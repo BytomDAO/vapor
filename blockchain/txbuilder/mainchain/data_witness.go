@@ -3,7 +3,7 @@ package mainchain
 import (
 	"encoding/json"
 
-	chainjson "github.com/bytom/encoding/json"
+	chainjson "github.com/vapor/encoding/json"
 )
 
 // DataWitness used sign transaction

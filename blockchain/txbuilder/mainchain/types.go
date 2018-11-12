@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/bytom/crypto/ed25519/chainkd"
-	chainjson "github.com/bytom/encoding/json"
-	"github.com/bytom/protocol/bc/types/bytom"
-	bytomtypes "github.com/bytom/protocol/bc/types/bytom/types"
+	"github.com/vapor/crypto/ed25519/chainkd"
+	chainjson "github.com/vapor/encoding/json"
+	"github.com/vapor/protocol/bc/types/bytom"
+	bytomtypes "github.com/vapor/protocol/bc/types/bytom/types"
 )
 
 // Template represents a partially- or fully-signed transaction.

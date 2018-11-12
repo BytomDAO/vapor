@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/bytom/equity/compiler"
+	"github.com/vapor/equity/compiler"
 )
 
 func main() {
@@ -26,8 +26,8 @@ func main() {
 		"bytes":        true,
 		"encoding/hex": true,
 		"fmt":          true,
-		"github.com/bytom/equity/compiler": true,
-		"github.com/bytom/protocol/vm":     true,
+		"github.com/vapor/equity/compiler": true,
+		"github.com/vapor/protocol/vm":     true,
 	}
 
 	buf := new(bytes.Buffer)
@@ -187,7 +187,7 @@ func asGoParams(params []*compiler.Param) (goParams string, imports []string) {
 			typ = "uint64"
 		case "Asset":
 			typ = "bc.AssetId"
-			imports = append(imports, "github.com/bytom/protocol/bc")
+			imports = append(imports, "github.com/vapor/protocol/bc")
 		case "Boolean":
 			typ = "bool"
 		case "Hash":
@@ -198,7 +198,7 @@ func asGoParams(params []*compiler.Param) (goParams string, imports []string) {
 			typ = "[]byte"
 		case "PublicKey":
 			typ = "ed25519.PublicKey"
-			imports = append(imports, "github.com/bytom/crypto/ed25519")
+			imports = append(imports, "github.com/vapor/crypto/ed25519")
 		case "Signature":
 			typ = "[]byte"
 		case "String":

@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/vm"
-	"github.com/bytom/testutil"
+	"github.com/vapor/protocol/bc"
+	"github.com/vapor/protocol/vm"
+	"github.com/vapor/testutil"
 )
 
 func TestMerkleRoot(t *testing.T) {

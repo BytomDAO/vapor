@@ -3,8 +3,8 @@ package util
 import (
 	"context"
 
-	"github.com/bytom/blockchain/rpc"
-	"github.com/bytom/env"
+	"github.com/vapor/blockchain/rpc"
+	"github.com/vapor/env"
 	jww "github.com/spf13/jwalterweatherman"
 )
 

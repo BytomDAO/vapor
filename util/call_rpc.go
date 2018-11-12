@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/bytom/blockchain/rpc"
-	"github.com/bytom/config"
+	"github.com/vapor/blockchain/rpc"
+	"github.com/vapor/config"
 	jww "github.com/spf13/jwalterweatherman"
 )
 

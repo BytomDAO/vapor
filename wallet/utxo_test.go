@@ -10,11 +10,11 @@ import (
 
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/account"
-	"github.com/bytom/consensus"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/testutil"
+	"github.com/vapor/account"
+	"github.com/vapor/consensus"
+	"github.com/vapor/protocol/bc"
+	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/testutil"
 )
 
 func TestGetAccountUtxos(t *testing.T) {

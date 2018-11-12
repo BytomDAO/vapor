@@ -3,10 +3,10 @@ package mainchain
 import (
 	"encoding/json"
 
-	"github.com/bytom/blockchain/txbuilder"
-	"github.com/bytom/crypto/ed25519/chainkd"
-	chainjson "github.com/bytom/encoding/json"
-	"github.com/bytom/errors"
+	"github.com/vapor/blockchain/txbuilder"
+	"github.com/vapor/crypto/ed25519/chainkd"
+	chainjson "github.com/vapor/encoding/json"
+	"github.com/vapor/errors"
 )
 
 // AddWitnessKeys adds a SignatureWitness with the given quorum and

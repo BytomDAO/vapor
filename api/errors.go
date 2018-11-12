@@ -3,17 +3,17 @@ package api
 import (
 	"context"
 
-	"github.com/bytom/account"
-	"github.com/bytom/asset"
-	"github.com/bytom/blockchain/pseudohsm"
-	"github.com/bytom/blockchain/rpc"
-	"github.com/bytom/blockchain/signers"
-	"github.com/bytom/blockchain/txbuilder"
-	"github.com/bytom/errors"
-	"github.com/bytom/net/http/httperror"
-	"github.com/bytom/net/http/httpjson"
-	"github.com/bytom/protocol/validation"
-	"github.com/bytom/protocol/vm"
+	"github.com/vapor/account"
+	"github.com/vapor/asset"
+	"github.com/vapor/blockchain/pseudohsm"
+	"github.com/vapor/blockchain/rpc"
+	"github.com/vapor/blockchain/signers"
+	"github.com/vapor/blockchain/txbuilder"
+	"github.com/vapor/errors"
+	"github.com/vapor/net/http/httperror"
+	"github.com/vapor/net/http/httpjson"
+	"github.com/vapor/protocol/validation"
+	"github.com/vapor/protocol/vm"
 )
 
 var (

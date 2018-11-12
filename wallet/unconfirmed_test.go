@@ -7,14 +7,14 @@ import (
 
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/account"
-	"github.com/bytom/asset"
-	"github.com/bytom/blockchain/pseudohsm"
-	"github.com/bytom/blockchain/query"
-	"github.com/bytom/consensus"
-	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/testutil"
+	"github.com/vapor/account"
+	"github.com/vapor/asset"
+	"github.com/vapor/blockchain/pseudohsm"
+	"github.com/vapor/blockchain/query"
+	"github.com/vapor/consensus"
+	"github.com/vapor/crypto/ed25519/chainkd"
+	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/testutil"
 )
 
 func TestWalletUnconfirmedTxs(t *testing.T) {

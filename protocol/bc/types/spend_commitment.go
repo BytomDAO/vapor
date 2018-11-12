@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/bytom/encoding/blockchain"
-	"github.com/bytom/errors"
-	"github.com/bytom/protocol/bc"
+	"github.com/vapor/encoding/blockchain"
+	"github.com/vapor/errors"
+	"github.com/vapor/protocol/bc"
 )
 
 // SpendCommitment contains the commitment data for a transaction output.

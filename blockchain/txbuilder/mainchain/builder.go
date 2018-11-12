@@ -4,9 +4,9 @@ import (
 	"math"
 	"time"
 
-	"github.com/bytom/blockchain/txbuilder"
-	"github.com/bytom/errors"
-	bytomtypes "github.com/bytom/protocol/bc/types/bytom/types"
+	"github.com/vapor/blockchain/txbuilder"
+	"github.com/vapor/errors"
+	bytomtypes "github.com/vapor/protocol/bc/types/bytom/types"
 )
 
 // NewBuilder return new TemplateBuilder instance

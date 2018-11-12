@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bytom/testutil"
+	"github.com/vapor/testutil"
 )
 
 func TestRPCCallJSON(t *testing.T) {

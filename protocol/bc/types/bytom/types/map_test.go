@@ -6,9 +6,9 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 
-	"github.com/bytom/consensus"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/testutil"
+	"github.com/vapor/consensus"
+	"github.com/vapor/protocol/bc"
+	"github.com/vapor/testutil"
 )
 
 func TestMapSpendTx(t *testing.T) {

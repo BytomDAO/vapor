@@ -3,11 +3,11 @@ package mainchain
 import (
 	"encoding/json"
 
-	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/crypto/sha3pool"
-	chainjson "github.com/bytom/encoding/json"
-	"github.com/bytom/errors"
-	"github.com/bytom/protocol/vm"
+	"github.com/vapor/crypto/ed25519/chainkd"
+	"github.com/vapor/crypto/sha3pool"
+	chainjson "github.com/vapor/encoding/json"
+	"github.com/vapor/errors"
+	"github.com/vapor/protocol/vm"
 )
 
 type (

@@ -4,12 +4,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bytom/consensus"
-	"github.com/bytom/database/storage"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/protocol/state"
-	"github.com/bytom/testutil"
+	"github.com/vapor/consensus"
+	"github.com/vapor/database/storage"
+	"github.com/vapor/protocol/bc"
+	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/state"
+	"github.com/vapor/testutil"
 )
 
 var testTxs = []*types.Tx{

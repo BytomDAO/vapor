@@ -21,7 +21,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"github.com/tendermint/go-wire"
 
-	"github.com/bytom/crypto"
+	"github.com/vapor/crypto"
 )
 
 var (

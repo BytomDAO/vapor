@@ -1,10 +1,10 @@
 package protocol
 
 import (
-	"github.com/bytom/database/storage"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/protocol/state"
+	"github.com/vapor/database/storage"
+	"github.com/vapor/protocol/bc"
+	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/state"
 )
 
 // Store provides storage interface for blockchain data

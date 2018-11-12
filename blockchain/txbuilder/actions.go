@@ -6,13 +6,13 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/bytom/common"
-	"github.com/bytom/consensus"
-	"github.com/bytom/encoding/json"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/protocol/vm"
-	"github.com/bytom/protocol/vm/vmutil"
+	"github.com/vapor/common"
+	"github.com/vapor/consensus"
+	"github.com/vapor/encoding/json"
+	"github.com/vapor/protocol/bc"
+	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/vm"
+	"github.com/vapor/protocol/vm/vmutil"
 )
 
 var retirementProgram = []byte{byte(vm.OP_FAIL)}

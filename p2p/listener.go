@@ -9,8 +9,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
 
-	"github.com/bytom/errors"
-	"github.com/bytom/p2p/upnp"
+	"github.com/vapor/errors"
+	"github.com/vapor/p2p/upnp"
 )
 
 const (

@@ -4,8 +4,8 @@ import (
 	"encoding/binary"
 	"strings"
 
-	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/protocol/bc"
+	"github.com/vapor/crypto/ed25519/chainkd"
+	"github.com/vapor/protocol/bc"
 )
 
 //consensus variables

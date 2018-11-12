@@ -3,8 +3,8 @@ package leveldb
 import (
 	"testing"
 
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
+	"github.com/vapor/protocol/bc"
+	"github.com/vapor/protocol/bc/types"
 )
 
 func TestBlockCache(t *testing.T) {

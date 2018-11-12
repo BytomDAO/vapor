@@ -13,8 +13,8 @@ import (
 	"net"
 	"sort"
 
-	"github.com/bytom/common"
-	"github.com/bytom/crypto"
+	"github.com/vapor/common"
+	"github.com/vapor/crypto"
 )
 
 const (

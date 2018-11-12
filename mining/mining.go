@@ -7,16 +7,16 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/account"
-	"github.com/bytom/blockchain/txbuilder"
-	"github.com/bytom/consensus"
-	"github.com/bytom/errors"
-	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/protocol/state"
-	"github.com/bytom/protocol/validation"
-	"github.com/bytom/protocol/vm/vmutil"
+	"github.com/vapor/account"
+	"github.com/vapor/blockchain/txbuilder"
+	"github.com/vapor/consensus"
+	"github.com/vapor/errors"
+	"github.com/vapor/protocol"
+	"github.com/vapor/protocol/bc"
+	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/state"
+	"github.com/vapor/protocol/validation"
+	"github.com/vapor/protocol/vm/vmutil"
 )
 
 // createCoinbaseTx returns a coinbase transaction paying an appropriate subsidy

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bytom/protocol/bc"
+	"github.com/vapor/protocol/bc"
 )
 
 var tests = []struct {

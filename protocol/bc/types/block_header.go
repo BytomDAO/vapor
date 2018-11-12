@@ -6,10 +6,10 @@ import (
 	"io"
 	"time"
 
-	"github.com/bytom/encoding/blockchain"
-	"github.com/bytom/encoding/bufpool"
-	"github.com/bytom/errors"
-	"github.com/bytom/protocol/bc"
+	"github.com/vapor/encoding/blockchain"
+	"github.com/vapor/encoding/bufpool"
+	"github.com/vapor/errors"
+	"github.com/vapor/protocol/bc"
 )
 
 type Proof struct {

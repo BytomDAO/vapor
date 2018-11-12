@@ -8,10 +8,10 @@ import (
 
 	wire "github.com/tendermint/go-wire"
 
-	"github.com/bytom/consensus"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/test/mock"
+	"github.com/vapor/consensus"
+	"github.com/vapor/protocol/bc"
+	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/test/mock"
 )
 
 type P2PPeer struct {

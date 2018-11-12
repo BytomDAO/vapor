@@ -13,8 +13,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/bytom/common"
-	"github.com/bytom/crypto"
+	"github.com/vapor/common"
+	"github.com/vapor/crypto"
 )
 
 // Node represents a host on the network.

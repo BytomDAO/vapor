@@ -3,10 +3,10 @@ package tensority
 import (
 	"github.com/golang/groupcache/lru"
 
-	"github.com/bytom/crypto/sha3pool"
-	"github.com/bytom/mining/tensority/cgo_algorithm"
-	"github.com/bytom/mining/tensority/go_algorithm"
-	"github.com/bytom/protocol/bc"
+	"github.com/vapor/crypto/sha3pool"
+	"github.com/vapor/mining/tensority/cgo_algorithm"
+	"github.com/vapor/mining/tensority/go_algorithm"
+	"github.com/vapor/protocol/bc"
 )
 
 const maxAIHashCached = 64

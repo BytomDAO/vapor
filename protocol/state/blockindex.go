@@ -6,11 +6,11 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/bytom/common"
-	"github.com/bytom/consensus"
-	"github.com/bytom/consensus/difficulty"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
+	"github.com/vapor/common"
+	"github.com/vapor/consensus"
+	"github.com/vapor/consensus/difficulty"
+	"github.com/vapor/protocol/bc"
+	"github.com/vapor/protocol/bc/types"
 )
 
 // approxNodesPerDay is an approximation of the number of new blocks there are

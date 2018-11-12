@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/bytom/protocol/bc"
+	"github.com/vapor/protocol/bc"
 )
 
 type ClaimCommitment struct {

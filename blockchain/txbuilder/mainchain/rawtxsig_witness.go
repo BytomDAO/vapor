@@ -3,8 +3,8 @@ package mainchain
 import (
 	"encoding/json"
 
-	"github.com/bytom/crypto/ed25519/chainkd"
-	chainjson "github.com/bytom/encoding/json"
+	"github.com/vapor/crypto/ed25519/chainkd"
+	chainjson "github.com/vapor/encoding/json"
 )
 
 // TODO(bobg): most of the code here is duplicated from

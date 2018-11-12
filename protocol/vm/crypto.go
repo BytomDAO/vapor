@@ -6,10 +6,10 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
-	"github.com/bytom/crypto"
-	"github.com/bytom/crypto/ed25519"
-	"github.com/bytom/crypto/sm3"
-	"github.com/bytom/math/checked"
+	"github.com/vapor/crypto"
+	"github.com/vapor/crypto/ed25519"
+	"github.com/vapor/crypto/sm3"
+	"github.com/vapor/math/checked"
 )
 
 func opSha256(vm *virtualMachine) error {

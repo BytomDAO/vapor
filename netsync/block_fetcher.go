@@ -4,7 +4,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 
-	"github.com/bytom/protocol/bc"
+	"github.com/vapor/protocol/bc"
 )
 
 const (

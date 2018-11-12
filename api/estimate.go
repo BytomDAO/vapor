@@ -3,11 +3,11 @@ package api
 import (
 	"math"
 
-	"github.com/bytom/blockchain/txbuilder/mainchain"
-	"github.com/bytom/consensus"
-	"github.com/bytom/consensus/segwit"
-	"github.com/bytom/errors"
-	"github.com/bytom/math/checked"
+	"github.com/vapor/blockchain/txbuilder/mainchain"
+	"github.com/vapor/consensus"
+	"github.com/vapor/consensus/segwit"
+	"github.com/vapor/errors"
+	"github.com/vapor/math/checked"
 )
 
 // EstimateTxGas estimate consumed neu for transaction

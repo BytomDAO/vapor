@@ -5,20 +5,20 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/bytom/protocol/bc/types/bytom"
+	"github.com/vapor/protocol/bc/types/bytom"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/account"
-	"github.com/bytom/blockchain/query"
-	"github.com/bytom/blockchain/signers"
-	"github.com/bytom/consensus"
-	"github.com/bytom/crypto/ed25519/chainkd"
-	chainjson "github.com/bytom/encoding/json"
-	"github.com/bytom/errors"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
-	bytomtypes "github.com/bytom/protocol/bc/types/bytom/types"
+	"github.com/vapor/account"
+	"github.com/vapor/blockchain/query"
+	"github.com/vapor/blockchain/signers"
+	"github.com/vapor/consensus"
+	"github.com/vapor/crypto/ed25519/chainkd"
+	chainjson "github.com/vapor/encoding/json"
+	"github.com/vapor/errors"
+	"github.com/vapor/protocol/bc"
+	"github.com/vapor/protocol/bc/types"
+	bytomtypes "github.com/vapor/protocol/bc/types/bytom/types"
 )
 
 // POST /list-accounts

@@ -7,16 +7,16 @@ import (
 	"math"
 	"strconv"
 
-	"github.com/bytom/consensus"
-	"github.com/bytom/consensus/segwit"
-	"github.com/bytom/crypto"
-	"github.com/bytom/errors"
-	"github.com/bytom/math/checked"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/protocol/vm"
-	"github.com/bytom/protocol/vm/vmutil"
-	"github.com/bytom/util"
+	"github.com/vapor/consensus"
+	"github.com/vapor/consensus/segwit"
+	"github.com/vapor/crypto"
+	"github.com/vapor/errors"
+	"github.com/vapor/math/checked"
+	"github.com/vapor/protocol/bc"
+	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/vm"
+	"github.com/vapor/protocol/vm/vmutil"
+	"github.com/vapor/util"
 )
 
 // validate transaction error

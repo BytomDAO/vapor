@@ -6,7 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/common"
+	"github.com/vapor/common"
 )
 
 // ImageSlice record info of single account

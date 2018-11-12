@@ -3,8 +3,8 @@ package api
 import (
 	"context"
 
-	"github.com/bytom/blockchain/txbuilder"
-	chainjson "github.com/bytom/encoding/json"
+	"github.com/vapor/blockchain/txbuilder"
+	chainjson "github.com/vapor/encoding/json"
 )
 
 func (a *API) createAccountReceiver(ctx context.Context, ins struct {

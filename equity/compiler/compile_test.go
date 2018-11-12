@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bytom/equity/compiler/equitytest"
+	"github.com/vapor/equity/compiler/equitytest"
 )
 
 func TestCompile(t *testing.T) {
