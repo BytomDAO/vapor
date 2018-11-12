@@ -1,4 +1,4 @@
-Bytom
+Bytom Sidechain
 ====
 
 [![Build Status](https://travis-ci.org/Bytom/bytom.svg)](https://travis-ci.org/Bytom/bytom) [![AGPL v3](https://img.shields.io/badge/license-AGPL%20v3-brightgreen.svg)](./LICENSE)
@@ -87,23 +87,34 @@ $ ./bytomd node
 available flags for `bytomd node`:
 
 ```
-      --auth.disable                Disable rpc access authenticate
-      --chain_id string             Select network type
-  -h, --help                        help for node
-      --mining                      Enable mining
-      --p2p.dial_timeout int        Set dial timeout (default 3)
-      --p2p.handshake_timeout int   Set handshake timeout (default 30)
-      --p2p.laddr string            Node listen address.
-      --p2p.max_num_peers int       Set max num peers (default 50)
-      --p2p.pex                     Enable Peer-Exchange  (default true)
-      --p2p.seeds string            Comma delimited host:port seed nodes
-      --p2p.skip_upnp               Skip UPNP configuration
-      --prof_laddr string           Use http to profile bytomd programs
-      --vault_mode                  Run in the offline enviroment
-      --wallet.disable              Disable wallet
-      --wallet.rescan               Rescan wallet
-      --web.closed                  Lanch web browser or not
-      --simd.enable                 Enable the _simd_ feature to speed up the _PoW_ verification (e.g., during mining and block verification)
+    --auth.disable                            Disable rpc access authenticate
+      --chain_id string                         Select network type
+  -h, --help                                    help for node
+      --log_file string                         Log output file
+      --log_level string                        Select log level(debug, info, warn, error or fatal
+      --mainchain.mainchain_rpc_host string     The address which the daemon will try to connect to validate peg-ins, if enabled. (default "127.0.0.1")
+      --mainchain.mainchain_rpc_port string     The port which the daemon will try to connect to validate peg-ins, if enabled. (default "9888")
+      --mainchain.mainchain_token string        The rpc token that the daemon will use to connect to validate peg-ins, if enabled.
+      --mining                                  Enable mining
+      --p2p.dial_timeout int                    Set dial timeout (default 3)
+      --p2p.handshake_timeout int               Set handshake timeout (default 30)
+      --p2p.laddr string                        Node listen address. (0.0.0.0:0 means any interface, any port) (default "tcp://0.0.0.0:46656")
+      --p2p.max_num_peers int                   Set max num peers (default 50)
+      --p2p.pex                                 Enable Peer-Exchange  (default true)
+      --p2p.seeds string                        Comma delimited host:port seed nodes
+      --p2p.skip_upnp                           Skip UPNP configuration
+      --prof_laddr string                       Use http to profile bytomd programs
+      --side.fedpeg_xpubs string                Change federated peg to use a different xpub.
+      --side.parent_genesis_block_hash string    (default "a75483474799ea1aa6bb910a1a5025b4372bf20bef20f246a2c2dc5e12e8a053")
+      --side.pegin_confirmation_depth uint      Pegin claims must be this deep to be considered valid. (default: 6) (default 6)
+      --side.sign_block_xpubs string            Change federated peg to use a different xpub.
+      --signer string                           The signer corresponds to xpub of signblock
+      --validate_pegin                          Validate pegin claims. All functionaries must run this.
+      --vault_mode                              Run in the offline enviroment
+      --wallet.disable                          Disable wallet
+      --wallet.rescan                           Rescan wallet
+      --web.closed                              Lanch web browser or not
+
 ```
 
 Given the `bytomd` node is running, the general workflow is as follows:
@@ -111,20 +122,6 @@ Given the `bytomd` node is running, the general workflow is as follows:
 - create key, then you can create account and asset.
 - send transaction, i.e., build, sign and submit transaction.
 - query all kinds of information, let's say, avaliable key, account, key, balances, transactions, etc.
-
-__simd feature:__
-
-You could enable the _simd_ feature to speed up the _PoW_ verification (e.g., during mining and block verification) by simply:
-```
-bytomd node --simd.enable
-```
-
-To enable this feature you will need to compile from the source code by yourself, and `make bytomd-simd`. 
-
-What is more,
-
-+ if you are using _Mac_, please make sure _llvm_ is installed by `brew install llvm`.
-+ if you are using _Windows_, please make sure _mingw-w64_ is installed and set up the _PATH_ environment variable accordingly.
 
 For more details about using `bytomcli` command please refer to [API Reference](https://github.com/vapor/bytom/wiki/API-Reference)
 

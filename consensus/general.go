@@ -123,7 +123,7 @@ var NetParams = map[string]Params{
 // BytomMainNetParams is the config for production
 var MainNetParams = Params{
 	Name:                 "main",
-	Bech32HRPSegwit:      "sbm",
+	Bech32HRPSegwit:      "vbm",
 	BytomBech32HRPSegwit: "bm",
 	Checkpoints: []Checkpoint{
 		{10000, bc.NewHash([32]byte{0x93, 0xe1, 0xeb, 0x78, 0x21, 0xd2, 0xb4, 0xad, 0x0f, 0x5b, 0x1c, 0xea, 0x82, 0xe8, 0x43, 0xad, 0x8c, 0x09, 0x9a, 0xb6, 0x5d, 0x8f, 0x70, 0xc5, 0x84, 0xca, 0xa2, 0xdd, 0xf1, 0x74, 0x65, 0x2c})},
@@ -140,7 +140,7 @@ var MainNetParams = Params{
 // BytomTestNetParams is the config for test-net
 var TestNetParams = Params{
 	Name:                 "test",
-	Bech32HRPSegwit:      "stm",
+	Bech32HRPSegwit:      "vtm",
 	BytomBech32HRPSegwit: "tm",
 	Checkpoints: []Checkpoint{
 		{10303, bc.NewHash([32]byte{0x3e, 0x94, 0x5d, 0x35, 0x70, 0x30, 0xd4, 0x3b, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c})},
@@ -151,7 +151,7 @@ var TestNetParams = Params{
 // BytomSoloNetParams is the config for test-net
 var SoloNetParams = Params{
 	Name:                 "solo",
-	Bech32HRPSegwit:      "ssm",
+	Bech32HRPSegwit:      "vsm",
 	BytomBech32HRPSegwit: "sm",
 	Checkpoints:          []Checkpoint{},
 }

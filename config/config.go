@@ -23,7 +23,6 @@ type Config struct {
 	Wallet    *WalletConfig       `mapstructure:"wallet"`
 	Auth      *RPCAuthConfig      `mapstructure:"auth"`
 	Web       *WebConfig          `mapstructure:"web"`
-	Simd      *SimdConfig         `mapstructure:"simd"`
 	Side      *SideChainConfig    `mapstructure:"side"`
 	MainChain *MainChainRpcConfig `mapstructure:"mainchain"`
 }
@@ -36,7 +35,6 @@ func DefaultConfig() *Config {
 		Wallet:     DefaultWalletConfig(),
 		Auth:       DefaultRPCAuthConfig(),
 		Web:        DefaultWebConfig(),
-		Simd:       DefaultSimdConfig(),
 		Side:       DefaultSideChainConfig(),
 		MainChain:  DefaultMainChainRpc(),
 	}
@@ -180,10 +178,6 @@ type WebConfig struct {
 	Closed bool `mapstructure:"closed"`
 }
 
-type SimdConfig struct {
-	Enable bool `mapstructure:"enable"`
-}
-
 type SideChainConfig struct {
 	FedpegXPubs            string `mapstructure:"fedpeg_xpubs"`
 	SignBlockXPubs         string `mapstructure:"sign_block_xpubs"`
@@ -220,13 +214,6 @@ func DefaultWalletConfig() *WalletConfig {
 	}
 }
 
-// Default configurable web parameters.
-func DefaultSimdConfig() *SimdConfig {
-	return &SimdConfig{
-		Enable: false,
-	}
-}
-
 // DeafultSideChainConfig for sidechain
 func DefaultSideChainConfig() *SideChainConfig {
 	return &SideChainConfig{
@@ -259,14 +246,14 @@ func DefaultDataDir() string {
 	// Try to place the data folder in the user's home dir
 	home := homeDir()
 	if home == "" {
-		return "./.bytom"
+		return "./.bytom_sidechain"
 	}
 	switch runtime.GOOS {
 	case "darwin":
 		// In order to be compatible with old data path,
 		// copy the data from the old path to the new path
-		oldPath := filepath.Join(home, "Library", "Bytom")
-		newPath := filepath.Join(home, "Library", "Application Support", "Bytom")
+		oldPath := filepath.Join(home, "Library", "Bytom_sidechain")
+		newPath := filepath.Join(home, "Library", "Application Support", "Bytom_sidechain")
 		if !isFolderNotExists(oldPath) && isFolderNotExists(newPath) {
 			if err := os.Rename(oldPath, newPath); err != nil {
 				log.Errorf("DefaultDataDir: %v", err)
@@ -275,9 +262,9 @@ func DefaultDataDir() string {
 		}
 		return newPath
 	case "windows":
-		return filepath.Join(home, "AppData", "Roaming", "Bytom")
+		return filepath.Join(home, "AppData", "Roaming", "Bytom_sidechain")
 	default:
-		return filepath.Join(home, ".bytom")
+		return filepath.Join(home, ".bytom_sidechain")
 	}
 }
 
