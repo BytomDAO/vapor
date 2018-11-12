@@ -3,11 +3,11 @@ package validation
 import (
 	"bytes"
 
-	"github.com/bytom/consensus/segwit"
-	"github.com/bytom/crypto/sha3pool"
-	"github.com/bytom/errors"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/vm"
+	"github.com/vapor/consensus/segwit"
+	"github.com/vapor/crypto/sha3pool"
+	"github.com/vapor/errors"
+	"github.com/vapor/protocol/bc"
+	"github.com/vapor/protocol/vm"
 )
 
 // NewTxVMContext generates the vm.Context for BVM

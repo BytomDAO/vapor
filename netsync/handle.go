@@ -13,14 +13,14 @@ import (
 	"github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
 
-	cfg "github.com/bytom/config"
-	"github.com/bytom/consensus"
-	"github.com/bytom/p2p"
-	"github.com/bytom/p2p/discover"
-	core "github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/version"
+	cfg "github.com/vapor/config"
+	"github.com/vapor/consensus"
+	"github.com/vapor/p2p"
+	"github.com/vapor/p2p/discover"
+	core "github.com/vapor/protocol"
+	"github.com/vapor/protocol/bc"
+	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/version"
 )
 
 const (

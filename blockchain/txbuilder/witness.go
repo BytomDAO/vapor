@@ -3,9 +3,9 @@ package txbuilder
 import (
 	"context"
 
-	"github.com/bytom/crypto/ed25519/chainkd"
-	chainjson "github.com/bytom/encoding/json"
-	"github.com/bytom/errors"
+	"github.com/vapor/crypto/ed25519/chainkd"
+	chainjson "github.com/vapor/encoding/json"
+	"github.com/vapor/errors"
 )
 
 // SignFunc is the function passed into Sign that produces

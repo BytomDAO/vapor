@@ -7,8 +7,8 @@ import (
 	"github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
 
-	cfg "github.com/bytom/config"
-	"github.com/bytom/p2p/connection"
+	cfg "github.com/vapor/config"
+	"github.com/vapor/p2p/connection"
 )
 
 //PanicOnAddPeerErr add peer error

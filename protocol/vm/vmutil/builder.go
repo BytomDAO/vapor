@@ -3,8 +3,8 @@ package vmutil
 import (
 	"encoding/binary"
 
-	"github.com/bytom/errors"
-	"github.com/bytom/protocol/vm"
+	"github.com/vapor/errors"
+	"github.com/vapor/protocol/vm"
 )
 
 type Builder struct {

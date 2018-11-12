@@ -3,9 +3,9 @@ package protocol
 import (
 	"testing"
 
-	"github.com/bytom/config"
-	"github.com/bytom/protocol/state"
-	"github.com/bytom/testutil"
+	"github.com/vapor/config"
+	"github.com/vapor/protocol/state"
+	"github.com/vapor/testutil"
 )
 
 func TestCalcReorganizeNodes(t *testing.T) {

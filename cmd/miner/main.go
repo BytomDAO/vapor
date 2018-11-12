@@ -5,12 +5,12 @@ import (
 	"log"
 	"os"
 
-	"github.com/bytom/api"
-	"github.com/bytom/consensus"
-	"github.com/bytom/consensus/difficulty"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/util"
+	"github.com/vapor/api"
+	"github.com/vapor/consensus"
+	"github.com/vapor/consensus/difficulty"
+	"github.com/vapor/protocol/bc"
+	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/util"
 )
 
 const (

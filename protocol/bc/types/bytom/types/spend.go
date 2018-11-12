@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/bytom/protocol/bc/types/bytom"
+	"github.com/vapor/protocol/bc/types/bytom"
 )
 
 // SpendInput satisfies the TypedInput interface and represents a spend transaction.

@@ -6,8 +6,8 @@ import (
 	"crypto/sha512"
 	"io"
 
-	"github.com/bytom/crypto/ed25519"
-	"github.com/bytom/crypto/ed25519/ecmath"
+	"github.com/vapor/crypto/ed25519"
+	"github.com/vapor/crypto/ed25519/ecmath"
 )
 
 type (

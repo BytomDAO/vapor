@@ -3,10 +3,10 @@ package api
 import (
 	"context"
 
-	"github.com/bytom/account"
-	"github.com/bytom/asset"
-	"github.com/bytom/blockchain/pseudohsm"
-	"github.com/bytom/errors"
+	"github.com/vapor/account"
+	"github.com/vapor/asset"
+	"github.com/vapor/blockchain/pseudohsm"
+	"github.com/vapor/errors"
 )
 
 // POST /wallet error

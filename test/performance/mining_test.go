@@ -6,9 +6,9 @@ import (
 
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/account"
-	"github.com/bytom/mining"
-	"github.com/bytom/test"
+	"github.com/vapor/account"
+	"github.com/vapor/mining"
+	"github.com/vapor/test"
 )
 
 // Function NewBlockTemplate's benchmark - 0.05s

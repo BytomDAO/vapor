@@ -8,7 +8,7 @@ import (
 
 	"strings"
 
-	"github.com/bytom/node"
+	"github.com/vapor/node"
 )
 
 var runNodeCmd = &cobra.Command{

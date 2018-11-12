@@ -3,12 +3,12 @@ package validation
 import (
 	"testing"
 
-	"github.com/bytom/consensus"
-	"github.com/bytom/mining/tensority"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/protocol/state"
-	"github.com/bytom/testutil"
+	"github.com/vapor/consensus"
+	"github.com/vapor/mining/tensority"
+	"github.com/vapor/protocol/bc"
+	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/state"
+	"github.com/vapor/testutil"
 )
 
 func TestCheckBlockTime(t *testing.T) {

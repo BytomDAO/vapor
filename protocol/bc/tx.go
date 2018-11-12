@@ -1,8 +1,8 @@
 package bc
 
 import (
-	"github.com/bytom/crypto/sha3pool"
-	"github.com/bytom/errors"
+	"github.com/vapor/crypto/sha3pool"
+	"github.com/vapor/errors"
 )
 
 type Tx struct {

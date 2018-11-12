@@ -4,10 +4,10 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 
-	"github.com/bytom/crypto/ed25519"
-	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/errors"
-	"github.com/bytom/protocol/vm"
+	"github.com/vapor/crypto/ed25519"
+	"github.com/vapor/crypto/ed25519/chainkd"
+	"github.com/vapor/errors"
+	"github.com/vapor/protocol/vm"
 )
 
 // pre-define errors

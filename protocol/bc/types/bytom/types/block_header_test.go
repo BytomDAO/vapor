@@ -8,8 +8,8 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 
-	"github.com/bytom/encoding/blockchain"
-	"github.com/bytom/testutil"
+	"github.com/vapor/encoding/blockchain"
+	"github.com/vapor/testutil"
 )
 
 func TestBlockHeader(t *testing.T) {

@@ -12,13 +12,13 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
 
-	cfg "github.com/bytom/config"
-	"github.com/bytom/consensus"
-	"github.com/bytom/errors"
-	"github.com/bytom/p2p/connection"
-	"github.com/bytom/p2p/discover"
-	"github.com/bytom/p2p/trust"
-	"github.com/bytom/version"
+	cfg "github.com/vapor/config"
+	"github.com/vapor/consensus"
+	"github.com/vapor/errors"
+	"github.com/vapor/p2p/connection"
+	"github.com/vapor/p2p/discover"
+	"github.com/vapor/p2p/trust"
+	"github.com/vapor/version"
 )
 
 const (

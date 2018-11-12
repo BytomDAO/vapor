@@ -1,11 +1,11 @@
 package protocol
 
 import (
-	"github.com/bytom/errors"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/protocol/state"
-	"github.com/bytom/protocol/validation"
+	"github.com/vapor/errors"
+	"github.com/vapor/protocol/bc"
+	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/state"
+	"github.com/vapor/protocol/validation"
 )
 
 // ErrBadTx is returned for transactions failing validation

@@ -3,9 +3,9 @@ package types
 import (
 	"fmt"
 
-	"github.com/bytom/protocol/bc/types/bytom"
-	"github.com/bytom/protocol/vm"
-	"github.com/bytom/protocol/vm/vmutil"
+	"github.com/vapor/protocol/bc/types/bytom"
+	"github.com/vapor/protocol/vm"
+	"github.com/vapor/protocol/vm/vmutil"
 )
 
 // MapTx converts a types TxData object into its entries-based

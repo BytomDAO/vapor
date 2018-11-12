@@ -9,11 +9,11 @@ import (
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 
-	"github.com/bytom/api"
-	"github.com/bytom/blockchain/txbuilder"
-	chainjson "github.com/bytom/encoding/json"
-	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/util"
+	"github.com/vapor/api"
+	"github.com/vapor/blockchain/txbuilder"
+	chainjson "github.com/vapor/encoding/json"
+	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/util"
 )
 
 func init() {

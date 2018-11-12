@@ -115,7 +115,7 @@ func (s *UpdateStatus) CheckUpdate(localVerStr string, remoteVerStr string, remo
 			"Current version": localVerStr,
 			"Newer version":   remoteVerStr,
 			"seed":            remoteAddr,
-		}).Warn("Please update your bytomd via https://github.com/Bytom/bytom/releases/ or http://bytom.io/wallet/")
+		}).Warn("Please update your bytomd via https://github.com/vapor/bytom/releases/ or http://bytom.io/wallet/")
 		s.notified = true
 	}
 	return nil

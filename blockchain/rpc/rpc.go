@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bytom/errors"
-	"github.com/bytom/net/http/httperror"
-	"github.com/bytom/net/http/reqid"
+	"github.com/vapor/errors"
+	"github.com/vapor/net/http/httperror"
+	"github.com/vapor/net/http/reqid"
 )
 
 // Bytom-specific header fields

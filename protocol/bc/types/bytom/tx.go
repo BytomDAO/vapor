@@ -1,8 +1,8 @@
 package bytom
 
 import (
-	"github.com/bytom/crypto/sha3pool"
-	"github.com/bytom/errors"
+	"github.com/vapor/crypto/sha3pool"
+	"github.com/vapor/errors"
 )
 
 // Tx is a wrapper for the entries-based representation of a transaction.

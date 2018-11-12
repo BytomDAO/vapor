@@ -4,7 +4,7 @@ import (
 	"context"
 	//"database/sql"
 	//	"fmt"
-	//	"github.com/bytom/errors"
+	//	"github.com/vapor/errors"
 )
 
 // Query queries the Chain Core for txfeeds matching the query.

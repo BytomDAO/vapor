@@ -4,10 +4,10 @@ import (
 	"context"
 	"strconv"
 
-	chainjson "github.com/bytom/encoding/json"
-	"github.com/bytom/errors"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
+	chainjson "github.com/vapor/encoding/json"
+	"github.com/vapor/errors"
+	"github.com/vapor/protocol/bc"
+	"github.com/vapor/protocol/bc/types"
 )
 
 // BlockHeaderJSON struct provides support for get work in json format, when it also follows

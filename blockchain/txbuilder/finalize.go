@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"context"
 
-	cfg "github.com/bytom/config"
-	"github.com/bytom/consensus"
-	"github.com/bytom/errors"
-	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/protocol/vm"
+	cfg "github.com/vapor/config"
+	"github.com/vapor/consensus"
+	"github.com/vapor/errors"
+	"github.com/vapor/protocol"
+	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/vm"
 )
 
 var (

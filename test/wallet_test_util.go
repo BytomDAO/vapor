@@ -9,13 +9,13 @@ import (
 
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/account"
-	"github.com/bytom/asset"
-	"github.com/bytom/blockchain/pseudohsm"
-	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc/types"
-	w "github.com/bytom/wallet"
+	"github.com/vapor/account"
+	"github.com/vapor/asset"
+	"github.com/vapor/blockchain/pseudohsm"
+	"github.com/vapor/crypto/ed25519/chainkd"
+	"github.com/vapor/protocol"
+	"github.com/vapor/protocol/bc/types"
+	w "github.com/vapor/wallet"
 )
 
 type walletTestConfig struct {

@@ -1,8 +1,8 @@
 package query
 
 import (
-	"github.com/bytom/blockchain/query/filter"
-	"github.com/bytom/errors"
+	"github.com/vapor/blockchain/query/filter"
+	"github.com/vapor/errors"
 )
 
 var filterTable = filter.Table{
