@@ -31,7 +31,6 @@ import (
 	"github.com/vapor/env"
 	"github.com/vapor/mining/cpuminer"
 	"github.com/vapor/mining/miningpool"
-	"github.com/vapor/mining/tensority"
 	"github.com/vapor/netsync"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
@@ -154,10 +153,6 @@ func NewNode(config *cfg.Config) *Node {
 	node.miningPool = miningpool.NewMiningPool(chain, accounts, txPool, newBlockCh)
 
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
-
-	if config.Simd.Enable {
-		tensority.UseSIMD = true
-	}
 
 	return node
 }
