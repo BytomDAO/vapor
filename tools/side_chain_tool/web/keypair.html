@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Bytom</title>
+  <link rel="stylesheet" href="./node_modules/bootstrap/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="./assets/main.css">
+  <script src="./node_modules/jquery/dist/jquery.min.js"></script>
+  <script src="./node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+  <script src="./node_modules/layer/layer.js"></script>
+  <script src="./assets/main.js"></script>
+  <script src="./assets/apiUrl.js"></script>
+  <script src="./assets/template.js"></script>
+</head>
+<body>
+  <nav class="navbar navbar-default">
+    <div class="navbar-header">
+      <a href="#" class="navbar-brand">Bytom</a>
+    </div>
+  </nav>
+  <div class="panel-body">
+    <button id="btnCreate" class="btn btn-primary">创建公私钥</button>
+    <button id="btnGetKey" class="btn btn-primary">获取公私钥</button>
+  </div>
+  <div class="col-sm-12 asset-box">
+    <h3>公钥、私钥</h3>
+    <div class="key-pair-table">
+      
+    </div>
+  </div>
+</body>
+
+<script id="keypairTpl" type="text/html">
+	<table class="table table-hover table-bordered">
+		<tr>
+			<th>公钥</th>
+			<th>私钥</th>
+		</tr>
+		<%for(var i in items){%> 
+    <tr class="item" data-index="<%= i%>" data-itemid="<%= items[i].id%>">
+      <td class="xpub" data-data="<%= items[i].xpub%>"><%= items[i].xpub%></td>
+			<td class="xprv" data-data="<%= items[i].xprv%>"><%= items[i].xprv%></td>
+		</tr>
+		<%}%>
+	</table>
+</script>
+
+</html>
