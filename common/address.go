@@ -144,6 +144,43 @@ func DecodeAddress(addr string, param *consensus.Params) (Address, error) {
 	return nil, ErrUnknownAddressType
 }
 
+func DecodeBytomAddress(addr string, param *consensus.Params) (Address, error) {
+	// Bech32 encoded segwit addresses start with a human-readable part
+	// (hrp) followed by '1'. For Bytom mainnet the hrp is "bm", and for
+	// testnet it is "tm". If the address string has a prefix that matches
+	// one of the prefixes for the known networks, we try to decode it as
+	// a segwit address.
+	oneIndex := strings.LastIndexByte(addr, '1')
+	if oneIndex > 1 {
+		prefix := addr[:oneIndex+1]
+		if consensus.IsBytomBech32SegwitPrefix(prefix, param) {
+			witnessVer, witnessProg, err := decodeSegWitAddress(addr)
+			if err != nil {
+				return nil, err
+			}
+
+			// We currently only support P2WPKH and P2WSH, which is
+			// witness version 0.
+			if witnessVer != 0 {
+				return nil, ErrUnsupportedWitnessVer
+			}
+
+			// The HRP is everything before the found '1'.
+			hrp := prefix[:len(prefix)-1]
+
+			switch len(witnessProg) {
+			case 20:
+				return newAddressWitnessPubKeyHash(hrp, witnessProg)
+			case 32:
+				return newAddressWitnessScriptHash(hrp, witnessProg)
+			default:
+				return nil, ErrUnsupportedWitnessProgLen
+			}
+		}
+	}
+	return nil, ErrUnknownAddressType
+}
+
 // decodeSegWitAddress parses a bech32 encoded segwit address string and
 // returns the witness version and witness program byte representation.
 func decodeSegWitAddress(address string) (byte, []byte, error) {

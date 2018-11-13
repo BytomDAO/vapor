@@ -518,25 +518,34 @@ func (a *API) buildMainChainTx(ins struct {
 	builder := mainchain.NewBuilder(time.Now())
 	builder.AddInput(txInput, sigInst)
 	changeAmount := uint64(0)
+	retire := false
 	for _, key := range ins.Tx.GetResultIds() {
-		output, err := ins.Tx.Output(*key)
+		output, err := ins.Tx.Retire(*key)
 		if err != nil {
-			return NewErrorResponse(err)
+			log.WithFields(log.Fields{"moudle": "transact", "err": err}).Warn("buildMainChainTx error")
+			continue
 		}
-		var ctrlProgram chainjson.HexBytes
-		ctrlProgram = output.ControlProgram.Code
-		tmp, _ := ctrlProgram.MarshalText()
-		if string(tmp) == ins.ControlProgram {
-			assetID := bytom.AssetID{
-				V0: output.Source.Value.AssetId.GetV0(),
-				V1: output.Source.Value.AssetId.GetV1(),
-				V2: output.Source.Value.AssetId.GetV2(),
-				V3: output.Source.Value.AssetId.GetV3(),
-			}
-			out := bytomtypes.NewTxOutput(assetID, output.Source.Value.Amount, output.ControlProgram.Code)
-			builder.AddOutput(out)
-			changeAmount = ins.Utxo.Amount - output.Source.Value.Amount
+		retire = true
+		var controlProgram []byte
+		retBool := true
+		if controlProgram, retBool = getInput(ins.Tx.Entries, *key, ins.ControlProgram); !retBool {
+			return NewErrorResponse(errors.New("The corresponding input cannot be found"))
 		}
+
+		assetID := bytom.AssetID{
+			V0: output.Source.Value.AssetId.GetV0(),
+			V1: output.Source.Value.AssetId.GetV1(),
+			V2: output.Source.Value.AssetId.GetV2(),
+			V3: output.Source.Value.AssetId.GetV3(),
+		}
+		out := bytomtypes.NewTxOutput(assetID, output.Source.Value.Amount, controlProgram)
+		builder.AddOutput(out)
+		changeAmount = ins.Utxo.Amount - output.Source.Value.Amount
+
+	}
+
+	if !retire {
+		return NewErrorResponse(errors.New("It's not a transaction to retire assets"))
 	}
 
 	if changeAmount > 0 {
@@ -569,6 +578,25 @@ func (a *API) buildMainChainTx(ins struct {
 	return NewSuccessResponse(tmpl)
 }
 
+//
+func getInput(entry map[bc.Hash]bc.Entry, outputID bc.Hash, controlProgram string) ([]byte, bool) {
+	output := entry[outputID].(*bc.Retirement)
+	mux := entry[*output.Source.Ref].(*bc.Mux)
+
+	for _, valueSource := range mux.GetSources() {
+		spend := entry[*valueSource.Ref].(*bc.Spend)
+		prevout := entry[*spend.SpentOutputId].(*bc.Output)
+
+		var ctrlProgram chainjson.HexBytes
+		ctrlProgram = prevout.ControlProgram.Code
+		tmp, _ := ctrlProgram.MarshalText()
+		if string(tmp) == controlProgram {
+			return ctrlProgram, true
+		}
+	}
+	return nil, false
+}
+
 // UtxoToInputs convert an utxo to the txinput
 func utxoToInputs(signer *signers.Signer, u *account.UTXO) (*bytomtypes.TxInput, *mainchain.SigningInstruction, error) {
 	sourceID := bytom.Hash{
@@ -597,7 +625,7 @@ func utxoToInputs(signer *signers.Signer, u *account.UTXO) (*bytomtypes.TxInput,
 		return txInput, sigInst, nil
 	}
 
-	address, err := common.DecodeAddress(u.Address, &consensus.ActiveNetParams)
+	address, err := common.DecodeBytomAddress(u.Address, &consensus.ActiveNetParams)
 	if err != nil {
 		return nil, nil, err
 	}

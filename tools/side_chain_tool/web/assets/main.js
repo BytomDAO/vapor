@@ -150,7 +150,7 @@ $(function(){
         }
         else {
             console.log(data);
-            layer.msg('创建失败', data.msg)
+            layer.msg('创建失败', res.msg)
         }
       },
       error: function(err){
@@ -184,13 +184,13 @@ $(function(){
       url: window.url + '/api/send_to_mainchain',
       data: JSON.stringify(obj),
       success: function(res){
-        if(res.code){
+        if(res.code == 200){
           console.log(res);
           layer.msg('send to mainchain success');
         }
         else {
-            console.log(data);
-            layer.msg('创建失败', data.msg)
+            console.log(res.msg);
+            layer.msg('创建失败', res.msg)
         }
       },
       error: function(err){
