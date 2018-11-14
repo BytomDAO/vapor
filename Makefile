@@ -17,40 +17,35 @@ BUILD_FLAGS := -ldflags "-X github.com/vapor/version.GitCommit=`git rev-parse HE
 MINER_BINARY32 := miner-$(GOOS)_386
 MINER_BINARY64 := miner-$(GOOS)_amd64
 
-BYTOMD_BINARY32 := bytomd-$(GOOS)_386
-BYTOMD_BINARY64 := bytomd-$(GOOS)_amd64
+BYTOMD_BINARY32 := vapor-$(GOOS)_386
+BYTOMD_BINARY64 := vapor-$(GOOS)_amd64
 
-BYTOMCLI_BINARY32 := bytomcli-$(GOOS)_386
-BYTOMCLI_BINARY64 := bytomcli-$(GOOS)_amd64
+BYTOMCLI_BINARY32 := vaporcli-$(GOOS)_386
+BYTOMCLI_BINARY64 := vaporcli-$(GOOS)_amd64
 
 VERSION := $(shell awk -F= '/Version =/ {print $$2}' version/version.go | tr -d "\" ")
 
 MINER_RELEASE32 := miner-$(VERSION)-$(GOOS)_386
 MINER_RELEASE64 := miner-$(VERSION)-$(GOOS)_amd64
 
-BYTOMD_RELEASE32 := bytomd-$(VERSION)-$(GOOS)_386
-BYTOMD_RELEASE64 := bytomd-$(VERSION)-$(GOOS)_amd64
+BYTOMD_RELEASE32 := vapor-$(VERSION)-$(GOOS)_386
+BYTOMD_RELEASE64 := vapor-$(VERSION)-$(GOOS)_amd64
 
-BYTOMCLI_RELEASE32 := bytomcli-$(VERSION)-$(GOOS)_386
-BYTOMCLI_RELEASE64 := bytomcli-$(VERSION)-$(GOOS)_amd64
+BYTOMCLI_RELEASE32 := vaporcli-$(VERSION)-$(GOOS)_386
+BYTOMCLI_RELEASE64 := vaporcli-$(VERSION)-$(GOOS)_amd64
 
-BYTOM_RELEASE32 := bytom-$(VERSION)-$(GOOS)_386
-BYTOM_RELEASE64 := bytom-$(VERSION)-$(GOOS)_amd64
+BYTOM_RELEASE32 := vapor-$(VERSION)-$(GOOS)_386
+BYTOM_RELEASE64 := vapor-$(VERSION)-$(GOOS)_amd64
 
 all: test target release-all
 
-bytomd:
-	@echo "Building bytomd to cmd/bytomd/bytomd"
-	@go build $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
+vapor:
+	@echo "Building vapor to cmd/vapor/vapor"
+	@go build $(BUILD_FLAGS) -o cmd/vapor/vapor cmd/vapor/main.go
 
-bytomd-simd:
-	@echo "Building SIMD version bytomd to cmd/bytomd/bytomd"
-	@cd mining/tensority/cgo_algorithm/lib/ && make
-	@go build -tags="simd" $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
-
-bytomcli:
-	@echo "Building bytomcli to cmd/bytomcli/bytomcli"
-	@go build $(BUILD_FLAGS) -o cmd/bytomcli/bytomcli cmd/bytomcli/main.go
+vaporcli:
+	@echo "Building vaporcli to cmd/vaporcli/vaporcli"
+	@go build $(BUILD_FLAGS) -o cmd/vaporcli/vaporcli cmd/vaporcli/main.go
 
 target:
 	mkdir -p $@

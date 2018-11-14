@@ -9,7 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/cli"
 
-	"github.com/vapor/cmd/bytomd/commands"
+	"github.com/vapor/cmd/vapor/commands"
 	"github.com/vapor/config"
 )
 
