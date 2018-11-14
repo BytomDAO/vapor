@@ -3,7 +3,7 @@ Bytom Sidechain
 
 [![Build Status](https://travis-ci.org/Bytom/bytom.svg)](https://travis-ci.org/Bytom/bytom) [![AGPL v3](https://img.shields.io/badge/license-AGPL%20v3-brightgreen.svg)](./LICENSE)
 
-**Official golang implementation of the Bytom protocol.**
+**Golang implemented sidechain for Bytom.**
 
 Automated builds are available for stable releases and the unstable master branch. Binary archives are published at https://github.com/vapor/bytom/releases.
 
@@ -132,6 +132,10 @@ Access the dashboard:
 ```
 $ open http://localhost:8888/
 ```
+
+### Sidechain
+
+* [Sidechain deployment](tools/side_chain_tool/README.md)
 
 ### In Docker
 

@@ -81,10 +81,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	preBlockHeader := c.BestBlockHeader()
 	preBlockHash := preBlockHeader.Hash()
 	nextBlockHeight := preBlockHeader.Height + 1
-	//nextBits, err := c.CalcNextBits(&preBlockHash)
-	//if err != nil {
-	//	return nil, err
-	//}
+
 	b = &types.Block{
 		BlockHeader: types.BlockHeader{
 			Version:           1,
@@ -139,7 +136,9 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			break
 		}
 	}
-
+	if txFee == 0 {
+		return nil, err
+	}
 	// creater coinbase transaction
 	b.Transactions[0], err = createCoinbaseTx(accountManager, txFee, nextBlockHeight)
 	if err != nil {
