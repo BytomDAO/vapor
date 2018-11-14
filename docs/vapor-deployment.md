@@ -44,7 +44,7 @@ xpub=$(cat key_pair | jq ".data.xpub" | sed "s/\"//g")
 
 拷贝key_pair到目录tools/side_chain_tool/
 
-* [参考侧链工具README](tools/side_chain_tool/README.md)
+* [参考侧链工具README](../tools/side_chain_tool/README.md)
 
 ## Bytom----->Vapor
 - 工具页面输入侧链账户ID，获取mainchain_address(主链锁定地址)、claim_script(赎回脚本)
