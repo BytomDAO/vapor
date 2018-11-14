@@ -6,7 +6,7 @@ import (
 )
 
 type Tx struct {
-// Tx is a wrapper for the entries-based representation of a transaction.
+	// Tx is a wrapper for the entries-based representation of a transaction.
 	*TxHeader
 	ID       Hash
 	Entries  map[Hash]Entry
@@ -70,4 +70,17 @@ func (tx *Tx) Issuance(id Hash) (*Issuance, error) {
 		return nil, errors.Wrapf(ErrEntryType, "entry %x has unexpected type %T", id.Bytes(), e)
 	}
 	return iss, nil
+}
+
+// Output try to get the output entry by given hash
+func (tx *Tx) Retire(id Hash) (*Retirement, error) {
+	e, ok := tx.Entries[id]
+	if !ok || e == nil {
+		return nil, errors.Wrapf(ErrMissingEntry, "id %x", id.Bytes())
+	}
+	o, ok := e.(*Retirement)
+	if !ok {
+		return nil, errors.Wrapf(ErrEntryType, "entry %x has unexpected type %T", id.Bytes(), e)
+	}
+	return o, nil
 }

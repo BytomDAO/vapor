@@ -88,6 +88,11 @@ func IsBech32SegwitPrefix(prefix string, params *Params) bool {
 	return prefix == params.Bech32HRPSegwit+"1"
 }
 
+func IsBytomBech32SegwitPrefix(prefix string, params *Params) bool {
+	prefix = strings.ToLower(prefix)
+	return prefix == params.BytomBech32HRPSegwit+"1"
+}
+
 // Checkpoint identifies a known good point in the block chain.  Using
 // checkpoints allows a few optimizations for old blocks during initial download
 // and also prevents forks from old blocks.

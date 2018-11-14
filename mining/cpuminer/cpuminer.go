@@ -64,13 +64,6 @@ func (m *CPUMiner) solveBlock(block *types.Block, ticker *time.Ticker, quit chan
 			}
 		default:
 		}
-		/*
-			header.Nonce = i
-			headerHash := header.Hash()
-			if difficulty.CheckProofOfWork(&headerHash, seed, header.Bits) {
-				return true
-			}
-		*/
 	}
 	return false
 }
@@ -118,6 +111,10 @@ out:
 			block, err := mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager)
 			if err != nil {
 				log.Errorf("Mining: failed on create NewBlockTemplate: %v", err)
+				continue
+			}
+			if block == nil {
+				time.Sleep(3 * time.Second)
 				continue
 			}
 			proof, _ := m.generateProof(*block)

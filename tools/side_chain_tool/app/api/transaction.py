@@ -218,21 +218,23 @@ def send_to_mainchain():
         raw_transaction = resp_json['data']['raw_transaction'].encode('utf-8')
         block_hash = resp_json['data']['block_hash'].encode('utf-8')
     elif resp_json['status'] == 'fail':
-        return json_contents(jsonify(code=-1, msg="get-raw-transaction: " + resp_json['msg']))
+        return json_contents(jsonify(code=-1, msg="get-side-raw-transaction: " + resp_json['msg']))
     else:
-        return json_contents(jsonify(code=-1, msg="get raw transaction fail"))
+        return json_contents(jsonify(code=-1, msg="get side raw transaction fail"))
 
     # 构建主链交易
     body_json = '{"claim_script":"%s","raw_transaction": "%s","alias": "%s","control_program":"%s","root_xpubs":%s,%s}' % (claim_script,raw_transaction,alias,control_program,root_xpubs,utxo)
+    print body_json
     response = connSide.request("/build-mainchain-tx",json.loads(body_json))
     resp_json = json.loads(response.text.encode('utf-8'))
     tmpl = ""
     if resp_json['status'] == 'success':
         tmpl = json.dumps(resp_json['data'])
     elif resp_json['status'] == 'fail':
-        return json_contents(jsonify(code=-1, msg="get-raw-transaction: " + resp_json['msg']))
+        print resp_json
+        return json_contents(jsonify(code=-1, msg="build-mainchain-tx: " + resp_json['msg']))
     else:
-        return json_contents(jsonify(code=-1, msg="get raw transaction fail"))
+        return json_contents(jsonify(code=-1, msg="build mainchain transaction fail"))
 
     # 签名
     #xpubs = request.json['root_xpubs']

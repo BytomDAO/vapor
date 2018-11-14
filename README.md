@@ -1,20 +1,13 @@
-Bytom Sidechain
+Vapor
 ====
 
-[![Build Status](https://travis-ci.org/Bytom/bytom.svg)](https://travis-ci.org/Bytom/bytom) [![AGPL v3](https://img.shields.io/badge/license-AGPL%20v3-brightgreen.svg)](./LICENSE)
+[![Build Status](https://travis-ci.org/Bytom/bytom.svg)](https://travis-ci.org/Bytom/vapor) [![AGPL v3](https://img.shields.io/badge/license-AGPL%20v3-brightgreen.svg)](./LICENSE)
 
-**Official golang implementation of the Bytom protocol.**
+**Golang implemented sidechain for Bytom.**
 
-Automated builds are available for stable releases and the unstable master branch. Binary archives are published at https://github.com/vapor/bytom/releases.
+## What is Vapor?
 
-## What is Bytom?
-
-Bytom is software designed to operate and connect to highly scalable blockchain networks confirming to the Bytom Blockchain Protocol, which allows partipicants to define, issue and transfer digitial assets on a multi-asset shared ledger. Please refer to the [White Paper](https://github.com/vapor/wiki/blob/master/White-Paper/%E6%AF%94%E5%8E%9F%E9%93%BE%E6%8A%80%E6%9C%AF%E7%99%BD%E7%9A%AE%E4%B9%A6-%E8%8B%B1%E6%96%87%E7%89%88.md) for more details.
-
-In the current state `bytom` is able to:
-
-- Manage key, account as well as asset
-- Send transactions, i.e., issue, spend and retire asset
+Vapor is software designed to extensions to the Bytom protocol, which allows partipicants to define, issue and transfer digitial assets on a multi-asset shared ledger or networks pegged to Bytom as a sidechain or run as a standalone blockchain.
 
 
 ## Building from source
@@ -42,32 +35,32 @@ $ git clone https://github.com/bytom/vapor.git $GOPATH/src/github.com/vapor
 
 ``` bash
 $ cd $GOPATH/src/github.com/vapor
-$ make bytomd    # build bytomd
-$ make bytomcli  # build bytomcli
+$ make vapor    # build vapor
+$ make vaporcli  # build vaporcli
 ```
 
-When successfully building the project, the `bytom` and `bytomcli` binary should be present in `cmd/bytomd` and `cmd/bytomcli` directory, respectively.
+When successfully building the project, the `vapor` and `vaporcli` binary should be present in `cmd/vapor` and `cmd/vaporcli` directory, respectively.
 
 ### Executables
 
-The Bytom project comes with several executables found in the `cmd` directory.
+The Vapor project comes with several executables found in the `cmd` directory.
 
 | Command      | Description                                                  |
 | ------------ | ------------------------------------------------------------ |
-| **bytomd**   | bytomd command can help to initialize and launch bytom domain by custom parameters. `bytomd --help` for command line options. |
-| **bytomcli** | Our main Bytom CLI client. It is the entry point into the Bytom network (main-, test- or private net), capable of running as a full node archive node (retaining all historical state). It can be used by other processes as a gateway into the Bytom network via JSON RPC endpoints exposed on top of HTTP, WebSocket and/or IPC transports. `bytomcli --help` and the [bytomcli Wiki page](https://github.com/vapor/bytom/wiki/Command-Line-Options) for command line options. |
+| **vapor**   | vapor command can help to initialize and launch vapor domain by custom parameters. `vapor --help` for command line options. |
+| **vaporcli** | Our main Vapor CLI client. It is the entry point into the Vapor network (main-, test- or private net), capable of running as a full node archive node (retaining all historical state). It can be used by other processes as a gateway into the Vapor network via JSON RPC endpoints exposed on top of HTTP, WebSocket and/or IPC transports. `vaporcli --help`. |
 
-## Running bytom
+## Running vapor
 
-Currently, bytom is still in active development and a ton of work needs to be done, but we also provide the following content for these eager to do something with `bytom`. This section won't cover all the commands of `bytomd` and `bytomcli` at length, for more information, please the help of every command, e.g., `bytomcli help`.
+Currently, vapor is still in active development and a ton of work needs to be done, but we also provide the following content for these eager to do something with `vapor`. This section won't cover all the commands of `vapor` and `vaporcli` at length, for more information, please the help of every command, e.g., `vaporcli help`.
 
 ### Initialize
 
 First of all, initialize the node:
 
 ```bash
-$ cd ./cmd/bytomd
-$ ./bytomd init --chain_id mainnet
+$ cd ./cmd/vapor
+$ ./vapor init --chain_id mainnet
 ```
 
 There are three options for the flag `--chain_id`:
@@ -81,13 +74,13 @@ After that, you'll see `config.toml` generated, then launch the node.
 ### launch
 
 ``` bash
-$ ./bytomd node
+$ ./vapor node
 ```
 
-available flags for `bytomd node`:
+available flags for `vapor node`:
 
 ```
-    --auth.disable                            Disable rpc access authenticate
+      --auth.disable                            Disable rpc access authenticate
       --chain_id string                         Select network type
   -h, --help                                    help for node
       --log_file string                         Log output file
@@ -117,13 +110,11 @@ available flags for `bytomd node`:
 
 ```
 
-Given the `bytomd` node is running, the general workflow is as follows:
+Given the `vapor` node is running, the general workflow is as follows:
 
-- create key, then you can create account and asset.
+- create key, then you can create account.
 - send transaction, i.e., build, sign and submit transaction.
 - query all kinds of information, let's say, avaliable key, account, key, balances, transactions, etc.
-
-For more details about using `bytomcli` command please refer to [API Reference](https://github.com/vapor/bytom/wiki/API-Reference)
 
 ### Dashboard
 
@@ -133,21 +124,20 @@ Access the dashboard:
 $ open http://localhost:8888/
 ```
 
+### Sidechain
+
+* [Sidechain deployment](docs/vapor-deployment.md)
+
 ### In Docker
 
 Ensure your [Docker](https://www.docker.com/) version is 17.05 or higher.
 
-```bash
-$ docker build -t bytom .
-```
-
-For the usage please refer to [running-in-docker-wiki](https://github.com/vapor/bytom/wiki/Running-in-Docker).
 
 ## Contributing
 
 Thank you for considering helping out with the source code! Any contributions are highly appreciated, and we are grateful for even the smallest of fixes!
 
-If you run into an issue, feel free to [bytom issues](https://github.com/vapor/bytom/issues/) in this repository. We are glad to help!
+If you run into an issue, feel free to [vapor issues](https://github.com/bytom/vapor/issues/) in this repository. We are glad to help!
 
 ## License
 

@@ -1,11 +1,11 @@
 Bytom version 1.0.2 is now available from:
 
-  https://github.com/vapor/bytom/releases/tag/v1.0.2
+  https://github.com/bytom/bytom/releases/tag/v1.0.2
 
 
 Please report bugs using the issue tracker at github:
 
-  https://github.com/vapor/bytom/issues
+  https://github.com/bytom/bytom/issues
 
 How to Upgrade
 ===============
