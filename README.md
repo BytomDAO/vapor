@@ -126,7 +126,7 @@ $ open http://localhost:8888/
 
 ### Sidechain
 
-* [Sidechain deployment](tools/side_chain_tool/README.md)
+* [Sidechain deployment](docs/vapor-deployment.md)
 
 ### In Docker
 
