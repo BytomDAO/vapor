@@ -128,11 +128,6 @@ $ open http://localhost:8888/
 
 * [Sidechain deployment](docs/vapor-deployment.md)
 
-### In Docker
-
-Ensure your [Docker](https://www.docker.com/) version is 17.05 or higher.
-
-
 ## Contributing
 
 Thank you for considering helping out with the source code! Any contributions are highly appreciated, and we are grateful for even the smallest of fixes!
