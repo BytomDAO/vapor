@@ -46,7 +46,7 @@ const (
 
 var (
 	// The full version string
-	Version = "1.0.5"
+	Version = "1.0.7"
 	// GitCommit is set with --ldflags "-X main.gitCommit=$(git rev-parse HEAD)"
 	GitCommit string
 	Status    *UpdateStatus
@@ -115,7 +115,7 @@ func (s *UpdateStatus) CheckUpdate(localVerStr string, remoteVerStr string, remo
 			"Current version": localVerStr,
 			"Newer version":   remoteVerStr,
 			"seed":            remoteAddr,
-		}).Warn("Please update your bytomd via https://github.com/vapor/bytom/releases/ or http://bytom.io/wallet/")
+		}).Warn("Please update your bytomd via https://github.com/Bytom/vapor/releases/ or http://bytom.io/wallet/")
 		s.notified = true
 	}
 	return nil

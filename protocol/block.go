@@ -1,8 +1,6 @@
 package protocol
 
 import (
-	"fmt"
-
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/errors"
@@ -88,7 +86,6 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	if err := utxoView.ApplyBlock(bcBlock, bcBlock.TransactionStatus); err != nil {
 		return err
 	}
-	fmt.Println(utxoView)
 	node := c.index.GetNode(&bcBlock.ID)
 	if err := c.setState(node, utxoView); err != nil {
 		return err

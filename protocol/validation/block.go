@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
@@ -11,6 +13,8 @@ import (
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
 )
+
+const logModule = "leveldb"
 
 var (
 	errBadTimestamp          = errors.New("block timestamp is not in the valid range")
@@ -73,6 +77,7 @@ func ValidateBlockHeader(b *bc.Block, parent *state.BlockNode) error {
 
 // ValidateBlock validates a block and the transactions within.
 func ValidateBlock(b *bc.Block, parent *state.BlockNode, block *types.Block, authoritys map[string]string, position uint64) error {
+	startTime := time.Now()
 	if err := ValidateBlockHeader(b, parent); err != nil {
 		return err
 	}
@@ -125,5 +130,12 @@ func ValidateBlock(b *bc.Block, parent *state.BlockNode, block *types.Block, aut
 	if txStatusHash != *b.TransactionStatusHash {
 		return errors.WithDetailf(errMismatchedMerkleRoot, "transaction status merkle root")
 	}
+
+	log.WithFields(log.Fields{
+		"module":   logModule,
+		"height":   b.Height,
+		"hash":     b.ID.String(),
+		"duration": time.Since(startTime),
+	}).Debug("finish validate block")
 	return nil
 }

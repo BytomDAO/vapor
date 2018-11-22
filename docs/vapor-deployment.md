@@ -3,8 +3,8 @@
 ## 启动 vapor
 
 ```
-./bytomd-sidechain init --chain_id solonet -r "side_chain"
-./bytomd-sidechain node -r "side_chain"
+./vapor init --chain_id solonet -r "side_chain"
+./vapor node -r "side_chain"
 ```
 
 ## 获取公私钥

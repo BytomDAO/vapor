@@ -37,6 +37,7 @@ import (
 var (
 	defaultTxTTL    = 5 * time.Minute
 	defaultBaseRate = float64(100000)
+	flexibleGas     = int64(1800)
 )
 
 func (a *API) actionDecoder(action string) (func([]byte) (txbuilder.Action, error), bool) {
@@ -69,47 +70,15 @@ func onlyHaveInputActions(req *BuildRequest) (bool, error) {
 }
 
 func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Template, error) {
-	if err := a.completeMissingIDs(ctx, req); err != nil {
+	if err := a.checkRequestValidity(ctx, req); err != nil {
+		return nil, err
+	}
+	actions, err := a.mergeSpendActions(req)
+	if err != nil {
 		return nil, err
 	}
 
-	if ok, err := onlyHaveInputActions(req); err != nil {
-		return nil, err
-	} else if ok {
-		return nil, errors.WithDetail(ErrBadActionConstruction, "transaction contains only input actions and no output actions")
-	}
-
-	actions := make([]txbuilder.Action, 0, len(req.Actions))
-	for i, act := range req.Actions {
-		typ, ok := act["type"].(string)
-		if !ok {
-			return nil, errors.WithDetailf(ErrBadActionType, "no action type provided on action %d", i)
-		}
-		decoder, ok := a.actionDecoder(typ)
-		if !ok {
-			return nil, errors.WithDetailf(ErrBadActionType, "unknown action type %q on action %d", typ, i)
-		}
-
-		// Remarshal to JSON, the action may have been modified when we
-		// filtered aliases.
-		b, err := json.Marshal(act)
-		if err != nil {
-			return nil, err
-		}
-		action, err := decoder(b)
-		if err != nil {
-			return nil, errors.WithDetailf(ErrBadAction, "%s on action %d", err.Error(), i)
-		}
-		actions = append(actions, action)
-	}
-	actions = account.MergeSpendAction(actions)
-
-	ttl := req.TTL.Duration
-	if ttl == 0 {
-		ttl = defaultTxTTL
-	}
-	maxTime := time.Now().Add(ttl)
-
+	maxTime := time.Now().Add(req.TTL.Duration)
 	tpl, err := txbuilder.Build(ctx, req.Tx, actions, maxTime, req.TimeRange)
 	if errors.Root(err) == txbuilder.ErrAction {
 		// append each of the inner errors contained in the data.
@@ -137,13 +106,100 @@ func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Te
 // POST /build-transaction
 func (a *API) build(ctx context.Context, buildReqs *BuildRequest) Response {
 	subctx := reqid.NewSubContext(ctx, reqid.New())
-
 	tmpl, err := a.buildSingle(subctx, buildReqs)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
 
 	return NewSuccessResponse(tmpl)
+}
+func (a *API) checkRequestValidity(ctx context.Context, req *BuildRequest) error {
+	if err := a.completeMissingIDs(ctx, req); err != nil {
+		return err
+	}
+
+	if req.TTL.Duration == 0 {
+		req.TTL.Duration = defaultTxTTL
+	}
+
+	if ok, err := onlyHaveInputActions(req); err != nil {
+		return err
+	} else if ok {
+		return errors.WithDetail(ErrBadActionConstruction, "transaction contains only input actions and no output actions")
+	}
+	return nil
+}
+
+func (a *API) mergeSpendActions(req *BuildRequest) ([]txbuilder.Action, error) {
+	actions := make([]txbuilder.Action, 0, len(req.Actions))
+	for i, act := range req.Actions {
+		typ, ok := act["type"].(string)
+		if !ok {
+			return nil, errors.WithDetailf(ErrBadActionType, "no action type provided on action %d", i)
+		}
+		decoder, ok := a.actionDecoder(typ)
+		if !ok {
+			return nil, errors.WithDetailf(ErrBadActionType, "unknown action type %q on action %d", typ, i)
+		}
+
+		// Remarshal to JSON, the action may have been modified when we
+		// filtered aliases.
+		b, err := json.Marshal(act)
+		if err != nil {
+			return nil, err
+		}
+		action, err := decoder(b)
+		if err != nil {
+			return nil, errors.WithDetailf(ErrBadAction, "%s on action %d", err.Error(), i)
+		}
+		actions = append(actions, action)
+	}
+	actions = account.MergeSpendAction(actions)
+	return actions, nil
+}
+
+func (a *API) buildTxs(ctx context.Context, req *BuildRequest) ([]*txbuilder.Template, error) {
+	if err := a.checkRequestValidity(ctx, req); err != nil {
+		return nil, err
+	}
+	actions, err := a.mergeSpendActions(req)
+	if err != nil {
+		return nil, err
+	}
+
+	builder := txbuilder.NewBuilder(time.Now().Add(req.TTL.Duration))
+	tpls := []*txbuilder.Template{}
+	for _, action := range actions {
+		if action.ActionType() == "spend_account" {
+			tpls, err = account.SpendAccountChain(ctx, builder, action)
+		} else {
+			err = action.Build(ctx, builder)
+		}
+
+		if err != nil {
+			builder.Rollback()
+			return nil, err
+		}
+	}
+
+	tpl, _, err := builder.Build()
+	if err != nil {
+		builder.Rollback()
+		return nil, err
+	}
+
+	tpls = append(tpls, tpl)
+	return tpls, nil
+}
+
+// POST /build-chain-transactions
+func (a *API) buildChainTxs(ctx context.Context, buildReqs *BuildRequest) Response {
+	subctx := reqid.NewSubContext(ctx, reqid.New())
+	tmpls, err := a.buildTxs(subctx, buildReqs)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(tmpls)
 }
 
 type submitTxResp struct {
@@ -160,6 +216,25 @@ func (a *API) submit(ctx context.Context, ins struct {
 
 	log.WithField("tx_id", ins.Tx.ID.String()).Info("submit single tx")
 	return NewSuccessResponse(&submitTxResp{TxID: &ins.Tx.ID})
+}
+
+type submitTxsResp struct {
+	TxID []*bc.Hash `json:"tx_id"`
+}
+
+// POST /submit-transactions
+func (a *API) submitTxs(ctx context.Context, ins struct {
+	Tx []types.Tx `json:"raw_transactions"`
+}) Response {
+	txHashs := []*bc.Hash{}
+	for i := range ins.Tx {
+		if err := txbuilder.FinalizeTx(ctx, a.chain, &ins.Tx[i]); err != nil {
+			return NewErrorResponse(err)
+		}
+		log.WithField("tx_id", ins.Tx[i].ID.String()).Info("submit single tx")
+		txHashs = append(txHashs, &ins.Tx[i].ID)
+	}
+	return NewSuccessResponse(&submitTxsResp{TxID: txHashs})
 }
 
 // EstimateTxGasResp estimate transaction consumed gas
@@ -191,6 +266,7 @@ func EstimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
 	totalP2WPKHGas := int64(0)
 	totalP2WSHGas := int64(0)
 	baseP2WPKHGas := int64(1419)
+	// flexible Gas is used for handle need extra utxo situation
 
 	for pos, inpID := range template.Transaction.Tx.InputIDs {
 		sp, err := template.Transaction.Spend(inpID)
@@ -212,7 +288,7 @@ func EstimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
 	}
 
 	// total estimate gas
-	totalGas := totalTxSizeGas + totalP2WPKHGas + totalP2WSHGas
+	totalGas := totalTxSizeGas + totalP2WPKHGas + totalP2WSHGas + flexibleGas
 
 	// rounding totalNeu with base rate 100000
 	totalNeu := float64(totalGas*consensus.VMGasRate) / defaultBaseRate
@@ -503,7 +579,7 @@ func (a *API) buildMainChainTx(ins struct {
 	acc := &account.Account{}
 	var err error
 	if acc, err = a.wallet.AccountMgr.FindByAlias(ins.Alias); err != nil {
-		acc, err = a.wallet.AccountMgr.Create(xpubs, len(xpubs), ins.Alias)
+		acc, err = a.wallet.AccountMgr.Create(xpubs, len(xpubs), ins.Alias, signers.BIP0044)
 		if err != nil {
 			return NewErrorResponse(err)
 		}
@@ -619,7 +695,8 @@ func utxoToInputs(signer *signers.Signer, u *account.UTXO) (*bytomtypes.TxInput,
 		return txInput, sigInst, nil
 	}
 
-	path := signers.Path(signer, signers.AccountKeySpace, u.ControlProgramIndex)
+	// TODO  u.Change看怎么填写
+	path, _ := signers.Path(signer, signers.AccountKeySpace, u.Change, u.ControlProgramIndex)
 	if u.Address == "" {
 		sigInst.AddWitnessKeys(signer.XPubs, path, signer.Quorum)
 		return txInput, sigInst, nil

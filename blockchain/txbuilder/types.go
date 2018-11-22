@@ -14,7 +14,7 @@ import (
 type Template struct {
 	Transaction         *types.Tx             `json:"raw_transaction"`
 	SigningInstructions []*SigningInstruction `json:"signing_instructions"`
-
+	Fee                 uint64                `json:"fee"`
 	// AllowAdditional affects whether Sign commits to the tx sighash or
 	// to individual details of the tx so far. When true, signatures
 	// commit to tx details, and new details may be added but existing
@@ -31,6 +31,7 @@ func (t *Template) Hash(idx uint32) bc.Hash {
 // Action is a interface
 type Action interface {
 	Build(context.Context, *TemplateBuilder) error
+	ActionType() string
 }
 
 // Receiver encapsulates information about where to send assets.
@@ -53,5 +54,20 @@ type RawTxSigArgument struct {
 
 // DataArgument is the other argument for run contract
 type DataArgument struct {
+	Value chainjson.HexBytes `json:"value"`
+}
+
+// StrArgument is the string argument for run contract
+type StrArgument struct {
 	Value string `json:"value"`
+}
+
+// IntegerArgument is the integer argument for run contract
+type IntegerArgument struct {
+	Value int64 `json:"value"`
+}
+
+// BoolArgument is the boolean argument for run contract
+type BoolArgument struct {
+	Value bool `json:"value"`
 }

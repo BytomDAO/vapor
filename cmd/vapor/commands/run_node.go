@@ -36,13 +36,19 @@ func init() {
 	runNodeCmd.Flags().String("p2p.laddr", config.P2P.ListenAddress, "Node listen address. (0.0.0.0:0 means any interface, any port)")
 	runNodeCmd.Flags().String("p2p.seeds", config.P2P.Seeds, "Comma delimited host:port seed nodes")
 	runNodeCmd.Flags().Bool("p2p.skip_upnp", config.P2P.SkipUPNP, "Skip UPNP configuration")
-	runNodeCmd.Flags().Bool("p2p.pex", config.P2P.PexReactor, "Enable Peer-Exchange ")
 	runNodeCmd.Flags().Int("p2p.max_num_peers", config.P2P.MaxNumPeers, "Set max num peers")
 	runNodeCmd.Flags().Int("p2p.handshake_timeout", config.P2P.HandshakeTimeout, "Set handshake timeout")
 	runNodeCmd.Flags().Int("p2p.dial_timeout", config.P2P.DialTimeout, "Set dial timeout")
+	runNodeCmd.Flags().String("p2p.proxy_address", config.P2P.ProxyAddress, "Connect via SOCKS5 proxy (eg. 127.0.0.1:1086)")
+	runNodeCmd.Flags().String("p2p.proxy_username", config.P2P.ProxyUsername, "Username for proxy server")
+	runNodeCmd.Flags().String("p2p.proxy_password", config.P2P.ProxyPassword, "Password for proxy server")
 
 	// log flags
 	runNodeCmd.Flags().String("log_file", config.LogFile, "Log output file")
+
+	// websocket flags
+	runNodeCmd.Flags().Int("ws.max_num_websockets", config.Websocket.MaxNumWebsockets, "Max number of websocket connections")
+	runNodeCmd.Flags().Int("ws.max_num_concurrent_reqs", config.Websocket.MaxNumConcurrentReqs, "Max number of concurrent websocket requests that may be processed concurrently")
 
 	//sidecain
 	runNodeCmd.Flags().String("side.fedpeg_xpubs", config.Side.FedpegXPubs, "Change federated peg to use a different xpub.")
@@ -57,7 +63,7 @@ func init() {
 	//mainchaintoken
 	runNodeCmd.Flags().String("mainchain.mainchain_token", config.MainChain.MainchainToken, "The rpc token that the daemon will use to connect to validate peg-ins, if enabled.")
 
-	//mainchaintoken
+	//Signer
 	runNodeCmd.Flags().String("signer", config.Signer, "The signer corresponds to xpub of signblock")
 	runNodeCmd.Flags().String("side.sign_block_xpubs", config.Side.SignBlockXPubs, "Change federated peg to use a different xpub.")
 

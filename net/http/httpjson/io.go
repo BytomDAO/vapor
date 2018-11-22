@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"reflect"
 
-	"github.com/vapor/errors"
 	log "github.com/sirupsen/logrus"
+	"github.com/vapor/errors"
 )
 
 // ErrBadRequest indicates the user supplied malformed JSON input,

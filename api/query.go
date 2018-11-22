@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/vapor/blockchain/txbuilder"
+	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/protocol/bc/types/bytom"
 
 	log "github.com/sirupsen/logrus"
@@ -76,8 +78,20 @@ func (a *API) listAssets(ctx context.Context, filter struct {
 }
 
 // POST /list-balances
-func (a *API) listBalances(ctx context.Context) Response {
-	balances, err := a.wallet.GetAccountBalances("")
+func (a *API) listBalances(ctx context.Context, filter struct {
+	AccountID    string `json:"account_id"`
+	AccountAlias string `json:"account_alias"`
+}) Response {
+	accountID := filter.AccountID
+	if filter.AccountAlias != "" {
+		acc, err := a.wallet.AccountMgr.FindByAlias(filter.AccountAlias)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+		accountID = acc.ID
+	}
+
+	balances, err := a.wallet.GetAccountBalances(accountID, "")
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -170,7 +184,16 @@ func (a *API) getUnconfirmedTx(ctx context.Context, filter struct {
 		TimeRange:  txDesc.Tx.TimeRange,
 		Inputs:     []*query.AnnotatedInput{},
 		Outputs:    []*query.AnnotatedOutput{},
-		StatusFail: false,
+		StatusFail: txDesc.StatusFail,
+	}
+
+	resOutID := txDesc.Tx.ResultIds[0]
+	resOut := txDesc.Tx.Entries[*resOutID]
+	switch out := resOut.(type) {
+	case *bc.Output:
+		tx.MuxID = *out.Source.Ref
+	case *bc.Retirement:
+		tx.MuxID = *out.Source.Ref
 	}
 
 	for i := range txDesc.Tx.Inputs {
@@ -212,7 +235,7 @@ type RawTx struct {
 	TimeRange uint64                   `json:"time_range"`
 	Inputs    []*query.AnnotatedInput  `json:"inputs"`
 	Outputs   []*query.AnnotatedOutput `json:"outputs"`
-	Fee       int64                    `json:"fee"`
+	Fee       uint64                   `json:"fee"`
 }
 
 // POST /decode-raw-transaction
@@ -235,22 +258,159 @@ func (a *API) decodeRawTransaction(ctx context.Context, ins struct {
 		tx.Outputs = append(tx.Outputs, a.wallet.BuildAnnotatedOutput(&ins.Tx, i))
 	}
 
-	totalInputBtm := uint64(0)
-	totalOutputBtm := uint64(0)
-	for _, input := range tx.Inputs {
-		if input.AssetID.String() == consensus.BTMAssetID.String() {
-			totalInputBtm += input.Amount
-		}
-	}
-
-	for _, output := range tx.Outputs {
-		if output.AssetID.String() == consensus.BTMAssetID.String() {
-			totalOutputBtm += output.Amount
-		}
-	}
-
-	tx.Fee = int64(totalInputBtm) - int64(totalOutputBtm)
+	tx.Fee = txbuilder.CalculateTxFee(&ins.Tx)
 	return NewSuccessResponse(tx)
+}
+
+// POST /list-unspent-outputs
+func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
+	AccountID     string `json:"account_id"`
+	AccountAlias  string `json:"account_alias"`
+	ID            string `json:"id"`
+	Unconfirmed   bool   `json:"unconfirmed"`
+	SmartContract bool   `json:"smart_contract"`
+	From          uint   `json:"from"`
+	Count         uint   `json:"count"`
+}) Response {
+	accountID := filter.AccountID
+	if filter.AccountAlias != "" {
+		acc, err := a.wallet.AccountMgr.FindByAlias(filter.AccountAlias)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+		accountID = acc.ID
+	}
+	accountUTXOs := a.wallet.GetAccountUtxos(accountID, filter.ID, filter.Unconfirmed, filter.SmartContract)
+
+	UTXOs := []query.AnnotatedUTXO{}
+	for _, utxo := range accountUTXOs {
+		UTXOs = append([]query.AnnotatedUTXO{{
+			AccountID:           utxo.AccountID,
+			OutputID:            utxo.OutputID.String(),
+			SourceID:            utxo.SourceID.String(),
+			AssetID:             utxo.AssetID.String(),
+			Amount:              utxo.Amount,
+			SourcePos:           utxo.SourcePos,
+			Program:             fmt.Sprintf("%x", utxo.ControlProgram),
+			ControlProgramIndex: utxo.ControlProgramIndex,
+			Address:             utxo.Address,
+			ValidHeight:         utxo.ValidHeight,
+			Alias:               a.wallet.AccountMgr.GetAliasByID(utxo.AccountID),
+			AssetAlias:          a.wallet.AssetReg.GetAliasByID(utxo.AssetID.String()),
+			Change:              utxo.Change,
+		}}, UTXOs...)
+	}
+	start, end := getPageRange(len(UTXOs), filter.From, filter.Count)
+	return NewSuccessResponse(UTXOs[start:end])
+}
+
+// return gasRate
+func (a *API) gasRate() Response {
+	gasrate := map[string]int64{"gas_rate": consensus.VMGasRate}
+	return NewSuccessResponse(gasrate)
+}
+
+// PubKeyInfo is structure of pubkey info
+type PubKeyInfo struct {
+	Pubkey string               `json:"pubkey"`
+	Path   []chainjson.HexBytes `json:"derivation_path"`
+}
+
+// AccountPubkey is detail of account pubkey info
+type AccountPubkey struct {
+	RootXPub    chainkd.XPub `json:"root_xpub"`
+	PubKeyInfos []PubKeyInfo `json:"pubkey_infos"`
+}
+
+func getPubkey(account *account.Account, change bool, index uint64) (*ed25519.PublicKey, []chainjson.HexBytes, error) {
+	rawPath, err := signers.Path(account.Signer, signers.AccountKeySpace, change, index)
+	if err != nil {
+		return nil, nil, err
+	}
+	derivedXPub := account.XPubs[0].Derive(rawPath)
+	pubkey := derivedXPub.PublicKey()
+	var path []chainjson.HexBytes
+	for _, p := range rawPath {
+		path = append(path, chainjson.HexBytes(p))
+	}
+
+	return &pubkey, path, nil
+}
+
+// POST /list-pubkeys
+func (a *API) listPubKeys(ctx context.Context, ins struct {
+	AccountID    string `json:"account_id"`
+	AccountAlias string `json:"account_alias"`
+	PublicKey    string `json:"public_key"`
+}) Response {
+	var err error
+	account := &account.Account{}
+	if ins.AccountAlias != "" {
+		account, err = a.wallet.AccountMgr.FindByAlias(ins.AccountAlias)
+	} else {
+		account, err = a.wallet.AccountMgr.FindByID(ins.AccountID)
+	}
+
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	pubKeyInfos := []PubKeyInfo{}
+	if account.DeriveRule == signers.BIP0032 {
+		idx := a.wallet.AccountMgr.GetContractIndex(account.ID)
+		for i := uint64(1); i <= idx; i++ {
+			pubkey, path, err := getPubkey(account, false, i)
+			if err != nil {
+				return NewErrorResponse(err)
+			}
+			if ins.PublicKey != "" && ins.PublicKey != hex.EncodeToString(*pubkey) {
+				continue
+			}
+			pubKeyInfos = append(pubKeyInfos, PubKeyInfo{
+				Pubkey: hex.EncodeToString(*pubkey),
+				Path:   path,
+			})
+		}
+	} else if account.DeriveRule == signers.BIP0044 {
+		idx := a.wallet.AccountMgr.GetBip44ContractIndex(account.ID, true)
+		for i := uint64(1); i <= idx; i++ {
+			pubkey, path, err := getPubkey(account, true, i)
+			if err != nil {
+				return NewErrorResponse(err)
+			}
+			if ins.PublicKey != "" && ins.PublicKey != hex.EncodeToString(*pubkey) {
+				continue
+			}
+			pubKeyInfos = append(pubKeyInfos, PubKeyInfo{
+				Pubkey: hex.EncodeToString(*pubkey),
+				Path:   path,
+			})
+		}
+
+		idx = a.wallet.AccountMgr.GetBip44ContractIndex(account.ID, false)
+		for i := uint64(1); i <= idx; i++ {
+			pubkey, path, err := getPubkey(account, false, i)
+			if err != nil {
+				return NewErrorResponse(err)
+			}
+			if ins.PublicKey != "" && ins.PublicKey != hex.EncodeToString(*pubkey) {
+				continue
+			}
+			pubKeyInfos = append(pubKeyInfos, PubKeyInfo{
+				Pubkey: hex.EncodeToString(*pubkey),
+				Path:   path,
+			})
+		}
+	}
+
+	if len(pubKeyInfos) == 0 {
+		return NewErrorResponse(errors.New("Not found publickey for the account"))
+	}
+
+	return NewSuccessResponse(&AccountPubkey{
+		RootXPub:    account.XPubs[0],
+		PubKeyInfos: pubKeyInfos,
+	})
 }
 
 type GetRawTransationResp struct {
@@ -387,104 +547,4 @@ func (a *API) getUnspentOutputs(ins struct {
 	}
 
 	return NewSuccessResponse(&utxoResp{Utxo: utxo})
-}
-
-// POST /list-unspent-outputs
-func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
-	ID            string `json:"id"`
-	Unconfirmed   bool   `json:"unconfirmed"`
-	SmartContract bool   `json:"smart_contract"`
-	From          uint   `json:"from"`
-	Count         uint   `json:"count"`
-}) Response {
-	accountUTXOs := a.wallet.GetAccountUtxos(filter.ID, filter.Unconfirmed, filter.SmartContract)
-
-	UTXOs := []query.AnnotatedUTXO{}
-	for _, utxo := range accountUTXOs {
-		UTXOs = append([]query.AnnotatedUTXO{{
-			AccountID:           utxo.AccountID,
-			OutputID:            utxo.OutputID.String(),
-			SourceID:            utxo.SourceID.String(),
-			AssetID:             utxo.AssetID.String(),
-			Amount:              utxo.Amount,
-			SourcePos:           utxo.SourcePos,
-			Program:             fmt.Sprintf("%x", utxo.ControlProgram),
-			ControlProgramIndex: utxo.ControlProgramIndex,
-			Address:             utxo.Address,
-			ValidHeight:         utxo.ValidHeight,
-			Alias:               a.wallet.AccountMgr.GetAliasByID(utxo.AccountID),
-			AssetAlias:          a.wallet.AssetReg.GetAliasByID(utxo.AssetID.String()),
-			Change:              utxo.Change,
-		}}, UTXOs...)
-	}
-	start, end := getPageRange(len(UTXOs), filter.From, filter.Count)
-	return NewSuccessResponse(UTXOs[start:end])
-}
-
-// return gasRate
-func (a *API) gasRate() Response {
-	gasrate := map[string]int64{"gas_rate": consensus.VMGasRate}
-	return NewSuccessResponse(gasrate)
-}
-
-// PubKeyInfo is structure of pubkey info
-type PubKeyInfo struct {
-	Pubkey string               `json:"pubkey"`
-	Path   []chainjson.HexBytes `json:"derivation_path"`
-}
-
-// AccountPubkey is detail of account pubkey info
-type AccountPubkey struct {
-	RootXPub    chainkd.XPub `json:"root_xpub"`
-	PubKeyInfos []PubKeyInfo `json:"pubkey_infos"`
-}
-
-// POST /list-pubkeys
-func (a *API) listPubKeys(ctx context.Context, ins struct {
-	AccountID    string `json:"account_id"`
-	AccountAlias string `json:"account_alias"`
-	PublicKey    string `json:"public_key"`
-}) Response {
-	var err error
-	account := &account.Account{}
-	if ins.AccountAlias != "" {
-		account, err = a.wallet.AccountMgr.FindByAlias(ins.AccountAlias)
-	} else {
-		account, err = a.wallet.AccountMgr.FindByID(ins.AccountID)
-	}
-
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	pubKeyInfos := []PubKeyInfo{}
-	idx := a.wallet.AccountMgr.GetContractIndex(account.ID)
-	for i := uint64(1); i <= idx; i++ {
-		rawPath := signers.Path(account.Signer, signers.AccountKeySpace, i)
-		derivedXPub := account.XPubs[0].Derive(rawPath)
-		pubkey := derivedXPub.PublicKey()
-
-		if ins.PublicKey != "" && ins.PublicKey != hex.EncodeToString(pubkey) {
-			continue
-		}
-
-		var path []chainjson.HexBytes
-		for _, p := range rawPath {
-			path = append(path, chainjson.HexBytes(p))
-		}
-
-		pubKeyInfos = append(pubKeyInfos, PubKeyInfo{
-			Pubkey: hex.EncodeToString(pubkey),
-			Path:   path,
-		})
-	}
-
-	if len(pubKeyInfos) == 0 {
-		return NewErrorResponse(errors.New("Not found publickey for the account"))
-	}
-
-	return NewSuccessResponse(&AccountPubkey{
-		RootXPub:    account.XPubs[0],
-		PubKeyInfos: pubKeyInfos,
-	})
 }

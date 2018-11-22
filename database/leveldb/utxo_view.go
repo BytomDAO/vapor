@@ -3,11 +3,11 @@ package leveldb
 import (
 	dbm "github.com/tendermint/tmlibs/db"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/vapor/database/storage"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/state"
-	"github.com/golang/protobuf/proto"
 )
 
 const utxoPreFix = "UT:"

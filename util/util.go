@@ -3,9 +3,9 @@ package util
 import (
 	"context"
 
+	jww "github.com/spf13/jwalterweatherman"
 	"github.com/vapor/blockchain/rpc"
 	"github.com/vapor/env"
-	jww "github.com/spf13/jwalterweatherman"
 )
 
 const (

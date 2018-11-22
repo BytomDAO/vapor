@@ -87,6 +87,8 @@ clean:
 	@rm -rf cmd/bytomcli/bytomcli
 	@rm -rf cmd/miner/miner
 	@rm -rf target
+	@rm -rf $(GOPATH)/bin/vapor
+	@rm -rf $(GOPATH)/bin/vaporcli
 	@echo "Cleaning temp test data..."
 	@rm -rf test/pseudo_hsm*
 	@rm -rf blockchain/pseudohsm/testdata/pseudo/

@@ -23,8 +23,10 @@ import (
 	"github.com/vapor/net/http/gzip"
 	"github.com/vapor/net/http/httpjson"
 	"github.com/vapor/net/http/static"
+	"github.com/vapor/net/websocket"
 	"github.com/vapor/netsync"
 	"github.com/vapor/protocol"
+	"github.com/vapor/protocol/bc"
 	"github.com/vapor/wallet"
 )
 
@@ -38,8 +40,7 @@ const (
 	// SUCCESS indicates the rpc calling is successful.
 	SUCCESS = "success"
 	// FAIL indicated the rpc calling is failed.
-	FAIL               = "fail"
-	crosscoreRPCPrefix = "/rpc/"
+	FAIL = "fail"
 )
 
 // Response describes the response standard.
@@ -104,15 +105,17 @@ func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 // API is the scheduling center for server
 type API struct {
-	sync          *netsync.SyncManager
-	wallet        *wallet.Wallet
-	accessTokens  *accesstoken.CredentialStore
-	chain         *protocol.Chain
-	server        *http.Server
-	handler       http.Handler
-	txFeedTracker *txfeed.Tracker
-	cpuMiner      *cpuminer.CPUMiner
-	miningPool    *miningpool.MiningPool
+	sync            *netsync.SyncManager
+	wallet          *wallet.Wallet
+	accessTokens    *accesstoken.CredentialStore
+	chain           *protocol.Chain
+	server          *http.Server
+	handler         http.Handler
+	txFeedTracker   *txfeed.Tracker
+	cpuMiner        *cpuminer.CPUMiner
+	miningPool      *miningpool.MiningPool
+	notificationMgr *websocket.WSNotificationManager
+	newBlockCh      chan *bc.Hash
 }
 
 func (a *API) initServer(config *cfg.Config) {
@@ -125,10 +128,7 @@ func (a *API) initServer(config *cfg.Config) {
 	mux := http.NewServeMux()
 	mux.Handle("/", &coreHandler)
 
-	handler = mux
-	if config.Auth.Disable == false {
-		handler = AuthHandler(handler, a.accessTokens)
-	}
+	handler = AuthHandler(mux, a.accessTokens, config.Auth.Disable)
 	handler = RedirectHandler(handler)
 
 	secureheader.DefaultConfig.PermitClearLoopback = true
@@ -169,7 +169,7 @@ func (a *API) StartServer(address string) {
 }
 
 // NewAPI create and initialize the API
-func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, cpuMiner *cpuminer.CPUMiner, miningPool *miningpool.MiningPool, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore) *API {
+func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, cpuMiner *cpuminer.CPUMiner, miningPool *miningpool.MiningPool, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, newBlockCh chan *bc.Hash, notificationMgr *websocket.WSNotificationManager) *API {
 	api := &API{
 		sync:          sync,
 		wallet:        wallet,
@@ -178,6 +178,9 @@ func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tr
 		txFeedTracker: txfeeds,
 		cpuMiner:      cpuMiner,
 		miningPool:    miningPool,
+
+		newBlockCh:      newBlockCh,
+		notificationMgr: notificationMgr,
 	}
 	api.buildHandler()
 	api.initServer(config)
@@ -197,6 +200,7 @@ func (a *API) buildHandler() {
 		walletEnable = true
 
 		m.Handle("/create-account", jsonHandler(a.createAccount))
+		m.Handle("/update-account-alias", jsonHandler(a.updateAccountAlias))
 		m.Handle("/list-accounts", jsonHandler(a.listAccounts))
 		m.Handle("/delete-account", jsonHandler(a.deleteAccount))
 
@@ -217,6 +221,7 @@ func (a *API) buildHandler() {
 		m.Handle("/list-assets", jsonHandler(a.listAssets))
 
 		m.Handle("/create-key", jsonHandler(a.pseudohsmCreateKey))
+		m.Handle("/update-key-alias", jsonHandler(a.pseudohsmUpdateKeyAlias))
 		m.Handle("/list-keys", jsonHandler(a.pseudohsmListKeys))
 		m.Handle("/delete-key", jsonHandler(a.pseudohsmDeleteKey))
 		m.Handle("/reset-key-password", jsonHandler(a.pseudohsmResetPassword))
@@ -224,7 +229,9 @@ func (a *API) buildHandler() {
 		m.Handle("/sign-message", jsonHandler(a.signMessage))
 
 		m.Handle("/build-transaction", jsonHandler(a.build))
-		m.Handle("/sign-transaction", jsonHandler(a.pseudohsmSignTemplates))
+		m.Handle("/build-chain-transactions", jsonHandler(a.buildChainTxs))
+		m.Handle("/sign-transaction", jsonHandler(a.signTemplate))
+		m.Handle("/sign-transactions", jsonHandler(a.signTemplates))
 
 		m.Handle("/get-transaction", jsonHandler(a.getTransaction))
 		m.Handle("/list-transactions", jsonHandler(a.listTransactions))
@@ -232,10 +239,13 @@ func (a *API) buildHandler() {
 		m.Handle("/list-balances", jsonHandler(a.listBalances))
 		m.Handle("/list-unspent-outputs", jsonHandler(a.listUnspentOutputs))
 
+		m.Handle("/decode-program", jsonHandler(a.decodeProgram))
+
 		m.Handle("/backup-wallet", jsonHandler(a.backupWalletImage))
 		m.Handle("/restore-wallet", jsonHandler(a.restoreWalletImage))
 		m.Handle("/rescan-wallet", jsonHandler(a.rescanWallet))
 		m.Handle("/wallet-info", jsonHandler(a.getWalletInfo))
+		m.Handle("/recovery-wallet", jsonHandler(a.recoveryFromRootXPubs))
 
 		m.Handle("/get-pegin-address", jsonHandler(a.getPeginAddress))
 		m.Handle("/claim-pegin-transaction", jsonHandler(a.claimPeginTx))
@@ -244,7 +254,6 @@ func (a *API) buildHandler() {
 		m.Handle("/get-side-raw-transaction", jsonHandler(a.getSideRawTransaction))
 		m.Handle("/build-mainchain-tx", jsonHandler(a.buildMainChainTx))
 		m.Handle("/sign-with-key", jsonHandler(a.signWithKey))
-
 	} else {
 		log.Warn("Please enable wallet")
 	}
@@ -264,6 +273,7 @@ func (a *API) buildHandler() {
 	m.Handle("/list-transaction-feeds", jsonHandler(a.listTxFeeds))
 
 	m.Handle("/submit-transaction", jsonHandler(a.submit))
+	m.Handle("/submit-transactions", jsonHandler(a.submitTxs))
 	m.Handle("/estimate-transaction-gas", jsonHandler(a.estimateTxGas))
 
 	m.Handle("/get-unconfirmed-transaction", jsonHandler(a.getUnconfirmedTx))
@@ -284,11 +294,11 @@ func (a *API) buildHandler() {
 
 	m.Handle("/get-work", jsonHandler(a.getWork))
 	m.Handle("/get-work-json", jsonHandler(a.getWorkJSON))
+	m.Handle("/submit-block", jsonHandler(a.submitBlock))
 	m.Handle("/submit-work", jsonHandler(a.submitWork))
 	m.Handle("/submit-work-json", jsonHandler(a.submitWorkJSON))
 
 	m.Handle("/verify-message", jsonHandler(a.verifyMessage))
-	m.Handle("/decode-program", jsonHandler(a.decodeProgram))
 	m.Handle("/compile", jsonHandler(a.compileEquity))
 
 	m.Handle("/gas-rate", jsonHandler(a.gasRate))
@@ -300,24 +310,13 @@ func (a *API) buildHandler() {
 
 	m.Handle("/get-merkle-proof", jsonHandler(a.getMerkleProof))
 
+	m.HandleFunc("/websocket-subscribe", a.websocketHandler)
+
 	handler := latencyHandler(m, walletEnable)
-	handler = maxBytesHandler(handler) // TODO(tessr): consider moving this to non-core specific mux
 	handler = webAssetsHandler(handler)
 	handler = gzip.Handler{Handler: handler}
 
 	a.handler = handler
-}
-
-func maxBytesHandler(h http.Handler) http.Handler {
-	const maxReqSize = 1e7 // 10MB
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		// A block can easily be bigger than maxReqSize, but everything
-		// else should be pretty small.
-		if req.URL.Path != crosscoreRPCPrefix+"signer/sign-block" {
-			req.Body = http.MaxBytesReader(w, req.Body, maxReqSize)
-		}
-		h.ServeHTTP(w, req)
-	})
 }
 
 // json Handler
@@ -350,15 +349,15 @@ func webAssetsHandler(next http.Handler) http.Handler {
 }
 
 // AuthHandler access token auth Handler
-func AuthHandler(handler http.Handler, accessTokens *accesstoken.CredentialStore) http.Handler {
-	authenticator := authn.NewAPI(accessTokens)
+func AuthHandler(handler http.Handler, accessTokens *accesstoken.CredentialStore, authDisable bool) http.Handler {
+	authenticator := authn.NewAPI(accessTokens, authDisable)
 
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		// TODO(tessr): check that this path exists; return early if this path isn't legit
 		req, err := authenticator.Authenticate(req)
 		if err != nil {
 			log.WithField("error", errors.Wrap(err, "Serve")).Error("Authenticate fail")
-			err = errors.Sub(errNotAuthenticated, err)
+			err = errors.WithDetail(errNotAuthenticated, err.Error())
 			errorFormatter.Write(req.Context(), rw, err)
 			return
 		}

@@ -13,13 +13,13 @@ type createKeyResp struct {
 	Alias    string       `json:"alias"`
 	XPub     chainkd.XPub `json:"xpub"`
 	File     string       `json:"file"`
-	Mnemonic string       `json:"mnemonic"`
+	Mnemonic string       `json:"mnemonic,omitempty"`
 }
 
 func (a *API) pseudohsmCreateKey(ctx context.Context, in struct {
 	Alias    string `json:"alias"`
 	Password string `json:"password"`
-	Mnemonic string `json:"nnemonic"`
+	Mnemonic string `json:"mnemonic"`
 	Language string `json:"language"`
 }) Response {
 	if in.Language == "" {
@@ -39,21 +39,18 @@ func (a *API) pseudohsmCreateKey(ctx context.Context, in struct {
 	return NewSuccessResponse(&createKeyResp{Alias: xpub.Alias, XPub: xpub.XPub, File: xpub.File, Mnemonic: *mnemonic})
 }
 
-func (a *API) pseudohsmListKeys(ctx context.Context) Response {
-	return NewSuccessResponse(a.wallet.Hsm.ListKeys())
-}
-
-type keyPair struct {
-	Xpub chainkd.XPub `json:"xpub"`
-	Xprv chainkd.XPrv `json:"xprv"`
-}
-
-func (a *API) createXKeys(ctx context.Context) Response {
-	xprv, xpub, err := chainkd.NewXKeys(nil)
-	if err != nil {
+func (a *API) pseudohsmUpdateKeyAlias(ctx context.Context, in struct {
+	XPub     chainkd.XPub `json:"xpub"`
+	NewAlias string       `json:"new_alias"`
+}) Response {
+	if err := a.wallet.Hsm.UpdateKeyAlias(in.XPub, in.NewAlias); err != nil {
 		return NewErrorResponse(err)
 	}
-	return NewSuccessResponse(&keyPair{Xprv: xprv, Xpub: xpub})
+	return NewSuccessResponse(nil)
+}
+
+func (a *API) pseudohsmListKeys(ctx context.Context) Response {
+	return NewSuccessResponse(a.wallet.Hsm.ListKeys())
 }
 
 func (a *API) pseudohsmDeleteKey(ctx context.Context, x struct {
@@ -66,12 +63,12 @@ func (a *API) pseudohsmDeleteKey(ctx context.Context, x struct {
 	return NewSuccessResponse(nil)
 }
 
-type signResp struct {
+type signTemplateResp struct {
 	Tx           *txbuilder.Template `json:"transaction"`
 	SignComplete bool                `json:"sign_complete"`
 }
 
-func (a *API) pseudohsmSignTemplates(ctx context.Context, x struct {
+func (a *API) signTemplate(ctx context.Context, x struct {
 	Password string             `json:"password"`
 	Txs      txbuilder.Template `json:"transaction"`
 }) Response {
@@ -80,7 +77,29 @@ func (a *API) pseudohsmSignTemplates(ctx context.Context, x struct {
 		return NewErrorResponse(err)
 	}
 	log.Info("Sign Transaction complete.")
-	return NewSuccessResponse(&signResp{Tx: &x.Txs, SignComplete: txbuilder.SignProgress(&x.Txs)})
+	return NewSuccessResponse(&signTemplateResp{Tx: &x.Txs, SignComplete: txbuilder.SignProgress(&x.Txs)})
+}
+
+type signTemplatesResp struct {
+	Tx           []*txbuilder.Template `json:"transaction"`
+	SignComplete bool                  `json:"sign_complete"`
+}
+
+func (a *API) signTemplates(ctx context.Context, x struct {
+	Password string                `json:"password"`
+	Txs      []*txbuilder.Template `json:"transactions"`
+}) Response {
+	signComplete := true
+	for _, tx := range x.Txs {
+		if err := txbuilder.Sign(ctx, tx, x.Password, a.PseudohsmSignTemplate); err != nil {
+			log.WithField("build err", err).Error("fail on sign transaction.")
+			return NewErrorResponse(err)
+		}
+		signComplete = signComplete && txbuilder.SignProgress(tx)
+	}
+
+	log.Info("Sign Chain Tx complete.")
+	return NewSuccessResponse(&signTemplatesResp{Tx: x.Txs, SignComplete: signComplete})
 }
 
 func (a *API) PseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {
@@ -120,4 +139,17 @@ func (a *API) pseudohsmCheckPassword(ctx context.Context, ins struct {
 	}
 	resp.CheckResult = true
 	return NewSuccessResponse(resp)
+}
+
+type keyPair struct {
+	Xpub chainkd.XPub `json:"xpub"`
+	Xprv chainkd.XPrv `json:"xprv"`
+}
+
+func (a *API) createXKeys(ctx context.Context) Response {
+	xprv, xpub, err := chainkd.NewXKeys(nil)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(&keyPair{Xprv: xprv, Xpub: xpub})
 }
