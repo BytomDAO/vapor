@@ -207,7 +207,6 @@ func (tp *TxPool) ProcessTransaction(tx *types.Tx, statusFail bool, height, fee 
 		Height:     height,
 		Fee:        fee,
 	}
-
 	requireParents, err := tp.checkOrphanUtxos(tx)
 	if err != nil {
 		return false, err

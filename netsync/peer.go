@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/tendermint/tmlibs/flowrate"
 	"gopkg.in/fatih/set.v0"
 
 	"github.com/vapor/consensus"
@@ -26,6 +27,7 @@ type BasePeer interface {
 	Addr() net.Addr
 	ID() string
 	ServiceFlag() consensus.ServiceFlag
+	TrafficStatus() (*flowrate.Status, *flowrate.Status)
 	TrySend(byte, interface{}) bool
 }
 
@@ -37,10 +39,17 @@ type BasePeerSet interface {
 
 // PeerInfo indicate peer status snap
 type PeerInfo struct {
-	ID         string `json:"peer_id"`
-	RemoteAddr string `json:"remote_addr"`
-	Height     uint64 `json:"height"`
-	Delay      uint32 `json:"delay"`
+	ID                  string `json:"peer_id"`
+	RemoteAddr          string `json:"remote_addr"`
+	Height              uint64 `json:"height"`
+	Ping                string `json:"ping"`
+	Duration            string `json:"duration"`
+	TotalSent           int64  `json:"total_sent"`
+	TotalReceived       int64  `json:"total_received"`
+	AverageSentRate     int64  `json:"average_sent_rate"`
+	AverageReceivedRate int64  `json:"average_received_rate"`
+	CurrentSentRate     int64  `json:"current_sent_rate"`
+	CurrentReceivedRate int64  `json:"current_received_rate"`
 }
 
 type peer struct {
@@ -76,13 +85,23 @@ func (p *peer) Height() uint64 {
 func (p *peer) addBanScore(persistent, transient uint64, reason string) bool {
 	score := p.banScore.Increase(persistent, transient)
 	if score > defaultBanThreshold {
-		log.WithFields(log.Fields{"address": p.Addr(), "score": score, "reason": reason}).Errorf("banning and disconnecting")
+		log.WithFields(log.Fields{
+			"module":  logModule,
+			"address": p.Addr(),
+			"score":   score,
+			"reason":  reason,
+		}).Errorf("banning and disconnecting")
 		return true
 	}
 
 	warnThreshold := defaultBanThreshold >> 1
 	if score > warnThreshold {
-		log.WithFields(log.Fields{"address": p.Addr(), "score": score, "reason": reason}).Warning("ban score increasing")
+		log.WithFields(log.Fields{
+			"module":  logModule,
+			"address": p.Addr(),
+			"score":   score,
+			"reason":  reason,
+		}).Warning("ban score increasing")
 	}
 	return false
 }
@@ -92,11 +111,11 @@ func (p *peer) addFilterAddress(address []byte) {
 	defer p.mtx.Unlock()
 
 	if p.filterAdds.Size() >= maxFilterAddressCount {
-		log.Warn("the count of filter addresses is greater than limit")
+		log.WithField("module", logModule).Warn("the count of filter addresses is greater than limit")
 		return
 	}
 	if len(address) > maxFilterAddressSize {
-		log.Warn("the size of filter address is greater than limit")
+		log.WithField("module", logModule).Warn("the size of filter address is greater than limit")
 		return
 	}
 	p.filterAdds.Add(hex.EncodeToString(address))
@@ -129,10 +148,25 @@ func (p *peer) getHeaders(locator []*bc.Hash, stopHash *bc.Hash) bool {
 func (p *peer) getPeerInfo() *PeerInfo {
 	p.mtx.RLock()
 	defer p.mtx.RUnlock()
+
+	sentStatus, receivedStatus := p.TrafficStatus()
+	ping := sentStatus.Idle - receivedStatus.Idle
+	if receivedStatus.Idle > sentStatus.Idle {
+		ping = -ping
+	}
+
 	return &PeerInfo{
-		ID:         p.ID(),
-		RemoteAddr: p.Addr().String(),
-		Height:     p.height,
+		ID:                  p.ID(),
+		RemoteAddr:          p.Addr().String(),
+		Height:              p.height,
+		Ping:                ping.String(),
+		Duration:            sentStatus.Duration.String(),
+		TotalSent:           sentStatus.Bytes,
+		TotalReceived:       receivedStatus.Bytes,
+		AverageSentRate:     sentStatus.AvgRate,
+		AverageReceivedRate: receivedStatus.AvgRate,
+		CurrentSentRate:     sentStatus.CurRate,
+		CurrentReceivedRate: receivedStatus.CurRate,
 	}
 }
 
@@ -306,7 +340,7 @@ func (ps *peerSet) addBanScore(peerID string, persistent, transient uint64, reas
 		return
 	}
 	if err := ps.AddBannedPeer(peer.Addr().String()); err != nil {
-		log.WithField("err", err).Error("fail on add ban peer")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on add ban peer")
 	}
 	ps.removePeer(peerID)
 }
@@ -319,7 +353,7 @@ func (ps *peerSet) addPeer(peer BasePeer, height uint64, hash *bc.Hash) {
 		ps.peers[peer.ID()] = newPeer(height, hash, peer)
 		return
 	}
-	log.WithField("ID", peer.ID()).Warning("add existing peer to blockKeeper")
+	log.WithField("module", logModule).Warning("add existing peer to blockKeeper")
 }
 
 func (ps *peerSet) bestPeer(flag consensus.ServiceFlag) *peer {
@@ -360,12 +394,12 @@ func (ps *peerSet) broadcastMinedBlock(block *types.Block) error {
 }
 
 func (ps *peerSet) broadcastNewStatus(bestBlock, genesisBlock *types.Block) error {
-	ps.mtx.RLock()
-	defer ps.mtx.RUnlock()
+	bestBlockHash := bestBlock.Hash()
+	peers := ps.peersWithoutBlock(&bestBlockHash)
 
 	genesisHash := genesisBlock.Hash()
 	msg := NewStatusResponseMessage(&bestBlock.BlockHeader, &genesisHash)
-	for _, peer := range ps.peers {
+	for _, peer := range peers {
 		if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
 			ps.removePeer(peer.ID())
 			continue

@@ -12,6 +12,7 @@ import (
 	"github.com/vapor/account"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/pseudohsm"
+	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc/types"
@@ -177,7 +178,7 @@ func (ctx *walletTestContext) createAccount(name string, keys []string, quorum i
 		}
 		xpubs = append(xpubs, *xpub)
 	}
-	_, err := ctx.Wallet.AccountMgr.Create(xpubs, quorum, name)
+	_, err := ctx.Wallet.AccountMgr.Create(xpubs, quorum, name, signers.BIP0044)
 	return err
 }
 
@@ -192,7 +193,7 @@ func (ctx *walletTestContext) update(block *types.Block) error {
 }
 
 func (ctx *walletTestContext) getBalance(accountAlias string, assetAlias string) (uint64, error) {
-	balances, _ := ctx.Wallet.GetAccountBalances("")
+	balances, _ := ctx.Wallet.GetAccountBalances("", "")
 	for _, balance := range balances {
 		if balance.Alias == accountAlias && balance.AssetAlias == assetAlias {
 			return balance.Amount, nil
@@ -203,7 +204,7 @@ func (ctx *walletTestContext) getBalance(accountAlias string, assetAlias string)
 
 func (ctx *walletTestContext) getAccBalances() map[string]map[string]uint64 {
 	accBalances := make(map[string]map[string]uint64)
-	balances, _ := ctx.Wallet.GetAccountBalances("")
+	balances, _ := ctx.Wallet.GetAccountBalances("", "")
 	for _, balance := range balances {
 		if accBalance, ok := accBalances[balance.Alias]; ok {
 			if _, ok := accBalance[balance.AssetAlias]; ok {

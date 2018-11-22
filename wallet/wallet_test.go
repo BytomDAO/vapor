@@ -7,6 +7,7 @@ import (
 	"time"
 
 	dbm "github.com/tendermint/tmlibs/db"
+	"github.com/vapor/blockchain/signers"
 
 	"github.com/vapor/account"
 	"github.com/vapor/asset"
@@ -49,7 +50,7 @@ func TestWalletUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testAccount, err := accountManager.Create([]chainkd.XPub{xpub1.XPub}, 1, "testAccount")
+	testAccount, err := accountManager.Create([]chainkd.XPub{xpub1.XPub}, 1, "testAccount", signers.BIP0044)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,10 +139,11 @@ func mockTxData(utxos []*account.UTXO, testAccount *account.Account) (*txbuilder
 
 func mockWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry, chain *protocol.Chain) *Wallet {
 	wallet := &Wallet{
-		DB:         walletDB,
-		AccountMgr: account,
-		AssetReg:   asset,
-		chain:      chain,
+		DB:          walletDB,
+		AccountMgr:  account,
+		AssetReg:    asset,
+		chain:       chain,
+		RecoveryMgr: newRecoveryManager(walletDB, account),
 	}
 	return wallet
 }
@@ -151,7 +153,6 @@ func mockSingleBlock(tx *types.Tx) *types.Block {
 		BlockHeader: types.BlockHeader{
 			Version: 1,
 			Height:  1,
-			Bits:    2305843009230471167,
 		},
 		Transactions: []*types.Tx{tx},
 	}

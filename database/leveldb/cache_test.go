@@ -16,7 +16,7 @@ func TestBlockCache(t *testing.T) {
 		}
 	}
 	blocks := make(map[bc.Hash]*types.Block)
-	for i := 0; i < maxCachedBlocks + 10; i++ {
+	for i := 0; i < maxCachedBlocks+10; i++ {
 		block := newBlock(uint64(i))
 		blocks[block.Hash()] = block
 	}
@@ -25,7 +25,7 @@ func TestBlockCache(t *testing.T) {
 		return blocks[*hash]
 	})
 
-	for i := 0; i < maxCachedBlocks + 10; i++ {
+	for i := 0; i < maxCachedBlocks+10; i++ {
 		block := newBlock(uint64(i))
 		hash := block.Hash()
 		cache.lookup(&hash)
@@ -39,7 +39,7 @@ func TestBlockCache(t *testing.T) {
 		}
 	}
 
-	for i := 10; i < maxCachedBlocks + 10; i++ {
+	for i := 10; i < maxCachedBlocks+10; i++ {
 		block := newBlock(uint64(i))
 		hash := block.Hash()
 		if b, _ := cache.get(&hash); b == nil {

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	dbm "github.com/tendermint/tmlibs/db"
+	"github.com/vapor/blockchain/signers"
 
 	"github.com/vapor/account"
 	"github.com/vapor/asset"
@@ -38,7 +39,7 @@ func TestWalletUnconfirmedTxs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testAccount, err := accountManager.Create([]chainkd.XPub{xpub1.XPub}, 1, "testAccount")
+	testAccount, err := accountManager.Create([]chainkd.XPub{xpub1.XPub}, 1, "testAccount", signers.BIP0044)
 	if err != nil {
 		t.Fatal(err)
 	}
