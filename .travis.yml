@@ -1,0 +1,20 @@
+language: go
+go_import_path: github.com/bytom
+dist: trusty
+sudo: false
+
+matrix:
+  include:
+    - go: 1.8.3
+    - go: 1.9
+    - go: tip
+  allow_failures:
+    - go: tip
+
+branches:
+    only:
+        - master
+        - dev
+
+script:
+    - make ci

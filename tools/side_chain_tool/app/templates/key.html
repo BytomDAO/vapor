@@ -1,0 +1,15 @@
+<html>
+  <head>
+    <title>sidechain</title>
+  </head>
+  <body>
+    <div class="table-responsive">
+        <table class="table table-hover table-bordered">
+            {% for keypair in keypairs %}
+                <td>xprv{{keypair.id}}:{{keypair.xprv}}</td></tr>
+                <td>xpub{{keypair.id}}:{{keypair.xpub}}</td></tr>
+            {% endfor %}
+        </table>
+    </div>
+  </body>
+</html>
