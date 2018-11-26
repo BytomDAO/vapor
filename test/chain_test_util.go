@@ -7,6 +7,7 @@ import (
 
 	dbm "github.com/tendermint/tmlibs/db"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/consensus"
 	"github.com/vapor/database/leveldb"
@@ -15,7 +16,6 @@ import (
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/vm"
-	"github.com/golang/protobuf/proto"
 )
 
 const utxoPrefix = "UT:"
