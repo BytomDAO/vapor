@@ -161,6 +161,7 @@ func mockChain(testDB dbm.DB) (*protocol.Chain, error) {
 }
 
 func mockNewRegistry(t *testing.T) *Registry {
+	consensus.ActiveNetParams.Signer = "78673764e0ba91a4c5ba9ec0c8c23c69e3d73bf27970e05e0a977e81e13bde475264d3b177a96646bc0ce517ae7fd63504c183ab6d330dea184331a4cf5912d5"
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatal(err)

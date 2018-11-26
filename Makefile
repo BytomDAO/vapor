@@ -10,7 +10,6 @@ endif
 endif
 
 PACKAGES    := $(shell go list ./... | grep -v '/vendor/' | grep -v '/crypto/ed25519/chainkd' | grep -v '/mining/tensority')
-PACKAGES += 'github.com/vapor/mining/tensority/go_algorithm'
 
 BUILD_FLAGS := -ldflags "-X github.com/vapor/version.GitCommit=`git rev-parse HEAD`"
 
@@ -122,8 +121,8 @@ benchmark:
 	@go test -bench $(PACKAGES)
 
 functional-tests:
-	@go test -timeout=5m -tags="functional" ./test 
+	@go test -timeout=10m -tags="functional" ./test 
 
-ci: test functional-tests
+ci: test
 
 .PHONY: all target release-all clean test benchmark
