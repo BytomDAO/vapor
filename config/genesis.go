@@ -90,7 +90,7 @@ func mainNetGenesisBlock() *types.Block {
 
 	var xPrv chainkd.XPrv
 	if consensus.ActiveNetParams.Signer == "" {
-		log.Panicf("Signer is empty")
+		return block
 	}
 	copy(xPrv[:], []byte(consensus.ActiveNetParams.Signer))
 	msg, _ := block.MarshalText()

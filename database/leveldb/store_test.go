@@ -36,7 +36,6 @@ func TestLoadBlockIndex(t *testing.T) {
 		}
 
 		for i := uint64(0); i < block.Height/32; i++ {
-			block.Nonce += 1
 			if err := store.SaveBlock(block, txStatus); err != nil {
 				t.Fatal(err)
 			}
