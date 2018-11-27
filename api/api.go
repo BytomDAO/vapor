@@ -248,6 +248,7 @@ func (a *API) buildHandler() {
 		m.Handle("/recovery-wallet", jsonHandler(a.recoveryFromRootXPubs))
 
 		m.Handle("/get-pegin-address", jsonHandler(a.getPeginAddress))
+		m.Handle("/get-pegin-contract-address", jsonHandler(a.getAddressForPeginContract))
 		m.Handle("/claim-pegin-transaction", jsonHandler(a.claimPeginTx))
 		m.Handle("/create-key-pair", jsonHandler(a.createXKeys))
 		m.Handle("/get-utxo-from-transaction", jsonHandler(a.getUnspentOutputs))
