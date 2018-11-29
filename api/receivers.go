@@ -63,7 +63,7 @@ func (a *API) getPeginAddress(ctx context.Context, ins struct {
 	})
 }
 
-func (a *API) getAddressForPeginContract(ctx context.Context, ins struct {
+func (a *API) getPeginContract(ctx context.Context, ins struct {
 	AccountID    string `json:"account_id"`
 	AccountAlias string `json:"account_alias"`
 }) Response {
@@ -78,13 +78,13 @@ func (a *API) getAddressForPeginContract(ctx context.Context, ins struct {
 		accountID = account.ID
 	}
 
-	mainchainAddress, claimScript, err := a.wallet.AccountMgr.CreatePeginContractAddress(accountID, false)
+	peginContractPrograms, claimScript, err := a.wallet.AccountMgr.CreatePeginContractPrograms(accountID, false)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
 
 	return NewSuccessResponse(fundingResp{
-		MainchainAddress: mainchainAddress,
+		MainchainAddress: peginContractPrograms,
 		ClaimScript:      claimScript,
 	})
 }

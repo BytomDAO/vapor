@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
@@ -219,7 +218,6 @@ func initActiveNetParams(config *cfg.Config) {
 
 	if config.Side.SignBlockXPubs != "" {
 		var signBlockXPubs []chainkd.XPub
-		fmt.Println(signBlockXPubs)
 		xPubs := strings.Split(config.Side.SignBlockXPubs, ",")
 		for _, xpubStr := range xPubs {
 			var xpub chainkd.XPub

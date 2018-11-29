@@ -12,15 +12,11 @@ import (
 // AddWitnessKeys adds a SignatureWitness with the given quorum and
 // list of keys derived by applying the derivation path to each of the
 // xpubs.
-func (si *SigningInstruction) AddWitnessKeys(xpubs []chainkd.XPub, path [][]byte, quorum int) {
-	hexPath := make([]chainjson.HexBytes, 0, len(path))
-	for _, p := range path {
-		hexPath = append(hexPath, p)
-	}
+func (si *SigningInstruction) AddWitnessKeys(xpubs []chainkd.XPub, quorum int) {
 
 	keyIDs := make([]keyID, 0, len(xpubs))
 	for _, xpub := range xpubs {
-		keyIDs = append(keyIDs, keyID{xpub, hexPath})
+		keyIDs = append(keyIDs, keyID{XPub: xpub})
 	}
 
 	sw := &SignatureWitness{
@@ -42,6 +38,20 @@ func (si *SigningInstruction) AddRawWitnessKeys(xpubs []chainkd.XPub, path [][]b
 	keyIDs := make([]keyID, 0, len(xpubs))
 	for _, xpub := range xpubs {
 		keyIDs = append(keyIDs, keyID{xpub, hexPath})
+	}
+
+	sw := &RawTxSigWitness{
+		Quorum: quorum,
+		Keys:   keyIDs,
+	}
+	si.WitnessComponents = append(si.WitnessComponents, sw)
+}
+
+func (si *SigningInstruction) AddRawWitnessKeysWithoutPath(xpubs []chainkd.XPub, quorum int) {
+
+	keyIDs := make([]keyID, 0, len(xpubs))
+	for _, xpub := range xpubs {
+		keyIDs = append(keyIDs, keyID{XPub: xpub})
 	}
 
 	sw := &RawTxSigWitness{

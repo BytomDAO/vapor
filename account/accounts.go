@@ -4,6 +4,7 @@ package account
 import (
 	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -831,13 +832,29 @@ func (m *Manager) GetPeginControlPrograms(claimScript []byte) (string, []byte) {
 }
 
 var lockWith2of3KeysFmt = `
-contract LockWith3Keys(%s) locks amount of asset {
+contract LockWith2of3Keys(%s) locks amount of asset {
   clause unlockWith2Sigs(%s) {
     verify checkTxMultiSig(%s)
     unlock amount of asset
   }
 }
 `
+
+func (m *Manager) CreatePeginContractPrograms(accountID string, change bool) (string, []byte, error) {
+	// 通过配置获取
+	claimCtrlProg, err := m.CreateAddress(accountID, change)
+	if err != nil {
+		return "", nil, err
+	}
+	claimScript := claimCtrlProg.ControlProgram
+
+	peginContractPrograms, err := m.GetPeginContractPrograms(claimScript)
+	if err != nil {
+		return "", nil, err
+	}
+	return hex.EncodeToString(peginContractPrograms), claimScript, nil
+
+}
 
 func (m *Manager) CreatePeginContractAddress(accountID string, change bool) (string, []byte, error) {
 	// 通过配置获取
@@ -847,7 +864,7 @@ func (m *Manager) CreatePeginContractAddress(accountID string, change bool) (str
 	}
 	claimScript := claimCtrlProg.ControlProgram
 
-	peginContractPrograms, err := m.getPeginContractPrograms(claimScript)
+	peginContractPrograms, err := m.GetPeginContractPrograms(claimScript)
 	if err != nil {
 		return "", nil, err
 	}
@@ -865,7 +882,7 @@ func (m *Manager) CreatePeginContractAddress(accountID string, change bool) (str
 
 func (m *Manager) GetPeginContractControlPrograms(claimScript []byte) (string, []byte) {
 
-	peginContractPrograms, err := m.getPeginContractPrograms(claimScript)
+	peginContractPrograms, err := m.GetPeginContractPrograms(claimScript)
 	if err != nil {
 		return "", nil
 	}
@@ -887,11 +904,10 @@ func (m *Manager) GetPeginContractControlPrograms(claimScript []byte) (string, [
 	return address.EncodeAddress(), program
 }
 
-func (m *Manager) getPeginContractPrograms(claimScript []byte) ([]byte, error) {
+func (m *Manager) GetPeginContractPrograms(claimScript []byte) ([]byte, error) {
 
 	pubkeys := getNewXpub(consensus.ActiveNetParams.FedpegXPubs, claimScript)
 	num := len(pubkeys)
-	fmt.Println(pubkeys)
 	if num == 0 {
 		return nil, errors.New("Fedpeg's XPubs is empty")
 	}
@@ -911,7 +927,6 @@ func (m *Manager) getPeginContractPrograms(claimScript []byte) ([]byte, error) {
 	params += ": PublicKey"
 	checkParams += "],["
 
-	fmt.Println(params)
 	signNum := getNumberOfSignaturesRequired(pubkeys)
 	for index := 0; index < signNum; index++ {
 		param := fmt.Sprintf("sig%d", index+1)
@@ -927,7 +942,6 @@ func (m *Manager) getPeginContractPrograms(claimScript []byte) ([]byte, error) {
 	checkParams += "]"
 
 	lockWith2of3Keys := fmt.Sprintf(lockWith2of3KeysFmt, params, unlockParams, checkParams)
-	fmt.Println(lockWith2of3Keys)
 	r := strings.NewReader(lockWith2of3Keys)
 	compiled, err := compiler.Compile(r)
 	if err != nil {
@@ -991,9 +1005,6 @@ func convertArguments(contract *compiler.Contract, args []ed25519.PublicKey) ([]
 		var argument compiler.ContractArg
 		switch p.Type {
 		case "PublicKey":
-			if len(args[i]) != 64 {
-				return nil, errors.New("mismatch length for Asset/Hash/PublicKey argument")
-			}
 			argument.S = (*chainjson.HexBytes)(&args[i])
 		default:
 			return nil, errors.New("Contract parameter type error")

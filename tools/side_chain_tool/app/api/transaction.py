@@ -223,8 +223,7 @@ def send_to_mainchain():
         return json_contents(jsonify(code=-1, msg="get side raw transaction fail"))
 
     # 构建主链交易
-    body_json = '{"claim_script":"%s","raw_transaction": "%s","alias": "%s","control_program":"%s","root_xpubs":%s,%s}' % (claim_script,raw_transaction,alias,control_program,root_xpubs,utxo)
-    print body_json
+    body_json = '{"claim_script":"%s","raw_transaction": "%s","control_program":"%s","root_xpubs":%s,%s}' % (claim_script,raw_transaction,control_program,root_xpubs,utxo)
     response = connSide.request("/build-mainchain-tx",json.loads(body_json))
     resp_json = json.loads(response.text.encode('utf-8'))
     tmpl = ""
@@ -237,15 +236,12 @@ def send_to_mainchain():
         return json_contents(jsonify(code=-1, msg="build mainchain transaction fail"))
 
     # 签名
-    #xpubs = request.json['root_xpubs']
-    #xprvs = request.json['xprvs']
-    #for index in range(len(xpubs)):
     for key,value in key_pair.items():
-        #xprv = request.json['xprv'].encode('utf-8')
         body_json = '{"xprv": "%s","xpub":"%s","transaction":%s,"claim_script":"%s"}' % (key,value,tmpl,claim_script)
         response = connSide.request("/sign-with-key",json.loads(body_json))
         resp_json = json.loads(response.text.encode('utf-8'))
         if resp_json['status'] == 'success':
+            tmpl = json.dumps(resp_json['data']['transaction'])
             raw_transaction = resp_json['data']['transaction']['raw_transaction'].encode('utf-8')
         elif resp_json['status'] == 'fail':
             return json_contents(jsonify(code=-1, msg="sign-with-key: " + resp_json['msg']))
@@ -256,6 +252,7 @@ def send_to_mainchain():
     body_json = '{"raw_transaction": "%s"}' % (raw_transaction)
     response = connMain.request("/submit-transaction",json.loads(body_json))
     resp_json = json.loads(response.text.encode('utf-8'))
+    print resp_json
     if resp_json['status'] == 'success':
         return json_contents(jsonify(code=200, msg=resp_json['data']))
     elif resp_json['status'] == 'fail':
