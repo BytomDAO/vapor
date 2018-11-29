@@ -4,7 +4,7 @@ if [ ! -f "key_pair" ];then
 ./vapor init --chain_id solonet -r "side_chain"
 nohup ./vapor node -r "side_chain" > /dev/null &
 sleep 30
-curl -s -X POST -d '{}' http://127.0.0.1:8888/create-key-pair > key_pair
+curl -s -X POST -d '{}' http://127.0.0.1:8888/create-key-pair >> key_pair
 ps -ef | grep vapor | grep -v grep | awk  '{print $2}' |xargs  kill -9
 rm -rf side_chain
 fi
@@ -31,7 +31,7 @@ python manager.py db upgrade
 touch install
 fi
 
-nohup python manager.py runserver -p 8080 -h 0.0.0.0 > /dev/null &
+nohup python manager.py runserver -p 8000 -h 0.0.0.0 > /dev/null &
 sleep 30
 cd web
-nohup python -m SimpleHTTPServer 80 > /dev/null &
+nohup python -m SimpleHTTPServer 8080 > /dev/null &
