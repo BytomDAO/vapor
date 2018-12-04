@@ -197,6 +197,7 @@ func (tp *TxPool) ProcessTransaction(tx *types.Tx, statusFail bool, height, fee 
 	defer tp.mtx.Unlock()
 
 	if tp.isWithdrawSpent(tx) {
+		log.WithFields(log.Fields{"module": "ProcessTransaction", "error": "pegin-already-claimed"}).Error("ProcessTransaction error")
 		return false, errors.New("pegin-already-claimed")
 	}
 

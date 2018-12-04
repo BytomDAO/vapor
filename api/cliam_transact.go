@@ -18,6 +18,7 @@ import (
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/bc/types/bytom"
 	bytomtypes "github.com/vapor/protocol/bc/types/bytom/types"
+	"github.com/vapor/protocol/validation"
 	"github.com/vapor/util"
 )
 
@@ -27,7 +28,7 @@ func getPeginTxnOutputIndex(rawTx bytomtypes.Tx, controlProg []byte) int {
 			return index
 		}
 	}
-	return 0
+	return -1
 }
 
 func toHash(hexBytes []chainjson.HexBytes) (hashs []*bytom.Hash) {
@@ -70,15 +71,6 @@ func (a *API) claimPeginTx(ctx context.Context, ins struct {
 	return NewSuccessResponse(&submitTxResp{TxID: &tmpl.Transaction.ID})
 }
 
-// GetMerkleBlockResp is resp struct for GetTxOutProof API
-type GetMerkleBlock struct {
-	BlockHeader  bytomtypes.BlockHeader `json:"block_header"`
-	TxHashes     []chainjson.HexBytes   `json:"tx_hashes"`
-	StatusHashes []chainjson.HexBytes   `json:"status_hashes"`
-	Flags        []uint32               `json:"flags"`
-	MatchedTxIDs []chainjson.HexBytes   `json:"matched_tx_ids"`
-}
-
 func (a *API) createRawPegin(ctx context.Context, ins struct {
 	Password     string                 `json:"password"`
 	RawTx        bytomtypes.Tx          `json:"raw_transaction"`
@@ -96,6 +88,7 @@ func (a *API) createRawPegin(ctx context.Context, ins struct {
 	}
 	txHashes := toHash(ins.TxHashes)
 	matchedTxIDs := toHash(ins.MatchedTxIDs)
+	statusHashes := toHash(ins.StatusHashes)
 	if !bytomtypes.ValidateTxMerkleTreeProof(txHashes, flags, matchedTxIDs, ins.BlockHeader.BlockCommitment.TransactionsMerkleRoot) {
 		return nil, errors.New("Merkleblock validation failed")
 	}
@@ -134,7 +127,7 @@ func (a *API) createRawPegin(ctx context.Context, ins struct {
 		// 获取交易的输出
 		nOut = getPeginTxnOutputIndex(ins.RawTx, controlProg)
 	}
-	if nOut == len(ins.RawTx.Outputs) {
+	if nOut == len(ins.RawTx.Outputs) || nOut == -1 {
 		return nil, errors.New("Failed to find output in bytom to the mainchain_address from getpeginaddress")
 	}
 
@@ -201,14 +194,20 @@ func (a *API) createRawPegin(ctx context.Context, ins struct {
 	tx, _ := json.Marshal(ins.RawTx)
 	stack = append(stack, tx)
 	// proof
-	MerkleBLock := GetMerkleBlock{
-		BlockHeader:  ins.BlockHeader,
-		TxHashes:     ins.TxHashes,
-		StatusHashes: ins.StatusHashes,
-		Flags:        ins.Flags,
-		MatchedTxIDs: ins.MatchedTxIDs,
+	blockHeader, err := ins.BlockHeader.MarshalText()
+	if err != nil {
+		return nil, err
 	}
-	txOutProof, _ := json.Marshal(MerkleBLock)
+	merkleBlock := validation.MerkleBlock{
+		BlockHeader:  blockHeader,
+		TxHashes:     txHashes,
+		StatusHashes: statusHashes,
+		Flags:        ins.Flags,
+		MatchedTxIDs: matchedTxIDs,
+	}
+
+	txOutProof, _ := json.Marshal(merkleBlock)
+
 	stack = append(stack, txOutProof)
 
 	//	tmpl.Transaction.Inputs[0].Peginwitness = stack
@@ -237,7 +236,7 @@ func (a *API) claimContractPeginTx(ctx context.Context, ins struct {
 }) Response {
 	tmpl, err := a.createContractRawPegin(ctx, ins)
 	if err != nil {
-		log.WithField("build err", err).Error("fail on createrawpegin.")
+		log.WithField("build err", err).Error("fail on claimContractPeginTx.")
 		return NewErrorResponse(err)
 	}
 	// 交易签名
@@ -272,6 +271,7 @@ func (a *API) createContractRawPegin(ctx context.Context, ins struct {
 	}
 	txHashes := toHash(ins.TxHashes)
 	matchedTxIDs := toHash(ins.MatchedTxIDs)
+	statusHashes := toHash(ins.StatusHashes)
 	if !bytomtypes.ValidateTxMerkleTreeProof(txHashes, flags, matchedTxIDs, ins.BlockHeader.BlockCommitment.TransactionsMerkleRoot) {
 		return nil, errors.New("Merkleblock validation failed")
 	}
@@ -294,11 +294,7 @@ func (a *API) createContractRawPegin(ctx context.Context, ins struct {
 		}
 
 		for _, cp := range cps {
-			controlProg, err := a.wallet.AccountMgr.GetPeginContractPrograms(cp.ControlProgram)
-
-			if controlProg == nil || err != nil {
-				continue
-			}
+			_, controlProg := a.wallet.AccountMgr.GetPeginContractControlPrograms(claimScript)
 			// 获取交易的输出
 			nOut = getPeginTxnOutputIndex(ins.RawTx, controlProg)
 			if nOut != len(ins.RawTx.Outputs) {
@@ -307,15 +303,12 @@ func (a *API) createContractRawPegin(ctx context.Context, ins struct {
 		}
 	} else {
 		claimScript = ins.ClaimScript
-		controlProg, err := a.wallet.AccountMgr.GetPeginContractPrograms(claimScript)
-		if err != nil {
-			return nil, err
-		}
+		_, controlProg := a.wallet.AccountMgr.GetPeginContractControlPrograms(claimScript)
 		// 获取交易的输出
 		nOut = getPeginTxnOutputIndex(ins.RawTx, controlProg)
 	}
-	if nOut == len(ins.RawTx.Outputs) {
-		return nil, errors.New("Failed to find output in bytom to the mainchain_address from getpeginaddress")
+	if nOut == len(ins.RawTx.Outputs) || nOut == -1 {
+		return nil, errors.New("Failed to find output in bytom to the mainchain_address from createContractRawPegin")
 	}
 
 	// 根据ClaimScript 获取account id
@@ -378,19 +371,23 @@ func (a *API) createContractRawPegin(ctx context.Context, ins struct {
 	// claim script
 	stack = append(stack, claimScript)
 	// raw tx
-	tx, _ := json.Marshal(ins.RawTx)
+	tx, _ := ins.RawTx.MarshalText()
+	//tx, _ := json.Marshal(ins.RawTx)
 	stack = append(stack, tx)
 	// proof
-	MerkleBLock := GetMerkleBlock{
-		BlockHeader:  ins.BlockHeader,
-		TxHashes:     ins.TxHashes,
-		StatusHashes: ins.StatusHashes,
-		Flags:        ins.Flags,
-		MatchedTxIDs: ins.MatchedTxIDs,
+	blockHeader, err := ins.BlockHeader.MarshalText()
+	if err != nil {
+		return nil, err
 	}
-	txOutProof, _ := json.Marshal(MerkleBLock)
+	merkleBlock := validation.MerkleBlock{
+		BlockHeader:  blockHeader,
+		TxHashes:     txHashes,
+		StatusHashes: statusHashes,
+		Flags:        ins.Flags,
+		MatchedTxIDs: matchedTxIDs,
+	}
+	txOutProof, _ := json.Marshal(merkleBlock)
 	stack = append(stack, txOutProof)
-
 	//	tmpl.Transaction.Inputs[0].Peginwitness = stack
 	txData.Inputs[0].Peginwitness = stack
 
