@@ -91,7 +91,6 @@ def get_pegin_address():
 
 @api.route('/claim_tx', methods=['GET', 'POST', 'OPTIONS'])
 def claim_tx():
-    print request.json
     if not request.json or not 'claim_script' in request.json or not 'block_height' in request.json or not 'tx_id' in request.json or not 'password' in request.json:
         return json_contents(jsonify(code=-1, msg="The json format is incorrect"))
     block_height = int(request.json['block_height'])
@@ -146,6 +145,7 @@ def claim_tx():
     if resp_json['status'] == 'success':
         return json_contents(jsonify(code=200, msg=resp_json['data']))
     elif resp_json['status'] == 'fail':
+        print resp_json
         return json_contents(jsonify(code=-1, msg="claim-pegin-transaction: " + resp_json['msg']))
     else:
         return json_contents(jsonify(code=-1, msg="claim pegin transaction fail"))

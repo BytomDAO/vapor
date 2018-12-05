@@ -10,10 +10,12 @@ import (
 	"github.com/vapor/consensus"
 	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/crypto"
+	"github.com/vapor/equity/pegin_contract"
 	"github.com/vapor/errors"
 	"github.com/vapor/math/checked"
 	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/bc/types/bytom"
+	bytomtypes "github.com/vapor/protocol/bc/types/bytom/types"
 	"github.com/vapor/protocol/vm"
 	"github.com/vapor/protocol/vm/vmutil"
 	"github.com/vapor/util"
@@ -324,11 +326,11 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errors.New("pegin-no-witness")
 		}
 
-		if IsValidPeginWitness(stack, *spentOutput) == nil {
-			return errors.New("PeginWitness invalid")
+		if err := IsValidPeginWitness(stack, *spentOutput); err != nil {
+			return err
 		}
 
-		// 判断cliamd的输入是否已经被用
+		// 判断cliam tx的输入是否已经被用
 
 		eq, err := spentOutput.Source.Value.Equal(e.WitnessDestination.Value)
 		if err != nil {
@@ -359,14 +361,40 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 }
 
 type MerkleBlock struct {
-	BlockHeader  types.BlockHeader `json:"block_header"`
-	TxHashes     []*bc.Hash        `json:"tx_hashes"`
-	StatusHashes []*bc.Hash        `json:"status_hashes"`
-	Flags        []uint32          `json:"flags"`
-	MatchedTxIDs []*bc.Hash        `json:"matched_tx_ids"`
+	BlockHeader  []byte        `json:"block_header"`
+	TxHashes     []*bytom.Hash `json:"tx_hashes"`
+	StatusHashes []*bytom.Hash `json:"status_hashes"`
+	Flags        []uint32      `json:"flags"`
+	MatchedTxIDs []*bytom.Hash `json:"matched_tx_ids"`
 }
 
 func IsValidPeginWitness(peginWitness [][]byte, prevout bc.Output) (err error) {
+	assetID := bytom.AssetID{}
+	assetID.V0 = prevout.Source.Value.AssetId.GetV0()
+	assetID.V1 = prevout.Source.Value.AssetId.GetV1()
+	assetID.V2 = prevout.Source.Value.AssetId.GetV2()
+	assetID.V3 = prevout.Source.Value.AssetId.GetV3()
+	//bytomPrevout.Source.Value.AssetId = &assetId
+
+	sourceID := bytom.Hash{}
+	sourceID.V0 = prevout.Source.Ref.GetV0()
+	sourceID.V1 = prevout.Source.Ref.GetV1()
+	sourceID.V2 = prevout.Source.Ref.GetV2()
+	sourceID.V3 = prevout.Source.Ref.GetV3()
+
+	assetAmount := &bytom.AssetAmount{
+		AssetId: &assetID,
+		Amount:  prevout.Source.Value.Amount,
+	}
+
+	src := &bytom.ValueSource{
+		Ref:      &sourceID,
+		Value:    assetAmount,
+		Position: prevout.Source.Position,
+	}
+	prog := &bytom.Program{prevout.ControlProgram.VmVersion, prevout.ControlProgram.Code}
+	bytomPrevout := bytom.NewOutput(src, prog, prevout.Source.Position)
+
 	if len(peginWitness) != 5 {
 		return errors.New("peginWitness is error")
 	}
@@ -374,23 +402,24 @@ func IsValidPeginWitness(peginWitness [][]byte, prevout bc.Output) (err error) {
 	if err != nil {
 		return err
 	}
-	if consensus.MoneyRange(amount) {
+	if !consensus.MoneyRange(amount) {
 		return errors.New("Amount out of range")
 	}
 
-	if len(peginWitness[1]) != 32 {
+	if len(peginWitness[1]) != 64 {
 		return errors.New("The length of gennesisBlockHash is not correct")
 	}
 
 	claimScript := peginWitness[2]
 
-	var rawTx types.Tx
-	err = json.Unmarshal(peginWitness[3], &rawTx)
+	rawTx := &bytomtypes.Tx{}
+	err = rawTx.UnmarshalText(peginWitness[3])
 	if err != nil {
 		return err
 	}
-	var merkleBlock MerkleBlock
-	err = json.Unmarshal(peginWitness[4], &merkleBlock)
+
+	merkleBlock := &MerkleBlock{}
+	err = json.Unmarshal(peginWitness[4], merkleBlock)
 	if err != nil {
 		return err
 	}
@@ -399,19 +428,20 @@ func IsValidPeginWitness(peginWitness [][]byte, prevout bc.Output) (err error) {
 	for flag := range merkleBlock.Flags {
 		flags = append(flags, uint8(flag))
 	}
-	if !types.ValidateTxMerkleTreeProof(merkleBlock.TxHashes, flags, merkleBlock.MatchedTxIDs, merkleBlock.BlockHeader.BlockCommitment.TransactionsMerkleRoot) {
-		return errors.New("Merkleblock validation failed")
-	}
-	var txHash bc.Hash = rawTx.ID
-	// 交易进行验证
-	if !checkPeginTx(&rawTx, &prevout, amount, claimScript) {
-		return errors.New("check PeginTx fail")
+	blockHeader := &bytomtypes.BlockHeader{}
+	if err = blockHeader.UnmarshalText(merkleBlock.BlockHeader); err != nil {
+		return err
 	}
 
-	// Check that the merkle proof corresponds to the txid
-	if txHash != *prevout.Source.Ref {
-		return errors.New("prevout hash don't match")
+	if !bytomtypes.ValidateTxMerkleTreeProof(merkleBlock.TxHashes, flags, merkleBlock.MatchedTxIDs, blockHeader.BlockCommitment.TransactionsMerkleRoot) {
+		return errors.New("Merkleblock validation failed")
 	}
+
+	// 交易进行验证
+	if err = checkPeginTx(rawTx, bytomPrevout, amount, claimScript); err != nil {
+		return err
+	}
+
 	// Check the genesis block corresponds to a valid peg (only one for now)
 	if !bytes.Equal(peginWitness[1], []byte(consensus.ActiveNetParams.ParentGenesisBlockHash)) {
 		return errors.New("ParentGenesisBlockHash don't match")
@@ -419,7 +449,7 @@ func IsValidPeginWitness(peginWitness [][]byte, prevout bc.Output) (err error) {
 	// TODO Finally, validate peg-in via rpc call
 
 	if util.ValidatePegin {
-		if err := util.IsConfirmedBytomBlock(merkleBlock.BlockHeader.Height, consensus.ActiveNetParams.PeginMinDepth); err != nil {
+		if err := util.IsConfirmedBytomBlock(blockHeader.Height, consensus.ActiveNetParams.PeginMinDepth); err != nil {
 			return err
 		}
 	}
@@ -427,27 +457,29 @@ func IsValidPeginWitness(peginWitness [][]byte, prevout bc.Output) (err error) {
 	return nil
 }
 
-func checkPeginTx(rawTx *types.Tx, prevout *bc.Output, claimAmount uint64, claimScript []byte) bool {
-	// Check that transaction matches txid
-	if rawTx.ID != *prevout.Source.Ref {
-		return false
-	}
+func checkPeginTx(rawTx *bytomtypes.Tx, prevout *bytom.Output, claimAmount uint64, claimScript []byte) error {
 	// Check the transaction nout/value matches
 	amount := rawTx.Outputs[prevout.Source.Position].Amount
 	if claimAmount != amount {
-		return false
+		return errors.New("transaction nout/value do not matches")
 	}
 	// Check that the witness program matches the p2ch on the p2sh-p2wsh transaction output
-	federationRedeemScript := vmutil.CalculateContract(consensus.ActiveNetParams.FedpegXPubs, claimScript)
-	scriptHash := crypto.Sha256(federationRedeemScript)
+	//federationRedeemScript := vmutil.CalculateContract(consensus.ActiveNetParams.FedpegXPubs, claimScript)
+	//scriptHash := crypto.Sha256(federationRedeemScript)
+	peginContractPrograms, err := pegin_contract.GetPeginContractPrograms(claimScript)
+	if err != nil {
+		return err
+	}
+
+	scriptHash := crypto.Sha256(peginContractPrograms)
 	controlProg, err := vmutil.P2WSHProgram(scriptHash)
 	if err != nil {
-		return false
+		return err
 	}
-	if bytes.Equal(rawTx.Outputs[prevout.Source.Position].ControlProgram, controlProg) {
-		return false
+	if !bytes.Equal(rawTx.Outputs[prevout.Source.Position].ControlProgram, controlProg) {
+		return errors.New("The output control program of transaction does not match the control program of the system's alliance contract")
 	}
-	return true
+	return nil
 }
 
 func checkValidSrc(vstate *validationState, vs *bc.ValueSource) error {

@@ -15,6 +15,7 @@ import (
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	chainjson "github.com/vapor/encoding/json"
+	"github.com/vapor/equity/pegin_contract"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -43,7 +44,7 @@ func (a *API) buildMainChainTxForContract(ins struct {
 		xpubs = append(xpubs, chaildXPub)
 	}
 
-	txInput, sigInst, err := contractToInputs(a, &ins.Utxo, xpubs)
+	txInput, sigInst, err := contractToInputs(a, &ins.Utxo, xpubs, ins.ClaimScript)
 	builder := mainchain.NewBuilder(time.Now())
 	builder.AddInput(txInput, sigInst)
 	changeAmount := uint64(0)
@@ -263,7 +264,7 @@ func utxoToInputs(xpubs []chainkd.XPub, u *account.UTXO) (*bytomtypes.TxInput, *
 	return txInput, sigInst, nil
 }
 
-func contractToInputs(a *API, u *account.UTXO, xpubs []chainkd.XPub) (*bytomtypes.TxInput, *mainchain.SigningInstruction, error) {
+func contractToInputs(a *API, u *account.UTXO, xpubs []chainkd.XPub, ClaimScript chainjson.HexBytes) (*bytomtypes.TxInput, *mainchain.SigningInstruction, error) {
 	sourceID := bytom.Hash{
 		V0: u.SourceID.GetV0(),
 		V1: u.SourceID.GetV1(),
@@ -280,10 +281,20 @@ func contractToInputs(a *API, u *account.UTXO, xpubs []chainkd.XPub) (*bytomtype
 
 	txInput := bytomtypes.NewSpendInput(nil, sourceID, assetID, u.Amount, u.SourcePos, u.ControlProgram)
 	sigInst := &mainchain.SigningInstruction{}
+
+	// raw_tx_signature
 	for _, xpub := range xpubs {
 		xpubsTmp := []chainkd.XPub{xpub}
 		sigInst.AddRawWitnessKeysWithoutPath(xpubsTmp, 1)
 	}
+
+	// data
+	peginContractPrograms, err := pegin_contract.GetPeginContractPrograms(ClaimScript)
+	if err != nil {
+		return nil, nil, err
+	}
+	sigInst.WitnessComponents = append(sigInst.WitnessComponents, mainchain.DataWitness(peginContractPrograms))
+
 	return txInput, sigInst, nil
 }
 
