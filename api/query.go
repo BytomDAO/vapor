@@ -7,7 +7,6 @@ import (
 
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/crypto/ed25519"
-	"github.com/vapor/protocol/bc/types/bytom"
 
 	log "github.com/sirupsen/logrus"
 
@@ -415,7 +414,7 @@ func (a *API) listPubKeys(ctx context.Context, ins struct {
 
 type GetRawTransationResp struct {
 	Tx        *bytomtypes.Tx `json:"raw_transaction"`
-	BlockHash bytom.Hash     `json:"block_hash"`
+	BlockHash bc.Hash        `json:"block_hash"`
 }
 
 func (a *API) getRawTransaction(ins struct {
@@ -432,7 +431,6 @@ func (a *API) getRawTransaction(ins struct {
 
 	txID := bc.Hash{}
 	txID.UnmarshalText([]byte(ins.TxID))
-
 	for _, tx := range block.Transactions {
 		if tx.ID.String() == txID.String() {
 			rawTransaction = tx

@@ -1,8 +1,10 @@
 package bytom
 
+import "github.com/vapor/protocol/bc"
+
 // Block is block struct in bc level
 type Block struct {
-	*BlockHeader
-	ID           Hash
+	*bc.BytomBlockHeader
+	ID           bc.Hash
 	Transactions []*Tx
 }

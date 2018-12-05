@@ -6,7 +6,7 @@ import (
 
 	"github.com/vapor/crypto/ed25519/chainkd"
 	chainjson "github.com/vapor/encoding/json"
-	"github.com/vapor/protocol/bc/types/bytom"
+	"github.com/vapor/protocol/bc"
 	bytomtypes "github.com/vapor/protocol/bc/types/bytom/types"
 )
 
@@ -24,7 +24,7 @@ type Template struct {
 }
 
 // Hash return sign hash
-func (t *Template) Hash(idx uint32) bytom.Hash {
+func (t *Template) Hash(idx uint32) bc.Hash {
 	return t.Transaction.SigHash(idx)
 }
 

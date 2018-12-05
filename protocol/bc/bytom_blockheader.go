@@ -1,12 +1,9 @@
-package bytom
+package bc
 
 import "io"
 
-// BlockHeader contains the header information for a blockchain
-// block. It satisfies the Entry interface.
-
-func (BlockHeader) typ() string { return "blockheader" }
-func (bh *BlockHeader) writeForHash(w io.Writer) {
+func (BytomBlockHeader) typ() string { return "blockheader" }
+func (bh *BytomBlockHeader) writeForHash(w io.Writer) {
 	mustWriteForHash(w, bh.Version)
 	mustWriteForHash(w, bh.Height)
 	mustWriteForHash(w, bh.PreviousBlockId)
@@ -17,10 +14,10 @@ func (bh *BlockHeader) writeForHash(w io.Writer) {
 	mustWriteForHash(w, bh.Nonce)
 }
 
-// NewBlockHeader creates a new BlockHeader and populates
+// NewBytomBlockHeader creates a new BlockHeader and populates
 // its body.
-func NewBlockHeader(version, height uint64, previousBlockID *Hash, timestamp uint64, transactionsRoot, transactionStatusHash *Hash, nonce, bits uint64) *BlockHeader {
-	return &BlockHeader{
+func NewBytomBlockHeader(version, height uint64, previousBlockID *Hash, timestamp uint64, transactionsRoot, transactionStatusHash *Hash, nonce, bits uint64) *BytomBlockHeader {
+	return &BytomBlockHeader{
 		Version:               version,
 		Height:                height,
 		PreviousBlockId:       previousBlockID,

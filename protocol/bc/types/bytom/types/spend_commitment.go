@@ -6,13 +6,13 @@ import (
 
 	"github.com/vapor/encoding/blockchain"
 	"github.com/vapor/errors"
-	"github.com/vapor/protocol/bc/types/bytom"
+	"github.com/vapor/protocol/bc"
 )
 
 // SpendCommitment contains the commitment data for a transaction output.
 type SpendCommitment struct {
-	bytom.AssetAmount
-	SourceID       bytom.Hash
+	bc.AssetAmount
+	SourceID       bc.Hash
 	SourcePosition uint64
 	VMVersion      uint64
 	ControlProgram []byte

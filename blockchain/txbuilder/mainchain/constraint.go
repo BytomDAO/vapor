@@ -2,7 +2,6 @@ package mainchain
 
 import (
 	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types/bytom"
 	"github.com/vapor/protocol/vm"
 	"github.com/vapor/protocol/vm/vmutil"
 )
@@ -34,7 +33,7 @@ func (o outputIDConstraint) code() []byte {
 // at the given index, optionally with the given refdatahash.
 type payConstraint struct {
 	Index int
-	bytom.AssetAmount
+	bc.AssetAmount
 	Program []byte
 }
 

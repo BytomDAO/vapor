@@ -1,6 +1,9 @@
 package types
 
 import (
+	"github.com/vapor/consensus"
+	"github.com/vapor/protocol/bc"
+	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/bc/types/bytom"
 	"github.com/vapor/protocol/vm"
 	"github.com/vapor/protocol/vm/vmutil"
@@ -14,24 +17,24 @@ func MapTx(oldTx *TxData) *bytom.Tx {
 		TxHeader: txHeader,
 		ID:       txID,
 		Entries:  entries,
-		InputIDs: make([]bytom.Hash, len(oldTx.Inputs)),
+		InputIDs: make([]bc.Hash, len(oldTx.Inputs)),
 	}
 
-	spentOutputIDs := make(map[bytom.Hash]bool)
+	spentOutputIDs := make(map[bc.Hash]bool)
 	for id, e := range entries {
 		var ord uint64
 		switch e := e.(type) {
-		case *bytom.Issuance:
+		case *bc.Issuance:
 			ord = e.Ordinal
 
-		case *bytom.Spend:
+		case *bc.Spend:
 			ord = e.Ordinal
 			spentOutputIDs[*e.SpentOutputId] = true
-			if *e.WitnessDestination.Value.AssetId == *bytom.BTMAssetID {
+			if *e.WitnessDestination.Value.AssetId == *consensus.BTMAssetID {
 				tx.GasInputIDs = append(tx.GasInputIDs, id)
 			}
 
-		case *bytom.Coinbase:
+		case *bc.Coinbase:
 			ord = 0
 
 		default:
@@ -50,32 +53,32 @@ func MapTx(oldTx *TxData) *bytom.Tx {
 	return tx
 }
 
-func mapTx(tx *TxData) (headerID bytom.Hash, hdr *bytom.TxHeader, entryMap map[bytom.Hash]bytom.Entry) {
-	entryMap = make(map[bytom.Hash]bytom.Entry)
-	addEntry := func(e bytom.Entry) bytom.Hash {
-		id := bytom.EntryID(e)
+func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash]bc.Entry) {
+	entryMap = make(map[bc.Hash]bc.Entry)
+	addEntry := func(e bc.Entry) bc.Hash {
+		id := bc.EntryID(e)
 		entryMap[id] = e
 		return id
 	}
 
 	var (
-		spends    []*bytom.Spend
-		issuances []*bytom.Issuance
-		coinbase  *bytom.Coinbase
+		spends    []*bc.Spend
+		issuances []*bc.Issuance
+		coinbase  *bc.Coinbase
 	)
 
-	muxSources := make([]*bytom.ValueSource, len(tx.Inputs))
+	muxSources := make([]*bc.ValueSource, len(tx.Inputs))
 	for i, input := range tx.Inputs {
 		switch inp := input.TypedInput.(type) {
-		case *IssuanceInput:
+		case *types.IssuanceInput:
 			nonceHash := inp.NonceHash()
 			assetDefHash := inp.AssetDefinitionHash()
 			value := input.AssetAmount()
 
-			issuance := bytom.NewIssuance(&nonceHash, &value, uint64(i))
-			issuance.WitnessAssetDefinition = &bytom.AssetDefinition{
+			issuance := bc.NewIssuance(&nonceHash, &value, uint64(i))
+			issuance.WitnessAssetDefinition = &bc.AssetDefinition{
 				Data: &assetDefHash,
-				IssuanceProgram: &bytom.Program{
+				IssuanceProgram: &bc.Program{
 					VmVersion: inp.VMVersion,
 					Code:      inp.IssuanceProgram,
 				},
@@ -83,7 +86,7 @@ func mapTx(tx *TxData) (headerID bytom.Hash, hdr *bytom.TxHeader, entryMap map[b
 			issuance.WitnessArguments = inp.Arguments
 			issuanceID := addEntry(issuance)
 
-			muxSources[i] = &bytom.ValueSource{
+			muxSources[i] = &bc.ValueSource{
 				Ref:   &issuanceID,
 				Value: &value,
 			}
@@ -91,43 +94,43 @@ func mapTx(tx *TxData) (headerID bytom.Hash, hdr *bytom.TxHeader, entryMap map[b
 
 		case *SpendInput:
 			// create entry for prevout
-			prog := &bytom.Program{VmVersion: inp.VMVersion, Code: inp.ControlProgram}
-			src := &bytom.ValueSource{
+			prog := &bc.Program{VmVersion: inp.VMVersion, Code: inp.ControlProgram}
+			src := &bc.ValueSource{
 				Ref:      &inp.SourceID,
 				Value:    &inp.AssetAmount,
 				Position: inp.SourcePosition,
 			}
-			prevout := bytom.NewOutput(src, prog, 0) // ordinal doesn't matter for prevouts, only for result outputs
+			prevout := bc.NewOutput(src, prog, 0) // ordinal doesn't matter for prevouts, only for result outputs
 			prevoutID := addEntry(prevout)
 			// create entry for spend
-			spend := bytom.NewSpend(&prevoutID, uint64(i))
+			spend := bc.NewSpend(&prevoutID, uint64(i))
 			spend.WitnessArguments = inp.Arguments
 			spendID := addEntry(spend)
 			// setup mux
-			muxSources[i] = &bytom.ValueSource{
+			muxSources[i] = &bc.ValueSource{
 				Ref:   &spendID,
 				Value: &inp.AssetAmount,
 			}
 			spends = append(spends, spend)
 
 		case *CoinbaseInput:
-			coinbase = bytom.NewCoinbase(inp.Arbitrary)
+			coinbase = bc.NewCoinbase(inp.Arbitrary)
 			coinbaseID := addEntry(coinbase)
 
 			out := tx.Outputs[0]
-			muxSources[i] = &bytom.ValueSource{
+			muxSources[i] = &bc.ValueSource{
 				Ref:   &coinbaseID,
 				Value: &out.AssetAmount,
 			}
 		}
 	}
 
-	mux := bytom.NewMux(muxSources, &bytom.Program{VmVersion: 1, Code: []byte{byte(vm.OP_TRUE)}})
+	mux := bc.NewMux(muxSources, &bc.Program{VmVersion: 1, Code: []byte{byte(vm.OP_TRUE)}})
 	muxID := addEntry(mux)
 
 	// connect the inputs to the mux
 	for _, spend := range spends {
-		spentOutput := entryMap[*spend.SpentOutputId].(*bytom.Output)
+		spentOutput := entryMap[*spend.SpentOutputId].(*bc.Output)
 		spend.SetDestination(&muxID, spentOutput.Source.Value, spend.Ordinal)
 	}
 	for _, issuance := range issuances {
@@ -139,26 +142,26 @@ func mapTx(tx *TxData) (headerID bytom.Hash, hdr *bytom.TxHeader, entryMap map[b
 	}
 
 	// convert types.outputs to the bytom.output
-	var resultIDs []*bytom.Hash
+	var resultIDs []*bc.Hash
 	for i, out := range tx.Outputs {
-		src := &bytom.ValueSource{
+		src := &bc.ValueSource{
 			Ref:      &muxID,
 			Value:    &out.AssetAmount,
 			Position: uint64(i),
 		}
-		var resultID bytom.Hash
+		var resultID bc.Hash
 		if vmutil.IsUnspendable(out.ControlProgram) {
 			// retirement
-			r := bytom.NewRetirement(src, uint64(i))
+			r := bc.NewRetirement(src, uint64(i))
 			resultID = addEntry(r)
 		} else {
 			// non-retirement
-			prog := &bytom.Program{out.VMVersion, out.ControlProgram}
-			o := bytom.NewOutput(src, prog, uint64(i))
+			prog := &bc.Program{out.VMVersion, out.ControlProgram}
+			o := bc.NewOutput(src, prog, uint64(i))
 			resultID = addEntry(o)
 		}
 
-		dest := &bytom.ValueDestination{
+		dest := &bc.ValueDestination{
 			Value:    src.Value,
 			Ref:      &resultID,
 			Position: 0,
@@ -167,13 +170,13 @@ func mapTx(tx *TxData) (headerID bytom.Hash, hdr *bytom.TxHeader, entryMap map[b
 		mux.WitnessDestinations = append(mux.WitnessDestinations, dest)
 	}
 
-	h := bytom.NewTxHeader(tx.Version, tx.SerializedSize, tx.TimeRange, resultIDs)
+	h := bc.NewTxHeader(tx.Version, tx.SerializedSize, tx.TimeRange, resultIDs)
 	return addEntry(h), h, entryMap
 }
 
-func mapBlockHeader(old *BlockHeader) (bytom.Hash, *bytom.BlockHeader) {
-	bh := bytom.NewBlockHeader(old.Version, old.Height, &old.PreviousBlockHash, old.Timestamp, &old.TransactionsMerkleRoot, &old.TransactionStatusHash, old.Nonce, old.Bits)
-	return bytom.EntryID(bh), bh
+func mapBlockHeader(old *BlockHeader) (bc.Hash, *bc.BytomBlockHeader) {
+	bh := bc.NewBytomBlockHeader(old.Version, old.Height, &old.PreviousBlockHash, old.Timestamp, &old.TransactionsMerkleRoot, &old.TransactionStatusHash, old.Nonce, old.Bits)
+	return bc.EntryID(bh), bh
 }
 
 // MapBlock converts a types block to bc block
@@ -183,7 +186,7 @@ func MapBlock(old *Block) *bytom.Block {
 	}
 
 	b := new(bytom.Block)
-	b.ID, b.BlockHeader = mapBlockHeader(&old.BlockHeader)
+	b.ID, b.BytomBlockHeader = mapBlockHeader(&old.BlockHeader)
 	for _, oldTx := range old.Transactions {
 		b.Transactions = append(b.Transactions, oldTx.Tx)
 	}

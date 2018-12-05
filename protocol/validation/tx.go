@@ -14,7 +14,7 @@ import (
 	"github.com/vapor/errors"
 	"github.com/vapor/math/checked"
 	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types/bytom"
+	"github.com/vapor/protocol/bc/types"
 	bytomtypes "github.com/vapor/protocol/bc/types/bytom/types"
 	"github.com/vapor/protocol/vm"
 	"github.com/vapor/protocol/vm/vmutil"
@@ -361,39 +361,41 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 }
 
 type MerkleBlock struct {
-	BlockHeader  []byte        `json:"block_header"`
-	TxHashes     []*bytom.Hash `json:"tx_hashes"`
-	StatusHashes []*bytom.Hash `json:"status_hashes"`
-	Flags        []uint32      `json:"flags"`
-	MatchedTxIDs []*bytom.Hash `json:"matched_tx_ids"`
+	BlockHeader  []byte     `json:"block_header"`
+	TxHashes     []*bc.Hash `json:"tx_hashes"`
+	StatusHashes []*bc.Hash `json:"status_hashes"`
+	Flags        []uint32   `json:"flags"`
+	MatchedTxIDs []*bc.Hash `json:"matched_tx_ids"`
 }
 
 func IsValidPeginWitness(peginWitness [][]byte, prevout bc.Output) (err error) {
-	assetID := bytom.AssetID{}
-	assetID.V0 = prevout.Source.Value.AssetId.GetV0()
-	assetID.V1 = prevout.Source.Value.AssetId.GetV1()
-	assetID.V2 = prevout.Source.Value.AssetId.GetV2()
-	assetID.V3 = prevout.Source.Value.AssetId.GetV3()
-	//bytomPrevout.Source.Value.AssetId = &assetId
+	/*
+		assetID := bc.AssetID{}
+		assetID.V0 = prevout.Source.Value.AssetId.GetV0()
+		assetID.V1 = prevout.Source.Value.AssetId.GetV1()
+		assetID.V2 = prevout.Source.Value.AssetId.GetV2()
+		assetID.V3 = prevout.Source.Value.AssetId.GetV3()
+		//bytomPrevout.Source.Value.AssetId = &assetId
 
-	sourceID := bytom.Hash{}
-	sourceID.V0 = prevout.Source.Ref.GetV0()
-	sourceID.V1 = prevout.Source.Ref.GetV1()
-	sourceID.V2 = prevout.Source.Ref.GetV2()
-	sourceID.V3 = prevout.Source.Ref.GetV3()
+		sourceID := bc.Hash{}
+		sourceID.V0 = prevout.Source.Ref.GetV0()
+		sourceID.V1 = prevout.Source.Ref.GetV1()
+		sourceID.V2 = prevout.Source.Ref.GetV2()
+		sourceID.V3 = prevout.Source.Ref.GetV3()
+	*/
 
-	assetAmount := &bytom.AssetAmount{
-		AssetId: &assetID,
+	assetAmount := &bc.AssetAmount{
+		AssetId: prevout.Source.Value.AssetId,
 		Amount:  prevout.Source.Value.Amount,
 	}
 
-	src := &bytom.ValueSource{
-		Ref:      &sourceID,
+	src := &bc.ValueSource{
+		Ref:      prevout.Source.Ref,
 		Value:    assetAmount,
 		Position: prevout.Source.Position,
 	}
-	prog := &bytom.Program{prevout.ControlProgram.VmVersion, prevout.ControlProgram.Code}
-	bytomPrevout := bytom.NewOutput(src, prog, prevout.Source.Position)
+	prog := &bc.Program{prevout.ControlProgram.VmVersion, prevout.ControlProgram.Code}
+	bytomPrevout := bc.NewOutput(src, prog, prevout.Source.Position)
 
 	if len(peginWitness) != 5 {
 		return errors.New("peginWitness is error")
@@ -433,7 +435,7 @@ func IsValidPeginWitness(peginWitness [][]byte, prevout bc.Output) (err error) {
 		return err
 	}
 
-	if !bytomtypes.ValidateTxMerkleTreeProof(merkleBlock.TxHashes, flags, merkleBlock.MatchedTxIDs, blockHeader.BlockCommitment.TransactionsMerkleRoot) {
+	if !types.ValidateTxMerkleTreeProof(merkleBlock.TxHashes, flags, merkleBlock.MatchedTxIDs, blockHeader.BlockCommitment.TransactionsMerkleRoot) {
 		return errors.New("Merkleblock validation failed")
 	}
 
@@ -457,7 +459,7 @@ func IsValidPeginWitness(peginWitness [][]byte, prevout bc.Output) (err error) {
 	return nil
 }
 
-func checkPeginTx(rawTx *bytomtypes.Tx, prevout *bytom.Output, claimAmount uint64, claimScript []byte) error {
+func checkPeginTx(rawTx *bytomtypes.Tx, prevout *bc.Output, claimAmount uint64, claimScript []byte) error {
 	// Check the transaction nout/value matches
 	amount := rawTx.Outputs[prevout.Source.Position].Amount
 	if claimAmount != amount {

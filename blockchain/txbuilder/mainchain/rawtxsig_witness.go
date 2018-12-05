@@ -2,7 +2,6 @@ package mainchain
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/vapor/crypto/ed25519/chainkd"
 	chainjson "github.com/vapor/encoding/json"
@@ -33,8 +32,6 @@ func (sw *RawTxSigWitness) Sign(tpl *Template, index uint32, xprv chainkd.XPrv) 
 			// Already have a signature for this key
 			continue
 		}
-		fmt.Println(keyID.XPub.String())
-		fmt.Println(xprv.XPub().String())
 		if keyID.XPub.String() != xprv.XPub().String() {
 			continue
 		}

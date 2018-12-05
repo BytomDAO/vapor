@@ -110,7 +110,8 @@ def claim_tx():
     if resp_json['status'] == 'success':
         raw_block = resp_json['data']['raw_block'].encode('utf-8')
     elif resp_json['status'] == 'fail':
-        return json_contents(jsonify(code=-1, msg="get-raw-block: " + resp_json['msg']))
+        print resp_json
+        return json_contents(jsonify(code=-1, msg="get-raw-block: " + resp_json['error_detail']))
     else:
         return json_contents(jsonify(code=-1, msg="get raw block fail"))
 
@@ -122,18 +123,21 @@ def claim_tx():
         raw_transaction = resp_json['data']['raw_transaction'].encode('utf-8')
         block_hash = resp_json['data']['block_hash'].encode('utf-8')
     elif resp_json['status'] == 'fail':
-        return json_contents(jsonify(code=-1, msg="get-raw-transaction: " + resp_json['msg']))
+        print resp_json
+        return json_contents(jsonify(code=-1, msg="get-raw-transaction: " + resp_json['error_detail']))
     else:
         return json_contents(jsonify(code=-1, msg="get raw transaction fail"))
 
     # 主链获取proof
+    print block_hash
     body_json = {"tx_id": tx_id,"block_hash": block_hash}
     response = connMain.request("/get-merkle-proof",body_json)
     resp_json = json.loads(response.text)
     if resp_json['status'] == 'success':
         proof = json.dumps(resp_json['data']).strip('{}')
     elif resp_json['status'] == 'fail':
-        return json_contents(jsonify(code=-1, msg="get-merkle-proof:" + resp_json['msg']))
+        print resp_json
+        return json_contents(jsonify(code=-1, msg="get-merkle-proof:" + resp_json['error_detail']))
     else:
         return json_contents(jsonify(code=-1, msg="get raw transaction fail"))
 
@@ -146,7 +150,7 @@ def claim_tx():
         return json_contents(jsonify(code=200, msg=resp_json['data']))
     elif resp_json['status'] == 'fail':
         print resp_json
-        return json_contents(jsonify(code=-1, msg="claim-pegin-transaction: " + resp_json['msg']))
+        return json_contents(jsonify(code=-1, msg="claim-pegin-transaction: " + resp_json['error_detail']))
     else:
         return json_contents(jsonify(code=-1, msg="claim pegin transaction fail"))
 

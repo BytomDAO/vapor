@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/vapor/protocol/bc/types/bytom"
+	"github.com/vapor/protocol/bc"
 )
 
 // SpendInput satisfies the TypedInput interface and represents a spend transaction.
@@ -12,9 +12,9 @@ type SpendInput struct {
 }
 
 // NewSpendInput create a new SpendInput struct.
-func NewSpendInput(arguments [][]byte, sourceID bytom.Hash, assetID bytom.AssetID, amount, sourcePos uint64, controlProgram []byte) *TxInput {
+func NewSpendInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amount, sourcePos uint64, controlProgram []byte) *TxInput {
 	sc := SpendCommitment{
-		AssetAmount: bytom.AssetAmount{
+		AssetAmount: bc.AssetAmount{
 			AssetId: &assetID,
 			Amount:  amount,
 		},
