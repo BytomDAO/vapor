@@ -13,6 +13,7 @@ class PeginAddress(db.Model):
     __tablename__ = 'pegin_address'
     id = db.Column(db.Integer, primary_key=True)
     address = db.Column(db.String, nullable=True, unique=True)
+    control_program = db.Column(db.String, nullable=True, unique=True)
     claim_script = db.Column(db.String, nullable=True, unique=True)
 
 class TxInfo(db.Model):

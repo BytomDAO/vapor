@@ -4,7 +4,7 @@ from flask import request, jsonify, make_response, current_app, render_template
 #from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 
 from . import api
-from .Connection import Connection
+from .Connection import Connection, WSClient
 from .. import db
 from ..models import KeyPair, PeginAddress
 
@@ -56,12 +56,13 @@ def create_pegin_address():
     accountID = request.json['account_id']
     connSide = Connection("http://127.0.0.1:8888")
     body_json = {"account_id": accountID}
-    response = connSide.request("/get-pegin-address",body_json)
+    response = connSide.request("/get-pegin-contract-address",body_json)
     resp_json = json.loads(response.text)
     if resp_json['status'] == 'success':
         mainchain_address = resp_json['data']['mainchain_address']
+        control_program = resp_json['data']['control_program']
         claim_script = resp_json['data']['claim_script']
-        pegin = PeginAddress(address=mainchain_address, claim_script=claim_script)
+        pegin = PeginAddress(address=mainchain_address, control_program=control_program, claim_script=claim_script)
         db.session.add(pegin)
         db.session.commit()
     elif resp_json['status'] == 'fail':
@@ -80,6 +81,7 @@ def get_pegin_address():
     for peginAddr in peginAddrs:
         data = {
             "mainchain_address":peginAddr.address.encode('utf-8'),
+            "control_program":peginAddr.control_program.encode('utf-8'),
             "claim_script": peginAddr.claim_script.encode('utf-8')
         }
         json_data = json_data + json.dumps(data)

@@ -51,7 +51,7 @@ xpub=$(cat key_pair | jq ".data.xpub" | sed "s/\"//g")
 
   ![pegin-address](pegin-address.png)
 
-- 在主链的dashboard，发送btm到mainchain_address
+- 在主链的dashboard，发送btm到mainchain_address 或者启动monitor_tx自动处理claim tx
 
 - 工具页面赎回交易填入参数，发送交易
 

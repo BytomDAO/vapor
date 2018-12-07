@@ -66,6 +66,7 @@ type TxPool struct {
 	utxo          map[bc.Hash]*types.Tx
 	orphans       map[bc.Hash]*orphanTx
 	orphansByPrev map[bc.Hash]map[bc.Hash]*orphanTx
+	claimTx       map[bc.Hash]bool
 	errCache      *lru.Cache
 	msgCh         chan *TxPoolMsg
 }
@@ -79,6 +80,7 @@ func NewTxPool(store Store) *TxPool {
 		utxo:          make(map[bc.Hash]*types.Tx),
 		orphans:       make(map[bc.Hash]*orphanTx),
 		orphansByPrev: make(map[bc.Hash]map[bc.Hash]*orphanTx),
+		claimTx:       make(map[bc.Hash]bool),
 		errCache:      lru.New(maxCachedErrTxs),
 		msgCh:         make(chan *TxPoolMsg, maxMsgChSize),
 	}
@@ -136,6 +138,7 @@ func (tp *TxPool) RemoveTransaction(txHash *bc.Hash) {
 	for _, output := range txD.Tx.ResultIds {
 		delete(tp.utxo, *output)
 	}
+	tp.removeClaimTx(txD.Tx)
 	delete(tp.pool, *txHash)
 
 	atomic.StoreInt64(&tp.lastUpdated, time.Now().Unix())
@@ -196,7 +199,7 @@ func (tp *TxPool) ProcessTransaction(tx *types.Tx, statusFail bool, height, fee 
 	tp.mtx.Lock()
 	defer tp.mtx.Unlock()
 
-	if tp.isWithdrawSpent(tx) {
+	if tp.IsWithdrawSpent(tx) {
 		log.WithFields(log.Fields{"module": "ProcessTransaction", "error": "pegin-already-claimed"}).Error("ProcessTransaction error")
 		return false, errors.New("pegin-already-claimed")
 	}
@@ -224,17 +227,40 @@ func (tp *TxPool) ProcessTransaction(tx *types.Tx, statusFail bool, height, fee 
 	return false, nil
 }
 
-func (tp *TxPool) isWithdrawSpent(tx *types.Tx) bool {
+func (tp *TxPool) IsWithdrawSpent(tx *types.Tx) bool {
 	for key, value := range tx.Entries {
 		switch value.(type) {
 		case *bc.Claim:
-			return tp.store.IsWithdrawSpent(&key)
+			_, ok := tp.claimTx[key]
+			return tp.store.IsWithdrawSpent(&key) || ok
 		default:
 			continue
 		}
 	}
 
 	return false
+}
+
+func (tp *TxPool) addClaimTx(tx *types.Tx) {
+	for key, value := range tx.Entries {
+		switch value.(type) {
+		case *bc.Claim:
+			tp.claimTx[key] = true
+		default:
+			continue
+		}
+	}
+}
+
+func (tp *TxPool) removeClaimTx(tx *types.Tx) {
+	for key, value := range tx.Entries {
+		switch value.(type) {
+		case *bc.Claim:
+			delete(tp.claimTx, key)
+		default:
+			continue
+		}
+	}
 }
 
 func (tp *TxPool) addOrphan(txD *TxDesc, requireParents []*bc.Hash) error {
@@ -261,6 +287,8 @@ func (tp *TxPool) addTransaction(txD *TxDesc) error {
 	tx := txD.Tx
 	txD.Added = time.Now()
 	tp.pool[tx.ID] = txD
+	// 增加一个claim id 到到claim pool中
+	tp.addClaimTx(tx)
 	for _, id := range tx.ResultIds {
 		output, err := tx.Output(*id)
 		if err != nil {
