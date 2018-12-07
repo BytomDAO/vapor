@@ -328,7 +328,7 @@ func bytomdRPCCheck() bool {
 	}
 	if util.ValidatePegin {
 		for {
-			resp, err := util.CallRPC("/get-block-header", &Req{BlockHeight: 0})
+			resp, err := util.CallRPC("/get-merkle-proof", &Req{BlockHeight: 0})
 			if err != nil {
 				log.Error("Call mainchain interface get-block-header failed")
 				time.Sleep(time.Millisecond * 1000)

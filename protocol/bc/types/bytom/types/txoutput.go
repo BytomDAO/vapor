@@ -5,7 +5,7 @@ import (
 
 	"github.com/vapor/encoding/blockchain"
 	"github.com/vapor/errors"
-	"github.com/vapor/protocol/bc/types/bytom"
+	"github.com/vapor/protocol/bc"
 )
 
 // TxOutput is the top level struct of tx output.
@@ -17,11 +17,11 @@ type TxOutput struct {
 }
 
 // NewTxOutput create a new output struct
-func NewTxOutput(assetID bytom.AssetID, amount uint64, controlProgram []byte) *TxOutput {
+func NewTxOutput(assetID bc.AssetID, amount uint64, controlProgram []byte) *TxOutput {
 	return &TxOutput{
 		AssetVersion: 1,
 		OutputCommitment: OutputCommitment{
-			AssetAmount: bytom.AssetAmount{
+			AssetAmount: bc.AssetAmount{
 				AssetId: &assetID,
 				Amount:  amount,
 			},
@@ -66,19 +66,19 @@ func (to *TxOutput) writeCommitment(w io.Writer) error {
 
 // ComputeOutputID assembles an output entry given a spend commitment and
 // computes and returns its corresponding entry ID.
-func ComputeOutputID(sc *SpendCommitment) (h bytom.Hash, err error) {
+func ComputeOutputID(sc *SpendCommitment) (h bc.Hash, err error) {
 	defer func() {
 		if r, ok := recover().(error); ok {
 			err = r
 		}
 	}()
-	src := &bytom.ValueSource{
+	src := &bc.ValueSource{
 		Ref:      &sc.SourceID,
 		Value:    &sc.AssetAmount,
 		Position: sc.SourcePosition,
 	}
-	o := bytom.NewOutput(src, &bytom.Program{VmVersion: sc.VMVersion, Code: sc.ControlProgram}, 0)
+	o := bc.NewOutput(src, &bc.Program{VmVersion: sc.VMVersion, Code: sc.ControlProgram}, 0)
 
-	h = bytom.EntryID(o)
+	h = bc.EntryID(o)
 	return h, nil
 }

@@ -4,18 +4,18 @@ import (
 	"io"
 
 	"github.com/vapor/encoding/blockchain"
-	"github.com/vapor/protocol/bc/types/bytom"
+	"github.com/vapor/protocol/bc"
 )
 
 // BlockCommitment store the TransactionsMerkleRoot && TransactionStatusHash
 type BlockCommitment struct {
 	// TransactionsMerkleRoot is the root hash of the Merkle binary hash tree
 	// formed by the hashes of all transactions included in the block.
-	TransactionsMerkleRoot bytom.Hash `json:"transaction_merkle_root"`
+	TransactionsMerkleRoot bc.Hash `json:"transaction_merkle_root"`
 
 	// TransactionStatusHash is the root hash of the Merkle binary hash tree
 	// formed by the hashes of all transaction verify results
-	TransactionStatusHash bytom.Hash `json:"transaction_status_hash"`
+	TransactionStatusHash bc.Hash `json:"transaction_status_hash"`
 }
 
 func (bc *BlockCommitment) readFrom(r *blockchain.Reader) error {

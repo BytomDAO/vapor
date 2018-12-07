@@ -8,6 +8,7 @@ import (
 
 	"github.com/vapor/encoding/blockchain"
 	"github.com/vapor/errors"
+	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types/bytom"
 )
 
@@ -29,7 +30,7 @@ func NewTx(data TxData) *Tx {
 }
 
 // OutputID return the hash of the output position
-func (tx *Tx) OutputID(outputIndex int) *bytom.Hash {
+func (tx *Tx) OutputID(outputIndex int) *bc.Hash {
 	return tx.ResultIds[outputIndex]
 }
 
@@ -49,9 +50,9 @@ func (tx *Tx) SetInputArguments(n uint32, args [][]byte) {
 	id := tx.Tx.InputIDs[n]
 	e := tx.Entries[id]
 	switch e := e.(type) {
-	case *bytom.Issuance:
+	case *bc.Issuance:
 		e.WitnessArguments = args
-	case *bytom.Spend:
+	case *bc.Spend:
 		e.WitnessArguments = args
 	}
 }

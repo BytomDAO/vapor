@@ -7,12 +7,15 @@ import (
 	"fmt"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/equity/compiler"
 )
+
+const module = "pegin_contract"
 
 var lockWith2of3KeysFmt = `
 contract LockWith2of3Keys(%s) locks amount of asset {
@@ -75,13 +78,13 @@ func GetPeginContractPrograms(claimScript []byte) ([]byte, error) {
 
 	contractArgs, err := convertArguments(contract, pubkeys)
 	if err != nil {
-		fmt.Println("Convert arguments into contract parameters error:", err)
+		log.WithFields(log.Fields{"module": module, "error": err}).Error("Convert arguments into contract parameters error")
 		return nil, errors.New("Convert arguments into contract parameters error")
 	}
 
 	instantProg, err := instantiateContract(contract, contractArgs)
 	if err != nil {
-		fmt.Println("Instantiate contract error:", err)
+		log.WithFields(log.Fields{"module": module, "error": err}).Error("Instantiate contract error")
 		return nil, errors.New("Instantiate contract error")
 	}
 

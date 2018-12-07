@@ -16,7 +16,6 @@ import (
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/bc/types/bytom"
 	bytomtypes "github.com/vapor/protocol/bc/types/bytom/types"
 	"github.com/vapor/protocol/validation"
 	"github.com/vapor/util"
@@ -31,11 +30,11 @@ func getPeginTxnOutputIndex(rawTx bytomtypes.Tx, controlProg []byte) int {
 	return -1
 }
 
-func toHash(hexBytes []chainjson.HexBytes) (hashs []*bytom.Hash) {
+func toHash(hexBytes []chainjson.HexBytes) (hashs []*bc.Hash) {
 	for _, data := range hexBytes {
 		b32 := [32]byte{}
 		copy(b32[:], data)
-		res := bytom.NewHash(b32)
+		res := bc.NewHash(b32)
 		hashs = append(hashs, &res)
 	}
 	return
@@ -89,7 +88,7 @@ func (a *API) createRawPegin(ctx context.Context, ins struct {
 	txHashes := toHash(ins.TxHashes)
 	matchedTxIDs := toHash(ins.MatchedTxIDs)
 	statusHashes := toHash(ins.StatusHashes)
-	if !bytomtypes.ValidateTxMerkleTreeProof(txHashes, flags, matchedTxIDs, ins.BlockHeader.BlockCommitment.TransactionsMerkleRoot) {
+	if !types.ValidateTxMerkleTreeProof(txHashes, flags, matchedTxIDs, ins.BlockHeader.BlockCommitment.TransactionsMerkleRoot) {
 		return nil, errors.New("Merkleblock validation failed")
 	}
 	// CheckBytomProof
@@ -149,20 +148,11 @@ func (a *API) createRawPegin(ctx context.Context, ins struct {
 	builder := txbuilder.NewBuilder(time.Now())
 	// TODO 根据raw tx生成一个utxo
 	//txInput := types.NewClaimInputInput(nil, *ins.RawTx.Outputs[nOut].AssetId, ins.RawTx.Outputs[nOut].Amount, cp.ControlProgram)
-	assetId := bc.AssetID{}
-	assetId.V0 = ins.RawTx.Outputs[nOut].AssetId.GetV0()
-	assetId.V1 = ins.RawTx.Outputs[nOut].AssetId.GetV1()
-	assetId.V2 = ins.RawTx.Outputs[nOut].AssetId.GetV2()
-	assetId.V3 = ins.RawTx.Outputs[nOut].AssetId.GetV3()
-
-	sourceID := bc.Hash{}
-	sourceID.V0 = ins.RawTx.OutputID(nOut).GetV0()
-	sourceID.V1 = ins.RawTx.OutputID(nOut).GetV1()
-	sourceID.V2 = ins.RawTx.OutputID(nOut).GetV2()
-	sourceID.V3 = ins.RawTx.OutputID(nOut).GetV3()
+	sourceID := *ins.RawTx.OutputID(nOut)
 	outputAccount := ins.RawTx.Outputs[nOut].Amount
+	assetID := *ins.RawTx.Outputs[nOut].AssetId
 
-	txInput := types.NewClaimInputInput(nil, sourceID, assetId, outputAccount, uint64(nOut), cp.ControlProgram)
+	txInput := types.NewClaimInputInput(nil, sourceID, assetID, outputAccount, uint64(nOut), cp.ControlProgram)
 	if err := builder.AddInput(txInput, &txbuilder.SigningInstruction{}); err != nil {
 		return nil, err
 	}
@@ -171,7 +161,7 @@ func (a *API) createRawPegin(ctx context.Context, ins struct {
 		return nil, err
 	}
 
-	if err = builder.AddOutput(types.NewTxOutput(assetId, outputAccount, program.ControlProgram)); err != nil {
+	if err = builder.AddOutput(types.NewTxOutput(assetID, outputAccount, program.ControlProgram)); err != nil {
 		return nil, err
 	}
 
@@ -272,7 +262,7 @@ func (a *API) createContractRawPegin(ctx context.Context, ins struct {
 	txHashes := toHash(ins.TxHashes)
 	matchedTxIDs := toHash(ins.MatchedTxIDs)
 	statusHashes := toHash(ins.StatusHashes)
-	if !bytomtypes.ValidateTxMerkleTreeProof(txHashes, flags, matchedTxIDs, ins.BlockHeader.BlockCommitment.TransactionsMerkleRoot) {
+	if !types.ValidateTxMerkleTreeProof(txHashes, flags, matchedTxIDs, ins.BlockHeader.BlockCommitment.TransactionsMerkleRoot) {
 		return nil, errors.New("Merkleblock validation failed")
 	}
 	// CheckBytomProof
@@ -329,20 +319,12 @@ func (a *API) createContractRawPegin(ctx context.Context, ins struct {
 	builder := txbuilder.NewBuilder(time.Now())
 	// TODO 根据raw tx生成一个utxo
 	//txInput := types.NewClaimInputInput(nil, *ins.RawTx.Outputs[nOut].AssetId, ins.RawTx.Outputs[nOut].Amount, cp.ControlProgram)
-	assetId := bc.AssetID{}
-	assetId.V0 = ins.RawTx.Outputs[nOut].AssetId.GetV0()
-	assetId.V1 = ins.RawTx.Outputs[nOut].AssetId.GetV1()
-	assetId.V2 = ins.RawTx.Outputs[nOut].AssetId.GetV2()
-	assetId.V3 = ins.RawTx.Outputs[nOut].AssetId.GetV3()
 
-	sourceID := bc.Hash{}
-	sourceID.V0 = ins.RawTx.OutputID(nOut).GetV0()
-	sourceID.V1 = ins.RawTx.OutputID(nOut).GetV1()
-	sourceID.V2 = ins.RawTx.OutputID(nOut).GetV2()
-	sourceID.V3 = ins.RawTx.OutputID(nOut).GetV3()
+	sourceID := *ins.RawTx.OutputID(nOut)
 	outputAccount := ins.RawTx.Outputs[nOut].Amount
+	assetID := *ins.RawTx.Outputs[nOut].AssetId
 
-	txInput := types.NewClaimInputInput(nil, sourceID, assetId, outputAccount, uint64(nOut), cp.ControlProgram)
+	txInput := types.NewClaimInputInput(nil, sourceID, assetID, outputAccount, uint64(nOut), cp.ControlProgram)
 	if err := builder.AddInput(txInput, &txbuilder.SigningInstruction{}); err != nil {
 		return nil, err
 	}
@@ -351,7 +333,7 @@ func (a *API) createContractRawPegin(ctx context.Context, ins struct {
 		return nil, err
 	}
 
-	if err = builder.AddOutput(types.NewTxOutput(assetId, outputAccount, program.ControlProgram)); err != nil {
+	if err = builder.AddOutput(types.NewTxOutput(assetID, outputAccount, program.ControlProgram)); err != nil {
 		return nil, err
 	}
 

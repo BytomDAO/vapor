@@ -19,7 +19,6 @@ import (
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/bc/types/bytom"
 	bytomtypes "github.com/vapor/protocol/bc/types/bytom/types"
 	"github.com/vapor/protocol/vm/vmutil"
 )
@@ -62,12 +61,7 @@ func (a *API) buildMainChainTxForContract(ins struct {
 			return NewErrorResponse(errors.New("The corresponding input cannot be found"))
 		}
 
-		assetID := bytom.AssetID{
-			V0: output.Source.Value.AssetId.GetV0(),
-			V1: output.Source.Value.AssetId.GetV1(),
-			V2: output.Source.Value.AssetId.GetV2(),
-			V3: output.Source.Value.AssetId.GetV3(),
-		}
+		assetID := *output.Source.Value.AssetId
 		out := bytomtypes.NewTxOutput(assetID, output.Source.Value.Amount, controlProgram)
 		builder.AddOutput(out)
 		changeAmount = ins.Utxo.Amount - output.Source.Value.Amount
@@ -80,13 +74,7 @@ func (a *API) buildMainChainTxForContract(ins struct {
 
 	if changeAmount > 0 {
 		u := ins.Utxo
-		assetID := bytom.AssetID{
-			V0: u.AssetID.GetV0(),
-			V1: u.AssetID.GetV1(),
-			V2: u.AssetID.GetV2(),
-			V3: u.AssetID.GetV3(),
-		}
-		out := bytomtypes.NewTxOutput(assetID, changeAmount, ins.Utxo.ControlProgram)
+		out := bytomtypes.NewTxOutput(u.AssetID, changeAmount, ins.Utxo.ControlProgram)
 		builder.AddOutput(out)
 	}
 
@@ -147,12 +135,7 @@ func (a *API) buildMainChainTx(ins struct {
 			return NewErrorResponse(errors.New("The corresponding input cannot be found"))
 		}
 
-		assetID := bytom.AssetID{
-			V0: output.Source.Value.AssetId.GetV0(),
-			V1: output.Source.Value.AssetId.GetV1(),
-			V2: output.Source.Value.AssetId.GetV2(),
-			V3: output.Source.Value.AssetId.GetV3(),
-		}
+		assetID := *output.Source.Value.AssetId
 		out := bytomtypes.NewTxOutput(assetID, output.Source.Value.Amount, controlProgram)
 		builder.AddOutput(out)
 		changeAmount = ins.Utxo.Amount - output.Source.Value.Amount
@@ -165,13 +148,7 @@ func (a *API) buildMainChainTx(ins struct {
 
 	if changeAmount > 0 {
 		u := ins.Utxo
-		assetID := bytom.AssetID{
-			V0: u.AssetID.GetV0(),
-			V1: u.AssetID.GetV1(),
-			V2: u.AssetID.GetV2(),
-			V3: u.AssetID.GetV3(),
-		}
-		out := bytomtypes.NewTxOutput(assetID, changeAmount, ins.Utxo.ControlProgram)
+		out := bytomtypes.NewTxOutput(u.AssetID, changeAmount, ins.Utxo.ControlProgram)
 		builder.AddOutput(out)
 	}
 
@@ -214,21 +191,7 @@ func getInput(entry map[bc.Hash]bc.Entry, outputID bc.Hash, controlProgram strin
 
 // UtxoToInputs convert an utxo to the txinput
 func utxoToInputs(xpubs []chainkd.XPub, u *account.UTXO) (*bytomtypes.TxInput, *mainchain.SigningInstruction, error) {
-	sourceID := bytom.Hash{
-		V0: u.SourceID.GetV0(),
-		V1: u.SourceID.GetV1(),
-		V2: u.SourceID.GetV2(),
-		V3: u.SourceID.GetV3(),
-	}
-
-	assetID := bytom.AssetID{
-		V0: u.AssetID.GetV0(),
-		V1: u.AssetID.GetV1(),
-		V2: u.AssetID.GetV2(),
-		V3: u.AssetID.GetV3(),
-	}
-
-	txInput := bytomtypes.NewSpendInput(nil, sourceID, assetID, u.Amount, u.SourcePos, u.ControlProgram)
+	txInput := bytomtypes.NewSpendInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram)
 	sigInst := &mainchain.SigningInstruction{}
 	quorum := len(xpubs)
 	if u.Address == "" {
@@ -265,21 +228,7 @@ func utxoToInputs(xpubs []chainkd.XPub, u *account.UTXO) (*bytomtypes.TxInput, *
 }
 
 func contractToInputs(a *API, u *account.UTXO, xpubs []chainkd.XPub, ClaimScript chainjson.HexBytes) (*bytomtypes.TxInput, *mainchain.SigningInstruction, error) {
-	sourceID := bytom.Hash{
-		V0: u.SourceID.GetV0(),
-		V1: u.SourceID.GetV1(),
-		V2: u.SourceID.GetV2(),
-		V3: u.SourceID.GetV3(),
-	}
-
-	assetID := bytom.AssetID{
-		V0: u.AssetID.GetV0(),
-		V1: u.AssetID.GetV1(),
-		V2: u.AssetID.GetV2(),
-		V3: u.AssetID.GetV3(),
-	}
-
-	txInput := bytomtypes.NewSpendInput(nil, sourceID, assetID, u.Amount, u.SourcePos, u.ControlProgram)
+	txInput := bytomtypes.NewSpendInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram)
 	sigInst := &mainchain.SigningInstruction{}
 
 	// raw_tx_signature

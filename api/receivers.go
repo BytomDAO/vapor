@@ -34,6 +34,7 @@ func (a *API) createAccountReceiver(ctx context.Context, ins struct {
 
 type fundingResp struct {
 	MainchainAddress string             `json:"mainchain_address"`
+	ControlProgram   chainjson.HexBytes `json:"control_program,omitempty"`
 	ClaimScript      chainjson.HexBytes `json:"claim_script"`
 }
 
@@ -78,13 +79,14 @@ func (a *API) getPeginContractAddress(ctx context.Context, ins struct {
 		accountID = account.ID
 	}
 
-	mainchainAddress, claimScript, err := a.wallet.AccountMgr.CreatePeginContractAddress(accountID, false)
+	mainchainAddress, controlProgram, claimScript, err := a.wallet.AccountMgr.CreatePeginContractAddress(accountID, false)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
 
 	return NewSuccessResponse(fundingResp{
 		MainchainAddress: mainchainAddress,
+		ControlProgram:   controlProgram,
 		ClaimScript:      claimScript,
 	})
 }
