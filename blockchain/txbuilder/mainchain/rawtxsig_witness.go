@@ -32,10 +32,6 @@ func (sw *RawTxSigWitness) Sign(tpl *Template, index uint32, xprv chainkd.XPrv) 
 			// Already have a signature for this key
 			continue
 		}
-		path := make([][]byte, len(keyID.DerivationPath))
-		for i, p := range keyID.DerivationPath {
-			path[i] = p
-		}
 		if keyID.XPub.String() != xprv.XPub().String() {
 			continue
 		}

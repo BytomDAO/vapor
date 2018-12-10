@@ -248,11 +248,12 @@ func (a *API) buildHandler() {
 		m.Handle("/recovery-wallet", jsonHandler(a.recoveryFromRootXPubs))
 
 		m.Handle("/get-pegin-address", jsonHandler(a.getPeginAddress))
-		m.Handle("/claim-pegin-transaction", jsonHandler(a.claimPeginTx))
+		m.Handle("/get-pegin-contract-address", jsonHandler(a.getPeginContractAddress))
+		m.Handle("/claim-pegin-transaction", jsonHandler(a.claimContractPeginTx))
 		m.Handle("/create-key-pair", jsonHandler(a.createXKeys))
 		m.Handle("/get-utxo-from-transaction", jsonHandler(a.getUnspentOutputs))
 		m.Handle("/get-side-raw-transaction", jsonHandler(a.getSideRawTransaction))
-		m.Handle("/build-mainchain-tx", jsonHandler(a.buildMainChainTx))
+		m.Handle("/build-mainchain-tx", jsonHandler(a.buildMainChainTxForContract))
 		m.Handle("/sign-with-key", jsonHandler(a.signWithKey))
 	} else {
 		log.Warn("Please enable wallet")

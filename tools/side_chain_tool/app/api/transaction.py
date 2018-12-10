@@ -4,7 +4,7 @@ from flask import request, jsonify, make_response, current_app, render_template
 #from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 
 from . import api
-from .Connection import Connection
+from .Connection import Connection, WSClient
 from .. import db
 from ..models import KeyPair, PeginAddress
 
@@ -56,12 +56,13 @@ def create_pegin_address():
     accountID = request.json['account_id']
     connSide = Connection("http://127.0.0.1:8888")
     body_json = {"account_id": accountID}
-    response = connSide.request("/get-pegin-address",body_json)
+    response = connSide.request("/get-pegin-contract-address",body_json)
     resp_json = json.loads(response.text)
     if resp_json['status'] == 'success':
         mainchain_address = resp_json['data']['mainchain_address']
+        control_program = resp_json['data']['control_program']
         claim_script = resp_json['data']['claim_script']
-        pegin = PeginAddress(address=mainchain_address, claim_script=claim_script)
+        pegin = PeginAddress(address=mainchain_address, control_program=control_program, claim_script=claim_script)
         db.session.add(pegin)
         db.session.commit()
     elif resp_json['status'] == 'fail':
@@ -80,6 +81,7 @@ def get_pegin_address():
     for peginAddr in peginAddrs:
         data = {
             "mainchain_address":peginAddr.address.encode('utf-8'),
+            "control_program":peginAddr.control_program.encode('utf-8'),
             "claim_script": peginAddr.claim_script.encode('utf-8')
         }
         json_data = json_data + json.dumps(data)
@@ -91,7 +93,6 @@ def get_pegin_address():
 
 @api.route('/claim_tx', methods=['GET', 'POST', 'OPTIONS'])
 def claim_tx():
-    print request.json
     if not request.json or not 'claim_script' in request.json or not 'block_height' in request.json or not 'tx_id' in request.json or not 'password' in request.json:
         return json_contents(jsonify(code=-1, msg="The json format is incorrect"))
     block_height = int(request.json['block_height'])
@@ -111,7 +112,8 @@ def claim_tx():
     if resp_json['status'] == 'success':
         raw_block = resp_json['data']['raw_block'].encode('utf-8')
     elif resp_json['status'] == 'fail':
-        return json_contents(jsonify(code=-1, msg="get-raw-block: " + resp_json['msg']))
+        print resp_json
+        return json_contents(jsonify(code=-1, msg="get-raw-block: " + resp_json['error_detail']))
     else:
         return json_contents(jsonify(code=-1, msg="get raw block fail"))
 
@@ -123,18 +125,21 @@ def claim_tx():
         raw_transaction = resp_json['data']['raw_transaction'].encode('utf-8')
         block_hash = resp_json['data']['block_hash'].encode('utf-8')
     elif resp_json['status'] == 'fail':
-        return json_contents(jsonify(code=-1, msg="get-raw-transaction: " + resp_json['msg']))
+        print resp_json
+        return json_contents(jsonify(code=-1, msg="get-raw-transaction: " + resp_json['error_detail']))
     else:
         return json_contents(jsonify(code=-1, msg="get raw transaction fail"))
 
     # 主链获取proof
+    print block_hash
     body_json = {"tx_id": tx_id,"block_hash": block_hash}
     response = connMain.request("/get-merkle-proof",body_json)
     resp_json = json.loads(response.text)
     if resp_json['status'] == 'success':
         proof = json.dumps(resp_json['data']).strip('{}')
     elif resp_json['status'] == 'fail':
-        return json_contents(jsonify(code=-1, msg="get-merkle-proof:" + resp_json['msg']))
+        print resp_json
+        return json_contents(jsonify(code=-1, msg="get-merkle-proof:" + resp_json['error_detail']))
     else:
         return json_contents(jsonify(code=-1, msg="get raw transaction fail"))
 
@@ -146,7 +151,8 @@ def claim_tx():
     if resp_json['status'] == 'success':
         return json_contents(jsonify(code=200, msg=resp_json['data']))
     elif resp_json['status'] == 'fail':
-        return json_contents(jsonify(code=-1, msg="claim-pegin-transaction: " + resp_json['msg']))
+        print resp_json
+        return json_contents(jsonify(code=-1, msg="claim-pegin-transaction: " + resp_json['error_detail']))
     else:
         return json_contents(jsonify(code=-1, msg="claim pegin transaction fail"))
 
@@ -223,8 +229,7 @@ def send_to_mainchain():
         return json_contents(jsonify(code=-1, msg="get side raw transaction fail"))
 
     # 构建主链交易
-    body_json = '{"claim_script":"%s","raw_transaction": "%s","alias": "%s","control_program":"%s","root_xpubs":%s,%s}' % (claim_script,raw_transaction,alias,control_program,root_xpubs,utxo)
-    print body_json
+    body_json = '{"claim_script":"%s","raw_transaction": "%s","control_program":"%s","root_xpubs":%s,%s}' % (claim_script,raw_transaction,control_program,root_xpubs,utxo)
     response = connSide.request("/build-mainchain-tx",json.loads(body_json))
     resp_json = json.loads(response.text.encode('utf-8'))
     tmpl = ""
@@ -237,15 +242,12 @@ def send_to_mainchain():
         return json_contents(jsonify(code=-1, msg="build mainchain transaction fail"))
 
     # 签名
-    #xpubs = request.json['root_xpubs']
-    #xprvs = request.json['xprvs']
-    #for index in range(len(xpubs)):
     for key,value in key_pair.items():
-        #xprv = request.json['xprv'].encode('utf-8')
         body_json = '{"xprv": "%s","xpub":"%s","transaction":%s,"claim_script":"%s"}' % (key,value,tmpl,claim_script)
         response = connSide.request("/sign-with-key",json.loads(body_json))
         resp_json = json.loads(response.text.encode('utf-8'))
         if resp_json['status'] == 'success':
+            tmpl = json.dumps(resp_json['data']['transaction'])
             raw_transaction = resp_json['data']['transaction']['raw_transaction'].encode('utf-8')
         elif resp_json['status'] == 'fail':
             return json_contents(jsonify(code=-1, msg="sign-with-key: " + resp_json['msg']))
@@ -256,6 +258,7 @@ def send_to_mainchain():
     body_json = '{"raw_transaction": "%s"}' % (raw_transaction)
     response = connMain.request("/submit-transaction",json.loads(body_json))
     resp_json = json.loads(response.text.encode('utf-8'))
+    print resp_json
     if resp_json['status'] == 'success':
         return json_contents(jsonify(code=200, msg=resp_json['data']))
     elif resp_json['status'] == 'fail':

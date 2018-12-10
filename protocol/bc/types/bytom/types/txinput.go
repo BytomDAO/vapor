@@ -6,7 +6,8 @@ import (
 
 	"github.com/vapor/encoding/blockchain"
 	"github.com/vapor/errors"
-	"github.com/vapor/protocol/bc/types/bytom"
+	"github.com/vapor/protocol/bc"
+	"github.com/vapor/protocol/bc/types"
 )
 
 // serflag variables for input types.
@@ -34,36 +35,36 @@ type (
 var errBadAssetID = errors.New("asset ID does not match other issuance parameters")
 
 // AssetAmount return the asset id and amount of the txinput.
-func (t *TxInput) AssetAmount() bytom.AssetAmount {
+func (t *TxInput) AssetAmount() bc.AssetAmount {
 	switch inp := t.TypedInput.(type) {
-	case *IssuanceInput:
+	case *types.IssuanceInput:
 		assetID := inp.AssetID()
-		return bytom.AssetAmount{
+		return bc.AssetAmount{
 			AssetId: &assetID,
 			Amount:  inp.Amount,
 		}
 	case *SpendInput:
 		return inp.AssetAmount
 	}
-	return bytom.AssetAmount{}
+	return bc.AssetAmount{}
 }
 
 // AssetID return the assetID of the txinput
-func (t *TxInput) AssetID() bytom.AssetID {
+func (t *TxInput) AssetID() bc.AssetID {
 	switch inp := t.TypedInput.(type) {
-	case *IssuanceInput:
+	case *types.IssuanceInput:
 		return inp.AssetID()
 	case *SpendInput:
 		return *inp.AssetId
 
 	}
-	return bytom.AssetID{}
+	return bc.AssetID{}
 }
 
 // Amount return the asset amount of the txinput
 func (t *TxInput) Amount() uint64 {
 	switch inp := t.TypedInput.(type) {
-	case *IssuanceInput:
+	case *types.IssuanceInput:
 		return inp.Amount
 	case *SpendInput:
 		return inp.Amount
@@ -81,7 +82,7 @@ func (t *TxInput) ControlProgram() []byte {
 
 // IssuanceProgram return the control program of the issuance input
 func (t *TxInput) IssuanceProgram() []byte {
-	if ii, ok := t.TypedInput.(*IssuanceInput); ok {
+	if ii, ok := t.TypedInput.(*types.IssuanceInput); ok {
 		return ii.IssuanceProgram
 	}
 	return nil
@@ -90,7 +91,7 @@ func (t *TxInput) IssuanceProgram() []byte {
 // Arguments get the args for the input
 func (t *TxInput) Arguments() [][]byte {
 	switch inp := t.TypedInput.(type) {
-	case *IssuanceInput:
+	case *types.IssuanceInput:
 		return inp.Arguments
 	case *SpendInput:
 		return inp.Arguments
@@ -101,7 +102,7 @@ func (t *TxInput) Arguments() [][]byte {
 // SetArguments set the args for the input
 func (t *TxInput) SetArguments(args [][]byte) {
 	switch inp := t.TypedInput.(type) {
-	case *IssuanceInput:
+	case *types.IssuanceInput:
 		inp.Arguments = args
 	case *SpendInput:
 		inp.Arguments = args
@@ -109,7 +110,7 @@ func (t *TxInput) SetArguments(args [][]byte) {
 }
 
 // SpentOutputID calculate the hash of spended output
-func (t *TxInput) SpentOutputID() (o bytom.Hash, err error) {
+func (t *TxInput) SpentOutputID() (o bc.Hash, err error) {
 	if si, ok := t.TypedInput.(*SpendInput); ok {
 		o, err = ComputeOutputID(&si.SpendCommitment)
 	}
@@ -121,7 +122,7 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 		return err
 	}
 
-	var assetID bytom.AssetID
+	var assetID bc.AssetID
 	t.CommitmentSuffix, err = blockchain.ReadExtensibleString(r, func(r *blockchain.Reader) error {
 		if t.AssetVersion != 1 {
 			return nil
@@ -132,7 +133,7 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 		}
 		switch icType[0] {
 		case IssuanceInputType:
-			ii := new(IssuanceInput)
+			ii := new(types.IssuanceInput)
 			t.TypedInput = ii
 
 			if ii.Nonce, err = blockchain.ReadVarstr31(r); err != nil {
@@ -174,7 +175,7 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 		}
 
 		switch inp := t.TypedInput.(type) {
-		case *IssuanceInput:
+		case *types.IssuanceInput:
 			if inp.AssetDefinition, err = blockchain.ReadVarstr31(r); err != nil {
 				return err
 			}
@@ -221,7 +222,7 @@ func (t *TxInput) writeInputCommitment(w io.Writer) (err error) {
 	}
 
 	switch inp := t.TypedInput.(type) {
-	case *IssuanceInput:
+	case *types.IssuanceInput:
 		if _, err = w.Write([]byte{IssuanceInputType}); err != nil {
 			return err
 		}
@@ -257,7 +258,7 @@ func (t *TxInput) writeInputWitness(w io.Writer) error {
 		return nil
 	}
 	switch inp := t.TypedInput.(type) {
-	case *IssuanceInput:
+	case *types.IssuanceInput:
 		if _, err := blockchain.WriteVarstr31(w, inp.AssetDefinition); err != nil {
 			return err
 		}

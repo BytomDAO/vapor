@@ -2,6 +2,7 @@
 package account
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"reflect"
 	"sort"
@@ -20,6 +21,7 @@ import (
 	"github.com/vapor/crypto"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/crypto/sha3pool"
+	"github.com/vapor/equity/pegin_contract"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
@@ -788,7 +790,10 @@ func (m *Manager) SaveControlPrograms(progs ...*CtrlProgram) error {
 
 func (m *Manager) CreatePeginAddress(accountID string, change bool) (string, []byte, error) {
 	// 通过配置获取
-	claimCtrlProg, _ := m.CreateAddress(accountID, change)
+	claimCtrlProg, err := m.CreateAddress(accountID, change)
+	if err != nil {
+		return "", nil, err
+	}
 	claimScript := claimCtrlProg.ControlProgram
 
 	federationRedeemScript := vmutil.CalculateContract(consensus.ActiveNetParams.FedpegXPubs, claimScript)
@@ -808,7 +813,79 @@ func (m *Manager) GetPeginControlPrograms(claimScript []byte) (string, []byte) {
 	federationRedeemScript := vmutil.CalculateContract(consensus.ActiveNetParams.FedpegXPubs, claimScript)
 	scriptHash := crypto.Sha256(federationRedeemScript)
 
-	address, err := common.NewAddressWitnessScriptHash(scriptHash, &consensus.ActiveNetParams)
+	address, err := common.NewPeginAddressWitnessScriptHash(scriptHash, &consensus.ActiveNetParams)
+	if err != nil {
+		return "", nil
+	}
+
+	redeemContract := address.ScriptAddress()
+
+	program := []byte{}
+	program, err = vmutil.P2WSHProgram(redeemContract)
+	if err != nil {
+		return "", nil
+	}
+
+	return address.EncodeAddress(), program
+}
+
+func (m *Manager) CreatePeginContractPrograms(accountID string, change bool) (string, []byte, error) {
+	// 通过配置获取
+	claimCtrlProg, err := m.CreateAddress(accountID, change)
+	if err != nil {
+		return "", nil, err
+	}
+	claimScript := claimCtrlProg.ControlProgram
+
+	peginContractPrograms, err := pegin_contract.GetPeginContractPrograms(claimScript)
+	if err != nil {
+		return "", nil, err
+	}
+	return hex.EncodeToString(peginContractPrograms), claimScript, nil
+
+}
+
+func (m *Manager) CreatePeginContractAddress(accountID string, change bool) (string, []byte, []byte, error) {
+	// 通过配置获取
+	claimCtrlProg, err := m.CreateAddress(accountID, change)
+	if err != nil {
+		return "", nil, nil, err
+	}
+	claimScript := claimCtrlProg.ControlProgram
+
+	peginContractPrograms, err := pegin_contract.GetPeginContractPrograms(claimScript)
+	if err != nil {
+		return "", nil, nil, err
+	}
+
+	scriptHash := crypto.Sha256(peginContractPrograms)
+
+	address, err := common.NewPeginAddressWitnessScriptHash(scriptHash, &consensus.ActiveNetParams)
+	if err != nil {
+		return "", nil, nil, err
+	}
+
+	redeemContract := address.ScriptAddress()
+
+	program := []byte{}
+	program, err = vmutil.P2WSHProgram(redeemContract)
+	if err != nil {
+		return "", nil, nil, err
+	}
+
+	return address.EncodeAddress(), program, claimScript, nil
+
+}
+
+func (m *Manager) GetPeginContractControlPrograms(claimScript []byte) (string, []byte) {
+
+	peginContractPrograms, err := pegin_contract.GetPeginContractPrograms(claimScript)
+	if err != nil {
+		return "", nil
+	}
+	scriptHash := crypto.Sha256(peginContractPrograms)
+
+	address, err := common.NewPeginAddressWitnessScriptHash(scriptHash, &consensus.ActiveNetParams)
 	if err != nil {
 		return "", nil
 	}

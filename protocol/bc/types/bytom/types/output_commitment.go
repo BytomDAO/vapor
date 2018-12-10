@@ -7,12 +7,12 @@ import (
 	"github.com/vapor/crypto/sha3pool"
 	"github.com/vapor/encoding/blockchain"
 	"github.com/vapor/errors"
-	"github.com/vapor/protocol/bc/types/bytom"
+	"github.com/vapor/protocol/bc"
 )
 
 // OutputCommitment contains the commitment data for a transaction output.
 type OutputCommitment struct {
-	bytom.AssetAmount
+	bc.AssetAmount
 	VMVersion      uint64
 	ControlProgram []byte
 }
@@ -62,8 +62,8 @@ func (oc *OutputCommitment) readFrom(r *blockchain.Reader, assetVersion uint64) 
 	})
 }
 
-// Hash convert suffix && assetVersion to bytom.Hash
-func (oc *OutputCommitment) Hash(suffix []byte, assetVersion uint64) (outputhash bytom.Hash) {
+// Hash convert suffix && assetVersion to bc.Hash
+func (oc *OutputCommitment) Hash(suffix []byte, assetVersion uint64) (outputhash bc.Hash) {
 	h := sha3pool.Get256()
 	defer sha3pool.Put256(h)
 	oc.writeExtensibleString(h, suffix, assetVersion)

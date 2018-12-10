@@ -9,17 +9,17 @@ import (
 	"github.com/vapor/encoding/blockchain"
 	"github.com/vapor/encoding/bufpool"
 	"github.com/vapor/errors"
-	"github.com/vapor/protocol/bc/types/bytom"
+	"github.com/vapor/protocol/bc"
 )
 
 // BlockHeader defines information about a block and is used in the Bytom
 type BlockHeader struct {
-	Version           uint64     // The version of the block.
-	Height            uint64     // The height of the block.
-	PreviousBlockHash bytom.Hash // The hash of the previous block.
-	Timestamp         uint64     // The time of the block in seconds.
-	Nonce             uint64     // Nonce used to generate the block.
-	Bits              uint64     // Difficulty target for the block.
+	Version           uint64  // The version of the block.
+	Height            uint64  // The height of the block.
+	PreviousBlockHash bc.Hash // The hash of the previous block.
+	Timestamp         uint64  // The time of the block in seconds.
+	Nonce             uint64  // Nonce used to generate the block.
+	Bits              uint64  // Difficulty target for the block.
 	BlockCommitment
 }
 
@@ -29,7 +29,7 @@ func (bh *BlockHeader) Time() time.Time {
 }
 
 // Hash returns complete hash of the block header.
-func (bh *BlockHeader) Hash() bytom.Hash {
+func (bh *BlockHeader) Hash() bc.Hash {
 	h, _ := mapBlockHeader(bh)
 	return h
 }

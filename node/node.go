@@ -205,27 +205,29 @@ func initActiveNetParams(config *cfg.Config) {
 	if !exist {
 		cmn.Exit(cmn.Fmt("chain_id[%v] don't exist", config.ChainID))
 	}
-	var federationRedeemXPubs []chainkd.XPub
-	if fedpegXPubs := strings.Split(config.Side.FedpegXPubs, ","); len(fedpegXPubs) > 0 {
+	if config.Side.FedpegXPubs != "" {
+		var federationRedeemXPubs []chainkd.XPub
+		fedpegXPubs := strings.Split(config.Side.FedpegXPubs, ",")
 		for _, xpubStr := range fedpegXPubs {
 			var xpub chainkd.XPub
 			xpub.UnmarshalText([]byte(xpubStr))
 			federationRedeemXPubs = append(federationRedeemXPubs, xpub)
 		}
+		consensus.ActiveNetParams.FedpegXPubs = federationRedeemXPubs
 	}
 
-	var signBlockXPubs []chainkd.XPub
-	if xPubs := strings.Split(config.Side.SignBlockXPubs, ","); len(xPubs) > 0 {
+	if config.Side.SignBlockXPubs != "" {
+		var signBlockXPubs []chainkd.XPub
+		xPubs := strings.Split(config.Side.SignBlockXPubs, ",")
 		for _, xpubStr := range xPubs {
 			var xpub chainkd.XPub
 			xpub.UnmarshalText([]byte(xpubStr))
 			signBlockXPubs = append(signBlockXPubs, xpub)
 		}
+		consensus.ActiveNetParams.SignBlockXPubs = signBlockXPubs
 	}
 
 	consensus.ActiveNetParams.Signer = config.Signer
-	consensus.ActiveNetParams.FedpegXPubs = federationRedeemXPubs
-	consensus.ActiveNetParams.SignBlockXPubs = signBlockXPubs
 	consensus.ActiveNetParams.PeginMinDepth = config.Side.PeginMinDepth
 	consensus.ActiveNetParams.ParentGenesisBlockHash = config.Side.ParentGenesisBlockHash
 }
@@ -326,7 +328,7 @@ func bytomdRPCCheck() bool {
 	}
 	if util.ValidatePegin {
 		for {
-			resp, err := util.CallRPC("/get-block-header", &Req{BlockHeight: 0})
+			resp, err := util.CallRPC("/get-merkle-proof", &Req{BlockHeight: 0})
 			if err != nil {
 				log.Error("Call mainchain interface get-block-header failed")
 				time.Sleep(time.Millisecond * 1000)
