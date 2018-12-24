@@ -1,12 +1,14 @@
 package config
 
 import (
+	"math/big"
 	"os"
 	"os/user"
 	"path/filepath"
 	"runtime"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/vapor/common"
 )
 
 var (
@@ -167,6 +169,15 @@ type MainChainRpcConfig struct {
 type WebsocketConfig struct {
 	MaxNumWebsockets     int `mapstructure:"max_num_websockets"`
 	MaxNumConcurrentReqs int `mapstructure:"max_num_concurrent_reqs"`
+}
+
+type DposConfig struct {
+	Period           uint64           `json:"period"`            // Number of seconds between blocks to enforce
+	Epoch            uint64           `json:"epoch"`             // Epoch length to reset votes and checkpoint
+	MaxSignerCount   uint64           `json:"max_signers_count"` // Max count of signers
+	MinVoterBalance  *big.Int         `json:"min_boter_balance"` // Min voter balance to valid this vote
+	GenesisTimestamp uint64           `json:"genesis_timestamp"` // The LoopStartTime of first Block
+	SelfVoteSigners  []common.Address `json:"signers"`           // Signers vote by themselves to seal the block, make sure the signer accounts are pre-funded
 }
 
 // Default configurable rpc's auth parameters.
