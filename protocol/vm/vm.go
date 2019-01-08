@@ -132,7 +132,6 @@ func (vm *virtualMachine) step() error {
 			fmt.Fprintf(TraceOut, "  stack %d: %x\n", len(vm.dataStack)-1-i, vm.dataStack[i])
 		}
 	}
-
 	return nil
 }
 

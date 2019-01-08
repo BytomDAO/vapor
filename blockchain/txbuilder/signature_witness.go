@@ -99,7 +99,56 @@ func (sw *SignatureWitness) sign(ctx context.Context, tpl *Template, index uint3
 	return nil
 }
 
-func (sw SignatureWitness) materialize(args *[][]byte) error {
+func (sw *SignatureWitness) Sign(tpl *Template, index uint32, xprv chainkd.XPrv) error {
+	// Compute the predicate to sign. This is either a
+	// txsighash program if tpl.AllowAdditional is false (i.e., the tx is complete
+	// and no further changes are allowed) or a program enforcing
+	// constraints derived from the existing outputs and current input.
+	if len(sw.Program) == 0 {
+		var err error
+		sw.Program, err = buildSigProgram(tpl, tpl.SigningInstructions[index].Position)
+		if err != nil {
+			return err
+		}
+		if len(sw.Program) == 0 {
+			return ErrEmptyProgram
+		}
+	}
+	if len(sw.Sigs) < len(sw.Keys) {
+		// Each key in sw.Keys may produce a signature in sw.Sigs. Make
+		// sure there are enough slots in sw.Sigs and that we preserve any
+		// sigs already present.
+		newSigs := make([]chainjson.HexBytes, len(sw.Keys))
+		copy(newSigs, sw.Sigs)
+		sw.Sigs = newSigs
+	}
+	var h [32]byte
+	sha3pool.Sum256(h[:], sw.Program)
+	for i, keyID := range sw.Keys {
+		if len(sw.Sigs[i]) > 0 {
+			// Already have a signature for this key
+			continue
+		}
+		path := make([][]byte, len(keyID.DerivationPath))
+		for i, p := range keyID.DerivationPath {
+			path[i] = p
+		}
+		if keyID.XPub.String() != xprv.XPub().String() {
+			continue
+		}
+
+		sigBytes := xprv.Sign(h[:])
+
+		// This break is ordered to avoid signing transaction successfully only once for a multiple-sign account
+		// that consist of different keys by the same password. Exit immediately when the signature is success,
+		// it means that only one signature will be successful in the loop for this multiple-sign account.
+		sw.Sigs[i] = sigBytes
+		break
+	}
+	return nil
+}
+
+func (sw SignatureWitness) Materialize(args *[][]byte) error {
 	// This is the value of N for the CHECKPREDICATE call. The code
 	// assumes that everything already in the arg list before this call
 	// to Materialize is input to the signature program, so N is

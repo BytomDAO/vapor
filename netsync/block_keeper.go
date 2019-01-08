@@ -6,6 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/vapor/chain"
 	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
 	"github.com/vapor/mining/tensority"
@@ -47,7 +48,7 @@ type headersMsg struct {
 }
 
 type blockKeeper struct {
-	chain Chain
+	chain chain.Chain
 	peers *peerSet
 
 	syncPeer         *peer
@@ -58,7 +59,7 @@ type blockKeeper struct {
 	headerList *list.List
 }
 
-func newBlockKeeper(chain Chain, peers *peerSet) *blockKeeper {
+func newBlockKeeper(chain chain.Chain, peers *peerSet) *blockKeeper {
 	bk := &blockKeeper{
 		chain:            chain,
 		peers:            peers,

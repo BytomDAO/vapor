@@ -26,6 +26,7 @@ var (
 	blockHeaderPrefix = []byte("BH:")
 	txStatusPrefix    = []byte("BTS:")
 	cliamTxPreFix     = []byte("Claim:")
+	dposPreFix        = []byte("dpos:")
 )
 
 func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
@@ -65,6 +66,10 @@ func calcTxStatusKey(hash *bc.Hash) []byte {
 
 func calcClaimTxKey(hash *bc.Hash) []byte {
 	return append(cliamTxPreFix, hash.Bytes()...)
+}
+
+func calcDPosKey(hash *bc.Hash) []byte {
+	return append(dposPreFix, hash.Bytes()...)
 }
 
 // GetBlock return the block by given hash
@@ -236,4 +241,19 @@ func (s *Store) SetWithdrawSpent(hash *bc.Hash) {
 	batch := s.db.NewBatch()
 	batch.Set(calcClaimTxKey(hash), []byte("1"))
 	batch.Write()
+}
+
+func (s *Store) Set(hash *bc.Hash, data []byte) error {
+	batch := s.db.NewBatch()
+	batch.Set(calcDPosKey(hash), data)
+	batch.Write()
+	return nil
+}
+
+func (s *Store) Get(hash *bc.Hash) ([]byte, error) {
+	data := s.db.Get(calcDPosKey(hash))
+	if data == nil {
+		return nil, errors.New("can't find the snapshot by given hash")
+	}
+	return data, nil
 }

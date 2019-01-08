@@ -147,12 +147,11 @@ func (a *API) createRawPegin(ctx context.Context, ins struct {
 	// 用输出作为交易输入 生成新的交易
 	builder := txbuilder.NewBuilder(time.Now())
 	// TODO 根据raw tx生成一个utxo
-	//txInput := types.NewClaimInputInput(nil, *ins.RawTx.Outputs[nOut].AssetId, ins.RawTx.Outputs[nOut].Amount, cp.ControlProgram)
 	sourceID := *ins.RawTx.OutputID(nOut)
 	outputAccount := ins.RawTx.Outputs[nOut].Amount
 	assetID := *ins.RawTx.Outputs[nOut].AssetId
 
-	txInput := types.NewClaimInputInput(nil, sourceID, assetID, outputAccount, uint64(nOut), cp.ControlProgram)
+	txInput := types.NewClaimInput(nil, sourceID, assetID, outputAccount, uint64(nOut), cp.ControlProgram)
 	if err := builder.AddInput(txInput, &txbuilder.SigningInstruction{}); err != nil {
 		return nil, err
 	}
@@ -318,13 +317,12 @@ func (a *API) createContractRawPegin(ctx context.Context, ins struct {
 	// 用输出作为交易输入 生成新的交易
 	builder := txbuilder.NewBuilder(time.Now())
 	// TODO 根据raw tx生成一个utxo
-	//txInput := types.NewClaimInputInput(nil, *ins.RawTx.Outputs[nOut].AssetId, ins.RawTx.Outputs[nOut].Amount, cp.ControlProgram)
 
 	sourceID := *ins.RawTx.OutputID(nOut)
 	outputAccount := ins.RawTx.Outputs[nOut].Amount
 	assetID := *ins.RawTx.Outputs[nOut].AssetId
 
-	txInput := types.NewClaimInputInput(nil, sourceID, assetID, outputAccount, uint64(nOut), cp.ControlProgram)
+	txInput := types.NewClaimInput(nil, sourceID, assetID, outputAccount, uint64(nOut), cp.ControlProgram)
 	if err := builder.AddInput(txInput, &txbuilder.SigningInstruction{}); err != nil {
 		return nil, err
 	}

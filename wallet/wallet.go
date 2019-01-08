@@ -10,6 +10,7 @@ import (
 	"github.com/vapor/account"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/pseudohsm"
+	"github.com/vapor/common"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -41,10 +42,11 @@ type Wallet struct {
 	chain       *protocol.Chain
 	RecoveryMgr *recoveryManager
 	rescanCh    chan struct{}
+	dposAddress common.Address
 }
 
 //NewWallet return a new wallet instance
-func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain) (*Wallet, error) {
+func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain, dposAddress common.Address) (*Wallet, error) {
 	w := &Wallet{
 		DB:          walletDB,
 		AccountMgr:  account,
@@ -53,6 +55,7 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 		Hsm:         hsm,
 		RecoveryMgr: newRecoveryManager(walletDB, account),
 		rescanCh:    make(chan struct{}, 1),
+		dposAddress: dposAddress,
 	}
 
 	if err := w.loadWalletInfo(); err != nil {

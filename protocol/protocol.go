@@ -6,6 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/config"
+	engine "github.com/vapor/consensus/consensus"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -26,6 +27,7 @@ type Chain struct {
 	bestNode   *state.BlockNode
 	Authoritys map[string]string
 	position   uint64
+	engine     engine.Engine
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
@@ -63,6 +65,14 @@ func (c *Chain) SetAuthoritys(authoritys map[string]string) {
 
 func (c *Chain) SetPosition(position uint64) {
 	c.position = position
+}
+
+func (c *Chain) GetAuthoritys(key string) string {
+	return c.Authoritys[key]
+}
+
+func (c *Chain) SetConsensusEngine(engine engine.Engine) {
+	c.engine = engine
 }
 
 func (c *Chain) initChainStatus() error {

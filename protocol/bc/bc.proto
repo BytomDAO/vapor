@@ -51,6 +51,7 @@ message ValueDestination {
 message Proof {
 	bytes sign           = 1;
 	bytes controlProgram = 2;
+  bytes address        = 3;
 }
 
 message BytomBlockHeader {
@@ -63,7 +64,6 @@ message BytomBlockHeader {
   uint64            nonce                   = 7;
   uint64            bits                    = 8;
   TransactionStatus transaction_status      = 9;
-  bytes             extra                   = 10;
 }
 
 message BlockHeader {
@@ -77,6 +77,8 @@ message BlockHeader {
   uint64            bits                    = 8;
   TransactionStatus transaction_status      = 9;
   Proof             Proof                   = 10;
+  bytes             extra                   = 11;
+  bytes             coinbase                = 12;
 }
 
 message TxHeader {
@@ -140,4 +142,16 @@ message Claim {
   repeated bytes   witness_arguments   = 3;
   uint64           ordinal             = 4;
   repeated bytes   Peginwitness        = 5;
+}
+
+message Dpos {
+  Hash             spent_output_id     = 1;
+  ValueDestination witness_destination = 2;
+  repeated bytes   witness_arguments   = 3;
+  uint64           ordinal             = 4;
+  uint32           type                = 5;
+  string           from                = 6;
+  string           to                  = 7;
+  uint64           stake               = 8;
+  string           data                = 9;
 }

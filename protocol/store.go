@@ -23,6 +23,9 @@ type Store interface {
 
 	IsWithdrawSpent(hash *bc.Hash) bool
 	SetWithdrawSpent(hash *bc.Hash)
+
+	Set(hash *bc.Hash, data []byte) error
+	Get(hash *bc.Hash) ([]byte, error)
 }
 
 // BlockStoreState represents the core's db status

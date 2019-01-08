@@ -17,7 +17,7 @@ import (
 	"github.com/vapor/dashboard/dashboard"
 	"github.com/vapor/dashboard/equity"
 	"github.com/vapor/errors"
-	"github.com/vapor/mining/cpuminer"
+	"github.com/vapor/mining/miner"
 	"github.com/vapor/mining/miningpool"
 	"github.com/vapor/net/http/authn"
 	"github.com/vapor/net/http/gzip"
@@ -105,14 +105,15 @@ func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 // API is the scheduling center for server
 type API struct {
-	sync            *netsync.SyncManager
-	wallet          *wallet.Wallet
-	accessTokens    *accesstoken.CredentialStore
-	chain           *protocol.Chain
-	server          *http.Server
-	handler         http.Handler
-	txFeedTracker   *txfeed.Tracker
-	cpuMiner        *cpuminer.CPUMiner
+	sync          *netsync.SyncManager
+	wallet        *wallet.Wallet
+	accessTokens  *accesstoken.CredentialStore
+	chain         *protocol.Chain
+	server        *http.Server
+	handler       http.Handler
+	txFeedTracker *txfeed.Tracker
+	//cpuMiner        *cpuminer.CPUMiner
+	miner           *miner.Miner
 	miningPool      *miningpool.MiningPool
 	notificationMgr *websocket.WSNotificationManager
 	newBlockCh      chan *bc.Hash
@@ -169,14 +170,14 @@ func (a *API) StartServer(address string) {
 }
 
 // NewAPI create and initialize the API
-func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, cpuMiner *cpuminer.CPUMiner, miningPool *miningpool.MiningPool, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, newBlockCh chan *bc.Hash, notificationMgr *websocket.WSNotificationManager) *API {
+func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, miner *miner.Miner, miningPool *miningpool.MiningPool, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, newBlockCh chan *bc.Hash, notificationMgr *websocket.WSNotificationManager) *API {
 	api := &API{
 		sync:          sync,
 		wallet:        wallet,
 		chain:         chain,
 		accessTokens:  token,
 		txFeedTracker: txfeeds,
-		cpuMiner:      cpuMiner,
+		miner:         miner,
 		miningPool:    miningPool,
 
 		newBlockCh:      newBlockCh,
@@ -255,6 +256,7 @@ func (a *API) buildHandler() {
 		m.Handle("/get-side-raw-transaction", jsonHandler(a.getSideRawTransaction))
 		m.Handle("/build-mainchain-tx", jsonHandler(a.buildMainChainTxForContract))
 		m.Handle("/sign-with-key", jsonHandler(a.signWithKey))
+		m.Handle("/dpos", jsonHandler(a.dpos))
 	} else {
 		log.Warn("Please enable wallet")
 	}

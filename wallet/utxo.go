@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"encoding/json"
+	"fmt"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/db"
@@ -13,6 +14,7 @@ import (
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/vm/vmutil"
 )
 
 // GetAccountUtxos return all account unspent outputs
@@ -45,6 +47,23 @@ func (w *Wallet) GetAccountUtxos(accountID string, id string, unconfirmed, isSma
 }
 
 func (w *Wallet) attachUtxos(batch db.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
+	/*
+		a := bc.Hash{}
+		a.UnmarshalText([]byte("bef9c83e5cadc6dbb80b81387f3e3c3fadd76b917e5337f5442b9ef071c06526"))
+		batch.Delete(account.StandardUTXOKey(a))
+		a.UnmarshalText([]byte("1a5e2141a12823dabf343b5ace0a181a3d018e24f3dc6e7c3704b66fc040ca7b"))
+		batch.Delete(account.StandardUTXOKey(a))
+		a.UnmarshalText([]byte("4647b1e0893f56438f9bbde6134840f1595da799cfc6ece77c4d9aabdf9cfe50"))
+		batch.Delete(account.StandardUTXOKey(a))
+		a.UnmarshalText([]byte("928094d14b00aaf674ee291bbfb0c843a4dab53984f6235b998338fe0fa2d688"))
+		batch.Delete(account.StandardUTXOKey(a))
+		a.UnmarshalText([]byte("e20aee90018f8b6483d5590786fcf495bccfa7f1a3a5a5a9106c4143f71d49a4"))
+		batch.Delete(account.StandardUTXOKey(a))
+		a.UnmarshalText([]byte("2cb18fe2dd3eb8dcf2df43aa6650851dd0b6de291bfffd151a36703c92f8e864"))
+		batch.Delete(account.StandardUTXOKey(a))
+		a.UnmarshalText([]byte("48d71e6da11de69983b0cc79787f0f9422a144c94e687dfec11b4a57fdca2832"))
+		batch.Delete(account.StandardUTXOKey(a))
+	*/
 	for txIndex, tx := range b.Transactions {
 		statusFail, err := txStatus.GetStatus(txIndex)
 		if err != nil {
@@ -108,6 +127,9 @@ func (w *Wallet) detachUtxos(batch db.Batch, b *types.Block, txStatus *bc.Transa
 
 func (w *Wallet) filterAccountUtxo(utxos []*account.UTXO) []*account.UTXO {
 	outsByScript := make(map[string][]*account.UTXO, len(utxos))
+	redeemContract := w.dposAddress.ScriptAddress()
+	program, _ := vmutil.P2WPKHProgram(redeemContract)
+	isDposAddress := false
 	for _, utxo := range utxos {
 		scriptStr := string(utxo.ControlProgram)
 		outsByScript[scriptStr] = append(outsByScript[scriptStr], utxo)
@@ -126,21 +148,33 @@ func (w *Wallet) filterAccountUtxo(utxos []*account.UTXO) []*account.UTXO {
 		sha3pool.Sum256(hash[:], []byte(s))
 		data := w.DB.Get(account.ContractKey(hash))
 		if data == nil {
-			continue
+			if s == string(program) {
+				isDposAddress = true
+			} else {
+				continue
+			}
+
 		}
 
-		cp := &account.CtrlProgram{}
-		if err := json.Unmarshal(data, cp); err != nil {
-			log.WithField("err", err).Error("filterAccountUtxo fail on unmarshal control program")
-			continue
-		}
-
-		for _, utxo := range outsByScript[s] {
-			utxo.AccountID = cp.AccountID
-			utxo.Address = cp.Address
-			utxo.ControlProgramIndex = cp.KeyIndex
-			utxo.Change = cp.Change
-			result = append(result, utxo)
+		if !isDposAddress {
+			cp := &account.CtrlProgram{}
+			if err := json.Unmarshal(data, cp); err != nil {
+				log.WithField("err", err).Error("filterAccountUtxo fail on unmarshal control program")
+				continue
+			}
+			for _, utxo := range outsByScript[s] {
+				utxo.AccountID = cp.AccountID
+				utxo.Address = cp.Address
+				utxo.ControlProgramIndex = cp.KeyIndex
+				utxo.Change = cp.Change
+				result = append(result, utxo)
+			}
+		} else {
+			for _, utxo := range outsByScript[s] {
+				utxo.Address = w.dposAddress.EncodeAddress()
+				result = append(result, utxo)
+			}
+			isDposAddress = false
 		}
 	}
 	return result
@@ -169,7 +203,6 @@ func txInToUtxos(tx *types.Tx, statusFail bool) []*account.UTXO {
 		if err != nil {
 			continue
 		}
-
 		resOut, err := tx.Output(*sp.SpentOutputId)
 		if err != nil {
 			log.WithField("err", err).Error("txInToUtxos fail on get resOut")
@@ -177,6 +210,7 @@ func txInToUtxos(tx *types.Tx, statusFail bool) []*account.UTXO {
 		}
 
 		if statusFail && *resOut.Source.Value.AssetId != *consensus.BTMAssetID {
+			fmt.Println("statusFail:", statusFail)
 			continue
 		}
 

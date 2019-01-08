@@ -148,6 +148,16 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 	case *bc.Mux:
 		parity := make(map[bc.AssetID]int64)
 		for i, src := range e.Sources {
+			e, ok := vs.tx.Entries[*src.Ref]
+			if !ok {
+				return errors.Wrapf(bc.ErrMissingEntry, "entry for bytom input %x not found", *src.Ref)
+			}
+			switch e.(type) {
+			case *bc.Dpos:
+				continue
+			default:
+			}
+
 			if src.Value.Amount > math.MaxInt64 {
 				return errors.WithDetailf(ErrOverflow, "amount %d exceeds maximum value 2^63", src.Value.Amount)
 			}
@@ -188,7 +198,6 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			if !ok {
 				return errors.Wrapf(bc.ErrMissingEntry, "entry for bytom input %x not found", BTMInputID)
 			}
-
 			vs2 := *vs
 			vs2.entryID = BTMInputID
 			if err := checkValid(&vs2, e); err != nil {
@@ -260,7 +269,6 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		if err != nil {
 			return errors.Wrap(err, "getting spend prevout")
 		}
-
 		gasLeft, err := vm.Verify(NewTxVMContext(vs, e, spentOutput.ControlProgram, e.WitnessArguments), vs.gasStatus.GasLeft)
 		if err != nil {
 			return errors.Wrap(err, "checking control program")
@@ -353,6 +361,8 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errors.Wrap(err, "checking spend destination")
 		}
 		vs.gasStatus.GasValid = true
+	case *bc.Dpos:
+		//fmt.Printf("kkkkkkkkkkkkkkkkkkkkkkkkkkk %T\n", e)
 	default:
 		return fmt.Errorf("entry has unexpected type %T", e)
 	}
@@ -369,20 +379,6 @@ type MerkleBlock struct {
 }
 
 func IsValidPeginWitness(peginWitness [][]byte, prevout bc.Output) (err error) {
-	/*
-		assetID := bc.AssetID{}
-		assetID.V0 = prevout.Source.Value.AssetId.GetV0()
-		assetID.V1 = prevout.Source.Value.AssetId.GetV1()
-		assetID.V2 = prevout.Source.Value.AssetId.GetV2()
-		assetID.V3 = prevout.Source.Value.AssetId.GetV3()
-		//bytomPrevout.Source.Value.AssetId = &assetId
-
-		sourceID := bc.Hash{}
-		sourceID.V0 = prevout.Source.Ref.GetV0()
-		sourceID.V1 = prevout.Source.Ref.GetV1()
-		sourceID.V2 = prevout.Source.Ref.GetV2()
-		sourceID.V3 = prevout.Source.Ref.GetV3()
-	*/
 
 	assetAmount := &bc.AssetAmount{
 		AssetId: prevout.Source.Value.AssetId,
@@ -407,11 +403,11 @@ func IsValidPeginWitness(peginWitness [][]byte, prevout bc.Output) (err error) {
 	if !consensus.MoneyRange(amount) {
 		return errors.New("Amount out of range")
 	}
-
-	if len(peginWitness[1]) != 64 {
-		return errors.New("The length of gennesisBlockHash is not correct")
-	}
-
+	/*
+		if len(peginWitness[1]) != 32 {
+			return errors.New("The length of gennesisBlockHash is not correct")
+		}
+	*/
 	claimScript := peginWitness[2]
 
 	rawTx := &bytomtypes.Tx{}
@@ -443,9 +439,10 @@ func IsValidPeginWitness(peginWitness [][]byte, prevout bc.Output) (err error) {
 	if err = checkPeginTx(rawTx, bytomPrevout, amount, claimScript); err != nil {
 		return err
 	}
-
+	var b bc.Hash
+	b.UnmarshalText(peginWitness[1])
 	// Check the genesis block corresponds to a valid peg (only one for now)
-	if !bytes.Equal(peginWitness[1], []byte(consensus.ActiveNetParams.ParentGenesisBlockHash)) {
+	if b.String() != consensus.ActiveNetParams.ParentGenesisBlockHash {
 		return errors.New("ParentGenesisBlockHash don't match")
 	}
 	// TODO Finally, validate peg-in via rpc call
@@ -532,6 +529,11 @@ func checkValidSrc(vstate *validationState, vs *bc.ValueSource) error {
 		}
 		dest = ref.WitnessDestinations[vs.Position]
 	case *bc.Claim:
+		if vs.Position != 0 {
+			return errors.Wrapf(ErrPosition, "invalid position %d for coinbase source", vs.Position)
+		}
+		dest = ref.WitnessDestination
+	case *bc.Dpos:
 		if vs.Position != 0 {
 			return errors.Wrapf(ErrPosition, "invalid position %d for coinbase source", vs.Position)
 		}

@@ -1,13 +1,13 @@
 package config
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/consensus"
-	"github.com/vapor/crypto"
 	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/protocol/bc"
@@ -17,20 +17,20 @@ import (
 
 func commitToArguments() (res *[32]byte) {
 	var fedpegPubkeys []ed25519.PublicKey
-	var signBlockPubkeys []ed25519.PublicKey
 	for _, xpub := range consensus.ActiveNetParams.FedpegXPubs {
 		fedpegPubkeys = append(fedpegPubkeys, xpub.PublicKey())
 	}
 	fedpegScript, _ := vmutil.P2SPMultiSigProgram(fedpegPubkeys, len(fedpegPubkeys))
 
-	for _, xpub := range consensus.ActiveNetParams.SignBlockXPubs {
-		signBlockPubkeys = append(signBlockPubkeys, xpub.PublicKey())
+	var buffer bytes.Buffer
+	for _, address := range CommonConfig.Consensus.Dpos.Signers {
+		redeemContract := address.ScriptAddress()
+		buffer.Write(redeemContract)
 	}
-	signBlockScript, _ := vmutil.P2SPMultiSigProgram(signBlockPubkeys, len(signBlockPubkeys))
 
 	hasher := sha256.New()
 	hasher.Write(fedpegScript)
-	hasher.Write(signBlockScript)
+	hasher.Write(buffer.Bytes())
 	resSlice := hasher.Sum(nil)
 	res = new([32]byte)
 	copy(res[:], resSlice)
@@ -56,6 +56,7 @@ func genesisTx() *types.Tx {
 			types.NewTxOutput(*consensus.BTMAssetID, consensus.InitialBlockSubsidy, contract),
 		},
 	}
+
 	return types.NewTx(txData)
 }
 
@@ -75,6 +76,13 @@ func mainNetGenesisBlock() *types.Block {
 		log.Panicf("fail on calc genesis tx merkel root")
 	}
 
+	var xPrv chainkd.XPrv
+	if CommonConfig.Consensus.Dpos.XPrv == "" {
+		log.Panicf("Signer is empty")
+	}
+	xPrv.UnmarshalText([]byte(CommonConfig.Consensus.Dpos.XPrv))
+	b, _ := xPrv.XPub().MarshalText()
+
 	block := &types.Block{
 		BlockHeader: types.BlockHeader{
 			Version:   1,
@@ -84,24 +92,10 @@ func mainNetGenesisBlock() *types.Block {
 				TransactionsMerkleRoot: merkleRoot,
 				TransactionStatusHash:  txStatusHash,
 			},
+			Coinbase: b,
 		},
 		Transactions: []*types.Tx{tx},
 	}
-
-	var xPrv chainkd.XPrv
-	if consensus.ActiveNetParams.Signer == "" {
-		return block
-	}
-	copy(xPrv[:], []byte(consensus.ActiveNetParams.Signer))
-	msg, _ := block.MarshalText()
-	sign := xPrv.Sign(msg)
-	pubHash := crypto.Ripemd160(xPrv.XPub().PublicKey())
-	control, err := vmutil.P2WPKHProgram([]byte(pubHash))
-	if err != nil {
-		log.Panicf(err.Error())
-	}
-	block.Proof.Sign = sign
-	block.Proof.ControlProgram = control
 	return block
 }
 
@@ -121,6 +115,13 @@ func testNetGenesisBlock() *types.Block {
 		log.Panicf("fail on calc genesis tx merkel root")
 	}
 
+	var xPrv chainkd.XPrv
+	if CommonConfig.Consensus.Dpos.XPrv == "" {
+		log.Panicf("Signer is empty")
+	}
+	xPrv.UnmarshalText([]byte(CommonConfig.Consensus.Dpos.XPrv))
+	b, _ := xPrv.XPub().MarshalText()
+
 	block := &types.Block{
 		BlockHeader: types.BlockHeader{
 			Version:   1,
@@ -130,6 +131,7 @@ func testNetGenesisBlock() *types.Block {
 				TransactionsMerkleRoot: merkleRoot,
 				TransactionStatusHash:  txStatusHash,
 			},
+			Coinbase: b,
 		},
 		Transactions: []*types.Tx{tx},
 	}
@@ -152,6 +154,13 @@ func soloNetGenesisBlock() *types.Block {
 		log.Panicf("fail on calc genesis tx merkel root")
 	}
 
+	var xPrv chainkd.XPrv
+	if CommonConfig.Consensus.Dpos.XPrv == "" {
+		log.Panicf("Signer is empty")
+	}
+	xPrv.UnmarshalText([]byte(CommonConfig.Consensus.Dpos.XPrv))
+	b, _ := xPrv.XPub().MarshalText()
+
 	block := &types.Block{
 		BlockHeader: types.BlockHeader{
 			Version:   1,
@@ -161,6 +170,7 @@ func soloNetGenesisBlock() *types.Block {
 				TransactionsMerkleRoot: merkleRoot,
 				TransactionStatusHash:  txStatusHash,
 			},
+			Coinbase: b,
 		},
 		Transactions: []*types.Tx{tx},
 	}

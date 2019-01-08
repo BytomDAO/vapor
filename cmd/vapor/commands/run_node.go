@@ -67,6 +67,8 @@ func init() {
 	runNodeCmd.Flags().String("signer", config.Signer, "The signer corresponds to xpub of signblock")
 	runNodeCmd.Flags().String("side.sign_block_xpubs", config.Side.SignBlockXPubs, "Change federated peg to use a different xpub.")
 
+	runNodeCmd.Flags().String("consensus_config_file", config.ConsensusConfigFile, "consensus configuration file")
+
 	RootCmd.AddCommand(runNodeCmd)
 }
 
