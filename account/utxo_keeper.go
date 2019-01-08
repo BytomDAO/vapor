@@ -143,6 +143,39 @@ func (uk *utxoKeeper) Reserve(accountID string, assetID *bc.AssetID, amount uint
 	return result, nil
 }
 
+func (uk *utxoKeeper) ReserveByAddress(address string, assetID *bc.AssetID, amount uint64, useUnconfirmed bool, isReserved bool) (*reservation, error) {
+	uk.mtx.Lock()
+	defer uk.mtx.Unlock()
+
+	utxos, immatureAmount := uk.findUtxosByAddress(address, assetID, useUnconfirmed)
+	optUtxos, optAmount, reservedAmount := uk.optUTXOs(utxos, amount)
+	if optAmount+reservedAmount+immatureAmount < amount {
+		return nil, ErrInsufficient
+	}
+	if optAmount+reservedAmount < amount {
+		return nil, ErrImmature
+	}
+
+	if optAmount < amount {
+		return nil, ErrReserved
+	}
+
+	result := &reservation{
+		id:     atomic.AddUint64(&uk.nextIndex, 1),
+		utxos:  optUtxos,
+		change: optAmount - amount,
+	}
+
+	uk.reservations[result.id] = result
+	if isReserved {
+		for _, u := range optUtxos {
+			uk.reserved[u.OutputID] = result.id
+		}
+	}
+
+	return result, nil
+}
+
 func (uk *utxoKeeper) ReserveParticular(outHash bc.Hash, useUnconfirmed bool, exp time.Time) (*reservation, error) {
 	uk.mtx.Lock()
 	defer uk.mtx.Unlock()
@@ -205,6 +238,41 @@ func (uk *utxoKeeper) findUtxos(accountID string, assetID *bc.AssetID, useUnconf
 	utxos := []*UTXO{}
 	appendUtxo := func(u *UTXO) {
 		if u.AccountID != accountID || u.AssetID != *assetID {
+			return
+		}
+		if u.ValidHeight > currentHeight {
+			immatureAmount += u.Amount
+		} else {
+			utxos = append(utxos, u)
+		}
+	}
+
+	utxoIter := uk.db.IteratorPrefix([]byte(UTXOPreFix))
+	defer utxoIter.Release()
+	for utxoIter.Next() {
+		u := &UTXO{}
+		if err := json.Unmarshal(utxoIter.Value(), u); err != nil {
+			log.WithField("err", err).Error("utxoKeeper findUtxos fail on unmarshal utxo")
+			continue
+		}
+		appendUtxo(u)
+	}
+	if !useUnconfirmed {
+		return utxos, immatureAmount
+	}
+
+	for _, u := range uk.unconfirmed {
+		appendUtxo(u)
+	}
+	return utxos, immatureAmount
+}
+
+func (uk *utxoKeeper) findUtxosByAddress(address string, assetID *bc.AssetID, useUnconfirmed bool) ([]*UTXO, uint64) {
+	immatureAmount := uint64(0)
+	currentHeight := uk.currentHeight()
+	utxos := []*UTXO{}
+	appendUtxo := func(u *UTXO) {
+		if u.Address != address || u.AssetID != *assetID {
 			return
 		}
 		if u.ValidHeight > currentHeight {

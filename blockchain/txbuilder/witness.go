@@ -33,7 +33,7 @@ func materializeWitnesses(txTemplate *Template) error {
 
 		var witness [][]byte
 		for j, wc := range sigInst.WitnessComponents {
-			err := wc.materialize(&witness)
+			err := wc.Materialize(&witness)
 			if err != nil {
 				return errors.WithDetailf(err, "error in witness component %d of input %d", j, i)
 			}

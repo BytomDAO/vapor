@@ -9,7 +9,7 @@ import (
 // DataWitness used sign transaction
 type DataWitness chainjson.HexBytes
 
-func (dw DataWitness) materialize(args *[][]byte) error {
+func (dw DataWitness) Materialize(args *[][]byte) error {
 	*args = append(*args, dw)
 	return nil
 }

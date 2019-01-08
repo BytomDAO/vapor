@@ -1,13 +1,13 @@
 package validation
 
 import (
-	"encoding/hex"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/vapor/chain"
 	"github.com/vapor/consensus"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	engine "github.com/vapor/consensus/consensus"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -56,15 +56,12 @@ func checkCoinbaseAmount(b *bc.Block, amount uint64) error {
 }
 
 // ValidateBlockHeader check the block's header
-func ValidateBlockHeader(b *bc.Block, parent *state.BlockNode) error {
+func ValidateBlockHeader(b *bc.Block, block *types.Block, parent *state.BlockNode, c chain.Chain, engine engine.Engine) error {
 	if b.Version < parent.Version {
 		return errors.WithDetailf(errVersionRegression, "previous block verson %d, current block version %d", parent.Version, b.Version)
 	}
 	if b.Height != parent.Height+1 {
 		return errors.WithDetailf(errMisorderedBlockHeight, "previous block height %d, current block height %d", parent.Height, b.Height)
-	}
-	if b.Bits != parent.CalcNextBits() {
-		return errBadBits
 	}
 	if parent.Hash != *b.PreviousBlockId {
 		return errors.WithDetailf(errMismatchedBlock, "previous block ID %x, current block wants %x", parent.Hash.Bytes(), b.PreviousBlockId.Bytes())
@@ -72,30 +69,34 @@ func ValidateBlockHeader(b *bc.Block, parent *state.BlockNode) error {
 	if err := checkBlockTime(b, parent); err != nil {
 		return err
 	}
+	if err := engine.VerifyHeader(c, &block.BlockHeader, false); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 // ValidateBlock validates a block and the transactions within.
-func ValidateBlock(b *bc.Block, parent *state.BlockNode, block *types.Block, authoritys map[string]string, position uint64) error {
+func ValidateBlock(b *bc.Block, parent *state.BlockNode, block *types.Block, c chain.Chain, engine engine.Engine, authoritys map[string]string, position uint64) error {
 	startTime := time.Now()
-	if err := ValidateBlockHeader(b, parent); err != nil {
+	if err := ValidateBlockHeader(b, block, parent, c, engine); err != nil {
 		return err
 	}
-	time.Sleep(3 * time.Second)
-	// 验证出块人
-	controlProgram := hex.EncodeToString(block.Proof.ControlProgram)
-	xpub := &chainkd.XPub{}
-	xpub.UnmarshalText([]byte(authoritys[controlProgram]))
+	/*
+		time.Sleep(3 * time.Second)
+		// 验证出块人
+		controlProgram := hex.EncodeToString(block.Proof.ControlProgram)
+		xpub := &chainkd.XPub{}
+		xpub.UnmarshalText([]byte(authoritys[controlProgram]))
 
-	msg := block.BlockCommitment.TransactionsMerkleRoot.Bytes()
-	if !xpub.Verify(msg, block.Proof.Sign) {
-		return errors.New("Verification signature failed")
-	}
-
+		msg := block.BlockCommitment.TransactionsMerkleRoot.Bytes()
+		if !xpub.Verify(msg, block.Proof.Sign) {
+			return errors.New("Verification signature failed")
+		}
+	*/
 	blockGasSum := uint64(0)
 	coinbaseAmount := consensus.BlockSubsidy(b.BlockHeader.Height)
 	b.TransactionStatus = bc.NewTransactionStatus()
-
 	for i, tx := range b.Transactions {
 		gasStatus, err := ValidateTx(tx, b)
 		if !gasStatus.GasValid {

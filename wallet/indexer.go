@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -15,6 +16,7 @@ import (
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/vm/vmutil"
 )
 
 const (
@@ -119,11 +121,18 @@ func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.
 // filterAccountTxs related and build the fully annotated transactions.
 func (w *Wallet) filterAccountTxs(b *types.Block, txStatus *bc.TransactionStatus) []*query.AnnotatedTx {
 	annotatedTxs := make([]*query.AnnotatedTx, 0, len(b.Transactions))
-
+	redeemContract := w.dposAddress.ScriptAddress()
+	program, _ := vmutil.P2WPKHProgram(redeemContract)
 transactionLoop:
 	for pos, tx := range b.Transactions {
 		statusFail, _ := txStatus.GetStatus(pos)
 		for _, v := range tx.Outputs {
+
+			if bytes.Equal(v.ControlProgram, program) {
+				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
+				continue transactionLoop
+			}
+
 			var hash [32]byte
 			sha3pool.Sum256(hash[:], v.ControlProgram)
 			if bytes := w.DB.Get(account.ContractKey(hash)); bytes != nil {
@@ -133,6 +142,11 @@ transactionLoop:
 		}
 
 		for _, v := range tx.Inputs {
+			if bytes.Equal(v.ControlProgram(), program) {
+				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
+				continue transactionLoop
+			}
+
 			outid, err := v.SpentOutputID()
 			if err != nil {
 				continue

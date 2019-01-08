@@ -4,6 +4,16 @@ import (
 	"github.com/vapor/protocol/bc"
 )
 
+type TxType uint8
+
+const (
+	Binary TxType = iota
+	LoginCandidate
+	LogoutCandidate
+	Delegate
+	UnDelegate
+)
+
 // SpendInput satisfies the TypedInput interface and represents a spend transaction.
 type SpendInput struct {
 	SpendCommitmentSuffix []byte   // The unconsumed suffix of the output commitment

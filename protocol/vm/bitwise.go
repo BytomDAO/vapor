@@ -1,6 +1,8 @@
 package vm
 
-import "bytes"
+import (
+	"bytes"
+)
 
 func opInvert(vm *virtualMachine) error {
 	err := vm.applyCost(1)

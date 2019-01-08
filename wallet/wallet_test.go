@@ -8,6 +8,8 @@ import (
 
 	dbm "github.com/tendermint/tmlibs/db"
 	"github.com/vapor/blockchain/signers"
+	"github.com/vapor/common"
+	"github.com/vapor/config"
 
 	"github.com/vapor/account"
 	"github.com/vapor/asset"
@@ -22,6 +24,23 @@ import (
 )
 
 func TestWalletUpdate(t *testing.T) {
+	config.CommonConfig = config.DefaultConfig()
+	consensus.SoloNetParams.Signer = "78673764e0ba91a4c5ba9ec0c8c23c69e3d73bf27970e05e0a977e81e13bde475264d3b177a96646bc0ce517ae7fd63504c183ab6d330dea184331a4cf5912d5"
+	config.CommonConfig.Consensus.Dpos.SelfVoteSigners = append(config.CommonConfig.Consensus.Dpos.SelfVoteSigners, "vsm1qkm743xmgnvh84pmjchq2s4tnfpgu9ae2f9slep")
+	config.CommonConfig.Consensus.Dpos.XPrv = "a8e281b615809046698fb0b0f2804a36d824d48fa443350f10f1b80649d39e5f1e85cf9855548915e36137345910606cbc8e7dd8497c831dce899ee6ac112445"
+	for _, v := range config.CommonConfig.Consensus.Dpos.SelfVoteSigners {
+		address, err := common.DecodeAddress(v, &consensus.SoloNetParams)
+		if err != nil {
+			t.Fatal(err)
+		}
+		config.CommonConfig.Consensus.Dpos.Signers = append(config.CommonConfig.Consensus.Dpos.Signers, address)
+	}
+	config.CommonConfig.Consensus.Dpos.Coinbase = "vsm1qkm743xmgnvh84pmjchq2s4tnfpgu9ae2f9slep"
+	address, err := common.DecodeAddress(config.CommonConfig.Consensus.Dpos.Coinbase, &consensus.SoloNetParams)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatal(err)
@@ -84,8 +103,7 @@ func TestWalletUpdate(t *testing.T) {
 	txStatus := bc.NewTransactionStatus()
 	txStatus.SetStatus(0, false)
 	store.SaveBlock(block, txStatus)
-
-	w := mockWallet(testDB, accountManager, reg, chain)
+	w := mockWallet(testDB, accountManager, reg, chain, address)
 	err = w.AttachBlock(block)
 	if err != nil {
 		t.Fatal(err)
@@ -137,13 +155,14 @@ func mockTxData(utxos []*account.UTXO, testAccount *account.Account) (*txbuilder
 	return tplBuilder.Build()
 }
 
-func mockWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry, chain *protocol.Chain) *Wallet {
+func mockWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry, chain *protocol.Chain, address common.Address) *Wallet {
 	wallet := &Wallet{
 		DB:          walletDB,
 		AccountMgr:  account,
 		AssetReg:    asset,
 		chain:       chain,
 		RecoveryMgr: newRecoveryManager(walletDB, account),
+		dposAddress: address,
 	}
 	return wallet
 }

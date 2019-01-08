@@ -198,7 +198,8 @@ func (a *API) setMining(in struct {
 }
 
 func (a *API) startMining() Response {
-	a.cpuMiner.Start()
+	//a.cpuMiner.Start()
+	a.miner.Start()
 	if !a.IsMining() {
 		return NewErrorResponse(errors.New("Failed to start mining"))
 	}
@@ -206,7 +207,8 @@ func (a *API) startMining() Response {
 }
 
 func (a *API) stopMining() Response {
-	a.cpuMiner.Stop()
+	//a.cpuMiner.Stop()
+	a.miner.Stop()
 	if a.IsMining() {
 		return NewErrorResponse(errors.New("Failed to stop mining"))
 	}
