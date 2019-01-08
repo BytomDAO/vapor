@@ -4,7 +4,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/vapor/common"
 	"github.com/vapor/config"
+	"github.com/vapor/consensus"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 
@@ -15,7 +17,16 @@ func TestLoadBlockIndex(t *testing.T) {
 	defer os.RemoveAll("temp")
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	store := NewStore(testDB)
-
+	config.CommonConfig = config.DefaultConfig()
+	config.CommonConfig.Consensus.Dpos.SelfVoteSigners = append(config.CommonConfig.Consensus.Dpos.SelfVoteSigners, "vsm1qkm743xmgnvh84pmjchq2s4tnfpgu9ae2f9slep")
+	config.CommonConfig.Consensus.Dpos.XPrv = "a8e281b615809046698fb0b0f2804a36d824d48fa443350f10f1b80649d39e5f1e85cf9855548915e36137345910606cbc8e7dd8497c831dce899ee6ac112445"
+	for _, v := range config.CommonConfig.Consensus.Dpos.SelfVoteSigners {
+		address, err := common.DecodeAddress(v, &consensus.SoloNetParams)
+		if err != nil {
+			t.Fatal(err)
+		}
+		config.CommonConfig.Consensus.Dpos.Signers = append(config.CommonConfig.Consensus.Dpos.Signers, address)
+	}
 	block := config.GenesisBlock()
 	txStatus := bc.NewTransactionStatus()
 
@@ -70,6 +81,16 @@ func TestLoadBlockIndexBestHeight(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	store := NewStore(testDB)
 	var savedBlocks []types.Block
+	config.CommonConfig = config.DefaultConfig()
+	config.CommonConfig.Consensus.Dpos.SelfVoteSigners = append(config.CommonConfig.Consensus.Dpos.SelfVoteSigners, "vsm1qkm743xmgnvh84pmjchq2s4tnfpgu9ae2f9slep")
+	config.CommonConfig.Consensus.Dpos.XPrv = "a8e281b615809046698fb0b0f2804a36d824d48fa443350f10f1b80649d39e5f1e85cf9855548915e36137345910606cbc8e7dd8497c831dce899ee6ac112445"
+	for _, v := range config.CommonConfig.Consensus.Dpos.SelfVoteSigners {
+		address, err := common.DecodeAddress(v, &consensus.SoloNetParams)
+		if err != nil {
+			t.Fatal(err)
+		}
+		config.CommonConfig.Consensus.Dpos.Signers = append(config.CommonConfig.Consensus.Dpos.Signers, address)
+	}
 
 	for _, c := range cases {
 		block := config.GenesisBlock()

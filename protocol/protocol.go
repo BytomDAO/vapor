@@ -67,10 +67,6 @@ func (c *Chain) SetPosition(position uint64) {
 	c.position = position
 }
 
-func (c *Chain) GetAuthoritys(key string) string {
-	return c.Authoritys[key]
-}
-
 func (c *Chain) SetConsensusEngine(engine engine.Engine) {
 	c.engine = engine
 }

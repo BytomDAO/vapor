@@ -18,5 +18,4 @@ type Chain interface {
 	InMainChain(bc.Hash) bool
 	ProcessBlock(*types.Block) (bool, error)
 	ValidateTx(*types.Tx) (bool, error)
-	GetAuthoritys(string) string
 }

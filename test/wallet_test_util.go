@@ -13,6 +13,9 @@ import (
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/pseudohsm"
 	"github.com/vapor/blockchain/signers"
+	"github.com/vapor/common"
+	"github.com/vapor/config"
+	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc/types"
@@ -256,10 +259,15 @@ func (cfg *walletTestConfig) Run() error {
 	if err != nil {
 		return err
 	}
+	config.CommonConfig.Consensus.Dpos.Coinbase = "vsm1qkm743xmgnvh84pmjchq2s4tnfpgu9ae2f9slep"
+	address, err := common.DecodeAddress(config.CommonConfig.Consensus.Dpos.Coinbase, &consensus.SoloNetParams)
+	if err != nil {
+		return err
+	}
 	walletDB := dbm.NewDB("wallet", "leveldb", path.Join(dirPath, "wallet_db"))
 	accountManager := account.NewManager(walletDB, chain)
 	assets := asset.NewRegistry(walletDB, chain)
-	wallet, err := w.NewWallet(walletDB, accountManager, assets, hsm, chain)
+	wallet, err := w.NewWallet(walletDB, accountManager, assets, hsm, chain, address)
 	if err != nil {
 		return err
 	}

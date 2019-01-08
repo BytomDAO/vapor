@@ -127,8 +127,12 @@ func (w *Wallet) detachUtxos(batch db.Batch, b *types.Block, txStatus *bc.Transa
 
 func (w *Wallet) filterAccountUtxo(utxos []*account.UTXO) []*account.UTXO {
 	outsByScript := make(map[string][]*account.UTXO, len(utxos))
-	redeemContract := w.dposAddress.ScriptAddress()
-	program, _ := vmutil.P2WPKHProgram(redeemContract)
+	var program []byte
+	if w.dposAddress != nil {
+		redeemContract := w.dposAddress.ScriptAddress()
+		program, _ = vmutil.P2WPKHProgram(redeemContract)
+	}
+
 	isDposAddress := false
 	for _, utxo := range utxos {
 		scriptStr := string(utxo.ControlProgram)
