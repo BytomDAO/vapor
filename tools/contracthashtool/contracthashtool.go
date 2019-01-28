@@ -38,7 +38,6 @@ func init() {
 	runCmd.PersistentFlags().StringVar(&fedpegXPrv, "xprv", "", "Generates one of the private keys corresponding to the payment contract address.")
 	runCmd.PersistentFlags().Uint16Var(&mode, "mode", 0, "0: generates the contract address for the payment  1: generate the private key corresponding to the payment contract address.")
 	runCmd.PersistentFlags().StringVar(&claimScriptStr, "claim_script", "", "Redemption of the script.")
-	fmt.Println("mode", mode)
 }
 
 func run(cmd *cobra.Command, args []string) {
