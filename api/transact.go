@@ -34,6 +34,7 @@ func (a *API) actionDecoder(action string) (func([]byte) (txbuilder.Action, erro
 		"retire":                       txbuilder.DecodeRetireAction,
 		"spend_account":                a.wallet.AccountMgr.DecodeSpendAction,
 		"spend_account_unspent_output": a.wallet.AccountMgr.DecodeSpendUTXOAction,
+		"dpos_address":                 a.wallet.AccountMgr.DecodeDposAction,
 	}
 	decoder, ok := decoders[action]
 	return decoder, ok
@@ -46,7 +47,9 @@ func onlyHaveInputActions(req *BuildRequest) (bool, error) {
 		if !ok {
 			return false, errors.WithDetailf(ErrBadActionType, "no action type provided on action %d", i)
 		}
-
+		if strings.HasPrefix(actionType, "dpos_address") {
+			return false, nil
+		}
 		if strings.HasPrefix(actionType, "spend") || actionType == "issue" {
 			count++
 		}

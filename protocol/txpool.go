@@ -203,7 +203,6 @@ func (tp *TxPool) ProcessTransaction(tx *types.Tx, statusFail bool, height, fee 
 		log.WithFields(log.Fields{"module": "ProcessTransaction", "error": "pegin-already-claimed"}).Error("ProcessTransaction error")
 		return false, errors.New("pegin-already-claimed")
 	}
-
 	txD := &TxDesc{
 		Tx:         tx,
 		StatusFail: statusFail,
@@ -302,6 +301,7 @@ func (tp *TxPool) addTransaction(txD *TxDesc) error {
 
 	atomic.StoreInt64(&tp.lastUpdated, time.Now().Unix())
 	tp.msgCh <- &TxPoolMsg{TxDesc: txD, MsgType: MsgNewTx}
+
 	log.WithField("tx_id", tx.ID.String()).Debug("Add tx to mempool")
 	return nil
 }

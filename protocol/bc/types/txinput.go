@@ -15,6 +15,7 @@ const (
 	SpendInputType
 	CoinbaseInputType
 	ClainPeginInputType
+	DposInputType
 )
 
 type (
@@ -48,6 +49,8 @@ func (t *TxInput) AssetAmount() bc.AssetAmount {
 		return inp.AssetAmount
 	case *ClaimInput:
 		return inp.AssetAmount
+	case *DposTx:
+		return inp.AssetAmount
 	}
 	return bc.AssetAmount{}
 }
@@ -60,6 +63,8 @@ func (t *TxInput) AssetID() bc.AssetID {
 	case *SpendInput:
 		return *inp.AssetId
 	case *ClaimInput:
+		return *inp.AssetId
+	case *DposTx:
 		return *inp.AssetId
 
 	}
@@ -74,6 +79,8 @@ func (t *TxInput) Amount() uint64 {
 	case *SpendInput:
 		return inp.Amount
 	case *ClaimInput:
+		return inp.Amount
+	case *DposTx:
 		return inp.Amount
 	}
 	return 0
@@ -112,6 +119,8 @@ func (t *TxInput) Arguments() [][]byte {
 		return inp.Arguments
 	case *ClaimInput:
 		return inp.Arguments
+	case *DposTx:
+		return inp.Arguments
 	}
 	return nil
 }
@@ -124,6 +133,8 @@ func (t *TxInput) SetArguments(args [][]byte) {
 	case *SpendInput:
 		inp.Arguments = args
 	case *ClaimInput:
+		inp.Arguments = args
+	case *DposTx:
 		inp.Arguments = args
 	}
 }
@@ -186,7 +197,12 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 			if ci.Arbitrary, err = blockchain.ReadVarstr31(r); err != nil {
 				return err
 			}
-
+		case DposInputType:
+			ci := new(DposTx)
+			t.TypedInput = ci
+			if ci.SpendCommitmentSuffix, err = ci.SpendCommitment.readFrom(r, 1); err != nil {
+				return err
+			}
 		default:
 			return fmt.Errorf("unsupported input type %d", icType[0])
 		}
@@ -227,6 +243,40 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 			if inp.Arguments, err = blockchain.ReadVarstrList(r); err != nil {
 				return err
 			}
+		case *DposTx:
+			txType := uint64(0)
+			if txType, err = blockchain.ReadVarint63(r); err != nil {
+				return err
+			}
+			inp.Type = TxType(txType)
+			var from []byte
+			if from, err = blockchain.ReadVarstr31(r); err != nil {
+				return err
+			}
+			inp.From = string(from)
+			var to []byte
+			if to, err = blockchain.ReadVarstr31(r); err != nil {
+				return err
+			}
+			inp.To = string(to)
+			if inp.Amount, err = blockchain.ReadVarint63(r); err != nil {
+				return err
+			}
+			if inp.Stake, err = blockchain.ReadVarint63(r); err != nil {
+				return err
+			}
+			if inp.PaymentAmount, err = blockchain.ReadVarint63(r); err != nil {
+				return err
+			}
+			if inp.Arguments, err = blockchain.ReadVarstrList(r); err != nil {
+				return err
+			}
+
+			var info []byte
+			if info, err = blockchain.ReadVarstr31(r); err != nil {
+				return err
+			}
+			inp.Info = string(info)
 		}
 		return nil
 	})
@@ -287,6 +337,11 @@ func (t *TxInput) writeInputCommitment(w io.Writer) (err error) {
 		if _, err = blockchain.WriteVarstr31(w, inp.Arbitrary); err != nil {
 			return errors.Wrap(err, "writing coinbase arbitrary")
 		}
+	case *DposTx:
+		if _, err = w.Write([]byte{DposInputType}); err != nil {
+			return err
+		}
+		return inp.SpendCommitment.writeExtensibleString(w, inp.SpendCommitmentSuffix, t.AssetVersion)
 	}
 	return nil
 }
@@ -314,6 +369,31 @@ func (t *TxInput) writeInputWitness(w io.Writer) error {
 		return err
 	case *ClaimInput:
 		_, err := blockchain.WriteVarstrList(w, inp.Arguments)
+
+		return err
+	case *DposTx:
+		if _, err := blockchain.WriteVarint63(w, uint64(inp.Type)); err != nil {
+			return err
+		}
+		if _, err := blockchain.WriteVarstr31(w, []byte(inp.From)); err != nil {
+			return err
+		}
+		if _, err := blockchain.WriteVarstr31(w, []byte(inp.To)); err != nil {
+			return err
+		}
+		if _, err := blockchain.WriteVarint63(w, inp.Amount); err != nil {
+			return err
+		}
+		if _, err := blockchain.WriteVarint63(w, inp.Stake); err != nil {
+			return err
+		}
+		if _, err := blockchain.WriteVarint63(w, inp.PaymentAmount); err != nil {
+			return err
+		}
+		if _, err := blockchain.WriteVarstrList(w, inp.Arguments); err != nil {
+			return err
+		}
+		_, err := blockchain.WriteVarstr31(w, []byte(inp.Info))
 
 		return err
 	}

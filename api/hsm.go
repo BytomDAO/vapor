@@ -6,6 +6,9 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/blockchain/txbuilder"
+	"github.com/vapor/common"
+	"github.com/vapor/consensus"
+	"github.com/vapor/crypto"
 	"github.com/vapor/crypto/ed25519/chainkd"
 )
 
@@ -142,8 +145,9 @@ func (a *API) pseudohsmCheckPassword(ctx context.Context, ins struct {
 }
 
 type keyPair struct {
-	Xpub chainkd.XPub `json:"xpub"`
-	Xprv chainkd.XPrv `json:"xprv"`
+	Xpub    chainkd.XPub `json:"xpub"`
+	Xprv    chainkd.XPrv `json:"xprv"`
+	Address string       `json:"address,omitempty"`
 }
 
 func (a *API) createXKeys(ctx context.Context) Response {
@@ -151,5 +155,13 @@ func (a *API) createXKeys(ctx context.Context) Response {
 	if err != nil {
 		return NewErrorResponse(err)
 	}
-	return NewSuccessResponse(&keyPair{Xprv: xprv, Xpub: xpub})
+
+	pubHash := crypto.Ripemd160(xpub.PublicKey())
+
+	address, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.ActiveNetParams)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	return NewSuccessResponse(&keyPair{Xprv: xprv, Xpub: xpub, Address: address.EncodeAddress()})
 }

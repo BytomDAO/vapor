@@ -26,7 +26,6 @@ func getTransactionsUtxo(db dbm.DB, view *state.UtxoViewpoint, txs []*bc.Tx) err
 			if data == nil {
 				continue
 			}
-
 			var utxo storage.UtxoEntry
 			if err := proto.Unmarshal(data, &utxo); err != nil {
 				return errors.Wrap(err, "unmarshaling utxo entry")

@@ -36,6 +36,15 @@ func MapTx(oldTx *TxData) *bc.Tx {
 			ord = 0
 		case *bc.Claim:
 			ord = 0
+		case *bc.Dpos:
+			ord = e.Ordinal
+			//spentOutputIDs[*e.SpentOutputId] = true
+			/*
+				if *e.WitnessDestination.Value.AssetId == *consensus.BTMAssetID {
+					tx.GasInputIDs = append(tx.GasInputIDs, id)
+				}
+			*/
+			continue
 		default:
 			continue
 		}
@@ -62,6 +71,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 
 	var (
 		spends    []*bc.Spend
+		dposs     []*bc.Dpos
 		issuances []*bc.Issuance
 		coinbase  *bc.Coinbase
 		claim     *bc.Claim
@@ -140,6 +150,26 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 				Ref:   &claimID,
 				Value: &inp.AssetAmount,
 			}
+		case *DposTx:
+			// create entry for prevout
+			prog := &bc.Program{VmVersion: inp.VMVersion, Code: inp.ControlProgram}
+			src := &bc.ValueSource{
+				Ref:      &inp.SourceID,
+				Value:    &inp.AssetAmount,
+				Position: inp.SourcePosition,
+			}
+			prevout := bc.NewOutput(src, prog, 0) // ordinal doesn't matter for prevouts, only for result outputs
+			prevoutID := addEntry(prevout)
+			// create entry for dpos
+			dpos := bc.NewDpos(&prevoutID, uint64(i), uint32(inp.Type), inp.Stake, inp.From, inp.To, inp.Info)
+			dpos.WitnessArguments = inp.Arguments
+			dposID := addEntry(dpos)
+			// setup mux
+			muxSources[i] = &bc.ValueSource{
+				Ref:   &dposID,
+				Value: &inp.AssetAmount,
+			}
+			dposs = append(dposs, dpos)
 		}
 	}
 
@@ -153,6 +183,12 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 	}
 	for _, issuance := range issuances {
 		issuance.SetDestination(&muxID, issuance.Value, issuance.Ordinal)
+	}
+
+	// connect the inputs to the mux
+	for _, dpos := range dposs {
+		spentOutput := entryMap[*dpos.SpentOutputId].(*bc.Output)
+		dpos.SetDestination(&muxID, spentOutput.Source.Value, dpos.Ordinal)
 	}
 
 	if coinbase != nil {
@@ -177,6 +213,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			r := bc.NewRetirement(src, uint64(i))
 			resultID = addEntry(r)
 		} else {
+
 			// non-retirement
 			prog := &bc.Program{out.VMVersion, out.ControlProgram}
 			o := bc.NewOutput(src, prog, uint64(i))
@@ -197,7 +234,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 
 func mapBlockHeader(old *BlockHeader) (bc.Hash, *bc.BlockHeader) {
 	proof := &bc.Proof{Sign: old.Proof.Sign, ControlProgram: old.Proof.ControlProgram}
-	bh := bc.NewBlockHeader(old.Version, old.Height, &old.PreviousBlockHash, old.Timestamp, &old.TransactionsMerkleRoot, &old.TransactionStatusHash, proof)
+	bh := bc.NewBlockHeader(old.Version, old.Height, &old.PreviousBlockHash, old.Timestamp, &old.TransactionsMerkleRoot, &old.TransactionStatusHash, proof, old.Extra, old.Coinbase)
 	return bc.EntryID(bh), bh
 }
 

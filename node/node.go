@@ -24,12 +24,15 @@ import (
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/pseudohsm"
 	"github.com/vapor/blockchain/txfeed"
+	"github.com/vapor/common"
 	cfg "github.com/vapor/config"
 	"github.com/vapor/consensus"
+	engine "github.com/vapor/consensus/consensus"
+	"github.com/vapor/consensus/consensus/dpos"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/database/leveldb"
 	"github.com/vapor/env"
-	"github.com/vapor/mining/cpuminer"
+	"github.com/vapor/mining/miner"
 	"github.com/vapor/mining/miningpool"
 	"github.com/vapor/net/websocket"
 	"github.com/vapor/netsync"
@@ -43,6 +46,8 @@ const (
 	webHost           = "http://127.0.0.1"
 	maxNewBlockChSize = 1024
 )
+
+var consensusEngine engine.Engine
 
 type Node struct {
 	cmn.BaseService
@@ -59,9 +64,11 @@ type Node struct {
 	api             *api.API
 	chain           *protocol.Chain
 	txfeed          *txfeed.Tracker
-	cpuMiner        *cpuminer.CPUMiner
-	miningPool      *miningpool.MiningPool
-	miningEnable    bool
+	//cpuMiner        *cpuminer.CPUMiner
+	miner *miner.Miner
+
+	miningPool   *miningpool.MiningPool
+	miningEnable bool
 
 	newBlockCh chan *bc.Hash
 }
@@ -73,7 +80,9 @@ func NewNode(config *cfg.Config) *Node {
 	}
 	initLogFile(config)
 	initActiveNetParams(config)
+	initConsensusConfig(config)
 	initCommonConfig(config)
+
 	util.MainchainConfig = config.MainChain
 	util.ValidatePegin = config.ValidatePegin
 	// Get store
@@ -111,10 +120,14 @@ func NewNode(config *cfg.Config) *Node {
 	}
 
 	if !config.Wallet.Disable {
+		address, err := common.DecodeAddress(config.Consensus.Dpos.Coinbase, &consensus.ActiveNetParams)
+		if err != nil {
+			cmn.Exit(cmn.Fmt("DecodeAddress: %v", err))
+		}
 		walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
 		accounts = account.NewManager(walletDB, chain)
 		assets = asset.NewRegistry(walletDB, chain)
-		wallet, err = w.NewWallet(walletDB, accounts, assets, hsm, chain)
+		wallet, err = w.NewWallet(walletDB, accounts, assets, hsm, chain, address)
 		if err != nil {
 			log.WithField("error", err).Error("init NewWallet")
 		}
@@ -158,7 +171,9 @@ func NewNode(config *cfg.Config) *Node {
 		notificationMgr: notificationMgr,
 	}
 
-	node.cpuMiner = cpuminer.NewCPUMiner(chain, accounts, txPool, newBlockCh)
+	//node.cpuMiner = cpuminer.NewCPUMiner(chain, accounts, txPool, newBlockCh)
+	consensusEngine = createConsensusEngine(config, store)
+	node.miner = miner.NewMiner(chain, accounts, txPool, newBlockCh, consensusEngine)
 	node.miningPool = miningpool.NewMiningPool(chain, accounts, txPool, newBlockCh)
 
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
@@ -216,17 +231,6 @@ func initActiveNetParams(config *cfg.Config) {
 		consensus.ActiveNetParams.FedpegXPubs = federationRedeemXPubs
 	}
 
-	if config.Side.SignBlockXPubs != "" {
-		var signBlockXPubs []chainkd.XPub
-		xPubs := strings.Split(config.Side.SignBlockXPubs, ",")
-		for _, xpubStr := range xPubs {
-			var xpub chainkd.XPub
-			xpub.UnmarshalText([]byte(xpubStr))
-			signBlockXPubs = append(signBlockXPubs, xpub)
-		}
-		consensus.ActiveNetParams.SignBlockXPubs = signBlockXPubs
-	}
-
 	consensus.ActiveNetParams.Signer = config.Signer
 	consensus.ActiveNetParams.PeginMinDepth = config.Side.PeginMinDepth
 	consensus.ActiveNetParams.ParentGenesisBlockHash = config.Side.ParentGenesisBlockHash
@@ -261,7 +265,7 @@ func launchWebBrowser(port string) {
 }
 
 func (n *Node) initAndstartApiServer() {
-	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.cpuMiner, n.miningPool, n.chain, n.config, n.accessTokens, n.newBlockCh, n.notificationMgr)
+	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.miner, n.miningPool, n.chain, n.config, n.accessTokens, n.newBlockCh, n.notificationMgr)
 
 	listenAddr := env.String("LISTEN", n.config.ApiAddress)
 	env.Parse()
@@ -274,7 +278,8 @@ func (n *Node) OnStart() error {
 			n.miningEnable = false
 			log.Error(err)
 		} else {
-			n.cpuMiner.Start()
+			//n.cpuMiner.Start()
+			n.miner.Start()
 		}
 	}
 	if !n.config.VaultMode {
@@ -299,7 +304,7 @@ func (n *Node) OnStop() {
 	n.notificationMgr.WaitForShutdown()
 	n.BaseService.OnStop()
 	if n.miningEnable {
-		n.cpuMiner.Stop()
+		n.miner.Stop()
 	}
 	if !n.config.VaultMode {
 		n.syncManager.Stop()
@@ -339,7 +344,7 @@ func bytomdRPCCheck() bool {
 			json.Unmarshal(tmp, &blockHeader)
 			hash := blockHeader.BlockHeader.Hash()
 			if strings.Compare(consensus.ActiveNetParams.ParentGenesisBlockHash, hash.String()) != 0 {
-				log.Error("Invalid parent genesis block hash response via RPC. Contacting wrong parent daemon?")
+				log.Error("Invalid parent genesis block hash response via RPC. Contacting wrong parent daemon?", consensus.ActiveNetParams.ParentGenesisBlockHash, hash.String())
 				return false
 			}
 			break
@@ -347,4 +352,41 @@ func bytomdRPCCheck() bool {
 	}
 
 	return true
+}
+
+func initConsensusConfig(config *cfg.Config) {
+	if config.ConsensusConfigFile == "" {
+		// poa
+	} else {
+		//
+		file, err := os.Open(config.ConsensusConfigFile)
+		if err != nil {
+			cmn.Exit(cmn.Fmt("Failed to read consensus file: %v", err))
+		}
+		defer file.Close()
+
+		if err := json.NewDecoder(file).Decode(config); err != nil {
+			cmn.Exit(cmn.Fmt("invalid consensus file: %v", err))
+		}
+
+		for _, v := range config.Consensus.Dpos.SelfVoteSigners {
+			address, err := common.DecodeAddress(v, &consensus.ActiveNetParams)
+			if err != nil {
+				cmn.Exit(cmn.Fmt("Address resolution failed: %v", err))
+			}
+			config.Consensus.Dpos.Signers = append(config.Consensus.Dpos.Signers, address)
+		}
+	}
+}
+
+func createConsensusEngine(config *cfg.Config, store protocol.Store) engine.Engine {
+	if config.Consensus.Dpos != nil {
+		return dpos.New(config.Consensus.Dpos, store)
+	} else {
+		return nil
+	}
+}
+
+func GetConsensusEngine() engine.Engine {
+	return consensusEngine
 }
