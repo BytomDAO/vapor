@@ -3,7 +3,6 @@ package dpos
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math/big"
 	"sort"
 	"time"
@@ -90,8 +89,6 @@ func newSnapshot(config *config.DposConfig, sigcache *lru.ARCCache, hash bc.Hash
 		if !ok {
 			snap.Tally[vote.Candidate] = 0
 		}
-		fmt.Println("newSnapshot", vote.Candidate, vote.Stake)
-		fmt.Println(snap.Tally)
 		snap.Tally[vote.Candidate] += vote.Stake
 		// init Voters
 		snap.Voters[vote.Voter] = 0 // block height is 0 , vote in genesis block
@@ -273,9 +270,7 @@ func (s *Snapshot) apply(headers []*types.BlockHeader) (*Snapshot, error) {
 	}
 	snap.Number += uint64(len(headers))
 	snap.Hash = headers[len(headers)-1].Hash()
-	fmt.Println("updateSnapshotForExpired before", snap.Tally)
 	snap.updateSnapshotForExpired()
-	fmt.Println("updateSnapshotForExpired after", snap.Tally)
 	err := snap.verifyTallyCnt()
 	if err != nil {
 		return nil, err
@@ -285,7 +280,6 @@ func (s *Snapshot) apply(headers []*types.BlockHeader) (*Snapshot, error) {
 
 func (s *Snapshot) removeExtraCandidate() {
 	// remove minimum tickets tally beyond candidateMaxLen
-	fmt.Println("removeExtraCandidate")
 	tallySlice := s.buildTallySlice()
 	sort.Sort(TallySlice(tallySlice))
 	if len(tallySlice) > candidateMaxLen {
@@ -309,8 +303,6 @@ func (s *Snapshot) verifyTallyCnt() error {
 	for address, tally := range s.Tally {
 		if targetTally, ok := tallyTarget[address]; ok && targetTally == tally {
 			continue
-		} else {
-			fmt.Println(address, "not find in votes")
 		}
 	}
 
@@ -460,24 +452,14 @@ func (s *Snapshot) updateSnapshotByConfirmations(confirmations []Confirmation) {
 }
 
 func (s *Snapshot) updateSnapshotByVotes(votes []Vote, headerHeight uint64) {
-	fmt.Println("updateSnapshotByVotes start")
 	for _, vote := range votes {
 		// update Votes, Tally, Voters data
 		if lastVote, ok := s.Votes[vote.Voter]; ok {
-			fmt.Println("lastVote.Candidate:", lastVote.Candidate)
-			fmt.Println("lastVote.Stake:", lastVote.Stake)
-			fmt.Println(s.Tally[lastVote.Candidate]-lastVote.Stake, s.Tally[lastVote.Candidate])
 			s.Tally[lastVote.Candidate] = s.Tally[lastVote.Candidate] - lastVote.Stake
-			fmt.Println(s.Tally)
-			fmt.Println(s.Tally[lastVote.Candidate])
 		}
 		if _, ok := s.Tally[vote.Candidate]; ok {
-			fmt.Println("vote.Candidate:", vote.Candidate)
-			fmt.Println("vote.Stake:", vote.Stake)
 			s.Tally[vote.Candidate] = s.Tally[vote.Candidate] + vote.Stake
 		} else {
-			fmt.Println("111 vote.Candidate:", vote.Candidate)
-			fmt.Println("111 vote.Stake:", vote.Stake)
 			s.Tally[vote.Candidate] = vote.Stake
 			if !candidateNeedPD {
 				s.Candidates[vote.Candidate] = candidateStateNormal
@@ -486,29 +468,16 @@ func (s *Snapshot) updateSnapshotByVotes(votes []Vote, headerHeight uint64) {
 		s.Votes[vote.Voter] = &Vote{vote.Voter, vote.Candidate, vote.Stake}
 		s.Voters[vote.Voter] = headerHeight
 	}
-	fmt.Println(votes)
-	fmt.Println(s.Tally)
-	fmt.Println("updateSnapshotByVotes end")
 }
 
 func (s *Snapshot) updateSnapshotByMPVotes(votes []Vote) {
-	fmt.Println("8888888888888888888888888888888888")
-	fmt.Println(s.Tally)
 	for _, txVote := range votes {
-		fmt.Println("updateSnapshotByMPVotesupdateSnapshotByMPVotesupdateSnapshotByMPVotes")
 		if lastVote, ok := s.Votes[txVote.Voter]; ok {
-			fmt.Println("txVote.Voter:", txVote.Voter)
-			fmt.Println("lastVote.Candidate:", lastVote.Candidate, ",lastVote.Stake:", lastVote.Stake)
-			fmt.Println("txVote.Stake:", txVote.Stake)
 			s.Tally[lastVote.Candidate] = s.Tally[lastVote.Candidate] - lastVote.Stake
 			s.Tally[lastVote.Candidate] = s.Tally[lastVote.Candidate] + txVote.Stake
 			s.Votes[txVote.Voter] = &Vote{Voter: txVote.Voter, Candidate: lastVote.Candidate, Stake: txVote.Stake}
-			fmt.Println(txVote.Voter, lastVote.Candidate, txVote.Stake)
-			// do not modify header number of snap.Voters
 		}
 	}
-	fmt.Println(s.Tally)
-	fmt.Println("999999999999999999999999999999999")
 }
 
 func (s *Snapshot) updateSnapshotForPunish(signerMissing []string, headerNumber uint64, coinbase string) {
@@ -553,13 +522,8 @@ func (s *Snapshot) updateSnapshotForPunish(signerMissing []string, headerNumber 
 
 // inturn returns if a signer at a given block height is in-turn or not.
 func (s *Snapshot) inturn(signer string, headerTime uint64) bool {
-	for _, addr := range s.Signers {
-		fmt.Println("inturn [addr]:", *addr)
-	}
-	fmt.Println("signer:", signer)
 	// if all node stop more than period of one loop
 	loopIndex := int((headerTime-s.LoopStartTime)/s.config.Period) % len(s.Signers)
-	fmt.Println(headerTime-s.LoopStartTime, s.config.Period, len(s.Signers), loopIndex)
 	if loopIndex >= len(s.Signers) {
 		return false
 	} else if *s.Signers[loopIndex] != signer {
