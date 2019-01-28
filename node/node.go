@@ -231,17 +231,6 @@ func initActiveNetParams(config *cfg.Config) {
 		consensus.ActiveNetParams.FedpegXPubs = federationRedeemXPubs
 	}
 
-	if config.Side.SignBlockXPubs != "" {
-		var signBlockXPubs []chainkd.XPub
-		xPubs := strings.Split(config.Side.SignBlockXPubs, ",")
-		for _, xpubStr := range xPubs {
-			var xpub chainkd.XPub
-			xpub.UnmarshalText([]byte(xpubStr))
-			signBlockXPubs = append(signBlockXPubs, xpub)
-		}
-		consensus.ActiveNetParams.SignBlockXPubs = signBlockXPubs
-	}
-
 	consensus.ActiveNetParams.Signer = config.Signer
 	consensus.ActiveNetParams.PeginMinDepth = config.Side.PeginMinDepth
 	consensus.ActiveNetParams.ParentGenesisBlockHash = config.Side.ParentGenesisBlockHash
@@ -379,6 +368,7 @@ func initConsensusConfig(config *cfg.Config) {
 		if err := json.NewDecoder(file).Decode(config); err != nil {
 			cmn.Exit(cmn.Fmt("invalid consensus file: %v", err))
 		}
+
 		for _, v := range config.Consensus.Dpos.SelfVoteSigners {
 			address, err := common.DecodeAddress(v, &consensus.ActiveNetParams)
 			if err != nil {

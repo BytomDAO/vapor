@@ -59,22 +59,6 @@ func NewMiner(c *protocol.Chain, accountManager *account.Manager, txPool *protoc
 		return nil
 	}
 	dpos.Authorize(config.CommonConfig.Consensus.Dpos.Coinbase)
-	/*
-		for index, xpub := range consensus.ActiveNetParams.SignBlockXPubs {
-			pubHash := crypto.Ripemd160(xpub.PublicKey())
-			address, _ := common.NewPeginAddressWitnessScriptHash(pubHash, &consensus.ActiveNetParams)
-			control, _ := vmutil.P2WPKHProgram([]byte(pubHash))
-			//key := hex.EncodeToString(control)
-			//authoritys[key] = xpub.String()
-			authoritys[address.EncodeAddress()] = xpub.String()
-			if accountManager.IsLocalControlProgram(control) {
-				position = uint64(index)
-				dpos.Authorize(address.EncodeAddress())
-			}
-		}
-	*/
-	//c.SetAuthoritys(authoritys)
-	//c.SetPosition(position)
 	c.SetConsensusEngine(dpos)
 	ConsensusEngine = dpos
 	return &Miner{
