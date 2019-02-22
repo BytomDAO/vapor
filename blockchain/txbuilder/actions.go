@@ -4,7 +4,12 @@ import (
 	"context"
 	stdjson "encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"os"
+	"strings"
 
+	ipfs "github.com/ipfs/go-ipfs-api"
 	"github.com/vapor/common"
 	"github.com/vapor/consensus"
 	"github.com/vapor/encoding/json"
@@ -136,4 +141,54 @@ func (a *retireAction) Build(ctx context.Context, b *TemplateBuilder) error {
 
 func (a *retireAction) ActionType() string {
 	return "retire"
+}
+
+const (
+	file uint32 = iota
+	data
+)
+
+type dataAction struct {
+	Type uint32 `json:"type"`
+	Data string `json:"data"`
+}
+
+func (a *dataAction) Build(ctx context.Context, b *TemplateBuilder) error {
+
+	var r io.Reader
+
+	switch a.Type {
+	case file:
+		// 检查文件是否存在
+		fi, err := os.Stat(a.Data)
+		if os.IsNotExist(err) {
+			return err
+		}
+		if fi.IsDir() {
+			return fmt.Errorf("data [%s] is directory", a.Data)
+		}
+		r, err = os.Open(a.Data)
+		if err != nil {
+			return err
+		}
+
+	case data:
+		if a.Data == "" {
+			return errors.New("data is empty")
+		}
+		// 生成文件对象
+		r = strings.NewReader(a.Data)
+	default:
+	}
+
+	// 连接ipfs节点
+	sh := ipfs.NewShell("localhost:5001")
+	cid, err := sh.Add(r)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(cid)
+
+	return nil
 }
