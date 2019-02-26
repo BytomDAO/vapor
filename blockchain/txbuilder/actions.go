@@ -9,6 +9,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/vapor/config"
+
 	ipfs "github.com/ipfs/go-ipfs-api"
 	"github.com/vapor/common"
 	"github.com/vapor/consensus"
@@ -148,18 +150,24 @@ const (
 	data
 )
 
+// DecodeIpfsDataAction convert input data to action struct
+func DecodeIpfsDataAction(data []byte) (Action, error) {
+	a := new(dataAction)
+	err := stdjson.Unmarshal(data, a)
+	return a, err
+}
+
 type dataAction struct {
-	Type uint32 `json:"type"`
+	bc.AssetAmount
+	Type uint32 `json:"data_type"`
 	Data string `json:"data"`
 }
 
 func (a *dataAction) Build(ctx context.Context, b *TemplateBuilder) error {
-
 	var r io.Reader
 
 	switch a.Type {
 	case file:
-		// 检查文件是否存在
 		fi, err := os.Stat(a.Data)
 		if os.IsNotExist(err) {
 			return err
@@ -171,24 +179,28 @@ func (a *dataAction) Build(ctx context.Context, b *TemplateBuilder) error {
 		if err != nil {
 			return err
 		}
-
 	case data:
 		if a.Data == "" {
 			return errors.New("data is empty")
 		}
-		// 生成文件对象
 		r = strings.NewReader(a.Data)
 	default:
 	}
 
-	// 连接ipfs节点
-	sh := ipfs.NewShell("localhost:5001")
+	sh := ipfs.NewShell(config.CommonConfig.IpfsAddress)
 	cid, err := sh.Add(r)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(cid)
+	program, err := vmutil.RetireProgram([]byte(cid))
+	if err != nil {
+		return err
+	}
+	out := types.NewTxOutput(*a.AssetId, 0, program)
+	return b.AddOutput(out)
+}
 
-	return nil
+func (a *dataAction) ActionType() string {
+	return "ipfs_data"
 }

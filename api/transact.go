@@ -35,6 +35,7 @@ func (a *API) actionDecoder(action string) (func([]byte) (txbuilder.Action, erro
 		"spend_account":                a.wallet.AccountMgr.DecodeSpendAction,
 		"spend_account_unspent_output": a.wallet.AccountMgr.DecodeSpendUTXOAction,
 		"dpos_address":                 a.wallet.AccountMgr.DecodeDposAction,
+		"ipfs_data":                    txbuilder.DecodeIpfsDataAction,
 	}
 	decoder, ok := decoders[action]
 	return decoder, ok
