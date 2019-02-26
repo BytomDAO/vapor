@@ -69,6 +69,9 @@ func init() {
 
 	runNodeCmd.Flags().String("consensus_config_file", config.ConsensusConfigFile, "consensus configuration file")
 
+	// ipfs address
+	runNodeCmd.Flags().String("IpfsAddress", config.IpfsAddress, "Connect ipfs (eg. 127.0.0.1:5001)")
+
 	RootCmd.AddCommand(runNodeCmd)
 }
 

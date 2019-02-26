@@ -4,7 +4,14 @@ import (
 	"context"
 	stdjson "encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"os"
+	"strings"
 
+	"github.com/vapor/config"
+
+	ipfs "github.com/ipfs/go-ipfs-api"
 	"github.com/vapor/common"
 	"github.com/vapor/consensus"
 	"github.com/vapor/encoding/json"
@@ -136,4 +143,64 @@ func (a *retireAction) Build(ctx context.Context, b *TemplateBuilder) error {
 
 func (a *retireAction) ActionType() string {
 	return "retire"
+}
+
+const (
+	file uint32 = iota
+	data
+)
+
+// DecodeIpfsDataAction convert input data to action struct
+func DecodeIpfsDataAction(data []byte) (Action, error) {
+	a := new(dataAction)
+	err := stdjson.Unmarshal(data, a)
+	return a, err
+}
+
+type dataAction struct {
+	bc.AssetAmount
+	Type uint32 `json:"data_type"`
+	Data string `json:"data"`
+}
+
+func (a *dataAction) Build(ctx context.Context, b *TemplateBuilder) error {
+	var r io.Reader
+
+	switch a.Type {
+	case file:
+		fi, err := os.Stat(a.Data)
+		if os.IsNotExist(err) {
+			return err
+		}
+		if fi.IsDir() {
+			return fmt.Errorf("data [%s] is directory", a.Data)
+		}
+		r, err = os.Open(a.Data)
+		if err != nil {
+			return err
+		}
+	case data:
+		if a.Data == "" {
+			return errors.New("data is empty")
+		}
+		r = strings.NewReader(a.Data)
+	default:
+	}
+
+	sh := ipfs.NewShell(config.CommonConfig.IpfsAddress)
+	cid, err := sh.Add(r)
+	if err != nil {
+		return err
+	}
+
+	program, err := vmutil.RetireProgram([]byte(cid))
+	if err != nil {
+		return err
+	}
+	out := types.NewTxOutput(*a.AssetId, 0, program)
+	return b.AddOutput(out)
+}
+
+func (a *dataAction) ActionType() string {
+	return "ipfs_data"
 }

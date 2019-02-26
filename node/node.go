@@ -344,7 +344,7 @@ func bytomdRPCCheck() bool {
 			json.Unmarshal(tmp, &blockHeader)
 			hash := blockHeader.BlockHeader.Hash()
 			if strings.Compare(consensus.ActiveNetParams.ParentGenesisBlockHash, hash.String()) != 0 {
-				log.Error("Invalid parent genesis block hash response via RPC. Contacting wrong parent daemon?", consensus.ActiveNetParams.ParentGenesisBlockHash, hash.String())
+				log.Error("Invalid parent genesis block hash response via RPC. Contacting wrong parent daemon?", consensus.ActiveNetParams.ParentGenesisBlockHash, ":", hash.String())
 				return false
 			}
 			break
