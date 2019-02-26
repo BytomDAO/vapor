@@ -86,7 +86,7 @@ func main() {
 		var rep WSResponse
 		err = json.Unmarshal(msg, &rep)
 		if err != nil {
-			log.Printf("Unmarshal error:", err)
+			log.Printf("Unmarshal error: %v", err)
 		}
 
 		block := &bytomtypes.Block{}
