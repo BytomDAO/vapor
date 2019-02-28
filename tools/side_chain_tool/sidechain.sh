@@ -31,7 +31,7 @@ python manager.py db upgrade
 touch install
 fi
 
-nohup python manager.py runserver -p 8000 -h 0.0.0.0 > /dev/null &
+nohup python manager.py runserver -p 8080 -h 0.0.0.0 > /dev/null &
 sleep 30
-cd web
-nohup python -m SimpleHTTPServer 8080 > /dev/null &
+#cd web
+#nohup python -m SimpleHTTPServer 8080 > /dev/null &

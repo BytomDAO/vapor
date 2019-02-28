@@ -14,7 +14,7 @@ Vapor is software designed to extensions to the Bytom protocol, which allows par
 
 ### Requirements
 
-- [Go](https://golang.org/doc/install) version 1.8 or higher, with `$GOPATH` set to your preferred directory
+- [Go](https://golang.org/doc/install) version 1.11.4 or higher, with `$GOPATH` set to your preferred directory
 
 ### Installation
 

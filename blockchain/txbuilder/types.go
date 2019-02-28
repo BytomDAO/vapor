@@ -71,3 +71,9 @@ type IntegerArgument struct {
 type BoolArgument struct {
 	Value bool `json:"value"`
 }
+
+// ContractArgument for smart contract
+type IpfsData struct {
+	Type string `json:"type"`
+	Data string `json:"data"`
+}

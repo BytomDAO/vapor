@@ -4,7 +4,7 @@ from flask import request, jsonify, make_response, current_app, render_template
 #from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 
 from . import api
-from .Connection import Connection, WSClient
+from .Connection import Connection
 from .. import db
 from ..models import KeyPair, PeginAddress
 

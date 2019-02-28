@@ -92,6 +92,8 @@ type BaseConfig struct {
 	Signer        string `mapstructure:"signer"`
 
 	ConsensusConfigFile string `mapstructure:"consensus_config_file"`
+
+	IpfsAddress string `mapstructure:"ipfs_addr"`
 }
 
 // Default configurable base parameters.
@@ -103,6 +105,7 @@ func DefaultBaseConfig() BaseConfig {
 		DBBackend:         "leveldb",
 		DBPath:            "data",
 		KeysPath:          "keystore",
+		IpfsAddress:       "127.0.0.1:5001",
 	}
 }
 
