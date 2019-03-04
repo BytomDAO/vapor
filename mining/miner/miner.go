@@ -125,7 +125,7 @@ out:
 		*/
 		isSeal := true
 		if isSeal {
-			block, err := mining.NewBlockTemplate1(m.chain, m.txPool, m.accountManager, m.engine)
+			block, err := mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager, m.engine)
 			if err != nil {
 				log.Errorf("Mining: failed on create NewBlockTemplate: %v", err)
 				time.Sleep(3 * time.Second)

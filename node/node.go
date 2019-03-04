@@ -33,7 +33,6 @@ import (
 	"github.com/vapor/database/leveldb"
 	"github.com/vapor/env"
 	"github.com/vapor/mining/miner"
-	"github.com/vapor/mining/miningpool"
 	"github.com/vapor/net/websocket"
 	"github.com/vapor/netsync"
 	"github.com/vapor/protocol"
@@ -67,7 +66,6 @@ type Node struct {
 	//cpuMiner        *cpuminer.CPUMiner
 	miner *miner.Miner
 
-	miningPool   *miningpool.MiningPool
 	miningEnable bool
 
 	newBlockCh chan *bc.Hash
@@ -174,7 +172,6 @@ func NewNode(config *cfg.Config) *Node {
 	//node.cpuMiner = cpuminer.NewCPUMiner(chain, accounts, txPool, newBlockCh)
 	consensusEngine = createConsensusEngine(config, store)
 	node.miner = miner.NewMiner(chain, accounts, txPool, newBlockCh, consensusEngine)
-	node.miningPool = miningpool.NewMiningPool(chain, accounts, txPool, newBlockCh)
 
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 
@@ -265,7 +262,7 @@ func launchWebBrowser(port string) {
 }
 
 func (n *Node) initAndstartApiServer() {
-	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.miner, n.miningPool, n.chain, n.config, n.accessTokens, n.newBlockCh, n.notificationMgr)
+	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.miner, n.chain, n.config, n.accessTokens, n.newBlockCh, n.notificationMgr)
 
 	listenAddr := env.String("LISTEN", n.config.ApiAddress)
 	env.Parse()
@@ -320,10 +317,6 @@ func (n *Node) RunForever() {
 
 func (n *Node) SyncManager() *netsync.SyncManager {
 	return n.syncManager
-}
-
-func (n *Node) MiningPool() *miningpool.MiningPool {
-	return n.miningPool
 }
 
 /**bytomdRPCCheck Check if bytomd connection via RPC is correctly working*/
