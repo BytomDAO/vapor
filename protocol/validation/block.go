@@ -69,7 +69,7 @@ func ValidateBlockHeader(b *bc.Block, block *types.Block, parent *state.BlockNod
 	if err := checkBlockTime(b, parent); err != nil {
 		return err
 	}
-	if err := engine.VerifyHeader(c, &block.BlockHeader, false); err != nil {
+	if err := engine.VerifySeal(c, &block.BlockHeader); err != nil {
 		return err
 	}
 
@@ -77,23 +77,12 @@ func ValidateBlockHeader(b *bc.Block, block *types.Block, parent *state.BlockNod
 }
 
 // ValidateBlock validates a block and the transactions within.
-func ValidateBlock(b *bc.Block, parent *state.BlockNode, block *types.Block, c chain.Chain, engine engine.Engine, authoritys map[string]string, position uint64) error {
+func ValidateBlock(b *bc.Block, parent *state.BlockNode, block *types.Block, c chain.Chain, engine engine.Engine) error {
 	startTime := time.Now()
 	if err := ValidateBlockHeader(b, block, parent, c, engine); err != nil {
 		return err
 	}
-	/*
-		time.Sleep(3 * time.Second)
-		// 验证出块人
-		controlProgram := hex.EncodeToString(block.Proof.ControlProgram)
-		xpub := &chainkd.XPub{}
-		xpub.UnmarshalText([]byte(authoritys[controlProgram]))
 
-		msg := block.BlockCommitment.TransactionsMerkleRoot.Bytes()
-		if !xpub.Verify(msg, block.Proof.Sign) {
-			return errors.New("Verification signature failed")
-		}
-	*/
 	blockGasSum := uint64(0)
 	coinbaseAmount := consensus.BlockSubsidy(b.BlockHeader.Height)
 	b.TransactionStatus = bc.NewTransactionStatus()

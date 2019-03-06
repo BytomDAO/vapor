@@ -85,7 +85,6 @@ func (s *Snapshot) buildTallySlice() TallySlice {
 }
 
 func (s *Snapshot) createSignerQueue() ([]string, error) {
-
 	if (s.Number+1)%s.config.MaxSignerCount != 0 || s.Hash != s.HistoryHash[len(s.HistoryHash)-1] {
 		return nil, errCreateSignerQueueNotAllowed
 	}

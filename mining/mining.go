@@ -35,15 +35,7 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 	address, _ := common.DecodeAddress(config.CommonConfig.Consensus.Dpos.Coinbase, &consensus.ActiveNetParams)
 	redeemContract := address.ScriptAddress()
 	script, _ = vmutil.P2WPKHProgram(redeemContract)
-	/*
-		if accountManager == nil {
-			script, err = vmutil.DefaultCoinbaseProgram()
-		} else {
 
-			script, err = accountManager.GetCoinbaseControlProgram()
-			arbitrary = append(arbitrary, accountManager.GetCoinbaseArbitrary()...)
-		}
-	*/
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +99,6 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 		Timestamp:         uint64(time.Now().Unix()),
 		BlockCommitment:   types.BlockCommitment{},
 		Coinbase:          xpub,
-		//Extra:             make([]byte, 32+65),
 	}
 
 	if err := engine.Prepare(c, &header); err != nil {
@@ -158,10 +149,6 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 		if gasUsed == consensus.MaxBlockGas {
 			break
 		}
-	}
-
-	if txFee == 0 {
-		return nil, nil
 	}
 
 	if err := engine.Finalize(c, &header, txEntries[1:]); err != nil {
