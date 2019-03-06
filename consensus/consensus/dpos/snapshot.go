@@ -8,11 +8,7 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/vapor/common"
 	"github.com/vapor/config"
-	"github.com/vapor/consensus"
-	"github.com/vapor/crypto"
-	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -209,18 +205,6 @@ func (s *Snapshot) apply(headers []*types.BlockHeader) (*Snapshot, error) {
 			return nil, err
 		}
 
-		xpub := &chainkd.XPub{}
-		xpub.UnmarshalText(header.Coinbase)
-		derivedPK := xpub.PublicKey()
-		pubHash := crypto.Ripemd160(derivedPK)
-		address, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.ActiveNetParams)
-		if err != nil {
-			return nil, err
-		}
-		if coinbase != address.EncodeAddress() {
-			return nil, errUnauthorized
-		}
-
 		headerExtra := HeaderExtra{}
 		if err := json.Unmarshal(header.Extra[extraVanity:len(header.Extra)-extraSeal], &headerExtra); err != nil {
 			return nil, err
@@ -247,11 +231,8 @@ func (s *Snapshot) apply(headers []*types.BlockHeader) (*Snapshot, error) {
 		// deal the new vote from voter
 		snap.updateSnapshotByVotes(headerExtra.CurrentBlockVotes, header.Height)
 
-		// deal the voter which balance modified
-		//snap.updateSnapshotByMPVotes(headerExtra.ModifyPredecessorVotes)
-
 		// deal the snap related with punished
-		//snap.updateSnapshotForPunish(headerExtra.SignerMissing, header.Height, header.Coinbase)
+		snap.updateSnapshotForPunish(headerExtra.SignerMissing, header.Height, coinbase)
 
 		// deal proposals
 		snap.updateSnapshotByProposals(headerExtra.CurrentBlockProposals, header.Height)
@@ -303,6 +284,8 @@ func (s *Snapshot) verifyTallyCnt() error {
 	for address, tally := range s.Tally {
 		if targetTally, ok := tallyTarget[address]; ok && targetTally == tally {
 			continue
+		} else {
+			return errIncorrectTallyCount
 		}
 	}
 
@@ -370,14 +353,10 @@ func (s *Snapshot) calculateProposalResult(headerHeight uint64) {
 					}
 				case proposalTypeMinerRewardDistributionModify:
 					minerRewardPerThousand = s.Proposals[hashKey].MinerRewardPerThousand
-
 				}
 			}
-
 		}
-
 	}
-
 }
 
 func (s *Snapshot) updateSnapshotByProposals(proposals []Proposal, headerHeight uint64) {
@@ -388,7 +367,6 @@ func (s *Snapshot) updateSnapshotByProposals(proposals []Proposal, headerHeight 
 }
 
 func (s *Snapshot) updateSnapshotForExpired() {
-
 	// deal the expired vote
 	var expiredVotes []*Vote
 	for voterAddress, voteNumber := range s.Voters {
@@ -404,13 +382,11 @@ func (s *Snapshot) updateSnapshotForExpired() {
 		for _, expiredVote := range expiredVotes {
 			s.Tally[expiredVote.Candidate] -= expiredVote.Stake
 			// TODO
-			/*
-				if s.Tally[expiredVote.Candidate] == 0 {
-					delete(s.Tally, expiredVote.Candidate)
-				}
-				delete(s.Votes, expiredVote.Voter)
-				delete(s.Voters, expiredVote.Voter)
-			*/
+			if s.Tally[expiredVote.Candidate] == 0 {
+				delete(s.Tally, expiredVote.Candidate)
+			}
+			delete(s.Votes, expiredVote.Voter)
+			delete(s.Voters, expiredVote.Voter)
 		}
 	}
 
@@ -422,14 +398,13 @@ func (s *Snapshot) updateSnapshotForExpired() {
 	}
 
 	// TODO
-	/*
-		// remove 0 stake tally
-		for address, tally := range s.Tally {
-			if tally <= 0 {
-				delete(s.Tally, address)
-			}
+	// remove 0 stake tally
+
+	for address, tally := range s.Tally {
+		if tally <= 0 && uint64(len(s.Tally)) > s.config.MaxSignerCount {
+			delete(s.Tally, address)
 		}
-	*/
+	}
 }
 
 func (s *Snapshot) updateSnapshotByConfirmations(confirmations []Confirmation) {
@@ -481,18 +456,6 @@ func (s *Snapshot) updateSnapshotByMPVotes(votes []Vote) {
 }
 
 func (s *Snapshot) updateSnapshotForPunish(signerMissing []string, headerNumber uint64, coinbase string) {
-	// set punished count to half of origin in Epoch
-	/*
-		if headerNumber.Uint64()%s.config.Epoch == 0 {
-			for bePublished := range s.Punished {
-				if count := s.Punished[bePublished] / 2; count > 0 {
-					s.Punished[bePublished] = count
-				} else {
-					delete(s.Punished, bePublished)
-				}
-			}
-		}
-	*/
 	// punish the missing signer
 	for _, signerMissing := range signerMissing {
 		if _, ok := s.Punished[signerMissing]; ok {
@@ -551,7 +514,6 @@ func (s *Snapshot) isCandidate(address string) bool {
 
 // get last block number meet the confirm condition
 func (s *Snapshot) getLastConfirmedBlockNumber(confirmations []Confirmation) *big.Int {
-
 	cpyConfirmations := make(map[uint64][]string)
 	for blockNumber, confirmers := range s.Confirmations {
 		cpyConfirmations[blockNumber] = make([]string, len(confirmers))
@@ -571,7 +533,6 @@ func (s *Snapshot) getLastConfirmedBlockNumber(confirmations []Confirmation) *bi
 			}
 		}
 		if addConfirmation == true {
-
 			cpyConfirmations[confirmation.BlockNumber] = append(cpyConfirmations[confirmation.BlockNumber], confirmation.Signer)
 		}
 	}

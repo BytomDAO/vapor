@@ -394,6 +394,8 @@ func (sm *SyncManager) processMsg(basePeer BasePeer, msgType byte, msg Blockchai
 	case *GetMerkleBlockMessage:
 		sm.handleGetMerkleBlockMsg(peer, msg)
 
+	// TODO PBFT消息
+
 	default:
 		log.WithFields(log.Fields{
 			"module":       logModule,

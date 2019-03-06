@@ -187,11 +187,6 @@ func (d *Dpos) processCustomTx(headerExtra HeaderExtra, c chain.Chain, header *t
 					}
 				}
 			}
-			/*
-				if height > 1 {
-					headerExtra.ModifyPredecessorVotes = d.processPredecessorVoter(headerExtra.ModifyPredecessorVotes, stake, from, to, snap)
-				}
-			*/
 		}
 	}
 
@@ -283,14 +278,13 @@ func (d *Dpos) processEventDeclare(currentBlockDeclares []Declare, txDataInfo []
 }
 
 func (d *Dpos) processEventVote(currentBlockVotes []Vote, stake uint64, voter, to string) []Vote {
-
-	//if new(big.Int).SetUint64(stake).Cmp(d.config.MinVoterBalance) > 0 {
-	currentBlockVotes = append(currentBlockVotes, Vote{
-		Voter:     voter,
-		Candidate: to,
-		Stake:     stake,
-	})
-	//}
+	if stake >= d.config.MinVoterBalance {
+		currentBlockVotes = append(currentBlockVotes, Vote{
+			Voter:     voter,
+			Candidate: to,
+			Stake:     stake,
+		})
+	}
 	return currentBlockVotes
 }
 
@@ -309,7 +303,6 @@ func (d *Dpos) processEventConfirm(currentBlockConfirmations []Confirmation, c c
 		if extraVanity+extraSeal > len(confirmedHeader.Extra) {
 			return currentBlockConfirmations
 		}
-		//err = rlp.DecodeBytes(confirmedHeader.Extra[extraVanity:len(confirmedHeader.Extra)-extraSeal], &confirmedHeaderExtra)
 		if err := json.Unmarshal(confirmedHeader.Extra[extraVanity:len(confirmedHeader.Extra)-extraSeal], &confirmedHeaderExtra); err != nil {
 			log.Info("Fail to decode parent header", "err", err)
 			return currentBlockConfirmations
@@ -326,25 +319,4 @@ func (d *Dpos) processEventConfirm(currentBlockConfirmations []Confirmation, c c
 	}
 
 	return currentBlockConfirmations
-}
-
-func (d *Dpos) processPredecessorVoter(modifyPredecessorVotes []Vote, stake uint64, voter, to string, snap *Snapshot) []Vote {
-	if stake > 0 {
-		if snap.isVoter(voter) {
-			modifyPredecessorVotes = append(modifyPredecessorVotes, Vote{
-				Voter:     voter,
-				Candidate: "",
-				Stake:     stake,
-			})
-		}
-		if snap.isVoter(to) {
-			modifyPredecessorVotes = append(modifyPredecessorVotes, Vote{
-				Voter:     to,
-				Candidate: "",
-				Stake:     stake,
-			})
-		}
-
-	}
-	return modifyPredecessorVotes
 }

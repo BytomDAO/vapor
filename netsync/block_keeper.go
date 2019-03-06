@@ -9,7 +9,6 @@ import (
 	"github.com/vapor/chain"
 	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
-	"github.com/vapor/mining/tensority"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
@@ -159,14 +158,7 @@ func (bk *blockKeeper) fastBlockSync(checkPoint *consensus.Checkpoint) error {
 				return errPeerMisbehave
 			}
 
-			seed, err := bk.chain.CalcNextSeed(&block.PreviousBlockHash)
-			if err != nil {
-				return errors.Wrap(err, "fail on fastBlockSync calculate seed")
-			}
-
-			tensority.AIHash.AddCache(&blockHash, seed, &bc.Hash{})
-			_, err = bk.chain.ProcessBlock(block)
-			tensority.AIHash.RemoveCache(&blockHash, seed)
+			_, err := bk.chain.ProcessBlock(block)
 			if err != nil {
 				return errors.Wrap(err, "fail on fastBlockSync process block")
 			}

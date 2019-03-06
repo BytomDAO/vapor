@@ -1,7 +1,7 @@
 {
     "consensus":{
         "dpos": {
-        "period": 1,
+        "period": 3,
         "epoch": 300,
         "maxSignersCount": 1,
         "minVoterBalance": 0,

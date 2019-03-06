@@ -103,21 +103,12 @@ type Dpos struct {
 	recents    *lru.ARCCache      // Snapshots for recent block to speed up reorgs
 	signatures *lru.ARCCache      // Signatures of recent blocks to speed up mining
 	signer     string             // Ethereum address of the signing key
-	signFn     SignerFn           // Signer function to authorize hashes with
-	signTxFn   SignTxFn           // Sign transaction function to sign tx
 	lock       sync.RWMutex       // Protects the signer fields
 	lcsc       uint64             // Last confirmed side chain
 }
 
-// SignerFn is a signer callback function to request a hash to be signed by a backing account.
-type SignerFn func(string, []byte) ([]byte, error)
-
-// SignTxFn is a signTx
-type SignTxFn func(string, *bc.Tx, *big.Int) (*bc.Tx, error)
-
 //
 func ecrecover(header *types.BlockHeader, sigcache *lru.ARCCache, c chain.Chain) (string, error) {
-
 	xpub := &chainkd.XPub{}
 	xpub.UnmarshalText(header.Coinbase)
 	derivedPK := xpub.PublicKey()
@@ -157,33 +148,14 @@ func New(config *config.DposConfig, store protocol.Store) *Dpos {
 }
 
 // Authorize injects a private key into the consensus engine to mint new blocks with.
-func (d *Dpos) Authorize(signer string /*, signFn SignerFn*/) {
+func (d *Dpos) Authorize(signer string) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
-
 	d.signer = signer
-	//d.signFn = signFn
-}
-
-// 从BLockHeader中获取到地址
-func (d *Dpos) Author(header *types.BlockHeader, c chain.Chain) (string, error) {
-	return ecrecover(header, d.signatures, c)
-}
-
-func (d *Dpos) VerifyHeader(c chain.Chain, header *types.BlockHeader, seal bool) error {
-	return d.verifyCascadingFields(c, header, nil)
-}
-
-func (d *Dpos) VerifyHeaders(c chain.Chain, headers []*types.BlockHeader, seals []bool) (chan<- struct{}, <-chan error) {
-	return nil, nil
 }
 
 func (d *Dpos) VerifySeal(c chain.Chain, header *types.BlockHeader) error {
-	return nil
-}
-
-func (d *Dpos) verifyHeader(c chain.Chain, header *types.BlockHeader, parents []*types.BlockHeader) error {
-	return nil
+	return d.verifyCascadingFields(c, header, nil)
 }
 
 func (d *Dpos) verifyCascadingFields(c chain.Chain, header *types.BlockHeader, parents []*types.BlockHeader) error {
@@ -233,11 +205,7 @@ func (d *Dpos) verifySeal(c chain.Chain, header *types.BlockHeader, parents []*t
 		return err
 	}
 
-	// Resolve the authorization key and check against signers
-	signer, err := ecrecover(header, d.signatures, c)
-	if err != nil {
-		return err
-	}
+	signer := ""
 
 	if height > d.config.MaxSignerCount {
 		var (
@@ -270,6 +238,7 @@ func (d *Dpos) verifySeal(c chain.Chain, header *types.BlockHeader, parents []*t
 		if err != nil {
 			return err
 		}
+		signer = currentCoinbase.EncodeAddress()
 
 		parentHeaderExtra := HeaderExtra{}
 		if err = json.Unmarshal(parent.Extra[extraVanity:len(parent.Extra)-extraSeal], &parentHeaderExtra); err != nil {
@@ -424,7 +393,6 @@ func (d *Dpos) Finalize(c chain.Chain, header *types.BlockHeader, txs []*bc.Tx) 
 		}
 	}
 	if height%d.config.MaxSignerCount == 0 {
-		//currentHeaderExtra.LoopStartTime = header.Time.Uint64()
 		currentHeaderExtra.LoopStartTime = currentHeaderExtra.LoopStartTime + d.config.Period*d.config.MaxSignerCount
 		// create random signersQueue in currentHeaderExtra by snapshot.Tally
 		currentHeaderExtra.SignerQueue = []string{}
@@ -589,7 +557,7 @@ func (d *Dpos) snapshot(c chain.Chain, number uint64, hash bc.Hash, parents []*t
 			if err != nil {
 				return nil, err
 			}
-			if err := d.VerifyHeader(c, genesis, false); err != nil {
+			if err := d.VerifySeal(c, genesis); err != nil {
 				return nil, err
 			}
 

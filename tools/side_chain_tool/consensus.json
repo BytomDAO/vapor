@@ -6,10 +6,11 @@
         "maxSignersCount": 1,
         "minVoterBalance": 0,
         "genesisTimestamp": 1524549600,
-        "coinbase": "vsm1qkm743xmgnvh84pmjchq2s4tnfpgu9ae2f9slep",
-        "xprv": "a8e281b615809046698fb0b0f2804a36d824d48fa443350f10f1b80649d39e5f1e85cf9855548915e36137345910606cbc8e7dd8497c831dce899ee6ac112445",
+        "coinbase": "vsm1qy7ml46ehvsny47l7cl76ejeye7ngkvh3tkp7n7",
+        "xprv": "c0d652077ae5d056c143ef94d0fa2042d9083d13174ae47d88ece000c4cc2d4d7200dba78d5f21e1c3d35b351fbd410b4cf453d7cd425f8d47acec25e8a271e9",
         "signers": [
-            "vsm1qkm743xmgnvh84pmjchq2s4tnfpgu9ae2f9slep"
+            "vsm1qkm743xmgnvh84pmjchq2s4tnfpgu9ae2f9slep",
+            "vsm1qy7ml46ehvsny47l7cl76ejeye7ngkvh3tkp7n7"
         ]
         }
     }

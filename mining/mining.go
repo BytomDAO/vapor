@@ -35,15 +35,7 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 	address, _ := common.DecodeAddress(config.CommonConfig.Consensus.Dpos.Coinbase, &consensus.ActiveNetParams)
 	redeemContract := address.ScriptAddress()
 	script, _ = vmutil.P2WPKHProgram(redeemContract)
-	/*
-		if accountManager == nil {
-			script, err = vmutil.DefaultCoinbaseProgram()
-		} else {
 
-			script, err = accountManager.GetCoinbaseControlProgram()
-			arbitrary = append(arbitrary, accountManager.GetCoinbaseArbitrary()...)
-		}
-	*/
 	if err != nil {
 		return nil, err
 	}
@@ -78,97 +70,7 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 }
 
 // NewBlockTemplate returns a new block template that is ready to be solved
-func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager) (b *types.Block, err error) {
-	view := state.NewUtxoViewpoint()
-	txStatus := bc.NewTransactionStatus()
-	if err := txStatus.SetStatus(0, false); err != nil {
-		return nil, err
-	}
-	txEntries := []*bc.Tx{nil}
-	gasUsed := uint64(0)
-	txFee := uint64(0)
-
-	// get preblock info for generate next block
-	preBlockHeader := c.BestBlockHeader()
-	preBlockHash := preBlockHeader.Hash()
-	nextBlockHeight := preBlockHeader.Height + 1
-
-	header := types.BlockHeader{
-		Version:           1,
-		Height:            nextBlockHeight,
-		PreviousBlockHash: preBlockHash,
-		Timestamp:         uint64(time.Now().Unix()),
-		BlockCommitment:   types.BlockCommitment{},
-	}
-
-	b = &types.Block{BlockHeader: header}
-	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: nextBlockHeight}}
-	b.Transactions = []*types.Tx{nil}
-
-	txs := txPool.GetTransactions()
-	sort.Sort(byTime(txs))
-	for _, txDesc := range txs {
-		tx := txDesc.Tx.Tx
-		gasOnlyTx := false
-
-		if err := c.GetTransactionsUtxo(view, []*bc.Tx{tx}); err != nil {
-			blkGenSkipTxForErr(txPool, &tx.ID, err)
-			continue
-		}
-
-		gasStatus, err := validation.ValidateTx(tx, bcBlock)
-		if err != nil {
-			if !gasStatus.GasValid {
-				blkGenSkipTxForErr(txPool, &tx.ID, err)
-				continue
-			}
-			gasOnlyTx = true
-		}
-
-		if gasUsed+uint64(gasStatus.GasUsed) > consensus.MaxBlockGas {
-			break
-		}
-
-		if err := view.ApplyTransaction(bcBlock, tx, gasOnlyTx); err != nil {
-			blkGenSkipTxForErr(txPool, &tx.ID, err)
-			continue
-		}
-
-		if err := txStatus.SetStatus(len(b.Transactions), gasOnlyTx); err != nil {
-			return nil, err
-		}
-
-		b.Transactions = append(b.Transactions, txDesc.Tx)
-		txEntries = append(txEntries, tx)
-		gasUsed += uint64(gasStatus.GasUsed)
-		txFee += txDesc.Fee
-
-		if gasUsed == consensus.MaxBlockGas {
-			break
-		}
-	}
-	if txFee == 0 {
-		return nil, err
-	}
-
-	// creater coinbase transaction
-	b.Transactions[0], err = createCoinbaseTx(accountManager, txFee, nextBlockHeight)
-	if err != nil {
-		return nil, errors.Wrap(err, "fail on createCoinbaseTx")
-	}
-	txEntries[0] = b.Transactions[0].Tx
-
-	b.BlockHeader.BlockCommitment.TransactionsMerkleRoot, err = types.TxMerkleRoot(txEntries)
-	if err != nil {
-		return nil, err
-	}
-
-	b.BlockHeader.BlockCommitment.TransactionStatusHash, err = types.TxStatusMerkleRoot(txStatus.VerifyStatus)
-	return b, err
-}
-
-// NewBlockTemplate returns a new block template that is ready to be solved
-func NewBlockTemplate1(c *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager, engine engine.Engine) (b *types.Block, err error) {
+func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager, engine engine.Engine) (b *types.Block, err error) {
 	view := state.NewUtxoViewpoint()
 	txStatus := bc.NewTransactionStatus()
 	if err := txStatus.SetStatus(0, false); err != nil {
@@ -197,7 +99,6 @@ func NewBlockTemplate1(c *protocol.Chain, txPool *protocol.TxPool, accountManage
 		Timestamp:         uint64(time.Now().Unix()),
 		BlockCommitment:   types.BlockCommitment{},
 		Coinbase:          xpub,
-		//Extra:             make([]byte, 32+65),
 	}
 
 	if err := engine.Prepare(c, &header); err != nil {
@@ -248,10 +149,6 @@ func NewBlockTemplate1(c *protocol.Chain, txPool *protocol.TxPool, accountManage
 		if gasUsed == consensus.MaxBlockGas {
 			break
 		}
-	}
-
-	if txFee == 0 {
-		return nil, nil
 	}
 
 	if err := engine.Finalize(c, &header, txEntries[1:]); err != nil {

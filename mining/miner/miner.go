@@ -45,14 +45,10 @@ type Miner struct {
 	updateNumWorkers chan struct{}
 	quit             chan struct{}
 	newBlockCh       chan *bc.Hash
-	Authoritys       map[string]string
-	position         uint64
 	engine           engine.Engine
 }
 
 func NewMiner(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, newBlockCh chan *bc.Hash, engine engine.Engine) *Miner {
-	authoritys := make(map[string]string)
-	var position uint64
 	dpos, ok := engine.(*dpos.Dpos)
 	if !ok {
 		log.Error("Only the dpos engine was allowed")
@@ -68,8 +64,6 @@ func NewMiner(c *protocol.Chain, accountManager *account.Manager, txPool *protoc
 		numWorkers:       defaultNumWorkers,
 		updateNumWorkers: make(chan struct{}),
 		newBlockCh:       newBlockCh,
-		Authoritys:       authoritys,
-		position:         position,
 		engine:           dpos,
 	}
 }
@@ -99,8 +93,6 @@ func (m *Miner) generateProof(block types.Block) (types.Proof, error) {
 //
 // It must be run as a goroutine.
 func (m *Miner) generateBlocks(quit chan struct{}) {
-	ticker := time.NewTicker(time.Second * hashUpdateSecs)
-	defer ticker.Stop()
 
 out:
 	for {
@@ -109,55 +101,45 @@ out:
 			break out
 		default:
 		}
-		/*
-			engine, ok := m.engine.(*dpos.Dpos)
-			if !ok {
-				log.Error("Only the dpos engine was allowed")
-				return
-			}
 
-				header := m.chain.BestBlockHeader()
-				isSeal, err := engine.IsSealer(m.chain, header.Hash(), header, uint64(time.Now().Unix()))
-				if err != nil {
-					log.WithFields(log.Fields{"module": module, "error": err}).Error("Determine whether seal is wrong")
-					continue
-				}
-		*/
-		isSeal := true
-		if isSeal {
-			block, err := mining.NewBlockTemplate1(m.chain, m.txPool, m.accountManager, m.engine)
-			if err != nil {
-				log.Errorf("Mining: failed on create NewBlockTemplate: %v", err)
-				time.Sleep(3 * time.Second)
-				continue
-			}
-			if block == nil {
-				time.Sleep(3 * time.Second)
-				continue
-			}
-			block, err = m.engine.Seal(m.chain, block)
-			if err != nil {
-				log.Errorf("Seal, %v", err)
-				continue
-			}
-			m.chain.SetConsensusEngine(m.engine)
-			if isOrphan, err := m.chain.ProcessBlock(block); err == nil {
-				log.WithFields(log.Fields{
-					"height":   block.BlockHeader.Height,
-					"isOrphan": isOrphan,
-					"tx":       len(block.Transactions),
-				}).Info("Miner processed block")
-
-				blockHash := block.Hash()
-				m.newBlockCh <- &blockHash
-			} else {
-				log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on ProcessBlock, %v", err)
-			}
+		block, err := mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager, m.engine)
+		if err != nil {
+			log.Errorf("Mining: failed on create NewBlockTemplate: %v", err)
+			time.Sleep(1 * time.Second)
+			continue
 		}
-		time.Sleep(3 * time.Second)
+		if block == nil {
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		block, err = m.engine.Seal(m.chain, block)
+		if err != nil {
+			log.Errorf("Seal, %v", err)
+			continue
+		}
+		m.chain.SetConsensusEngine(m.engine)
+		if isOrphan, err := m.chain.ProcessBlock(block); err == nil {
+			log.WithFields(log.Fields{
+				"height":   block.BlockHeader.Height,
+				"isOrphan": isOrphan,
+				"tx":       len(block.Transactions),
+			}).Info("Miner processed block")
+
+			blockHash := block.Hash()
+			m.newBlockCh <- &blockHash
+		} else {
+			log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on ProcessBlock, %v", err)
+		}
+		// confirm block
+		m.sendConfirmTx(block.Height - 1)
+		time.Sleep(time.Duration(config.CommonConfig.Consensus.Dpos.Period) * time.Second)
 	}
 
 	m.workerWg.Done()
+}
+
+func (m *Miner) sendConfirmTx(height uint64) error {
+	return nil
 }
 
 // miningWorkerController launches the worker goroutines that are used to

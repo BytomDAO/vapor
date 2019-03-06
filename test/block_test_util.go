@@ -1,8 +1,6 @@
 package test
 
 import (
-	"encoding/hex"
-
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto"
 	"github.com/vapor/crypto/ed25519/chainkd"
@@ -116,20 +114,6 @@ func AppendBlocks(chain *protocol.Chain, num uint64) error {
 		}
 	}
 	return nil
-}
-
-func setAuthoritys(chain *protocol.Chain) {
-	authoritys := make(map[string]string)
-	xpubStr := "96bc2ad4b1c2db399990c811c4367688cbb7867612bb9d04e4dc7848e425c6395264d3b177a96646bc0ce517ae7fd63504c183ab6d330dea184331a4cf5912d5"
-	var xpub chainkd.XPub
-	xpub.UnmarshalText([]byte(xpubStr))
-
-	pubHash := crypto.Ripemd160(xpub.PublicKey())
-	control, _ := vmutil.P2WPKHProgram([]byte(pubHash))
-	key := hex.EncodeToString(control)
-	authoritys[key] = xpub.String()
-
-	chain.SetAuthoritys(authoritys)
 }
 
 // SolveAndUpdate solve difficulty and update chain status
