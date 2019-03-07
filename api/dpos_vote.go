@@ -14,6 +14,7 @@ import (
 )
 
 func (a *API) dpos(ctx context.Context, ins struct {
+	From   string `json:"from"`
 	To     string `json:"to"`
 	Fee    uint64 `json:"fee"`
 	Stake  uint64 `json:"stake"`
@@ -25,7 +26,7 @@ func (a *API) dpos(ctx context.Context, ins struct {
 	// 生成dpos交易
 	dpos := account.DopsAction{
 		Accounts: a.wallet.AccountMgr,
-		From:     config.CommonConfig.Consensus.Dpos.Coinbase,
+		From:     ins.From,
 		To:       ins.To,
 		Fee:      ins.Fee,
 	}

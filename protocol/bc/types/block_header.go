@@ -54,6 +54,7 @@ type BlockHeader struct {
 	Coinbase          []byte
 	Proof             Proof
 	Extra             []byte
+	CmtMsges          []*CommitMsg
 	BlockCommitment
 }
 
@@ -129,6 +130,28 @@ func (bh *BlockHeader) readFrom(r *blockchain.Reader) (serflag uint8, err error)
 	if bh.Extra, err = blockchain.ReadVarstr31(r); err != nil {
 		return 0, err
 	}
+	nelts := uint32(0)
+	if nelts, err = blockchain.ReadVarint31(r); err != nil {
+		return 0, err
+	}
+	if nelts == 0 {
+		return 0, nil
+	}
+
+	cmtMsges := []*CommitMsg{}
+	for ; nelts > 0 && err == nil; nelts-- {
+		s := &CommitMsg{}
+		_, err = blockchain.ReadExtensibleString(r, s.readFrom)
+		cmtMsges = append(cmtMsges, s)
+	}
+	if len(cmtMsges) < int(nelts) {
+		err = io.ErrUnexpectedEOF
+	}
+	if err != nil {
+		return 0, err
+	}
+	bh.CmtMsges = cmtMsges
+
 	return
 }
 
@@ -166,6 +189,15 @@ func (bh *BlockHeader) writeTo(w io.Writer, serflags uint8) (err error) {
 	}
 	if _, err = blockchain.WriteVarstr31(w, bh.Extra); err != nil {
 		return err
+	}
+
+	if _, err = blockchain.WriteVarint31(w, uint64(len(bh.CmtMsges))); err != nil {
+		return err
+	}
+	for _, s := range bh.CmtMsges {
+		if _, err = blockchain.WriteExtensibleString(w, nil, s.writeTo); err != nil {
+			return err
+		}
 	}
 	return nil
 }

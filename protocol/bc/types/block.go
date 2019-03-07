@@ -113,3 +113,7 @@ func (b *Block) writeTo(w io.Writer, serflags uint8) error {
 	}
 	return nil
 }
+
+func (b *Block) FillBftMsg(msges []*CommitMsg) {
+	b.BlockHeader.CmtMsges = msges
+}
