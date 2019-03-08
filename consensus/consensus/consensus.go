@@ -26,4 +26,7 @@ type Engine interface {
 	// Seal generates a new block for the given input block with the local miner's
 	// seal place on top.
 	Seal(c chain.Chain, block *types.Block) (*types.Block, error)
+
+	// HandleBftMsg is doing bft consensus
+	HandleBftMsg(c chain.Chain, msg types.ConsensusMsg)
 }

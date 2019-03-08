@@ -43,11 +43,13 @@ type SyncManager struct {
 	blockKeeper  *blockKeeper
 	peers        *peerSet
 
-	newTxCh    chan *types.Tx
-	newBlockCh chan *bc.Hash
-	txSyncCh   chan *txSyncMsg
-	quitSync   chan struct{}
-	config     *cfg.Config
+	newTxCh      chan *types.Tx
+	newBlockCh   chan *bc.Hash
+	txSyncCh     chan *txSyncMsg
+	consensusMsg chan types.ConsensusMsg
+	bftMsg       chan types.ConsensusMsg
+	quitSync     chan struct{}
+	config       *cfg.Config
 }
 
 //NewSyncManager create a sync manager
@@ -71,6 +73,8 @@ func NewSyncManager(config *cfg.Config, chain chain.Chain, txPool *core.TxPool, 
 		newTxCh:      make(chan *types.Tx, maxTxChanSize),
 		newBlockCh:   newBlockCh,
 		txSyncCh:     make(chan *txSyncMsg),
+		consensusMsg: make(chan types.ConsensusMsg),
+		bftMsg:       make(chan types.ConsensusMsg),
 		quitSync:     make(chan struct{}),
 		config:       config,
 	}
@@ -109,6 +113,14 @@ func (sm *SyncManager) BestPeer() *PeerInfo {
 // GetNewTxCh return a unconfirmed transaction feed channel
 func (sm *SyncManager) GetNewTxCh() chan *types.Tx {
 	return sm.newTxCh
+}
+
+func (sm *SyncManager) GetConsensusMsgCh() chan types.ConsensusMsg {
+	return sm.consensusMsg
+}
+
+func (sm *SyncManager) GetRecvBftMsgCh() chan types.ConsensusMsg {
+	return sm.bftMsg
 }
 
 //GetPeerInfos return peer info of all peers
@@ -338,6 +350,33 @@ func (sm *SyncManager) handleTransactionMsg(peer *peer, msg *TransactionMessage)
 	}
 }
 
+func (sm *SyncManager) handleBftPreprepareMessage(peer *peer, msg *BftPreprepareMessage) {
+	prePrepare, err := msg.GetPreprepareMsg()
+	if err != nil {
+		sm.peers.addBanScore(peer.ID(), 0, 10, "fail on get BftPreprepare from message")
+		return
+	}
+	sm.bftMsg <- prePrepare
+}
+
+func (sm *SyncManager) handleBftPrepareMessage(peer *peer, msg *BftPrepareMessage) {
+	prepare, err := msg.GetPrepareMsg()
+	if err != nil {
+		sm.peers.addBanScore(peer.ID(), 0, 10, "fail on get BftPrepare from message")
+		return
+	}
+	sm.bftMsg <- prepare
+}
+
+func (sm *SyncManager) handleBftCommitMessage(peer *peer, msg *BftCommitMessage) {
+	coimmit, err := msg.GetCoimmitMsg()
+	if err != nil {
+		sm.peers.addBanScore(peer.ID(), 0, 10, "fail on get BftCommit from message")
+		return
+	}
+	sm.bftMsg <- coimmit
+}
+
 func (sm *SyncManager) processMsg(basePeer BasePeer, msgType byte, msg BlockchainMessage) {
 	peer := sm.peers.getPeer(basePeer.ID())
 	if peer == nil && msgType != StatusResponseByte && msgType != StatusRequestByte {
@@ -395,7 +434,14 @@ func (sm *SyncManager) processMsg(basePeer BasePeer, msgType byte, msg Blockchai
 		sm.handleGetMerkleBlockMsg(peer, msg)
 
 	// TODO PBFT消息
+	case *BftPreprepareMessage:
+		sm.handleBftPreprepareMessage(peer, msg)
 
+	case *BftPrepareMessage:
+		sm.handleBftPrepareMessage(peer, msg)
+
+	case *BftCommitMessage:
+		sm.handleBftCommitMessage(peer, msg)
 	default:
 		log.WithFields(log.Fields{
 			"module":       logModule,
@@ -450,6 +496,7 @@ func (sm *SyncManager) Start() {
 	go sm.txBroadcastLoop()
 	go sm.minedBroadcastLoop()
 	go sm.txSyncLoop()
+	go sm.consensusMsgBroadcastLoop()
 }
 
 //Stop stop sync manager

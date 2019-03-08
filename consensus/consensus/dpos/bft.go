@@ -42,9 +42,9 @@ type BftManager struct {
 	mining     uint32 // mining or not, atomic read and write
 
 	// callbacks
-	sendBftMsg  func(types.ConsensusMsg)
-	verifyBlock func(*types.Block) (uint64, error)
-	writeBlock  func(*types.Block) error
+	sendBftMsg   func(types.ConsensusMsg)
+	verifyBlock  func(*types.Block) error
+	processBlock func(*types.Block) error
 }
 
 func newBftManager(dp *Dpos) *BftManager {
@@ -92,7 +92,7 @@ func (b *BftManager) handleBftMsg(msg types.ConsensusMsg) error {
 		return nil
 	}
 
-	if msgBlkHeight > 0 {
+	if msgBlkHeight > b.h {
 
 		if err := b.mp.addMsg(msg); err != nil {
 			log.Error("add prepare msg to msg pool error", "err", err)
@@ -103,7 +103,7 @@ func (b *BftManager) handleBftMsg(msg types.ConsensusMsg) error {
 		}
 		return nil
 
-	} else {
+	} else if msgBlkHeight < b.h {
 		return fmt.Errorf("the height of msg is lower than current height, msg height :%d, current height : %d", msgBlkHeight, b.h)
 	}
 
@@ -144,16 +144,15 @@ func (b *BftManager) handlePrePrepareMsg(msg *types.PreprepareMsg) error {
 	}
 	// Verify msg
 	if err := b.verifyPrePrepareMsg(msg); err != nil {
-		log.Debug("Pre-prepare msg is invalid", "error", err)
+		log.Errorf("Pre-prepare msg is invalid: %v", err)
 		return err
 	}
 
-	if _, err := b.verifyBlock(msg.Block); err != nil {
-		log.Debug("Pre-prepare's block is invalid", "error", err)
+	if err := b.verifyBlock(msg.Block); err != nil {
+		log.Errorf("Pre-prepare's block is invalid: %v", err)
 		return nil
-	} else {
-		log.Debug("Pre-prepare block is valid")
 	}
+
 	// Add msg to round msg pool, instead of msg pool
 	if err := b.roundMp.addMsg(msg); err != nil {
 		log.Warn("Add pre-prepare msg failed", "error", err)
@@ -271,7 +270,7 @@ func (b *BftManager) tryWriteBlockStep() error {
 			log.Error("Get pre-prepare msg from msg pool in try write block", "err", err)
 			return fmt.Errorf("get pre-prepare msg from msg pool, error: %s", err)
 		} else {
-			if err := b.writeBlockWithSig(prePrepareMsg, commitMsgs); err != nil {
+			if err := b.processBlockWithSig(prePrepareMsg, commitMsgs); err != nil {
 				log.Error("Write block to chain", "err", err)
 				return fmt.Errorf("write block to chain error: %s", err)
 			}
@@ -321,7 +320,7 @@ func (b *BftManager) handleCommitMsg(msg *types.CommitMsg) error {
 }
 
 // writeBlock to block chain
-func (b *BftManager) writeBlockWithSig(msg *types.PreprepareMsg, cmtMsg []*types.CommitMsg) error {
+func (b *BftManager) processBlockWithSig(msg *types.PreprepareMsg, cmtMsg []*types.CommitMsg) error {
 	block := msg.Block
 	h := block.Hash()
 	// Match pre-prepare msg and commit msg
@@ -331,8 +330,8 @@ func (b *BftManager) writeBlockWithSig(msg *types.PreprepareMsg, cmtMsg []*types
 
 	block.FillBftMsg(cmtMsg)
 
-	log.Debug("writeBlockWithSig", "h", b.h, "r", b.r, "hash", h.String())
-	return b.writeBlock(block)
+	log.Info("writeBlockWithSig", "h", b.h, "r", b.r, "hash", h.String())
+	return b.processBlock(block)
 }
 
 // newRound has lock, it maybe time consuming at sometime, call it by routine

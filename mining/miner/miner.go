@@ -2,6 +2,7 @@ package miner
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -45,10 +46,12 @@ type Miner struct {
 	updateNumWorkers chan struct{}
 	quit             chan struct{}
 	newBlockCh       chan *bc.Hash
+	consensusMsgCh   chan types.ConsensusMsg
+	bftMsgCh         chan types.ConsensusMsg
 	engine           engine.Engine
 }
 
-func NewMiner(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, newBlockCh chan *bc.Hash, engine engine.Engine) *Miner {
+func NewMiner(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, newBlockCh chan *bc.Hash, engine engine.Engine, consensusMsgCh chan types.ConsensusMsg, bftMsgCh chan types.ConsensusMsg) *Miner {
 	dpos, ok := engine.(*dpos.Dpos)
 	if !ok {
 		log.Error("Only the dpos engine was allowed")
@@ -57,7 +60,7 @@ func NewMiner(c *protocol.Chain, accountManager *account.Manager, txPool *protoc
 	dpos.Authorize(config.CommonConfig.Consensus.Dpos.Coinbase)
 	c.SetConsensusEngine(dpos)
 	ConsensusEngine = dpos
-	return &Miner{
+	miner := &Miner{
 		chain:            c,
 		accountManager:   accountManager,
 		txPool:           txPool,
@@ -65,7 +68,11 @@ func NewMiner(c *protocol.Chain, accountManager *account.Manager, txPool *protoc
 		updateNumWorkers: make(chan struct{}),
 		newBlockCh:       newBlockCh,
 		engine:           dpos,
+		consensusMsgCh:   consensusMsgCh,
+		bftMsgCh:         bftMsgCh,
 	}
+	dpos.InitBft(miner.SendBftMsg, miner.chain.VerifyBlock, miner.processBlock)
+	return miner
 }
 
 func (m *Miner) generateProof(block types.Block) (types.Proof, error) {
@@ -118,20 +125,22 @@ out:
 			continue
 		}
 		m.chain.SetConsensusEngine(m.engine)
-		if isOrphan, err := m.chain.ProcessBlock(block); err == nil {
-			log.WithFields(log.Fields{
-				"height":   block.BlockHeader.Height,
-				"isOrphan": isOrphan,
-				"tx":       len(block.Transactions),
-			}).Info("Miner processed block")
+		/*
+			if isOrphan, err := m.chain.ProcessBlock(block); err == nil {
+				log.WithFields(log.Fields{
+					"height":   block.BlockHeader.Height,
+					"isOrphan": isOrphan,
+					"tx":       len(block.Transactions),
+				}).Info("Miner processed block")
 
-			blockHash := block.Hash()
-			m.newBlockCh <- &blockHash
-		} else {
-			log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on ProcessBlock, %v", err)
-		}
+				blockHash := block.Hash()
+				m.newBlockCh <- &blockHash
+			} else {
+				log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on ProcessBlock, %v", err)
+			}
+		*/
 		// confirm block
-		m.sendConfirmTx(block.Height - 1)
+		//m.sendConfirmTx(block.Height - 1)
 		time.Sleep(time.Duration(config.CommonConfig.Consensus.Dpos.Period) * time.Second)
 	}
 
@@ -216,6 +225,7 @@ func (m *Miner) Start() {
 
 	m.quit = make(chan struct{})
 	go m.miningWorkerController()
+	go m.recBftMsg()
 
 	m.started = true
 	log.Infof("CPU miner started")
@@ -233,6 +243,10 @@ func (m *Miner) Stop() {
 	// Nothing to do if the miner is not currently running
 	if !m.started {
 		return
+	}
+
+	if dp, ok := m.engine.(*dpos.Dpos); ok {
+		dp.MiningStop()
 	}
 
 	close(m.quit)
@@ -289,4 +303,37 @@ func (m *Miner) NumWorkers() int32 {
 	defer m.Unlock()
 
 	return int32(m.numWorkers)
+}
+
+func (m *Miner) SendBftMsg(msg types.ConsensusMsg) {
+	m.consensusMsgCh <- msg
+}
+
+func (m *Miner) processBlock(block *types.Block) error {
+	if isOrphan, err := m.chain.ProcessBlock(block); err == nil {
+		log.WithFields(log.Fields{
+			"height":   block.BlockHeader.Height,
+			"isOrphan": isOrphan,
+			"tx":       len(block.Transactions),
+		}).Info("Miner processed block")
+
+		blockHash := block.Hash()
+		m.newBlockCh <- &blockHash
+	} else {
+		log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on ProcessBlock, %v", err)
+		return fmt.Errorf("Miner fail on ProcessBlock, %v", err)
+	}
+	return nil
+}
+
+func (m *Miner) recBftMsg() {
+	for {
+		select {
+		case msg := <-m.bftMsgCh:
+			m.engine.HandleBftMsg(m.chain, msg)
+		case <-m.quit:
+			return
+		}
+	}
+
 }

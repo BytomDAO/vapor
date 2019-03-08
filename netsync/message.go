@@ -17,21 +17,24 @@ import (
 const (
 	BlockchainChannel = byte(0x40)
 
-	BlockRequestByte    = byte(0x10)
-	BlockResponseByte   = byte(0x11)
-	HeadersRequestByte  = byte(0x12)
-	HeadersResponseByte = byte(0x13)
-	BlocksRequestByte   = byte(0x14)
-	BlocksResponseByte  = byte(0x15)
-	StatusRequestByte   = byte(0x20)
-	StatusResponseByte  = byte(0x21)
-	NewTransactionByte  = byte(0x30)
-	NewMineBlockByte    = byte(0x40)
-	FilterLoadByte      = byte(0x50)
-	FilterAddByte       = byte(0x51)
-	FilterClearByte     = byte(0x52)
-	MerkleRequestByte   = byte(0x60)
-	MerkleResponseByte  = byte(0x61)
+	BlockRequestByte         = byte(0x10)
+	BlockResponseByte        = byte(0x11)
+	HeadersRequestByte       = byte(0x12)
+	HeadersResponseByte      = byte(0x13)
+	BlocksRequestByte        = byte(0x14)
+	BlocksResponseByte       = byte(0x15)
+	StatusRequestByte        = byte(0x20)
+	StatusResponseByte       = byte(0x21)
+	NewTransactionByte       = byte(0x30)
+	NewMineBlockByte         = byte(0x40)
+	FilterLoadByte           = byte(0x50)
+	FilterAddByte            = byte(0x51)
+	FilterClearByte          = byte(0x52)
+	MerkleRequestByte        = byte(0x60)
+	MerkleResponseByte       = byte(0x61)
+	BftPreprepareMessageByte = byte(0x70)
+	BftPrepareMessageByte    = byte(0x71)
+	BftCommitMessageByte     = byte(0x72)
 
 	maxBlockchainResponseSize = 22020096 + 2
 )
@@ -58,6 +61,9 @@ var _ = wire.RegisterInterface(
 	wire.ConcreteType{&FilterClearMessage{}, FilterClearByte},
 	wire.ConcreteType{&GetMerkleBlockMessage{}, MerkleRequestByte},
 	wire.ConcreteType{&MerkleBlockMessage{}, MerkleResponseByte},
+	wire.ConcreteType{&BftPrepareMessage{}, BftPreprepareMessageByte},
+	wire.ConcreteType{&BftPrepareMessage{}, BftPrepareMessageByte},
+	wire.ConcreteType{&BftCommitMessage{}, BftCommitMessageByte},
 )
 
 //DecodeMessage decode msg
@@ -465,4 +471,82 @@ func (m *MerkleBlockMessage) String() string {
 //NewMerkleBlockMessage construct merkle block message
 func NewMerkleBlockMessage() *MerkleBlockMessage {
 	return &MerkleBlockMessage{}
+}
+
+type BftPreprepareMessage struct {
+	RawMsg []byte
+}
+
+//NewBftPreprepareMessage construct notify BftPreprepare msg
+func NewBftPreprepareMessage(msg types.PreprepareMsg) (*BftPreprepareMessage, error) {
+	rawMsg, err := msg.MarshalText()
+
+	if err != nil {
+		return nil, err
+	}
+	return &BftPreprepareMessage{RawMsg: rawMsg}, nil
+}
+
+func (m *BftPreprepareMessage) String() string {
+	return "{}"
+}
+
+func (m *BftPreprepareMessage) GetPreprepareMsg() (*types.PreprepareMsg, error) {
+	msg := &types.PreprepareMsg{}
+	if err := msg.UnmarshalText(m.RawMsg); err != nil {
+		return nil, err
+	}
+	return msg, nil
+}
+
+type BftPrepareMessage struct {
+	RawMsg []byte
+}
+
+//NewBftPrepareMessage construct notify BftPreprepare msg
+func NewBftPrepareMessage(msg types.PrepareMsg) (*BftPrepareMessage, error) {
+	rawMsg, err := msg.MarshalText()
+
+	if err != nil {
+		return nil, err
+	}
+	return &BftPrepareMessage{RawMsg: rawMsg}, nil
+}
+
+func (m *BftPrepareMessage) String() string {
+	return "{}"
+}
+
+func (m *BftPrepareMessage) GetPrepareMsg() (*types.PrepareMsg, error) {
+	msg := &types.PrepareMsg{}
+	if err := msg.UnmarshalText(m.RawMsg); err != nil {
+		return nil, err
+	}
+	return msg, nil
+}
+
+type BftCommitMessage struct {
+	RawMsg []byte
+}
+
+//NewBftCommitMessage construct notify BftPreprepare msg
+func NewBftCommitMessage(msg types.CommitMsg) (*BftCommitMessage, error) {
+	rawMsg, err := msg.MarshalText()
+
+	if err != nil {
+		return nil, err
+	}
+	return &BftCommitMessage{RawMsg: rawMsg}, nil
+}
+
+func (m *BftCommitMessage) String() string {
+	return "{}"
+}
+
+func (m *BftCommitMessage) GetCoimmitMsg() (*types.CommitMsg, error) {
+	msg := &types.CommitMsg{}
+	if err := msg.UnmarshalText(m.RawMsg); err != nil {
+		return nil, err
+	}
+	return msg, nil
 }

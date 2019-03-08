@@ -171,7 +171,7 @@ func NewNode(config *cfg.Config) *Node {
 
 	//node.cpuMiner = cpuminer.NewCPUMiner(chain, accounts, txPool, newBlockCh)
 	consensusEngine = createConsensusEngine(config, store)
-	node.miner = miner.NewMiner(chain, accounts, txPool, newBlockCh, consensusEngine)
+	node.miner = miner.NewMiner(chain, accounts, txPool, newBlockCh, consensusEngine, syncManager.GetConsensusMsgCh(), syncManager.GetRecvBftMsgCh())
 
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 

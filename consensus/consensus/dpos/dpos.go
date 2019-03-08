@@ -99,12 +99,13 @@ var (
 
 type Dpos struct {
 	config     *config.DposConfig // Consensus engine configuration parameters
-	store      protocol.Store     // Database to store and retrieve snapshot checkpoints
-	recents    *lru.ARCCache      // Snapshots for recent block to speed up reorgs
-	signatures *lru.ARCCache      // Signatures of recent blocks to speed up mining
-	signer     string             // Ethereum address of the signing key
-	lock       sync.RWMutex       // Protects the signer fields
-	lcsc       uint64             // Last confirmed side chain
+	bft        *BftManager
+	store      protocol.Store // Database to store and retrieve snapshot checkpoints
+	recents    *lru.ARCCache  // Snapshots for recent block to speed up reorgs
+	signatures *lru.ARCCache  // Signatures of recent blocks to speed up mining
+	signer     string         // Ethereum address of the signing key
+	lock       sync.RWMutex   // Protects the signer fields
+	lcsc       uint64         // Last confirmed side chain
 }
 
 //
@@ -139,12 +140,27 @@ func New(config *config.DposConfig, store protocol.Store) *Dpos {
 	// Allocate the snapshot caches and create the engine
 	recents, _ := lru.NewARC(inMemorySnapshots)
 	signatures, _ := lru.NewARC(inMemorySignatures)
-	return &Dpos{
+	d := &Dpos{
 		config:     &conf,
 		store:      store,
 		recents:    recents,
 		signatures: signatures,
 	}
+	d.bft = newBftManager(d)
+	return d
+}
+
+func (d *Dpos) InitBft(sendBftMsg func(types.ConsensusMsg), verifyBlock func(*types.Block) error, processBlock func(*types.Block) error) {
+
+	// Init bft function
+	d.bft.sendBftMsg = sendBftMsg
+	d.bft.verifyBlock = verifyBlock
+	d.bft.processBlock = processBlock
+
+	// Init bft field
+	d.bft.coinBase = d.config.Coinbase
+
+	d.bft.miningStart()
 }
 
 // Authorize injects a private key into the consensus engine to mint new blocks with.
@@ -205,7 +221,16 @@ func (d *Dpos) verifySeal(c chain.Chain, header *types.BlockHeader, parents []*t
 		return err
 	}
 
-	signer := ""
+	//current
+	xpub := &chainkd.XPub{}
+	xpub.UnmarshalText(header.Coinbase)
+	derivedPK := xpub.PublicKey()
+	pubHash := crypto.Ripemd160(derivedPK)
+	currentCoinbase, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.ActiveNetParams)
+	if err != nil {
+		return err
+	}
+	signer := currentCoinbase.EncodeAddress()
 
 	if height > d.config.MaxSignerCount {
 		var (
@@ -229,16 +254,6 @@ func (d *Dpos) verifySeal(c chain.Chain, header *types.BlockHeader, parents []*t
 		if err != nil {
 			return err
 		}
-
-		//current
-		xpub.UnmarshalText(header.Coinbase)
-		derivedPK = xpub.PublicKey()
-		pubHash = crypto.Ripemd160(derivedPK)
-		currentCoinbase, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.ActiveNetParams)
-		if err != nil {
-			return err
-		}
-		signer = currentCoinbase.EncodeAddress()
 
 		parentHeaderExtra := HeaderExtra{}
 		if err = json.Unmarshal(parent.Extra[extraVanity:len(parent.Extra)-extraSeal], &parentHeaderExtra); err != nil {
@@ -276,6 +291,8 @@ func (d *Dpos) verifySeal(c chain.Chain, header *types.BlockHeader, parents []*t
 		}
 
 	}
+
+	d.bft.VerifyCmtMsgOf(header)
 
 	if !snap.inturn(signer, header.Timestamp) {
 		return errUnauthorized
@@ -333,8 +350,10 @@ func (d *Dpos) Finalize(c chain.Chain, header *types.BlockHeader, txs []*bc.Tx) 
 	}
 
 	//header.Timestamp
-	t := new(big.Int).Add(new(big.Int).SetUint64(parent.Timestamp), new(big.Int).SetUint64(d.config.Period))
-	header.Timestamp = t.Uint64()
+	//t := new(big.Int).Add(new(big.Int).SetUint64(parent.Timestamp), new(big.Int).SetUint64(d.config.Period))
+	//header.Timestamp = t.Uint64()
+	produceTime, nPeriod := d.nextProduceTime(parent.Timestamp)
+	header.Timestamp = produceTime
 
 	if header.Timestamp < uint64(time.Now().Unix()) {
 		header.Timestamp = uint64(time.Now().Unix())
@@ -409,6 +428,9 @@ func (d *Dpos) Finalize(c chain.Chain, header *types.BlockHeader, txs []*bc.Tx) 
 	if err != nil {
 		return err
 	}
+	r := uint32(nPeriod) - 1
+	d.bft.blockRound = r
+	go d.bft.newRound(header.Height, r, currentHeaderExtra.SignerQueue)
 	header.Extra = append(header.Extra, currentHeaderExtraEnc...)
 	header.Extra = append(header.Extra, make([]byte, extraSeal)...)
 	return nil
@@ -447,7 +469,9 @@ func (d *Dpos) Seal(c chain.Chain, block *types.Block) (*types.Block, error) {
 	}
 
 	block.Proof = types.Proof{Sign: sign, ControlProgram: control}
-	return block, nil
+	log.WithFields(log.Fields{"func": "seal"}).Infof("Seal block at time: %v", time.Now().Unix())
+	d.bft.startPrePrepare(block)
+	return nil, nil
 }
 
 func (d *Dpos) IsSealer(c chain.Chain, hash bc.Hash, header *types.BlockHeader, headerTime uint64) (bool, error) {
@@ -624,4 +648,28 @@ func getSignerMissing(lastSigner string, currentSigner string, extra HeaderExtra
 		}
 	}
 	return signerMissing
+}
+
+// HandleBftMsg handle the bft message received from peer.
+func (d *Dpos) HandleBftMsg(c chain.Chain, msg types.ConsensusMsg) {
+	go d.bft.handleBftMsg(msg)
+}
+
+func (d *Dpos) MiningStop() {
+	d.bft.miningStop()
+}
+
+func (d *Dpos) nextProduceTime(preBlockTime uint64) (uint64, uint64) {
+	now := time.Now().Unix()
+	dur := new(big.Int).Sub(new(big.Int).SetInt64(now), new(big.Int).SetUint64(preBlockTime))
+	period := new(big.Int).SetUint64(d.config.Period)
+	// the unit is second, even no left of DivMod, but current time is in new period
+
+	nPeriod := new(big.Int).Div(dur, period)
+	nPeriod.Add(nPeriod, common.Big1)
+
+	nextTime := new(big.Int).Mul(nPeriod, period)
+	nextTime.Add(nextTime, new(big.Int).SetUint64(preBlockTime))
+
+	return nextTime.Uint64(), nPeriod.Uint64()
 }

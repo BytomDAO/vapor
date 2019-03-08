@@ -1,13 +1,17 @@
 package types
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 
 	"github.com/vapor/common"
+	"github.com/vapor/consensus"
 	"github.com/vapor/crypto"
 	"github.com/vapor/encoding/blockchain"
+	"github.com/vapor/encoding/bufpool"
+	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 )
 
@@ -60,6 +64,57 @@ func (msg *PreprepareMsg) GetRound() uint32 {
 	return msg.Round
 }
 
+func (msg *PreprepareMsg) MarshalText() ([]byte, error) {
+	buf := bufpool.Get()
+	defer bufpool.Put(buf)
+
+	if _, err := blockchain.WriteVarint31(buf, uint64(msg.Round)); err != nil {
+		return nil, err
+	}
+
+	block, err := msg.Block.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+	if _, err := blockchain.WriteVarstr31(buf, block); err != nil {
+		return nil, err
+	}
+
+	enc := make([]byte, hex.EncodedLen(buf.Len()))
+	hex.Encode(enc, buf.Bytes())
+	return enc, nil
+}
+
+// UnmarshalText fulfills the encoding.TextUnmarshaler interface.
+func (msg *PreprepareMsg) UnmarshalText(text []byte) error {
+	decoded := make([]byte, hex.DecodedLen(len(text)))
+	if _, err := hex.Decode(decoded, text); err != nil {
+		return err
+	}
+
+	r := blockchain.NewReader(decoded)
+
+	round, err := blockchain.ReadVarint31(r)
+	if err != nil {
+		return errors.Wrap(err, "reading  round of bftpreprepare")
+	}
+	msg.Round = round
+
+	block, err := blockchain.ReadVarstr31(r)
+	if err != nil {
+		return errors.Wrap(err, "reading  block of bftpreprepare")
+	}
+
+	if err := msg.Block.UnmarshalText(block); err != nil {
+		return err
+	}
+
+	if trailing := r.Len(); trailing > 0 {
+		return fmt.Errorf("trailing garbage (%d bytes)", trailing)
+	}
+	return nil
+}
+
 type PreprepareMsgHash struct {
 	Round uint32  `json:"round"`
 	Hash  bc.Hash `json:"hash"`
@@ -98,6 +153,94 @@ func (msg *PrepareMsg) GetBlockHeight() uint64 {
 
 func (msg *PrepareMsg) GetRound() uint32 {
 	return msg.Round
+}
+
+func (msg *PrepareMsg) MarshalText() ([]byte, error) {
+	buf := bufpool.Get()
+	defer bufpool.Put(buf)
+
+	if _, err := blockchain.WriteVarint31(buf, uint64(msg.Round)); err != nil {
+		return nil, err
+	}
+
+	address, err := common.DecodeAddress(msg.PrepareAddr, &consensus.ActiveNetParams)
+	if err != nil {
+		return nil, err
+	}
+	redeemContract := address.ScriptAddress()
+
+	if _, err := blockchain.WriteVarstr31(buf, redeemContract); err != nil {
+		return nil, err
+	}
+
+	if _, err := blockchain.WriteVarint63(buf, msg.BlockHeight); err != nil {
+		return nil, err
+	}
+
+	blockHash, err := msg.BlockHash.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := blockchain.WriteVarstr31(buf, blockHash); err != nil {
+		return nil, err
+	}
+
+	if _, err := blockchain.WriteVarstr31(buf, msg.PrepareSig); err != nil {
+		return nil, err
+	}
+
+	enc := make([]byte, hex.EncodedLen(buf.Len()))
+	hex.Encode(enc, buf.Bytes())
+	return enc, nil
+}
+
+// UnmarshalText fulfills the encoding.TextUnmarshaler interface.
+func (msg *PrepareMsg) UnmarshalText(text []byte) error {
+	decoded := make([]byte, hex.DecodedLen(len(text)))
+	if _, err := hex.Decode(decoded, text); err != nil {
+		return err
+	}
+
+	r := blockchain.NewReader(decoded)
+
+	round, err := blockchain.ReadVarint31(r)
+	if err != nil {
+		return errors.Wrap(err, "reading  round of bftpreprepare")
+	}
+	msg.Round = round
+
+	redeemContract, err := blockchain.ReadVarstr31(r)
+	if err != nil {
+		return errors.Wrap(err, "reading  address of bftpreprepare")
+	}
+	address, err := common.NewPeginAddressWitnessScriptHash(redeemContract, &consensus.ActiveNetParams)
+	if err != nil {
+		return errors.Wrap(err, "reading  address of bftpreprepare")
+	}
+
+	msg.PrepareAddr = address.EncodeAddress()
+
+	hight, err := blockchain.ReadVarint63(r)
+	if err != nil {
+		return errors.Wrap(err, "reading  hight of bftpreprepare")
+	}
+	msg.BlockHeight = hight
+
+	blockHash, err := blockchain.ReadVarstr31(r)
+
+	if err := msg.BlockHash.UnmarshalText(blockHash); err != nil {
+		return err
+	}
+
+	if msg.PrepareSig, err = blockchain.ReadVarstr31(r); err != nil {
+		return err
+	}
+
+	if trailing := r.Len(); trailing > 0 {
+		return fmt.Errorf("trailing garbage (%d bytes)", trailing)
+	}
+	return nil
 }
 
 type PrepareMsgHash struct {
@@ -231,8 +374,96 @@ func (msg *CommitMsg) Dump() {
 
 	fmt.Printf("committer: %s\n", msg.Commiter)
 	fmt.Printf("number: %d\nround: %d\n", msg.BlockHeight, msg.Round)
-	fmt.Printf("hash: %s\n", msg.BlockHash)
+	fmt.Printf("hash: %s\n", msg.BlockHash.String())
 
+}
+
+func (msg *CommitMsg) MarshalText() ([]byte, error) {
+	buf := bufpool.Get()
+	defer bufpool.Put(buf)
+
+	if _, err := blockchain.WriteVarint31(buf, uint64(msg.Round)); err != nil {
+		return nil, err
+	}
+
+	address, err := common.DecodeAddress(msg.Commiter, &consensus.ActiveNetParams)
+	if err != nil {
+		return nil, err
+	}
+	redeemContract := address.ScriptAddress()
+
+	if _, err := blockchain.WriteVarstr31(buf, redeemContract); err != nil {
+		return nil, err
+	}
+
+	if _, err := blockchain.WriteVarint63(buf, msg.BlockHeight); err != nil {
+		return nil, err
+	}
+
+	blockHash, err := msg.BlockHash.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := blockchain.WriteVarstr31(buf, blockHash); err != nil {
+		return nil, err
+	}
+
+	if _, err := blockchain.WriteVarstr31(buf, msg.CommitSig); err != nil {
+		return nil, err
+	}
+
+	enc := make([]byte, hex.EncodedLen(buf.Len()))
+	hex.Encode(enc, buf.Bytes())
+	return enc, nil
+}
+
+// UnmarshalText fulfills the encoding.TextUnmarshaler interface.
+func (msg *CommitMsg) UnmarshalText(text []byte) error {
+	decoded := make([]byte, hex.DecodedLen(len(text)))
+	if _, err := hex.Decode(decoded, text); err != nil {
+		return err
+	}
+
+	r := blockchain.NewReader(decoded)
+
+	round, err := blockchain.ReadVarint31(r)
+	if err != nil {
+		return errors.Wrap(err, "reading  round of bftpreprepare")
+	}
+	msg.Round = round
+
+	redeemContract, err := blockchain.ReadVarstr31(r)
+	if err != nil {
+		return errors.Wrap(err, "reading  address of bftpreprepare")
+	}
+	address, err := common.NewPeginAddressWitnessScriptHash(redeemContract, &consensus.ActiveNetParams)
+	if err != nil {
+		return errors.Wrap(err, "reading  address of bftpreprepare")
+	}
+
+	msg.Commiter = address.EncodeAddress()
+
+	hight, err := blockchain.ReadVarint63(r)
+	if err != nil {
+		return errors.Wrap(err, "reading  hight of bftpreprepare")
+	}
+	msg.BlockHeight = hight
+
+	blockHash, err := blockchain.ReadVarstr31(r)
+
+	if err := msg.BlockHash.UnmarshalText(blockHash); err != nil {
+		return err
+	}
+
+	if msg.CommitSig, err = blockchain.ReadVarstr31(r); err != nil {
+		return err
+	}
+
+	if trailing := r.Len(); trailing > 0 {
+		return fmt.Errorf("trailing garbage (%d bytes)", trailing)
+	}
+	return nil
 }
 
 func CopyCmtMsg(msg *CommitMsg) *CommitMsg {

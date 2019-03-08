@@ -2,6 +2,7 @@ package netsync
 
 import (
 	"encoding/hex"
+	"fmt"
 	"net"
 	"sync"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/tendermint/tmlibs/flowrate"
 	"gopkg.in/fatih/set.v0"
 
+	"github.com/vapor/common"
 	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
 	"github.com/vapor/p2p/trust"
@@ -62,6 +64,7 @@ type peer struct {
 	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
 	knownBlocks *set.Set // Set of block hashes known to be known by this peer
 	filterAdds  *set.Set // Set of addresses that the spv node cares about.
+	knownBftMsg *set.Set
 }
 
 func newPeer(height uint64, hash *bc.Hash, basePeer BasePeer) *peer {
@@ -73,6 +76,7 @@ func newPeer(height uint64, hash *bc.Hash, basePeer BasePeer) *peer {
 		knownTxs:    set.New(),
 		knownBlocks: set.New(),
 		filterAdds:  set.New(),
+		knownBftMsg: set.New(),
 	}
 }
 
@@ -221,6 +225,15 @@ func (p *peer) markTransaction(hash *bc.Hash) {
 		p.knownTxs.Pop()
 	}
 	p.knownTxs.Add(hash.String())
+}
+
+func (p *peer) markBftMsg(hash common.Hash) {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+	for p.knownBftMsg.Size() >= maxKnownBlocks {
+		p.knownBftMsg.Pop()
+	}
+	p.knownBftMsg.Add(hash.Str())
 }
 
 func (p *peer) sendBlock(block *types.Block) (bool, error) {
@@ -428,6 +441,52 @@ func (ps *peerSet) broadcastTx(tx *types.Tx) error {
 	return nil
 }
 
+func (ps *peerSet) broadcastConsensusMsg(msg types.ConsensusMsg) error {
+	var data BlockchainMessage
+	var err error
+	var hash common.Hash
+	switch msg.Type() {
+	case types.BftPreprepareMessage:
+		preprepareMsg, ok := msg.(*types.PreprepareMsg)
+		if !ok {
+			return fmt.Errorf("BftPreprepareMessage error")
+		}
+		preprepareMsg.Hash()
+		data, err = NewBftPreprepareMessage(*preprepareMsg)
+	case types.BftPrepareMessage:
+		prepareMsg, ok := msg.(*types.PrepareMsg)
+		if !ok {
+			return fmt.Errorf("BftPreprepareMessage error")
+		}
+
+		prepareMsg.Hash()
+		data, err = NewBftPrepareMessage(*prepareMsg)
+	case types.BftCommitMessage:
+		commitMsg, ok := msg.(*types.CommitMsg)
+		if !ok {
+			return fmt.Errorf("BftPreprepareMessage error")
+		}
+
+		commitMsg.Hash()
+		data, err = NewBftCommitMessage(*commitMsg)
+	default:
+		err = fmt.Errorf("bft msg type error")
+	}
+	if err != nil {
+		return err
+	}
+
+	peers := ps.peersWithoutBftMsg(hash)
+
+	for _, peer := range peers {
+		if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{data}); !ok {
+			ps.removePeer(peer.ID())
+			continue
+		}
+	}
+	return nil
+}
+
 func (ps *peerSet) errorHandler(peerID string, err error) {
 	if errors.Root(err) == errPeerMisbehave {
 		ps.addBanScore(peerID, 20, 0, err.Error())
@@ -474,6 +533,19 @@ func (ps *peerSet) peersWithoutTx(hash *bc.Hash) []*peer {
 	peers := []*peer{}
 	for _, peer := range ps.peers {
 		if !peer.knownTxs.Has(hash.String()) {
+			peers = append(peers, peer)
+		}
+	}
+	return peers
+}
+
+func (ps *peerSet) peersWithoutBftMsg(hash common.Hash) []*peer {
+	ps.mtx.RLock()
+	defer ps.mtx.RUnlock()
+
+	peers := []*peer{}
+	for _, peer := range ps.peers {
+		if !peer.knownBftMsg.Has(hash.Str()) {
 			peers = append(peers, peer)
 		}
 	}

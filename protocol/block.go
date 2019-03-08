@@ -175,6 +175,16 @@ func (c *Chain) saveBlock(block *types.Block) error {
 	return nil
 }
 
+func (c *Chain) VerifyBlock(block *types.Block) error {
+	bcBlock := types.MapBlock(block)
+	parent := c.index.GetNode(&block.PreviousBlockHash)
+
+	if err := validation.ValidateBlock(bcBlock, parent, block, c, c.engine); err != nil {
+		return errors.Sub(ErrBadBlock, err)
+	}
+	return nil
+}
+
 func (c *Chain) saveSubBlock(block *types.Block) *types.Block {
 	blockHash := block.Hash()
 	prevOrphans, ok := c.orphanManage.GetPrevOrphans(&blockHash)

@@ -3,6 +3,7 @@ package dpos
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 	"sort"
 	"time"
@@ -487,6 +488,10 @@ func (s *Snapshot) updateSnapshotForPunish(signerMissing []string, headerNumber 
 func (s *Snapshot) inturn(signer string, headerTime uint64) bool {
 	// if all node stop more than period of one loop
 	loopIndex := int((headerTime-s.LoopStartTime)/s.config.Period) % len(s.Signers)
+	fmt.Println(loopIndex, signer)
+	for _, v := range s.Signers {
+		fmt.Println(*v)
+	}
 	if loopIndex >= len(s.Signers) {
 		return false
 	} else if *s.Signers[loopIndex] != signer {

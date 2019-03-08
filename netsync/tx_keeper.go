@@ -128,3 +128,18 @@ func (sm *SyncManager) txSyncLoop() {
 		}
 	}
 }
+
+//consensusMsg
+func (sm *SyncManager) consensusMsgBroadcastLoop() {
+	for {
+		select {
+		case consensusMsg := <-sm.consensusMsg:
+			if err := sm.peers.broadcastConsensusMsg(consensusMsg); err != nil {
+				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on broadcast consensus msg.")
+				return
+			}
+		case <-sm.quitSync:
+			return
+		}
+	}
+}

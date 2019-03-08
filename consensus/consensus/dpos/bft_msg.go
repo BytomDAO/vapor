@@ -104,9 +104,8 @@ func (bft *BftManager) verifyCommitMsg(msg *types.CommitMsg) error {
 	return nil
 }
 
-func (bft *BftManager) VerifyCmtMsgOf(block *types.Block) error {
-	//cmtMsges := block.CmtMsges()
-	cmtMsges := []*types.CommitMsg{}
+func (bft *BftManager) VerifyCmtMsgOf(block *types.BlockHeader) error {
+	cmtMsges := block.CmtMsges
 	if uint64(len(cmtMsges)) < bft.quorum {
 		return fmt.Errorf("too less commit msg, len = %d", len(cmtMsges))
 	}
