@@ -29,6 +29,8 @@ type DopsAction struct {
 	To             string `json:"to"`
 	Fee            uint64 `json:"fee"`
 	UseUnconfirmed bool   `json:"use_unconfirmed"`
+	TxType         uint32 `json:"tx_type"`
+	Height         uint64 `json:"height"`
 }
 
 func (a *DopsAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
@@ -44,6 +46,12 @@ func (a *DopsAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) er
 		missing = append(missing, "to")
 	}
 
+	if types.TxType(a.TxType) < types.Binary || types.TxType(a.TxType) > types.ConfirmTx {
+		return errors.New("tx type  of dpos is error")
+	}
+
+	txType := types.TxType(a.TxType)
+
 	if len(missing) > 0 {
 		return txbuilder.MissingFieldsError(missing...)
 	}
@@ -55,7 +63,7 @@ func (a *DopsAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) er
 	// Cancel the reservation if the build gets rolled back.
 	b.OnRollback(func() { a.Accounts.utxoKeeper.Cancel(res.id) })
 	for _, r := range res.utxos {
-		txInput, sigInst, err := DposTx(a.From, a.To, a.Amount, r)
+		txInput, sigInst, err := DposTx(a.From, a.To, a.Amount, r, txType, a.Height)
 		if err != nil {
 			return errors.Wrap(err, "creating inputs")
 		}
@@ -104,8 +112,8 @@ func (a *DopsAction) ActionType() string {
 }
 
 // DposInputs convert an utxo to the txinput
-func DposTx(from, to string, stake uint64, u *UTXO) (*types.TxInput, *txbuilder.SigningInstruction, error) {
-	txInput := types.NewDpos(nil, from, to, u.SourceID, u.AssetID, stake, u.Amount, u.SourcePos, u.ControlProgram, types.Delegate)
+func DposTx(from, to string, stake uint64, u *UTXO, txType types.TxType, h uint64) (*types.TxInput, *txbuilder.SigningInstruction, error) {
+	txInput := types.NewDpos(nil, from, to, u.SourceID, u.AssetID, stake, u.Amount, u.SourcePos, u.ControlProgram, txType, h)
 	sigInst := &txbuilder.SigningInstruction{}
 	var xpubs []chainkd.XPub
 	var xprv chainkd.XPrv

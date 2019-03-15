@@ -1,17 +1,10 @@
 package types
 
 import (
+	"fmt"
+
 	"github.com/vapor/protocol/bc"
 )
-
-/*
-const (
-	LoginCandidate DposType = iota
-	LogoutCandidate
-	Delegate
-	UnDelegate
-)
-*/
 
 type DposTx struct {
 	SpendCommitmentSuffix []byte
@@ -20,13 +13,12 @@ type DposTx struct {
 	To                    string
 	Amount                uint64
 	Stake                 uint64
-	PaymentAmount         uint64
 	Arguments             [][]byte
 	Info                  string
 	SpendCommitment
 }
 
-func NewDpos(arguments [][]byte, from, to string, sourceID bc.Hash, assetID bc.AssetID, stake, amount, sourcePos uint64, controlProgram []byte, t TxType) *TxInput {
+func NewDpos(arguments [][]byte, from, to string, sourceID bc.Hash, assetID bc.AssetID, stake, amount, sourcePos uint64, controlProgram []byte, t TxType, height uint64) *TxInput {
 	var vote string
 	switch t {
 	case LoginCandidate:
@@ -34,6 +26,8 @@ func NewDpos(arguments [][]byte, from, to string, sourceID bc.Hash, assetID bc.A
 	case Delegate:
 		vote = "vapor:1:event:vote"
 	case UnDelegate:
+	case ConfirmTx:
+		vote = fmt.Sprintf("vapor:1:event:confirm:%d", height)
 	}
 	sc := SpendCommitment{
 		AssetAmount: bc.AssetAmount{

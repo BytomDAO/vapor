@@ -265,9 +265,6 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 			if inp.Stake, err = blockchain.ReadVarint63(r); err != nil {
 				return err
 			}
-			if inp.PaymentAmount, err = blockchain.ReadVarint63(r); err != nil {
-				return err
-			}
 			if inp.Arguments, err = blockchain.ReadVarstrList(r); err != nil {
 				return err
 			}
@@ -385,9 +382,6 @@ func (t *TxInput) writeInputWitness(w io.Writer) error {
 			return err
 		}
 		if _, err := blockchain.WriteVarint63(w, inp.Stake); err != nil {
-			return err
-		}
-		if _, err := blockchain.WriteVarint63(w, inp.PaymentAmount); err != nil {
 			return err
 		}
 		if _, err := blockchain.WriteVarstrList(w, inp.Arguments); err != nil {

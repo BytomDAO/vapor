@@ -12,6 +12,7 @@ const (
 	LogoutCandidate
 	Delegate
 	UnDelegate
+	ConfirmTx
 )
 
 // SpendInput satisfies the TypedInput interface and represents a spend transaction.

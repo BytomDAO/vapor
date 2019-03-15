@@ -5,6 +5,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/vapor/blockchain/pseudohsm"
+
+	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/config"
 
 	log "github.com/sirupsen/logrus"
@@ -139,6 +142,38 @@ out:
 }
 
 func (m *Miner) sendConfirmTx(height uint64) error {
+	// 找到utxo
+	var assetID bc.AssetID
+	assetID.UnmarshalText([]byte("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"))
+	// 生成dpos交易
+	dpos := account.DopsAction{
+		Accounts: m.accountManager,
+		From:     config.CommonConfig.Consensus.Dpos.Coinbase,
+		Fee:      100000000,
+		TxType:   6,
+		Height:   height,
+	}
+	dpos.AssetId = &assetID
+	builder := txbuilder.NewBuilder(time.Now())
+	if err := dpos.Build(nil, builder); err != nil {
+		return err
+	}
+	// 签名
+	tmpl, _, err := builder.Build()
+	if err != nil {
+		return err
+	}
+
+	var xprv chainkd.XPrv
+	xprv.UnmarshalText([]byte(config.CommonConfig.Consensus.Dpos.XPrv))
+	if err := pseudohsm.SignWithKey(tmpl, xprv); err != nil {
+		return err
+	}
+
+	if err := txbuilder.FinalizeTx(nil, m.chain, tmpl.Transaction); err != nil {
+		return err
+	}
+
 	return nil
 }
 
