@@ -32,9 +32,6 @@ type BlockNode struct {
 	Bits                   uint64
 	TransactionsMerkleRoot bc.Hash
 	TransactionStatusHash  bc.Hash
-	Proof                  bc.Proof
-	Coinbase               []byte
-	Extra                  []byte
 }
 
 func NewBlockNode(bh *types.BlockHeader, parent *BlockNode) (*BlockNode, error) {
@@ -53,12 +50,6 @@ func NewBlockNode(bh *types.BlockHeader, parent *BlockNode) (*BlockNode, error) 
 		//Bits:      bh.Bits,
 		TransactionsMerkleRoot: bh.TransactionsMerkleRoot,
 		TransactionStatusHash:  bh.TransactionStatusHash,
-		Proof: bc.Proof{
-			Sign:           bh.Proof.Sign,
-			ControlProgram: bh.Proof.ControlProgram,
-		},
-		Coinbase: bh.Coinbase,
-		Extra:    bh.Extra,
 	}
 	/*
 		if bh.Height == 0 {
@@ -82,16 +73,10 @@ func (node *BlockNode) BlockHeader() *types.BlockHeader {
 		Height:            node.Height,
 		PreviousBlockHash: previousBlockHash,
 		Timestamp:         node.Timestamp,
-		Proof: types.Proof{
-			Sign:           node.Proof.Sign,
-			ControlProgram: node.Proof.ControlProgram,
-		},
 		BlockCommitment: types.BlockCommitment{
 			TransactionsMerkleRoot: node.TransactionsMerkleRoot,
 			TransactionStatusHash:  node.TransactionStatusHash,
 		},
-		Coinbase: node.Coinbase,
-		Extra:    node.Extra,
 	}
 }
 

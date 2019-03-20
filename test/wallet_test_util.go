@@ -259,8 +259,8 @@ func (cfg *walletTestConfig) Run() error {
 	if err != nil {
 		return err
 	}
-	config.CommonConfig.Consensus.Dpos.Coinbase = "vsm1qkm743xmgnvh84pmjchq2s4tnfpgu9ae2f9slep"
-	address, err := common.DecodeAddress(config.CommonConfig.Consensus.Dpos.Coinbase, &consensus.SoloNetParams)
+	config.CommonConfig.Consensus.Coinbase = "vsm1qkm743xmgnvh84pmjchq2s4tnfpgu9ae2f9slep"
+	address, err := common.DecodeAddress(config.CommonConfig.Consensus.Coinbase, &consensus.SoloNetParams)
 	if err != nil {
 		return err
 	}

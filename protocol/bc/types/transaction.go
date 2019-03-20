@@ -139,6 +139,11 @@ func (tx *TxData) readFrom(r *blockchain.Reader) (err error) {
 		tx.Outputs = append(tx.Outputs, to)
 	}
 	tx.SerializedSize = uint64(startSerializedSize - r.Len())
+
+	if tx.ReferenceData, err = blockchain.ReadVarstr31(r); err != nil {
+		return errors.Wrap(err, "reading transaction referenceData")
+	}
+
 	return nil
 }
 
@@ -181,5 +186,10 @@ func (tx *TxData) writeTo(w io.Writer, serflags byte) error {
 			return errors.Wrapf(err, "writing tx output %d", i)
 		}
 	}
+
+	if _, err := blockchain.WriteVarstr31(w, tx.ReferenceData); err != nil {
+		return errors.Wrap(err, "writing tx ReferenceData")
+	}
+
 	return nil
 }

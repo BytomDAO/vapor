@@ -28,7 +28,7 @@ import (
 	cfg "github.com/vapor/config"
 	"github.com/vapor/consensus"
 	engine "github.com/vapor/consensus/consensus"
-	"github.com/vapor/consensus/consensus/dpos"
+	dpos "github.com/vapor/consensus/consensus/dpos"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/database/leveldb"
 	"github.com/vapor/env"
@@ -45,8 +45,6 @@ const (
 	webHost           = "http://127.0.0.1"
 	maxNewBlockChSize = 1024
 )
-
-var consensusEngine engine.Engine
 
 type Node struct {
 	cmn.BaseService
@@ -69,6 +67,8 @@ type Node struct {
 	miningEnable bool
 
 	newBlockCh chan *bc.Hash
+
+	engine engine.Engine
 }
 
 func NewNode(config *cfg.Config) *Node {
@@ -93,8 +93,14 @@ func NewNode(config *cfg.Config) *Node {
 	tokenDB := dbm.NewDB("accesstoken", config.DBBackend, config.DBDir())
 	accessTokens := accesstoken.NewStore(tokenDB)
 
+	var engine engine.Engine
+	switch config.Consensus.Type {
+	case "dpos":
+		engine = dpos.GDpos
+	}
+
 	txPool := protocol.NewTxPool(store)
-	chain, err := protocol.NewChain(store, txPool)
+	chain, err := protocol.NewChain(store, txPool, engine)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 	}
@@ -118,7 +124,7 @@ func NewNode(config *cfg.Config) *Node {
 	}
 
 	if !config.Wallet.Disable {
-		address, err := common.DecodeAddress(config.Consensus.Dpos.Coinbase, &consensus.ActiveNetParams)
+		address, err := common.DecodeAddress(config.Consensus.Coinbase, &consensus.ActiveNetParams)
 		if err != nil {
 			cmn.Exit(cmn.Fmt("DecodeAddress: %v", err))
 		}
@@ -156,6 +162,11 @@ func NewNode(config *cfg.Config) *Node {
 		}()
 	}
 
+	switch config.Consensus.Type {
+	case "dpos":
+		initDpos(chain, config)
+	}
+
 	node := &Node{
 		config:       config,
 		syncManager:  syncManager,
@@ -167,12 +178,10 @@ func NewNode(config *cfg.Config) *Node {
 
 		newBlockCh:      newBlockCh,
 		notificationMgr: notificationMgr,
+		engine:          engine,
 	}
 
-	//node.cpuMiner = cpuminer.NewCPUMiner(chain, accounts, txPool, newBlockCh)
-	consensusEngine = createConsensusEngine(config, store)
-	node.miner = miner.NewMiner(chain, accounts, txPool, newBlockCh, consensusEngine)
-
+	node.miner = miner.NewMiner(chain, accounts, txPool, newBlockCh, engine)
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 
 	return node
@@ -297,6 +306,10 @@ func (n *Node) OnStart() error {
 }
 
 func (n *Node) OnStop() {
+	if err := n.engine.Finish(); err != nil {
+		log.Errorf("OnStop: %v", err)
+	}
+
 	n.notificationMgr.Shutdown()
 	n.notificationMgr.WaitForShutdown()
 	n.BaseService.OnStop()
@@ -362,24 +375,31 @@ func initConsensusConfig(config *cfg.Config) {
 			cmn.Exit(cmn.Fmt("invalid consensus file: %v", err))
 		}
 
-		for _, v := range config.Consensus.Dpos.SelfVoteSigners {
+		for _, v := range config.Consensus.SelfVoteSigners {
 			address, err := common.DecodeAddress(v, &consensus.ActiveNetParams)
 			if err != nil {
 				cmn.Exit(cmn.Fmt("Address resolution failed: %v", err))
 			}
-			config.Consensus.Dpos.Signers = append(config.Consensus.Dpos.Signers, address)
+			config.Consensus.Signers = append(config.Consensus.Signers, address)
 		}
 	}
 }
 
-func createConsensusEngine(config *cfg.Config, store protocol.Store) engine.Engine {
-	if config.Consensus.Dpos != nil {
-		return dpos.New(config.Consensus.Dpos, store)
-	} else {
-		return nil
+func initDpos(chain *protocol.Chain, config *cfg.Config) {
+	header := chain.BestBlockHeader()
+	height := header.Height
+	hash := header.Hash()
+	maxSignerCount := config.Consensus.MaxSignerCount
+	period := config.Consensus.Period
+	if err := dpos.GDpos.Init(chain, maxSignerCount, period, height, hash); err != nil {
+		cmn.Exit(cmn.Fmt("initVote: Dpos new: %v", err))
 	}
-}
 
-func GetConsensusEngine() engine.Engine {
-	return consensusEngine
+	if height > 0 {
+		oldBlockHeight := dpos.GDpos.GetOldBlockHeight()
+		oldBlockHash := dpos.GDpos.GetOldBlockHash()
+		if err := chain.RepairDPoSData(oldBlockHeight, oldBlockHash); err != nil {
+			cmn.Exit(cmn.Fmt("initVote failed: %v", err))
+		}
+	}
 }

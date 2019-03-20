@@ -1,8 +1,6 @@
 package types
 
 import (
-	"fmt"
-
 	"github.com/vapor/protocol/bc"
 )
 
@@ -20,15 +18,7 @@ type DposTx struct {
 
 func NewDpos(arguments [][]byte, from, to string, sourceID bc.Hash, assetID bc.AssetID, stake, amount, sourcePos uint64, controlProgram []byte, t TxType, height uint64) *TxInput {
 	var vote string
-	switch t {
-	case LoginCandidate:
-	case LogoutCandidate:
-	case Delegate:
-		vote = "vapor:1:event:vote"
-	case UnDelegate:
-	case ConfirmTx:
-		vote = fmt.Sprintf("vapor:1:event:confirm:%d", height)
-	}
+
 	sc := SpendCommitment{
 		AssetAmount: bc.AssetAmount{
 			AssetId: &assetID,

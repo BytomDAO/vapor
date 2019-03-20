@@ -5,9 +5,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/chain"
 	"github.com/vapor/consensus"
-	engine "github.com/vapor/consensus/consensus"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -56,7 +54,7 @@ func checkCoinbaseAmount(b *bc.Block, amount uint64) error {
 }
 
 // ValidateBlockHeader check the block's header
-func ValidateBlockHeader(b *bc.Block, block *types.Block, parent *state.BlockNode, c chain.Chain) error {
+func ValidateBlockHeader(b *bc.Block, block *types.Block, parent *state.BlockNode) error {
 	if b.Version < parent.Version {
 		return errors.WithDetailf(errVersionRegression, "previous block verson %d, current block version %d", parent.Version, b.Version)
 	}
@@ -70,25 +68,13 @@ func ValidateBlockHeader(b *bc.Block, block *types.Block, parent *state.BlockNod
 		return err
 	}
 
-	if err := engine.GDpos.CheckBlockHeader(block.BlockHeader); err != nil {
-		return err
-	}
-
-	if err := engine.GDpos.IsValidBlockCheckIrreversibleBlock(block.Height, block.Hash()); err != nil {
-		return err
-	}
-
 	return nil
 }
 
 // ValidateBlock validates a block and the transactions within.
-func ValidateBlock(b *bc.Block, parent *state.BlockNode, block *types.Block, c chain.Chain) error {
+func ValidateBlock(b *bc.Block, parent *state.BlockNode, block *types.Block) error {
 	startTime := time.Now()
-	if err := ValidateBlockHeader(b, block, parent, c); err != nil {
-		return err
-	}
-
-	if err := engine.GDpos.CheckBlock(*block, true); err != nil {
+	if err := ValidateBlockHeader(b, block, parent); err != nil {
 		return err
 	}
 
