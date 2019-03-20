@@ -24,6 +24,7 @@ type TemplateBuilder struct {
 	timeRange           uint64
 	rollbacks           []func()
 	callbacks           []func() error
+	referenceData       []byte
 }
 
 // AddInput add inputs of transactions
@@ -43,6 +44,10 @@ func (b *TemplateBuilder) AddOutput(o *types.TxOutput) error {
 	}
 	b.outputs = append(b.outputs, o)
 	return nil
+}
+
+func (b *TemplateBuilder) SetReferenceData(referenceData []byte) {
+	b.referenceData = referenceData
 }
 
 // InputCount return number of input in the template builder
@@ -130,6 +135,8 @@ func (b *TemplateBuilder) Build() (*Template, *types.TxData, error) {
 		tpl.SigningInstructions = append(tpl.SigningInstructions, instruction)
 		tx.Inputs = append(tx.Inputs, in)
 	}
+
+	tx.ReferenceData = b.referenceData
 
 	tpl.Transaction = types.NewTx(*tx)
 	tpl.Fee = CalculateTxFee(tpl.Transaction)

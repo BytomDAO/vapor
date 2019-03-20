@@ -253,16 +253,17 @@ func (a *API) buildHandler() {
 		m.Handle("/get-side-raw-transaction", jsonHandler(a.getSideRawTransaction))
 		m.Handle("/build-mainchain-tx", jsonHandler(a.buildMainChainTxForContract))
 		m.Handle("/sign-with-key", jsonHandler(a.signWithKey))
-		m.Handle("/dpos", jsonHandler(a.dpos))
-		// registe
-		// vote
-		// cancelvote
+		m.Handle("/sign-with-xprv", jsonHandler(a.signWithPriKey))
 		// listdelegates
+		m.Handle("/list-delegates", jsonHandler(a.listDelegates))
 		// getdelegatevotes
-		// getdelegatefunds
+		m.Handle("/get-delegate-votes", jsonHandler(a.getDelegateVotes))
 		// listvoteddelegates
+		m.Handle("/list-voted-delegates", jsonHandler(a.listVotedDelegates))
 		// listreceivedvotes
-		// getirreversibleblock
+		m.Handle("/list-received-votes", jsonHandler(a.listReceivedVotes))
+
+		m.Handle("/get-address-balance", jsonHandler(a.getAddressBalance))
 	} else {
 		log.Warn("Please enable wallet")
 	}

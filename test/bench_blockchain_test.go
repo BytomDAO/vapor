@@ -13,7 +13,10 @@ import (
 	"github.com/vapor/blockchain/pseudohsm"
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/blockchain/txbuilder"
+	"github.com/vapor/config"
 	"github.com/vapor/consensus"
+	engine "github.com/vapor/consensus/consensus"
+	"github.com/vapor/consensus/consensus/dpos"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/database/leveldb"
 	"github.com/vapor/database/storage"
@@ -136,10 +139,15 @@ func GenerateChainData(dirPath string, testDB dbm.DB, txNumber, otherAssetNum in
 	if err := SetUtxoView(testDB, utxoView); err != nil {
 		return nil, nil, nil, err
 	}
+	var engine engine.Engine
+	switch config.CommonConfig.Consensus.Type {
+	case "dpos":
+		engine = dpos.GDpos
+	}
 
 	store := leveldb.NewStore(testDB)
 	txPool := protocol.NewTxPool(store)
-	chain, err := protocol.NewChain(store, txPool)
+	chain, err := protocol.NewChain(store, txPool, engine)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -156,7 +164,7 @@ func InsertChain(chain *protocol.Chain, txPool *protocol.TxPool, txs []*types.Tx
 		}
 	}
 
-	block, err := mining.NewBlockTemplate(chain, txPool, nil, nil)
+	block, err := mining.NewBlockTemplate(chain, txPool, nil, nil, nil)
 	if err != nil {
 		return err
 	}

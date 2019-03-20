@@ -72,7 +72,7 @@ const (
 	VoteForgerFee       = 1000000 // 0.0.1 * Coin
 	CancelVoteForgerFee = 1000000 // 0.0.1 * Coin
 	MaxNumberOfVotes    = 51
-	MinHoldBalance      = 500000000000
+	MinHoldBalance      = 50000000000
 )
 
 func MoneyRange(nValue uint64) bool { return nValue >= 0 && nValue <= MaxMoney }

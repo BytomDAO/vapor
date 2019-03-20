@@ -14,6 +14,8 @@ import (
 	"github.com/vapor/common"
 	"github.com/vapor/config"
 	"github.com/vapor/consensus"
+	engine "github.com/vapor/consensus/consensus"
+	"github.com/vapor/consensus/consensus/dpos"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol"
@@ -153,9 +155,14 @@ func TestListAssets(t *testing.T) {
 }
 
 func mockChain(testDB dbm.DB) (*protocol.Chain, error) {
+	var engine engine.Engine
+	switch config.CommonConfig.Consensus.Type {
+	case "dpos":
+		engine = dpos.GDpos
+	}
 	store := leveldb.NewStore(testDB)
 	txPool := protocol.NewTxPool(store)
-	chain, err := protocol.NewChain(store, txPool)
+	chain, err := protocol.NewChain(store, txPool, engine)
 	if err != nil {
 		return nil, err
 	}
@@ -165,14 +172,14 @@ func mockChain(testDB dbm.DB) (*protocol.Chain, error) {
 func mockNewRegistry(t *testing.T) *Registry {
 	config.CommonConfig = config.DefaultConfig()
 	consensus.SoloNetParams.Signer = "78673764e0ba91a4c5ba9ec0c8c23c69e3d73bf27970e05e0a977e81e13bde475264d3b177a96646bc0ce517ae7fd63504c183ab6d330dea184331a4cf5912d5"
-	config.CommonConfig.Consensus.Dpos.SelfVoteSigners = append(config.CommonConfig.Consensus.Dpos.SelfVoteSigners, "vsm1qkm743xmgnvh84pmjchq2s4tnfpgu9ae2f9slep")
-	config.CommonConfig.Consensus.Dpos.XPrv = "a8e281b615809046698fb0b0f2804a36d824d48fa443350f10f1b80649d39e5f1e85cf9855548915e36137345910606cbc8e7dd8497c831dce899ee6ac112445"
-	for _, v := range config.CommonConfig.Consensus.Dpos.SelfVoteSigners {
+	config.CommonConfig.Consensus.SelfVoteSigners = append(config.CommonConfig.Consensus.SelfVoteSigners, "vsm1qkm743xmgnvh84pmjchq2s4tnfpgu9ae2f9slep")
+	config.CommonConfig.Consensus.XPrv = "a8e281b615809046698fb0b0f2804a36d824d48fa443350f10f1b80649d39e5f1e85cf9855548915e36137345910606cbc8e7dd8497c831dce899ee6ac112445"
+	for _, v := range config.CommonConfig.Consensus.SelfVoteSigners {
 		address, err := common.DecodeAddress(v, &consensus.SoloNetParams)
 		if err != nil {
 			t.Fatal(err)
 		}
-		config.CommonConfig.Consensus.Dpos.Signers = append(config.CommonConfig.Consensus.Dpos.Signers, address)
+		config.CommonConfig.Consensus.Signers = append(config.CommonConfig.Consensus.Signers, address)
 	}
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {

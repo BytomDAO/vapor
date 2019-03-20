@@ -229,13 +229,12 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 		mux.WitnessDestinations = append(mux.WitnessDestinations, dest)
 	}
 	refdatahash := hashData(tx.ReferenceData)
-	h := bc.NewTxHeader(tx.Version, tx.SerializedSize, &refdatahash, tx.TimeRange, resultIDs)
+	h := bc.NewTxHeader(tx.Version, tx.SerializedSize, &refdatahash, tx.TimeRange, resultIDs, true)
 	return addEntry(h), h, entryMap
 }
 
 func mapBlockHeader(old *BlockHeader) (bc.Hash, *bc.BlockHeader) {
-	proof := &bc.Proof{Sign: old.Proof.Sign, ControlProgram: old.Proof.ControlProgram}
-	bh := bc.NewBlockHeader(old.Version, old.Height, &old.PreviousBlockHash, old.Timestamp, &old.TransactionsMerkleRoot, &old.TransactionStatusHash, proof, old.Extra, old.Coinbase)
+	bh := bc.NewBlockHeader(old.Version, old.Height, &old.PreviousBlockHash, old.Timestamp, &old.TransactionsMerkleRoot, &old.TransactionStatusHash)
 	return bc.EntryID(bh), bh
 }
 

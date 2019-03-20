@@ -1,13 +1,9 @@
 package miner
 
 import (
-	"errors"
 	"sync"
 	"time"
 
-	"github.com/vapor/blockchain/pseudohsm"
-
-	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/config"
 
 	log "github.com/sirupsen/logrus"
@@ -16,14 +12,9 @@ import (
 	"github.com/vapor/common"
 	"github.com/vapor/consensus"
 	engine "github.com/vapor/consensus/consensus"
-	"github.com/vapor/consensus/consensus/dpos"
-	"github.com/vapor/crypto"
-	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/mining"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/vm/vmutil"
 )
 
 const (
@@ -32,8 +23,6 @@ const (
 	hashUpdateSecs    = 1
 	module            = "miner"
 )
-
-var ConsensusEngine engine.Engine
 
 // Miner creates blocks and searches for proof-of-work values.
 type Miner struct {
@@ -52,14 +41,6 @@ type Miner struct {
 }
 
 func NewMiner(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, newBlockCh chan *bc.Hash, engine engine.Engine) *Miner {
-	dpos, ok := engine.(*dpos.Dpos)
-	if !ok {
-		log.Error("Only the dpos engine was allowed")
-		return nil
-	}
-	dpos.Authorize(config.CommonConfig.Consensus.Dpos.Coinbase)
-	c.SetConsensusEngine(dpos)
-	ConsensusEngine = dpos
 	return &Miner{
 		chain:            c,
 		accountManager:   accountManager,
@@ -67,25 +48,8 @@ func NewMiner(c *protocol.Chain, accountManager *account.Manager, txPool *protoc
 		numWorkers:       defaultNumWorkers,
 		updateNumWorkers: make(chan struct{}),
 		newBlockCh:       newBlockCh,
-		engine:           dpos,
+		engine:           engine,
 	}
-}
-
-func (m *Miner) generateProof(block types.Block) (types.Proof, error) {
-	var xPrv chainkd.XPrv
-	if consensus.ActiveNetParams.Signer == "" {
-		return types.Proof{}, errors.New("Signer is empty")
-	}
-	xPrv.UnmarshalText([]byte(consensus.ActiveNetParams.Signer))
-	sign := xPrv.Sign(block.BlockCommitment.TransactionsMerkleRoot.Bytes())
-	pubHash := crypto.Ripemd160(xPrv.XPub().PublicKey())
-
-	address, _ := common.NewPeginAddressWitnessScriptHash(pubHash, &consensus.ActiveNetParams)
-	control, err := vmutil.P2WPKHProgram([]byte(pubHash))
-	if err != nil {
-		return types.Proof{}, err
-	}
-	return types.Proof{Sign: sign, ControlProgram: control, Address: address.ScriptAddress()}, nil
 }
 
 // generateBlocks is a worker that is controlled by the miningWorkerController.
@@ -104,9 +68,12 @@ out:
 			break out
 		default:
 		}
-		delegateInfo := engine.DelegateInfo{}
-		address, _ := common.DecodeAddress(config.CommonConfig.Consensus.Dpos.Coinbase, &consensus.ActiveNetParams)
-		if err := engine.GDpos.IsMining(&delegateInfo, address, uint64(time.Now().Unix())); err != nil {
+		var (
+			delegateInfo interface{}
+			err          error
+		)
+		address, _ := common.DecodeAddress(config.CommonConfig.Consensus.Coinbase, &consensus.ActiveNetParams)
+		if delegateInfo, err = m.engine.IsMining(address, uint64(time.Now().Unix())); err != nil {
 			time.Sleep(1 * time.Second)
 			continue
 		}
@@ -121,12 +88,7 @@ out:
 			time.Sleep(1 * time.Second)
 			continue
 		}
-		block, err = m.engine.Seal(m.chain, block)
-		if err != nil {
-			log.Errorf("Seal, %v", err)
-			continue
-		}
-		m.chain.SetConsensusEngine(m.engine)
+
 		if isOrphan, err := m.chain.ProcessBlock(block); err == nil {
 			log.WithFields(log.Fields{
 				"height":   block.BlockHeader.Height,
@@ -139,48 +101,10 @@ out:
 		} else {
 			log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on ProcessBlock, %v", err)
 		}
-		// confirm block
-		//m.sendConfirmTx(block.Height - 1)
-		time.Sleep(time.Duration(config.CommonConfig.Consensus.Dpos.Period) * time.Second)
+		time.Sleep(time.Duration(config.CommonConfig.Consensus.Period) * time.Second)
 	}
 
 	m.workerWg.Done()
-}
-
-func (m *Miner) sendConfirmTx(height uint64) error {
-	// 找到utxo
-	var assetID bc.AssetID
-	assetID.UnmarshalText([]byte("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"))
-	// 生成dpos交易
-	dpos := account.DopsAction{
-		Accounts: m.accountManager,
-		From:     config.CommonConfig.Consensus.Dpos.Coinbase,
-		Fee:      100000000,
-		TxType:   6,
-		Height:   height,
-	}
-	dpos.AssetId = &assetID
-	builder := txbuilder.NewBuilder(time.Now())
-	if err := dpos.Build(nil, builder); err != nil {
-		return err
-	}
-	// 签名
-	tmpl, _, err := builder.Build()
-	if err != nil {
-		return err
-	}
-
-	var xprv chainkd.XPrv
-	xprv.UnmarshalText([]byte(config.CommonConfig.Consensus.Dpos.XPrv))
-	if err := pseudohsm.SignWithKey(tmpl, xprv); err != nil {
-		return err
-	}
-
-	if err := txbuilder.FinalizeTx(nil, m.chain, tmpl.Transaction); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // miningWorkerController launches the worker goroutines that are used to

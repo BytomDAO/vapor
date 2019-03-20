@@ -178,12 +178,19 @@ type WebsocketConfig struct {
 }
 
 type ConsensusConfig struct {
-	Dpos *DposConfig `mapstructure:"dpos"`
+	Type             string   `mapstructure:"consensus_type"`
+	Period           uint64   `json:"period"`            // Number of seconds between blocks to enforce
+	MaxSignerCount   uint64   `json:"max_signers_count"` // Max count of signers
+	MinVoterBalance  uint64   `json:"min_boter_balance"` // Min voter balance to valid this vote
+	GenesisTimestamp uint64   `json:"genesis_timestamp"` // The LoopStartTime of first Block
+	Coinbase         string   `json:"coinbase"`
+	XPrv             string   `json:"xprv"`
+	SelfVoteSigners  []string `json:"signers"` // Signers vote by themselves to seal the block, make sure the signer accounts are pre-funded
+	Signers          []common.Address
 }
 
 type DposConfig struct {
 	Period           uint64   `json:"period"`            // Number of seconds between blocks to enforce
-	Epoch            uint64   `json:"epoch"`             // Epoch length to reset votes and checkpoint
 	MaxSignerCount   uint64   `json:"max_signers_count"` // Max count of signers
 	MinVoterBalance  uint64   `json:"min_boter_balance"` // Min voter balance to valid this vote
 	GenesisTimestamp uint64   `json:"genesis_timestamp"` // The LoopStartTime of first Block
@@ -241,7 +248,6 @@ func DefaultWebsocketConfig() *WebsocketConfig {
 func DefaultDposConfig() *DposConfig {
 	return &DposConfig{
 		Period:           1,
-		Epoch:            300,
 		MaxSignerCount:   1,
 		MinVoterBalance:  0,
 		GenesisTimestamp: 1524549600,
@@ -249,7 +255,12 @@ func DefaultDposConfig() *DposConfig {
 }
 
 func DefaultConsensusCOnfig() *ConsensusConfig {
-	return &ConsensusConfig{Dpos: DefaultDposConfig()}
+	return &ConsensusConfig{
+		Type:             "dpos",
+		Period:           1,
+		MaxSignerCount:   1,
+		MinVoterBalance:  0,
+		GenesisTimestamp: 1524549600}
 }
 
 //-----------------------------------------------------------------------------

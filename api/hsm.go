@@ -5,6 +5,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/vapor/blockchain/pseudohsm"
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/common"
 	"github.com/vapor/consensus"
@@ -81,6 +82,21 @@ func (a *API) signTemplate(ctx context.Context, x struct {
 	}
 	log.Info("Sign Transaction complete.")
 	return NewSuccessResponse(&signTemplateResp{Tx: &x.Txs, SignComplete: txbuilder.SignProgress(&x.Txs)})
+}
+
+func (a *API) signWithPriKey(ins struct {
+	Xprv string             `json:"xprv"`
+	Tx   txbuilder.Template `json:"transaction"`
+}) Response {
+	xprv := &chainkd.XPrv{}
+	if err := xprv.UnmarshalText([]byte(ins.Xprv)); err != nil {
+		return NewErrorResponse(err)
+	}
+	if err := pseudohsm.SignWithKey(&ins.Tx, *xprv); err != nil {
+		return NewErrorResponse(err)
+	}
+	log.Info("Sign Transaction complete.")
+	return NewSuccessResponse(&signTemplateResp{Tx: &ins.Tx, SignComplete: txbuilder.SignProgress(&ins.Tx)})
 }
 
 type signTemplatesResp struct {

@@ -210,6 +210,11 @@ const (
 	OP_ENTRYID     Op = 0xca
 	OP_OUTPUTID    Op = 0xcb
 	OP_BLOCKHEIGHT Op = 0xcd
+
+	OP_DELEGATE Op = 0xd0
+	OP_REGISTE  Op = 0xd1
+	OP_VOTE     Op = 0xd2
+	OP_REVOKE   Op = 0xd3
 )
 
 type opInfo struct {

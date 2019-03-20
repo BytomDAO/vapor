@@ -8,11 +8,9 @@ type TxType uint8
 
 const (
 	Binary TxType = iota
-	LoginCandidate
-	LogoutCandidate
-	Delegate
-	UnDelegate
-	ConfirmTx
+	Registe
+	Vote
+	CancelVote
 )
 
 // SpendInput satisfies the TypedInput interface and represents a spend transaction.

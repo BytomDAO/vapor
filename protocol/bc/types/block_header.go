@@ -12,48 +12,12 @@ import (
 	"github.com/vapor/protocol/bc"
 )
 
-type Proof struct {
-	Sign           []byte
-	ControlProgram []byte
-	Address        []byte
-}
-
-func (p *Proof) readFrom(r *blockchain.Reader) (err error) {
-	if p.Sign, err = blockchain.ReadVarstr31(r); err != nil {
-		return err
-	}
-	if p.ControlProgram, err = blockchain.ReadVarstr31(r); err != nil {
-		return err
-	}
-	if p.Address, err = blockchain.ReadVarstr31(r); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (p *Proof) writeTo(w io.Writer) error {
-	if _, err := blockchain.WriteVarstr31(w, p.Sign); err != nil {
-		return err
-	}
-
-	if _, err := blockchain.WriteVarstr31(w, p.ControlProgram); err != nil {
-		return err
-	}
-	if _, err := blockchain.WriteVarstr31(w, p.Address); err != nil {
-		return err
-	}
-	return nil
-}
-
 // BlockHeader defines information about a block and is used in the Bytom
 type BlockHeader struct {
 	Version           uint64  // The version of the block.
 	Height            uint64  // The height of the block.
 	PreviousBlockHash bc.Hash // The hash of the previous block.
 	Timestamp         uint64  // The time of the block in seconds.
-	Coinbase          []byte
-	Proof             Proof
-	Extra             []byte
 	BlockCommitment
 }
 
@@ -117,16 +81,7 @@ func (bh *BlockHeader) readFrom(r *blockchain.Reader) (serflag uint8, err error)
 	if bh.Timestamp, err = blockchain.ReadVarint63(r); err != nil {
 		return 0, err
 	}
-	if bh.Coinbase, err = blockchain.ReadVarstr31(r); err != nil {
-		return 0, err
-	}
 	if _, err = blockchain.ReadExtensibleString(r, bh.BlockCommitment.readFrom); err != nil {
-		return 0, err
-	}
-	if _, err = blockchain.ReadExtensibleString(r, bh.Proof.readFrom); err != nil {
-		return 0, err
-	}
-	if bh.Extra, err = blockchain.ReadVarstr31(r); err != nil {
 		return 0, err
 	}
 	return
@@ -155,16 +110,7 @@ func (bh *BlockHeader) writeTo(w io.Writer, serflags uint8) (err error) {
 	if _, err = blockchain.WriteVarint63(w, bh.Timestamp); err != nil {
 		return err
 	}
-	if _, err := blockchain.WriteVarstr31(w, bh.Coinbase); err != nil {
-		return err
-	}
 	if _, err = blockchain.WriteExtensibleString(w, nil, bh.BlockCommitment.writeTo); err != nil {
-		return err
-	}
-	if _, err = blockchain.WriteExtensibleString(w, nil, bh.Proof.writeTo); err != nil {
-		return err
-	}
-	if _, err = blockchain.WriteVarstr31(w, bh.Extra); err != nil {
 		return err
 	}
 	return nil

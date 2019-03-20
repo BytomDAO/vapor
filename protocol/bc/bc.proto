@@ -76,9 +76,6 @@ message BlockHeader {
   uint64            nonce                   = 7;
   uint64            bits                    = 8;
   TransactionStatus transaction_status      = 9;
-  Proof             Proof                   = 10;
-  bytes             extra                   = 11;
-  bytes             coinbase                = 12;
 }
 
 message TxHeader {
@@ -87,6 +84,7 @@ message TxHeader {
   Hash          data            = 3;
   uint64        time_range      = 4;
   repeated Hash result_ids      = 5;
+  bool          side            = 6;
 }
 
 message TxVerifyResult {
