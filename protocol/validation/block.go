@@ -56,7 +56,7 @@ func checkCoinbaseAmount(b *bc.Block, amount uint64) error {
 }
 
 // ValidateBlockHeader check the block's header
-func ValidateBlockHeader(b *bc.Block, block *types.Block, parent *state.BlockNode, c chain.Chain, engine engine.Engine) error {
+func ValidateBlockHeader(b *bc.Block, block *types.Block, parent *state.BlockNode, c chain.Chain) error {
 	if b.Version < parent.Version {
 		return errors.WithDetailf(errVersionRegression, "previous block verson %d, current block version %d", parent.Version, b.Version)
 	}
@@ -69,7 +69,12 @@ func ValidateBlockHeader(b *bc.Block, block *types.Block, parent *state.BlockNod
 	if err := checkBlockTime(b, parent); err != nil {
 		return err
 	}
-	if err := engine.VerifySeal(c, &block.BlockHeader); err != nil {
+
+	if err := engine.GDpos.CheckBlockHeader(block.BlockHeader); err != nil {
+		return err
+	}
+
+	if err := engine.GDpos.IsValidBlockCheckIrreversibleBlock(block.Height, block.Hash()); err != nil {
 		return err
 	}
 
@@ -77,9 +82,13 @@ func ValidateBlockHeader(b *bc.Block, block *types.Block, parent *state.BlockNod
 }
 
 // ValidateBlock validates a block and the transactions within.
-func ValidateBlock(b *bc.Block, parent *state.BlockNode, block *types.Block, c chain.Chain, engine engine.Engine) error {
+func ValidateBlock(b *bc.Block, parent *state.BlockNode, block *types.Block, c chain.Chain) error {
 	startTime := time.Now()
-	if err := ValidateBlockHeader(b, block, parent, c, engine); err != nil {
+	if err := ValidateBlockHeader(b, block, parent, c); err != nil {
+		return err
+	}
+
+	if err := engine.GDpos.CheckBlock(*block, true); err != nil {
 		return err
 	}
 

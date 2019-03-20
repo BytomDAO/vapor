@@ -66,8 +66,13 @@ var BTMDefinitionMap = map[string]interface{}{
 }
 
 const (
-	Coin     = 100000000
-	MaxMoney = 2100000000 * Coin
+	Coin                = 100000000
+	MaxMoney            = 2100000000 * Coin
+	RegisrerForgerFee   = 1 * Coin
+	VoteForgerFee       = 1000000 // 0.0.1 * Coin
+	CancelVoteForgerFee = 1000000 // 0.0.1 * Coin
+	MaxNumberOfVotes    = 51
+	MinHoldBalance      = 500000000000
 )
 
 func MoneyRange(nValue uint64) bool { return nValue >= 0 && nValue <= MaxMoney }

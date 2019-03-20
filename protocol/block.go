@@ -1,8 +1,14 @@
 package protocol
 
 import (
+	"encoding/json"
+	"fmt"
+
 	log "github.com/sirupsen/logrus"
 
+	"github.com/vapor/common"
+	"github.com/vapor/consensus"
+	engine "github.com/vapor/consensus/consensus"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -158,9 +164,10 @@ func (c *Chain) saveBlock(block *types.Block) error {
 	bcBlock := types.MapBlock(block)
 	parent := c.index.GetNode(&block.PreviousBlockHash)
 
-	if err := validation.ValidateBlock(bcBlock, parent, block, c, c.engine); err != nil {
+	if err := validation.ValidateBlock(bcBlock, parent, block, c); err != nil {
 		return errors.Sub(ErrBadBlock, err)
 	}
+
 	if err := c.store.SaveBlock(block, bcBlock.TransactionStatus); err != nil {
 		return err
 	}
@@ -257,4 +264,98 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 		return false, c.reorganizeChain(bestNode)
 	}
 	return false, nil
+}
+
+func (c *Chain) ProcessDPoSConnectBlock(block *types.Block) {
+	mapTxFee := c.CalculateBalance(block, true)
+	fmt.Println(mapTxFee)
+}
+
+func DoVoting(block *types.Block, mapTxFee map[bc.Hash]uint64) error {
+	for _, tx := range block.Transactions {
+		to := tx.Outputs[0]
+		var delegate engine.TypedData
+
+		if err := json.Unmarshal(tx.TxData.ReferenceData, delegate); err != nil && to.Amount > 0 {
+			continue
+		}
+		var (
+			address common.Address
+			err     error
+		)
+		address, err = common.NewAddressWitnessPubKeyHash(to.ControlProgram[2:], &consensus.ActiveNetParams)
+		if err != nil {
+			address, err = common.NewAddressWitnessScriptHash(to.ControlProgram[2:], &consensus.ActiveNetParams)
+			if err != nil {
+				return errors.New("ControlProgram cannot be converted to address")
+			}
+		}
+		hash := block.Hash()
+		height := block.Height
+		switch data := delegate.(type) {
+		case *engine.DelegateInfoList:
+			continue
+		case *engine.RegisterForgerData:
+			if mapTxFee[tx.Tx.ID] >= consensus.RegisrerForgerFee {
+				engine.DposVote.ProcessRegister(address.EncodeAddress(), data.Name, hash, height)
+			}
+		case *engine.VoteForgerData:
+			if mapTxFee[tx.Tx.ID] >= consensus.VoteForgerFee {
+				engine.DposVote.ProcessVote(address.EncodeAddress(), data.Forgers, hash, height)
+			}
+		case *engine.CancelVoteForgerData:
+			if mapTxFee[tx.Tx.ID] >= consensus.CancelVoteForgerFee {
+				engine.DposVote.ProcessCancelVote(address.EncodeAddress(), data.Forgers, hash, height)
+			}
+		}
+	}
+	return nil
+}
+
+func (c *Chain) CalculateBalance(block *types.Block, fIsAdd bool) map[bc.Hash]uint64 {
+
+	addressBalances := []engine.AddressBalance{}
+	mapTxFee := make(map[bc.Hash]uint64)
+	var (
+		address common.Address
+		err     error
+	)
+
+	for _, tx := range block.Transactions {
+		fee := uint64(0)
+		for _, input := range tx.Inputs {
+			fee += input.Amount()
+			value := int64(input.Amount())
+			address, err = common.NewAddressWitnessPubKeyHash(input.ControlProgram()[2:], &consensus.ActiveNetParams)
+			if err != nil {
+				address, err = common.NewAddressWitnessScriptHash(input.ControlProgram()[2:], &consensus.ActiveNetParams)
+				if err != nil {
+					continue
+				}
+			}
+			if fIsAdd {
+				value = 0 - value
+			}
+			addressBalances = append(addressBalances, engine.AddressBalance{address.EncodeAddress(), value})
+		}
+		for _, output := range tx.Outputs {
+			fee -= output.Amount
+			value := int64(output.Amount)
+			address, err = common.NewAddressWitnessPubKeyHash(output.ControlProgram[2:], &consensus.ActiveNetParams)
+			if err != nil {
+				address, err = common.NewAddressWitnessScriptHash(output.ControlProgram[2:], &consensus.ActiveNetParams)
+				if err != nil {
+					continue
+				}
+			}
+			if fIsAdd {
+				value = 0 - value
+			}
+			addressBalances = append(addressBalances, engine.AddressBalance{address.EncodeAddress(), value})
+		}
+		mapTxFee[tx.Tx.ID] = fee
+	}
+
+	engine.DposVote.UpdateAddressBalance(addressBalances)
+	return mapTxFee
 }

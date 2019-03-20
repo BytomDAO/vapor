@@ -43,17 +43,22 @@ func (a *API) actionDecoder(action string) (func([]byte) (txbuilder.Action, erro
 
 func onlyHaveInputActions(req *BuildRequest) (bool, error) {
 	count := 0
+	dpos := false
 	for i, act := range req.Actions {
 		actionType, ok := act["type"].(string)
 		if !ok {
 			return false, errors.WithDetailf(ErrBadActionType, "no action type provided on action %d", i)
 		}
 		if strings.HasPrefix(actionType, "dpos_address") {
-			return false, nil
+			dpos = true
 		}
 		if strings.HasPrefix(actionType, "spend") || actionType == "issue" {
 			count++
 		}
+	}
+
+	if dpos == true && count == 0 {
+		return false, nil
 	}
 
 	return count == len(req.Actions), nil

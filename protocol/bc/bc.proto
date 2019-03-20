@@ -84,8 +84,9 @@ message BlockHeader {
 message TxHeader {
   uint64        version         = 1;
   uint64        serialized_size = 2;
-  uint64        time_range      = 3;
-  repeated Hash result_ids      = 4;
+  Hash          data            = 3;
+  uint64        time_range      = 4;
+  repeated Hash result_ids      = 5;
 }
 
 message TxVerifyResult {

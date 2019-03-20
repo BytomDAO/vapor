@@ -1,6 +1,8 @@
 package mining
 
 import (
+	"encoding/binary"
+	"encoding/json"
 	"sort"
 	"strconv"
 	"time"
@@ -27,7 +29,7 @@ import (
 // createCoinbaseTx returns a coinbase transaction paying an appropriate subsidy
 // based on the passed block height to the provided address.  When the address
 // is nil, the coinbase transaction will instead be redeemable by anyone.
-func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeight uint64) (tx *types.Tx, err error) {
+func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeight uint64, delegateInfo engine.DelegateInfo, timestamp uint64) (tx *types.Tx, err error) {
 	//amount += consensus.BlockSubsidy(blockHeight)
 	arbitrary := append([]byte{0x00}, []byte(strconv.FormatUint(blockHeight, 10))...)
 
@@ -48,6 +50,7 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 	if err = builder.AddInput(types.NewCoinbaseInput(arbitrary), &txbuilder.SigningInstruction{}); err != nil {
 		return nil, err
 	}
+
 	if err = builder.AddOutput(types.NewTxOutput(*consensus.BTMAssetID, amount, script)); err != nil {
 		return nil, err
 	}
@@ -62,6 +65,27 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 	}
 	txData.SerializedSize = uint64(len(byteData))
 
+	delegates := engine.DelegateInfoList{}
+	delegates.Delegate = delegateInfo
+
+	var xPrv chainkd.XPrv
+	if config.CommonConfig.Consensus.Dpos.XPrv == "" {
+		return nil, errors.New("Signer is empty")
+	}
+	xPrv.UnmarshalText([]byte(config.CommonConfig.Consensus.Dpos.XPrv))
+
+	buf := [8]byte{}
+	binary.LittleEndian.PutUint64(buf[:], timestamp)
+	delegates.SigTime = xPrv.Sign(buf)
+	delegates.Xpub = xPrv.XPub()
+
+	data, err := json.Marshal(&delegates)
+	if err != nil {
+		return nil, err
+	}
+
+	txData.ReferenceData = data
+
 	tx = &types.Tx{
 		TxData: *txData,
 		Tx:     types.MapTx(txData),
@@ -70,7 +94,7 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 }
 
 // NewBlockTemplate returns a new block template that is ready to be solved
-func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager, engine engine.Engine) (b *types.Block, err error) {
+func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager, engine engine.Engine, delegateInfo engine.DelegateInfo) (b *types.Block, err error) {
 	view := state.NewUtxoViewpoint()
 	txStatus := bc.NewTransactionStatus()
 	if err := txStatus.SetStatus(0, false); err != nil {
@@ -157,7 +181,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 
 	b.BlockHeader = header
 	// creater coinbase transaction
-	b.Transactions[0], err = createCoinbaseTx(accountManager, txFee, nextBlockHeight)
+	b.Transactions[0], err = createCoinbaseTx(accountManager, txFee, nextBlockHeight, delegateInfo, bcBlock.Timestamp)
 	if err != nil {
 		return nil, errors.Wrap(err, "fail on createCoinbaseTx")
 	}

@@ -254,6 +254,15 @@ func (a *API) buildHandler() {
 		m.Handle("/build-mainchain-tx", jsonHandler(a.buildMainChainTxForContract))
 		m.Handle("/sign-with-key", jsonHandler(a.signWithKey))
 		m.Handle("/dpos", jsonHandler(a.dpos))
+		// registe
+		// vote
+		// cancelvote
+		// listdelegates
+		// getdelegatevotes
+		// getdelegatefunds
+		// listvoteddelegates
+		// listreceivedvotes
+		// getirreversibleblock
 	} else {
 		log.Warn("Please enable wallet")
 	}

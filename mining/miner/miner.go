@@ -104,8 +104,14 @@ out:
 			break out
 		default:
 		}
+		delegateInfo := engine.DelegateInfo{}
+		address, _ := common.DecodeAddress(config.CommonConfig.Consensus.Dpos.Coinbase, &consensus.ActiveNetParams)
+		if err := engine.GDpos.IsMining(&delegateInfo, address, uint64(time.Now().Unix())); err != nil {
+			time.Sleep(1 * time.Second)
+			continue
+		}
 
-		block, err := mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager, m.engine)
+		block, err := mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager, m.engine, delegateInfo)
 		if err != nil {
 			log.Errorf("Mining: failed on create NewBlockTemplate: %v", err)
 			time.Sleep(1 * time.Second)
@@ -134,7 +140,7 @@ out:
 			log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on ProcessBlock, %v", err)
 		}
 		// confirm block
-		m.sendConfirmTx(block.Height - 1)
+		//m.sendConfirmTx(block.Height - 1)
 		time.Sleep(time.Duration(config.CommonConfig.Consensus.Dpos.Period) * time.Second)
 	}
 
