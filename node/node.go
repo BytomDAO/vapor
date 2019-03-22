@@ -105,6 +105,11 @@ func NewNode(config *cfg.Config) *Node {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 	}
 
+	switch config.Consensus.Type {
+	case "dpos":
+		initDpos(chain, config)
+	}
+
 	var accounts *account.Manager = nil
 	var assets *asset.Registry = nil
 	var wallet *w.Wallet = nil
@@ -161,12 +166,6 @@ func NewNode(config *cfg.Config) *Node {
 			}
 		}()
 	}
-
-	switch config.Consensus.Type {
-	case "dpos":
-		initDpos(chain, config)
-	}
-
 	node := &Node{
 		config:       config,
 		syncManager:  syncManager,

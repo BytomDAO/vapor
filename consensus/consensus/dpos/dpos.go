@@ -109,10 +109,7 @@ func (d *DposType) Init(c chain.Chain, delegateNumber, intervalTime, blockHeight
 
 	GDpos.irreversibleBlockFileName = filepath.Join(config.CommonConfig.RootDir, "dpos", "irreversible_block.dat")
 	GDpos.irreversibleBlockInfo = *newIrreversibleBlockInfo()
-	if err := GDpos.ReadIrreversibleBlockInfo(&GDpos.irreversibleBlockInfo); err != nil {
-		return err
-	}
-
+	GDpos.ReadIrreversibleBlockInfo(&GDpos.irreversibleBlockInfo)
 	header, _ := c.GetHeaderByHeight(d.DposStartHeight)
 	d.setStartTime(header.Timestamp)
 	return nil
@@ -132,6 +129,9 @@ func (d *DposType) IsMining(address common.Address, t uint64) (interface{}, erro
 	if currentLoopIndex > prevLoopIndex {
 		delegateInfo := d.GetNextDelegates(t)
 		cDelegateInfo := delegateInfo.(*DelegateInfo)
+		if uint64(len(cDelegateInfo.Delegates)) < currentDelegateIndex+1 {
+			return nil, errors.New("Out of the block node list")
+		}
 		if cDelegateInfo.Delegates[currentDelegateIndex].DelegateAddress == address.EncodeAddress() {
 			return delegateInfo, nil
 		}

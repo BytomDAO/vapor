@@ -396,7 +396,9 @@ func (v *Vote) GetTopDelegateInfo(minHoldBalance uint64, delegateNum uint64) []D
 			result = append(result, Delegate{k, 0})
 		}
 	}
-
+	if uint64(len(result)) <= delegateNum {
+		return result
+	}
 	result = result[:delegateNum]
 	return result
 }
