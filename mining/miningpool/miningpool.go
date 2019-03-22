@@ -8,7 +8,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/account"
-	"github.com/vapor/mining"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -68,15 +67,7 @@ func (m *MiningPool) blockUpdater() {
 
 // generateBlock generates a block template to mine
 func (m *MiningPool) generateBlock() {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
 
-	block, err := mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager)
-	if err != nil {
-		log.Errorf("miningpool: failed on create NewBlockTemplate: %v", err)
-		return
-	}
-	m.block = block
 }
 
 // GetWork will return a block header for p2p mining

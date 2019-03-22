@@ -34,7 +34,7 @@ func (a *API) actionDecoder(action string) (func([]byte) (txbuilder.Action, erro
 		"retire":                       txbuilder.DecodeRetireAction,
 		"spend_account":                a.wallet.AccountMgr.DecodeSpendAction,
 		"spend_account_unspent_output": a.wallet.AccountMgr.DecodeSpendUTXOAction,
-		"dpos_address":                 a.wallet.AccountMgr.DecodeDposAction,
+		"dpos":                         a.wallet.AccountMgr.DecodeDposAction,
 		"ipfs_data":                    txbuilder.DecodeIpfsDataAction,
 	}
 	decoder, ok := decoders[action]
@@ -43,17 +43,22 @@ func (a *API) actionDecoder(action string) (func([]byte) (txbuilder.Action, erro
 
 func onlyHaveInputActions(req *BuildRequest) (bool, error) {
 	count := 0
+	dpos := false
 	for i, act := range req.Actions {
 		actionType, ok := act["type"].(string)
 		if !ok {
 			return false, errors.WithDetailf(ErrBadActionType, "no action type provided on action %d", i)
 		}
-		if strings.HasPrefix(actionType, "dpos_address") {
-			return false, nil
+		if strings.HasPrefix(actionType, "dpos") {
+			dpos = true
 		}
 		if strings.HasPrefix(actionType, "spend") || actionType == "issue" {
 			count++
 		}
+	}
+
+	if dpos == true && count == 0 {
+		return false, nil
 	}
 
 	return count == len(req.Actions), nil

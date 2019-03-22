@@ -50,24 +50,6 @@ func (a *API) setCoinbaseArbitrary(ctx context.Context, req CoinbaseArbitrary) R
 	return a.getCoinbaseArbitrary()
 }
 
-// getWork gets work in compressed protobuf format
-func (a *API) getWork() Response {
-	work, err := a.GetWork()
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-	return NewSuccessResponse(work)
-}
-
-// getWorkJSON gets work in json format
-func (a *API) getWorkJSON() Response {
-	work, err := a.GetWorkJSON()
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-	return NewSuccessResponse(work)
-}
-
 // SubmitBlockReq is req struct for submit-block API
 type SubmitBlockReq struct {
 	Block *types.Block `json:"raw_block"`
@@ -93,35 +75,9 @@ type SubmitWorkReq struct {
 	BlockHeader *types.BlockHeader `json:"block_header"`
 }
 
-// submitWork submits work in compressed protobuf format
-func (a *API) submitWork(ctx context.Context, req *SubmitWorkReq) Response {
-	if err := a.SubmitWork(req.BlockHeader); err != nil {
-		return NewErrorResponse(err)
-	}
-	return NewSuccessResponse(true)
-}
-
 // SubmitWorkJSONReq is req struct for submit-work-json API
 type SubmitWorkJSONReq struct {
 	BlockHeader *BlockHeaderJSON `json:"block_header"`
-}
-
-// submitWorkJSON submits work in json format
-func (a *API) submitWorkJSON(ctx context.Context, req *SubmitWorkJSONReq) Response {
-	bh := &types.BlockHeader{
-		Version:           req.BlockHeader.Version,
-		Height:            req.BlockHeader.Height,
-		PreviousBlockHash: req.BlockHeader.PreviousBlockHash,
-		Timestamp:         req.BlockHeader.Timestamp,
-		//Nonce:             req.BlockHeader.Nonce,
-		//Bits:              req.BlockHeader.Bits,
-		BlockCommitment: *req.BlockHeader.BlockCommitment,
-	}
-
-	if err := a.SubmitWork(bh); err != nil {
-		return NewErrorResponse(err)
-	}
-	return NewSuccessResponse(true)
 }
 
 // GetWorkResp is resp struct for get-work API
@@ -130,59 +86,10 @@ type GetWorkResp struct {
 	Seed        *bc.Hash           `json:"seed"`
 }
 
-// GetWork gets work in compressed protobuf format
-func (a *API) GetWork() (*GetWorkResp, error) {
-	bh, err := a.miningPool.GetWork()
-	if err != nil {
-		return nil, err
-	}
-
-	seed, err := a.chain.CalcNextSeed(&bh.PreviousBlockHash)
-	if err != nil {
-		return nil, err
-	}
-
-	return &GetWorkResp{
-		BlockHeader: bh,
-		Seed:        seed,
-	}, nil
-}
-
 // GetWorkJSONResp is resp struct for get-work-json API
 type GetWorkJSONResp struct {
 	BlockHeader *BlockHeaderJSON `json:"block_header"`
 	Seed        *bc.Hash         `json:"seed"`
-}
-
-// GetWorkJSON gets work in json format
-func (a *API) GetWorkJSON() (*GetWorkJSONResp, error) {
-	bh, err := a.miningPool.GetWork()
-	if err != nil {
-		return nil, err
-	}
-
-	seed, err := a.chain.CalcNextSeed(&bh.PreviousBlockHash)
-	if err != nil {
-		return nil, err
-	}
-
-	return &GetWorkJSONResp{
-		BlockHeader: &BlockHeaderJSON{
-			Version:           bh.Version,
-			Height:            bh.Height,
-			PreviousBlockHash: bh.PreviousBlockHash,
-			Timestamp:         bh.Timestamp,
-			//			Nonce:             bh.Nonce,
-			//			Bits:              bh.Bits,
-			BlockCommitment: &bh.BlockCommitment,
-		},
-		Seed: seed,
-	}, nil
-}
-
-// SubmitWork tries to submit work to the chain
-func (a *API) SubmitWork(bh *types.BlockHeader) error {
-	return a.miningPool.SubmitWork(bh)
 }
 
 func (a *API) setMining(in struct {

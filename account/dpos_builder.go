@@ -3,16 +3,19 @@ package account
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/vapor/config"
 
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/common"
 	"github.com/vapor/consensus"
+	dpos "github.com/vapor/consensus/consensus/dpos"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/vm"
 	"github.com/vapor/protocol/vm/vmutil"
 )
 
@@ -25,10 +28,11 @@ func (m *Manager) DecodeDposAction(data []byte) (txbuilder.Action, error) {
 type DopsAction struct {
 	Accounts *Manager
 	bc.AssetAmount
-	From           string `json:"from"`
-	To             string `json:"to"`
-	Fee            uint64 `json:"fee"`
-	UseUnconfirmed bool   `json:"use_unconfirmed"`
+	DposType       uint32   `json:"dpos_type"`
+	Address        string   `json:"address"`
+	Name           string   `json:"name"`
+	Forgers        []string `json:"forgers"`
+	UseUnconfirmed bool     `json:"use_unconfirmed"`
 }
 
 func (a *DopsAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
@@ -37,34 +41,94 @@ func (a *DopsAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) er
 	if a.AssetId.IsZero() {
 		missing = append(missing, "asset_id")
 	}
-	if a.From == "" {
-		missing = append(missing, "from")
+	if a.Address == "" {
+		missing = append(missing, "address")
 	}
-	if a.To == "" {
-		missing = append(missing, "to")
-	}
-
 	if len(missing) > 0 {
 		return txbuilder.MissingFieldsError(missing...)
 	}
-	res, err := a.Accounts.utxoKeeper.ReserveByAddress(a.From, a.AssetId, a.Amount, a.UseUnconfirmed, false)
-	if err != nil {
-		return errors.Wrap(err, "reserving utxos")
+	if types.TxType(a.DposType) < types.Binary || types.TxType(a.DposType) > types.CancelVote {
+		return errors.New("tx type  of dpos is error")
 	}
+	var (
+		referenceData []byte
+		data          []byte
+		op            vm.Op
+		err           error
+	)
 
-	// Cancel the reservation if the build gets rolled back.
-	b.OnRollback(func() { a.Accounts.utxoKeeper.Cancel(res.id) })
-	for _, r := range res.utxos {
-		txInput, sigInst, err := DposTx(a.From, a.To, a.Amount, r)
+	switch types.TxType(a.DposType) {
+	case types.Binary:
+	case types.Registe:
+		if a.Name == "" {
+			return errors.New("name is null for dpos Registe")
+		}
+		if a.Amount < consensus.RegisrerForgerFee {
+			return errors.New("The transaction fee is 100000000 for dpos Registe")
+		}
+
+		if dpos.GDpos.HaveDelegate(a.Name, a.Address) {
+			return errors.New("Forger name has registe")
+		}
+
+		data, err = json.Marshal(&dpos.RegisterForgerData{Name: a.Name})
 		if err != nil {
-			return errors.Wrap(err, "creating inputs")
+			return err
 		}
-		if err = b.AddInput(txInput, sigInst); err != nil {
-			return errors.Wrap(err, "adding inputs")
+		op = vm.OP_REGISTE
+	case types.Vote:
+		if len(a.Forgers) == 0 {
+			return errors.New("Forgers is null for dpos Vote")
 		}
+
+		if a.Amount < consensus.VoteForgerFee {
+			return errors.New("The transaction fee is 10000000 for dpos Registe")
+		}
+
+		for _, forger := range a.Forgers {
+			if dpos.GDpos.HaveVote(a.Address, forger) {
+				return fmt.Errorf("delegate name: %s is voted", forger)
+			}
+		}
+
+		data, err = json.Marshal(&dpos.VoteForgerData{Forgers: a.Forgers})
+		if err != nil {
+			return err
+		}
+		op = vm.OP_VOTE
+	case types.CancelVote:
+		if len(a.Forgers) == 0 {
+			return errors.New("Forgers is null for dpos CancelVote")
+		}
+		if a.Amount < consensus.CancelVoteForgerFee {
+			return errors.New("The transaction fee is 10000000 for dpos Registe")
+		}
+
+		for _, forger := range a.Forgers {
+			if !dpos.GDpos.HaveVote(a.Address, forger) {
+				return fmt.Errorf("delegate name: %s is not voted", forger)
+			}
+		}
+
+		data, err = json.Marshal(&dpos.CancelVoteForgerData{Forgers: a.Forgers})
+		if err != nil {
+			return err
+		}
+		op = vm.OP_REVOKE
 	}
 
-	res, err = a.Accounts.utxoKeeper.ReserveByAddress(a.From, a.AssetId, a.Fee, a.UseUnconfirmed, true)
+	msg := dpos.DposMsg{
+		Type: op,
+		Data: data,
+	}
+
+	referenceData, err = json.Marshal(&msg)
+	if err != nil {
+		return err
+	}
+	b.SetReferenceData(referenceData)
+
+	res, err := a.Accounts.utxoKeeper.ReserveByAddress(a.Address, a.AssetId, a.Amount, a.UseUnconfirmed, false)
 	if err != nil {
 		return errors.Wrap(err, "reserving utxos")
 	}
@@ -82,7 +146,7 @@ func (a *DopsAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) er
 		}
 	}
 	if res.change >= 0 {
-		address, err := common.DecodeAddress(a.From, &consensus.ActiveNetParams)
+		address, err := common.DecodeAddress(a.Address, &consensus.ActiveNetParams)
 		if err != nil {
 			return err
 		}
@@ -104,12 +168,12 @@ func (a *DopsAction) ActionType() string {
 }
 
 // DposInputs convert an utxo to the txinput
-func DposTx(from, to string, stake uint64, u *UTXO) (*types.TxInput, *txbuilder.SigningInstruction, error) {
-	txInput := types.NewDpos(nil, from, to, u.SourceID, u.AssetID, stake, u.Amount, u.SourcePos, u.ControlProgram, types.Delegate)
+func DposTx(from, to string, stake uint64, u *UTXO, txType types.TxType, h uint64) (*types.TxInput, *txbuilder.SigningInstruction, error) {
+	txInput := types.NewDpos(nil, from, to, u.SourceID, u.AssetID, stake, u.Amount, u.SourcePos, u.ControlProgram, txType, h)
 	sigInst := &txbuilder.SigningInstruction{}
 	var xpubs []chainkd.XPub
 	var xprv chainkd.XPrv
-	xprv.UnmarshalText([]byte(config.CommonConfig.Consensus.Dpos.XPrv))
+	xprv.UnmarshalText([]byte(config.CommonConfig.Consensus.XPrv))
 	xpubs = append(xpubs, xprv.XPub())
 	quorum := len(xpubs)
 	if u.Address == "" {
@@ -149,7 +213,7 @@ func spendInput(u *UTXO) (*types.TxInput, *txbuilder.SigningInstruction, error) 
 	sigInst := &txbuilder.SigningInstruction{}
 	var xpubs []chainkd.XPub
 	var xprv chainkd.XPrv
-	xprv.UnmarshalText([]byte(config.CommonConfig.Consensus.Dpos.XPrv))
+	xprv.UnmarshalText([]byte(config.CommonConfig.Consensus.XPrv))
 	xpubs = append(xpubs, xprv.XPub())
 	quorum := len(xpubs)
 	if u.Address == "" {

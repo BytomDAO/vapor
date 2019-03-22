@@ -170,7 +170,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 		mux.WitnessDestinations = append(mux.WitnessDestinations, dest)
 	}
 
-	h := bc.NewTxHeader(tx.Version, tx.SerializedSize, tx.TimeRange, resultIDs)
+	h := bc.NewTxHeader(tx.Version, tx.SerializedSize, &bc.Hash{}, tx.TimeRange, resultIDs, false)
 	return addEntry(h), h, entryMap
 }
 

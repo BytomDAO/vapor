@@ -2,6 +2,7 @@ package types
 
 import (
 	"github.com/vapor/consensus"
+	"github.com/vapor/crypto/sha3pool"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/vm"
 	"github.com/vapor/protocol/vm/vmutil"
@@ -213,7 +214,6 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			r := bc.NewRetirement(src, uint64(i))
 			resultID = addEntry(r)
 		} else {
-
 			// non-retirement
 			prog := &bc.Program{out.VMVersion, out.ControlProgram}
 			o := bc.NewOutput(src, prog, uint64(i))
@@ -228,13 +228,13 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 		resultIDs = append(resultIDs, &resultID)
 		mux.WitnessDestinations = append(mux.WitnessDestinations, dest)
 	}
-	h := bc.NewTxHeader(tx.Version, tx.SerializedSize, tx.TimeRange, resultIDs)
+	refdatahash := hashData(tx.ReferenceData)
+	h := bc.NewTxHeader(tx.Version, tx.SerializedSize, &refdatahash, tx.TimeRange, resultIDs, true)
 	return addEntry(h), h, entryMap
 }
 
 func mapBlockHeader(old *BlockHeader) (bc.Hash, *bc.BlockHeader) {
-	proof := &bc.Proof{Sign: old.Proof.Sign, ControlProgram: old.Proof.ControlProgram}
-	bh := bc.NewBlockHeader(old.Version, old.Height, &old.PreviousBlockHash, old.Timestamp, &old.TransactionsMerkleRoot, &old.TransactionStatusHash, proof, old.Extra, old.Coinbase)
+	bh := bc.NewBlockHeader(old.Version, old.Height, &old.PreviousBlockHash, old.Timestamp, &old.TransactionsMerkleRoot, &old.TransactionStatusHash)
 	return bc.EntryID(bh), bh
 }
 
@@ -250,4 +250,10 @@ func MapBlock(old *Block) *bc.Block {
 		b.Transactions = append(b.Transactions, oldTx.Tx)
 	}
 	return b
+}
+
+func hashData(data []byte) bc.Hash {
+	var b32 [32]byte
+	sha3pool.Sum256(b32[:], data)
+	return bc.NewHash(b32)
 }

@@ -1,659 +1,637 @@
 package dpos
 
 import (
-	"bytes"
+	"bufio"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
-	"math/big"
+	"fmt"
+	"io"
+	"math/rand"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 
-	lru "github.com/hashicorp/golang-lru"
-	log "github.com/sirupsen/logrus"
 	"github.com/vapor/chain"
 	"github.com/vapor/common"
 	"github.com/vapor/config"
 	"github.com/vapor/consensus"
+	engine "github.com/vapor/consensus/consensus"
 	"github.com/vapor/crypto"
-	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/vm/vmutil"
+	"github.com/vapor/protocol/vm"
 )
 
-const (
-	inMemorySnapshots  = 128             // Number of recent vote snapshots to keep in memory
-	inMemorySignatures = 4096            // Number of recent block signatures to keep in memory
-	secondsPerYear     = 365 * 24 * 3600 // Number of seconds for one year
-	checkpointInterval = 360             // About N hours if config.period is N
-	module             = "dpos"
-)
-
-//delegated-proof-of-stake protocol constants.
-var (
-	SignerBlockReward     = big.NewInt(5e+18) // Block reward in wei for successfully mining a block first year
-	defaultEpochLength    = uint64(3000000)   // Default number of blocks after which vote's period of validity
-	defaultBlockPeriod    = uint64(3)         // Default minimum difference between two consecutive block's timestamps
-	defaultMaxSignerCount = uint64(21)        //
-	//defaultMinVoterBalance           = new(big.Int).Mul(big.NewInt(10000), big.NewInt(1e+18))
-	defaultMinVoterBalance           = uint64(0)
-	extraVanity                      = 32            // Fixed number of extra-data prefix bytes reserved for signer vanity
-	extraSeal                        = 65            // Fixed number of extra-data suffix bytes reserved for signer seal
-	defaultDifficulty                = big.NewInt(1) // Default difficulty
-	defaultLoopCntRecalculateSigners = uint64(10)    // Default loop count to recreate signers from top tally
-	minerRewardPerThousand           = uint64(618)   // Default reward for miner in each block from block reward (618/1000)
-	candidateNeedPD                  = false         // is new candidate need Proposal & Declare process
-)
-
-var (
-	// errUnknownBlock is returned when the list of signers is requested for a block
-	// that is not part of the local blockchain.
-	errUnknownBlock = errors.New("unknown block")
-
-	// errMissingVanity is returned if a block's extra-data section is shorter than
-	// 32 bytes, which is required to store the signer vanity.
-	errMissingVanity = errors.New("extra-data 32 byte vanity prefix missing")
-
-	// errMissingSignature is returned if a block's extra-data section doesn't seem
-	// to contain a 65 byte secp256k1 signature.
-	errMissingSignature = errors.New("extra-data 65 byte suffix signature missing")
-
-	// errInvalidMixDigest is returned if a block's mix digest is non-zero.
-	errInvalidMixDigest = errors.New("non-zero mix digest")
-
-	// errInvalidUncleHash is returned if a block contains an non-empty uncle list.
-	errInvalidUncleHash = errors.New("non empty uncle hash")
-
-	// ErrInvalidTimestamp is returned if the timestamp of a block is lower than
-	// the previous block's timestamp + the minimum block period.
-	ErrInvalidTimestamp = errors.New("invalid timestamp")
-
-	// errInvalidVotingChain is returned if an authorization list is attempted to
-	// be modified via out-of-range or non-contiguous headers.
-	errInvalidVotingChain = errors.New("invalid voting chain")
-
-	// errUnauthorized is returned if a header is signed by a non-authorized entity.
-	errUnauthorized = errors.New("unauthorized")
-
-	// errPunishedMissing is returned if a header calculate punished signer is wrong.
-	errPunishedMissing = errors.New("punished signer missing")
-
-	// errWaitTransactions is returned if an empty block is attempted to be sealed
-	// on an instant chain (0 second period). It's important to refuse these as the
-	// block reward is zero, so an empty block just bloats the chain... fast.
-	errWaitTransactions = errors.New("waiting for transactions")
-
-	// errUnclesNotAllowed is returned if uncles exists
-	errUnclesNotAllowed = errors.New("uncles not allowed")
-
-	// errCreateSignerQueueNotAllowed is returned if called in (block number + 1) % maxSignerCount != 0
-	errCreateSignerQueueNotAllowed = errors.New("create signer queue not allowed")
-
-	// errInvalidSignerQueue is returned if verify SignerQueue fail
-	errInvalidSignerQueue = errors.New("invalid signer queue")
-
-	// errSignerQueueEmpty is returned if no signer when calculate
-	errSignerQueueEmpty = errors.New("signer queue is empty")
-)
-
-type Dpos struct {
-	config     *config.DposConfig // Consensus engine configuration parameters
-	store      protocol.Store     // Database to store and retrieve snapshot checkpoints
-	recents    *lru.ARCCache      // Snapshots for recent block to speed up reorgs
-	signatures *lru.ARCCache      // Signatures of recent blocks to speed up mining
-	signer     string             // Ethereum address of the signing key
-	signFn     SignerFn           // Signer function to authorize hashes with
-	signTxFn   SignTxFn           // Sign transaction function to sign tx
-	lock       sync.RWMutex       // Protects the signer fields
-	lcsc       uint64             // Last confirmed side chain
+type Delegate struct {
+	DelegateAddress string `json:"delegate_address"`
+	Votes           uint64 `json:"votes"`
 }
 
-// SignerFn is a signer callback function to request a hash to be signed by a backing account.
-type SignerFn func(string, []byte) ([]byte, error)
+type DelegateWrapper struct {
+	delegate []Delegate
+	by       func(p, q *Delegate) bool
+}
 
-// SignTxFn is a signTx
-type SignTxFn func(string, *bc.Tx, *big.Int) (*bc.Tx, error)
+func (dw DelegateWrapper) Len() int {
+	return len(dw.delegate)
+}
+func (dw DelegateWrapper) Swap(i, j int) {
+	dw.delegate[i], dw.delegate[j] = dw.delegate[j], dw.delegate[i]
+}
+func (dw DelegateWrapper) Less(i, j int) bool {
+	return dw.by(&dw.delegate[i], &dw.delegate[j])
+}
 
-//
-func ecrecover(header *types.BlockHeader, sigcache *lru.ARCCache, c chain.Chain) (string, error) {
+type DelegateInfo struct {
+	Delegates []Delegate `json:"delegates"`
+}
 
-	xpub := &chainkd.XPub{}
-	xpub.UnmarshalText(header.Coinbase)
-	derivedPK := xpub.PublicKey()
-	pubHash := crypto.Ripemd160(derivedPK)
-	address, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.ActiveNetParams)
+func (d *DelegateInfo) ConsensusName() string {
+	return "dpos"
+}
+
+const maxConfirmBlockCount = 2
+
+type IrreversibleBlockInfo struct {
+	heights    []int64
+	hashs      []bc.Hash
+	HeightHash map[int64]bc.Hash
+}
+
+func newIrreversibleBlockInfo() *IrreversibleBlockInfo {
+	o := &IrreversibleBlockInfo{}
+	for i := 0; i < maxConfirmBlockCount; i++ {
+		o.heights = append(o.heights, -1)
+		o.hashs = append(o.hashs, bc.Hash{})
+	}
+	o.HeightHash = make(map[int64]bc.Hash)
+	return o
+}
+
+type DposType struct {
+	c                           chain.Chain
+	vote                        *Vote
+	MaxDelegateNumber           uint64
+	BlockIntervalTime           uint64
+	DposStartHeight             uint64
+	DposStartTime               uint64
+	superForgerAddress          common.Address
+	irreversibleBlockFileName   string
+	irreversibleBlockInfo       IrreversibleBlockInfo
+	lockIrreversibleBlockInfo   sync.Mutex
+	maxIrreversibleCount        int
+	firstIrreversibleThreshold  uint64
+	secondIrreversibleThreshold uint64
+}
+
+var GDpos = &DposType{
+	maxIrreversibleCount:        10000,
+	firstIrreversibleThreshold:  90,
+	secondIrreversibleThreshold: 67,
+}
+
+func (d *DposType) Init(c chain.Chain, delegateNumber, intervalTime, blockHeight uint64, blockHash bc.Hash) error {
+	d.c = c
+	vote, err := newVote(blockHeight, blockHash)
 	if err != nil {
-		return "", err
+		return err
+	}
+	d.vote = vote
+	d.MaxDelegateNumber = delegateNumber
+	d.BlockIntervalTime = intervalTime
+	d.DposStartHeight = 0
+	address, _ := common.DecodeAddress("vsm1qkm743xmgnvh84pmjchq2s4tnfpgu9ae2f9slep", &consensus.ActiveNetParams)
+	d.superForgerAddress = address
+
+	GDpos.irreversibleBlockFileName = filepath.Join(config.CommonConfig.RootDir, "dpos", "irreversible_block.dat")
+	GDpos.irreversibleBlockInfo = *newIrreversibleBlockInfo()
+	if err := GDpos.ReadIrreversibleBlockInfo(&GDpos.irreversibleBlockInfo); err != nil {
+		return err
 	}
 
-	return address.EncodeAddress(), nil
-}
-
-//
-func New(config *config.DposConfig, store protocol.Store) *Dpos {
-	conf := *config
-	if conf.Epoch == 0 {
-		conf.Epoch = defaultEpochLength
-	}
-	if conf.Period == 0 {
-		conf.Period = defaultBlockPeriod
-	}
-	if conf.MaxSignerCount == 0 {
-		conf.MaxSignerCount = defaultMaxSignerCount
-	}
-	if conf.MinVoterBalance == 0 {
-		conf.MinVoterBalance = defaultMinVoterBalance
-	}
-	// Allocate the snapshot caches and create the engine
-	recents, _ := lru.NewARC(inMemorySnapshots)
-	signatures, _ := lru.NewARC(inMemorySignatures)
-	return &Dpos{
-		config:     &conf,
-		store:      store,
-		recents:    recents,
-		signatures: signatures,
-	}
-}
-
-// Authorize injects a private key into the consensus engine to mint new blocks with.
-func (d *Dpos) Authorize(signer string /*, signFn SignerFn*/) {
-	d.lock.Lock()
-	defer d.lock.Unlock()
-
-	d.signer = signer
-	//d.signFn = signFn
-}
-
-// 从BLockHeader中获取到地址
-func (d *Dpos) Author(header *types.BlockHeader, c chain.Chain) (string, error) {
-	return ecrecover(header, d.signatures, c)
-}
-
-func (d *Dpos) VerifyHeader(c chain.Chain, header *types.BlockHeader, seal bool) error {
-	return d.verifyCascadingFields(c, header, nil)
-}
-
-func (d *Dpos) VerifyHeaders(c chain.Chain, headers []*types.BlockHeader, seals []bool) (chan<- struct{}, <-chan error) {
-	return nil, nil
-}
-
-func (d *Dpos) VerifySeal(c chain.Chain, header *types.BlockHeader) error {
+	header, _ := c.GetHeaderByHeight(d.DposStartHeight)
+	d.setStartTime(header.Timestamp)
 	return nil
 }
 
-func (d *Dpos) verifyHeader(c chain.Chain, header *types.BlockHeader, parents []*types.BlockHeader) error {
-	return nil
+func (d *DposType) setStartTime(t uint64) {
+	d.DposStartTime = t
 }
 
-func (d *Dpos) verifyCascadingFields(c chain.Chain, header *types.BlockHeader, parents []*types.BlockHeader) error {
-	// The genesis block is the always valid dead-end
-	height := header.Height
-	if height == 0 {
-		return nil
-	}
+func (d *DposType) IsMining(address common.Address, t uint64) (interface{}, error) {
 
-	var (
-		parent *types.BlockHeader
-		err    error
-	)
-
-	if len(parents) > 0 {
-		parent = parents[len(parents)-1]
-	} else {
-		parent, err = c.GetHeaderByHeight(height - 1)
+	header := d.c.BestBlockHeader()
+	currentLoopIndex := d.GetLoopIndex(t)
+	currentDelegateIndex := d.GetDelegateIndex(t)
+	prevLoopIndex := d.GetLoopIndex(header.Timestamp)
+	prevDelegateIndex := d.GetDelegateIndex(header.Timestamp)
+	if currentLoopIndex > prevLoopIndex {
+		delegateInfo := d.GetNextDelegates(t)
+		cDelegateInfo := delegateInfo.(*DelegateInfo)
+		if cDelegateInfo.Delegates[currentDelegateIndex].DelegateAddress == address.EncodeAddress() {
+			return delegateInfo, nil
+		}
+		return nil, errors.New("Is not the current mining node")
+	} else if currentLoopIndex == prevLoopIndex && currentDelegateIndex > prevDelegateIndex {
+		currentDelegateInfo, err := d.GetBlockDelegates(header)
 		if err != nil {
-			return err
-		}
-	}
-
-	if parent == nil {
-		return errors.New("unknown ancestor")
-	}
-
-	if _, err = d.snapshot(c, height-1, header.PreviousBlockHash, parents, nil, defaultLoopCntRecalculateSigners); err != nil {
-		return err
-	}
-
-	return d.verifySeal(c, header, parents)
-}
-
-// verifySeal checks whether the signature contained in the header satisfies the
-// consensus protocol requirements. The method accepts an optional list of parent
-// headers that aren't yet part of the local blockchain to generate the snapshots
-// from.
-func (d *Dpos) verifySeal(c chain.Chain, header *types.BlockHeader, parents []*types.BlockHeader) error {
-	height := header.Height
-	if height == 0 {
-		return errUnknownBlock
-	}
-	// Retrieve the snapshot needed to verify this header and cache it
-	snap, err := d.snapshot(c, height-1, header.PreviousBlockHash, parents, nil, defaultLoopCntRecalculateSigners)
-	if err != nil {
-		return err
-	}
-
-	// Resolve the authorization key and check against signers
-	signer, err := ecrecover(header, d.signatures, c)
-	if err != nil {
-		return err
-	}
-
-	if height > d.config.MaxSignerCount {
-		var (
-			parent *types.BlockHeader
-			err    error
-		)
-		if len(parents) > 0 {
-			parent = parents[len(parents)-1]
-		} else {
-			if parent, err = c.GetHeaderByHeight(height - 1); err != nil {
-				return err
-			}
-		}
-
-		//parent
-		xpub := &chainkd.XPub{}
-		xpub.UnmarshalText(parent.Coinbase)
-		derivedPK := xpub.PublicKey()
-		pubHash := crypto.Ripemd160(derivedPK)
-		parentCoinbase, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.ActiveNetParams)
-		if err != nil {
-			return err
-		}
-
-		//current
-		xpub.UnmarshalText(header.Coinbase)
-		derivedPK = xpub.PublicKey()
-		pubHash = crypto.Ripemd160(derivedPK)
-		currentCoinbase, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.ActiveNetParams)
-		if err != nil {
-			return err
-		}
-
-		parentHeaderExtra := HeaderExtra{}
-		if err = json.Unmarshal(parent.Extra[extraVanity:len(parent.Extra)-extraSeal], &parentHeaderExtra); err != nil {
-			return err
-		}
-
-		currentHeaderExtra := HeaderExtra{}
-		if err = json.Unmarshal(header.Extra[extraVanity:len(header.Extra)-extraSeal], &currentHeaderExtra); err != nil {
-			return err
-		}
-
-		// verify signerqueue
-		if height%d.config.MaxSignerCount == 0 {
-			err := snap.verifySignerQueue(currentHeaderExtra.SignerQueue)
-			if err != nil {
-				return err
-			}
-
-		} else {
-			for i := 0; i < int(d.config.MaxSignerCount); i++ {
-				if parentHeaderExtra.SignerQueue[i] != currentHeaderExtra.SignerQueue[i] {
-					return errInvalidSignerQueue
-				}
-			}
-		}
-		// verify missing signer for punish
-		parentSignerMissing := getSignerMissing(parentCoinbase.EncodeAddress(), currentCoinbase.EncodeAddress(), parentHeaderExtra)
-		if len(parentSignerMissing) != len(currentHeaderExtra.SignerMissing) {
-			return errPunishedMissing
-		}
-		for i, signerMissing := range currentHeaderExtra.SignerMissing {
-			if parentSignerMissing[i] != signerMissing {
-				return errPunishedMissing
-			}
-		}
-
-	}
-
-	if !snap.inturn(signer, header.Timestamp) {
-		return errUnauthorized
-	}
-
-	return nil
-}
-
-// Prepare implements consensus.Engine, preparing all the consensus fields of the header for running the transactions on top.
-func (d *Dpos) Prepare(c chain.Chain, header *types.BlockHeader) error {
-	if d.config.GenesisTimestamp < uint64(time.Now().Unix()) {
-		return nil
-	}
-
-	if header.Height == 1 {
-		for {
-			delay := time.Unix(int64(d.config.GenesisTimestamp-2), 0).Sub(time.Now())
-			if delay <= time.Duration(0) {
-				log.WithFields(log.Fields{"module": module, "time": time.Now()}).Info("Ready for seal block")
-				break
-			} else if delay > time.Duration(d.config.Period)*time.Second {
-				delay = time.Duration(d.config.Period) * time.Second
-			}
-			log.WithFields(log.Fields{"module": module, "delay": time.Duration(time.Unix(int64(d.config.GenesisTimestamp-2), 0).Sub(time.Now()))}).Info("Waiting for seal block")
-			select {
-			case <-time.After(delay):
-				continue
-			}
-		}
-	}
-	return nil
-}
-
-func (d *Dpos) Finalize(c chain.Chain, header *types.BlockHeader, txs []*bc.Tx) error {
-	height := header.Height
-	parent, err := c.GetHeaderByHeight(height - 1)
-	if parent == nil {
-		return err
-	}
-	//parent
-	var xpub chainkd.XPub
-	xpub.UnmarshalText(parent.Coinbase)
-	pubHash := crypto.Ripemd160(xpub.PublicKey())
-	parentCoinbase, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.ActiveNetParams)
-	if err != nil {
-		return err
-	}
-
-	//current
-	xpub.UnmarshalText(header.Coinbase)
-	pubHash = crypto.Ripemd160(xpub.PublicKey())
-	currentCoinbase, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.ActiveNetParams)
-	if err != nil {
-		return err
-	}
-
-	//header.Timestamp
-	t := new(big.Int).Add(new(big.Int).SetUint64(parent.Timestamp), new(big.Int).SetUint64(d.config.Period))
-	header.Timestamp = t.Uint64()
-
-	if header.Timestamp < uint64(time.Now().Unix()) {
-		header.Timestamp = uint64(time.Now().Unix())
-	}
-
-	if len(header.Extra) < extraVanity {
-		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, extraVanity-len(header.Extra))...)
-	}
-
-	header.Extra = header.Extra[:extraVanity]
-	// genesisVotes write direct into snapshot, which number is 1
-	var genesisVotes []*Vote
-	parentHeaderExtra := HeaderExtra{}
-	currentHeaderExtra := HeaderExtra{}
-	if height == 1 {
-		alreadyVote := make(map[string]struct{})
-		for _, voter := range d.config.SelfVoteSigners {
-			if _, ok := alreadyVote[voter]; !ok {
-				genesisVotes = append(genesisVotes, &Vote{
-					Voter:     voter,
-					Candidate: voter,
-					Stake:     0,
-					//Stake:     state.GetBalance(voter),
-				})
-				alreadyVote[voter] = struct{}{}
-			}
-		}
-	} else {
-		parentHeaderExtraByte := parent.Extra[extraVanity : len(parent.Extra)-extraSeal]
-		if err := json.Unmarshal(parentHeaderExtraByte, &parentHeaderExtra); err != nil {
-			return err
-		}
-		currentHeaderExtra.ConfirmedBlockNumber = parentHeaderExtra.ConfirmedBlockNumber
-		currentHeaderExtra.SignerQueue = parentHeaderExtra.SignerQueue
-		currentHeaderExtra.LoopStartTime = parentHeaderExtra.LoopStartTime
-		currentHeaderExtra.SignerMissing = getSignerMissing(parentCoinbase.EncodeAddress(), currentCoinbase.EncodeAddress(), parentHeaderExtra)
-	}
-
-	// calculate votes write into header.extra
-	currentHeaderExtra, err = d.processCustomTx(currentHeaderExtra, c, header, txs)
-	if err != nil {
-		return err
-	}
-	// Assemble the voting snapshot to check which votes make sense
-	snap, err := d.snapshot(c, height-1, header.PreviousBlockHash, nil, genesisVotes, defaultLoopCntRecalculateSigners)
-	if err != nil {
-		return err
-	}
-
-	currentHeaderExtra.ConfirmedBlockNumber = snap.getLastConfirmedBlockNumber(currentHeaderExtra.CurrentBlockConfirmations).Uint64()
-	// write signerQueue in first header, from self vote signers in genesis block
-	if height == 1 {
-		currentHeaderExtra.LoopStartTime = d.config.GenesisTimestamp
-		for i := 0; i < int(d.config.MaxSignerCount); i++ {
-			currentHeaderExtra.SignerQueue = append(currentHeaderExtra.SignerQueue, d.config.SelfVoteSigners[i%len(d.config.SelfVoteSigners)])
-		}
-	}
-	if height%d.config.MaxSignerCount == 0 {
-		//currentHeaderExtra.LoopStartTime = header.Time.Uint64()
-		currentHeaderExtra.LoopStartTime = currentHeaderExtra.LoopStartTime + d.config.Period*d.config.MaxSignerCount
-		// create random signersQueue in currentHeaderExtra by snapshot.Tally
-		currentHeaderExtra.SignerQueue = []string{}
-		newSignerQueue, err := snap.createSignerQueue()
-		if err != nil {
-			return err
-		}
-
-		currentHeaderExtra.SignerQueue = newSignerQueue
-
-	}
-	// encode header.extra
-	currentHeaderExtraEnc, err := json.Marshal(currentHeaderExtra)
-	if err != nil {
-		return err
-	}
-	header.Extra = append(header.Extra, currentHeaderExtraEnc...)
-	header.Extra = append(header.Extra, make([]byte, extraSeal)...)
-	return nil
-}
-
-func (d *Dpos) Seal(c chain.Chain, block *types.Block) (*types.Block, error) {
-	header := block.BlockHeader
-	height := header.Height
-	if height == 0 {
-		return nil, errUnknownBlock
-	}
-
-	if d.config.Period == 0 && len(block.Transactions) == 0 {
-		return nil, errWaitTransactions
-	}
-	// Bail out if we're unauthorized to sign a block
-	snap, err := d.snapshot(c, height-1, header.PreviousBlockHash, nil, nil, defaultLoopCntRecalculateSigners)
-	if err != nil {
-		return nil, err
-	}
-	if !snap.inturn(d.signer, header.Timestamp) {
-		return nil, errUnauthorized
-	}
-
-	var xPrv chainkd.XPrv
-	if config.CommonConfig.Consensus.Dpos.XPrv == "" {
-		return nil, errors.New("Signer is empty")
-	}
-	xPrv.UnmarshalText([]byte(config.CommonConfig.Consensus.Dpos.XPrv))
-	sign := xPrv.Sign(block.BlockCommitment.TransactionsMerkleRoot.Bytes())
-	pubHash := crypto.Ripemd160(xPrv.XPub().PublicKey())
-
-	control, err := vmutil.P2WPKHProgram([]byte(pubHash))
-	if err != nil {
-		return nil, err
-	}
-
-	block.Proof = types.Proof{Sign: sign, ControlProgram: control}
-	return block, nil
-}
-
-func (d *Dpos) IsSealer(c chain.Chain, hash bc.Hash, header *types.BlockHeader, headerTime uint64) (bool, error) {
-	var (
-		snap    *Snapshot
-		headers []*types.BlockHeader
-	)
-	h := hash
-	height := header.Height
-	for snap == nil {
-		// If an in-memory snapshot was found, use that
-		if s, ok := d.recents.Get(h); ok {
-			snap = s.(*Snapshot)
-			break
-		}
-		// If an on-disk checkpoint snapshot can be found, use that
-		if height%checkpointInterval == 0 {
-			if s, err := loadSnapshot(d.config, d.signatures, d.store, h); err == nil {
-				log.WithFields(log.Fields{"func": "IsSealer", "number": height, "hash": h}).Warn("Loaded voting snapshot from disk")
-				snap = s
-				break
-			} else {
-				log.Warn("loadSnapshot:", err)
-			}
-		}
-
-		if height == 0 {
-			genesis, err := c.GetHeaderByHeight(0)
-			if err != nil {
-				return false, err
-			}
-			var genesisVotes []*Vote
-			alreadyVote := make(map[string]struct{})
-			for _, voter := range d.config.SelfVoteSigners {
-				if _, ok := alreadyVote[voter]; !ok {
-					genesisVotes = append(genesisVotes, &Vote{
-						Voter:     voter,
-						Candidate: voter,
-						Stake:     0,
-						//Stake:     state.GetBalance(voter),
-					})
-					alreadyVote[voter] = struct{}{}
-				}
-			}
-			snap = newSnapshot(d.config, d.signatures, genesis.Hash(), genesisVotes, defaultLoopCntRecalculateSigners)
-			if err := snap.store(d.store); err != nil {
-				return false, err
-			}
-			log.Info("Stored genesis voting snapshot to disk")
-			break
-		}
-
-		header, err := c.GetHeaderByHeight(height)
-		if header == nil || err != nil {
-			return false, errors.New("unknown ancestor")
-		}
-
-		height, h = height-1, header.PreviousBlockHash
-	}
-
-	snap, err := snap.apply(headers)
-	if err != nil {
-		return false, err
-	}
-
-	d.recents.Add(snap.Hash, snap)
-
-	if snap != nil {
-		loopIndex := int((headerTime-snap.LoopStartTime)/snap.config.Period) % len(snap.Signers)
-		if loopIndex >= len(snap.Signers) {
-			return false, nil
-		} else if *snap.Signers[loopIndex] != d.signer {
-			return false, nil
-
-		}
-		return true, nil
-	} else {
-		return false, nil
-	}
-}
-
-// snapshot retrieves the authorization snapshot at a given point in time.
-func (d *Dpos) snapshot(c chain.Chain, number uint64, hash bc.Hash, parents []*types.BlockHeader, genesisVotes []*Vote, lcrs uint64) (*Snapshot, error) {
-
-	var (
-		headers []*types.BlockHeader
-		snap    *Snapshot
-	)
-	h := hash
-
-	for snap == nil {
-		// If an in-memory snapshot was found, use that
-		if s, ok := d.recents.Get(h); ok {
-			snap = s.(*Snapshot)
-			break
-		}
-		// If an on-disk checkpoint snapshot can be found, use that
-		if number%checkpointInterval == 0 {
-			if s, err := loadSnapshot(d.config, d.signatures, d.store, h); err == nil {
-				log.WithFields(log.Fields{"number": number, "hash": h}).Warn("Loaded voting snapshot from disk")
-				snap = s
-				break
-			}
-		}
-		if number == 0 {
-			genesis, err := c.GetHeaderByHeight(0)
-			if err != nil {
-				return nil, err
-			}
-			if err := d.VerifyHeader(c, genesis, false); err != nil {
-				return nil, err
-			}
-
-			snap = newSnapshot(d.config, d.signatures, genesis.Hash(), genesisVotes, lcrs)
-			if err := snap.store(d.store); err != nil {
-				return nil, err
-			}
-			log.Info("Stored genesis voting snapshot to disk")
-			break
-		}
-		var header *types.BlockHeader
-		if len(parents) > 0 {
-			header = parents[len(parents)-1]
-			if header.Hash() != h || header.Height != number {
-				return nil, errors.New("unknown ancestor")
-			}
-			parents = parents[:len(parents)-1]
-		} else {
-			var err error
-			header, err = c.GetHeaderByHeight(number)
-			if header == nil || err != nil {
-				return nil, errors.New("unknown ancestor")
-			}
-		}
-		headers = append(headers, header)
-		number, h = number-1, header.PreviousBlockHash
-	}
-
-	// Previous snapshot found, apply any pending headers on top of it
-	for i := 0; i < len(headers)/2; i++ {
-		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
-	}
-	snap, err := snap.apply(headers)
-	if err != nil {
-		return nil, err
-	}
-	d.recents.Add(snap.Hash, snap)
-
-	// If we've generated a new checkpoint snapshot, save to disk
-	if snap.Number%checkpointInterval == 0 && len(headers) > 0 {
-		if err = snap.store(d.store); err != nil {
 			return nil, err
 		}
-		log.Info("Stored voting snapshot to disk", "number", snap.Number, "hash", snap.Hash)
+		if currentDelegateIndex+1 > uint64(len(currentDelegateInfo.Delegates)) {
+			return nil, errors.New("Out of the block node list")
+		} else if currentDelegateInfo.Delegates[currentDelegateIndex].DelegateAddress == address.EncodeAddress() {
+			return nil, nil
+		} else {
+			return nil, errors.New("Is not the current mining node")
+		}
+	} else {
+		return nil, errors.New("Time anomaly")
 	}
-	return snap, err
 }
 
-// Get the signer missing from last signer till header.Coinbase
-func getSignerMissing(lastSigner string, currentSigner string, extra HeaderExtra) []string {
+func (d *DposType) ProcessRegister(delegateAddress string, delegateName string, hash bc.Hash, height uint64) bool {
+	return d.vote.ProcessRegister(delegateAddress, delegateName, hash, height)
+}
 
-	var signerMissing []string
-	recordMissing := false
-	for _, signer := range extra.SignerQueue {
-		if signer == lastSigner {
-			recordMissing = true
-			continue
+func (d *DposType) ProcessVote(voterAddress string, delegates []string, hash bc.Hash, height uint64) bool {
+	return d.vote.ProcessVote(voterAddress, delegates, hash, height)
+}
+
+func (d *DposType) ProcessCancelVote(voterAddress string, delegates []string, hash bc.Hash, height uint64) bool {
+	return d.vote.ProcessCancelVote(voterAddress, delegates, hash, height)
+}
+
+func (d *DposType) UpdateAddressBalance(addressBalance []engine.AddressBalance) {
+	d.vote.UpdateAddressBalance(addressBalance)
+}
+
+func (d *DposType) GetLoopIndex(time uint64) uint64 {
+	if time < d.DposStartTime {
+		return 0
+	}
+	return (time - d.DposStartTime) / (d.MaxDelegateNumber * d.BlockIntervalTime)
+}
+
+func (d *DposType) GetDelegateIndex(time uint64) uint64 {
+	if time < d.DposStartTime {
+		return 0
+	}
+	return (time - d.DposStartTime) % (d.MaxDelegateNumber * d.BlockIntervalTime) / d.BlockIntervalTime
+}
+
+func (d *DposType) GetNextDelegates(t uint64) interface{} {
+	delegates := d.vote.GetTopDelegateInfo(config.CommonConfig.Consensus.MinVoterBalance, d.MaxDelegateNumber-1)
+	delegate := Delegate{
+		DelegateAddress: d.superForgerAddress.EncodeAddress(),
+		Votes:           7,
+	}
+	delegates = append(delegates, delegate)
+	delegateInfo := DelegateInfo{}
+	delegateInfo.Delegates = SortDelegate(delegates, t)
+	return &delegateInfo
+}
+
+func (d *DposType) GetBlockDelegates(header *types.BlockHeader) (*DelegateInfo, error) {
+	loopIndex := d.GetLoopIndex(header.Timestamp)
+	for {
+		preHeader, err := d.c.GetHeaderByHash(&header.PreviousBlockHash)
+		if err != nil {
+			return nil, err
 		}
-		if signer == currentSigner {
-			break
+		if header.Height == d.DposStartHeight || d.GetLoopIndex(preHeader.Timestamp) < loopIndex {
+			block, err := d.c.GetBlockByHeight(header.Height)
+			if err != nil {
+				return nil, err
+			}
+			delegateInfo, err := d.GetBlockDelegate(block)
+			if err != nil {
+				return nil, err
+			}
+			return delegateInfo, nil
 		}
-		if recordMissing {
-			signerMissing = append(signerMissing, signer)
+		header = preHeader
+	}
+}
+
+func (d *DposType) GetBlockDelegate(block *types.Block) (*DelegateInfo, error) {
+	tx := block.Transactions[0]
+	if len(tx.TxData.Inputs) == 1 && tx.TxData.Inputs[0].InputType() == types.CoinbaseInputType {
+		msg := &DposMsg{}
+		if err := json.Unmarshal(tx.TxData.ReferenceData, msg); err != nil {
+			return nil, err
+		}
+		if msg.Type == vm.OP_DELEGATE {
+			delegateInfo := &DelegateInfoList{}
+			if err := json.Unmarshal(msg.Data, delegateInfo); err != nil {
+				return nil, err
+			}
+			return &delegateInfo.Delegate, nil
+		}
+
+	}
+	return nil, errors.New("The first transaction is not a coinbase transaction")
+}
+
+func (d *DposType) CheckCoinbase(tx types.TxData, t uint64, Height uint64) error {
+	msg := &DposMsg{}
+	if err := json.Unmarshal(tx.ReferenceData, msg); err != nil {
+		return err
+	}
+	if msg.Type == vm.OP_DELEGATE {
+		delegateInfo := &DelegateInfoList{}
+		if err := json.Unmarshal(msg.Data, delegateInfo); err != nil {
+			return err
+		}
+		buf := [8]byte{}
+		binary.LittleEndian.PutUint64(buf[:], t)
+
+		if !delegateInfo.Xpub.Verify(buf[:], delegateInfo.SigTime) {
+			return errors.New("CheckBlock CheckCoinbase: Verification signature error")
+		}
+		var (
+			address common.Address
+			err     error
+		)
+		address, err = common.NewAddressWitnessPubKeyHash(tx.Outputs[0].ControlProgram[2:], &consensus.ActiveNetParams)
+		if err != nil {
+			return err
+		}
+		derivedPK := delegateInfo.Xpub.PublicKey()
+		pubHash := crypto.Ripemd160(derivedPK)
+
+		addressDet, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.ActiveNetParams)
+		if err != nil {
+			return err
+		}
+
+		if addressDet.EncodeAddress() == address.EncodeAddress() {
+			return nil
 		}
 	}
-	return signerMissing
+	return errors.New("CheckBlock CheckCoinbase error")
+}
+
+func (d *DposType) CheckBlockHeader(header types.BlockHeader) error {
+	blockT := time.Unix(int64(header.Timestamp), 0)
+
+	if blockT.Sub(time.Now()).Seconds() > float64(d.BlockIntervalTime) {
+		return errors.New("block time is error")
+	}
+
+	if header.Height > d.DposStartHeight {
+		header, _ := d.c.GetHeaderByHeight(d.DposStartHeight)
+		d.setStartTime(header.Timestamp)
+	}
+
+	preHeader, err := d.c.GetHeaderByHash(&header.PreviousBlockHash)
+	if err != nil {
+		return err
+	}
+
+	currentLoopIndex := d.GetLoopIndex(header.Timestamp)
+	currentDelegateIndex := d.GetDelegateIndex(header.Timestamp)
+	prevLoopIndex := d.GetLoopIndex(preHeader.Timestamp)
+	prevDelegateIndex := d.GetDelegateIndex(preHeader.Timestamp)
+	if currentLoopIndex > prevLoopIndex ||
+		(currentLoopIndex == prevLoopIndex && currentDelegateIndex > prevDelegateIndex) {
+		return nil
+	}
+
+	return errors.New("DPoS CheckBlockHeader error")
+}
+
+func (d *DposType) CheckBlock(block types.Block, fIsCheckDelegateInfo bool) error {
+	if block.Height > d.DposStartHeight {
+		header, _ := d.c.GetHeaderByHeight(d.DposStartHeight)
+		d.setStartTime(header.Timestamp)
+	}
+
+	blockT := time.Unix(int64(block.Timestamp), 0)
+	if blockT.Sub(time.Now()).Seconds() > float64(d.BlockIntervalTime) {
+		return errors.New("block time is error")
+	}
+	if err := d.CheckCoinbase(block.Transactions[0].TxData, block.Timestamp, block.Height); err != nil {
+		return err
+	}
+
+	preBlock, err := d.c.GetBlockByHash(&block.PreviousBlockHash)
+	if err != nil {
+		return err
+	}
+
+	currentLoopIndex := d.GetLoopIndex(block.Timestamp)
+	currentDelegateIndex := d.GetDelegateIndex(block.Timestamp)
+	prevLoopIndex := d.GetLoopIndex(preBlock.Timestamp)
+	prevDelegateIndex := d.GetDelegateIndex(preBlock.Timestamp)
+
+	delegateInfo := &DelegateInfo{}
+
+	if currentLoopIndex < prevLoopIndex {
+		return errors.New("Block time exception")
+	} else if currentLoopIndex > prevLoopIndex {
+		if fIsCheckDelegateInfo {
+			if err := d.CheckBlockDelegate(block); err != nil {
+				return err
+			}
+			d.ProcessIrreversibleBlock(block.Height, block.Hash())
+		}
+		delegateInfo, err = d.GetBlockDelegate(&block)
+		if err != nil {
+			return err
+		}
+	} else {
+		if currentDelegateIndex < prevDelegateIndex {
+			return errors.New("Block time exception")
+		}
+
+		delegateInfo, err = d.GetBlockDelegates(&preBlock.BlockHeader)
+		if err != nil {
+			return err
+		}
+	}
+
+	delegateAddress := d.getBlockForgerAddress(block)
+	if currentDelegateIndex < uint64(len(delegateInfo.Delegates)) &&
+		delegateInfo.Delegates[currentDelegateIndex].DelegateAddress == delegateAddress.EncodeAddress() {
+		return nil
+	}
+	h := block.Hash()
+	return fmt.Errorf("CheckBlock GetDelegateID blockhash:%s error", h.String())
+}
+
+func (d *DposType) CheckBlockDelegate(block types.Block) error {
+	delegateInfo, err := d.GetBlockDelegate(&block)
+	if err != nil {
+		return err
+	}
+	nextDelegateInfoInterface := d.GetNextDelegates(block.Timestamp)
+	nextDelegateInfo := nextDelegateInfoInterface.(*DelegateInfo)
+	if len(delegateInfo.Delegates) != len(nextDelegateInfo.Delegates) {
+		return errors.New("The delegates num is not correct in block")
+	}
+	for index, v := range delegateInfo.Delegates {
+		if v.DelegateAddress != nextDelegateInfo.Delegates[index].DelegateAddress {
+			return errors.New("The delegates address is not correct in block")
+		}
+	}
+
+	return nil
+}
+
+func (d *DposType) ProcessIrreversibleBlock(height uint64, hash bc.Hash) {
+	d.lockIrreversibleBlockInfo.Lock()
+	defer d.lockIrreversibleBlockInfo.Unlock()
+	i := 0
+	for i = maxConfirmBlockCount - 1; i >= 0; i-- {
+		if d.irreversibleBlockInfo.heights[i] < 0 || int64(height) < d.irreversibleBlockInfo.heights[i] {
+			d.irreversibleBlockInfo.heights[i] = -1
+		} else {
+			level := (height - uint64(d.irreversibleBlockInfo.heights[i])) * 100
+			if level >= d.MaxDelegateNumber*d.firstIrreversibleThreshold {
+				d.AddIrreversibleBlock(int64(height), hash)
+			} else if level >= d.MaxDelegateNumber*d.secondIrreversibleThreshold {
+				if i == maxConfirmBlockCount-1 {
+					d.AddIrreversibleBlock(int64(height), hash)
+					for k := 0; k < maxConfirmBlockCount-1; k++ {
+						d.irreversibleBlockInfo.heights[k] = d.irreversibleBlockInfo.heights[k+1]
+						d.irreversibleBlockInfo.hashs[k] = d.irreversibleBlockInfo.hashs[k+1]
+					}
+					d.irreversibleBlockInfo.heights[i] = int64(height)
+					d.irreversibleBlockInfo.hashs[i] = hash
+					return
+				} else {
+					d.irreversibleBlockInfo.heights[i+1] = int64(height)
+					d.irreversibleBlockInfo.hashs[i+1] = hash
+					return
+				}
+
+			}
+			for k := 0; k < maxConfirmBlockCount; k++ {
+				d.irreversibleBlockInfo.heights[k] = -1
+			}
+			d.irreversibleBlockInfo.heights[0] = int64(height)
+			d.irreversibleBlockInfo.hashs[0] = hash
+			return
+
+		}
+	}
+	if i < 0 {
+		d.irreversibleBlockInfo.heights[0] = int64(height)
+		d.irreversibleBlockInfo.hashs[0] = hash
+	}
+}
+
+func (d *DposType) getBlockForgerAddress(block types.Block) common.Address {
+	tx := block.Transactions[0].TxData
+
+	if len(tx.Inputs) == 1 && tx.Inputs[0].InputType() == types.CoinbaseInputType {
+		address, err := common.NewAddressWitnessPubKeyHash(tx.Outputs[0].ControlProgram[2:], &consensus.ActiveNetParams)
+		if err != nil {
+			address, err := common.NewAddressWitnessScriptHash(tx.Outputs[0].ControlProgram[2:], &consensus.ActiveNetParams)
+			if err != nil {
+				return nil
+			}
+			return address
+		}
+		return address
+	}
+
+	return nil
+}
+
+func (d *DposType) IsValidBlockCheckIrreversibleBlock(height uint64, hash bc.Hash) error {
+	d.lockIrreversibleBlockInfo.Lock()
+	defer d.lockIrreversibleBlockInfo.Unlock()
+
+	if h, ok := d.irreversibleBlockInfo.HeightHash[int64(height)]; ok {
+		if h != hash {
+			return fmt.Errorf("invalid block[%d:%s]", height, hash.String())
+		}
+	}
+
+	return nil
+}
+
+func (d *DposType) ReadIrreversibleBlockInfo(info *IrreversibleBlockInfo) error {
+	f, err := os.Open(d.irreversibleBlockFileName)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	buf := bufio.NewReader(f)
+	for {
+		line, err := buf.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			return err
+		}
+		line = strings.TrimSpace(line)
+		var height int64
+		var hashString string
+		n, err := fmt.Sscanf(line, "%d;%s\n", &height, &hashString)
+		if err != nil || n != 2 {
+			return errors.New("parse error for ReadIrreversibleBlockInfo ")
+		}
+		var hash bc.Hash
+		if err := hash.UnmarshalText([]byte(hashString)); err != nil {
+			return err
+		}
+		d.AddIrreversibleBlock(height, hash)
+	}
+}
+
+type Int64Slice []int64
+
+func (a Int64Slice) Len() int {
+	return len(a)
+}
+func (a Int64Slice) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+func (a Int64Slice) Less(i, j int) bool {
+	return a[i] < a[j]
+}
+
+func (d *DposType) WriteIrreversibleBlockInfo() error {
+	if len(d.irreversibleBlockInfo.HeightHash) == 0 {
+		return nil
+	}
+
+	f, err := os.Create(d.irreversibleBlockFileName)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	w := bufio.NewWriter(f)
+	var keys []int64
+	for k := range d.irreversibleBlockInfo.HeightHash {
+		keys = append(keys, k)
+	}
+
+	sort.Sort(Int64Slice(keys))
+
+	for _, k := range keys {
+		data, _ := d.irreversibleBlockInfo.HeightHash[k].MarshalText()
+		line := fmt.Sprintf("%d;%s\n", k, string(data))
+		w.WriteString(line)
+	}
+
+	if err := w.Flush(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d *DposType) AddIrreversibleBlock(height int64, hash bc.Hash) {
+	for k, _ := range d.irreversibleBlockInfo.HeightHash {
+		if len(d.irreversibleBlockInfo.HeightHash) > d.maxIrreversibleCount {
+			delete(d.irreversibleBlockInfo.HeightHash, k)
+		} else {
+			break
+		}
+	}
+	d.irreversibleBlockInfo.HeightHash[height] = hash
+	d.vote.DeleteInvalidVote(uint64(height))
+}
+
+func (d *DposType) GetSuperForgerAddress() common.Address {
+	return d.superForgerAddress
+}
+
+func (d *DposType) GetIrreversibleBlock() {
+
+}
+
+func (d *DposType) GetOldBlockHeight() uint64 {
+	return d.vote.GetOldBlockHeight()
+}
+
+func (d *DposType) GetOldBlockHash() bc.Hash {
+	return d.vote.GetOldBlockHash()
+}
+
+func (d *DposType) ListDelegates() map[string]string {
+	return d.vote.ListDelegates()
+}
+
+func (d *DposType) GetDelegateVotes(delegate string) uint64 {
+	return d.vote.GetDelegateVotes(delegate)
+}
+
+func (d *DposType) GetDelegateVoters(delegate string) []string {
+	return d.vote.GetDelegateVoters(delegate)
+}
+
+func (d *DposType) GetDelegate(name string) string {
+	return d.vote.GetDelegate(name)
+
+}
+
+func (d *DposType) GetDelegateName(address string) string {
+	return d.vote.GetDelegateName(address)
+}
+
+func (d *DposType) GetAddressBalance(address string) uint64 {
+	return d.vote.GetAddressBalance(address)
+}
+
+func (d *DposType) GetVotedDelegates(voter string) []string {
+	return d.vote.GetVotedDelegates(voter)
+}
+
+func (d *DposType) HaveVote(voter, delegate string) bool {
+	return d.vote.HaveVote(voter, delegate)
+}
+
+func (d *DposType) HaveDelegate(name, delegate string) bool {
+	return d.vote.HaveDelegate(name, delegate)
+}
+
+func (d *DposType) Finish() error {
+	header := d.c.BestBlockHeader()
+	if err := d.vote.Store(header.Height, header.Hash()); err != nil {
+		return err
+	}
+
+	if err := d.WriteIrreversibleBlockInfo(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func SortDelegate(delegates []Delegate, t uint64) []Delegate {
+	var result []Delegate
+	r := getRand(uint64(len(delegates)), int64(t))
+	for _, i := range r {
+		result = append(result, delegates[i])
+	}
+	return result
+}
+
+func getRand(num uint64, seed int64) []uint64 {
+	rand.Seed(seed)
+	var r []uint64
+	s := make(map[uint64]bool)
+	for {
+		v := rand.Uint64()
+		v %= num
+		if _, ok := s[v]; ok {
+			continue
+		}
+		s[v] = true
+		r = append(r, v)
+		if uint64(len(r)) >= num {
+			break
+		}
+	}
+
+	return r
 }

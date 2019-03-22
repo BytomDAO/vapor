@@ -18,7 +18,6 @@ import (
 	"github.com/vapor/dashboard/equity"
 	"github.com/vapor/errors"
 	"github.com/vapor/mining/miner"
-	"github.com/vapor/mining/miningpool"
 	"github.com/vapor/net/http/authn"
 	"github.com/vapor/net/http/gzip"
 	"github.com/vapor/net/http/httpjson"
@@ -114,7 +113,6 @@ type API struct {
 	txFeedTracker *txfeed.Tracker
 	//cpuMiner        *cpuminer.CPUMiner
 	miner           *miner.Miner
-	miningPool      *miningpool.MiningPool
 	notificationMgr *websocket.WSNotificationManager
 	newBlockCh      chan *bc.Hash
 }
@@ -170,7 +168,7 @@ func (a *API) StartServer(address string) {
 }
 
 // NewAPI create and initialize the API
-func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, miner *miner.Miner, miningPool *miningpool.MiningPool, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, newBlockCh chan *bc.Hash, notificationMgr *websocket.WSNotificationManager) *API {
+func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, miner *miner.Miner, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, newBlockCh chan *bc.Hash, notificationMgr *websocket.WSNotificationManager) *API {
 	api := &API{
 		sync:          sync,
 		wallet:        wallet,
@@ -178,7 +176,6 @@ func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tr
 		accessTokens:  token,
 		txFeedTracker: txfeeds,
 		miner:         miner,
-		miningPool:    miningPool,
 
 		newBlockCh:      newBlockCh,
 		notificationMgr: notificationMgr,
@@ -256,7 +253,17 @@ func (a *API) buildHandler() {
 		m.Handle("/get-side-raw-transaction", jsonHandler(a.getSideRawTransaction))
 		m.Handle("/build-mainchain-tx", jsonHandler(a.buildMainChainTxForContract))
 		m.Handle("/sign-with-key", jsonHandler(a.signWithKey))
-		m.Handle("/dpos", jsonHandler(a.dpos))
+		m.Handle("/sign-with-xprv", jsonHandler(a.signWithPriKey))
+		// listdelegates
+		m.Handle("/list-delegates", jsonHandler(a.listDelegates))
+		// getdelegatevotes
+		m.Handle("/get-delegate-votes", jsonHandler(a.getDelegateVotes))
+		// listvoteddelegates
+		m.Handle("/list-voted-delegates", jsonHandler(a.listVotedDelegates))
+		// listreceivedvotes
+		m.Handle("/list-received-votes", jsonHandler(a.listReceivedVotes))
+
+		m.Handle("/get-address-balance", jsonHandler(a.getAddressBalance))
 	} else {
 		log.Warn("Please enable wallet")
 	}
@@ -294,12 +301,6 @@ func (a *API) buildHandler() {
 
 	m.Handle("/is-mining", jsonHandler(a.isMining))
 	m.Handle("/set-mining", jsonHandler(a.setMining))
-
-	m.Handle("/get-work", jsonHandler(a.getWork))
-	m.Handle("/get-work-json", jsonHandler(a.getWorkJSON))
-	m.Handle("/submit-block", jsonHandler(a.submitBlock))
-	m.Handle("/submit-work", jsonHandler(a.submitWork))
-	m.Handle("/submit-work-json", jsonHandler(a.submitWorkJSON))
 
 	m.Handle("/verify-message", jsonHandler(a.verifyMessage))
 	m.Handle("/compile", jsonHandler(a.compileEquity))

@@ -1,7 +1,6 @@
 package miner
 
 import (
-	"errors"
 	"sync"
 	"time"
 
@@ -13,14 +12,9 @@ import (
 	"github.com/vapor/common"
 	"github.com/vapor/consensus"
 	engine "github.com/vapor/consensus/consensus"
-	"github.com/vapor/consensus/consensus/dpos"
-	"github.com/vapor/crypto"
-	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/mining"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/vm/vmutil"
 )
 
 const (
@@ -29,8 +23,6 @@ const (
 	hashUpdateSecs    = 1
 	module            = "miner"
 )
-
-var ConsensusEngine engine.Engine
 
 // Miner creates blocks and searches for proof-of-work values.
 type Miner struct {
@@ -45,22 +37,10 @@ type Miner struct {
 	updateNumWorkers chan struct{}
 	quit             chan struct{}
 	newBlockCh       chan *bc.Hash
-	Authoritys       map[string]string
-	position         uint64
 	engine           engine.Engine
 }
 
 func NewMiner(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, newBlockCh chan *bc.Hash, engine engine.Engine) *Miner {
-	authoritys := make(map[string]string)
-	var position uint64
-	dpos, ok := engine.(*dpos.Dpos)
-	if !ok {
-		log.Error("Only the dpos engine was allowed")
-		return nil
-	}
-	dpos.Authorize(config.CommonConfig.Consensus.Dpos.Coinbase)
-	c.SetConsensusEngine(dpos)
-	ConsensusEngine = dpos
 	return &Miner{
 		chain:            c,
 		accountManager:   accountManager,
@@ -68,27 +48,8 @@ func NewMiner(c *protocol.Chain, accountManager *account.Manager, txPool *protoc
 		numWorkers:       defaultNumWorkers,
 		updateNumWorkers: make(chan struct{}),
 		newBlockCh:       newBlockCh,
-		Authoritys:       authoritys,
-		position:         position,
-		engine:           dpos,
+		engine:           engine,
 	}
-}
-
-func (m *Miner) generateProof(block types.Block) (types.Proof, error) {
-	var xPrv chainkd.XPrv
-	if consensus.ActiveNetParams.Signer == "" {
-		return types.Proof{}, errors.New("Signer is empty")
-	}
-	xPrv.UnmarshalText([]byte(consensus.ActiveNetParams.Signer))
-	sign := xPrv.Sign(block.BlockCommitment.TransactionsMerkleRoot.Bytes())
-	pubHash := crypto.Ripemd160(xPrv.XPub().PublicKey())
-
-	address, _ := common.NewPeginAddressWitnessScriptHash(pubHash, &consensus.ActiveNetParams)
-	control, err := vmutil.P2WPKHProgram([]byte(pubHash))
-	if err != nil {
-		return types.Proof{}, err
-	}
-	return types.Proof{Sign: sign, ControlProgram: control, Address: address.ScriptAddress()}, nil
 }
 
 // generateBlocks is a worker that is controlled by the miningWorkerController.
@@ -99,8 +60,6 @@ func (m *Miner) generateProof(block types.Block) (types.Proof, error) {
 //
 // It must be run as a goroutine.
 func (m *Miner) generateBlocks(quit chan struct{}) {
-	ticker := time.NewTicker(time.Second * hashUpdateSecs)
-	defer ticker.Stop()
 
 out:
 	for {
@@ -109,52 +68,40 @@ out:
 			break out
 		default:
 		}
-		/*
-			engine, ok := m.engine.(*dpos.Dpos)
-			if !ok {
-				log.Error("Only the dpos engine was allowed")
-				return
-			}
-
-				header := m.chain.BestBlockHeader()
-				isSeal, err := engine.IsSealer(m.chain, header.Hash(), header, uint64(time.Now().Unix()))
-				if err != nil {
-					log.WithFields(log.Fields{"module": module, "error": err}).Error("Determine whether seal is wrong")
-					continue
-				}
-		*/
-		isSeal := true
-		if isSeal {
-			block, err := mining.NewBlockTemplate1(m.chain, m.txPool, m.accountManager, m.engine)
-			if err != nil {
-				log.Errorf("Mining: failed on create NewBlockTemplate: %v", err)
-				time.Sleep(3 * time.Second)
-				continue
-			}
-			if block == nil {
-				time.Sleep(3 * time.Second)
-				continue
-			}
-			block, err = m.engine.Seal(m.chain, block)
-			if err != nil {
-				log.Errorf("Seal, %v", err)
-				continue
-			}
-			m.chain.SetConsensusEngine(m.engine)
-			if isOrphan, err := m.chain.ProcessBlock(block); err == nil {
-				log.WithFields(log.Fields{
-					"height":   block.BlockHeader.Height,
-					"isOrphan": isOrphan,
-					"tx":       len(block.Transactions),
-				}).Info("Miner processed block")
-
-				blockHash := block.Hash()
-				m.newBlockCh <- &blockHash
-			} else {
-				log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on ProcessBlock, %v", err)
-			}
+		var (
+			delegateInfo interface{}
+			err          error
+		)
+		address, _ := common.DecodeAddress(config.CommonConfig.Consensus.Coinbase, &consensus.ActiveNetParams)
+		if delegateInfo, err = m.engine.IsMining(address, uint64(time.Now().Unix())); err != nil {
+			time.Sleep(1 * time.Second)
+			continue
 		}
-		time.Sleep(3 * time.Second)
+
+		block, err := mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager, m.engine, delegateInfo)
+		if err != nil {
+			log.Errorf("Mining: failed on create NewBlockTemplate: %v", err)
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		if block == nil {
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		if isOrphan, err := m.chain.ProcessBlock(block); err == nil {
+			log.WithFields(log.Fields{
+				"height":   block.BlockHeader.Height,
+				"isOrphan": isOrphan,
+				"tx":       len(block.Transactions),
+			}).Info("Miner processed block")
+
+			blockHash := block.Hash()
+			m.newBlockCh <- &blockHash
+		} else {
+			log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on ProcessBlock, %v", err)
+		}
+		time.Sleep(time.Duration(config.CommonConfig.Consensus.Period) * time.Second)
 	}
 
 	m.workerWg.Done()

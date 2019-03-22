@@ -23,20 +23,19 @@ type Chain struct {
 	store          Store
 	processBlockCh chan *processBlockMsg
 
-	cond       sync.Cond
-	bestNode   *state.BlockNode
-	Authoritys map[string]string
-	position   uint64
-	engine     engine.Engine
+	cond     sync.Cond
+	bestNode *state.BlockNode
+	engine   engine.Engine
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
-func NewChain(store Store, txPool *TxPool) (*Chain, error) {
+func NewChain(store Store, txPool *TxPool, engine engine.Engine) (*Chain, error) {
 	c := &Chain{
 		orphanManage:   NewOrphanManage(),
 		txPool:         txPool,
 		store:          store,
 		processBlockCh: make(chan *processBlockMsg, maxProcessBlockChSize),
+		engine:         engine,
 	}
 	c.cond.L = new(sync.Mutex)
 
@@ -57,14 +56,6 @@ func NewChain(store Store, txPool *TxPool) (*Chain, error) {
 	c.index.SetMainChain(c.bestNode)
 	go c.blockProcesser()
 	return c, nil
-}
-
-func (c *Chain) SetAuthoritys(authoritys map[string]string) {
-	c.Authoritys = authoritys
-}
-
-func (c *Chain) SetPosition(position uint64) {
-	c.position = position
 }
 
 func (c *Chain) SetConsensusEngine(engine engine.Engine) {

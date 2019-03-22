@@ -1,18 +1,11 @@
 package test
 
 import (
-	"encoding/hex"
-
-	"github.com/vapor/consensus"
-	"github.com/vapor/crypto"
-	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/errors"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/validation"
 	"github.com/vapor/protocol/vm"
-	"github.com/vapor/protocol/vm/vmutil"
 )
 
 // NewBlock create block according to the current status of chain
@@ -69,27 +62,7 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 	}
 
 	b.TransactionStatusHash, err = types.TxStatusMerkleRoot(txStatus.VerifyStatus)
-	proof, err := generateProof(*b)
-	if err != nil {
-		return nil, err
-	}
-	b.Proof = proof
 	return b, err
-}
-
-func generateProof(block types.Block) (types.Proof, error) {
-	var xPrv chainkd.XPrv
-	if consensus.ActiveNetParams.Signer == "" {
-		return types.Proof{}, errors.New("Signer is empty")
-	}
-	xPrv.UnmarshalText([]byte(consensus.ActiveNetParams.Signer))
-	sign := xPrv.Sign(block.BlockCommitment.TransactionsMerkleRoot.Bytes())
-	pubHash := crypto.Ripemd160(xPrv.XPub().PublicKey())
-	control, err := vmutil.P2WPKHProgram([]byte(pubHash))
-	if err != nil {
-		return types.Proof{}, err
-	}
-	return types.Proof{Sign: sign, ControlProgram: control}, nil
 }
 
 // ReplaceCoinbase replace the coinbase tx of block with coinbaseTx
@@ -116,20 +89,6 @@ func AppendBlocks(chain *protocol.Chain, num uint64) error {
 		}
 	}
 	return nil
-}
-
-func setAuthoritys(chain *protocol.Chain) {
-	authoritys := make(map[string]string)
-	xpubStr := "96bc2ad4b1c2db399990c811c4367688cbb7867612bb9d04e4dc7848e425c6395264d3b177a96646bc0ce517ae7fd63504c183ab6d330dea184331a4cf5912d5"
-	var xpub chainkd.XPub
-	xpub.UnmarshalText([]byte(xpubStr))
-
-	pubHash := crypto.Ripemd160(xpub.PublicKey())
-	control, _ := vmutil.P2WPKHProgram([]byte(pubHash))
-	key := hex.EncodeToString(control)
-	authoritys[key] = xpub.String()
-
-	chain.SetAuthoritys(authoritys)
 }
 
 // SolveAndUpdate solve difficulty and update chain status

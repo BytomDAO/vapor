@@ -20,7 +20,7 @@ type Response struct {
 }
 
 func getPeginInfo() (map[string]string, error) {
-	resp, err := http.Get("http://127.0.0.1:8000/api/get_pegin_address")
+	resp, err := http.Get("http://127.0.0.1:8080/api/get_pegin_address")
 	if err != nil {
 		return nil, err
 	}
