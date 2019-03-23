@@ -14,8 +14,6 @@ import (
 	"github.com/vapor/common"
 	"github.com/vapor/config"
 	"github.com/vapor/consensus"
-	engine "github.com/vapor/consensus/consensus"
-	dpos "github.com/vapor/consensus/consensus/dpos"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
@@ -233,12 +231,7 @@ func mockAccountManager(t *testing.T) *Manager {
 
 	store := leveldb.NewStore(testDB)
 	txPool := protocol.NewTxPool(store)
-	var engine engine.Engine
-	switch config.CommonConfig.Consensus.Type {
-	case "dpos":
-		engine = dpos.GDpos
-	}
-	chain, err := protocol.NewChain(store, txPool, engine)
+	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
 		t.Fatal(err)
 	}
