@@ -415,7 +415,7 @@ func (c *Chain) RepairDPoSData(oldBlockHeight uint64, oldBlockHash bc.Hash) erro
 	if block.Height != oldBlockHeight {
 		return errors.New("The module vote records data with a problem")
 	}
-	for i := block.Height + 1; i < c.bestNode.Height; i++ {
+	for i := block.Height + 1; i <= c.bestNode.Height; i++ {
 		b, err := c.GetBlockByHeight(i)
 		if err != nil {
 			return err

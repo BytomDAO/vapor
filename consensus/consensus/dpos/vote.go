@@ -462,7 +462,7 @@ func (v *Vote) updateAddressBalance(address string, value int64) {
 	if val, ok := v.AddressBalances[address]; ok {
 		banlance := int64(val) + value
 		if banlance < 0 {
-			cmn.Exit("The balance was negative")
+			cmn.Exit(fmt.Sprintf("The balance was negative: %s: %d", address, value))
 		}
 		if banlance == 0 {
 			delete(v.AddressBalances, address)
@@ -471,7 +471,7 @@ func (v *Vote) updateAddressBalance(address string, value int64) {
 		}
 	} else {
 		if value < 0 {
-			cmn.Exit("The balance was negative")
+			cmn.Exit(fmt.Sprintf("The balance was negative: %s: %d", address, value))
 		}
 		if value > 0 {
 			v.AddressBalances[address] = uint64(value)
