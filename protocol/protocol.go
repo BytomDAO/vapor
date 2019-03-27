@@ -7,6 +7,7 @@ import (
 
 	"github.com/vapor/config"
 	engine "github.com/vapor/consensus/consensus"
+	dpos "github.com/vapor/consensus/consensus/dpos"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -25,17 +26,24 @@ type Chain struct {
 
 	cond     sync.Cond
 	bestNode *state.BlockNode
-	engine   engine.Engine
+	Engine   engine.Engine
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
-func NewChain(store Store, txPool *TxPool, engine engine.Engine) (*Chain, error) {
+func NewChain(store Store, txPool *TxPool) (*Chain, error) {
+
+	var engine engine.Engine
+	switch config.CommonConfig.Consensus.Type {
+	case "dpos":
+		engine = dpos.GDpos
+	}
+
 	c := &Chain{
 		orphanManage:   NewOrphanManage(),
 		txPool:         txPool,
 		store:          store,
 		processBlockCh: make(chan *processBlockMsg, maxProcessBlockChSize),
-		engine:         engine,
+		Engine:         engine,
 	}
 	c.cond.L = new(sync.Mutex)
 
@@ -56,10 +64,6 @@ func NewChain(store Store, txPool *TxPool, engine engine.Engine) (*Chain, error)
 	c.index.SetMainChain(c.bestNode)
 	go c.blockProcesser()
 	return c, nil
-}
-
-func (c *Chain) SetConsensusEngine(engine engine.Engine) {
-	c.engine = engine
 }
 
 func (c *Chain) initChainStatus() error {

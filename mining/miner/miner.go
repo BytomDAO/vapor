@@ -11,7 +11,6 @@ import (
 	"github.com/vapor/account"
 	"github.com/vapor/common"
 	"github.com/vapor/consensus"
-	engine "github.com/vapor/consensus/consensus"
 	"github.com/vapor/mining"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
@@ -37,10 +36,9 @@ type Miner struct {
 	updateNumWorkers chan struct{}
 	quit             chan struct{}
 	newBlockCh       chan *bc.Hash
-	engine           engine.Engine
 }
 
-func NewMiner(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, newBlockCh chan *bc.Hash, engine engine.Engine) *Miner {
+func NewMiner(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, newBlockCh chan *bc.Hash) *Miner {
 	return &Miner{
 		chain:            c,
 		accountManager:   accountManager,
@@ -48,7 +46,6 @@ func NewMiner(c *protocol.Chain, accountManager *account.Manager, txPool *protoc
 		numWorkers:       defaultNumWorkers,
 		updateNumWorkers: make(chan struct{}),
 		newBlockCh:       newBlockCh,
-		engine:           engine,
 	}
 }
 
@@ -73,12 +70,13 @@ out:
 			err          error
 		)
 		address, _ := common.DecodeAddress(config.CommonConfig.Consensus.Coinbase, &consensus.ActiveNetParams)
-		if delegateInfo, err = m.engine.IsMining(address, uint64(time.Now().Unix())); err != nil {
+		blockTime := uint64(time.Now().Unix())
+		if delegateInfo, err = m.chain.Engine.IsMining(address, blockTime); err != nil {
 			time.Sleep(1 * time.Second)
 			continue
 		}
 
-		block, err := mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager, m.engine, delegateInfo)
+		block, err := mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager, m.chain.Engine, delegateInfo, blockTime)
 		if err != nil {
 			log.Errorf("Mining: failed on create NewBlockTemplate: %v", err)
 			time.Sleep(1 * time.Second)

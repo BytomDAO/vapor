@@ -1,13 +1,13 @@
 package dpos
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"sync"
 
 	cmn "github.com/tendermint/tmlibs/common"
@@ -55,17 +55,6 @@ type Vote struct {
 	oldBlockHash   bc.Hash
 }
 
-/*
-var DposVote = Vote{
-	DelegateVoters:        make(map[string]map[string]bool),
-	VoterDelegates:        make(map[string]map[string]bool),
-	DelegateName:          make(map[string]string),
-	NameDelegate:          make(map[string]string),
-	HashHeightInvalidVote: make(map[bc.Hash]uint64),
-	AddressBalances:       make(map[string]uint64),
-	DelegateMultiaddress:  make(map[string]uint64),
-}
-*/
 func newVote(blockHeight uint64, blockHash bc.Hash) (*Vote, error) {
 	vote := &Vote{
 		DelegateVoters:        make(map[string]map[string]bool),
@@ -77,11 +66,8 @@ func newVote(blockHeight uint64, blockHash bc.Hash) (*Vote, error) {
 		DelegateMultiaddress:  make(map[string]uint64),
 	}
 
-	if err := vote.New(blockHeight, blockHash); err != nil {
-		return nil, err
-	}
-
-	return vote, nil
+	err := vote.New(blockHeight, blockHash)
+	return vote, err
 }
 
 func (v *Vote) New(blockHeight uint64, blockHash bc.Hash) error {
@@ -377,12 +363,8 @@ func (v *Vote) GetTopDelegateInfo(minHoldBalance uint64, delegateNum uint64) []D
 			return false
 		} else if p.Votes > q.Votes {
 			return true
-		} else {
-			if strings.Compare(p.DelegateAddress, p.DelegateAddress) >= 0 {
-				return false
-			}
 		}
-		return true
+		return bytes.Compare([]byte(p.DelegateAddress), []byte(q.DelegateAddress)) > 0
 	}})
 
 	for k := range v.DelegateName {
@@ -396,7 +378,9 @@ func (v *Vote) GetTopDelegateInfo(minHoldBalance uint64, delegateNum uint64) []D
 			result = append(result, Delegate{k, 0})
 		}
 	}
-
+	if uint64(len(result)) <= delegateNum {
+		return result
+	}
 	result = result[:delegateNum]
 	return result
 }
@@ -478,7 +462,7 @@ func (v *Vote) updateAddressBalance(address string, value int64) {
 	if val, ok := v.AddressBalances[address]; ok {
 		banlance := int64(val) + value
 		if banlance < 0 {
-			cmn.Exit("The balance was negative")
+			cmn.Exit(fmt.Sprintf("The balance was negative: %s: %d", address, value))
 		}
 		if banlance == 0 {
 			delete(v.AddressBalances, address)
@@ -487,7 +471,7 @@ func (v *Vote) updateAddressBalance(address string, value int64) {
 		}
 	} else {
 		if value < 0 {
-			cmn.Exit("The balance was negative")
+			cmn.Exit(fmt.Sprintf("The balance was negative: %s: %d", address, value))
 		}
 		if value > 0 {
 			v.AddressBalances[address] = uint64(value)

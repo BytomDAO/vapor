@@ -12,8 +12,6 @@ import (
 	"github.com/vapor/common"
 	"github.com/vapor/config"
 	"github.com/vapor/consensus"
-	engine "github.com/vapor/consensus/consensus"
-	"github.com/vapor/consensus/consensus/dpos"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol"
@@ -43,13 +41,8 @@ func MockChain(testDB dbm.DB) (*protocol.Chain, *leveldb.Store, *protocol.TxPool
 
 	store := leveldb.NewStore(testDB)
 	txPool := protocol.NewTxPool(store)
-	var engine engine.Engine
-	switch config.CommonConfig.Consensus.Type {
-	case "dpos":
-		engine = dpos.GDpos
-	}
 
-	chain, err := protocol.NewChain(store, txPool, engine)
+	chain, err := protocol.NewChain(store, txPool)
 	consensus.ActiveNetParams.Signer = "78673764e0ba91a4c5ba9ec0c8c23c69e3d73bf27970e05e0a977e81e13bde475264d3b177a96646bc0ce517ae7fd63504c183ab6d330dea184331a4cf5912d5"
 	return chain, store, txPool, err
 }

@@ -329,7 +329,7 @@ func (c *Chain) DoVoting(block *types.Block, mapTxFee map[bc.Hash]uint64) error 
 				if err := json.Unmarshal(msg.Data, data); err != nil {
 					return err
 				}
-				c.engine.ProcessRegister(address.EncodeAddress(), data.Name, hash, height)
+				c.Engine.ProcessRegister(address.EncodeAddress(), data.Name, hash, height)
 			}
 		case vm.OP_VOTE:
 			if mapTxFee[tx.Tx.ID] >= consensus.VoteForgerFee {
@@ -337,7 +337,7 @@ func (c *Chain) DoVoting(block *types.Block, mapTxFee map[bc.Hash]uint64) error 
 				if err := json.Unmarshal(msg.Data, data); err != nil {
 					return err
 				}
-				c.engine.ProcessVote(address.EncodeAddress(), data.Forgers, hash, height)
+				c.Engine.ProcessVote(address.EncodeAddress(), data.Forgers, hash, height)
 			}
 		case vm.OP_REVOKE:
 			if mapTxFee[tx.Tx.ID] >= consensus.CancelVoteForgerFee {
@@ -345,7 +345,7 @@ func (c *Chain) DoVoting(block *types.Block, mapTxFee map[bc.Hash]uint64) error 
 				if err := json.Unmarshal(msg.Data, data); err != nil {
 					return err
 				}
-				c.engine.ProcessCancelVote(address.EncodeAddress(), data.Forgers, hash, height)
+				c.Engine.ProcessCancelVote(address.EncodeAddress(), data.Forgers, hash, height)
 			}
 		}
 	}
@@ -403,7 +403,7 @@ func (c *Chain) CalculateBalance(block *types.Block, fIsAdd bool) map[bc.Hash]ui
 		mapTxFee[tx.Tx.ID] = fee
 	}
 
-	c.engine.UpdateAddressBalance(addressBalances)
+	c.Engine.UpdateAddressBalance(addressBalances)
 	return mapTxFee
 }
 
@@ -415,7 +415,7 @@ func (c *Chain) RepairDPoSData(oldBlockHeight uint64, oldBlockHash bc.Hash) erro
 	if block.Height != oldBlockHeight {
 		return errors.New("The module vote records data with a problem")
 	}
-	for i := block.Height + 1; i < c.bestNode.Height; i++ {
+	for i := block.Height + 1; i <= c.bestNode.Height; i++ {
 		b, err := c.GetBlockByHeight(i)
 		if err != nil {
 			return err

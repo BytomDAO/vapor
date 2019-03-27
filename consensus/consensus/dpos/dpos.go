@@ -97,9 +97,6 @@ var GDpos = &DposType{
 func (d *DposType) Init(c chain.Chain, delegateNumber, intervalTime, blockHeight uint64, blockHash bc.Hash) error {
 	d.c = c
 	vote, err := newVote(blockHeight, blockHash)
-	if err != nil {
-		return err
-	}
 	d.vote = vote
 	d.MaxDelegateNumber = delegateNumber
 	d.BlockIntervalTime = intervalTime
@@ -109,13 +106,10 @@ func (d *DposType) Init(c chain.Chain, delegateNumber, intervalTime, blockHeight
 
 	GDpos.irreversibleBlockFileName = filepath.Join(config.CommonConfig.RootDir, "dpos", "irreversible_block.dat")
 	GDpos.irreversibleBlockInfo = *newIrreversibleBlockInfo()
-	if err := GDpos.ReadIrreversibleBlockInfo(&GDpos.irreversibleBlockInfo); err != nil {
-		return err
-	}
-
+	GDpos.ReadIrreversibleBlockInfo(&GDpos.irreversibleBlockInfo)
 	header, _ := c.GetHeaderByHeight(d.DposStartHeight)
 	d.setStartTime(header.Timestamp)
-	return nil
+	return err
 }
 
 func (d *DposType) setStartTime(t uint64) {
@@ -132,6 +126,9 @@ func (d *DposType) IsMining(address common.Address, t uint64) (interface{}, erro
 	if currentLoopIndex > prevLoopIndex {
 		delegateInfo := d.GetNextDelegates(t)
 		cDelegateInfo := delegateInfo.(*DelegateInfo)
+		if uint64(len(cDelegateInfo.Delegates)) < currentDelegateIndex+1 {
+			return nil, errors.New("Out of the block node list")
+		}
 		if cDelegateInfo.Delegates[currentDelegateIndex].DelegateAddress == address.EncodeAddress() {
 			return delegateInfo, nil
 		}
@@ -191,7 +188,7 @@ func (d *DposType) GetNextDelegates(t uint64) interface{} {
 	}
 	delegates = append(delegates, delegate)
 	delegateInfo := DelegateInfo{}
-	delegateInfo.Delegates = SortDelegate(delegates, t)
+	delegateInfo.Delegates = delegates //SortDelegate(delegates, t)
 	return &delegateInfo
 }
 
@@ -373,6 +370,7 @@ func (d *DposType) CheckBlockDelegate(block types.Block) error {
 	if len(delegateInfo.Delegates) != len(nextDelegateInfo.Delegates) {
 		return errors.New("The delegates num is not correct in block")
 	}
+
 	for index, v := range delegateInfo.Delegates {
 		if v.DelegateAddress != nextDelegateInfo.Delegates[index].DelegateAddress {
 			return errors.New("The delegates address is not correct in block")

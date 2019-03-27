@@ -2,7 +2,7 @@
     "consensus":{
         "consensus_type": "dpos" ,
         "period": 3,
-        "max_signers_count": 2,
+        "max_signers_count": 7,
         "min_boter_balance": 10,
         "genesis_timestamp": 1524549600,
         "coinbase": "vsm1qkm743xmgnvh84pmjchq2s4tnfpgu9ae2f9slep",
