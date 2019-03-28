@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/vapor/blockchain/txbuilder"
+	"github.com/vapor/claim/rpc"
 	chainjson "github.com/vapor/encoding/json"
 )
 
@@ -38,55 +39,33 @@ type fundingResp struct {
 	ClaimScript      chainjson.HexBytes `json:"claim_script"`
 }
 
-func (a *API) getPeginAddress(ctx context.Context, ins struct {
-	AccountID    string `json:"account_id"`
-	AccountAlias string `json:"account_alias"`
-}) Response {
+func (a *API) getPeginAddress(ctx context.Context, ins rpc.ClaimArgs) Response {
 
-	accountID := ins.AccountID
-	if ins.AccountAlias != "" {
-		account, err := a.wallet.AccountMgr.FindByAlias(ins.AccountAlias)
-		if err != nil {
-			return NewErrorResponse(err)
-		}
-
-		accountID = account.ID
+	pegin := &rpc.BytomPeginRpc{
+		ClaimArgs: ins,
+		Wallet:    a.wallet,
 	}
 
-	mainchainAddress, claimScript, err := a.wallet.AccountMgr.CreatePeginAddress(accountID, false)
+	resp, err := pegin.GetPeginAddress()
 	if err != nil {
 		return NewErrorResponse(err)
 	}
 
-	return NewSuccessResponse(fundingResp{
-		MainchainAddress: mainchainAddress,
-		ClaimScript:      claimScript,
-	})
+	return NewSuccessResponse(resp)
 }
 
 func (a *API) getPeginContractAddress(ctx context.Context, ins struct {
 	AccountID    string `json:"account_id"`
 	AccountAlias string `json:"account_alias"`
 }) Response {
-
-	accountID := ins.AccountID
-	if ins.AccountAlias != "" {
-		account, err := a.wallet.AccountMgr.FindByAlias(ins.AccountAlias)
-		if err != nil {
-			return NewErrorResponse(err)
-		}
-
-		accountID = account.ID
+	pegin := &rpc.BytomPeginRpc{
+		ClaimArgs: ins,
+		Wallet:    a.wallet,
 	}
-
-	mainchainAddress, controlProgram, claimScript, err := a.wallet.AccountMgr.CreatePeginContractAddress(accountID, false)
+	resp, err := pegin.GetPeginContractAddress()
 	if err != nil {
 		return NewErrorResponse(err)
 	}
 
-	return NewSuccessResponse(fundingResp{
-		MainchainAddress: mainchainAddress,
-		ControlProgram:   controlProgram,
-		ClaimScript:      claimScript,
-	})
+	return NewSuccessResponse(resp)
 }

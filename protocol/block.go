@@ -3,8 +3,6 @@ package protocol
 import (
 	"encoding/json"
 
-	"github.com/vapor/protocol/vm"
-
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/common"
@@ -16,6 +14,8 @@ import (
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
 	"github.com/vapor/protocol/validation"
+	"github.com/vapor/protocol/vm"
+	"github.com/vapor/protocol/vm/vmutil"
 )
 
 var (
@@ -387,6 +387,9 @@ func (c *Chain) CalculateBalance(block *types.Block, fIsAdd bool) map[bc.Hash]ui
 		}
 		for _, output := range tx.Outputs {
 			fee -= output.Amount
+			if vmutil.IsUnspendable(output.ControlProgram) {
+				continue
+			}
 			value := int64(output.Amount)
 			address, err = common.NewAddressWitnessPubKeyHash(output.ControlProgram[2:], &consensus.ActiveNetParams)
 			if err != nil {

@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	bytomtypes "github.com/vapor/claim/bytom/protocolbc/types"
 	"github.com/vapor/config"
 	chainjson "github.com/vapor/encoding/json"
-	bytomtypes "github.com/vapor/protocol/bc/types/bytom/types"
 	"github.com/vapor/util"
 )
 

@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"strconv"
 
+	jww "github.com/spf13/jwalterweatherman"
 	"github.com/vapor/blockchain/rpc"
 	"github.com/vapor/config"
-	jww "github.com/spf13/jwalterweatherman"
 )
 
 var MainchainConfig *config.MainChainRpcConfig
