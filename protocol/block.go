@@ -364,6 +364,9 @@ func (c *Chain) CalculateBalance(block *types.Block, fIsAdd bool) map[bc.Hash]ui
 	for _, tx := range block.Transactions {
 		fee := uint64(0)
 		for _, input := range tx.Inputs {
+			if input.AssetID() != *consensus.BTMAssetID {
+				continue
+			}
 
 			if len(tx.TxData.Inputs) == 1 &&
 				(tx.TxData.Inputs[0].InputType() == types.CoinbaseInputType ||
@@ -388,6 +391,9 @@ func (c *Chain) CalculateBalance(block *types.Block, fIsAdd bool) map[bc.Hash]ui
 		for _, output := range tx.Outputs {
 			fee -= output.Amount
 			if vmutil.IsUnspendable(output.ControlProgram) {
+				continue
+			}
+			if *output.AssetId != *consensus.BTMAssetID {
 				continue
 			}
 			value := int64(output.Amount)
