@@ -188,12 +188,12 @@ def send_to_mainchain():
     response = connSide.request("/get-utxo-from-transaction",body_json)
     resp_json = json.loads(response.text)
     if resp_json['status'] == 'success':
-        utxo = json.dumps(resp_json['data']).strip('{}')+"}"
+        utxo = json.dumps(resp_json['data']).strip('{}')
     elif resp_json['status'] == 'fail':
         return json_contents(jsonify(code=-1, msg="get-utxo-from-transaction: " + resp_json['msg']))
     else:
         return json_contents(jsonify(code=-1, msg="fail get utxo from transaction"))
-
+    
     block_height = int(request.json['side_block_height'])
     tx_id  = request.json['side_tx_id'].encode('utf-8')
     alias = request.json['alias'].encode('utf-8')
@@ -229,29 +229,32 @@ def send_to_mainchain():
         return json_contents(jsonify(code=-1, msg="get side raw transaction fail"))
 
     # 构建主链交易
-    body_json = '{"claim_script":"%s","raw_transaction": "%s","control_program":"%s","root_xpubs":%s,%s}' % (claim_script,raw_transaction,control_program,root_xpubs,utxo)
+    body_json = '{"claim_script":"%s","raw_transaction": "%s","control_program":"%s","pubs":%s,%s}' % (claim_script,raw_transaction,control_program,root_xpubs,utxo)
     response = connSide.request("/build-mainchain-tx",json.loads(body_json))
     resp_json = json.loads(response.text.encode('utf-8'))
     tmpl = ""
     if resp_json['status'] == 'success':
-        tmpl = json.dumps(resp_json['data'])
+        tmpl = json.dumps(resp_json['data']['tx'])
     elif resp_json['status'] == 'fail':
         print resp_json
         return json_contents(jsonify(code=-1, msg="build-mainchain-tx: " + resp_json['msg']))
     else:
         return json_contents(jsonify(code=-1, msg="build mainchain transaction fail"))
-
     # 签名
     for key,value in key_pair.items():
         body_json = '{"xprv": "%s","xpub":"%s","transaction":%s,"claim_script":"%s"}' % (key,value,tmpl,claim_script)
         response = connSide.request("/sign-with-key",json.loads(body_json))
         resp_json = json.loads(response.text.encode('utf-8'))
         if resp_json['status'] == 'success':
+            print resp_json
             tmpl = json.dumps(resp_json['data']['transaction'])
             raw_transaction = resp_json['data']['transaction']['raw_transaction'].encode('utf-8')
-        elif resp_json['status'] == 'fail':
+        elif resp_json['status'] == 'fail': 
+            print "sign-with-key"
+            print  resp_json
             return json_contents(jsonify(code=-1, msg="sign-with-key: " + resp_json['msg']))
         else:
+            print resp_json
             return json_contents(jsonify(code=-1, msg="sign-with-key fail"))
     
     # 提交到主链

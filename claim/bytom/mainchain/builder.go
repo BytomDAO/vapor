@@ -5,8 +5,9 @@ import (
 	"time"
 
 	"github.com/vapor/blockchain/txbuilder"
+	bytomtypes "github.com/vapor/claim/bytom/protocolbc/types"
+	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
-	bytomtypes "github.com/vapor/protocol/bc/types/bytom/types"
 )
 
 // NewBuilder return new TemplateBuilder instance
@@ -128,5 +129,27 @@ func (b *TemplateBuilder) Build() (*Template, *bytomtypes.TxData, error) {
 	}
 
 	tpl.Transaction = bytomtypes.NewTx(*tx)
+	tpl.Fee = CalculateTxFee(tpl.Transaction)
 	return tpl, tx, nil
+}
+
+// CalculateTxFee calculate transaction fee
+func CalculateTxFee(tx *bytomtypes.Tx) (fee uint64) {
+	totalInputBTM := uint64(0)
+	totalOutputBTM := uint64(0)
+
+	for _, input := range tx.Inputs {
+		if input.InputType() != bytomtypes.CoinbaseInputType && input.AssetID() == *consensus.BTMAssetID {
+			totalInputBTM += input.Amount()
+		}
+	}
+
+	for _, output := range tx.Outputs {
+		if *output.AssetId == *consensus.BTMAssetID {
+			totalOutputBTM += output.Amount
+		}
+	}
+
+	fee = totalInputBTM - totalOutputBTM
+	return
 }

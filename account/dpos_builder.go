@@ -167,46 +167,6 @@ func (a *DopsAction) ActionType() string {
 	return "dpos"
 }
 
-// DposInputs convert an utxo to the txinput
-func DposTx(from, to string, stake uint64, u *UTXO, txType types.TxType, h uint64) (*types.TxInput, *txbuilder.SigningInstruction, error) {
-	txInput := types.NewDpos(nil, from, to, u.SourceID, u.AssetID, stake, u.Amount, u.SourcePos, u.ControlProgram, txType, h)
-	sigInst := &txbuilder.SigningInstruction{}
-	var xpubs []chainkd.XPub
-	var xprv chainkd.XPrv
-	xprv.UnmarshalText([]byte(config.CommonConfig.Consensus.XPrv))
-	xpubs = append(xpubs, xprv.XPub())
-	quorum := len(xpubs)
-	if u.Address == "" {
-		sigInst.AddWitnessKeysWithOutPath(xpubs, quorum)
-		return txInput, sigInst, nil
-	}
-
-	address, err := common.DecodeAddress(u.Address, &consensus.ActiveNetParams)
-	if err != nil {
-		return nil, nil, err
-	}
-	sigInst.AddRawWitnessKeysWithoutPath(xpubs, quorum)
-	switch address.(type) {
-	case *common.AddressWitnessPubKeyHash:
-		derivedPK := xpubs[0].PublicKey()
-		sigInst.WitnessComponents = append(sigInst.WitnessComponents, txbuilder.DataWitness([]byte(derivedPK)))
-
-	case *common.AddressWitnessScriptHash:
-		derivedXPubs := xpubs
-		derivedPKs := chainkd.XPubKeys(derivedXPubs)
-		script, err := vmutil.P2SPMultiSigProgram(derivedPKs, quorum)
-		if err != nil {
-			return nil, nil, err
-		}
-		sigInst.WitnessComponents = append(sigInst.WitnessComponents, txbuilder.DataWitness(script))
-
-	default:
-		return nil, nil, errors.New("unsupport address type")
-	}
-
-	return txInput, sigInst, nil
-}
-
 // spendInput convert an utxo to the txinput
 func spendInput(u *UTXO) (*types.TxInput, *txbuilder.SigningInstruction, error) {
 	txSpendInput := types.NewSpendInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram)

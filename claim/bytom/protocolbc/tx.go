@@ -1,4 +1,4 @@
-package bytom
+package protocolbc
 
 import (
 	"github.com/vapor/crypto/sha3pool"

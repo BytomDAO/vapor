@@ -1,9 +1,9 @@
-package api
+package bytom
 
 import (
 	"math"
 
-	"github.com/vapor/blockchain/txbuilder/mainchain"
+	"github.com/vapor/claim/bytom/mainchain"
 	"github.com/vapor/consensus"
 	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/errors"
