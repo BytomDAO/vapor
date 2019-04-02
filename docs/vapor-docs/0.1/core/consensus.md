@@ -34,8 +34,14 @@
 
 1、交易格式
 
-~~~json
+​	dpos_type: 1代表注册为候选出块人，2代表投票，3代表取消投票
 
+​        type: dpos表示跟共识有关系的交易
+
+​	amount: 表示注册交易的交易费，目前是1btm
+
+~~~json
+	注册交易
         ```
         {
         "base_transaction":null,
@@ -52,14 +58,55 @@
         "ttl":0,
         "time_range":43432
         }
+       ```
+	投票交易
+	   ```
+        {
+            "base_transaction":null,
+            "actions":[
+                {
+                    "address":"vsm1qkm743xmgnvh84pmjchq2s4tnfpgu9ae2f9slep",
+                    "amount":100000000,
+                    "asset_id":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+                    "forgers":[
+                        "vsm1qndq3w79kwtk9acnuswxlwxjqweglwhg8yrzp2c",
+                        "vsm1q93jcjhwe62n5mdtym6m7utle95erd6s3jsn4tn",
+                        "vsm1qtu926tcsky876hflm93getsv27w7pccv4jg2fs",
+                        "vsm1qyd4rcrdnwexgg2gwk33frrrqymzyrycggjslu2",
+                        "vsm1qacp9zg2h4950lr5yhlychn6686fhullkuyzd5s",
+                        "vsm1qlf8s9tv90x9ys25fl2kczy44jjnnaa8e542nea"
+                    ],
+                    "dpos_type":2,
+                    "type":"dpos"
+                }
+            ],
+            "ttl":0,
+            "time_range":43432
+        }
+ 		```
+	取消投票
+        ```
+        {
+            "base_transaction":null,
+            "actions":[
+                {
+                    "address":"vsm1qkm743xmgnvh84pmjchq2s4tnfpgu9ae2f9slep",
+                    "amount":100000000,
+                    "asset_id":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+                    "forgers":[
+                        "vsm1qndq3w79kwtk9acnuswxlwxjqweglwhg8yrzp2c",
+                        "vsm1q93jcjhwe62n5mdtym6m7utle95erd6s3jsn4tn",
+                        "vsm1qtu926tcsky876hflm93getsv27w7pccv4jg2fs"
+                    ],
+                    "dpos_type":3,
+                    "type":"dpos"
+                }
+            ],
+            "ttl":0,
+            "time_range":43432
+        }
         ```
 ~~~
-
-​	dpos_type: 1代表注册为候选出块人，2代表投票，3代表取消投票
-
-​        type: dpos表示跟共识有关系的交易
-
-​	amount: 表示注册交易的交易费，目前是1btm
 
 2、逻辑说明
 

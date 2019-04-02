@@ -36,6 +36,8 @@
 
 ​	注：成为验证人、收集人、联邦在侧链都需要质押一定数量的btm
 
+
+
 # 侧链提现流程
 
 ​	1、vapor侧链用户发起提现请求，销毁vapor侧链的资产
@@ -43,4 +45,28 @@
 ​	2、联邦合约地址针对请求向vapor侧链用户的主链地址发送对应对应数量的资产(前提交易已经在侧链上达到不会回滚的确认数)
 
 ​	3、联邦在侧链上生成一笔完成提现的操作的交易
+
+
+
+# claim交易输入类型
+
+1、定义此输入类型，为了处理claim交易
+
+type ClaimInput struct {
+
+​    SpendCommitmentSuffix []byte   // The unconsumed suffix of the output commitment
+
+​    Arguments             [][]byte // Witness
+
+​    SpendCommitment
+
+}
+
+2、TxInput结构作用增加字段Peginwitness
+
+​	Peginwitness保存了主链的源交易信息，用于其他节点收到交易时做验证。
+
+​	内容如下(字段序列化后依次放入Peginwitness):
+
+​	amount + ParentGenesisBlockHash + claimScript + rawTx + merkleBlock
 
