@@ -19,8 +19,8 @@ type TypedData interface {
 }
 
 type DposMsg struct {
-	Type vm.Op
-	Data []byte
+	Type vm.Op  `json:"type"`
+	Data []byte `json:"data"`
 }
 
 // DELEGATE_IDS PUBKEY SIG(block.time)
