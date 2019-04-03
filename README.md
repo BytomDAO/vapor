@@ -126,7 +126,7 @@ $ open http://localhost:8888/
 
 ### Sidechain
 
-* [Sidechain deployment](docs/vapor-deployment.md)
+* [Sidechain deployment](docs/vapor-docs/0.1/core/vapor-deployment.md)
 
 ## Contributing
 
