@@ -110,22 +110,26 @@
 
 2、逻辑说明
 
-​	(1)、检查交易费在用户地址是否够用，序列化的注册、注册类型(用op表示)序列化后放入tx的referenceData
+​	(1)、检查交易费在用户地址是否够用，序列化的注册\投票\取消投票、注册类型(用op表示)序列化后放入tx的referenceData
 
-​	(2)、在内核chain做saveBlock之前做dpos验证
+​	(2)、判断当前节点是否出块人，否不出块，是获取到出块人列表，并在coinbase交易的referenceData存出块人列表信息
+
+​		注：出块人列表只有本轮第一个块获取到，其他的块根据这个块做验证。
+
+​	(3)、在内核chain做saveBlock之前做dpos验证
 
 - 验证块的时间-当前时间的>出块时间间隔
 - 通过上一个块与当前出的块的时间获取出块轮数以及当前轮的出块索引，判断当前出块的顺序是否正确
 
-​	(3)、验证不可逆的区块时候有效(针对同步)
+​	(4)、验证不可逆的区块时候有效(针对同步)
 
-​	(4)、验证block中的候选人列表时候正确，并且生成不可逆区块
+​	(5)、验证block中的候选人列表时候正确，并且生成不可逆区块
 
 - 如果当前block与上一个不是同一个出块的轮，验证出块人列表，并确认不可逆的区块
 - 如果在同一个出块轮，验证出块顺序以及出块人列表。
 - 验证当前的出块人是否正确
 
-​	(5)、验证交易完成后，先计算用户的余额，在处理与dpos相关的交易(注册、投票、取消投票)
+​	(6)、验证交易完成后，先计算用户的余额，在处理与dpos相关的交易(注册、投票、取消投票)
 
 ### 计算余额
 
@@ -159,21 +163,16 @@
 
 
 
-### dpos注册、投票、取消投票的数据结构
+### dpos相关数据结构
 
 1、交易结构ReferenceData的数据
 
-type DposMsg struct {
+| 字段 | 类型   | 描述                   |
+| :--- | ------ | ---------------------- |
+| Type | vm.Op  | dpos相关的数据类型     |
+| Data | []byte | dpos相关的数据的序列化 |
 
-​    Type vm.Op  `json:"type"`
-
-​    Data []byte `json:"data"`
-
-}
-
-Data：是以下的数据结构的序列化
-
-Type：   
+Type字段的值如下：   
 
 ​    OP_DELEGATE Op = 0xd0
 
@@ -187,55 +186,42 @@ Type：
 
 // DELEGATE_IDS PUBKEY SIG(block.time)
 
-type DelegateInfoList struct {
+| 字段            | 类型               | 描述                     |
+| --------------- | ------------------ | ------------------------ |
+| Delegate        | DelegateInfo       | 出块人信息列表           |
+| Xpub            | chainkd.XPub       | 当前出块人的公钥         |
+| SigTime         | chainjson.HexBytes | 当前出块人的对时间的签名 |
 
-​    Delegate DelegateInfo       `json:"delegate"`
 
-​    Xpub     chainkd.XPub       `json:"xpub"`
 
-​    SigTime  chainjson.HexBytes `json:"sig_time"`
+| 字段            | 类型               | 描述       |
+| --------------- | ------------------ | ---------- |
+| Delegates       | []Delegate         | 出块人类表 |
 
-}
 
-type Delegate struct {
 
-​    DelegateAddress string `json:"delegate_address"`
-
-​    Votes           uint64 `json:"votes"`
-
-}
-
-type Delegate struct {
-
-​    DelegateAddress string `json:"delegate_address"`
-
-​    Votes           uint64 `json:"votes"`
-
-}
+| 字段            | 类型               | 描述       |
+| --------------- | ------------------ | ---------- |
+| DelegateAddress | string             | 出块人地址 |
+| Votes           | uint64             | 出块人票数 |
 
 
 
 3、注册出块人的信息
 
-type RegisterForgerData struct {
-
-​    Name string `json:"name"`
-
-}
+| 字段 | 类型   | 描述                 |
+| ---- | ------ | -------------------- |
+| Name | string | 注册候选出块人的名称 |
 
 4、投票的信息
 
-type VoteForgerData struct {
-
-​    Forgers []string `json:"forgers"`
-
-}
+| 字段    | 类型     | 描述               |
+| ------- | -------- | ------------------ |
+| Forgers | []string | 投票给候选人的列表 |
 
 5、取消投票的信息
 
-type CancelVoteForgerData struct {
-
-​    Forgers []string `json:"forgers"`
-
-}
+| 字段    | 类型     | 描述                 |
+| ------- | -------- | -------------------- |
+| Forgers | []string | 取消投票候选人的列表 |
 
