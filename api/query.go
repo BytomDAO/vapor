@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 
 	"github.com/vapor/blockchain/txbuilder"
@@ -13,13 +14,13 @@ import (
 	"github.com/vapor/account"
 	"github.com/vapor/blockchain/query"
 	"github.com/vapor/blockchain/signers"
+	bytomtypes "github.com/vapor/claim/bytom/protocolbc/types"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
-	bytomtypes "github.com/vapor/protocol/bc/types/bytom/types"
 )
 
 // POST /list-accounts
@@ -477,7 +478,7 @@ func (a *API) getSideRawTransaction(ins struct {
 }
 
 type utxoResp struct {
-	Utxo account.UTXO `json:"utxo"`
+	Utxo []byte `json:"utxo"`
 }
 
 func (a *API) getUnspentOutputs(ins struct {
@@ -488,8 +489,7 @@ func (a *API) getUnspentOutputs(ins struct {
 }) Response {
 	var rawTransaction *bytomtypes.Tx
 	block := &bytomtypes.Block{}
-	err := block.UnmarshalText([]byte(ins.RawBlock))
-	if err != nil {
+	if err := block.UnmarshalText([]byte(ins.RawBlock)); err != nil {
 		return NewErrorResponse(err)
 	}
 
@@ -544,5 +544,10 @@ func (a *API) getUnspentOutputs(ins struct {
 		}
 	}
 
-	return NewSuccessResponse(&utxoResp{Utxo: utxo})
+	resp, err := json.Marshal(&utxo)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	return NewSuccessResponse(&utxoResp{Utxo: resp})
 }

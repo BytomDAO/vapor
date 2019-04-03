@@ -88,8 +88,6 @@ func checkTxSighashCommitment(tx *types.Tx) error {
 			args = t.Arguments
 		case *types.ClaimInput:
 			args = t.Arguments
-		case *types.DposTx:
-			args = t.Arguments
 		}
 		// Note: These numbers will need to change if more args are added such that the minimum length changes
 		switch {
@@ -133,7 +131,7 @@ func CalculateTxFee(tx *types.Tx) (fee uint64) {
 	totalOutputBTM := uint64(0)
 
 	for _, input := range tx.Inputs {
-		if input.InputType() != types.CoinbaseInputType && input.InputType() != types.DposInputType && input.AssetID() == *consensus.BTMAssetID {
+		if input.InputType() != types.CoinbaseInputType && input.AssetID() == *consensus.BTMAssetID {
 			totalInputBTM += input.Amount()
 		}
 	}

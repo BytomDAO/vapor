@@ -62,11 +62,6 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 		return nil, err
 	}
 
-	byteData, err := txData.MarshalText()
-	if err != nil {
-		return nil, err
-	}
-	txData.SerializedSize = uint64(len(byteData))
 	delegates := dpos.DelegateInfoList{}
 	if delegateInfo != nil {
 		tmp := delegateInfo.(*dpos.DelegateInfo)
@@ -99,6 +94,12 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 		return nil, err
 	}
 	txData.ReferenceData = data
+
+	byteData, err := txData.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+	txData.SerializedSize = uint64(len(byteData))
 
 	tx = &types.Tx{
 		TxData: *txData,

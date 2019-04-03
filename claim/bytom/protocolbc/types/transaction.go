@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"io"
 
+	bytom "github.com/vapor/claim/bytom/protocolbc"
 	"github.com/vapor/encoding/blockchain"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types/bytom"
 )
 
 const serRequired = 0x7 // Bit mask accepted serialization flag.
@@ -70,7 +70,7 @@ type TxData struct {
 func (tx *TxData) MarshalText() ([]byte, error) {
 	var buf bytes.Buffer
 	if _, err := tx.WriteTo(&buf); err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	b := make([]byte, hex.EncodedLen(buf.Len()))

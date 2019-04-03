@@ -1,4 +1,4 @@
-package bytom
+package protocolbc
 
 import (
 	"encoding/binary"
