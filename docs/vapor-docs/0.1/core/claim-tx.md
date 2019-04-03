@@ -1,4 +1,12 @@
-# 侧链充值流程
+# claim交易
+
+​	主链是通过矿工挖矿产生资产，vapor侧链是通过claim交易产生资产，因此侧链上资产的源头都是claim交易。
+
+​	claim交易是资产从主链转移到侧链产生的交易，即在主链上锁定交易，在侧链上用claim交易生成侧链上的资产。
+
+# 主链与侧链资产的转移逻辑
+
+### 侧链充值流程
 
 ​	vapor侧链中验证人、收集人、联邦三个角色：
 
@@ -36,9 +44,7 @@
 
 ​	注：成为验证人、收集人、联邦在侧链都需要质押一定数量的btm
 
-
-
-# 侧链提现流程
+### 侧链提现流程
 
 ​	1、vapor侧链用户发起提现请求，销毁vapor侧链的资产
 
@@ -48,25 +54,28 @@
 
 
 
-# claim交易输入类型
+# claim交易
 
-1、定义此输入类型，为了处理claim交易
+1、claim交易输入
 
-type ClaimInput struct {
+- 增加ClaimInput的输入类型，也是vapor侧链上资产产生源头，主要用于处理资产从主链到侧链的转移。
 
-​    SpendCommitmentSuffix []byte   // The unconsumed suffix of the output commitment
+- TxInput结构作用增加字段Peginwitness
 
-​    Arguments             [][]byte // Witness
+  ​	Peginwitness保存了主链的源交易信息，用于其他节点收到交易时做验证。
 
-​    SpendCommitment
+  ​	内容如下(字段序列化后依次放入Peginwitness):
 
-}
+  ​	amount + ParentGenesisBlockHash + claimScript + rawTx + merkleBlock
 
-2、TxInput结构作用增加字段Peginwitness
+- 生成claim交易输入，并根据主链交易、proof生成Peginwitness
 
-​	Peginwitness保存了主链的源交易信息，用于其他节点收到交易时做验证。
+2、签名交易
 
-​	内容如下(字段序列化后依次放入Peginwitness):
+​	签名交易是对claim交易的签名。
 
-​	amount + ParentGenesisBlockHash + claimScript + rawTx + merkleBlock
+3、提交交易
 
+​	提交交易是要进入交易池，以及广播交易给其他节点。
+
+​	在入交易池前以及处理block过程的交易验证的时候，claim交易验证是对输入中的claim输入与Peginwitness的信息匹配做验证(验证主链交易信息，以及生成的claim输入有没恶意行为)，类似工作量证明。
