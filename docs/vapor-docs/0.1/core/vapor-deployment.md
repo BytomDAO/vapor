@@ -67,18 +67,18 @@ xpub=$(cat key_pair | jq ".data.xpub" | sed "s/\"//g")
 
 拷贝上面生成key_pair文件到目录tools/side_chain_tool/
 
-* [参考侧链工具README](../../tools/side_chain_tool/README.md)
+* [参考侧链工具README](../../../../tools/side_chain_tool/README.md)
 
 ## Bytom----->Vapor
 - 工具页面输入侧链账户ID，获取mainchain_address(主链锁定地址)、claim_script(赎回脚本)
 
-  ![pegin-address](pegin-address.png)
+  ![pegin-address](png/pegin-address.png)
 
 - 在主链的dashboard，发送btm到mainchain_address 或者启动monitor_tx自动处理claim tx
 
 - 工具页面赎回交易填入参数，发送交易
 
-  ![tosidechain](tosidechain.png)
+  ![tosidechain](png/tosidechain.png)
 
 Vapor----->Bytom
 
@@ -90,7 +90,7 @@ Vapor----->Bytom
 
 - 工具网页的侧链发送回主链的页面填入参数，发送交易
 
-  ![tomain](tomain.png)
+  ![tomain](png/tomain.png)
 
 
 

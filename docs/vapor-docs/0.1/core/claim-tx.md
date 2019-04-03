@@ -16,7 +16,7 @@
 
 ​		联邦   ： 侧链充值是指资产从主链转移到侧链的过程，转移过程，是需要资产先锁定到联邦合约地址。
 
-​	![main2side](main2side.png)
+​	![main2side](png/main2side.png)
 
 
 
