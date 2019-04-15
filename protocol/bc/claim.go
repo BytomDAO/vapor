@@ -4,6 +4,7 @@ import "io"
 
 func (Claim) typ() string { return "claim1" }
 func (c *Claim) writeForHash(w io.Writer) {
+	mustWriteForHash(w, c.SpentOutputId)
 	mustWriteForHash(w, c.Peginwitness)
 }
 

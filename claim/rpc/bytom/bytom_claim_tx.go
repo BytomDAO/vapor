@@ -162,7 +162,7 @@ func (b *BytomClaimTx) createRawPegin(ins rpc.ClaimTxParam) (*txbuilder.Template
 	outputAccount := rawTx.Outputs[nOut].Amount
 	assetID := *rawTx.Outputs[nOut].AssetId
 
-	txInput := types.NewClaimInput(nil, sourceID, assetID, outputAccount, uint64(nOut), cp.ControlProgram)
+	txInput := types.NewClaimInput(nil, sourceID, assetID, outputAccount, uint64(nOut), cp.ControlProgram, ins.AssetDefinition)
 	if err := builder.AddInput(txInput, &txbuilder.SigningInstruction{}); err != nil {
 		return nil, err
 	}
@@ -327,7 +327,7 @@ func (b *BytomClaimTx) createContractRawPegin(ins rpc.ClaimTxParam) (*txbuilder.
 	outputAccount := rawTx.Outputs[nOut].Amount
 	assetID := *rawTx.Outputs[nOut].AssetId
 
-	txInput := types.NewClaimInput(nil, sourceID, assetID, outputAccount, uint64(nOut), cp.ControlProgram)
+	txInput := types.NewClaimInput(nil, sourceID, assetID, outputAccount, uint64(nOut), cp.ControlProgram, ins.AssetDefinition)
 	if err := builder.AddInput(txInput, &txbuilder.SigningInstruction{}); err != nil {
 		return nil, err
 	}
@@ -374,13 +374,15 @@ func (b *BytomClaimTx) createContractRawPegin(ins rpc.ClaimTxParam) (*txbuilder.
 	stack = append(stack, txOutProof)
 	//	tmpl.Transaction.Inputs[0].Peginwitness = stack
 	txData.Inputs[0].Peginwitness = stack
-
-	//交易费估算
-	txGasResp, err := EstimateTxGas(*tmpl)
-	if err != nil {
-		return nil, err
-	}
-	txData.Outputs[0].Amount = txData.Outputs[0].Amount - uint64(txGasResp.TotalNeu)
+	// 由于claim tx是侧链的资产的源头，故不收取交易费
+	/*
+		//交易费估算
+		txGasResp, err := EstimateTxGas(*tmpl)
+		if err != nil {
+			return nil, err
+		}
+		txData.Outputs[0].Amount = txData.Outputs[0].Amount - uint64(txGasResp.TotalNeu)
+	*/
 	//重设置Transaction
 	tmpl.Transaction = types.NewTx(*txData)
 	return tmpl, nil

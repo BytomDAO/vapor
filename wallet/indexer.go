@@ -73,6 +73,15 @@ func saveExternalAssetDefinition(b *types.Block, walletDB db.DB) {
 					}
 				}
 			}
+
+			if claimInput, ok := orig.TypedInput.(*types.ClaimInput); ok {
+				if isValidJSON(claimInput.AssetDefinition) {
+					assetID := claimInput.AssetId
+					if assetExist := walletDB.Get(asset.ExtAssetKey(assetID)); assetExist == nil {
+						storeBatch.Set(asset.ExtAssetKey(assetID), claimInput.AssetDefinition)
+					}
+				}
+			}
 		}
 	}
 }

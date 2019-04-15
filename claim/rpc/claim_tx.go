@@ -7,14 +7,15 @@ import (
 )
 
 type ClaimTxParam struct {
-	Password     string               `json:"password"`
-	RawTx        string               `json:"raw_transaction"`
-	BlockHeader  string               `json:"block_header"`
-	TxHashes     []chainjson.HexBytes `json:"tx_hashes"`
-	StatusHashes []chainjson.HexBytes `json:"status_hashes"`
-	Flags        []uint32             `json:"flags"`
-	MatchedTxIDs []chainjson.HexBytes `json:"matched_tx_ids"`
-	ClaimScript  chainjson.HexBytes   `json:"claim_script"`
+	Password        string               `json:"password"`
+	RawTx           string               `json:"raw_transaction"`
+	BlockHeader     string               `json:"block_header"`
+	TxHashes        []chainjson.HexBytes `json:"tx_hashes"`
+	StatusHashes    []chainjson.HexBytes `json:"status_hashes"`
+	Flags           []uint32             `json:"flags"`
+	MatchedTxIDs    []chainjson.HexBytes `json:"matched_tx_ids"`
+	ClaimScript     chainjson.HexBytes   `json:"claim_script"`
+	AssetDefinition chainjson.HexBytes   `json:"asset_definition"`
 }
 
 type ClaimTx interface {
