@@ -4,16 +4,16 @@ import (
 	"github.com/vapor/protocol/bc"
 )
 
-
 // ClaimInput satisfies the TypedInput interface and represents a spend transaction.
 type ClaimInput struct {
 	SpendCommitmentSuffix []byte   // The unconsumed suffix of the output commitment
 	Arguments             [][]byte // Witness
+	AssetDefinition       []byte
 	SpendCommitment
 }
 
 // NewClaimInput create a new SpendInput struct.
-func NewClaimInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amount, sourcePos uint64, controlProgram []byte) *TxInput {
+func NewClaimInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amount, sourcePos uint64, controlProgram []byte, assetDefinition []byte) *TxInput {
 
 	sc := SpendCommitment{
 		AssetAmount: bc.AssetAmount{
@@ -31,6 +31,7 @@ func NewClaimInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amo
 		TypedInput: &ClaimInput{
 			SpendCommitment: sc,
 			Arguments:       arguments,
+			AssetDefinition: assetDefinition,
 		},
 	}
 }

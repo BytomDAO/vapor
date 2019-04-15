@@ -223,6 +223,9 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 				return err
 			}
 		case *ClaimInput:
+			if inp.AssetDefinition, err = blockchain.ReadVarstr31(r); err != nil {
+				return err
+			}
 			if inp.Arguments, err = blockchain.ReadVarstrList(r); err != nil {
 				return err
 			}
@@ -312,6 +315,9 @@ func (t *TxInput) writeInputWitness(w io.Writer) error {
 		_, err := blockchain.WriteVarstrList(w, inp.Arguments)
 		return err
 	case *ClaimInput:
+		if _, err := blockchain.WriteVarstr31(w, inp.AssetDefinition); err != nil {
+			return err
+		}
 		_, err := blockchain.WriteVarstrList(w, inp.Arguments)
 
 		return err

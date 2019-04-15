@@ -143,8 +143,23 @@ def claim_tx():
     else:
         return json_contents(jsonify(code=-1, msg="get raw transaction fail"))
 
+
+    # 主链获取资产描述
+    assetDefinition = ""
+    body_json = {"id": request.json['asset_id'].encode('utf-8')}
+    response = connMain.request("/get-asset",body_json)
+    resp_json = json.loads(response.text)
+    if resp_json['status'] == 'success':
+        assetDefinition = resp_json['data']['raw_definition_byte'].encode('utf-8')
+        print assetDefinition
+    elif resp_json['status'] == 'fail':
+        print resp_json
+        return json_contents(jsonify(code=-1, msg="get-asset:" + resp_json['error_detail']))
+    else:
+        return json_contents(jsonify(code=-1, msg="get asset fail"))
+
     # 调用claimtx
-    body_json = '{"password": "%s","raw_transaction": "%s","claim_script":"%s",%s}' % (password,raw_transaction,claim_script,proof)
+    body_json = '{"password": "%s","raw_transaction": "%s","claim_script":"%s","asset_definition":"%s",%s}' % (password,raw_transaction,claim_script,assetDefinition,proof)
     print body_json
     response = connSide.request("/claim-pegin-transaction",json.loads(body_json))
     resp_json = json.loads(response.text)
