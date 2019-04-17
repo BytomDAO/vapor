@@ -6,12 +6,11 @@ import (
 	"os"
 	"testing"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/vapor/account"
 	"github.com/vapor/blockchain/pseudohsm"
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/crypto/ed25519/chainkd"
+	dbm "github.com/vapor/database/db"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/validation"
 	"github.com/vapor/test"

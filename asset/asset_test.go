@@ -9,13 +9,12 @@ import (
 	"strings"
 	"testing"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/vapor/common"
 	"github.com/vapor/config"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/database/leveldb"
+	"github.com/vapor/database"
+	dbm "github.com/vapor/database/db"
 	"github.com/vapor/protocol"
 	"github.com/vapor/testutil"
 )
@@ -153,7 +152,7 @@ func TestListAssets(t *testing.T) {
 }
 
 func mockChain(testDB dbm.DB) (*protocol.Chain, error) {
-	store := leveldb.NewStore(testDB)
+	store := database.NewStore(testDB)
 	txPool := protocol.NewTxPool(store)
 	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {

@@ -6,9 +6,8 @@ import (
 	"os"
 	"testing"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/vapor/consensus"
+	dbm "github.com/vapor/database/db"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/vm"
 )

@@ -10,8 +10,9 @@ import (
 	crypto "github.com/tendermint/go-crypto"
 	"github.com/tendermint/iavl"
 	cmn "github.com/tendermint/tmlibs/common"
-	dbm "github.com/tendermint/tmlibs/db"
 	"github.com/tendermint/tmlibs/log"
+
+	dbm "github.com/vapor/database/db"
 )
 
 const (

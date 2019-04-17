@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	dbm "github.com/tendermint/tmlibs/db"
 	"github.com/vapor/account"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/pseudohsm"
@@ -16,7 +15,8 @@ import (
 	"github.com/vapor/config"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/database/leveldb"
+	"github.com/vapor/database"
+	dbm "github.com/vapor/database/db"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -49,7 +49,7 @@ func TestWalletUpdate(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 
-	store := leveldb.NewStore(testDB)
+	store := database.NewStore(testDB)
 	txPool := protocol.NewTxPool(store)
 
 	chain, err := protocol.NewChain(store, txPool)

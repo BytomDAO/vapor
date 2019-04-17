@@ -10,10 +10,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
-	dbm "github.com/tendermint/tmlibs/db"
 
 	cfg "github.com/vapor/config"
 	"github.com/vapor/consensus"
+	dbm "github.com/vapor/database/db"
 	"github.com/vapor/errors"
 	"github.com/vapor/p2p/connection"
 	"github.com/vapor/p2p/discover"

@@ -1,9 +1,8 @@
-package leveldb
+package database
 
 import (
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/golang/protobuf/proto"
+	dbm "github.com/vapor/database/db"
 	"github.com/vapor/database/storage"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"

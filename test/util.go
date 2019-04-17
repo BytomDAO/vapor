@@ -4,8 +4,7 @@ import (
 	"context"
 	"time"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
+	"github.com/bytom/database"
 	"github.com/vapor/account"
 	"github.com/vapor/blockchain/pseudohsm"
 	"github.com/vapor/blockchain/txbuilder"
@@ -13,7 +12,7 @@ import (
 	"github.com/vapor/config"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/database/leveldb"
+	dbm "github.com/vapor/database/db"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -26,7 +25,7 @@ const (
 )
 
 // MockChain mock chain with genesis block
-func MockChain(testDB dbm.DB) (*protocol.Chain, *leveldb.Store, *protocol.TxPool, error) {
+func MockChain(testDB dbm.DB) (*protocol.Chain, *database.Store, *protocol.TxPool, error) {
 	config.CommonConfig = config.DefaultConfig()
 	consensus.SoloNetParams.Signer = "78673764e0ba91a4c5ba9ec0c8c23c69e3d73bf27970e05e0a977e81e13bde475264d3b177a96646bc0ce517ae7fd63504c183ab6d330dea184331a4cf5912d5"
 	config.CommonConfig.Consensus.SelfVoteSigners = append(config.CommonConfig.Consensus.SelfVoteSigners, "vsm1qkm743xmgnvh84pmjchq2s4tnfpgu9ae2f9slep")
@@ -39,7 +38,7 @@ func MockChain(testDB dbm.DB) (*protocol.Chain, *leveldb.Store, *protocol.TxPool
 		config.CommonConfig.Consensus.Signers = append(config.CommonConfig.Consensus.Signers, address)
 	}
 
-	store := leveldb.NewStore(testDB)
+	store := database.NewStore(testDB)
 	txPool := protocol.NewTxPool(store)
 
 	chain, err := protocol.NewChain(store, txPool)

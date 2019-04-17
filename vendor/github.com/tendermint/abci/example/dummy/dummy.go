@@ -7,7 +7,8 @@ import (
 	wire "github.com/tendermint/go-wire"
 	"github.com/tendermint/iavl"
 	cmn "github.com/tendermint/tmlibs/common"
-	dbm "github.com/tendermint/tmlibs/db"
+
+	dbm "github.com/vapor/database/db"
 )
 
 type DummyApplication struct {

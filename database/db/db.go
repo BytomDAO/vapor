@@ -29,6 +29,7 @@ type Iterator interface {
 
 	Key() []byte
 	Value() []byte
+	Seek([]byte) bool
 
 	Release()
 	Error() error
@@ -41,13 +42,14 @@ const (
 	CLevelDBBackendStr  = "cleveldb"
 	GoLevelDBBackendStr = "goleveldb"
 	MemDBBackendStr     = "memdb"
+	SqliteDBBackendStr  = "sqlitedb"
 )
 
 type dbCreator func(name string, dir string) (DB, error)
 
 var backends = map[string]dbCreator{}
 
-func registerDBCreator(backend string, creator dbCreator, force bool) {
+func RegisterDBCreator(backend string, creator dbCreator, force bool) {
 	_, ok := backends[backend]
 	if !force && ok {
 		return

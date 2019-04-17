@@ -10,9 +10,8 @@ import (
 	"strings"
 	"time"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/vapor/crypto/sha3pool"
+	dbm "github.com/vapor/database/db"
 	"github.com/vapor/errors"
 )
 

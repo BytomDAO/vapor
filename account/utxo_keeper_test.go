@@ -6,8 +6,7 @@ import (
 	"testing"
 	"time"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
+	dbm "github.com/vapor/database/db"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/testutil"
 )

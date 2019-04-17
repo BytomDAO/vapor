@@ -1,4 +1,4 @@
-package leveldb
+package database
 
 import (
 	"os"
@@ -7,10 +7,9 @@ import (
 	"github.com/vapor/common"
 	"github.com/vapor/config"
 	"github.com/vapor/consensus"
+	dbm "github.com/vapor/database/db"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
-
-	dbm "github.com/tendermint/tmlibs/db"
 )
 
 func TestLoadBlockIndex(t *testing.T) {

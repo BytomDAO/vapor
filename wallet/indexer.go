@@ -7,12 +7,12 @@ import (
 	"sort"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tendermint/tmlibs/db"
 
 	"github.com/vapor/account"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/query"
 	"github.com/vapor/crypto/sha3pool"
+	db "github.com/vapor/database/db"
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"

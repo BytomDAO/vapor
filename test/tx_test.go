@@ -10,12 +10,12 @@ import (
 	"testing"
 
 	log "github.com/sirupsen/logrus"
-	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/vapor/account"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/pseudohsm"
 	"github.com/vapor/consensus"
+	dbm "github.com/vapor/database/db"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/validation"

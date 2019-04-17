@@ -5,12 +5,11 @@ import (
 	"os"
 	"time"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
+	"github.com/bytom/database"
 	"github.com/golang/protobuf/proto"
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/consensus"
-	"github.com/vapor/database/leveldb"
+	dbm "github.com/vapor/database/db"
 	"github.com/vapor/database/storage"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
@@ -23,7 +22,7 @@ const utxoPrefix = "UT:"
 type chainTestContext struct {
 	Chain *protocol.Chain
 	DB    dbm.DB
-	Store *leveldb.Store
+	Store *database.Store
 }
 
 func (ctx *chainTestContext) validateStatus(block *types.Block) error {

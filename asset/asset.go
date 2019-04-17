@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/golang/groupcache/lru"
-	dbm "github.com/tendermint/tmlibs/db"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/vapor/blockchain/signers"
@@ -15,6 +14,7 @@ import (
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/crypto/ed25519/chainkd"
+	dbm "github.com/vapor/database/db"
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol"

@@ -1,4 +1,4 @@
-package db
+package leveldb
 
 import (
 	"fmt"
@@ -11,14 +11,16 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/util"
 
 	. "github.com/tendermint/tmlibs/common"
+
+	"github.com/vapor/database/db"
 )
 
 func init() {
-	dbCreator := func(name string, dir string) (DB, error) {
+	dbCreator := func(name string, dir string) (db.DB, error) {
 		return NewGoLevelDB(name, dir)
 	}
-	registerDBCreator(LevelDBBackendStr, dbCreator, false)
-	registerDBCreator(GoLevelDBBackendStr, dbCreator, false)
+	db.RegisterDBCreator(db.LevelDBBackendStr, dbCreator, false)
+	db.RegisterDBCreator(db.GoLevelDBBackendStr, dbCreator, false)
 }
 
 type GoLevelDB struct {
@@ -139,6 +141,10 @@ func (it *goLevelDBIterator) Value() []byte {
 	return v
 }
 
+func (it *goLevelDBIterator) Seek(point []byte) bool {
+	return it.source.Seek(point)
+}
+
 func (it *goLevelDBIterator) Error() error {
 	return it.source.Error()
 }
@@ -151,15 +157,15 @@ func (it *goLevelDBIterator) Release() {
 	it.source.Release()
 }
 
-func (db *GoLevelDB) Iterator() Iterator {
+func (db *GoLevelDB) Iterator() db.Iterator {
 	return &goLevelDBIterator{db.db.NewIterator(nil, nil)}
 }
 
-func (db *GoLevelDB) IteratorPrefix(prefix []byte) Iterator {
+func (db *GoLevelDB) IteratorPrefix(prefix []byte) db.Iterator {
 	return &goLevelDBIterator{db.db.NewIterator(util.BytesPrefix(prefix), nil)}
 }
 
-func (db *GoLevelDB) NewBatch() Batch {
+func (db *GoLevelDB) NewBatch() db.Batch {
 	batch := new(leveldb.Batch)
 	return &goLevelDBBatch{db, batch}
 }

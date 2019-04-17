@@ -1,4 +1,4 @@
-package leveldb
+package database
 
 import (
 	"encoding/binary"
@@ -8,8 +8,8 @@ import (
 	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/common"
-	dbm "github.com/tendermint/tmlibs/db"
 
+	dbm "github.com/vapor/database/db"
 	"github.com/vapor/database/storage"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol"

@@ -15,7 +15,6 @@ import (
 	"github.com/prometheus/prometheus/util/flock"
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
-	dbm "github.com/tendermint/tmlibs/db"
 	browser "github.com/toqueteos/webbrowser"
 
 	"github.com/vapor/accesstoken"
@@ -28,7 +27,8 @@ import (
 	cfg "github.com/vapor/config"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/database/leveldb"
+	"github.com/vapor/database"
+	dbm "github.com/vapor/database/db"
 	"github.com/vapor/env"
 	"github.com/vapor/mining/miner"
 	"github.com/vapor/net/websocket"
@@ -84,7 +84,7 @@ func NewNode(config *cfg.Config) *Node {
 		cmn.Exit(cmn.Fmt("Param db_backend [%v] is invalid, use leveldb or memdb", config.DBBackend))
 	}
 	coreDB := dbm.NewDB("core", config.DBBackend, config.DBDir())
-	store := leveldb.NewStore(coreDB)
+	store := database.NewStore(coreDB)
 
 	tokenDB := dbm.NewDB("accesstoken", config.DBBackend, config.DBDir())
 	accessTokens := accesstoken.NewStore(tokenDB)

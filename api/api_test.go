@@ -8,12 +8,11 @@ import (
 	"os"
 	"testing"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/vapor/accesstoken"
 	"github.com/vapor/blockchain/rpc"
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/consensus"
+	dbm "github.com/vapor/database/db"
 	"github.com/vapor/testutil"
 )
 
