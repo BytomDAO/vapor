@@ -1,6 +1,12 @@
 package sqlite
 
 import (
+	"path"
+
+	"github.com/go-xorm/xorm"
+	_ "github.com/mattn/go-sqlite3"
+	cmn "github.com/tendermint/tmlibs/common"
+
 	"github.com/vapor/database/db"
 )
 
@@ -12,26 +18,23 @@ func init() {
 }
 
 type SqliteDB struct {
+	engine *xorm.Engine
 }
 
 func NewSqliteDB(name string, dir string) (*SqliteDB, error) {
-
-	database := &SqliteDB{}
+	dbPath := path.Join(dir, name)
+	cmn.EnsureDir(dbPath, 0700)
+	dbFilePath := path.Join(dbPath, name+".db")
+	engine, err := xorm.NewEngine("sqlite3", dbFilePath)
+	if err != nil {
+		return nil, err
+	}
+	database := &SqliteDB{engine: engine}
 	return database, nil
 }
 
-//var _ db.DB = (*SqliteDB)(nil)
-
-// Close is a noop currently
-func (sd *SqliteDB) Close() {
-}
-
-func (sd *SqliteDB) Delete(key []byte) {
-
-}
-
-func (sd *SqliteDB) DeleteSync(key []byte) {
-
+func (sd *SqliteDB) Get(key []byte) []byte {
+	return nil
 }
 
 func (sd *SqliteDB) Set(key, value []byte) {
@@ -42,20 +45,16 @@ func (sd *SqliteDB) SetSync(key, value []byte) {
 
 }
 
-func (sd *SqliteDB) Get(key []byte) []byte {
-	return nil
+func (sd *SqliteDB) Delete(key []byte) {
+
 }
 
-func (sd *SqliteDB) Has(key []byte) bool {
-	return true
+func (sd *SqliteDB) DeleteSync(key []byte) {
+
 }
 
-func (sd *SqliteDB) ReverseIterator(start, end []byte) db.Iterator {
-	return nil
-}
-
-func (sd *SqliteDB) NewBatch() db.Batch {
-	return &batch{}
+func (sd *SqliteDB) Close() {
+	sd.engine.Clone()
 }
 
 func (sd *SqliteDB) Print() {
@@ -72,6 +71,10 @@ func (sd *SqliteDB) Iterator() db.Iterator {
 
 func (sd *SqliteDB) IteratorPrefix(prefix []byte) db.Iterator {
 	return nil
+}
+
+func (sd *SqliteDB) NewBatch() db.Batch {
+	return &batch{}
 }
 
 type reverseIterator struct {
