@@ -34,6 +34,7 @@ func NewSqliteDB(name string, dir string) (*SqliteDB, error) {
 }
 
 func (sd *SqliteDB) Get(key []byte) []byte {
+
 	return nil
 }
 
