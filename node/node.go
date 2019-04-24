@@ -29,6 +29,9 @@ import (
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/database"
 	dbm "github.com/vapor/database/db"
+	_ "github.com/vapor/database/leveldb"
+	"github.com/vapor/database/orm"
+	_ "github.com/vapor/database/sqlite"
 	"github.com/vapor/env"
 	"github.com/vapor/mining/miner"
 	"github.com/vapor/net/websocket"
@@ -83,14 +86,16 @@ func NewNode(config *cfg.Config) *Node {
 	if config.DBBackend != "memdb" && config.DBBackend != "leveldb" {
 		cmn.Exit(cmn.Fmt("Param db_backend [%v] is invalid, use leveldb or memdb", config.DBBackend))
 	}
-	coreDB := dbm.NewDB("core", config.DBBackend, config.DBDir())
-	store := database.NewStore(coreDB)
+
+	sqlDB := dbm.NewSqlDB("sql", "sqlitedb", config.DBDir())
+	initDatabaseTable(sqlDB)
+	sqlStore := database.NewSQLStore(sqlDB)
 
 	tokenDB := dbm.NewDB("accesstoken", config.DBBackend, config.DBDir())
 	accessTokens := accesstoken.NewStore(tokenDB)
 
-	txPool := protocol.NewTxPool(store)
-	chain, err := protocol.NewChain(store, txPool)
+	txPool := protocol.NewTxPool(sqlStore)
+	chain, err := protocol.NewChain(sqlStore, txPool)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 	}
@@ -394,4 +399,11 @@ func initDpos(chain *protocol.Chain, config *cfg.Config) {
 			cmn.Exit(cmn.Fmt("initVote failed: %v", err))
 		}
 	}
+}
+
+func initDatabaseTable(db dbm.SQLDB) {
+	db.Db().AutoMigrate(&orm.Block{})
+	db.Db().AutoMigrate(&orm.BlockStoreState{})
+	db.Db().AutoMigrate(&orm.ClaimTx{})
+	db.Db().AutoMigrate(&orm.UtxoViewpoint{})
 }

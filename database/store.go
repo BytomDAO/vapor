@@ -237,10 +237,11 @@ func (s *Store) IsWithdrawSpent(hash *bc.Hash) bool {
 	return false
 }
 
-func (s *Store) SetWithdrawSpent(hash *bc.Hash) {
+func (s *Store) SetWithdrawSpent(hash *bc.Hash) error {
 	batch := s.db.NewBatch()
 	batch.Set(calcClaimTxKey(hash), []byte("1"))
 	batch.Write()
+	return nil
 }
 
 func (s *Store) Set(hash *bc.Hash, data []byte) error {

@@ -102,7 +102,9 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		for key, value := range tx.Entries {
 			switch value.(type) {
 			case *bc.Claim:
-				c.store.SetWithdrawSpent(&key)
+				if err := c.store.SetWithdrawSpent(&key); err != nil {
+					return err
+				}
 			default:
 				continue
 			}
