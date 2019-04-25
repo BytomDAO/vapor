@@ -5,10 +5,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/bytom/database"
 	"github.com/golang/protobuf/proto"
+
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/consensus"
+	"github.com/vapor/database"
 	dbm "github.com/vapor/database/db"
 	"github.com/vapor/database/storage"
 	"github.com/vapor/protocol"

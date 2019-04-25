@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/bytom/database"
 	"github.com/vapor/account"
 	"github.com/vapor/blockchain/pseudohsm"
 	"github.com/vapor/blockchain/txbuilder"
@@ -12,6 +11,7 @@ import (
 	"github.com/vapor/config"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
+	"github.com/vapor/database"
 	dbm "github.com/vapor/database/db"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
