@@ -9,7 +9,6 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/syndtr/goleveldb/leveldb/util"
-
 	. "github.com/tendermint/tmlibs/common"
 
 	"github.com/vapor/database/db"

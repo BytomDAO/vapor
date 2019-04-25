@@ -15,6 +15,7 @@ import (
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/database"
 	dbm "github.com/vapor/database/db"
+	_ "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol"
 	"github.com/vapor/testutil"

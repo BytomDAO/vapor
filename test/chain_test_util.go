@@ -11,6 +11,7 @@ import (
 	"github.com/vapor/consensus"
 	"github.com/vapor/database"
 	dbm "github.com/vapor/database/db"
+	_ "github.com/vapor/database/leveldb"
 	"github.com/vapor/database/storage"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"

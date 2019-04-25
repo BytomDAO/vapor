@@ -11,6 +11,7 @@ import (
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	dbm "github.com/vapor/database/db"
+	_ "github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/validation"
 	"github.com/vapor/test"

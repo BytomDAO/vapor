@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	dbm "github.com/vapor/database/db"
+	_ "github.com/vapor/database/leveldb"
 	"github.com/vapor/database/storage"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/state"
