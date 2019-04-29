@@ -402,8 +402,10 @@ func initDpos(chain *protocol.Chain, config *cfg.Config) {
 }
 
 func initDatabaseTable(db dbm.SQLDB) {
-	db.Db().AutoMigrate(&orm.Block{})
+	db.Db().AutoMigrate(&orm.BlockHeader{})
+	db.Db().AutoMigrate(&orm.Transaction{})
+	db.Db().AutoMigrate(&orm.TxStatus{})
 	db.Db().AutoMigrate(&orm.BlockStoreState{})
-	db.Db().AutoMigrate(&orm.ClaimTx{})
-	db.Db().AutoMigrate(&orm.UtxoViewpoint{})
+	db.Db().AutoMigrate(&orm.ClaimTxState{})
+	db.Db().AutoMigrate(&orm.Utxo{})
 }

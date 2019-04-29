@@ -1,5 +1,7 @@
 package orm
 
+import "github.com/vapor/protocol/bc"
+
 type BlockStoreState struct {
 	StoreKey string `gorm:"primary_key"`
 	Height   uint64
@@ -7,8 +9,8 @@ type BlockStoreState struct {
 }
 
 type BlockHeader struct {
-	Height                 uint64 `gorm:"primary_key"`
-	BlockHash              string `gorm:"primary_key"`
+	Height                 uint64
+	BlockHash              string
 	Version                uint64
 	PreviousBlockHash      string
 	Timestamp              uint64
@@ -16,10 +18,22 @@ type BlockHeader struct {
 	TransactionStatusHash  string
 }
 
-type Block struct {
-	BlockHash string
-	Height    uint64
-	Block     string
-	Header    string
-	TxStatus  string
+func stringToHash(str string) (*bc.Hash, error) {
+	hash := &bc.Hash{}
+	if err := hash.UnmarshalText([]byte(str)); err != nil {
+		return nil, err
+	}
+	return hash, nil
+}
+
+func (b *BlockHeader) PreBlockHash() (*bc.Hash, error) {
+	return stringToHash(b.PreviousBlockHash)
+}
+
+func (b *BlockHeader) MerkleRoot() (*bc.Hash, error) {
+	return stringToHash(b.TransactionsMerkleRoot)
+}
+
+func (b *BlockHeader) StatusHash() (*bc.Hash, error) {
+	return stringToHash(b.TransactionStatusHash)
 }

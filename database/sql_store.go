@@ -1,6 +1,7 @@
 package database
 
 import (
+	"encoding/hex"
 	"time"
 
 	"github.com/golang/protobuf/proto"
@@ -48,14 +49,67 @@ type SQLStore struct {
 
 // GetBlockFromSQLDB return the block by given hash
 func GetBlockFromSQLDB(db dbm.SQLDB, hash *bc.Hash) *types.Block {
-	ormBlock := orm.Block{BlockHash: hash.String()}
-	if err := db.Db().Where(&ormBlock).Find(&ormBlock).Error; err != nil {
+	blockHeader := &orm.BlockHeader{BlockHash: hash.String()}
+	if err := db.Db().Where(blockHeader).Find(blockHeader).Error; err != nil {
 		return nil
 	}
 
-	block := &types.Block{}
-	block.UnmarshalText([]byte(ormBlock.Block))
+	txs := []*orm.Transaction{}
+	if err := db.Db().Where(&orm.Transaction{BlockHash: hash.String()}).Find(&txs).Error; err != nil {
+		return nil
+	}
+
+	block, err := toBlock(blockHeader, txs)
+	if err != nil {
+		return nil
+	}
+
 	return block
+}
+
+func toBlock(header *orm.BlockHeader, txs []*orm.Transaction) (*types.Block, error) {
+
+	previousBlockHash, err := header.PreBlockHash()
+	if err != nil {
+		return nil, err
+	}
+
+	transactionsMerkleRoot, err := header.MerkleRoot()
+	if err != nil {
+		return nil, err
+	}
+	transactionStatusHash, err := header.StatusHash()
+	if err != nil {
+		return nil, err
+	}
+
+	blockHeader := types.BlockHeader{
+		Version:           header.Version,
+		Height:            header.Height,
+		PreviousBlockHash: *previousBlockHash,
+		Timestamp:         header.Timestamp,
+		BlockCommitment: types.BlockCommitment{
+			TransactionsMerkleRoot: *transactionsMerkleRoot,
+			TransactionStatusHash:  *transactionStatusHash,
+		},
+	}
+
+	var transactions []*types.Tx
+
+	for _, tx := range txs {
+		transaction, err := tx.UnmarshalText()
+		if err != nil {
+			return nil, err
+		}
+		transactions = append(transactions, transaction)
+	}
+
+	block := &types.Block{
+		BlockHeader:  blockHeader,
+		Transactions: transactions,
+	}
+
+	return block, nil
 }
 
 // NewSQLStore creates and returns a new Store object.
@@ -92,15 +146,19 @@ func (s *SQLStore) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) 
 
 // GetTransactionStatus will return the utxo that related to the block hash
 func (s *SQLStore) GetTransactionStatus(hash *bc.Hash) (*bc.TransactionStatus, error) {
-	block := orm.Block{
+	txStatus := orm.TxStatus{
 		BlockHash: hash.String(),
 	}
-	if err := s.db.Db().Where(&block).Find(&block).Error; err != nil {
+	if err := s.db.Db().Where(&txStatus).Find(&txStatus).Error; err != nil {
 		return nil, err
 	}
 
+	b, err := hex.DecodeString(txStatus.TxStatus)
+	if err != nil {
+		return nil, err
+	}
 	ts := &bc.TransactionStatus{}
-	if err := proto.Unmarshal([]byte(block.TxStatus), ts); err != nil {
+	if err := proto.Unmarshal(b, ts); err != nil {
 		return nil, errors.Wrap(err, "unmarshaling transaction status")
 	}
 	return ts, nil
@@ -114,46 +172,62 @@ func (s *SQLStore) GetStoreStatus() *protocol.BlockStoreState {
 func (s *SQLStore) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error) {
 	startTime := time.Now()
 	blockIndex := state.NewBlockIndex()
-	start := uint64(0)
-	limit := uint64(10000)
+
 	var lastNode *state.BlockNode
-loop:
-	for {
-		blocks := []orm.Block{}
-		if err := s.db.Db().Offset(start).Limit(limit).Select("header").Find(&blocks).Error; err != nil {
+	rows, err := s.db.Db().Model(&orm.BlockHeader{}).Rows()
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		header := orm.BlockHeader{}
+		if err := rows.Scan(&header.Height, &header.BlockHash, &header.Version, &header.PreviousBlockHash, &header.Timestamp, &header.TransactionsMerkleRoot, &header.TransactionStatusHash); err != nil {
+			return nil, err
+		}
+		if header.Height > stateBestHeight {
+			break
+		}
+
+		previousBlockHash, err := header.PreBlockHash()
+		if err != nil {
 			return nil, err
 		}
 
-		if len(blocks) == 0 {
-			break loop
+		var parent *state.BlockNode
+		if lastNode == nil || lastNode.Hash == *previousBlockHash {
+			parent = lastNode
+		} else {
+			parent = blockIndex.GetNode(previousBlockHash)
 		}
-		start += limit
 
-		for _, block := range blocks {
-			bh := &types.BlockHeader{}
-			if err := bh.UnmarshalText([]byte(block.Header)); err != nil {
-				return nil, err
-			}
-
-			if bh.Height > stateBestHeight {
-				break loop
-			}
-
-			var parent *state.BlockNode
-			if lastNode == nil || lastNode.Hash == bh.PreviousBlockHash {
-				parent = lastNode
-			} else {
-				parent = blockIndex.GetNode(&bh.PreviousBlockHash)
-			}
-
-			node, err := state.NewBlockNode(bh, parent)
-			if err != nil {
-				return nil, err
-			}
-
-			blockIndex.AddNode(node)
-			lastNode = node
+		transactionStatusHash, err := header.StatusHash()
+		if err != nil {
+			return nil, err
 		}
+
+		transactionsMerkleRoot, err := header.MerkleRoot()
+		if err != nil {
+			return nil, err
+		}
+
+		bh := &types.BlockHeader{
+			Version:           header.Version,
+			Height:            header.Height,
+			PreviousBlockHash: *previousBlockHash,
+			Timestamp:         header.Timestamp,
+			BlockCommitment: types.BlockCommitment{
+				TransactionStatusHash:  *transactionStatusHash,
+				TransactionsMerkleRoot: *transactionsMerkleRoot,
+			},
+		}
+
+		node, err := state.NewBlockNode(bh, parent)
+		if err != nil {
+			return nil, err
+		}
+
+		blockIndex.AddNode(node)
+		lastNode = node
 
 	}
 
@@ -168,15 +242,6 @@ loop:
 // SaveBlock persists a new block in the protocol.
 func (s *SQLStore) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 	startTime := time.Now()
-	binaryBlock, err := block.MarshalText()
-	if err != nil {
-		return errors.Wrap(err, "Marshal block meta")
-	}
-
-	binaryBlockHeader, err := block.BlockHeader.MarshalText()
-	if err != nil {
-		return errors.Wrap(err, "Marshal block header")
-	}
 
 	binaryTxStatus, err := proto.Marshal(ts)
 	if err != nil {
@@ -185,18 +250,33 @@ func (s *SQLStore) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error
 
 	blockHash := block.Hash()
 	SQLDB := s.db.Db()
-	b, err := blockHash.MarshalText()
-	if err != nil {
+
+	// Save block header details
+	blockHeader := &orm.BlockHeader{
+		Height:                 block.Height,
+		BlockHash:              blockHash.String(),
+		Version:                block.Version,
+		PreviousBlockHash:      block.PreviousBlockHash.String(),
+		Timestamp:              block.Timestamp,
+		TransactionsMerkleRoot: block.TransactionsMerkleRoot.String(),
+		TransactionStatusHash:  block.TransactionStatusHash.String(),
+	}
+
+	if err := SQLDB.Save(blockHeader).Error; err != nil {
 		return err
 	}
-	blockInsert := &orm.Block{
-		BlockHash: string(b),
-		Height:    block.Height,
-		Block:     string(binaryBlock),
-		Header:    string(binaryBlockHeader),
-		TxStatus:  string(binaryTxStatus),
+
+	txStatus := &orm.TxStatus{
+		BlockHash: blockHash.String(),
+		TxStatus:  hex.EncodeToString(binaryTxStatus),
 	}
-	if err := SQLDB.Save(blockInsert).Error; err != nil {
+
+	if err := SQLDB.Save(txStatus).Error; err != nil {
+		return err
+	}
+
+	// Save tx
+	if err := s.saveTranasaction(block.Transactions, ts, block.Hash(), block.Height, block.Timestamp); err != nil {
 		return err
 	}
 
@@ -223,27 +303,30 @@ func (s *SQLStore) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpo
 	return s.db.Db().Save(state).Error
 }
 
-/*
-func (s *SQLStore) IsWithdrawSpent(hash *bc.Hash) (bool, error) {
-	data := &orm.ClaimTx{
-		TxHash: hash.String(),
-	}
-	count := 0
-	if err := s.db.Db().Where(data).First(data).Count(&count).Error; err != nil {
-		return false, err
-	}
-	if count == 1 {
-		return true, nil
-	} else if count == 0 {
-		return false, nil
+func (s *SQLStore) saveTranasaction(transactions []*types.Tx, ts *bc.TransactionStatus, blockHash bc.Hash, height, blockTimestamp uint64) error {
+	for index, tx := range transactions {
+		rawTx, err := tx.MarshalText()
+		if err != nil {
+			return err
+		}
+		ormTransaction := &orm.Transaction{
+			BlockHash:      blockHash.String(),
+			BlockHeight:    height,
+			BlockTimestamp: blockTimestamp,
+			TxIndex:        uint64(index),
+			RawData:        string(rawTx),
+			StatusFail:     ts.VerifyStatus[index].StatusFail,
+		}
+		if err := s.db.Db().Save(ormTransaction).Error; err != nil {
+			return err
+		}
 	}
 
-	return false, errors.New("Transactions of claim have duplicate records")
+	return nil
 }
-*/
 
 func (s *SQLStore) IsWithdrawSpent(hash *bc.Hash) bool {
-	data := &orm.ClaimTx{
+	data := &orm.ClaimTxState{
 		TxHash: hash.String(),
 	}
 	count := 0
@@ -260,7 +343,7 @@ func (s *SQLStore) IsWithdrawSpent(hash *bc.Hash) bool {
 }
 
 func (s *SQLStore) SetWithdrawSpent(hash *bc.Hash) error {
-	data := &orm.ClaimTx{
+	data := &orm.ClaimTxState{
 		TxHash: hash.String(),
 	}
 	if err := s.db.Db().Save(data).Error; err != nil {

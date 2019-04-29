@@ -1,5 +1,5 @@
 package orm
 
-type ClaimTx struct {
+type ClaimTxState struct {
 	TxHash string
 }
