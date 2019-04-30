@@ -50,6 +50,7 @@ const (
 type Node struct {
 	cmn.BaseService
 
+	db dbm.SQLDB
 	// config
 	config *cfg.Config
 
@@ -162,6 +163,7 @@ func NewNode(config *cfg.Config) *Node {
 		}()
 	}
 	node := &Node{
+		db:           sqlDB,
 		config:       config,
 		syncManager:  syncManager,
 		accessTokens: accessTokens,
@@ -312,6 +314,8 @@ func (n *Node) OnStop() {
 	if !n.config.VaultMode {
 		n.syncManager.Stop()
 	}
+
+	n.db.Db().Close()
 }
 
 func (n *Node) RunForever() {
@@ -402,10 +406,5 @@ func initDpos(chain *protocol.Chain, config *cfg.Config) {
 }
 
 func initDatabaseTable(db dbm.SQLDB) {
-	db.Db().AutoMigrate(&orm.BlockHeader{})
-	db.Db().AutoMigrate(&orm.Transaction{})
-	db.Db().AutoMigrate(&orm.TxStatus{})
-	db.Db().AutoMigrate(&orm.BlockStoreState{})
-	db.Db().AutoMigrate(&orm.ClaimTxState{})
-	db.Db().AutoMigrate(&orm.Utxo{})
+	db.Db().AutoMigrate(&orm.BlockHeader{}, &orm.Transaction{}, &orm.BlockStoreState{}, &orm.ClaimTxState{}, &orm.Utxo{})
 }

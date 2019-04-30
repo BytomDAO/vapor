@@ -1,10 +1,8 @@
 package database
 
 import (
-	"encoding/hex"
 	"time"
 
-	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/common"
 
@@ -69,29 +67,9 @@ func GetBlockFromSQLDB(db dbm.SQLDB, hash *bc.Hash) *types.Block {
 
 func toBlock(header *orm.BlockHeader, txs []*orm.Transaction) (*types.Block, error) {
 
-	previousBlockHash, err := header.PreBlockHash()
+	blockHeader, err := header.BcBlockHeader()
 	if err != nil {
 		return nil, err
-	}
-
-	transactionsMerkleRoot, err := header.MerkleRoot()
-	if err != nil {
-		return nil, err
-	}
-	transactionStatusHash, err := header.StatusHash()
-	if err != nil {
-		return nil, err
-	}
-
-	blockHeader := types.BlockHeader{
-		Version:           header.Version,
-		Height:            header.Height,
-		PreviousBlockHash: *previousBlockHash,
-		Timestamp:         header.Timestamp,
-		BlockCommitment: types.BlockCommitment{
-			TransactionsMerkleRoot: *transactionsMerkleRoot,
-			TransactionStatusHash:  *transactionStatusHash,
-		},
 	}
 
 	var transactions []*types.Tx
@@ -105,7 +83,7 @@ func toBlock(header *orm.BlockHeader, txs []*orm.Transaction) (*types.Block, err
 	}
 
 	block := &types.Block{
-		BlockHeader:  blockHeader,
+		BlockHeader:  *blockHeader,
 		Transactions: transactions,
 	}
 
@@ -146,21 +124,20 @@ func (s *SQLStore) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) 
 
 // GetTransactionStatus will return the utxo that related to the block hash
 func (s *SQLStore) GetTransactionStatus(hash *bc.Hash) (*bc.TransactionStatus, error) {
-	txStatus := orm.TxStatus{
-		BlockHash: hash.String(),
-	}
-	if err := s.db.Db().Where(&txStatus).Find(&txStatus).Error; err != nil {
-		return nil, err
+	ts := &bc.TransactionStatus{}
+
+	txs := []*orm.Transaction{}
+	if err := s.db.Db().Where(&orm.Transaction{BlockHash: hash.String()}).Select("version,tx_index,status_fail").Find(&txs).Error; err != nil {
+		return nil, nil
 	}
 
-	b, err := hex.DecodeString(txStatus.TxStatus)
-	if err != nil {
-		return nil, err
+	ts.VerifyStatus = make([]*bc.TxVerifyResult, len(txs))
+
+	for _, tx := range txs {
+		ts.Version = tx.Version
+		ts.VerifyStatus[tx.TxIndex] = &bc.TxVerifyResult{tx.StatusFail}
 	}
-	ts := &bc.TransactionStatus{}
-	if err := proto.Unmarshal(b, ts); err != nil {
-		return nil, errors.Wrap(err, "unmarshaling transaction status")
-	}
+
 	return ts, nil
 }
 
@@ -174,14 +151,15 @@ func (s *SQLStore) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, er
 	blockIndex := state.NewBlockIndex()
 
 	var lastNode *state.BlockNode
-	rows, err := s.db.Db().Model(&orm.BlockHeader{}).Rows()
+	rows, err := s.db.Db().Model(&orm.BlockHeader{}).Order("height").Rows()
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		header := orm.BlockHeader{}
-		if err := rows.Scan(&header.Height, &header.BlockHash, &header.Version, &header.PreviousBlockHash, &header.Timestamp, &header.TransactionsMerkleRoot, &header.TransactionStatusHash); err != nil {
+		if err := rows.Scan(&header.ID, &header.BlockHash, &header.Height, &header.Version, &header.PreviousBlockHash, &header.Timestamp, &header.TransactionsMerkleRoot, &header.TransactionStatusHash); err != nil {
 			return nil, err
 		}
 		if header.Height > stateBestHeight {
@@ -200,25 +178,9 @@ func (s *SQLStore) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, er
 			parent = blockIndex.GetNode(previousBlockHash)
 		}
 
-		transactionStatusHash, err := header.StatusHash()
+		bh, err := header.BcBlockHeader()
 		if err != nil {
 			return nil, err
-		}
-
-		transactionsMerkleRoot, err := header.MerkleRoot()
-		if err != nil {
-			return nil, err
-		}
-
-		bh := &types.BlockHeader{
-			Version:           header.Version,
-			Height:            header.Height,
-			PreviousBlockHash: *previousBlockHash,
-			Timestamp:         header.Timestamp,
-			BlockCommitment: types.BlockCommitment{
-				TransactionStatusHash:  *transactionStatusHash,
-				TransactionsMerkleRoot: *transactionsMerkleRoot,
-			},
 		}
 
 		node, err := state.NewBlockNode(bh, parent)
@@ -228,7 +190,6 @@ func (s *SQLStore) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, er
 
 		blockIndex.AddNode(node)
 		lastNode = node
-
 	}
 
 	log.WithFields(log.Fields{
@@ -243,14 +204,9 @@ func (s *SQLStore) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, er
 func (s *SQLStore) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 	startTime := time.Now()
 
-	binaryTxStatus, err := proto.Marshal(ts)
-	if err != nil {
-		return errors.Wrap(err, "marshal block transaction status")
-	}
-
 	blockHash := block.Hash()
 	SQLDB := s.db.Db()
-
+	tx := SQLDB.Begin()
 	// Save block header details
 	blockHeader := &orm.BlockHeader{
 		Height:                 block.Height,
@@ -262,22 +218,35 @@ func (s *SQLStore) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error
 		TransactionStatusHash:  block.TransactionStatusHash.String(),
 	}
 
-	if err := SQLDB.Save(blockHeader).Error; err != nil {
-		return err
-	}
-
-	txStatus := &orm.TxStatus{
-		BlockHash: blockHash.String(),
-		TxStatus:  hex.EncodeToString(binaryTxStatus),
-	}
-
-	if err := SQLDB.Save(txStatus).Error; err != nil {
+	if err := tx.Create(blockHeader).Error; err != nil {
+		tx.Rollback()
 		return err
 	}
 
 	// Save tx
-	if err := s.saveTranasaction(block.Transactions, ts, block.Hash(), block.Height, block.Timestamp); err != nil {
-		return err
+	for index, transaction := range block.Transactions {
+		rawTx, err := transaction.MarshalText()
+		if err != nil {
+			return err
+		}
+		ormTransaction := &orm.Transaction{
+			BlockHeaderID:  blockHeader.ID,
+			BlockHash:      blockHash.String(),
+			BlockHeight:    block.Height,
+			Version:        block.Version,
+			BlockTimestamp: block.Timestamp,
+			TxIndex:        uint64(index),
+			RawData:        string(rawTx),
+			StatusFail:     ts.VerifyStatus[index].StatusFail,
+		}
+		if err := tx.Create(ormTransaction).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return errors.Wrap(err, "commit transaction")
 	}
 
 	log.WithFields(log.Fields{
@@ -301,28 +270,6 @@ func (s *SQLStore) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpo
 	}
 
 	return s.db.Db().Save(state).Error
-}
-
-func (s *SQLStore) saveTranasaction(transactions []*types.Tx, ts *bc.TransactionStatus, blockHash bc.Hash, height, blockTimestamp uint64) error {
-	for index, tx := range transactions {
-		rawTx, err := tx.MarshalText()
-		if err != nil {
-			return err
-		}
-		ormTransaction := &orm.Transaction{
-			BlockHash:      blockHash.String(),
-			BlockHeight:    height,
-			BlockTimestamp: blockTimestamp,
-			TxIndex:        uint64(index),
-			RawData:        string(rawTx),
-			StatusFail:     ts.VerifyStatus[index].StatusFail,
-		}
-		if err := s.db.Db().Save(ormTransaction).Error; err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func (s *SQLStore) IsWithdrawSpent(hash *bc.Hash) bool {

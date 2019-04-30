@@ -3,8 +3,10 @@ package orm
 import "github.com/vapor/protocol/bc/types"
 
 type Transaction struct {
+	BlockHeaderID  uint
 	BlockHash      string
 	BlockHeight    uint64
+	Version        uint64
 	BlockTimestamp uint64
 	TxIndex        uint64
 	RawData        string
@@ -17,9 +19,4 @@ func (t *Transaction) UnmarshalText() (*types.Tx, error) {
 		return nil, err
 	}
 	return tx, nil
-}
-
-type TxStatus struct {
-	BlockHash string
-	TxStatus  string
 }
