@@ -53,7 +53,7 @@ func GetBlockFromSQLDB(db dbm.SQLDB, hash *bc.Hash) *types.Block {
 	}
 
 	txs := []*orm.Transaction{}
-	if err := db.Db().Where(&orm.Transaction{BlockHash: hash.String()}).Find(&txs).Error; err != nil {
+	if err := db.Db().Where(&orm.Transaction{BlockHeaderID: blockHeader.ID}).Order("tx_index desc").Find(&txs).Error; err != nil {
 		return nil
 	}
 
@@ -67,7 +67,7 @@ func GetBlockFromSQLDB(db dbm.SQLDB, hash *bc.Hash) *types.Block {
 
 func toBlock(header *orm.BlockHeader, txs []*orm.Transaction) (*types.Block, error) {
 
-	blockHeader, err := header.BcBlockHeader()
+	blockHeader, err := header.ToTypesBlockHeader()
 	if err != nil {
 		return nil, err
 	}
@@ -124,11 +124,17 @@ func (s *SQLStore) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) 
 
 // GetTransactionStatus will return the utxo that related to the block hash
 func (s *SQLStore) GetTransactionStatus(hash *bc.Hash) (*bc.TransactionStatus, error) {
+
+	blockHeader := &orm.BlockHeader{BlockHash: hash.String()}
+	if err := s.db.Db().Where(blockHeader).Select("id").Find(blockHeader).Error; err != nil {
+		return nil, err
+	}
+
 	ts := &bc.TransactionStatus{}
 
 	txs := []*orm.Transaction{}
-	if err := s.db.Db().Where(&orm.Transaction{BlockHash: hash.String()}).Select("version,tx_index,status_fail").Find(&txs).Error; err != nil {
-		return nil, nil
+	if err := s.db.Db().Where(&orm.Transaction{BlockHeaderID: blockHeader.ID}).Select("version,tx_index,status_fail").Order("tx_index desc").Find(&txs).Error; err != nil {
+		return nil, err
 	}
 
 	ts.VerifyStatus = make([]*bc.TxVerifyResult, len(txs))
@@ -166,19 +172,21 @@ func (s *SQLStore) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, er
 			break
 		}
 
-		previousBlockHash, err := header.PreBlockHash()
+		typesBlockHeader, err := header.ToTypesBlockHeader()
 		if err != nil {
 			return nil, err
 		}
 
+		previousBlockHash := typesBlockHeader.PreviousBlockHash
+
 		var parent *state.BlockNode
-		if lastNode == nil || lastNode.Hash == *previousBlockHash {
+		if lastNode == nil || lastNode.Hash == previousBlockHash {
 			parent = lastNode
 		} else {
-			parent = blockIndex.GetNode(previousBlockHash)
+			parent = blockIndex.GetNode(&previousBlockHash)
 		}
 
-		bh, err := header.BcBlockHeader()
+		bh, err := header.ToTypesBlockHeader()
 		if err != nil {
 			return nil, err
 		}
@@ -231,8 +239,6 @@ func (s *SQLStore) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error
 		}
 		ormTransaction := &orm.Transaction{
 			BlockHeaderID:  blockHeader.ID,
-			BlockHash:      blockHash.String(),
-			BlockHeight:    block.Height,
 			Version:        block.Version,
 			BlockTimestamp: block.Timestamp,
 			TxIndex:        uint64(index),
@@ -280,13 +286,8 @@ func (s *SQLStore) IsWithdrawSpent(hash *bc.Hash) bool {
 	if err := s.db.Db().Where(data).First(data).Count(&count).Error; err != nil {
 		return false
 	}
-	if count == 1 {
-		return true
-	} else if count == 0 {
-		return false
-	}
 
-	return true
+	return count > 0
 }
 
 func (s *SQLStore) SetWithdrawSpent(hash *bc.Hash) error {

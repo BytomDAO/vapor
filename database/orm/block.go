@@ -13,15 +13,13 @@ type BlockStoreState struct {
 
 type BlockHeader struct {
 	ID                     uint   `gorm:"AUTO_INCREMENT"`
-	BlockHash              string `gorm:"primary_key"`
-	Height                 uint64
+	BlockHash              string `sql:"index"`
+	Height                 uint64 `sql:"index"`
 	Version                uint64
 	PreviousBlockHash      string
 	Timestamp              uint64
 	TransactionsMerkleRoot string
 	TransactionStatusHash  string
-
-	tx *Transaction `gorm:"FOREIGNKEY:ID;AssociationForeignKey:BlockHeaderID"`
 }
 
 func stringToHash(str string) (*bc.Hash, error) {
@@ -32,29 +30,17 @@ func stringToHash(str string) (*bc.Hash, error) {
 	return hash, nil
 }
 
-func (bh *BlockHeader) PreBlockHash() (*bc.Hash, error) {
-	return stringToHash(bh.PreviousBlockHash)
-}
-
-func (bh *BlockHeader) MerkleRoot() (*bc.Hash, error) {
-	return stringToHash(bh.TransactionsMerkleRoot)
-}
-
-func (bh *BlockHeader) StatusHash() (*bc.Hash, error) {
-	return stringToHash(bh.TransactionStatusHash)
-}
-
-func (bh *BlockHeader) BcBlockHeader() (*types.BlockHeader, error) {
-	previousBlockHash, err := bh.PreBlockHash()
+func (bh *BlockHeader) ToTypesBlockHeader() (*types.BlockHeader, error) {
+	previousBlockHash, err := stringToHash(bh.PreviousBlockHash)
 	if err != nil {
 		return nil, err
 	}
 
-	transactionsMerkleRoot, err := bh.MerkleRoot()
+	transactionsMerkleRoot, err := stringToHash(bh.TransactionsMerkleRoot)
 	if err != nil {
 		return nil, err
 	}
-	transactionStatusHash, err := bh.StatusHash()
+	transactionStatusHash, err := stringToHash(bh.TransactionStatusHash)
 	if err != nil {
 		return nil, err
 	}

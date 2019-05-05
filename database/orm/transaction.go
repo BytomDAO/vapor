@@ -4,13 +4,13 @@ import "github.com/vapor/protocol/bc/types"
 
 type Transaction struct {
 	BlockHeaderID  uint
-	BlockHash      string
-	BlockHeight    uint64
 	Version        uint64
 	BlockTimestamp uint64
 	TxIndex        uint64
 	RawData        string
 	StatusFail     bool
+
+	BlockHeader *BlockHeader `gorm:"FOREIGNKEY:BlockHeaderID;AssociationForeignKey:ID"`
 }
 
 func (t *Transaction) UnmarshalText() (*types.Tx, error) {

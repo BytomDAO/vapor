@@ -2,6 +2,7 @@ package database
 
 import (
 	"github.com/golang/protobuf/proto"
+	"github.com/jinzhu/gorm"
 
 	dbm "github.com/vapor/database/db"
 	"github.com/vapor/database/orm"
@@ -78,6 +79,9 @@ func getTransactionsUtxoFromSQLDB(db dbm.SQLDB, view *state.UtxoViewpoint, txs [
 			}
 
 			if err := db.Db().Where(data).Find(data).Error; err != nil {
+				if err != gorm.ErrRecordNotFound {
+					return err
+				}
 				continue
 			}
 
@@ -111,7 +115,7 @@ func getUtxoFromSQLDB(db dbm.SQLDB, hash *bc.Hash) (*storage.UtxoEntry, error) {
 func saveUtxoViewToSQLDB(db dbm.SQLDB, view *state.UtxoViewpoint) error {
 	for key, entry := range view.Entries {
 		if entry.Spent && !entry.IsCoinBase && !entry.IsCliam {
-			if err := db.Db().Where("out_put_id = ?", key.String()).Delete(&orm.Utxo{}).Error; err != nil {
+			if err := db.Db().Where("output_id = ?", key.String()).Delete(&orm.Utxo{}).Error; err != nil {
 				return err
 			}
 			continue
