@@ -3,12 +3,10 @@ package orm
 import "github.com/vapor/protocol/bc/types"
 
 type Transaction struct {
-	BlockHeaderID  uint
-	Version        uint64
-	BlockTimestamp uint64
-	TxIndex        uint64
-	RawData        string
-	StatusFail     bool
+	BlockHeaderID uint
+	TxIndex       uint64
+	RawData       string
+	StatusFail    bool
 
 	BlockHeader *BlockHeader `gorm:"FOREIGNKEY:BlockHeaderID;AssociationForeignKey:ID"`
 }

@@ -58,8 +58,7 @@ type dbCreator func(name string, dir string) (DB, error)
 var backends = map[string]dbCreator{}
 
 func RegisterDBCreator(backend string, creator dbCreator, force bool) {
-	_, ok := backends[backend]
-	if !force && ok {
+	if _, ok := backends[backend]; !force && ok {
 		return
 	}
 	backends[backend] = creator

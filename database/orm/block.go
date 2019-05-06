@@ -13,7 +13,7 @@ type BlockStoreState struct {
 
 type BlockHeader struct {
 	ID                     uint   `gorm:"AUTO_INCREMENT"`
-	BlockHash              string `sql:"index"`
+	BlockHash              string `gorm:"primary_key"`
 	Height                 uint64 `sql:"index"`
 	Version                uint64
 	PreviousBlockHash      string

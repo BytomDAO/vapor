@@ -112,10 +112,10 @@ func getUtxoFromSQLDB(db dbm.SQLDB, hash *bc.Hash) (*storage.UtxoEntry, error) {
 	}, nil
 }
 
-func saveUtxoViewToSQLDB(db dbm.SQLDB, view *state.UtxoViewpoint) error {
+func saveUtxoViewToSQLDB(tx *gorm.DB, view *state.UtxoViewpoint) error {
 	for key, entry := range view.Entries {
 		if entry.Spent && !entry.IsCoinBase && !entry.IsCliam {
-			if err := db.Db().Where("output_id = ?", key.String()).Delete(&orm.Utxo{}).Error; err != nil {
+			if err := tx.Where("output_id = ?", key.String()).Delete(&orm.Utxo{}).Error; err != nil {
 				return err
 			}
 			continue
@@ -126,7 +126,18 @@ func saveUtxoViewToSQLDB(db dbm.SQLDB, view *state.UtxoViewpoint) error {
 			BlockHeight: entry.BlockHeight,
 			Spent:       entry.Spent,
 		}
-		if err := db.Db().Save(utxoViewpoint).Error; err != nil {
+
+		if entry.IsCoinBase {
+			count := 0
+			if err := tx.Model(&orm.Utxo{}).Where(utxoViewpoint).Update("spent", entry.Spent).Count(&count).Error; err != nil {
+				return err
+			}
+			if count != 0 {
+				continue
+			}
+		}
+
+		if err := tx.Create(utxoViewpoint).Error; err != nil {
 			return err
 		}
 	}

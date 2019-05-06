@@ -24,7 +24,6 @@ func loadBlockSQLStoreStateJSON(db dbm.SQLDB) *protocol.BlockStoreState {
 	}
 
 	SQLDB := db.Db()
-	//if err := SQLDB.Where("store_key = ?", string(blockStoreKey)).First(&bsj).Error; err != nil {
 	if err := SQLDB.Where(&bsj).First(&bsj).Error; err != nil {
 		return nil
 	}
@@ -53,7 +52,7 @@ func GetBlockFromSQLDB(db dbm.SQLDB, hash *bc.Hash) *types.Block {
 	}
 
 	txs := []*orm.Transaction{}
-	if err := db.Db().Where(&orm.Transaction{BlockHeaderID: blockHeader.ID}).Order("tx_index desc").Find(&txs).Error; err != nil {
+	if err := db.Db().Where(&orm.Transaction{BlockHeaderID: blockHeader.ID}).Order("tx_index asc").Find(&txs).Error; err != nil {
 		return nil
 	}
 
@@ -124,26 +123,26 @@ func (s *SQLStore) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) 
 
 // GetTransactionStatus will return the utxo that related to the block hash
 func (s *SQLStore) GetTransactionStatus(hash *bc.Hash) (*bc.TransactionStatus, error) {
-
-	blockHeader := &orm.BlockHeader{BlockHash: hash.String()}
-	if err := s.db.Db().Where(blockHeader).Select("id").Find(blockHeader).Error; err != nil {
-		return nil, err
-	}
-
 	ts := &bc.TransactionStatus{}
-
-	txs := []*orm.Transaction{}
-	if err := s.db.Db().Where(&orm.Transaction{BlockHeaderID: blockHeader.ID}).Select("version,tx_index,status_fail").Order("tx_index desc").Find(&txs).Error; err != nil {
+	query := s.db.Db().Model(&orm.Transaction{}).Joins("join block_headers on block_headers.id = transactions.block_header_id").Where("block_headers.block_hash = ?", hash.String())
+	rows, err := query.Select("transactions.status_fail, block_headers.version").Order("transactions.tx_index asc").Rows()
+	if err != nil {
 		return nil, err
 	}
 
-	ts.VerifyStatus = make([]*bc.TxVerifyResult, len(txs))
+	for rows.Next() {
+		var (
+			statusFail bool
+			version    uint64
+		)
+		if err := rows.Scan(&statusFail, &version); err != nil {
+			return nil, err
+		}
 
-	for _, tx := range txs {
-		ts.Version = tx.Version
-		ts.VerifyStatus[tx.TxIndex] = &bc.TxVerifyResult{tx.StatusFail}
+		ts.Version = version
+		ts.VerifyStatus = append(ts.VerifyStatus, &bc.TxVerifyResult{StatusFail: statusFail})
+
 	}
-
 	return ts, nil
 }
 
@@ -186,12 +185,7 @@ func (s *SQLStore) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, er
 			parent = blockIndex.GetNode(&previousBlockHash)
 		}
 
-		bh, err := header.ToTypesBlockHeader()
-		if err != nil {
-			return nil, err
-		}
-
-		node, err := state.NewBlockNode(bh, parent)
+		node, err := state.NewBlockNode(typesBlockHeader, parent)
 		if err != nil {
 			return nil, err
 		}
@@ -215,6 +209,7 @@ func (s *SQLStore) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error
 	blockHash := block.Hash()
 	SQLDB := s.db.Db()
 	tx := SQLDB.Begin()
+
 	// Save block header details
 	blockHeader := &orm.BlockHeader{
 		Height:                 block.Height,
@@ -238,12 +233,10 @@ func (s *SQLStore) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error
 			return err
 		}
 		ormTransaction := &orm.Transaction{
-			BlockHeaderID:  blockHeader.ID,
-			Version:        block.Version,
-			BlockTimestamp: block.Timestamp,
-			TxIndex:        uint64(index),
-			RawData:        string(rawTx),
-			StatusFail:     ts.VerifyStatus[index].StatusFail,
+			BlockHeaderID: blockHeader.ID,
+			TxIndex:       uint64(index),
+			RawData:       string(rawTx),
+			StatusFail:    ts.VerifyStatus[index].StatusFail,
 		}
 		if err := tx.Create(ormTransaction).Error; err != nil {
 			tx.Rollback()
@@ -252,6 +245,7 @@ func (s *SQLStore) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error
 	}
 
 	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
 		return errors.Wrap(err, "commit transaction")
 	}
 
@@ -266,16 +260,39 @@ func (s *SQLStore) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error
 
 // SaveChainStatus save the core's newest status && delete old status
 func (s *SQLStore) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint) error {
-	if err := saveUtxoViewToSQLDB(s.db, view); err != nil {
+	SQLDB := s.db.Db()
+	tx := SQLDB.Begin()
+
+	if err := saveUtxoViewToSQLDB(tx, view); err != nil {
+		tx.Rollback()
 		return err
 	}
+
 	state := &orm.BlockStoreState{
 		StoreKey: string(blockStoreKey),
 		Height:   node.Height,
 		Hash:     node.Hash.String(),
 	}
 
-	return s.db.Db().Save(state).Error
+	count := 0
+	if err := tx.Model(&orm.BlockStoreState{}).Update(state).Count(&count).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if count == 0 {
+		if err := tx.Save(state).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		return errors.Wrap(err, "commit transaction")
+	}
+
+	return nil
 }
 
 func (s *SQLStore) IsWithdrawSpent(hash *bc.Hash) bool {
@@ -294,7 +311,7 @@ func (s *SQLStore) SetWithdrawSpent(hash *bc.Hash) error {
 	data := &orm.ClaimTxState{
 		TxHash: hash.String(),
 	}
-	if err := s.db.Db().Save(data).Error; err != nil {
+	if err := s.db.Db().Create(data).Error; err != nil {
 		return err
 	}
 	return nil
