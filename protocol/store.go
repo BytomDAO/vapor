@@ -22,10 +22,10 @@ type Store interface {
 	SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint) error
 
 	IsWithdrawSpent(hash *bc.Hash) bool
-	SetWithdrawSpent(hash *bc.Hash)
+	SetWithdrawSpent(hash *bc.Hash) error
 
-	Set(hash *bc.Hash, data []byte) error
-	Get(hash *bc.Hash) ([]byte, error)
+	//Set(hash *bc.Hash, data []byte) error
+	//Get(hash *bc.Hash) ([]byte, error)
 }
 
 // BlockStoreState represents the core's db status

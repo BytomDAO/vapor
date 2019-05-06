@@ -7,15 +7,15 @@ import (
 	"strings"
 	"testing"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/vapor/blockchain/pseudohsm"
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/common"
 	"github.com/vapor/config"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/database/leveldb"
+	"github.com/vapor/database"
+	dbm "github.com/vapor/database/db"
+	_ "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol"
 	"github.com/vapor/testutil"
@@ -229,7 +229,7 @@ func mockAccountManager(t *testing.T) *Manager {
 	testDB := dbm.NewDB("testdb", "memdb", "temp")
 	defer os.RemoveAll("temp")
 
-	store := leveldb.NewStore(testDB)
+	store := database.NewStore(testDB)
 	txPool := protocol.NewTxPool(store)
 	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {

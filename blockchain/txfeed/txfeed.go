@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/vapor/blockchain/query"
+	dbm "github.com/vapor/database/db"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"

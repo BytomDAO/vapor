@@ -1,6 +1,14 @@
 package db
 
-import . "github.com/tendermint/tmlibs/common"
+import (
+	"github.com/jinzhu/gorm"
+	. "github.com/tendermint/tmlibs/common"
+)
+
+type SQLDB interface {
+	Name() string
+	Db() *gorm.DB
+}
 
 type DB interface {
 	Get([]byte) []byte
@@ -29,6 +37,7 @@ type Iterator interface {
 
 	Key() []byte
 	Value() []byte
+	Seek([]byte) bool
 
 	Release()
 	Error() error
@@ -41,15 +50,15 @@ const (
 	CLevelDBBackendStr  = "cleveldb"
 	GoLevelDBBackendStr = "goleveldb"
 	MemDBBackendStr     = "memdb"
+	SqliteDBBackendStr  = "sqlitedb"
 )
 
 type dbCreator func(name string, dir string) (DB, error)
 
 var backends = map[string]dbCreator{}
 
-func registerDBCreator(backend string, creator dbCreator, force bool) {
-	_, ok := backends[backend]
-	if !force && ok {
+func RegisterDBCreator(backend string, creator dbCreator, force bool) {
+	if _, ok := backends[backend]; !force && ok {
 		return
 	}
 	backends[backend] = creator
@@ -57,6 +66,26 @@ func registerDBCreator(backend string, creator dbCreator, force bool) {
 
 func NewDB(name string, backend string, dir string) DB {
 	db, err := backends[backend](name, dir)
+	if err != nil {
+		PanicSanity(Fmt("Error initializing DB: %v", err))
+	}
+	return db
+}
+
+type sqlDbCreator func(name string, dir string) (SQLDB, error)
+
+var sqlBackends = map[string]sqlDbCreator{}
+
+func RegisterSqlDBCreator(backend string, creator sqlDbCreator, force bool) {
+	_, ok := sqlBackends[backend]
+	if !force && ok {
+		return
+	}
+	sqlBackends[backend] = creator
+}
+
+func NewSqlDB(name string, backend string, dir string) SQLDB {
+	db, err := sqlBackends[backend](name, dir)
 	if err != nil {
 		PanicSanity(Fmt("Error initializing DB: %v", err))
 	}

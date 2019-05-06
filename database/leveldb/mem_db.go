@@ -1,14 +1,16 @@
-package db
+package leveldb
 
 import (
 	"fmt"
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/vapor/database/db"
 )
 
 func init() {
-	registerDBCreator(MemDBBackendStr, func(name string, dir string) (DB, error) {
+	db.RegisterDBCreator(db.MemDBBackendStr, func(name string, dir string) (db.DB, error) {
 		return NewMemDB(), nil
 	}, false)
 }
@@ -101,6 +103,16 @@ func (it *memDBIterator) Value() []byte {
 	return it.db.Get(it.Key())
 }
 
+func (it *memDBIterator) Seek(point []byte) bool {
+	for i, key := range it.keys {
+		if key >= string(point) {
+			it.last = i
+			return true
+		}
+	}
+	return false
+}
+
 func (it *memDBIterator) Release() {
 	it.db = nil
 	it.keys = nil
@@ -110,11 +122,11 @@ func (it *memDBIterator) Error() error {
 	return nil
 }
 
-func (db *MemDB) Iterator() Iterator {
+func (db *MemDB) Iterator() db.Iterator {
 	return db.IteratorPrefix([]byte{})
 }
 
-func (db *MemDB) IteratorPrefix(prefix []byte) Iterator {
+func (db *MemDB) IteratorPrefix(prefix []byte) db.Iterator {
 	it := newMemDBIterator()
 	it.db = db
 	it.last = -1
@@ -133,7 +145,7 @@ func (db *MemDB) IteratorPrefix(prefix []byte) Iterator {
 	return it
 }
 
-func (db *MemDB) NewBatch() Batch {
+func (db *MemDB) NewBatch() db.Batch {
 	return &memDBBatch{db, nil}
 }
 

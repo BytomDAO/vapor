@@ -1,4 +1,4 @@
-package leveldb
+package database
 
 import (
 	"encoding/binary"
@@ -8,8 +8,8 @@ import (
 	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/common"
-	dbm "github.com/tendermint/tmlibs/db"
 
+	dbm "github.com/vapor/database/db"
 	"github.com/vapor/database/storage"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol"
@@ -237,10 +237,11 @@ func (s *Store) IsWithdrawSpent(hash *bc.Hash) bool {
 	return false
 }
 
-func (s *Store) SetWithdrawSpent(hash *bc.Hash) {
+func (s *Store) SetWithdrawSpent(hash *bc.Hash) error {
 	batch := s.db.NewBatch()
 	batch.Set(calcClaimTxKey(hash), []byte("1"))
 	batch.Write()
+	return nil
 }
 
 func (s *Store) Set(hash *bc.Hash, data []byte) error {

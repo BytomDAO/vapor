@@ -9,8 +9,8 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	dbm "github.com/tendermint/tmlibs/db"
 
+	dbm "github.com/vapor/database/db"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 )

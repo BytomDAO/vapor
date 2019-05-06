@@ -3,8 +3,8 @@ package test
 import (
 	"fmt"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
+	dbm "github.com/vapor/database/db"
+	_ "github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc/types"
 )

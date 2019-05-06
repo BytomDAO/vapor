@@ -7,15 +7,15 @@ import (
 	"testing"
 	"time"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/vapor/account"
 	"github.com/vapor/blockchain/pseudohsm"
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/database/leveldb"
+	"github.com/vapor/database"
+	dbm "github.com/vapor/database/db"
+	_ "github.com/vapor/database/leveldb"
 	"github.com/vapor/database/storage"
 	"github.com/vapor/mining"
 	"github.com/vapor/protocol"
@@ -137,7 +137,7 @@ func GenerateChainData(dirPath string, testDB dbm.DB, txNumber, otherAssetNum in
 		return nil, nil, nil, err
 	}
 
-	store := leveldb.NewStore(testDB)
+	store := database.NewStore(testDB)
 	txPool := protocol.NewTxPool(store)
 	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
@@ -361,7 +361,7 @@ func CreateTxbyNum(txNumber, otherAssetNum int) ([]*types.Tx, error) {
 
 func SetUtxoView(db dbm.DB, view *state.UtxoViewpoint) error {
 	batch := db.NewBatch()
-	if err := leveldb.SaveUtxoView(batch, view); err != nil {
+	if err := database.SaveUtxoView(batch, view); err != nil {
 		return err
 	}
 	batch.Write()

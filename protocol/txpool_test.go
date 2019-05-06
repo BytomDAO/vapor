@@ -77,7 +77,7 @@ func (s *mockStore) LoadBlockIndex(uint64) (*state.BlockIndex, error)           
 func (s *mockStore) SaveBlock(*types.Block, *bc.TransactionStatus) error          { return nil }
 func (s *mockStore) SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint) error { return nil }
 func (s *mockStore) IsWithdrawSpent(hash *bc.Hash) bool                           { return true }
-func (s *mockStore) SetWithdrawSpent(hash *bc.Hash)                               {}
+func (s *mockStore) SetWithdrawSpent(hash *bc.Hash) error                         { return nil }
 func (s *mockStore) Set(hash *bc.Hash, data []byte) error                         { return nil }
 func (s *mockStore) Get(hash *bc.Hash) ([]byte, error)                            { return nil, nil }
 

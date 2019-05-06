@@ -11,7 +11,6 @@ import (
 
 	"github.com/golang/groupcache/lru"
 	log "github.com/sirupsen/logrus"
-	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/blockchain/txbuilder"
@@ -21,6 +20,7 @@ import (
 	"github.com/vapor/crypto"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/crypto/sha3pool"
+	dbm "github.com/vapor/database/db"
 	"github.com/vapor/equity/pegin_contract"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol"

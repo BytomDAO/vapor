@@ -7,8 +7,6 @@ import (
 	"path"
 	"reflect"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/vapor/account"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/pseudohsm"
@@ -17,6 +15,8 @@ import (
 	"github.com/vapor/config"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
+	dbm "github.com/vapor/database/db"
+	_ "github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc/types"
 	w "github.com/vapor/wallet"

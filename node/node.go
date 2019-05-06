@@ -15,7 +15,6 @@ import (
 	"github.com/prometheus/prometheus/util/flock"
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
-	dbm "github.com/tendermint/tmlibs/db"
 	browser "github.com/toqueteos/webbrowser"
 
 	"github.com/vapor/accesstoken"
@@ -28,7 +27,11 @@ import (
 	cfg "github.com/vapor/config"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/database/leveldb"
+	"github.com/vapor/database"
+	dbm "github.com/vapor/database/db"
+	_ "github.com/vapor/database/leveldb"
+	"github.com/vapor/database/orm"
+	_ "github.com/vapor/database/sqlite"
 	"github.com/vapor/env"
 	"github.com/vapor/mining/miner"
 	"github.com/vapor/net/websocket"
@@ -47,6 +50,7 @@ const (
 type Node struct {
 	cmn.BaseService
 
+	db dbm.SQLDB
 	// config
 	config *cfg.Config
 
@@ -83,14 +87,16 @@ func NewNode(config *cfg.Config) *Node {
 	if config.DBBackend != "memdb" && config.DBBackend != "leveldb" {
 		cmn.Exit(cmn.Fmt("Param db_backend [%v] is invalid, use leveldb or memdb", config.DBBackend))
 	}
-	coreDB := dbm.NewDB("core", config.DBBackend, config.DBDir())
-	store := leveldb.NewStore(coreDB)
+
+	sqlDB := dbm.NewSqlDB("sql", "sqlitedb", config.DBDir())
+	initDatabaseTable(sqlDB)
+	sqlStore := database.NewSQLStore(sqlDB)
 
 	tokenDB := dbm.NewDB("accesstoken", config.DBBackend, config.DBDir())
 	accessTokens := accesstoken.NewStore(tokenDB)
 
-	txPool := protocol.NewTxPool(store)
-	chain, err := protocol.NewChain(store, txPool)
+	txPool := protocol.NewTxPool(sqlStore)
+	chain, err := protocol.NewChain(sqlStore, txPool)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 	}
@@ -157,6 +163,7 @@ func NewNode(config *cfg.Config) *Node {
 		}()
 	}
 	node := &Node{
+		db:           sqlDB,
 		config:       config,
 		syncManager:  syncManager,
 		accessTokens: accessTokens,
@@ -307,6 +314,8 @@ func (n *Node) OnStop() {
 	if !n.config.VaultMode {
 		n.syncManager.Stop()
 	}
+
+	n.db.Db().Close()
 }
 
 func (n *Node) RunForever() {
@@ -394,4 +403,8 @@ func initDpos(chain *protocol.Chain, config *cfg.Config) {
 			cmn.Exit(cmn.Fmt("initVote failed: %v", err))
 		}
 	}
+}
+
+func initDatabaseTable(db dbm.SQLDB) {
+	db.Db().AutoMigrate(&orm.BlockHeader{}, &orm.Transaction{}, &orm.BlockStoreState{}, &orm.ClaimTxState{}, &orm.Utxo{})
 }
