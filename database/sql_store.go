@@ -274,13 +274,14 @@ func (s *SQLStore) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpo
 		Hash:     node.Hash.String(),
 	}
 
-	count := 0
-	if err := tx.Model(&orm.BlockStoreState{}).Update(state).Count(&count).Error; err != nil {
+	db := tx.Model(&orm.BlockStoreState{}).Update(state)
+
+	if err := db.Error; err != nil {
 		tx.Rollback()
 		return err
 	}
 
-	if count == 0 {
+	if db.RowsAffected == 0 {
 		if err := tx.Save(state).Error; err != nil {
 			tx.Rollback()
 			return err

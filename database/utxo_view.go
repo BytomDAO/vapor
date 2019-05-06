@@ -128,11 +128,11 @@ func saveUtxoViewToSQLDB(tx *gorm.DB, view *state.UtxoViewpoint) error {
 		}
 
 		if entry.IsCoinBase {
-			count := 0
-			if err := tx.Model(&orm.Utxo{}).Where(utxoViewpoint).Update("spent", entry.Spent).Count(&count).Error; err != nil {
+			db := tx.Model(&orm.Utxo{}).Where(utxoViewpoint).Update("spent", entry.Spent)
+			if err := db.Error; err != nil {
 				return err
 			}
-			if count != 0 {
+			if db.RowsAffected != 0 {
 				continue
 			}
 		}
