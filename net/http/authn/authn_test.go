@@ -9,12 +9,19 @@ import (
 	"github.com/vapor/accesstoken"
 	dbm "github.com/vapor/database/db"
 	_ "github.com/vapor/database/leveldb"
+	"github.com/vapor/database/orm"
+	_ "github.com/vapor/database/sqlite"
 	"github.com/vapor/errors"
 )
 
 func TestAuthenticate(t *testing.T) {
-	tokenDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer os.RemoveAll("temp")
+	tokenDB := dbm.NewSqlDB("sql", "sqlitedb", "temp")
+	defer func() {
+		tokenDB.Db().Close()
+		os.RemoveAll("temp")
+	}()
+
+	tokenDB.Db().AutoMigrate(&orm.AccessToken{})
 	tokenStore := accesstoken.NewStore(tokenDB)
 	token, err := tokenStore.Create("alice", "test")
 	if err != nil {

@@ -92,8 +92,7 @@ func NewNode(config *cfg.Config) *Node {
 	initDatabaseTable(sqlDB)
 	sqlStore := database.NewSQLStore(sqlDB)
 
-	tokenDB := dbm.NewDB("accesstoken", config.DBBackend, config.DBDir())
-	accessTokens := accesstoken.NewStore(tokenDB)
+	accessTokens := accesstoken.NewStore(sqlDB)
 
 	txPool := protocol.NewTxPool(sqlStore)
 	chain, err := protocol.NewChain(sqlStore, txPool)

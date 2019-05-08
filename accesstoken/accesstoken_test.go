@@ -6,14 +6,25 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jinzhu/gorm"
+
+	"github.com/vapor/database/orm"
+
 	dbm "github.com/vapor/database/db"
 	_ "github.com/vapor/database/leveldb"
+	_ "github.com/vapor/database/sqlite"
 	"github.com/vapor/errors"
 )
 
 func TestCreate(t *testing.T) {
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer os.RemoveAll("temp")
+	testDB := dbm.NewSqlDB("sql", "sqlitedb", "temp")
+	defer func() {
+		testDB.Db().Close()
+		os.RemoveAll("temp")
+	}()
+
+	testDB.Db().AutoMigrate(&orm.AccessToken{})
+
 	cs := NewStore(testDB)
 
 	cases := []struct {
@@ -37,8 +48,13 @@ func TestCreate(t *testing.T) {
 
 func TestList(t *testing.T) {
 	ctx := context.Background()
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer os.RemoveAll("temp")
+	testDB := dbm.NewSqlDB("sql", "sqlitedb", "temp")
+	defer func() {
+		testDB.Db().Close()
+		os.RemoveAll("temp")
+	}()
+
+	testDB.Db().AutoMigrate(&orm.AccessToken{})
 	cs := NewStore(testDB)
 
 	tokenMap := make(map[string]*Token)
@@ -64,8 +80,13 @@ func TestList(t *testing.T) {
 
 func TestCheck(t *testing.T) {
 	ctx := context.Background()
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer os.RemoveAll("temp")
+	testDB := dbm.NewSqlDB("sql", "sqlitedb", "temp")
+	defer func() {
+		testDB.Db().Close()
+		os.RemoveAll("temp")
+	}()
+
+	testDB.Db().AutoMigrate(&orm.AccessToken{})
 	cs := NewStore(testDB)
 
 	token := mustCreateToken(ctx, t, cs, "x", "client")
@@ -82,8 +103,13 @@ func TestCheck(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	ctx := context.Background()
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer os.RemoveAll("temp")
+	testDB := dbm.NewSqlDB("sql", "sqlitedb", "temp")
+	defer func() {
+		testDB.Db().Close()
+		os.RemoveAll("temp")
+	}()
+
+	testDB.Db().AutoMigrate(&orm.AccessToken{})
 	cs := NewStore(testDB)
 
 	const id = "Y"
@@ -94,15 +120,35 @@ func TestDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	value := cs.DB.Get([]byte(id))
-	if len(value) > 0 {
+	accessToken := orm.AccessToken{ID: id}
+
+	err = cs.DB.Db().Where(&accessToken).Find(&accessToken).Error
+	if err != gorm.ErrRecordNotFound {
+		t.Fatal(err)
+	}
+
+	if err == nil {
 		t.Fatal("delete fail")
 	}
+
+	/*
+		cs.List
+
+		value := cs.DB.Get([]byte(id))
+		if len(value) > 0 {
+			t.Fatal("delete fail")
+		}
+	*/
 }
 
 func TestDeleteWithInvalidId(t *testing.T) {
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer os.RemoveAll("temp")
+	testDB := dbm.NewSqlDB("sql", "sqlitedb", "temp")
+	defer func() {
+		testDB.Db().Close()
+		os.RemoveAll("temp")
+	}()
+
+	testDB.Db().AutoMigrate(&orm.AccessToken{})
 	cs := NewStore(testDB)
 
 	err := cs.Delete("@")

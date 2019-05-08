@@ -4,11 +4,14 @@ package accesstoken
 
 import (
 	"crypto/rand"
-	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/jinzhu/gorm"
+
+	"github.com/vapor/database/orm"
 
 	"github.com/vapor/crypto/sha3pool"
 	dbm "github.com/vapor/database/db"
@@ -42,13 +45,22 @@ type Token struct {
 	Created time.Time `json:"created_at"`
 }
 
+func tokenFromOrmToken(ac orm.AccessToken) *Token {
+	return &Token{
+		ID:      ac.ID,
+		Token:   ac.Token,
+		Type:    ac.Type,
+		Created: ac.Created,
+	}
+}
+
 // CredentialStore store user access credential.
 type CredentialStore struct {
-	DB dbm.DB
+	DB dbm.SQLDB
 }
 
 // NewStore creates and returns a new Store object.
-func NewStore(db dbm.DB) *CredentialStore {
+func NewStore(db dbm.SQLDB) *CredentialStore {
 	return &CredentialStore{
 		DB: db,
 	}
@@ -60,33 +72,30 @@ func (cs *CredentialStore) Create(id, typ string) (*Token, error) {
 		return nil, errors.WithDetailf(ErrBadID, "invalid id %q", id)
 	}
 
-	key := []byte(id)
-	if cs.DB.Get(key) != nil {
-		return nil, errors.WithDetailf(ErrDuplicateID, "id %q already in use", id)
+	accessToken := orm.AccessToken{ID: id}
+
+	if err := cs.DB.Db().Where(&accessToken).Find(&accessToken).Error; err != nil {
+		if err != gorm.ErrRecordNotFound {
+			return nil, err
+		}
+		secret := make([]byte, tokenSize)
+		if _, err := rand.Read(secret); err != nil {
+			return nil, err
+		}
+		hashedSecret := make([]byte, tokenSize)
+		sha3pool.Sum256(hashedSecret, secret)
+		accessToken = orm.AccessToken{
+			ID:      id,
+			Token:   fmt.Sprintf("%s:%x", id, hashedSecret),
+			Type:    typ,
+			Created: time.Now(),
+		}
+		if err = cs.DB.Db().Create(&accessToken).Error; err != nil {
+			return nil, err
+		}
+		return tokenFromOrmToken(accessToken), nil
 	}
-
-	secret := make([]byte, tokenSize)
-	if _, err := rand.Read(secret); err != nil {
-		return nil, err
-	}
-
-	hashedSecret := make([]byte, tokenSize)
-	sha3pool.Sum256(hashedSecret, secret)
-
-	token := &Token{
-		ID:      id,
-		Token:   fmt.Sprintf("%s:%x", id, hashedSecret),
-		Type:    typ,
-		Created: time.Now(),
-	}
-
-	value, err := json.Marshal(token)
-	if err != nil {
-		return nil, err
-	}
-	cs.DB.Set(key, value)
-
-	return token, nil
+	return nil, errors.WithDetailf(ErrDuplicateID, "id %q already in use", id)
 }
 
 // Check returns whether or not an id-secret pair is a valid access token.
@@ -94,18 +103,13 @@ func (cs *CredentialStore) Check(id string, secret string) error {
 	if !validIDRegexp.MatchString(id) {
 		return errors.WithDetailf(ErrBadID, "invalid id %q", id)
 	}
+	accessToken := orm.AccessToken{ID: id}
 
-	var value []byte
-	token := &Token{}
-
-	if value = cs.DB.Get([]byte(id)); value == nil {
-		return errors.WithDetailf(ErrNoMatchID, "check id %q nonexisting", id)
-	}
-	if err := json.Unmarshal(value, token); err != nil {
+	if err := cs.DB.Db().Where(&accessToken).Find(&accessToken).Error; err != nil {
 		return err
 	}
 
-	if strings.Split(token.Token, ":")[1] == secret {
+	if strings.Split(accessToken.Token, ":")[1] == secret {
 		return nil
 	}
 
@@ -115,15 +119,16 @@ func (cs *CredentialStore) Check(id string, secret string) error {
 // List lists all access tokens.
 func (cs *CredentialStore) List() ([]*Token, error) {
 	tokens := make([]*Token, 0)
-	iter := cs.DB.Iterator()
-	defer iter.Release()
-
-	for iter.Next() {
-		token := &Token{}
-		if err := json.Unmarshal(iter.Value(), token); err != nil {
+	rows, err := cs.DB.Db().Model(&orm.AccessToken{}).Rows()
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		accessToken := orm.AccessToken{}
+		if err := rows.Scan(&accessToken.ID, &accessToken.Token, &accessToken.Type, &accessToken.Created); err != nil {
 			return nil, err
 		}
-		tokens = append(tokens, token)
+		tokens = append(tokens, tokenFromOrmToken(accessToken))
 	}
 	return tokens, nil
 }
@@ -133,11 +138,11 @@ func (cs *CredentialStore) Delete(id string) error {
 	if !validIDRegexp.MatchString(id) {
 		return errors.WithDetailf(ErrBadID, "invalid id %q", id)
 	}
-
-	if value := cs.DB.Get([]byte(id)); value == nil {
-		return errors.WithDetailf(ErrNoMatchID, "check id %q", id)
+	if err := cs.DB.Db().Delete(&orm.AccessToken{ID: id}).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return errors.WithDetailf(ErrNoMatchID, "check id %q", id)
+		}
+		return err
 	}
-
-	cs.DB.Delete([]byte(id))
 	return nil
 }

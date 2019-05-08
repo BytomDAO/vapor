@@ -14,6 +14,8 @@ import (
 	"github.com/vapor/consensus"
 	dbm "github.com/vapor/database/db"
 	_ "github.com/vapor/database/leveldb"
+	"github.com/vapor/database/orm"
+	_ "github.com/vapor/database/sqlite"
 	"github.com/vapor/testutil"
 )
 
@@ -27,8 +29,13 @@ func TestAPIHandler(t *testing.T) {
 	defer server.Close()
 
 	// create accessTokens
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer os.RemoveAll("temp")
+	testDB := dbm.NewSqlDB("sql", "sqlitedb", "temp")
+	defer func() {
+		testDB.Db().Close()
+		os.RemoveAll("temp")
+	}()
+
+	testDB.Db().AutoMigrate(&orm.AccessToken{})
 	a.accessTokens = accesstoken.NewStore(testDB)
 
 	client := &rpc.Client{
