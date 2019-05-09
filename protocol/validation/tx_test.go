@@ -551,7 +551,7 @@ func TestTxValidation(t *testing.T) {
 			err: vm.ErrRunLimitExceeded,
 		},
 		{
-			desc: "check cross-chain output gas",
+			desc: "check cross-chain output gas bypassing",
 			f: func() {
 				// del gas spend input
 				spendID := mux.Sources[len(mux.Sources)-1].Ref
