@@ -16,8 +16,7 @@ import (
 const (
 	maxNonce = ^uint64(0) // 2^64 - 1
 	isCrazy  = true
-
-	esHR = 1 //estimated Hashrate
+	esHR     = 1 //estimated Hashrate
 )
 
 var (
