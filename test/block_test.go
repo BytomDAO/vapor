@@ -180,7 +180,7 @@ func TestMaxBlockGas(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := SolveAndUpdate(chain, block); err == nil {
+	if _, err := chain.ProcessBlock(block); err == nil {
 		t.Fatalf("test max block gas failed")
 	}
 }

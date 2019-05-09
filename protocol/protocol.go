@@ -6,7 +6,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/config"
-	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
@@ -104,24 +103,6 @@ func (c *Chain) BestBlockHeader() *types.BlockHeader {
 // InMainChain checks wheather a block is in the main chain
 func (c *Chain) InMainChain(hash bc.Hash) bool {
 	return c.index.InMainchain(hash)
-}
-
-// CalcNextSeed return the seed for the given block
-func (c *Chain) CalcNextSeed(preBlock *bc.Hash) (*bc.Hash, error) {
-	node := c.index.GetNode(preBlock)
-	if node == nil {
-		return nil, errors.New("can't find preblock in the blockindex")
-	}
-	return node.CalcNextSeed(), nil
-}
-
-// CalcNextBits return the seed for the given block
-func (c *Chain) CalcNextBits(preBlock *bc.Hash) (uint64, error) {
-	node := c.index.GetNode(preBlock)
-	if node == nil {
-		return 0, errors.New("can't find preblock in the blockindex")
-	}
-	return node.CalcNextBits(), nil
 }
 
 // This function must be called with mu lock in above level

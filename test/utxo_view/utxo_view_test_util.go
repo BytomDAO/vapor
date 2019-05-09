@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 
 	"github.com/vapor/consensus"
-	"github.com/vapor/consensus/difficulty"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
@@ -62,12 +61,9 @@ func blockNode(header *bc.BlockHeader) *state.BlockNode {
 	return &state.BlockNode{
 		Parent:    nil,
 		Hash:      h.Hash(),
-		WorkSum:   difficulty.CalcWork(h.Bits),
 		Version:   h.Version,
 		Height:    h.Height,
 		Timestamp: h.Timestamp,
-		Nonce:     h.Nonce,
-		Bits:      h.Bits,
 	}
 }
 

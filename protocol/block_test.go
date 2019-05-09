@@ -68,7 +68,6 @@ func TestEdgeCalcReorganizeNodes(t *testing.T) {
 	for i := uint64(1); i <= 5; i++ {
 		node := &state.BlockNode{
 			Height: i,
-			Nonce:  0,
 			Hash:   bc.Hash{V0: uint64(i)},
 			Parent: testNodes[i-1],
 		}
@@ -76,7 +75,6 @@ func TestEdgeCalcReorganizeNodes(t *testing.T) {
 
 		newNode := &state.BlockNode{
 			Height: i,
-			Nonce:  1,
 			Hash:   bc.Hash{V1: uint64(i)},
 			Parent: testNewNodes[i-1],
 		}
