@@ -217,6 +217,14 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errors.Wrap(err, "checking output source")
 		}
 
+	case *bc.CrossChainOutput:
+		vs.gasStatus.GasLeft = consensus.DefaultGasCredit
+		vs2 := *vs
+		vs2.sourcePos = 0
+		if err = checkValidSrc(&vs2, e.Source); err != nil {
+			return errors.Wrap(err, "checking cross-chain output source")
+		}
+
 	case *bc.Retirement:
 		vs2 := *vs
 		vs2.sourcePos = 0
@@ -404,6 +412,12 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 		}
 		src = ref.Source
 
+	case *bc.CrossChainOutput:
+		if vd.Position != 0 {
+			return errors.Wrapf(ErrPosition, "invalid position %d for cross-chain output destination", vd.Position)
+		}
+		src = ref.Source
+
 	case *bc.Retirement:
 		if vd.Position != 0 {
 			return errors.Wrapf(ErrPosition, "invalid position %d for retirement destination", vd.Position)
@@ -417,7 +431,7 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 		src = ref.Sources[vd.Position]
 
 	default:
-		return errors.Wrapf(bc.ErrEntryType, "value destination is %T, should be output, retirement, or mux", e)
+		return errors.Wrapf(bc.ErrEntryType, "value destination is %T, should be output, crosschainoutput, retirement, or mux", e)
 	}
 
 	if src.Ref == nil || *src.Ref != vs.entryID {
