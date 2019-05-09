@@ -1,6 +1,5 @@
 package sm2
 
-// reference to ecdsa
 import (
 	"bytes"
 	"crypto"
@@ -15,7 +14,7 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/vapor/crypto/sm3"
+	"github.com/bytom/crypto/sm3"
 )
 
 const (
@@ -323,6 +322,7 @@ func Sm2Verify(pub *PublicKey, msg, uid []byte, r, s *big.Int) bool {
 	return x.Cmp(r) == 0
 }
 
+//
 func msgHash(za, msg []byte) (*big.Int, error) {
 	e := sm3.New()
 	e.Write(za)
@@ -349,7 +349,7 @@ func ZA(pub *PublicKey, uid []byte) ([]byte, error) {
 	xBuf := pub.X.Bytes()
 	yBuf := pub.Y.Bytes()
 	if n := len(xBuf); n < 32 {
-		xBuf = append(zeroByteSlice[:32-n], xBuf...)
+		xBuf = append(zeroByteSlice()[:32-n], xBuf...)
 	}
 	za.Write(xBuf)
 	za.Write(yBuf)
@@ -357,15 +357,17 @@ func ZA(pub *PublicKey, uid []byte) ([]byte, error) {
 }
 
 // 32byte
-var zeroByteSlice = []byte{
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-	0, 0, 0, 0,
+func zeroByteSlice() []byte {
+	return []byte{
+		0, 0, 0, 0,
+		0, 0, 0, 0,
+		0, 0, 0, 0,
+		0, 0, 0, 0,
+		0, 0, 0, 0,
+		0, 0, 0, 0,
+		0, 0, 0, 0,
+		0, 0, 0, 0,
+	}
 }
 
 /*
@@ -391,16 +393,16 @@ func Encrypt(pub *PublicKey, data []byte) ([]byte, error) {
 		x2Buf := x2.Bytes()
 		y2Buf := y2.Bytes()
 		if n := len(x1Buf); n < 32 {
-			x1Buf = append(zeroByteSlice[:32-n], x1Buf...)
+			x1Buf = append(zeroByteSlice()[:32-n], x1Buf...)
 		}
 		if n := len(y1Buf); n < 32 {
-			y1Buf = append(zeroByteSlice[:32-n], y1Buf...)
+			y1Buf = append(zeroByteSlice()[:32-n], y1Buf...)
 		}
 		if n := len(x2Buf); n < 32 {
-			x2Buf = append(zeroByteSlice[:32-n], x2Buf...)
+			x2Buf = append(zeroByteSlice()[:32-n], x2Buf...)
 		}
 		if n := len(y2Buf); n < 32 {
-			y2Buf = append(zeroByteSlice[:32-n], y2Buf...)
+			y2Buf = append(zeroByteSlice()[:32-n], y2Buf...)
 		}
 		c = append(c, x1Buf...) // x分量
 		c = append(c, y1Buf...) // y分量
@@ -432,10 +434,10 @@ func Decrypt(priv *PrivateKey, data []byte) ([]byte, error) {
 	x2Buf := x2.Bytes()
 	y2Buf := y2.Bytes()
 	if n := len(x2Buf); n < 32 {
-		x2Buf = append(zeroByteSlice[:32-n], x2Buf...)
+		x2Buf = append(zeroByteSlice()[:32-n], x2Buf...)
 	}
 	if n := len(y2Buf); n < 32 {
-		y2Buf = append(zeroByteSlice[:32-n], y2Buf...)
+		y2Buf = append(zeroByteSlice()[:32-n], y2Buf...)
 	}
 	c, ok := kdf(x2Buf, y2Buf, length)
 	if !ok {
@@ -472,17 +474,27 @@ func getLastBit(a *big.Int) uint {
 	return a.Bit(0)
 }
 
+// Compress transform  publickey point struct to 33 bytes publickey.
 func Compress(a *PublicKey) []byte {
 	buf := []byte{}
 	yp := getLastBit(a.Y)
 	buf = append(buf, a.X.Bytes()...)
 	if n := len(a.X.Bytes()); n < 32 {
-		buf = append(zeroByteSlice[:(32-n)], buf...)
+		buf = append(zeroByteSlice()[:(32-n)], buf...)
 	}
-	buf = append([]byte{byte(yp)}, buf...)
+	// RFC: GB/T 32918.1-2016 4.2.9
+	// if yp = 0, buf = 02||x
+	// if yp = 0, buf = 03||x
+	if yp == uint(0) {
+		buf = append([]byte{byte(2)}, buf...)
+	}
+	if yp == uint(1) {
+		buf = append([]byte{byte(3)}, buf...)
+	}
 	return buf
 }
 
+// Decompress transform  33 bytes publickey to publickey point struct.
 func Decompress(a []byte) *PublicKey {
 	var aa, xx, xx3 sm2P256FieldElement
 
@@ -498,7 +510,12 @@ func Decompress(a []byte) *PublicKey {
 
 	y2 := sm2P256ToBig(&xx3)
 	y := new(big.Int).ModSqrt(y2, sm2P256.P)
-	if getLastBit(y) != uint(a[0]) {
+
+	// RFC: GB/T 32918.1-2016 4.2.10
+	// if a[0] = 02, getLastBit(y) = 0
+	// if a[0] = 03, getLastBit(y) = 1
+	// if yp = 0, buf = 03||x
+	if getLastBit(y) != uint(a[0])-2 {
 		y.Sub(sm2P256.P, y)
 	}
 	return &PublicKey{
