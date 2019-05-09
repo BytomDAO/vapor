@@ -481,13 +481,25 @@ func checkStandardTx(tx *bc.Tx, blockHeight uint64) error {
 			return errors.Wrapf(bc.ErrMissingEntry, "id %x", id.Bytes())
 		}
 
-		// TODO: fix here
-		output, ok := e.(*bc.Output)
-		if !ok || *output.Source.Value.AssetId != *consensus.BTMAssetID {
+		var prog []byte
+		switch e := e.(type) {
+		case *bc.Output:
+			if *e.Source.Value.AssetId != *consensus.BTMAssetID {
+				continue
+			}
+			prog = e.ControlProgram.Code
+
+		case *bc.CrossChainOutput:
+			if *e.Source.Value.AssetId != *consensus.BTMAssetID {
+				continue
+			}
+			prog = e.ControlProgram.Code
+
+		default:
 			continue
 		}
 
-		if !segwit.IsP2WScript(output.ControlProgram.Code) {
+		if !segwit.IsP2WScript(prog) {
 			return ErrNotStandardTx
 		}
 	}
