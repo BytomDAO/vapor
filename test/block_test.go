@@ -64,16 +64,6 @@ func TestBlockHeader(t *testing.T) {
 			valid:      false,
 		},
 		{
-			desc:       "invalid bits",
-			version:    func() uint64 { return chain.BestBlockHeader().Version },
-			prevHeight: chain.BestBlockHeight,
-			timestamp:  func() uint64 { return chain.BestBlockHeader().Timestamp + 1 },
-			prevHash:   chain.BestBlockHash,
-			bits:       func() uint64 { return chain.BestBlockHeader().Bits + 100 },
-			solve:      true,
-			valid:      false,
-		},
-		{
 			desc:       "invalid timestamp, greater than MaxTimeOffsetSeconds from system time",
 			version:    func() uint64 { return chain.BestBlockHeader().Version },
 			prevHeight: chain.BestBlockHeight,
@@ -126,14 +116,7 @@ func TestBlockHeader(t *testing.T) {
 		block.Timestamp = c.timestamp()
 		block.PreviousBlockHash = *c.prevHash()
 		block.Bits = c.bits()
-		seed, err := chain.CalcNextSeed(&block.PreviousBlockHash)
-		if err != nil && c.valid {
-			t.Fatal(err)
-		}
 
-		if c.solve {
-			Solve(seed, block)
-		}
 		_, err = chain.ProcessBlock(block)
 		result := err == nil
 		if result != c.valid {
