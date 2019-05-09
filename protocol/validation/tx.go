@@ -481,6 +481,7 @@ func checkStandardTx(tx *bc.Tx, blockHeight uint64) error {
 			return errors.Wrapf(bc.ErrMissingEntry, "id %x", id.Bytes())
 		}
 
+		// TODO: fix here
 		output, ok := e.(*bc.Output)
 		if !ok || *output.Source.Value.AssetId != *consensus.BTMAssetID {
 			continue
