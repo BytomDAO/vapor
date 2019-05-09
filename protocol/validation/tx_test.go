@@ -551,6 +551,29 @@ func TestTxValidation(t *testing.T) {
 			err: vm.ErrRunLimitExceeded,
 		},
 		{
+			desc: "check cross-chain output gas",
+			f: func() {
+				// del gas spend input
+				spendID := mux.Sources[len(mux.Sources)-1].Ref
+				delete(tx.Entries, *spendID)
+				mux.Sources = mux.Sources[:len(mux.Sources)-1]
+				tx.GasInputIDs = nil
+				vs.gasStatus.GasLeft = 0
+
+				// forcely convert output as cross-chain output
+				outputID := tx.ResultIds[0]
+				output := tx.Entries[*outputID].(*bc.Output)
+				crossChainOutput := bc.NewCrossChainOutput(output.Source, output.ControlProgram, output.Ordinal)
+				crossChainOutputID := bc.EntryID(crossChainOutput)
+				tx.Entries[crossChainOutputID] = crossChainOutput
+				delete(tx.Entries, *outputID)
+				tx.ResultIds[0] = &crossChainOutputID
+				mux.WitnessDestinations[0].Ref = &crossChainOutputID
+
+			},
+			err: nil,
+		},
+		{
 			desc: "no gas spend input, but set gas left, so it's ok",
 			f: func() {
 				spendID := mux.Sources[len(mux.Sources)-1].Ref
