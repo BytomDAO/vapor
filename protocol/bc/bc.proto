@@ -58,6 +58,7 @@ message BlockHeader {
   uint64            nonce                   = 7;
   uint64            bits                    = 8;
   TransactionStatus transaction_status      = 9;
+  repeated bytes    witness_arguments       = 10;
 }
 
 message TxHeader {

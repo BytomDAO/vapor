@@ -26,6 +26,7 @@ func TestBlockHeader(t *testing.T) {
 			TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
 			TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 		},
+		BlockWitness: BlockWitness{Witness: [][]byte{[]byte{0xbe, 0xef}}},
 	}
 
 	wantHex := strings.Join([]string{
@@ -37,6 +38,7 @@ func TestBlockHeader(t *testing.T) {
 		"40",         // commitment extensible field length
 		"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
 		"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
+		"040102beef",         //BlockWitness
 		"a68c02",             // nonce
 		"ffffff838080808020", // bits
 	}, "")
@@ -79,6 +81,7 @@ func TestMarshalBlockHeader(t *testing.T) {
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
 				},
+				BlockWitness: BlockWitness{Witness: [][]byte{[]byte{0xbe, 0xef}}},
 			},
 			wantHex: strings.Join([]string{
 				"01",   // serialization flags
@@ -89,6 +92,7 @@ func TestMarshalBlockHeader(t *testing.T) {
 				"40",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
 				"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
+				"040102beef",         //BlockWitness
 				"e19f8080a88d02",     // nonce
 				"cc99b3808080808020", // bits
 			}, ""),
@@ -105,6 +109,7 @@ func TestMarshalBlockHeader(t *testing.T) {
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
 				},
+				BlockWitness: BlockWitness{Witness: [][]byte{[]byte{0xbe, 0xef}}},
 			},
 			wantError: blockchain.ErrRange,
 		},
@@ -120,6 +125,7 @@ func TestMarshalBlockHeader(t *testing.T) {
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
 				},
+				BlockWitness: BlockWitness{Witness: [][]byte{[]byte{0xbe, 0xef}}},
 			},
 			wantError: blockchain.ErrRange,
 		},
@@ -135,6 +141,7 @@ func TestMarshalBlockHeader(t *testing.T) {
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
 				},
+				BlockWitness: BlockWitness{Witness: [][]byte{[]byte{0xbe, 0xef}}},
 			},
 			wantError: blockchain.ErrRange,
 		},
@@ -150,6 +157,7 @@ func TestMarshalBlockHeader(t *testing.T) {
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
 				},
+				BlockWitness: BlockWitness{Witness: [][]byte{[]byte{0xbe, 0xef}}},
 			},
 			wantError: blockchain.ErrRange,
 		},
@@ -161,6 +169,7 @@ func TestMarshalBlockHeader(t *testing.T) {
 				Timestamp:         1528945000,
 				Nonce:             9253507043297,
 				Bits:              2305843009214532812,
+				BlockWitness:      BlockWitness{Witness: [][]byte{[]byte{0xbe, 0xef}}},
 			},
 			wantHex: strings.Join([]string{
 				"01",                 // serialization flags
@@ -171,6 +180,7 @@ func TestMarshalBlockHeader(t *testing.T) {
 				"40",         // commitment extensible field length
 				"0000000000000000000000000000000000000000000000000000000000000000", // transactions merkle root
 				"0000000000000000000000000000000000000000000000000000000000000000", // tx status hash
+				"040102beef",         //BlockWitness
 				"e19f8080a88d02",     // nonce
 				"cc99b3808080808020", // bits
 			}, ""),
@@ -216,6 +226,7 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"40",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
 				"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
+				"040102beef",         //BlockWitness
 				"e19f8080a88d02",     // nonce
 				"cc99b3808080808020", // bits
 			}, ""),
@@ -230,6 +241,7 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
 				},
+				BlockWitness: BlockWitness{Witness: [][]byte{[]byte{0xbe, 0xef}}},
 			},
 		},
 		{
@@ -242,6 +254,7 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"40",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
 				"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
+				"040102beef",         //BlockWitness
 				"e19f8080a88d02",     // nonce
 				"cc99b3808080808020", // bits
 			}, ""),
@@ -256,6 +269,7 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
 				},
+				BlockWitness: BlockWitness{Witness: [][]byte{[]byte{0xbe, 0xef}}},
 			},
 		},
 		{
@@ -268,6 +282,7 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"40",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
 				"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
+
 				"e19f8080a88d02",     // nonce
 				"cc99b3808080808020", // bits
 			}, ""),
@@ -298,6 +313,7 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"40",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
 				"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
+				"040102beef",           //BlockWitness
 				"e19f8080a88d02",       // nonce
 				"ffffffffffffffffff20", // bits
 			}, ""),
@@ -313,6 +329,7 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"40",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
 				"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
+				"040102beef",         //BlockWitness
 				"e19f8080a88d02",     // nonce
 				"ffffffffffffffff80", // bits
 			}, ""),
@@ -328,6 +345,7 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"40",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
 				"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
+				"040102beef",           //BlockWitness
 				"e19f8080a88d02",       // nonce
 				"ffffffffffffffffff01", // bits
 			}, ""),
@@ -343,6 +361,7 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"40",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
 				"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
+				"040102beef",         //BlockWitness
 				"e19f8080a88d02",     // nonce
 				"cc99b3808080808020", // bits
 			}, ""),
@@ -357,6 +376,7 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
 				},
+				BlockWitness: BlockWitness{Witness: [][]byte{[]byte{0xbe, 0xef}}},
 			},
 		},
 	}
