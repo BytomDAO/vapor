@@ -1,7 +1,0 @@
-contract LockWith3Keys(pubkey1, pubkey2, pubkey3: PublicKey) locks amount of asset {
-  clause unlockWith2Sigs(sig1, sig2: Signature) {
-    verify checkTxMultiSig([pubkey1, pubkey2, pubkey3], [sig1, sig2])
-    unlock amount of asset
-  }
-}
-
