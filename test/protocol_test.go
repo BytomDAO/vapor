@@ -122,7 +122,7 @@ func TestDoubleSpentInDiffBlock(t *testing.T) {
 	}
 
 	newBlock, err := NewBlock(chain, []*types.Tx{tx}, []byte{byte(vm.OP_TRUE)})
-	_, err = chain.ProcessBlock(chain, newBlock)
+	_, err = chain.ProcessBlock(newBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
