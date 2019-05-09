@@ -560,7 +560,7 @@ func TestTxValidation(t *testing.T) {
 				tx.GasInputIDs = nil
 				vs.gasStatus.GasLeft = 0
 
-				// forcely convert output as cross-chain output
+				// forcely convert output to cross-chain output
 				outputID := tx.ResultIds[0]
 				output := tx.Entries[*outputID].(*bc.Output)
 				crossChainOutput := bc.NewCrossChainOutput(output.Source, output.ControlProgram, output.Ordinal)
