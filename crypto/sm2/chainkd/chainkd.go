@@ -6,7 +6,7 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/bytom/crypto/sm2"
+	"github.com/vapor/crypto/sm2"
 )
 
 type (
