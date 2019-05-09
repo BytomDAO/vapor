@@ -30,7 +30,6 @@ func TestBlockHeader(t *testing.T) {
 		timestamp  func() uint64
 		prevHash   func() *bc.Hash
 		bits       func() uint64
-		solve      bool
 		valid      bool
 	}{
 		{
@@ -40,7 +39,6 @@ func TestBlockHeader(t *testing.T) {
 			timestamp:  func() uint64 { return chain.BestBlockHeader().Timestamp + 1 },
 			prevHash:   chain.BestBlockHash,
 			bits:       func() uint64 { return chain.BestBlockHeader().Bits },
-			solve:      true,
 			valid:      true,
 		},
 		{
@@ -50,7 +48,6 @@ func TestBlockHeader(t *testing.T) {
 			timestamp:  func() uint64 { return chain.BestBlockHeader().Timestamp + 1 },
 			prevHash:   chain.BestBlockHash,
 			bits:       func() uint64 { return chain.BestBlockHeader().Bits },
-			solve:      true,
 			valid:      false,
 		},
 		{
@@ -60,7 +57,6 @@ func TestBlockHeader(t *testing.T) {
 			timestamp:  func() uint64 { return chain.BestBlockHeader().Timestamp + 1 },
 			prevHash:   func() *bc.Hash { hash := genesisHeader.Hash(); return &hash },
 			bits:       func() uint64 { return chain.BestBlockHeader().Bits },
-			solve:      true,
 			valid:      false,
 		},
 		{
@@ -70,7 +66,6 @@ func TestBlockHeader(t *testing.T) {
 			timestamp:  func() uint64 { return uint64(time.Now().Unix()) + consensus.MaxTimeOffsetSeconds + 60 },
 			prevHash:   chain.BestBlockHash,
 			bits:       func() uint64 { return chain.BestBlockHeader().Bits },
-			solve:      true,
 			valid:      false,
 		},
 		{
@@ -80,7 +75,6 @@ func TestBlockHeader(t *testing.T) {
 			timestamp:  func() uint64 { return chain.BestBlockHeader().Timestamp + 3 },
 			prevHash:   chain.BestBlockHash,
 			bits:       func() uint64 { return chain.BestBlockHeader().Bits },
-			solve:      true,
 			valid:      true,
 		},
 		{
@@ -90,7 +84,6 @@ func TestBlockHeader(t *testing.T) {
 			timestamp:  func() uint64 { return chain.BestBlockHeader().Timestamp - 1 },
 			prevHash:   chain.BestBlockHash,
 			bits:       func() uint64 { return chain.BestBlockHeader().Bits },
-			solve:      true,
 			valid:      true,
 		},
 		{
@@ -100,7 +93,6 @@ func TestBlockHeader(t *testing.T) {
 			timestamp:  func() uint64 { return genesisHeader.Timestamp },
 			prevHash:   chain.BestBlockHash,
 			bits:       func() uint64 { return chain.BestBlockHeader().Bits },
-			solve:      true,
 			valid:      false,
 		},
 	}
