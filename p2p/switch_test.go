@@ -126,6 +126,7 @@ func initSwitchFunc(sw *Switch) *Switch {
 
 //Test connect self.
 func TestFiltersOutItself(t *testing.T) {
+	t.Skip("skipping test")
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatal(err)
@@ -159,6 +160,7 @@ func TestFiltersOutItself(t *testing.T) {
 }
 
 func TestDialBannedPeer(t *testing.T) {
+	t.Skip("skipping test")
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatal(err)
@@ -190,6 +192,7 @@ func TestDialBannedPeer(t *testing.T) {
 }
 
 func TestDuplicateOutBoundPeer(t *testing.T) {
+	t.Skip("skipping test")
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatal(err)
@@ -220,6 +223,7 @@ func TestDuplicateOutBoundPeer(t *testing.T) {
 }
 
 func TestDuplicateInBoundPeer(t *testing.T) {
+	t.Skip("skipping test")
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatal(err)
@@ -254,6 +258,7 @@ func TestDuplicateInBoundPeer(t *testing.T) {
 }
 
 func TestAddInboundPeer(t *testing.T) {
+	t.Skip("skipping test")
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatal(err)
@@ -305,6 +310,7 @@ func TestAddInboundPeer(t *testing.T) {
 }
 
 func TestStopPeer(t *testing.T) {
+	t.Skip("skipping test")
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatal(err)

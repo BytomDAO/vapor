@@ -7,21 +7,8 @@ import (
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/errors"
 	"github.com/vapor/event"
-	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
-
-// BlockHeaderJSON struct provides support for get work in json format, when it also follows
-// BlockHeader structure
-type BlockHeaderJSON struct {
-	Version           uint64                 `json:"version"`             // The version of the block.
-	Height            uint64                 `json:"height"`              // The height of the block.
-	PreviousBlockHash bc.Hash                `json:"previous_block_hash"` // The hash of the previous block.
-	Timestamp         uint64                 `json:"timestamp"`           // The time of the block in seconds.
-	Nonce             uint64                 `json:"nonce"`               // Nonce used to generate the block.
-	Bits              uint64                 `json:"bits"`                // Difficulty target for the block.
-	BlockCommitment   *types.BlockCommitment `json:"block_commitment"`    // Block commitment
-}
 
 type CoinbaseArbitrary struct {
 	Arbitrary chainjson.HexBytes `json:"arbitrary"`

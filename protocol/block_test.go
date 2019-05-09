@@ -24,7 +24,6 @@ func TestCalcReorganizeNodes(t *testing.T) {
 	mainChainNode := initNode
 	for i := 1; i <= 7; i++ {
 		header.Height = uint64(i)
-		header.Nonce = 0
 		mainChainNode, err = state.NewBlockNode(&header, mainChainNode)
 		if err != nil {
 			t.Fatal(err)
@@ -38,7 +37,6 @@ func TestCalcReorganizeNodes(t *testing.T) {
 	sideChainNode := initNode
 	for i := 1; i <= 13; i++ {
 		header.Height = uint64(i)
-		header.Nonce = 1
 		sideChainNode, err = state.NewBlockNode(&header, sideChainNode)
 		if err != nil {
 			t.Fatal(err)

@@ -19,7 +19,6 @@ import (
 	"github.com/vapor/errors"
 	"github.com/vapor/event"
 	"github.com/vapor/mining/cpuminer"
-	"github.com/vapor/mining/miningpool"
 	"github.com/vapor/net/http/authn"
 	"github.com/vapor/net/http/gzip"
 	"github.com/vapor/net/http/httpjson"
@@ -115,7 +114,6 @@ type API struct {
 	handler         http.Handler
 	txFeedTracker   *txfeed.Tracker
 	cpuMiner        *cpuminer.CPUMiner
-	miningPool      *miningpool.MiningPool
 	notificationMgr *websocket.WSNotificationManager
 	eventDispatcher *event.Dispatcher
 }
@@ -182,16 +180,14 @@ type NetSync interface {
 }
 
 // NewAPI create and initialize the API
-func NewAPI(sync NetSync, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, cpuMiner *cpuminer.CPUMiner, miningPool *miningpool.MiningPool, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, dispatcher *event.Dispatcher, notificationMgr *websocket.WSNotificationManager) *API {
+func NewAPI(sync NetSync, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, cpuMiner *cpuminer.CPUMiner, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, dispatcher *event.Dispatcher, notificationMgr *websocket.WSNotificationManager) *API {
 	api := &API{
-		sync:          sync,
-		wallet:        wallet,
-		chain:         chain,
-		accessTokens:  token,
-		txFeedTracker: txfeeds,
-		cpuMiner:      cpuMiner,
-		miningPool:    miningPool,
-
+		sync:            sync,
+		wallet:          wallet,
+		chain:           chain,
+		accessTokens:    token,
+		txFeedTracker:   txfeeds,
+		cpuMiner:        cpuMiner,
 		eventDispatcher: dispatcher,
 		notificationMgr: notificationMgr,
 	}
