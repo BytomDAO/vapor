@@ -28,4 +28,4 @@ func NewCrossChainTxOutput(assetID bc.AssetID, amount uint64, controlProgram []b
 	}
 }
 
-func (it *CrossChainTxOutput) TypedOutput() uint8 { return IntraChainOutputType }
+func (it *CrossChainTxOutput) TypedOutput() uint8 { return CrossChainOutputType }
