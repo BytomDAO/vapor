@@ -5,7 +5,6 @@ import (
 
 	"github.com/vapor/encoding/blockchain"
 	"github.com/vapor/errors"
-	"github.com/vapor/protocol/bc"
 )
 
 // serflag variables for output types.
@@ -19,8 +18,10 @@ type (
 	TxOutput struct {
 		AssetVersion uint64
 		TypedOutput
+		// TODO:
 		OutputCommitment
 		// Unconsumed suffixes of the commitment and witness extensible strings.
+		// TODO:
 		CommitmentSuffix []byte
 	}
 
@@ -29,21 +30,6 @@ type (
 		OutputType() uint8
 	}
 )
-
-// NewIntraChainTxOutput create a new output struct
-func NewIntraChainTxOutput(assetID bc.AssetID, amount uint64, controlProgram []byte) *TxOutput {
-	return &TxOutput{
-		AssetVersion: 1,
-		OutputCommitment: OutputCommitment{
-			AssetAmount: bc.AssetAmount{
-				AssetId: &assetID,
-				Amount:  amount,
-			},
-			VMVersion:      1,
-			ControlProgram: controlProgram,
-		},
-	}
-}
 
 func (to *TxOutput) readFrom(r *blockchain.Reader) (err error) {
 	if to.AssetVersion, err = blockchain.ReadVarint63(r); err != nil {
