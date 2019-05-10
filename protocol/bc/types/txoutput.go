@@ -63,22 +63,3 @@ func (to *TxOutput) writeTo(w io.Writer) error {
 func (to *TxOutput) writeCommitment(w io.Writer) error {
 	return to.OutputCommitment.writeExtensibleString(w, to.CommitmentSuffix, to.AssetVersion)
 }
-
-// ComputeOutputID assembles an output entry given a spend commitment and
-// computes and returns its corresponding entry ID.
-func ComputeOutputID(sc *SpendCommitment) (h bc.Hash, err error) {
-	defer func() {
-		if r, ok := recover().(error); ok {
-			err = r
-		}
-	}()
-	src := &bc.ValueSource{
-		Ref:      &sc.SourceID,
-		Value:    &sc.AssetAmount,
-		Position: sc.SourcePosition,
-	}
-	o := bc.NewOutput(src, &bc.Program{VmVersion: sc.VMVersion, Code: sc.ControlProgram}, 0)
-
-	h = bc.EntryID(o)
-	return h, nil
-}
