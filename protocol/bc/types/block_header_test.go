@@ -183,6 +183,26 @@ func TestMarshalBlockHeader(t *testing.T) {
 				Height:            9223372036854775807, // MaxInt64(9223372036854775807)
 				PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
 				Timestamp:         1528945000,
+				BlockWitness:      BlockWitness{Witness: [][]byte{[]byte{0xbe, 0xef}, []byte{}, []byte{0xcd, 0x68}}},
+			},
+			wantHex: strings.Join([]string{
+				"01",                 // serialization flags
+				"01",                 // version
+				"ffffffffffffffff7f", // block height
+				"c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0", // prev block hash
+				"e8b287d905", // timestamp
+				"40",         // commitment extensible field length
+				"0000000000000000000000000000000000000000000000000000000000000000", // transactions merkle root
+				"0000000000000000000000000000000000000000000000000000000000000000", // tx status hash
+				"080302beef0002cd68", //BlockWitness
+			}, ""),
+		},
+		{
+			blockHeader: &BlockHeader{
+				Version:           1,
+				Height:            9223372036854775807, // MaxInt64(9223372036854775807)
+				PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
+				Timestamp:         1528945000,
 				BlockWitness:      BlockWitness{Witness: [][]byte{}},
 			},
 			wantHex: strings.Join([]string{
