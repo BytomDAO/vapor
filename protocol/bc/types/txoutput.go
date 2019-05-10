@@ -150,6 +150,7 @@ func (to *TxOutput) writeCommitment(w io.Writer) error {
 	// return to.OutputCommitment.writeExtensibleString(w, to.CommitmentSuffix, to.AssetVersion)
 }
 
+// TODO:
 // ComputeOutputID assembles an output entry given a spend commitment and
 // computes and returns its corresponding entry ID.
 func ComputeOutputID(sc *SpendCommitment) (h bc.Hash, err error) {
