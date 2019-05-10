@@ -8,13 +8,27 @@ import (
 	"github.com/vapor/protocol/bc"
 )
 
-// TxOutput is the top level struct of tx output.
-type TxOutput struct {
-	AssetVersion uint64
-	OutputCommitment
-	// Unconsumed suffixes of the commitment and witness extensible strings.
-	CommitmentSuffix []byte
-}
+// serflag variables for output types.
+const (
+	IntraChainOutputType uint8 = iota
+	CrossChainOutputType
+)
+
+type (
+	// TxOutput is the top level struct of tx output.
+	TxOutput struct {
+		AssetVersion uint64
+		TypedOutput
+		OutputCommitment
+		// Unconsumed suffixes of the commitment and witness extensible strings.
+		CommitmentSuffix []byte
+	}
+
+	// TypedOutput return the txoutput type.
+	TypedOutput interface {
+		OutputType() uint8
+	}
+)
 
 // NewTxOutput create a new output struct
 func NewTxOutput(assetID bc.AssetID, amount uint64, controlProgram []byte) *TxOutput {
