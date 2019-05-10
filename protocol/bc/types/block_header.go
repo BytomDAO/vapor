@@ -119,8 +119,7 @@ func (bh *BlockHeader) writeTo(w io.Writer, serflags uint8) (err error) {
 		return err
 	}
 
-	_, err = blockchain.WriteExtensibleString(w, nil, bh.BlockWitness.writeTo)
-	if err != nil {
+	if _, err = blockchain.WriteExtensibleString(w, nil, bh.BlockWitness.writeTo); err != nil {
 		return err
 	}
 	return nil

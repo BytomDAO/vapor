@@ -19,6 +19,14 @@ func TestReadWriteBlockWitness(t *testing.T) {
 			hexString: "0102beef",
 		},
 		{
+			bw:        BlockWitness{Witness: [][]byte{[]byte{0xbe, 0xef}, []byte{0xab, 0xcd}, []byte{0xcd, 0x68}}},
+			hexString: "0302beef02abcd02cd68",
+		},
+		{
+			bw:        BlockWitness{Witness: [][]byte{[]byte{0xbe, 0xef}, nil, []byte{0xcd, 0x68}}},
+			hexString: "0302beef0002cd68",
+		},
+		{
 			bw:        BlockWitness{Witness: [][]byte{[]byte{}}},
 			hexString: "0100",
 		},
