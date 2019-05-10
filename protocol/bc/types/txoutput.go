@@ -20,7 +20,7 @@ type (
 		AssetVersion uint64
 		TypedOutput
 		// TODO:
-		OutputCommitment
+		// OutputCommitment
 		// Unconsumed suffixes of the commitment and witness extensible strings.
 		// TODO:
 		CommitmentSuffix []byte
@@ -37,14 +37,95 @@ func (to *TxOutput) readFrom(r *blockchain.Reader) (err error) {
 	if to.AssetVersion, err = blockchain.ReadVarint63(r); err != nil {
 		return errors.Wrap(err, "reading asset version")
 	}
+	return
 
-	if to.CommitmentSuffix, err = to.OutputCommitment.readFrom(r, to.AssetVersion); err != nil {
-		return errors.Wrap(err, "reading output commitment")
-	}
+	// var assetID bc.AssetID
+	// t.CommitmentSuffix, err = blockchain.ReadExtensibleString(r, func(r *blockchain.Reader) error {
+	// 	if t.AssetVersion != 1 {
+	// 		return nil
+	// 	}
+	// 	var icType [1]byte
+	// 	if _, err = io.ReadFull(r, icType[:]); err != nil {
+	// 		return errors.Wrap(err, "reading input commitment type")
+	// 	}
+	// 	switch icType[0] {
+	// 	case IssuanceInputType:
+	// 		ii := new(IssuanceInput)
+	// 		t.TypedInput = ii
 
-	// read and ignore the (empty) output witness
-	_, err = blockchain.ReadVarstr31(r)
-	return errors.Wrap(err, "reading output witness")
+	// 		if ii.Nonce, err = blockchain.ReadVarstr31(r); err != nil {
+	// 			return err
+	// 		}
+	// 		if _, err = assetID.ReadFrom(r); err != nil {
+	// 			return err
+	// 		}
+	// 		if ii.Amount, err = blockchain.ReadVarint63(r); err != nil {
+	// 			return err
+	// 		}
+
+	// 	case SpendInputType:
+	// 		si := new(SpendInput)
+	// 		t.TypedInput = si
+	// 		if si.SpendCommitmentSuffix, err = si.SpendCommitment.readFrom(r, 1); err != nil {
+	// 			return err
+	// 		}
+
+	// 	case CoinbaseInputType:
+	// 		ci := new(CoinbaseInput)
+	// 		t.TypedInput = ci
+	// 		if ci.Arbitrary, err = blockchain.ReadVarstr31(r); err != nil {
+	// 			return err
+	// 		}
+
+	// 	default:
+	// 		return fmt.Errorf("unsupported input type %d", icType[0])
+	// 	}
+	// 	return nil
+	// })
+	// if err != nil {
+	// 	return err
+	// }
+
+	// t.WitnessSuffix, err = blockchain.ReadExtensibleString(r, func(r *blockchain.Reader) error {
+	// 	if t.AssetVersion != 1 {
+	// 		return nil
+	// 	}
+
+	// 	switch inp := t.TypedInput.(type) {
+	// 	case *IssuanceInput:
+	// 		if inp.AssetDefinition, err = blockchain.ReadVarstr31(r); err != nil {
+	// 			return err
+	// 		}
+	// 		if inp.VMVersion, err = blockchain.ReadVarint63(r); err != nil {
+	// 			return err
+	// 		}
+	// 		if inp.IssuanceProgram, err = blockchain.ReadVarstr31(r); err != nil {
+	// 			return err
+	// 		}
+	// 		if inp.AssetID() != assetID {
+	// 			return errBadAssetID
+	// 		}
+	// 		if inp.Arguments, err = blockchain.ReadVarstrList(r); err != nil {
+	// 			return err
+	// 		}
+
+	// 	case *SpendInput:
+	// 		if inp.Arguments, err = blockchain.ReadVarstrList(r); err != nil {
+	// 			return err
+	// 		}
+	// 	}
+	// 	return nil
+	// })
+
+	// return err
+
+	// if to.CommitmentSuffix, err = to.OutputCommitment.readFrom(r, to.AssetVersion); err != nil {
+	// 	return errors.Wrap(err, "reading output commitment")
+	// }
+
+	// // read and ignore the (empty) output witness
+	// _, err = blockchain.ReadVarstr31(r)
+	// return errors.Wrap(err, "reading output witness")
 }
 
 // TODO:
@@ -53,19 +134,20 @@ func (to *TxOutput) writeTo(w io.Writer) error {
 		return errors.Wrap(err, "writing asset version")
 	}
 
-	if err := to.writeCommitment(w); err != nil {
-		return errors.Wrap(err, "writing output commitment")
-	}
+	// if err := to.writeCommitment(w); err != nil {
+	// 	return errors.Wrap(err, "writing output commitment")
+	// }
 
-	if _, err := blockchain.WriteVarstr31(w, nil); err != nil {
-		return errors.Wrap(err, "writing witness")
-	}
+	// if _, err := blockchain.WriteVarstr31(w, nil); err != nil {
+	// 	return errors.Wrap(err, "writing witness")
+	// }
 	return nil
 }
 
 // TODO:
 func (to *TxOutput) writeCommitment(w io.Writer) error {
-	return to.OutputCommitment.writeExtensibleString(w, to.CommitmentSuffix, to.AssetVersion)
+	return nil
+	// return to.OutputCommitment.writeExtensibleString(w, to.CommitmentSuffix, to.AssetVersion)
 }
 
 // ComputeOutputID assembles an output entry given a spend commitment and

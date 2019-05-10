@@ -6,10 +6,8 @@ import (
 
 // CrossChainTxOutput satisfies the TypedOutput interface and represents a cross-chain transaction.
 type CrossChainTxOutput struct {
-	// TODO:
 	OutputCommitment
 	// Unconsumed suffixes of the commitment and witness extensible strings.
-	// TODO:
 	CommitmentSuffix []byte
 }
 
@@ -17,15 +15,17 @@ type CrossChainTxOutput struct {
 func NewCrossChainTxOutput(assetID bc.AssetID, amount uint64, controlProgram []byte) *TxOutput {
 	return &TxOutput{
 		AssetVersion: 1,
-		OutputCommitment: OutputCommitment{
-			AssetAmount: bc.AssetAmount{
-				AssetId: &assetID,
-				Amount:  amount,
+		TypedOutput: &CrossChainTxOutput{
+			OutputCommitment: OutputCommitment{
+				AssetAmount: bc.AssetAmount{
+					AssetId: &assetID,
+					Amount:  amount,
+				},
+				VMVersion:      1,
+				ControlProgram: controlProgram,
 			},
-			VMVersion:      1,
-			ControlProgram: controlProgram,
 		},
 	}
 }
 
-func (it *CrossChainTxOutput) TypedOutput() uint8 { return CrossChainOutputType }
+func (it *CrossChainTxOutput) OutputType() uint8 { return CrossChainOutputType }
