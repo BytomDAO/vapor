@@ -32,6 +32,42 @@ type (
 	}
 )
 
+// AssetAmount return the asset id and amount of a txoutput.
+func (to *TxOutput) AssetAmount() bc.AssetAmount {
+	switch outp := to.TypedOutput.(type) {
+	case *IntraChainTxOutput:
+		return outp.AssetAmount
+	case *CrossChainTxOutput:
+		return outp.AssetAmount
+	default:
+		return bc.AssetAmount{}
+	}
+}
+
+// ControlProgram return the control program of the txoutput
+func (to *TxOutput) ControlProgram() []byte {
+	switch outp := to.TypedOutput.(type) {
+	case *IntraChainTxOutput:
+		return outp.ControlProgram
+	case *CrossChainTxOutput:
+		return outp.ControlProgram
+	default:
+		return nil
+	}
+}
+
+// VMVersion return the VM version of the txoutput
+func (to *TxOutput) VMVersion() uint64 {
+	switch outp := to.TypedOutput.(type) {
+	case *IntraChainTxOutput:
+		return outp.VMVersion
+	case *CrossChainTxOutput:
+		return outp.VMVersion
+	default:
+		return 0
+	}
+}
+
 // TODO:
 func (to *TxOutput) readFrom(r *blockchain.Reader) (err error) {
 	if to.AssetVersion, err = blockchain.ReadVarint63(r); err != nil {
