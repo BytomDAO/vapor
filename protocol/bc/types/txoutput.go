@@ -30,8 +30,8 @@ type (
 	}
 )
 
-// NewTxOutput create a new output struct
-func NewTxOutput(assetID bc.AssetID, amount uint64, controlProgram []byte) *TxOutput {
+// NewIntraChainTxOutput create a new output struct
+func NewIntraChainTxOutput(assetID bc.AssetID, amount uint64, controlProgram []byte) *TxOutput {
 	return &TxOutput{
 		AssetVersion: 1,
 		OutputCommitment: OutputCommitment{
