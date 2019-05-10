@@ -4,7 +4,7 @@ import (
 	"github.com/vapor/protocol/bc"
 )
 
-// CrossChainTxOutput satisfies the TypedOutput interface and represents a intra-chain transaction.
+// CrossChainTxOutput satisfies the TypedOutput interface and represents a cross-chain transaction.
 type CrossChainTxOutput struct {
 	// TODO:
 	OutputCommitment
