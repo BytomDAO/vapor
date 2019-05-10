@@ -89,7 +89,7 @@ func ComputeOutputID(sc *SpendCommitment) (h bc.Hash, err error) {
 		Value:    &sc.AssetAmount,
 		Position: sc.SourcePosition,
 	}
-	o := bc.NewOutput(src, &bc.Program{VmVersion: sc.VMVersion, Code: sc.ControlProgram}, 0)
+	o := bc.NewIntraChainOutput(src, &bc.Program{VmVersion: sc.VMVersion, Code: sc.ControlProgram}, 0)
 
 	h = bc.EntryID(o)
 	return h, nil

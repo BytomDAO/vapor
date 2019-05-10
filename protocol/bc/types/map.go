@@ -99,7 +99,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 				Value:    &inp.AssetAmount,
 				Position: inp.SourcePosition,
 			}
-			prevout := bc.NewOutput(src, prog, 0) // ordinal doesn't matter for prevouts, only for result outputs
+			prevout := bc.NewIntraChainOutput(src, prog, 0) // ordinal doesn't matter for prevouts, only for result outputs
 			prevoutID := addEntry(prevout)
 			// create entry for spend
 			spend := bc.NewSpend(&prevoutID, uint64(i))
@@ -129,7 +129,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 
 	// connect the inputs to the mux
 	for _, spend := range spends {
-		spentOutput := entryMap[*spend.SpentOutputId].(*bc.Output)
+		spentOutput := entryMap[*spend.SpentOutputId].(*bc.IntraChainOutput)
 		spend.SetDestination(&muxID, spentOutput.Source.Value, spend.Ordinal)
 	}
 	for _, issuance := range issuances {
@@ -156,7 +156,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 		} else {
 			// non-retirement
 			prog := &bc.Program{out.VMVersion, out.ControlProgram}
-			o := bc.NewOutput(src, prog, uint64(i))
+			o := bc.NewIntraChainOutput(src, prog, uint64(i))
 			resultID = addEntry(o)
 		}
 

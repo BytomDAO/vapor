@@ -34,12 +34,12 @@ var (
 )
 
 // Output try to get the output entry by given hash
-func (tx *Tx) Output(id Hash) (*Output, error) {
+func (tx *Tx) Output(id Hash) (*IntraChainOutput, error) {
 	e, ok := tx.Entries[id]
 	if !ok || e == nil {
 		return nil, errors.Wrapf(ErrMissingEntry, "id %x", id.Bytes())
 	}
-	o, ok := e.(*Output)
+	o, ok := e.(*IntraChainOutput)
 	if !ok {
 		return nil, errors.Wrapf(ErrEntryType, "entry %x has unexpected type %T", id.Bytes(), e)
 	}
