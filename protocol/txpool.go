@@ -276,7 +276,7 @@ func (tp *TxPool) addTransaction(txD *TxDesc) error {
 	txD.Added = time.Now()
 	tp.pool[tx.ID] = txD
 	for _, id := range tx.ResultIds {
-		output, err := tx.Output(*id)
+		output, err := tx.IntraChainOutput(*id)
 		if err != nil {
 			// error due to it's a retirement, utxo doesn't care this output type so skip it
 			continue

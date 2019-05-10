@@ -248,7 +248,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		if e.SpentOutputId == nil {
 			return errors.Wrap(ErrMissingField, "spend without spent output ID")
 		}
-		spentOutput, err := vs.tx.Output(*e.SpentOutputId)
+		spentOutput, err := vs.tx.IntraChainOutput(*e.SpentOutputId)
 		if err != nil {
 			return errors.Wrap(err, "getting spend prevout")
 		}
@@ -451,7 +451,7 @@ func checkStandardTx(tx *bc.Tx, blockHeight uint64) error {
 		if err != nil {
 			continue
 		}
-		spentOutput, err := tx.Output(*spend.SpentOutputId)
+		spentOutput, err := tx.IntraChainOutput(*spend.SpentOutputId)
 		if err != nil {
 			return err
 		}

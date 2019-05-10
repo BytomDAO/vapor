@@ -46,7 +46,7 @@ func checkCoinbaseAmount(b *bc.Block, amount uint64) error {
 		return errors.Wrap(ErrWrongCoinbaseTransaction, "have more than 1 output")
 	}
 
-	output, err := tx.Output(*tx.TxHeader.ResultIds[0])
+	output, err := tx.IntraChainOutput(*tx.TxHeader.ResultIds[0])
 	if err != nil {
 		return err
 	}
