@@ -87,7 +87,14 @@ message Coinbase {
   bytes            arbitrary           = 2;
 }
 
-message Output {
+message IntraChainOutput {
+  ValueSource source          = 1;
+  Program     control_program = 2;
+  uint64      ordinal         = 3;
+}
+
+// TODO:
+message CrossChainOutput {
   ValueSource source          = 1;
   Program     control_program = 2;
   uint64      ordinal         = 3;
