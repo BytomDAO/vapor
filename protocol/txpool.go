@@ -203,7 +203,8 @@ func isTransactionNoBtmInput(tx *types.Tx) bool {
 
 func isTransactionZeroOutput(tx *types.Tx) bool {
 	for _, output := range tx.TxData.Outputs {
-		if output.Amount == uint64(0) {
+		value := output.AssetAmount()
+		if value.Amount == uint64(0) {
 			return true
 		}
 	}

@@ -117,9 +117,10 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			coinbaseID := addEntry(coinbase)
 
 			out := tx.Outputs[0]
+			value := out.AssetAmount()
 			muxSources[i] = &bc.ValueSource{
 				Ref:   &coinbaseID,
-				Value: &out.AssetAmount,
+				Value: &value,
 			}
 		}
 	}
@@ -143,19 +144,20 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 	// convert types.outputs to the bc.output
 	var resultIDs []*bc.Hash
 	for i, out := range tx.Outputs {
+		value := out.AssetAmount()
 		src := &bc.ValueSource{
 			Ref:      &muxID,
-			Value:    &out.AssetAmount,
+			Value:    &value,
 			Position: uint64(i),
 		}
 		var resultID bc.Hash
-		if vmutil.IsUnspendable(out.ControlProgram) {
+		if vmutil.IsUnspendable(out.ControlProgram()) {
 			// retirement
 			r := bc.NewRetirement(src, uint64(i))
 			resultID = addEntry(r)
 		} else {
 			// non-retirement
-			prog := &bc.Program{out.VMVersion, out.ControlProgram}
+			prog := &bc.Program{out.VMVersion(), out.ControlProgram()}
 			o := bc.NewIntraChainOutput(src, prog, uint64(i))
 			resultID = addEntry(o)
 		}
