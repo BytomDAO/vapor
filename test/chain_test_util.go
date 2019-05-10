@@ -249,7 +249,7 @@ func (cfg *chainTestConfig) Run() error {
 		if err != nil {
 			return err
 		}
-		err = SolveAndUpdate(ctx.Chain, block)
+		_, err = ctx.Chain.ProcessBlock(block)
 		if err != nil && blk.Invalid {
 			continue
 		}

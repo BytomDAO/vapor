@@ -27,7 +27,7 @@ func declChain(name string, baseChain *protocol.Chain, baseHeight uint64, height
 		if err != nil {
 			return nil, err
 		}
-		if err := SolveAndUpdate(chain, block); err != nil {
+		if _, err := chain.ProcessBlock(block); err != nil {
 			return nil, err
 		}
 	}

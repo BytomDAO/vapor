@@ -10,7 +10,6 @@ endif
 endif
 
 PACKAGES    := $(shell go list ./... | grep -v '/vendor/' | grep -v '/crypto/ed25519/chainkd' | grep -v '/mining/tensority')
-PACKAGES += 'github.com/vapor/mining/tensority/go_algorithm'
 
 BUILD_FLAGS := -ldflags "-X github.com/vapor/version.GitCommit=`git rev-parse HEAD`"
 

@@ -6,7 +6,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/consensus"
-	"github.com/vapor/consensus/difficulty"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -66,19 +65,11 @@ func ValidateBlockHeader(b *bc.Block, parent *state.BlockNode) error {
 	if b.Height != parent.Height+1 {
 		return errors.WithDetailf(errMisorderedBlockHeight, "previous block height %d, current block height %d", parent.Height, b.Height)
 	}
-	if b.Bits != parent.CalcNextBits() {
-		return errBadBits
-	}
 	if parent.Hash != *b.PreviousBlockId {
 		return errors.WithDetailf(errMismatchedBlock, "previous block ID %x, current block wants %x", parent.Hash.Bytes(), b.PreviousBlockId.Bytes())
 	}
-	if err := checkBlockTime(b, parent); err != nil {
-		return err
-	}
-	if !difficulty.CheckProofOfWork(&b.ID, parent.CalcNextSeed(), b.BlockHeader.Bits) {
-		return errWorkProof
-	}
-	return nil
+
+	return checkBlockTime(b, parent)
 }
 
 // ValidateBlock validates a block and the transactions within.
