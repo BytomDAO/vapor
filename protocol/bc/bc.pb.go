@@ -513,7 +513,6 @@ func (m *IntraChainOutput) GetOrdinal() uint64 {
 	return 0
 }
 
-// TODO:
 type CrossChainOutput struct {
 	Source         *ValueSource `protobuf:"bytes,1,opt,name=source" json:"source,omitempty"`
 	ControlProgram *Program     `protobuf:"bytes,2,opt,name=control_program,json=controlProgram" json:"control_program,omitempty"`
