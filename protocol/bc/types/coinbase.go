@@ -8,7 +8,7 @@ type CoinbaseInput struct {
 // NewCoinbaseInput creates a new coinbase input struct
 func NewCoinbaseInput(arbitrary []byte) *TxInput {
 	return &TxInput{
-		AssetVersion: 1,
+		AssetVersion: currentAssetVersion,
 		TypedInput:   &CoinbaseInput{Arbitrary: arbitrary},
 	}
 }

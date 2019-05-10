@@ -35,8 +35,10 @@ func (to *TxOutput) AssetAmount() bc.AssetAmount {
 	switch outp := to.TypedOutput.(type) {
 	case *IntraChainOutput:
 		return outp.AssetAmount
+
 	case *CrossChainOutput:
 		return outp.AssetAmount
+
 	default:
 		return bc.AssetAmount{}
 	}
@@ -47,8 +49,10 @@ func (to *TxOutput) ControlProgram() []byte {
 	switch outp := to.TypedOutput.(type) {
 	case *IntraChainOutput:
 		return outp.ControlProgram
+
 	case *CrossChainOutput:
 		return outp.ControlProgram
+
 	default:
 		return nil
 	}
@@ -59,8 +63,10 @@ func (to *TxOutput) VMVersion() uint64 {
 	switch outp := to.TypedOutput.(type) {
 	case *IntraChainOutput:
 		return outp.VMVersion
+
 	case *CrossChainOutput:
 		return outp.VMVersion
+
 	default:
 		return 0
 	}
@@ -72,7 +78,7 @@ func (to *TxOutput) readFrom(r *blockchain.Reader) (err error) {
 	}
 
 	to.CommitmentSuffix, err = blockchain.ReadExtensibleString(r, func(r *blockchain.Reader) error {
-		if to.AssetVersion != 1 {
+		if to.AssetVersion != currentAssetVersion {
 			return nil
 		}
 
@@ -112,26 +118,37 @@ func (to *TxOutput) readFrom(r *blockchain.Reader) (err error) {
 	return errors.Wrap(err, "reading output witness")
 }
 
-// TODO:
 func (to *TxOutput) writeTo(w io.Writer) error {
 	if _, err := blockchain.WriteVarint63(w, to.AssetVersion); err != nil {
 		return errors.Wrap(err, "writing asset version")
 	}
 
-	// if err := to.writeCommitment(w); err != nil {
-	// 	return errors.Wrap(err, "writing output commitment")
-	// }
+	if err := to.writeCommitment(w); err != nil {
+		return errors.Wrap(err, "writing output commitment")
+	}
 
-	// if _, err := blockchain.WriteVarstr31(w, nil); err != nil {
-	// 	return errors.Wrap(err, "writing witness")
-	// }
+	if _, err := blockchain.WriteVarstr31(w, nil); err != nil {
+		return errors.Wrap(err, "writing witness")
+	}
+
 	return nil
 }
 
-// TODO:
 func (to *TxOutput) writeCommitment(w io.Writer) error {
-	return nil
-	// return to.OutputCommitment.writeExtensibleString(w, to.CommitmentSuffix, to.AssetVersion)
+	if to.AssetVersion != currentAssetVersion {
+		return nil
+	}
+
+	switch outp := to.TypedOutput.(type) {
+	case *IntraChainOutput:
+		return outp.OutputCommitment.writeExtensibleString(w, outp.CommitmentSuffix, to.AssetVersion)
+
+	case *CrossChainOutput:
+		return outp.OutputCommitment.writeExtensibleString(w, outp.CommitmentSuffix, to.AssetVersion)
+
+	default:
+		return nil
+	}
 }
 
 // TODO:

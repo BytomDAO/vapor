@@ -19,7 +19,7 @@ type IssuanceInput struct {
 // NewIssuanceInput create a new IssuanceInput struct.
 func NewIssuanceInput(nonce []byte, amount uint64, issuanceProgram []byte, arguments [][]byte, assetDefinition []byte) *TxInput {
 	return &TxInput{
-		AssetVersion: 1,
+		AssetVersion: currentAssetVersion,
 		TypedInput: &IssuanceInput{
 			Nonce:           nonce,
 			Amount:          amount,
