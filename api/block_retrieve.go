@@ -151,7 +151,7 @@ func (a *API) getBlockHeader(ins BlockReq) Response {
 
 	resp := &GetBlockHeaderResp{
 		BlockHeader: &block.BlockHeader,
-		Reward:      block.Transactions[0].Outputs[0].Amount,
+		Reward:      block.Transactions[0].Outputs[0].AssetAmount().Amount,
 	}
 	return NewSuccessResponse(resp)
 }

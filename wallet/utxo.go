@@ -200,15 +200,15 @@ func txOutToUtxos(tx *types.Tx, statusFail bool, vaildHeight uint64) []*account.
 			continue
 		}
 
-		if statusFail && *out.AssetAmount.AssetId != *consensus.BTMAssetID {
+		if statusFail && *out.AssetAmount().AssetId != *consensus.BTMAssetID {
 			continue
 		}
 
 		utxos = append(utxos, &account.UTXO{
 			OutputID:       *tx.OutputID(i),
-			AssetID:        *out.AssetAmount.AssetId,
-			Amount:         out.Amount,
-			ControlProgram: out.ControlProgram,
+			AssetID:        *out.AssetAmount().AssetId,
+			Amount:         out.AssetAmount().Amount,
+			ControlProgram: out.ControlProgram(),
 			SourceID:       *bcOut.Source.Ref,
 			SourcePos:      bcOut.Source.Position,
 			ValidHeight:    vaildHeight,
