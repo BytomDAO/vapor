@@ -83,16 +83,16 @@ func (to *TxOutput) readFrom(r *blockchain.Reader) (err error) {
 
 		switch outType[0] {
 		case IntraChainOutputType:
-			io := new(IntraChainOutput)
-			to.TypedInput = io
-			if io.CommitmentSuffix, err = io.OutputCommitment.readFrom(r, to.AssetVersion); err != nil {
+			out := new(IntraChainOutput)
+			to.TypedOutput = out
+			if out.CommitmentSuffix, err = out.OutputCommitment.readFrom(r, to.AssetVersion); err != nil {
 				return errors.Wrap(err, "reading intra-chain output commitment")
 			}
 
 		case CrossChainOutputType:
-			co := new(CrossChainOutput)
-			to.TypedInput = io
-			if io.CommitmentSuffix, err = io.OutputCommitment.readFrom(r, to.AssetVersion); err != nil {
+			out := new(CrossChainOutput)
+			to.TypedOutput = out
+			if out.CommitmentSuffix, err = out.OutputCommitment.readFrom(r, to.AssetVersion); err != nil {
 				return errors.Wrap(err, "reading cross-chain output commitment")
 			}
 
