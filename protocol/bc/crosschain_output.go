@@ -14,8 +14,8 @@ func (o *CrossChainOutput) writeForHash(w io.Writer) {
 	mustWriteForHash(w, o.ControlProgram)
 }
 
-// CrossChainOutput creates a new CrossChainOutput.
-func CrossChainOutput(source *ValueSource, controlProgram *Program, ordinal uint64) *CrossChainOutput {
+// NewCrossChainOutput creates a new CrossChainOutput.
+func NewCrossChainOutput(source *ValueSource, controlProgram *Program, ordinal uint64) *CrossChainOutput {
 	return &CrossChainOutput{
 		Source:         source,
 		ControlProgram: controlProgram,
