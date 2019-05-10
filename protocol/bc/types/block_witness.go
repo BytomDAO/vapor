@@ -7,8 +7,7 @@ import (
 )
 
 type BlockWitness struct {
-	// Witness is a vector of arguments to the previous block's
-	// ConsensusProgram for validating this block.
+	// Witness is a vector of arguments  for validating this block.
 	Witness [][]byte
 }
 
