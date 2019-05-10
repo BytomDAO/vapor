@@ -195,7 +195,7 @@ func (p *peer) isRelatedTx(tx *types.Tx) bool {
 		}
 	}
 	for _, output := range tx.Outputs {
-		if p.filterAdds.Has(hex.EncodeToString(output.ControlProgram)) {
+		if p.filterAdds.Has(hex.EncodeToString(output.ControlProgram())) {
 			return true
 		}
 	}
