@@ -122,7 +122,7 @@ func TestDoubleSpentInDiffBlock(t *testing.T) {
 	}
 
 	newBlock, err := NewBlock(chain, []*types.Tx{tx}, []byte{byte(vm.OP_TRUE)})
-	err = SolveAndUpdate(chain, newBlock)
+	_, err = chain.ProcessBlock(newBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -189,7 +189,7 @@ func TestDoubleSpentInSameBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := SolveAndUpdate(chain, block); err == nil {
+	if _, err := chain.ProcessBlock(block); err == nil {
 		t.Fatalf("process double spent tx success")
 	}
 }
@@ -242,7 +242,7 @@ func TestTxPoolDependencyTx(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := SolveAndUpdate(chain, block); err != nil {
+	if _, err := chain.ProcessBlock(block); err != nil {
 		t.Fatal("process dependency tx failed")
 	}
 }

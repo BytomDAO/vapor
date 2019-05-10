@@ -200,14 +200,14 @@ func TestCoinbaseMature(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := SolveAndUpdate(chain, block); err == nil {
+		if _, err := chain.ProcessBlock(block); err == nil {
 			t.Fatal("spent immature coinbase output success")
 		}
 		block, err = NewBlock(chain, nil, defaultCtrlProg)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := SolveAndUpdate(chain, block); err != nil {
+		if _, err := chain.ProcessBlock(block); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -216,7 +216,7 @@ func TestCoinbaseMature(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := SolveAndUpdate(chain, block); err != nil {
+	if _, err := chain.ProcessBlock(block); err != nil {
 		t.Fatalf("spent mature coinbase output failed: %s", err)
 	}
 }
@@ -257,7 +257,7 @@ func TestCoinbaseTx(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := SolveAndUpdate(chain, block); err == nil {
+		if _, err := chain.ProcessBlock(block); err == nil {
 			t.Fatalf("invalid coinbase tx validate success")
 		}
 	}

@@ -12,15 +12,15 @@ import (
 var testBlocks = []*types.Block{
 	&types.Block{BlockHeader: types.BlockHeader{
 		PreviousBlockHash: bc.Hash{V0: 1},
-		Nonce:             0,
+		Timestamp:         0,
 	}},
 	&types.Block{BlockHeader: types.BlockHeader{
 		PreviousBlockHash: bc.Hash{V0: 1},
-		Nonce:             1,
+		Timestamp:         1,
 	}},
 	&types.Block{BlockHeader: types.BlockHeader{
 		PreviousBlockHash: bc.Hash{V0: 2},
-		Nonce:             3,
+		Timestamp:         3,
 	}},
 }
 
