@@ -21,7 +21,6 @@ type (
 		AssetVersion uint64
 		TypedOutput
 		// Unconsumed suffixes of the commitment and witness extensible strings.
-		// TODO:
 		CommitmentSuffix []byte
 	}
 
@@ -67,104 +66,50 @@ func (to *TxOutput) VMVersion() uint64 {
 	}
 }
 
-// TODO:
 func (to *TxOutput) readFrom(r *blockchain.Reader) (err error) {
 	if to.AssetVersion, err = blockchain.ReadVarint63(r); err != nil {
 		return errors.Wrap(err, "reading asset version")
 	}
-	return
 
-	// var assetID bc.AssetID
 	to.CommitmentSuffix, err = blockchain.ReadExtensibleString(r, func(r *blockchain.Reader) error {
 		if to.AssetVersion != 1 {
 			return nil
 		}
+
 		var outType [1]byte
 		if _, err = io.ReadFull(r, outType[:]); err != nil {
 			return errors.Wrap(err, "reading output type")
 		}
+
 		switch outType[0] {
 		case IntraChainOutputType:
 			io := new(IntraChainOutput)
+			to.TypedInput = io
+			if io.CommitmentSuffix, err = io.OutputCommitment.readFrom(r, to.AssetVersion); err != nil {
+				return errors.Wrap(err, "reading intra-chain output commitment")
+			}
+
 		case CrossChainOutputType:
 			co := new(CrossChainOutput)
+			to.TypedInput = io
+			if io.CommitmentSuffix, err = io.OutputCommitment.readFrom(r, to.AssetVersion); err != nil {
+				return errors.Wrap(err, "reading cross-chain output commitment")
+			}
+
 		default:
 			return fmt.Errorf("unsupported output type %d", outType[0])
-			// 	case IssuanceInputType:
-			// 		ii := new(IssuanceInput)
-			// 		t.TypedInput = ii
-
-			// 		if ii.Nonce, err = blockchain.ReadVarstr31(r); err != nil {
-			// 			return err
-			// 		}
-			// 		if _, err = assetID.ReadFrom(r); err != nil {
-			// 			return err
-			// 		}
-			// 		if ii.Amount, err = blockchain.ReadVarint63(r); err != nil {
-			// 			return err
-			// 		}
-
-			// 	case SpendInputType:
-			// 		si := new(SpendInput)
-			// 		t.TypedInput = si
-			// 		if si.SpendCommitmentSuffix, err = si.SpendCommitment.readFrom(r, 1); err != nil {
-			// 			return err
-			// 		}
-
-			// 	case CoinbaseInputType:
-			// 		ci := new(CoinbaseInput)
-			// 		t.TypedInput = ci
-			// 		if ci.Arbitrary, err = blockchain.ReadVarstr31(r); err != nil {
-			// 			return err
-			// 		}
-
 		}
+
 		return nil
 	})
+
 	if err != nil {
 		return err
 	}
 
-	// t.WitnessSuffix, err = blockchain.ReadExtensibleString(r, func(r *blockchain.Reader) error {
-	// 	if t.AssetVersion != 1 {
-	// 		return nil
-	// 	}
-
-	// 	switch inp := t.TypedInput.(type) {
-	// 	case *IssuanceInput:
-	// 		if inp.AssetDefinition, err = blockchain.ReadVarstr31(r); err != nil {
-	// 			return err
-	// 		}
-	// 		if inp.VMVersion, err = blockchain.ReadVarint63(r); err != nil {
-	// 			return err
-	// 		}
-	// 		if inp.IssuanceProgram, err = blockchain.ReadVarstr31(r); err != nil {
-	// 			return err
-	// 		}
-	// 		if inp.AssetID() != assetID {
-	// 			return errBadAssetID
-	// 		}
-	// 		if inp.Arguments, err = blockchain.ReadVarstrList(r); err != nil {
-	// 			return err
-	// 		}
-
-	// 	case *SpendInput:
-	// 		if inp.Arguments, err = blockchain.ReadVarstrList(r); err != nil {
-	// 			return err
-	// 		}
-	// 	}
-	// 	return nil
-	// })
-
-	return err
-
-	// if to.CommitmentSuffix, err = to.OutputCommitment.readFrom(r, to.AssetVersion); err != nil {
-	// 	return errors.Wrap(err, "reading output commitment")
-	// }
-
-	// // read and ignore the (empty) output witness
-	// _, err = blockchain.ReadVarstr31(r)
-	// return errors.Wrap(err, "reading output witness")
+	// read and ignore the (empty) output witness
+	_, err = blockchain.ReadVarstr31(r)
+	return errors.Wrap(err, "reading output witness")
 }
 
 // TODO:
