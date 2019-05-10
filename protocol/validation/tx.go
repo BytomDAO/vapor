@@ -210,7 +210,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			}
 		}
 
-	case *bc.Output:
+	case *bc.IntraChainOutput:
 		vs2 := *vs
 		vs2.sourcePos = 0
 		if err = checkValidSrc(&vs2, e.Source); err != nil {
@@ -398,7 +398,7 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 
 	var src *bc.ValueSource
 	switch ref := e.(type) {
-	case *bc.Output:
+	case *bc.IntraChainOutput:
 		if vd.Position != 0 {
 			return errors.Wrapf(ErrPosition, "invalid position %d for output destination", vd.Position)
 		}
@@ -467,7 +467,7 @@ func checkStandardTx(tx *bc.Tx, blockHeight uint64) error {
 			return errors.Wrapf(bc.ErrMissingEntry, "id %x", id.Bytes())
 		}
 
-		output, ok := e.(*bc.Output)
+		output, ok := e.(*bc.IntraChainOutput)
 		if !ok || *output.Source.Value.AssetId != *consensus.BTMAssetID {
 			continue
 		}
