@@ -124,8 +124,9 @@ func soloNetGenesisBlock() *types.Block {
 // GenesisBlock will return genesis block
 func GenesisBlock() *types.Block {
 	return map[string]func() *types.Block{
-		"main": mainNetGenesisBlock,
-		"test": testNetGenesisBlock,
-		"solo": soloNetGenesisBlock,
+		"main":  mainNetGenesisBlock,
+		"test":  testNetGenesisBlock,
+		"solo":  soloNetGenesisBlock,
+		"vapor": soloNetGenesisBlock,
 	}[consensus.ActiveNetParams.Name]()
 }

@@ -143,6 +143,7 @@ func (b BaseConfig) KeysDir() string {
 // P2PConfig
 type P2PConfig struct {
 	ListenAddress    string `mapstructure:"laddr"`
+	NetworkMagic     uint64 `mapstructure:"network_magic"`
 	Seeds            string `mapstructure:"seeds"`
 	PrivateKey       string `mapstructure:"node_key"`
 	NodeKeyFile      string `mapstructure:"node_key_file"`

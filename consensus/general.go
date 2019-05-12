@@ -108,6 +108,7 @@ var NetParams = map[string]Params{
 	"mainnet": MainNetParams,
 	"wisdom":  TestNetParams,
 	"solonet": SoloNetParams,
+	"vapor":   VaporNetParams,
 }
 
 // MainNetParams is the config for production
@@ -160,4 +161,11 @@ var SoloNetParams = Params{
 	Name:            "solo",
 	Bech32HRPSegwit: "sm",
 	Checkpoints:     []Checkpoint{},
+}
+
+// VaporNetParams is the config for vapor-net
+var VaporNetParams = Params{
+	Name:                 "vapor",
+	Bech32HRPSegwit:      "vm",
+	Checkpoints:          []Checkpoint{},
 }

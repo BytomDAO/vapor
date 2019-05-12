@@ -30,7 +30,8 @@ const (
 // Errors
 var (
 	errPacketTooSmall   = errors.New("too small")
-	errBadPrefix        = errors.New("bad prefix")
+	errPrefixMismatch   = errors.New("prefix mismatch")
+	errNetMagicMismatch = errors.New("network magic mismatch")
 	errExpired          = errors.New("expired")
 	errUnsolicitedReply = errors.New("unsolicited reply")
 	errUnknownNode      = errors.New("unknown node")
@@ -158,11 +159,12 @@ type (
 )
 
 var (
-	versionPrefix     = []byte("bytom discovery")
-	versionPrefixSize = len(versionPrefix)
-	nodeIDSize        = 32
-	sigSize           = 520 / 8
-	headSize          = versionPrefixSize + nodeIDSize + sigSize // space of packet frame data
+	prefix           = []byte("vapor discv")
+	prefixSize       = len(prefix)
+	networkMagicSize = 8
+	nodeIDSize       = 32
+	sigSize          = 520 / 8
+	headSize         = prefixSize + networkMagicSize + nodeIDSize + sigSize // space of packet frame data
 )
 
 // Neighbors replies are sent across multiple packets to
@@ -254,9 +256,10 @@ type netWork interface {
 
 // udp implements the RPC protocol.
 type udp struct {
-	conn        conn
-	priv        ed25519.PrivateKey
-	ourEndpoint rpcEndpoint
+	conn         conn
+	priv         ed25519.PrivateKey
+	networkMagic uint64
+	ourEndpoint  rpcEndpoint
 	//nat         nat.Interface
 	net netWork
 }
@@ -273,7 +276,7 @@ func NewDiscover(config *cfg.Config, priv ed25519.PrivateKey, port uint16) (*Net
 	}
 
 	realaddr := conn.LocalAddr().(*net.UDPAddr)
-	ntab, err := ListenUDP(priv, conn, realaddr, path.Join(config.DBDir(), "discover"), nil)
+	ntab, err := ListenUDP(priv, conn, realaddr, path.Join(config.DBDir(), "discover"), nil, config.P2P.NetworkMagic)
 	if err != nil {
 		return nil, err
 	}
@@ -302,8 +305,8 @@ func NewDiscover(config *cfg.Config, priv ed25519.PrivateKey, port uint16) (*Net
 }
 
 // ListenUDP returns a new table that listens for UDP packets on laddr.
-func ListenUDP(priv ed25519.PrivateKey, conn conn, realaddr *net.UDPAddr, nodeDBPath string, netrestrict *netutil.Netlist) (*Network, error) {
-	transport, err := listenUDP(priv, conn, realaddr)
+func ListenUDP(priv ed25519.PrivateKey, conn conn, realaddr *net.UDPAddr, nodeDBPath string, netrestrict *netutil.Netlist, networkMagic uint64) (*Network, error) {
+	transport, err := listenUDP(priv, conn, realaddr, networkMagic)
 	if err != nil {
 		return nil, err
 	}
@@ -318,8 +321,8 @@ func ListenUDP(priv ed25519.PrivateKey, conn conn, realaddr *net.UDPAddr, nodeDB
 	return net, nil
 }
 
-func listenUDP(priv ed25519.PrivateKey, conn conn, realaddr *net.UDPAddr) (*udp, error) {
-	return &udp{conn: conn, priv: priv, ourEndpoint: makeEndpoint(realaddr, uint16(realaddr.Port))}, nil
+func listenUDP(priv ed25519.PrivateKey, conn conn, realaddr *net.UDPAddr, networkMagic uint64) (*udp, error) {
+	return &udp{conn: conn, priv: priv, networkMagic: networkMagic, ourEndpoint: makeEndpoint(realaddr, uint16(realaddr.Port))}, nil
 }
 
 func (t *udp) localAddr() *net.UDPAddr {
@@ -400,7 +403,7 @@ func (t *udp) sendTopicNodes(remote *Node, queryHash common.Hash, nodes []*Node)
 }
 
 func (t *udp) sendPacket(toid NodeID, toaddr *net.UDPAddr, ptype byte, req interface{}) (hash []byte, err error) {
-	packet, hash, err := encodePacket(t.priv, ptype, req)
+	packet, hash, err := encodePacket(t.priv, ptype, req, t.networkMagic)
 	if err != nil {
 		return hash, err
 	}
@@ -414,7 +417,7 @@ func (t *udp) sendPacket(toid NodeID, toaddr *net.UDPAddr, ptype byte, req inter
 // zeroed padding space for encodePacket.
 var headSpace = make([]byte, headSize)
 
-func encodePacket(priv ed25519.PrivateKey, ptype byte, req interface{}) (p, hash []byte, err error) {
+func encodePacket(priv ed25519.PrivateKey, ptype byte, req interface{}, magicNumber uint64) (p, hash []byte, err error) {
 	b := new(bytes.Buffer)
 	b.Write(headSpace)
 	b.WriteByte(ptype)
@@ -427,11 +430,13 @@ func encodePacket(priv ed25519.PrivateKey, ptype byte, req interface{}) (p, hash
 	packet := b.Bytes()
 	nodeID := priv.Public()
 	sig := ed25519.Sign(priv, common.BytesToHash(packet[headSize:]).Bytes())
-	copy(packet, versionPrefix)
-	copy(packet[versionPrefixSize:], nodeID[:])
-	copy(packet[versionPrefixSize+nodeIDSize:], sig)
+	magicNum := []byte(strconv.FormatUint(magicNumber, 16))
+	copy(packet, prefix)
+	copy(packet[prefixSize:], magicNum[:])
+	copy(packet[prefixSize+networkMagicSize:], nodeID[:])
+	copy(packet[prefixSize+networkMagicSize+nodeIDSize:], sig)
 
-	hash = common.BytesToHash(packet[versionPrefixSize:]).Bytes()
+	hash = common.BytesToHash(packet[prefixSize:]).Bytes()
 	return packet, hash, nil
 }
 
@@ -460,7 +465,7 @@ func (t *udp) readLoop() {
 
 func (t *udp) handlePacket(from *net.UDPAddr, buf []byte) error {
 	pkt := ingressPacket{remoteAddr: from}
-	if err := decodePacket(buf, &pkt); err != nil {
+	if err := decodePacket(buf, &pkt, t.networkMagic); err != nil {
 		log.WithFields(log.Fields{"module": logModule, "from": from, "error": err}).Error("Bad packet")
 		return err
 	}
@@ -468,18 +473,27 @@ func (t *udp) handlePacket(from *net.UDPAddr, buf []byte) error {
 	return nil
 }
 
-func decodePacket(buffer []byte, pkt *ingressPacket) error {
+func (t *udp) netMagic() uint64 {
+	return t.networkMagic
+}
+
+func decodePacket(buffer []byte, pkt *ingressPacket, magic uint64) error {
 	if len(buffer) < headSize+1 {
 		return errPacketTooSmall
 	}
 	buf := make([]byte, len(buffer))
 	copy(buf, buffer)
-	prefix, fromID, sigdata := buf[:versionPrefixSize], buf[versionPrefixSize:versionPrefixSize+nodeIDSize], buf[headSize:]
-	if !bytes.Equal(prefix, versionPrefix) {
-		return errBadPrefix
+	fromID, sigdata := buf[prefixSize+networkMagicSize:prefixSize+networkMagicSize+nodeIDSize], buf[headSize:]
+	if !bytes.Equal(buf[:prefixSize], prefix) {
+		return errPrefixMismatch
 	}
+
+	if !bytes.Equal(buf[prefixSize:prefixSize+networkMagicSize], []byte(strconv.FormatUint(magic, 16))[:networkMagicSize]) {
+		return errNetMagicMismatch
+	}
+
 	pkt.rawData = buf
-	pkt.hash = common.BytesToHash(buf[versionPrefixSize:]).Bytes()
+	pkt.hash = common.BytesToHash(buf[prefixSize:]).Bytes()
 	pkt.remoteID = ByteID(fromID)
 	switch pkt.ev = nodeEvent(sigdata[0]); pkt.ev {
 	case pingPacket:
