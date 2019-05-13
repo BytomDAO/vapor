@@ -145,10 +145,6 @@ func (to *TxOutput) writeTo(w io.Writer) error {
 		return errors.Wrap(err, "writing output commitment")
 	}
 
-	if _, err := blockchain.WriteVarstr31(w, nil); err != nil {
-		return errors.Wrap(err, "writing witness")
-	}
-
 	return nil
 }
 
