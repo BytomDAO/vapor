@@ -30,7 +30,7 @@ type (
 	}
 )
 
-// OutputCommitment return the asset id and amount of a txoutput.
+// OutputCommitment return the OutputCommitment of a txoutput.
 func (to *TxOutput) OutputCommitment() OutputCommitment {
 	switch outp := to.TypedOutput.(type) {
 	case *IntraChainOutput:
