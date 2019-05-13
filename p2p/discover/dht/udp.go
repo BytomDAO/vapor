@@ -38,6 +38,7 @@ var (
 	errTimeout          = errors.New("RPC timeout")
 	errClockWarp        = errors.New("reply deadline too far in the future")
 	errClosed           = errors.New("socket closed")
+	errPacketType       = errors.New("unknown packet type")
 )
 
 // Timeouts
@@ -513,7 +514,7 @@ func decodePacket(buffer []byte, pkt *ingressPacket, magic uint64) error {
 	case topicNodesPacket:
 		pkt.data = new(topicNodes)
 	default:
-		return fmt.Errorf("unknown packet type: %d", sigdata[0])
+		return errPacketType
 	}
 	var err error
 	wire.ReadJSON(pkt.data, sigdata[1:], &err)
