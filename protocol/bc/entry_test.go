@@ -59,7 +59,7 @@ func TestEntryID(t *testing.T) {
 				&Program{VmVersion: 1, Code: []byte{5, 5, 5, 5}},
 				1,
 			),
-			expectEntryID: "1145c54cd79721c31c81ecfb7cae217f8ef1bea0016df51c1f5060bba43252cc",
+			expectEntryID: "c60faad6ae44b15d54a57b5bd021f6cec0e5f7d2c55f53b90d6231ce5c561e9c",
 		},
 		{
 			entry: NewRetirement(
