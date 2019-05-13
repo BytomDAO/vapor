@@ -464,12 +464,17 @@ func checkStandardTx(tx *bc.Tx, blockHeight uint64) error {
 		if err != nil {
 			continue
 		}
-		spentOutput, err := tx.IntraChainOutput(*spend.SpentOutputId)
-		if err != nil {
-			return err
+
+		intraChainSpentOutput, err1 := tx.IntraChainOutput(*spend.SpentOutputId)
+		if (err1 == nil) && !segwit.IsP2WScript(intraChainSpentOutput.ControlProgram.Code) {
+			return ErrNotStandardTx
 		}
 
-		if !segwit.IsP2WScript(spentOutput.ControlProgram.Code) {
+		// err1 can be either nil or non-nil
+		crossChainSpentOutput, err2 := tx.CrossChainOutput(*spend.SpentOutputId)
+		if (err1 != nil) && (err2 != nil) {
+			return err2
+		} else if (err2 == nil) && !segwit.IsP2WScript(crossChainSpentOutput.ControlProgram.Code) {
 			return ErrNotStandardTx
 		}
 	}
@@ -489,6 +494,7 @@ func checkStandardTx(tx *bc.Tx, blockHeight uint64) error {
 			return ErrNotStandardTx
 		}
 	}
+
 	return nil
 }
 
@@ -500,6 +506,7 @@ func checkTimeRange(tx *bc.Tx, block *bc.Block) error {
 	if tx.TimeRange < block.Height {
 		return ErrBadTimeRange
 	}
+
 	return nil
 }
 
