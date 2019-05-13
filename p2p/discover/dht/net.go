@@ -83,7 +83,7 @@ type transport interface {
 	send(remote *Node, ptype nodeEvent, p interface{}) (hash []byte)
 
 	localAddr() *net.UDPAddr
-	netMagic() uint64
+	netMagicNumber() uint64
 	Close()
 }
 
@@ -1163,7 +1163,7 @@ func (net *Network) handleQueryEvent(n *Node, ev nodeEvent, pkt *ingressPacket) 
 	case topicRegisterPacket:
 		//fmt.Println("got topicRegisterPacket")
 		regdata := pkt.data.(*topicRegister)
-		pong, err := net.checkTopicRegister(regdata, net.conn.netMagic())
+		pong, err := net.checkTopicRegister(regdata, net.conn.netMagicNumber())
 		if err != nil {
 			//fmt.Println(err)
 			return n.state, fmt.Errorf("bad waiting ticket: %v", err)
@@ -1199,9 +1199,9 @@ func (net *Network) handleQueryEvent(n *Node, ev nodeEvent, pkt *ingressPacket) 
 	}
 }
 
-func (net *Network) checkTopicRegister(data *topicRegister, magic uint64) (*pong, error) {
+func (net *Network) checkTopicRegister(data *topicRegister, magicNumber uint64) (*pong, error) {
 	var pongpkt ingressPacket
-	if err := decodePacket(data.Pong, &pongpkt, magic); err != nil {
+	if err := decodePacket(data.Pong, &pongpkt, magicNumber); err != nil {
 		return nil, err
 	}
 	if pongpkt.ev != pongPacket {
