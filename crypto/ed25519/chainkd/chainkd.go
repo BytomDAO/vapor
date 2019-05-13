@@ -15,11 +15,6 @@ type (
 	XPrv [64]byte
 	//XPub external public key
 	XPub [64]byte
-
-	// Sm2XPrv external sm2 private key
-	Sm2XPrv [64]byte
-	// Sm2XPub external sm2 public key
-	Sm2XPub [65]byte
 )
 
 // NewXPrv takes a source of random bytes and produces a new XPrv.

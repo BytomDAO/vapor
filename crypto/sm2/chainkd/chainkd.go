@@ -10,9 +10,9 @@ import (
 )
 
 type (
-	//XPrv external private key
+	//XPrv external sm2 private key
 	XPrv [64]byte
-	//XPub external public key
+	//XPub external sm2 public key
 	XPub [65]byte
 )
 
