@@ -119,7 +119,7 @@ func (t *TxInput) SetArguments(args [][]byte) {
 // SpentOutputID calculate the hash of spended output
 func (t *TxInput) SpentOutputID() (o bc.Hash, err error) {
 	if si, ok := t.TypedInput.(*SpendInput); ok {
-		o, err = ComputeIntraChainOutputID(&si.SpendCommitment)
+		o, err = ComputeOutputID(&si.SpendCommitment)
 	}
 	return o, err
 }
