@@ -324,22 +324,23 @@ func TestTxValidation(t *testing.T) {
 	addCoinbase := func(assetID *bc.AssetID, amount uint64, arbitrary []byte) {
 		coinbase := bc.NewCoinbase(arbitrary)
 		txOutput := types.NewIntraChainOutput(*assetID, amount, []byte{byte(vm.OP_TRUE)})
+		assetAmount := txOutput.AssetAmount()
 		muxID := getMuxID(tx)
-		coinbase.SetDestination(muxID, &txOutput.AssetAmount, uint64(len(mux.Sources)))
+		coinbase.SetDestination(muxID, &assetAmount, uint64(len(mux.Sources)))
 		coinbaseID := bc.EntryID(coinbase)
 		tx.Entries[coinbaseID] = coinbase
 
 		mux.Sources = append(mux.Sources, &bc.ValueSource{
 			Ref:   &coinbaseID,
-			Value: &txOutput.AssetAmount,
+			Value: &assetAmount,
 		})
 
 		src := &bc.ValueSource{
 			Ref:      muxID,
-			Value:    &txOutput.AssetAmount,
+			Value:    &assetAmount,
 			Position: uint64(len(tx.ResultIds)),
 		}
-		prog := &bc.Program{txOutput.VMVersion, txOutput.ControlProgram}
+		prog := &bc.Program{txOutput.VMVersion(), txOutput.ControlProgram()}
 		output := bc.NewOutput(src, prog, uint64(len(tx.ResultIds)))
 		outputID := bc.EntryID(output)
 		tx.Entries[outputID] = output
