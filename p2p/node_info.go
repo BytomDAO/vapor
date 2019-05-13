@@ -53,7 +53,7 @@ func (info *NodeInfo) CompatibleWith(other *NodeInfo) error {
 	}
 
 	if info.MagicNumber != other.MagicNumber {
-		return fmt.Errorf("Network magic number dismatch. Peer network magic: %v, node network magic: %v", other.MagicNumber, info.MagicNumber)
+		return fmt.Errorf("Network magic number dismatch. Peer network magic number: %v, node network magic number: %v", other.MagicNumber, info.MagicNumber)
 	}
 
 	compatible, err := version.CompatibleWith(other.Version)
