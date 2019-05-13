@@ -72,6 +72,7 @@ func (to *TxOutput) VMVersion() uint64 {
 	}
 }
 
+// TODO: OutputType
 func (to *TxOutput) readFrom(r *blockchain.Reader) (err error) {
 	if to.AssetVersion, err = blockchain.ReadVarint63(r); err != nil {
 		return errors.Wrap(err, "reading asset version")
@@ -118,6 +119,7 @@ func (to *TxOutput) readFrom(r *blockchain.Reader) (err error) {
 	return errors.Wrap(err, "reading output witness")
 }
 
+// TODO: OutputType
 func (to *TxOutput) writeTo(w io.Writer) error {
 	if _, err := blockchain.WriteVarint63(w, to.AssetVersion); err != nil {
 		return errors.Wrap(err, "writing asset version")
