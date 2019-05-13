@@ -430,7 +430,7 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 		src = ref.Sources[vd.Position]
 
 	default:
-		return errors.Wrapf(bc.ErrEntryType, "value destination is %T, should be output, retirement, or mux", e)
+		return errors.Wrapf(bc.ErrEntryType, "value destination is %T, should be intra-chain/cross-chain output, retirement, or mux", e)
 	}
 
 	if src.Ref == nil || *src.Ref != vs.entryID {
@@ -485,12 +485,25 @@ func checkStandardTx(tx *bc.Tx, blockHeight uint64) error {
 			return errors.Wrapf(bc.ErrMissingEntry, "id %x", id.Bytes())
 		}
 
-		output, ok := e.(*bc.IntraChainOutput)
-		if !ok || *output.Source.Value.AssetId != *consensus.BTMAssetID {
+		var prog []byte
+		switch e := e.(type) {
+		case *bc.IntraChainOutput:
+			if *e.Source.Value.AssetId != *consensus.BTMAssetID {
+				continue
+			}
+			prog = e.ControlProgram.Code
+
+		case *bc.CrossChainOutput:
+			if *e.Source.Value.AssetId != *consensus.BTMAssetID {
+				continue
+			}
+			prog = e.ControlProgram.Code
+
+		default:
 			continue
 		}
 
-		if !segwit.IsP2WScript(output.ControlProgram.Code) {
+		if !segwit.IsP2WScript(prog) {
 			return ErrNotStandardTx
 		}
 	}
