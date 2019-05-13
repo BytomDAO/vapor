@@ -18,7 +18,7 @@ func TestMapSpendTx(t *testing.T) {
 				NewSpendInput(nil, testutil.MustDecodeHash("fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409"), *consensus.BTMAssetID, 88, 3, []byte{1}),
 			},
 			Outputs: []*TxOutput{
-				NewTxOutput(*consensus.BTMAssetID, 80, []byte{1}),
+				NewIntraChainOutput(*consensus.BTMAssetID, 80, []byte{1}),
 			},
 		},
 		&TxData{
@@ -26,7 +26,7 @@ func TestMapSpendTx(t *testing.T) {
 				NewIssuanceInput([]byte("nonce"), 254354, []byte("issuanceProgram"), [][]byte{[]byte("arguments1"), []byte("arguments2")}, []byte("assetDefinition")),
 			},
 			Outputs: []*TxOutput{
-				NewTxOutput(*consensus.BTMAssetID, 80, []byte{1}),
+				NewIntraChainOutput(*consensus.BTMAssetID, 80, []byte{1}),
 			},
 		},
 		&TxData{
@@ -35,8 +35,8 @@ func TestMapSpendTx(t *testing.T) {
 				NewSpendInput(nil, testutil.MustDecodeHash("db7b16ac737440d6e38559996ddabb207d7ce84fbd6f3bfd2525d234761dc863"), *consensus.BTMAssetID, 88, 3, []byte{1}),
 			},
 			Outputs: []*TxOutput{
-				NewTxOutput(*consensus.BTMAssetID, 80, []byte{1}),
-				NewTxOutput(*consensus.BTMAssetID, 80, []byte{1}),
+				NewIntraChainOutput(*consensus.BTMAssetID, 80, []byte{1}),
+				NewIntraChainOutput(*consensus.BTMAssetID, 80, []byte{1}),
 			},
 		},
 	}
@@ -86,7 +86,7 @@ func TestMapSpendTx(t *testing.T) {
 			if newOut.ControlProgram.VmVersion != 1 {
 				t.Errorf("header.ResultIds[%d].(*output).ControlProgram.VMVersion is %d, expected 1", i, newOut.ControlProgram.VmVersion)
 			}
-			if !bytes.Equal(newOut.ControlProgram.Code, oldOut.ControlProgram) {
+			if !bytes.Equal(newOut.ControlProgram.Code, oldOut.ControlProgram()) {
 				t.Errorf("header.ResultIds[%d].(*output).ControlProgram.Code is %x, expected %x", i, newOut.ControlProgram.Code, oldOut.ControlProgram)
 			}
 
@@ -100,7 +100,7 @@ func TestMapCoinbaseTx(t *testing.T) {
 			NewCoinbaseInput([]byte("TestMapCoinbaseTx")),
 		},
 		Outputs: []*TxOutput{
-			NewTxOutput(*consensus.BTMAssetID, 800000000000, []byte{1}),
+			NewIntraChainOutput(*consensus.BTMAssetID, 800000000000, []byte{1}),
 		},
 	}
 	oldOut := txData.Outputs[0]
