@@ -411,6 +411,12 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 		}
 		src = ref.Source
 
+	case *bc.CrossChainOutput:
+		if vd.Position != 0 {
+			return errors.Wrapf(ErrPosition, "invalid position %d for output destination", vd.Position)
+		}
+		src = ref.Source
+
 	case *bc.Retirement:
 		if vd.Position != 0 {
 			return errors.Wrapf(ErrPosition, "invalid position %d for retirement destination", vd.Position)
