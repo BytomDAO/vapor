@@ -117,6 +117,9 @@ type BaseConfig struct {
 
 	// log file name
 	LogFile string `mapstructure:"log_file"`
+
+	// Cipher Service Provider
+	// CipherServiceProvider string `mapstructure:"csp"`
 }
 
 // Default configurable base parameters.
@@ -129,6 +132,7 @@ func DefaultBaseConfig() BaseConfig {
 		DBPath:            "data",
 		KeysPath:          "keystore",
 		NodeAlias:         "",
+		// CipherServiceProvider: "ed25519",
 	}
 }
 
