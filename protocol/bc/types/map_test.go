@@ -87,7 +87,7 @@ func TestMapSpendTx(t *testing.T) {
 				t.Errorf("header.ResultIds[%d].(*output).ControlProgram.VMVersion is %d, expected 1", i, newOut.ControlProgram.VmVersion)
 			}
 			if !bytes.Equal(newOut.ControlProgram.Code, oldOut.ControlProgram()) {
-				t.Errorf("header.ResultIds[%d].(*output).ControlProgram.Code is %x, expected %x", i, newOut.ControlProgram.Code, oldOut.ControlProgram)
+				t.Errorf("header.ResultIds[%d].(*output).ControlProgram.Code is %x, expected %x", i, newOut.ControlProgram.Code, oldOut.ControlProgram())
 			}
 
 		}
