@@ -72,7 +72,6 @@ func (to *TxOutput) VMVersion() uint64 {
 	}
 }
 
-// TODO: OutputType
 func (to *TxOutput) readFrom(r *blockchain.Reader) (err error) {
 	if to.AssetVersion, err = blockchain.ReadVarint63(r); err != nil {
 		return errors.Wrap(err, "reading asset version")
@@ -119,10 +118,13 @@ func (to *TxOutput) readFrom(r *blockchain.Reader) (err error) {
 	return errors.Wrap(err, "reading output witness")
 }
 
-// TODO: OutputType
 func (to *TxOutput) writeTo(w io.Writer) error {
 	if _, err := blockchain.WriteVarint63(w, to.AssetVersion); err != nil {
 		return errors.Wrap(err, "writing asset version")
+	}
+
+	if _, err := blockchain.WriteVarint63(w, uint64(to.TypedOutput.OutputType())); err != nil {
+		return errors.Wrap(err, "writing OutputType")
 	}
 
 	if err := to.writeCommitment(w); err != nil {
@@ -153,10 +155,9 @@ func (to *TxOutput) writeCommitment(w io.Writer) error {
 	}
 }
 
-// TODO:
-// ComputeOutputID assembles an output entry given a spend commitment and
-// computes and returns its corresponding entry ID.
-func ComputeOutputID(sc *SpendCommitment) (h bc.Hash, err error) {
+// ComputeIntraChainOutputID assembles an intra-chain output entry given a spend
+// commitment and computes and returns its corresponding entry ID.
+func ComputeIntraChainOutputID(sc *SpendCommitment) (h bc.Hash, err error) {
 	defer func() {
 		if r, ok := recover().(error); ok {
 			err = r

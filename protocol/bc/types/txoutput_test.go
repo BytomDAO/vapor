@@ -55,7 +55,7 @@ func TestSerializationTxOutput(t *testing.T) {
 	}
 }
 
-func TestComputeOutputID(t *testing.T) {
+func TestComputeIntraChainOutputID(t *testing.T) {
 	btmAssetID := testutil.MustDecodeAsset("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
 	cases := []struct {
 		sc           *SpendCommitment
@@ -84,7 +84,7 @@ func TestComputeOutputID(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		outputID, err := ComputeOutputID(c.sc)
+		outputID, err := ComputeIntraChainOutputID(c.sc)
 		if err != nil {
 			t.Fatal(err)
 		}

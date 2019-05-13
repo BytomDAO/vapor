@@ -467,14 +467,16 @@ func checkStandardTx(tx *bc.Tx, blockHeight uint64) error {
 
 		intraChainSpentOutput, err1 := tx.IntraChainOutput(*spend.SpentOutputId)
 		if (err1 == nil) && !segwit.IsP2WScript(intraChainSpentOutput.ControlProgram.Code) {
+			// intraChainSpentOutput exists
 			return ErrNotStandardTx
 		}
 
-		// err1 can be either nil or non-nil
 		crossChainSpentOutput, err2 := tx.CrossChainOutput(*spend.SpentOutputId)
 		if (err1 != nil) && (err2 != nil) {
+			// neither intraChainSpentOutput or crossChainSpentOutput exists
 			return err2
 		} else if (err2 == nil) && !segwit.IsP2WScript(crossChainSpentOutput.ControlProgram.Code) {
+			// crossChainSpentOutput exists
 			return ErrNotStandardTx
 		}
 	}
