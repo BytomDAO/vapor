@@ -2,6 +2,10 @@
 
 package csp
 
+import (
+	"crypto"
+)
+
 type (
 	//XPrv external private key
 	XPrv [64]byte
@@ -27,13 +31,12 @@ type XPrvKeyer interface {
 }
 
 type XPubKeyer interface {
-	// PublicKey extracts the ed25519 public key from an xpub.
-	PublicKey() interface{}
+	// PublicKey extracts the public key from an xpub.
+	PublicKey() crypto.PublicKey
 	// Derive generates a child xpub by recursively deriving
 	// non-hardened child xpubs over the list of selectors:
 	// `Derive([a,b,c,...]) == Child(a).Child(b).Child(c)...`
 	Derive(path [][]byte) XPubKeyer
 	// Verify checks an EdDSA signature using public key
-	// extracted from the first 32 bytes of the xpub.
 	Verify(msg []byte, sig []byte) bool
 }
