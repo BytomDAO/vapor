@@ -14,7 +14,7 @@ type CrossChainOutput struct {
 // CrossChainOutput create a new output struct
 func NewCrossChainOutput(assetID bc.AssetID, amount uint64, controlProgram []byte) *TxOutput {
 	return &TxOutput{
-		AssetVersion: 1,
+		AssetVersion: currentAssetVersion,
 		TypedOutput: &CrossChainOutput{
 			OutputCommitment: OutputCommitment{
 				AssetAmount: bc.AssetAmount{
