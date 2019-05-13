@@ -81,7 +81,7 @@ func TestMapSpendTx(t *testing.T) {
 			}
 
 			if *newOut.Source.Value != oldOut.AssetAmount() {
-				t.Errorf("header.ResultIds[%d].(*output).Source is %v, expected %v", i, newOut.Source.Value, oldOut.AssetAmount)
+				t.Errorf("header.ResultIds[%d].(*output).Source is %v, expected %v", i, newOut.Source.Value, oldOut.AssetAmount())
 			}
 			if newOut.ControlProgram.VmVersion != 1 {
 				t.Errorf("header.ResultIds[%d].(*output).ControlProgram.VMVersion is %d, expected 1", i, newOut.ControlProgram.VmVersion)
@@ -130,7 +130,7 @@ func TestMapCoinbaseTx(t *testing.T) {
 		t.Errorf("header.ResultIds[0] has type %T, expected *Output", outEntry)
 	}
 	if *newOut.Source.Value != oldOut.AssetAmount() {
-		t.Errorf("(*output).Source is %v, expected %v", newOut.Source.Value, oldOut.AssetAmount)
+		t.Errorf("(*output).Source is %v, expected %v", newOut.Source.Value, oldOut.AssetAmount())
 	}
 
 	muxEntry, ok := tx.Entries[*newOut.Source.Ref]
