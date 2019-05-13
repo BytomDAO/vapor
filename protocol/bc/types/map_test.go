@@ -58,7 +58,7 @@ func TestMapSpendTx(t *testing.T) {
 					t.Errorf("tx.InputIDs[%d]'s asset amount is not equal after map'", i)
 				}
 			case *bc.Spend:
-				spendOut, err := tx.Output(*newInput.SpentOutputId)
+				spendOut, err := tx.IntraChainOutput(*newInput.SpentOutputId)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -75,7 +75,7 @@ func TestMapSpendTx(t *testing.T) {
 			if !ok {
 				t.Errorf("entryMap contains nothing for header.ResultIds[%d] (%x)", i, tx.ResultIds[i].Bytes())
 			}
-			newOut, ok := resultEntry.(*bc.Output)
+			newOut, ok := resultEntry.(*bc.IntraChainOutput)
 			if !ok {
 				t.Errorf("header.ResultIds[%d] has type %T, expected *Output", i, resultEntry)
 			}
