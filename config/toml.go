@@ -25,7 +25,6 @@ fast_sync = true
 db_backend = "leveldb"
 api_addr = "0.0.0.0:9888"
 node_alias = ""
-csp = "ed25519"
 `
 
 var mainNetConfigTmpl = `chain_id = "mainnet"
