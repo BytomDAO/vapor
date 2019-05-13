@@ -14,7 +14,7 @@ type IntraChainOutput struct {
 // NewIntraChainOutput create a new output struct
 func NewIntraChainOutput(assetID bc.AssetID, amount uint64, controlProgram []byte) *TxOutput {
 	return &TxOutput{
-		AssetVersion: currentAssetVersion,
+		AssetVersion: 1,
 		TypedOutput: &IntraChainOutput{
 			OutputCommitment: OutputCommitment{
 				AssetAmount: bc.AssetAmount{

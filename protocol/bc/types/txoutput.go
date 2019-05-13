@@ -78,7 +78,7 @@ func (to *TxOutput) readFrom(r *blockchain.Reader) (err error) {
 	}
 
 	to.CommitmentSuffix, err = blockchain.ReadExtensibleString(r, func(r *blockchain.Reader) error {
-		if to.AssetVersion != currentAssetVersion {
+		if to.AssetVersion != 1 {
 			return nil
 		}
 
@@ -139,7 +139,7 @@ func (to *TxOutput) writeTo(w io.Writer) error {
 }
 
 func (to *TxOutput) writeCommitment(w io.Writer) error {
-	if to.AssetVersion != currentAssetVersion {
+	if to.AssetVersion != 1 {
 		return nil
 	}
 

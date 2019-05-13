@@ -11,8 +11,6 @@ import (
 
 // serflag variables for input types.
 const (
-	currentAssetVersion = 1
-
 	IssuanceInputType uint8 = iota
 	SpendInputType
 	CoinbaseInputType
@@ -133,7 +131,7 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 
 	var assetID bc.AssetID
 	t.CommitmentSuffix, err = blockchain.ReadExtensibleString(r, func(r *blockchain.Reader) error {
-		if t.AssetVersion != currentAssetVersion {
+		if t.AssetVersion != 1 {
 			return nil
 		}
 		var icType [1]byte
@@ -158,7 +156,7 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 		case SpendInputType:
 			si := new(SpendInput)
 			t.TypedInput = si
-			if si.SpendCommitmentSuffix, err = si.SpendCommitment.readFrom(r, currentAssetVersion); err != nil {
+			if si.SpendCommitmentSuffix, err = si.SpendCommitment.readFrom(r, 1); err != nil {
 				return err
 			}
 
@@ -179,7 +177,7 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 	}
 
 	t.WitnessSuffix, err = blockchain.ReadExtensibleString(r, func(r *blockchain.Reader) error {
-		if t.AssetVersion != currentAssetVersion {
+		if t.AssetVersion != 1 {
 			return nil
 		}
 
@@ -226,7 +224,7 @@ func (t *TxInput) writeTo(w io.Writer) error {
 }
 
 func (t *TxInput) writeInputCommitment(w io.Writer) (err error) {
-	if t.AssetVersion != currentAssetVersion {
+	if t.AssetVersion != 1 {
 		return nil
 	}
 
@@ -263,7 +261,7 @@ func (t *TxInput) writeInputCommitment(w io.Writer) (err error) {
 }
 
 func (t *TxInput) writeInputWitness(w io.Writer) error {
-	if t.AssetVersion != currentAssetVersion {
+	if t.AssetVersion != 1 {
 		return nil
 	}
 
