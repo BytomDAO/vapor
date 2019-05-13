@@ -154,6 +154,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 		}
 		var resultID bc.Hash
 		switch {
+		// must deal with retirement first due to cases' priorities in the switch statement
 		case vmutil.IsUnspendable(out.ControlProgram()):
 			// retirement
 			r := bc.NewRetirement(src, uint64(i))
