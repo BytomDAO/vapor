@@ -23,7 +23,8 @@ import (
 )
 
 const (
-	Version   = 4
+	//Version dht discover protocol version
+	Version   = 5
 	logModule = "discover"
 )
 
@@ -32,24 +33,13 @@ var (
 	errPacketTooSmall   = errors.New("too small")
 	errPrefixMismatch   = errors.New("prefix mismatch")
 	errNetMagicMismatch = errors.New("network magic mismatch")
-	errExpired          = errors.New("expired")
-	errUnsolicitedReply = errors.New("unsolicited reply")
-	errUnknownNode      = errors.New("unknown node")
-	errTimeout          = errors.New("RPC timeout")
-	errClockWarp        = errors.New("reply deadline too far in the future")
-	errClosed           = errors.New("socket closed")
 	errPacketType       = errors.New("unknown packet type")
 )
 
 // Timeouts
 const (
 	respTimeout = 1 * time.Second
-	queryDelay  = 1000 * time.Millisecond
 	expiration  = 20 * time.Second
-
-	ntpFailureThreshold = 32               // Continuous timeouts after which to check NTP
-	ntpWarningCooldown  = 10 * time.Minute // Minimum amount of time to pass before repeating NTP warning
-	driftThreshold      = 10 * time.Second // Allowed clock drift before warning user
 )
 
 // ReadPacket is sent to the unhandled channel when it could not be processed
@@ -265,6 +255,7 @@ type udp struct {
 	net netWork
 }
 
+//NewDiscover create new dht discover
 func NewDiscover(config *cfg.Config, priv ed25519.PrivateKey, port uint16) (*Network, error) {
 	addr, err := net.ResolveUDPAddr("udp", net.JoinHostPort("0.0.0.0", strconv.FormatUint(uint64(port), 10)))
 	if err != nil {
@@ -372,7 +363,7 @@ func (t *udp) sendNeighbours(remote *Node, results []*Node) {
 
 func (t *udp) sendFindnodeHash(remote *Node, target common.Hash) {
 	t.sendPacket(remote.ID, remote.addr(), byte(findnodeHashPacket), findnodeHash{
-		Target:     common.Hash(target),
+		Target:     target,
 		Expiration: uint64(time.Now().Add(expiration).Unix()),
 	})
 }
@@ -460,14 +451,15 @@ func (t *udp) readLoop() {
 			log.WithFields(log.Fields{"module": logModule, "error": err}).Debug("Read error")
 			return
 		}
-		t.handlePacket(from, buf[:nbytes])
+		if err := t.handlePacket(from, buf[:nbytes]); err != nil {
+			log.WithFields(log.Fields{"module": logModule, "from": from, "error": err}).Error("handle packet err")
+		}
 	}
 }
 
 func (t *udp) handlePacket(from *net.UDPAddr, buf []byte) error {
 	pkt := ingressPacket{remoteAddr: from}
 	if err := decodePacket(buf, &pkt, t.networkMagic); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "from": from, "error": err}).Error("Bad packet")
 		return err
 	}
 	t.net.reqReadPacket(pkt)
