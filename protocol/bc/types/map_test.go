@@ -80,7 +80,7 @@ func TestMapSpendTx(t *testing.T) {
 				t.Errorf("header.ResultIds[%d] has type %T, expected *Output", i, resultEntry)
 			}
 
-			if *newOut.Source.Value != oldOut.AssetAmount {
+			if *newOut.Source.Value != oldOut.AssetAmount() {
 				t.Errorf("header.ResultIds[%d].(*output).Source is %v, expected %v", i, newOut.Source.Value, oldOut.AssetAmount)
 			}
 			if newOut.ControlProgram.VmVersion != 1 {
@@ -125,11 +125,11 @@ func TestMapCoinbaseTx(t *testing.T) {
 	if !ok {
 		t.Errorf("entryMap contains nothing for output")
 	}
-	newOut, ok := outEntry.(*bc.Output)
+	newOut, ok := outEntry.(*bc.IntraChainOutput)
 	if !ok {
 		t.Errorf("header.ResultIds[0] has type %T, expected *Output", outEntry)
 	}
-	if *newOut.Source.Value != oldOut.AssetAmount {
+	if *newOut.Source.Value != oldOut.AssetAmount() {
 		t.Errorf("(*output).Source is %v, expected %v", newOut.Source.Value, oldOut.AssetAmount)
 	}
 
