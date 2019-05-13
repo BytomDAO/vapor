@@ -30,6 +30,20 @@ type (
 	}
 )
 
+// OutputCommitment return the asset id and amount of a txoutput.
+func (to *TxOutput) OutputCommitment() OutputCommitment {
+	switch outp := to.TypedOutput.(type) {
+	case *IntraChainOutput:
+		return outp.OutputCommitment
+
+	case *CrossChainOutput:
+		return outp.OutputCommitment
+
+	default:
+		return OutputCommitment{}
+	}
+}
+
 // AssetAmount return the asset id and amount of a txoutput.
 func (to *TxOutput) AssetAmount() bc.AssetAmount {
 	switch outp := to.TypedOutput.(type) {

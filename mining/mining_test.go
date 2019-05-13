@@ -38,7 +38,7 @@ func TestCreateCoinbaseTx(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		outputAmount := coinbaseTx.Outputs[0].OutputCommitment.Amount
+		outputAmount := coinbaseTx.Outputs[0].OutputCommitment().Amount
 		if outputAmount != c.subsidy {
 			t.Fatalf("coinbase tx reward dismatch, expected: %d, have: %d", c.subsidy, outputAmount)
 		}
