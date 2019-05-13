@@ -1,6 +1,8 @@
 package types
 
 import (
+	log "github.com/sirupsen/logrus"
+
 	"github.com/vapor/consensus"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/vm"
@@ -151,15 +153,26 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			Position: uint64(i),
 		}
 		var resultID bc.Hash
-		if vmutil.IsUnspendable(out.ControlProgram()) {
+		switch {
+		case vmutil.IsUnspendable(out.ControlProgram()):
 			// retirement
 			r := bc.NewRetirement(src, uint64(i))
 			resultID = addEntry(r)
-		} else {
-			// non-retirement
+
+		case out.OutputType() == IntraChainOutputType:
+			// non-retirement intra-chain tx
 			prog := &bc.Program{out.VMVersion(), out.ControlProgram()}
 			o := bc.NewIntraChainOutput(src, prog, uint64(i))
 			resultID = addEntry(o)
+
+		case out.OutputType() == CrossChainOutputType:
+			// non-retirement cross-chain tx
+			prog := &bc.Program{out.VMVersion(), out.ControlProgram()}
+			o := bc.NewCrossChainOutput(src, prog, uint64(i))
+			resultID = addEntry(o)
+
+		default:
+			log.Warn("unknown outType")
 		}
 
 		dest := &bc.ValueDestination{
