@@ -307,6 +307,10 @@ func (tn *preminedTestnet) sendTopicRegister(to *Node, topics []Topic, idx int, 
 	panic("sendTopicRegister called")
 }
 
+func (tn *preminedTestnet) getNetID() uint64 {
+	return 0
+}
+
 func (*preminedTestnet) Close() {}
 
 func (*preminedTestnet) localAddr() *net.UDPAddr {
