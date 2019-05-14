@@ -89,7 +89,13 @@ func (c *consensusNodeManager) nextLeaderTime(pubkey []byte) (*time.Time, error)
 	// The timestamp of the block can only be accurate to the second, so take the ceil of timestamp
 	begin := (int64(prevRoundLastBlock.Timestamp) + 1) * 1000
 	now := time.Now().UnixNano() / 1e6
-	roundVoteTime := int64(roundVoteBlockNums * blockTimeInterval)
+
+	rvbn := roundVoteBlockNums
+	// Exclude genesis block
+	if prevRoundLastBlockHeight == 0 {
+		rvbn--
+	}
+	roundVoteTime := int64(rvbn * blockTimeInterval)
 
 	if now - begin >= roundVoteTime {
 		return nil, fmt.Errorf("the node has not completed block synchronization")
