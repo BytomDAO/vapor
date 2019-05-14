@@ -17,6 +17,7 @@ import (
 	"github.com/vapor/consensus"
 	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/crypto"
+	"github.com/vapor/crypto/csp"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/crypto/sha3pool"
 	dbm "github.com/vapor/database/leveldb"
@@ -650,7 +651,8 @@ func CreateCtrlProgram(account *Account, addrIdx uint64, change bool) (cp *CtrlP
 }
 
 func createP2PKH(account *Account, path [][]byte) (*CtrlProgram, error) {
-	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
+	// derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
+	derivedXPubs := csp.DeriveXPubs(account.XPubs, path)
 	derivedPK := derivedXPubs[0].PublicKey()
 	pubHash := crypto.Ripemd160(derivedPK)
 
@@ -672,8 +674,10 @@ func createP2PKH(account *Account, path [][]byte) (*CtrlProgram, error) {
 }
 
 func createP2SH(account *Account, path [][]byte) (*CtrlProgram, error) {
-	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
-	derivedPKs := chainkd.XPubKeys(derivedXPubs)
+	// derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
+	// derivedPKs := chainkd.XPubKeys(derivedXPubs)
+	derivedXPubs := csp.DeriveXPubs(account.XPubs, path)
+	derivedPKs := csp.XPubKeys(derivedXPubs)
 	signScript, err := vmutil.P2SPMultiSigProgram(derivedPKs, account.Quorum)
 	if err != nil {
 		return nil, err
