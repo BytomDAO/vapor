@@ -953,7 +953,7 @@ func TestStandardTx(t *testing.T) {
 			f: func() {
 				inputID := tx.GasInputIDs[0]
 				spend := tx.Entries[inputID].(*bc.Spend)
-				spentOutput, err := tx.Output(*spend.SpentOutputId)
+				spentOutput, err := tx.IntraChainOutput(*spend.SpentOutputId)
 				if err != nil {
 					t.Fatal(err)
 				}

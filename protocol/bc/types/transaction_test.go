@@ -128,6 +128,7 @@ func TestTransaction(t *testing.T) {
 				"00",                 // input 0: witness length
 				"02",                 // outputs count
 				"01",                 // output 0: asset version
+				"00",                 // output 0: outType
 				"29",                 // output 0: serialization length
 				"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // output 0: assetID
 				"92c30f",   // output 0: amount
@@ -136,6 +137,7 @@ func TestTransaction(t *testing.T) {
 				"74727565", // output 0: control program
 				"00",       // output 0: witness length
 				"01",       // output 1: asset version
+				"00",       // output 1: outType
 				"2a",       // output 1: serialization length
 				"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // output 1: assetID
 				"92c30f",     // output 1: amount
@@ -222,6 +224,7 @@ func TestInvalidIssuance(t *testing.T) {
 		"010203", // input 0, issuance input witness, argument 0
 		"01",     // outputs count
 		"01",     // output 0, asset version
+		"00",     // output 0, outType
 		"29",     // output 0, output commitment length
 		"0000000000000000000000000000000000000000000000000000000000000000", // output 0, output commitment, asset id
 		"80a094a58d1d",   // output 0, output commitment, amount
