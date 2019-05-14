@@ -15,7 +15,7 @@ import (
 
 func TestSerializationTxOutput(t *testing.T) {
 	assetID := testutil.MustDecodeAsset("81756fdab39a17163b0ce582ee4ee256fb4d1e156c692b997d608a42ecb38d47")
-	txOutput := NewTxOutput(assetID, 254354, []byte("TestSerializationTxOutput"))
+	txOutput := NewIntraChainOutput(assetID, 254354, []byte("TestSerializationTxOutput"))
 
 	wantHex := strings.Join([]string{
 		"01", // asset version
@@ -52,6 +52,48 @@ func TestSerializationTxOutput(t *testing.T) {
 
 	if !testutil.DeepEqual(*txOutput, gotTxOutput) {
 		t.Errorf("expected marshaled/unmarshaled txoutput to be:\n%sgot:\n%s", spew.Sdump(*txOutput), spew.Sdump(gotTxOutput))
+	}
+}
+
+func TestSerializationVoteTxOutput(t *testing.T) {
+	assetID := testutil.MustDecodeAsset("81756fdab39a17163b0ce582ee4ee256fb4d1e156c692b997d608a42ecb38d47")
+	voteTxOutput := NewVoteOutput(assetID, 1000, []byte("TestSerializationTxOutput"), []byte("af594006a40837d9f028daabb6d589df0b9138daefad5683e5233c2646279217294a8d532e60863bcf196625a35fb8ceeffa3c09610eb92dcfb655a947f13269"))
+
+	wantHex := strings.Join([]string{
+		"01", // asset version
+		"3e", // serialization length
+		"81756fdab39a17163b0ce582ee4ee256fb4d1e156c692b997d608a42ecb38d47", // assetID
+		"92c30f", // amount
+		"01",     // version
+		"19",     // control program length
+		"5465737453657269616c697a6174696f6e54784f7574707574", // control program
+		"00", // witness length
+	}, "")
+
+	// Test convert struct to hex
+	var buffer bytes.Buffer
+	if err := voteTxOutput.writeTo(&buffer); err != nil {
+		t.Fatal(err)
+	}
+
+	gotHex := hex.EncodeToString(buffer.Bytes())
+	if gotHex != wantHex {
+		t.Errorf("serialization bytes = %s want %s", gotHex, wantHex)
+	}
+
+	// Test convert hex to struct
+	var gotTxOutput TxOutput
+	decodeHex, err := hex.DecodeString(wantHex)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := gotTxOutput.readFrom(blockchain.NewReader(decodeHex)); err != nil {
+		t.Fatal(err)
+	}
+
+	if !testutil.DeepEqual(*voteTxOutput, gotTxOutput) {
+		t.Errorf("expected marshaled/unmarshaled txoutput to be:\n%sgot:\n%s", spew.Sdump(*voteTxOutput), spew.Sdump(gotTxOutput))
 	}
 }
 
