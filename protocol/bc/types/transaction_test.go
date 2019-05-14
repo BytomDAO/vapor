@@ -191,7 +191,7 @@ func TestTransaction(t *testing.T) {
 
 func TestTransactionTrailingGarbage(t *testing.T) {
 	// validTxHex is a valid tx, we don't care what's inside as long as it's valid
-	validTxHex := `07010001012b00030a0908916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380a094a58d1d09000101010103010203010129000000000000000000000000000000000000000000000000000000000000000080a094a58d1d01010100`
+	validTxHex := `07010001012b00030a0908916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380a094a58d1d0900010101010301020301012b0029000000000000000000000000000000000000000000000000000000000000000080a094a58d1d01010100`
 	validTx := Tx{}
 	if err := validTx.UnmarshalText([]byte(validTxHex)); err != nil {
 		t.Fatal(err)
@@ -228,8 +228,9 @@ func TestInvalidIssuance(t *testing.T) {
 		"010203", // input 0, issuance input witness, argument 0
 		"01",     // outputs count
 		"01",     // output 0, asset version
-		"2a",     // output 0, output commitment length
+		"2b",     // output 0, serialization length
 		"00",     // output 0, outType
+		"29",     // output 0, output commitment length
 		"0000000000000000000000000000000000000000000000000000000000000000", // output 0, output commitment, asset id
 		"80a094a58d1d",   // output 0, output commitment, amount
 		"01",             // output 0, output commitment, vm version
@@ -246,7 +247,7 @@ func TestInvalidIssuance(t *testing.T) {
 }
 
 func TestFuzzUnknownAssetVersion(t *testing.T) {
-	rawTx := `07010001012b00030a0908916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380a094a58d1d09000101010103010203010129000000000000000000000000000000000000000000000000000000000000000080a094a58d1d01010100`
+	rawTx := `07010001012b00030a0908916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380a094a58d1d0900010101010301020301012b0029000000000000000000000000000000000000000000000000000000000000000080a094a58d1d01010100`
 	want := Tx{}
 	if err := want.UnmarshalText([]byte(rawTx)); err != nil {
 		t.Fatal(err)
