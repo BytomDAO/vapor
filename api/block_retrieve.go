@@ -93,7 +93,7 @@ func (a *API) getBlock(ins BlockReq) Response {
 		}
 
 		resOutID := orig.ResultIds[0]
-		resOut, ok := orig.Entries[*resOutID].(*bc.Output)
+		resOut, ok := orig.Entries[*resOutID].(*bc.IntraChainOutput)
 		if ok {
 			tx.MuxID = *resOut.Source.Ref
 		} else {
@@ -151,7 +151,7 @@ func (a *API) getBlockHeader(ins BlockReq) Response {
 
 	resp := &GetBlockHeaderResp{
 		BlockHeader: &block.BlockHeader,
-		Reward:      block.Transactions[0].Outputs[0].Amount,
+		Reward:      block.Transactions[0].Outputs[0].AssetAmount().Amount,
 	}
 	return NewSuccessResponse(resp)
 }

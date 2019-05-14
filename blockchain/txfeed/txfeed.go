@@ -367,10 +367,10 @@ func buildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOutput {
 	out := &query.AnnotatedOutput{
 		OutputID:        *outid,
 		Position:        idx,
-		AssetID:         *orig.AssetId,
+		AssetID:         *orig.AssetAmount().AssetId,
 		AssetDefinition: &emptyJSONObject,
-		Amount:          orig.Amount,
-		ControlProgram:  orig.ControlProgram,
+		Amount:          orig.AssetAmount().Amount,
+		ControlProgram:  orig.ControlProgram(),
 	}
 
 	if vmutil.IsUnspendable(out.ControlProgram) {

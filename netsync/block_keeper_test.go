@@ -629,7 +629,7 @@ func TestSendMerkleBlock(t *testing.T) {
 
 		spvPeer := fullNode.peers.getPeer("spv_node")
 		for i := 0; i < len(c.relatedTxIndex); i++ {
-			spvPeer.filterAdds.Add(hex.EncodeToString(txs[c.relatedTxIndex[i]].Outputs[0].ControlProgram))
+			spvPeer.filterAdds.Add(hex.EncodeToString(txs[c.relatedTxIndex[i]].Outputs[0].ControlProgram()))
 		}
 		msg := &GetMerkleBlockMessage{RawHash: targetBlock.Hash().Byte32()}
 		fullNode.handleGetMerkleBlockMsg(spvPeer, msg)
