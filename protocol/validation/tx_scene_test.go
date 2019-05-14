@@ -266,7 +266,7 @@ func TestValidateTx(t *testing.T) {
 	for i, c := range cases {
 		gasStatus, err := ValidateTx(types.MapTx(c.txData), mockBlock())
 		if rootErr(err) != c.err {
-			t.Errorf("case #%d (%s) got error %s, want %s; validationState is:\n", i, c.desc, err, c.err)
+			t.Errorf("case #%d (%s) got error %s, want %v; validationState is:\n", i, c.desc, err, c.err)
 		}
 		if c.gasValid != gasStatus.GasValid {
 			t.Errorf("#%d got GasValid %t, want %t", i, gasStatus.GasValid, c.gasValid)
