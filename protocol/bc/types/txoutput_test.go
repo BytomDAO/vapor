@@ -16,11 +16,11 @@ import (
 func TestSerializationTxOutput(t *testing.T) {
 	assetID := testutil.MustDecodeAsset("81756fdab39a17163b0ce582ee4ee256fb4d1e156c692b997d608a42ecb38d47")
 	txOutput := NewIntraChainOutput(assetID, 254354, []byte("TestSerializationTxOutput"))
-
 	wantHex := strings.Join([]string{
 		"01", // asset version
-		"3f", // serialization length
+		"40", // serialization length
 		"00", // outType
+		"3e", // output commitment length
 		"81756fdab39a17163b0ce582ee4ee256fb4d1e156c692b997d608a42ecb38d47", // assetID
 		"92c30f", // amount
 		"01",     // version
