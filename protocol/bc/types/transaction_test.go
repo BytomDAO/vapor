@@ -93,6 +93,8 @@ func TestTransaction(t *testing.T) {
 				"617267756d656e747334", // input 1: second argument data
 				"01", // outputs count
 				"01", // output 0: asset version
+				"2b", // output 0: output commitment length
+				"00", // output 0: outType
 				"29", // output 0: serialization length
 				"a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf", // output 0: assetID
 				"92c30f",   // output 0: amount
@@ -101,7 +103,7 @@ func TestTransaction(t *testing.T) {
 				"74727565", // output 0: control program
 				"00",       // output 0: witness length
 			}, ""),
-			hash: testutil.MustDecodeHash("a0ece5ca48dca27708394852599cb4d04af22c36538c03cb72663f3091406c17"),
+			hash: testutil.MustDecodeHash("d6a1f6ea3cc3c53c3cdcd10bbd446c643f23b37ca5e87665d03f204de8c7dc2a"),
 		},
 		{
 			tx: NewTx(TxData{
@@ -128,8 +130,9 @@ func TestTransaction(t *testing.T) {
 				"00",                 // input 0: witness length
 				"02",                 // outputs count
 				"01",                 // output 0: asset version
-				"2a",                 // output 0: serialization length
+				"2b",                 // output 0: output commitment length
 				"00",                 // output 0: outType
+				"29",                 // output 0: serialization length
 				"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // output 0: assetID
 				"92c30f",   // output 0: amount
 				"01",       // output 0: version
@@ -137,8 +140,9 @@ func TestTransaction(t *testing.T) {
 				"74727565", // output 0: control program
 				"00",       // output 0: witness length
 				"01",       // output 1: asset version
-				"2b",       // output 1: serialization length
+				"2c",       // output 1: output commitment length
 				"00",       // output 1: outType
+				"2a",       // output 1: serialization length
 				"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // output 1: assetID
 				"92c30f",     // output 1: amount
 				"01",         // output 1: version
@@ -146,7 +150,7 @@ func TestTransaction(t *testing.T) {
 				"66616c7365", // output 1: control program
 				"00",         // output 1: witness length
 			}, ""),
-			hash: testutil.MustDecodeHash("c2e2f388706fc06cca6aba5e85e0e85029f772872e1b6e6c32a70da22d0309dc"),
+			hash: testutil.MustDecodeHash("2ef0831a69f4da1188af94a87ed6fd234500b979947aa706d47eb2d76359ad78"),
 		},
 	}
 	for i, test := range cases {
