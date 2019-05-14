@@ -19,8 +19,8 @@ func TestSerializationTxOutput(t *testing.T) {
 
 	wantHex := strings.Join([]string{
 		"01", // asset version
-		"00", // outType
 		"3e", // serialization length
+		"00", // outType
 		"81756fdab39a17163b0ce582ee4ee256fb4d1e156c692b997d608a42ecb38d47", // assetID
 		"92c30f", // amount
 		"01",     // version

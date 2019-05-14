@@ -137,10 +137,6 @@ func (to *TxOutput) writeTo(w io.Writer) error {
 		return errors.Wrap(err, "writing asset version")
 	}
 
-	if _, err := blockchain.WriteVarint63(w, uint64(to.TypedOutput.OutputType())); err != nil {
-		return errors.Wrap(err, "writing OutputType")
-	}
-
 	if err := to.writeCommitment(w); err != nil {
 		return errors.Wrap(err, "writing output commitment")
 	}
@@ -159,9 +155,15 @@ func (to *TxOutput) writeCommitment(w io.Writer) error {
 
 	switch outp := to.TypedOutput.(type) {
 	case *IntraChainOutput:
+		if _, err := w.Write([]byte{IntraChainOutputType}); err != nil {
+			return err
+		}
 		return outp.OutputCommitment.writeExtensibleString(w, outp.CommitmentSuffix, to.AssetVersion)
 
 	case *CrossChainOutput:
+		if _, err := w.Write([]byte{CrossChainOutputType}); err != nil {
+			return err
+		}
 		return outp.OutputCommitment.writeExtensibleString(w, outp.CommitmentSuffix, to.AssetVersion)
 
 	default:
