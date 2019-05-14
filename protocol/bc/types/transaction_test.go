@@ -41,7 +41,7 @@ func TestTransaction(t *testing.T) {
 		{
 			tx: NewTx(TxData{
 				Version:        1,
-				SerializedSize: uint64(261),
+				SerializedSize: uint64(263),
 				TimeRange:      654,
 				Inputs: []*TxInput{
 					NewIssuanceInput([]byte("nonce"), 254354, []byte("issuanceProgram"), [][]byte{[]byte("arguments1"), []byte("arguments2")}, []byte("assetDefinition")),
@@ -108,7 +108,7 @@ func TestTransaction(t *testing.T) {
 		{
 			tx: NewTx(TxData{
 				Version:        1,
-				SerializedSize: uint64(108),
+				SerializedSize: uint64(112),
 				Inputs: []*TxInput{
 					NewCoinbaseInput([]byte("arbitrary")),
 				},
