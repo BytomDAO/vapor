@@ -165,7 +165,7 @@ var SoloNetParams = Params{
 
 // VaporNetParams is the config for vapor-net
 var VaporNetParams = Params{
-	Name:                 "vapor",
-	Bech32HRPSegwit:      "vm",
-	Checkpoints:          []Checkpoint{},
+	Name:            "vapor",
+	Bech32HRPSegwit: "vp",
+	Checkpoints:     []Checkpoint{},
 }
