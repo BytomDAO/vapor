@@ -176,15 +176,15 @@ func TestPacketCodec(t *testing.T) {
 	}
 
 	_, privateKey, _ := ed25519.GenerateKey(nil)
-	magicNumber := uint64(0x12345)
+	netID := uint64(0x12345)
 	for i, test := range testPackets {
-		packet, h, err := encodePacket(privateKey, test.ptype, test.wantPacket, magicNumber)
+		packet, h, err := encodePacket(privateKey, test.ptype, test.wantPacket, netID)
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		var pkt ingressPacket
-		if err := decodePacket(packet, &pkt, magicNumber); err != nil {
+		if err := decodePacket(packet, &pkt, netID); err != nil {
 			if errors.Root(err) != test.wantErr {
 				t.Errorf("index %d did not accept packet %s\n%v", i, packet, err)
 			}
@@ -242,9 +242,9 @@ func TestPacketTransport(t *testing.T) {
 	toAddr := &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 40000}
 	_, inPrivKey, _ := ed25519.GenerateKey(nil)
 	_, outPrivKey, _ := ed25519.GenerateKey(nil)
-	magicNumber := uint64(0x12345)
+	netID := uint64(0x12345)
 
-	udpInput, err := listenUDP(inPrivKey, inConn, realaddr, magicNumber)
+	udpInput, err := listenUDP(inPrivKey, inConn, realaddr, netID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -258,7 +258,7 @@ func TestPacketTransport(t *testing.T) {
 	go udpInput.readLoop()
 
 	outConn := &testConn{conn: c2}
-	udp, err := listenUDP(outPrivKey, outConn, realaddr, magicNumber)
+	udp, err := listenUDP(outPrivKey, outConn, realaddr, netID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -370,9 +370,9 @@ func TestSendTopicNodes(t *testing.T) {
 	realaddr := &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 40000}
 	_, inPrivKey, _ := ed25519.GenerateKey(nil)
 	_, outPrivKey, _ := ed25519.GenerateKey(nil)
-	magicNumber := uint64(0x12345)
+	netID := uint64(0x12345)
 
-	udpInput, err := listenUDP(inPrivKey, inConn, realaddr, magicNumber)
+	udpInput, err := listenUDP(inPrivKey, inConn, realaddr, netID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -386,7 +386,7 @@ func TestSendTopicNodes(t *testing.T) {
 	go udpInput.readLoop()
 
 	outConn := &testConn{conn: c2}
-	udp, err := listenUDP(outPrivKey, outConn, realaddr, magicNumber)
+	udp, err := listenUDP(outPrivKey, outConn, realaddr, netID)
 	if err != nil {
 		t.Fatal(err)
 	}

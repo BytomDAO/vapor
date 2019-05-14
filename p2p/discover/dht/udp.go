@@ -30,10 +30,10 @@ const (
 
 // Errors
 var (
-	errPacketTooSmall   = errors.New("too small")
-	errPrefixMismatch   = errors.New("prefix mismatch")
-	errNetMagicMismatch = errors.New("network magic number mismatch")
-	errPacketType       = errors.New("unknown packet type")
+	errPacketTooSmall = errors.New("too small")
+	errPrefixMismatch = errors.New("prefix mismatch")
+	errNetIDMismatch  = errors.New("network id mismatch")
+	errPacketType     = errors.New("unknown packet type")
 )
 
 // Timeouts
@@ -150,12 +150,10 @@ type (
 )
 
 var (
-	prefix          = []byte("vapor discv")
-	prefixSize      = len(prefix)
-	MagicNumberSize = 8
-	nodeIDSize      = 32
-	sigSize         = 520 / 8
-	headSize        = prefixSize + MagicNumberSize + nodeIDSize + sigSize // space of packet frame data
+	netIDSize  = 8
+	nodeIDSize = 32
+	sigSize    = 520 / 8
+	headSize   = netIDSize + nodeIDSize + sigSize // space of packet frame data
 )
 
 // Neighbors replies are sent across multiple packets to
@@ -249,14 +247,14 @@ type netWork interface {
 type udp struct {
 	conn conn
 	priv ed25519.PrivateKey
-	//MagicNumber used to isolate subnets with same network id
-	magicNumber uint64
+	//netID used to isolate subnets
+	netID       uint64
 	ourEndpoint rpcEndpoint
 	net         netWork
 }
 
 //NewDiscover create new dht discover
-func NewDiscover(config *cfg.Config, priv ed25519.PrivateKey, port uint16) (*Network, error) {
+func NewDiscover(config *cfg.Config, priv ed25519.PrivateKey, port uint16, netID uint64) (*Network, error) {
 	addr, err := net.ResolveUDPAddr("udp", net.JoinHostPort("0.0.0.0", strconv.FormatUint(uint64(port), 10)))
 	if err != nil {
 		return nil, err
@@ -268,7 +266,7 @@ func NewDiscover(config *cfg.Config, priv ed25519.PrivateKey, port uint16) (*Net
 	}
 
 	realaddr := conn.LocalAddr().(*net.UDPAddr)
-	ntab, err := ListenUDP(priv, conn, realaddr, path.Join(config.DBDir(), "discover"), nil, config.P2P.MagicNumber)
+	ntab, err := ListenUDP(priv, conn, realaddr, path.Join(config.DBDir(), "discover"), nil, netID)
 	if err != nil {
 		return nil, err
 	}
@@ -297,8 +295,8 @@ func NewDiscover(config *cfg.Config, priv ed25519.PrivateKey, port uint16) (*Net
 }
 
 // ListenUDP returns a new table that listens for UDP packets on laddr.
-func ListenUDP(priv ed25519.PrivateKey, conn conn, realaddr *net.UDPAddr, nodeDBPath string, netrestrict *netutil.Netlist, magicNumber uint64) (*Network, error) {
-	transport, err := listenUDP(priv, conn, realaddr, magicNumber)
+func ListenUDP(priv ed25519.PrivateKey, conn conn, realaddr *net.UDPAddr, nodeDBPath string, netrestrict *netutil.Netlist, netID uint64) (*Network, error) {
+	transport, err := listenUDP(priv, conn, realaddr, netID)
 	if err != nil {
 		return nil, err
 	}
@@ -313,8 +311,8 @@ func ListenUDP(priv ed25519.PrivateKey, conn conn, realaddr *net.UDPAddr, nodeDB
 	return net, nil
 }
 
-func listenUDP(priv ed25519.PrivateKey, conn conn, realaddr *net.UDPAddr, magicNumber uint64) (*udp, error) {
-	return &udp{conn: conn, priv: priv, magicNumber: magicNumber, ourEndpoint: makeEndpoint(realaddr, uint16(realaddr.Port))}, nil
+func listenUDP(priv ed25519.PrivateKey, conn conn, realaddr *net.UDPAddr, netID uint64) (*udp, error) {
+	return &udp{conn: conn, priv: priv, netID: netID, ourEndpoint: makeEndpoint(realaddr, uint16(realaddr.Port))}, nil
 }
 
 func (t *udp) localAddr() *net.UDPAddr {
@@ -395,7 +393,7 @@ func (t *udp) sendTopicNodes(remote *Node, queryHash common.Hash, nodes []*Node)
 }
 
 func (t *udp) sendPacket(toid NodeID, toaddr *net.UDPAddr, ptype byte, req interface{}) (hash []byte, err error) {
-	packet, hash, err := encodePacket(t.priv, ptype, req, t.magicNumber)
+	packet, hash, err := encodePacket(t.priv, ptype, req, t.netID)
 	if err != nil {
 		return hash, err
 	}
@@ -409,7 +407,7 @@ func (t *udp) sendPacket(toid NodeID, toaddr *net.UDPAddr, ptype byte, req inter
 // zeroed padding space for encodePacket.
 var headSpace = make([]byte, headSize)
 
-func encodePacket(priv ed25519.PrivateKey, ptype byte, req interface{}, magicNumber uint64) (p, hash []byte, err error) {
+func encodePacket(priv ed25519.PrivateKey, ptype byte, req interface{}, netID uint64) (p, hash []byte, err error) {
 	b := new(bytes.Buffer)
 	b.Write(headSpace)
 	b.WriteByte(ptype)
@@ -422,13 +420,12 @@ func encodePacket(priv ed25519.PrivateKey, ptype byte, req interface{}, magicNum
 	packet := b.Bytes()
 	nodeID := priv.Public()
 	sig := ed25519.Sign(priv, common.BytesToHash(packet[headSize:]).Bytes())
-	magic := []byte(strconv.FormatUint(magicNumber, 16))
-	copy(packet, prefix)
-	copy(packet[prefixSize:], magic[:])
-	copy(packet[prefixSize+MagicNumberSize:], nodeID[:])
-	copy(packet[prefixSize+MagicNumberSize+nodeIDSize:], sig)
+	id := []byte(strconv.FormatUint(netID, 16))
+	copy(packet[:], id[:])
+	copy(packet[netIDSize:], nodeID[:])
+	copy(packet[netIDSize+nodeIDSize:], sig)
 
-	hash = common.BytesToHash(packet[prefixSize:]).Bytes()
+	hash = common.BytesToHash(packet[:]).Bytes()
 	return packet, hash, nil
 }
 
@@ -459,34 +456,31 @@ func (t *udp) readLoop() {
 
 func (t *udp) handlePacket(from *net.UDPAddr, buf []byte) error {
 	pkt := ingressPacket{remoteAddr: from}
-	if err := decodePacket(buf, &pkt, t.magicNumber); err != nil {
+	if err := decodePacket(buf, &pkt, t.netID); err != nil {
 		return err
 	}
 	t.net.reqReadPacket(pkt)
 	return nil
 }
 
-func (t *udp) netMagicNumber() uint64 {
-	return t.magicNumber
+func (t *udp) getNetID() uint64 {
+	return t.netID
 }
 
-func decodePacket(buffer []byte, pkt *ingressPacket, magicNumber uint64) error {
+func decodePacket(buffer []byte, pkt *ingressPacket, netID uint64) error {
 	if len(buffer) < headSize+1 {
 		return errPacketTooSmall
 	}
 	buf := make([]byte, len(buffer))
 	copy(buf, buffer)
-	fromID, sigdata := buf[prefixSize+MagicNumberSize:prefixSize+MagicNumberSize+nodeIDSize], buf[headSize:]
-	if !bytes.Equal(buf[:prefixSize], prefix) {
-		return errPrefixMismatch
-	}
+	fromID, sigdata := buf[netIDSize:netIDSize+nodeIDSize], buf[headSize:]
 
-	if !bytes.Equal(buf[prefixSize:prefixSize+MagicNumberSize], []byte(strconv.FormatUint(magicNumber, 16))[:MagicNumberSize]) {
-		return errNetMagicMismatch
+	if !bytes.Equal(buf[:netIDSize], []byte(strconv.FormatUint(netID, 16))[:netIDSize]) {
+		return errNetIDMismatch
 	}
 
 	pkt.rawData = buf
-	pkt.hash = common.BytesToHash(buf[prefixSize:]).Bytes()
+	pkt.hash = common.BytesToHash(buf[:]).Bytes()
 	pkt.remoteID = ByteID(fromID)
 	switch pkt.ev = nodeEvent(sigdata[0]); pkt.ev {
 	case pingPacket:

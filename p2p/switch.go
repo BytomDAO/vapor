@@ -33,6 +33,7 @@ const (
 
 	minNumOutboundPeers = 4
 	maxNumLANPeers      = 5
+	magicNumber         = 0x054c5638
 )
 
 //pre-define errors for connecting fail
@@ -84,6 +85,7 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 	var discv *dht.Network
 	var lanDiscv *mdns.LANDiscover
 
+	netID := magicNumber ^ cfg.GenesisBlock().Hash().V0
 	blacklistDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
 	config.P2P.PrivateKey, err = config.NodeKey()
 	if err != nil {
@@ -101,7 +103,7 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 	if !config.VaultMode {
 		// Create listener
 		l, listenAddr = GetListener(config.P2P)
-		discv, err = dht.NewDiscover(config, ed25519.PrivateKey(bytes), l.ExternalAddress().Port)
+		discv, err = dht.NewDiscover(config, ed25519.PrivateKey(bytes), l.ExternalAddress().Port, netID)
 		if err != nil {
 			return nil, err
 		}
@@ -110,11 +112,11 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 		}
 	}
 
-	return newSwitch(config, discv, lanDiscv, blacklistDB, l, privKey, listenAddr)
+	return newSwitch(config, discv, lanDiscv, blacklistDB, l, privKey, listenAddr, netID)
 }
 
 // newSwitch creates a new Switch with the given config.
-func newSwitch(config *cfg.Config, discv discv, lanDiscv lanDiscv, blacklistDB dbm.DB, l Listener, priv crypto.PrivKeyEd25519, listenAddr string) (*Switch, error) {
+func newSwitch(config *cfg.Config, discv discv, lanDiscv lanDiscv, blacklistDB dbm.DB, l Listener, priv crypto.PrivKeyEd25519, listenAddr string, netID uint64) (*Switch, error) {
 	sw := &Switch{
 		Config:       config,
 		peerConfig:   DefaultPeerConfig(config.P2P),
@@ -127,7 +129,7 @@ func newSwitch(config *cfg.Config, discv discv, lanDiscv lanDiscv, blacklistDB d
 		discv:        discv,
 		lanDiscv:     lanDiscv,
 		db:           blacklistDB,
-		nodeInfo:     NewNodeInfo(config, priv.PubKey().Unwrap().(crypto.PubKeyEd25519), listenAddr),
+		nodeInfo:     NewNodeInfo(config, priv.PubKey().Unwrap().(crypto.PubKeyEd25519), listenAddr, netID),
 		bannedPeer:   make(map[string]time.Time),
 	}
 	if err := sw.loadBannedPeers(); err != nil {
