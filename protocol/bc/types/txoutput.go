@@ -137,7 +137,7 @@ func (to *TxOutput) writeTo(w io.Writer) error {
 		return errors.Wrap(err, "writing asset version")
 	}
 
-	if err := to.writeCommitment(w); err != nil {
+	if _, err := blockchain.WriteExtensibleString(w, to.CommitmentSuffix, to.writeOutputCommitment); err != nil {
 		return errors.Wrap(err, "writing output commitment")
 	}
 
@@ -148,7 +148,7 @@ func (to *TxOutput) writeTo(w io.Writer) error {
 	return nil
 }
 
-func (to *TxOutput) writeCommitment(w io.Writer) error {
+func (to *TxOutput) writeOutputCommitment(w io.Writer) error {
 	if to.AssetVersion != 1 {
 		return nil
 	}
