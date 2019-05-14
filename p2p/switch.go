@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 	cfg "github.com/vapor/config"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519"
+	"github.com/vapor/crypto/sha3pool"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 	"github.com/vapor/event"
@@ -33,7 +35,8 @@ const (
 
 	minNumOutboundPeers = 4
 	maxNumLANPeers      = 5
-	magicNumber         = 0x054c5638
+	//magicNumber used to generate unique netID
+	magicNumber = uint64(0x054c5638)
 )
 
 //pre-define errors for connecting fail
@@ -85,7 +88,16 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 	var discv *dht.Network
 	var lanDiscv *mdns.LANDiscover
 
-	netID := magicNumber ^ cfg.GenesisBlock().Hash().V0
+	//generate unique netID
+	var data []byte
+	var h [32]byte
+	data = append(data, cfg.GenesisBlock().Hash().Bytes()...)
+	magic := make([]byte, 8)
+	binary.BigEndian.PutUint64(magic, magicNumber)
+	data = append(data, magic[:]...)
+	sha3pool.Sum256(h[:], data)
+	netID := binary.BigEndian.Uint64(h[:8])
+
 	blacklistDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
 	config.P2P.PrivateKey, err = config.NodeKey()
 	if err != nil {
