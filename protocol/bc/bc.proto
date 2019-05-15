@@ -119,3 +119,9 @@ message Spend {
   repeated bytes   witness_arguments   = 3;
   uint64           ordinal             = 4;
 }
+
+message CrossChainInput {
+  ValueDestination witness_destination = 1;
+  repeated bytes   witness_arguments   = 2;
+  uint64           ordinal             = 3;
+}
