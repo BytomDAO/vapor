@@ -6,7 +6,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tendermint/go-crypto"
 	cfg "github.com/vapor/config"
 	"github.com/vapor/consensus"
 	"github.com/vapor/event"
@@ -352,9 +351,6 @@ func (sm *SyncManager) IsListening() bool {
 }
 
 func (sm *SyncManager) NodeInfo() *p2p.NodeInfo {
-	if sm.config.VaultMode {
-		return p2p.NewNodeInfo(sm.config, crypto.PubKeyEd25519{}, "")
-	}
 	return sm.sw.NodeInfo()
 }
 

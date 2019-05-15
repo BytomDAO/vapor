@@ -107,7 +107,7 @@ func ValidateBlock(b *bc.Block, parent *state.BlockNode) error {
 		return errors.Wrap(err, "computing transaction id merkle root")
 	}
 	if txMerkleRoot != *b.TransactionsRoot {
-		return errors.WithDetailf(errMismatchedMerkleRoot, "transaction id merkle root")
+		return errors.WithDetailf(errMismatchedMerkleRoot, "transaction id merkle root. compute: %v, given: %v", txMerkleRoot, *b.TransactionsRoot)
 	}
 
 	txStatusHash, err := types.TxStatusMerkleRoot(b.TransactionStatus.VerifyStatus)

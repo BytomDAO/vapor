@@ -8,7 +8,6 @@ import (
 
 	"github.com/vapor/crypto"
 	"github.com/vapor/crypto/ed25519"
-	"github.com/vapor/crypto/sm3"
 	"github.com/vapor/math/checked"
 )
 
@@ -151,8 +150,4 @@ func opHash160(vm *virtualMachine) error {
 	}
 
 	return vm.push(crypto.Ripemd160(data), false)
-}
-
-func opSm3(vm *virtualMachine) error {
-	return doHash(vm, sm3.New)
 }

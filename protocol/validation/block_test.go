@@ -75,7 +75,7 @@ func TestCheckCoinbaseAmount(t *testing.T) {
 			txs: []*types.Tx{
 				types.NewTx(types.TxData{
 					Inputs:  []*types.TxInput{types.NewCoinbaseInput(nil)},
-					Outputs: []*types.TxOutput{types.NewIntraOutput(*consensus.BTMAssetID, 5000, nil)},
+					Outputs: []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 5000, nil)},
 				}),
 			},
 			amount: 5000,
@@ -85,7 +85,7 @@ func TestCheckCoinbaseAmount(t *testing.T) {
 			txs: []*types.Tx{
 				types.NewTx(types.TxData{
 					Inputs:  []*types.TxInput{types.NewCoinbaseInput(nil)},
-					Outputs: []*types.TxOutput{types.NewIntraOutput(*consensus.BTMAssetID, 5000, nil)},
+					Outputs: []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 5000, nil)},
 				}),
 			},
 			amount: 6000,
@@ -239,7 +239,7 @@ func TestValidateBlock(t *testing.T) {
 						Version:        1,
 						SerializedSize: 1,
 						Inputs:         []*types.TxInput{types.NewCoinbaseInput(nil)},
-						Outputs:        []*types.TxOutput{types.NewIntraOutput(*consensus.BTMAssetID, 41250000000, cp)},
+						Outputs:        []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 41250000000, cp)},
 					}),
 				},
 			},
@@ -268,7 +268,7 @@ func TestValidateBlock(t *testing.T) {
 						Version:        1,
 						SerializedSize: 1,
 						Inputs:         []*types.TxInput{types.NewCoinbaseInput(nil)},
-						Outputs:        []*types.TxOutput{types.NewIntraOutput(*consensus.BTMAssetID, 41250000000, cp)},
+						Outputs:        []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 41250000000, cp)},
 					}),
 				},
 			},
@@ -295,13 +295,13 @@ func TestValidateBlock(t *testing.T) {
 						Version:        1,
 						SerializedSize: 1,
 						Inputs:         []*types.TxInput{types.NewCoinbaseInput(nil)},
-						Outputs:        []*types.TxOutput{types.NewIntraOutput(*consensus.BTMAssetID, 41250000000, cp)},
+						Outputs:        []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 41250000000, cp)},
 					}),
 					types.MapTx(&types.TxData{
 						Version:        1,
 						SerializedSize: 1,
 						Inputs:         []*types.TxInput{types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp)},
-						Outputs:        []*types.TxOutput{types.NewIntraOutput(*consensus.BTMAssetID, 90000000, cp)},
+						Outputs:        []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 90000000, cp)},
 					}),
 				},
 			},
@@ -346,7 +346,7 @@ func TestGasOverBlockLimit(t *testing.T) {
 				Version:        1,
 				SerializedSize: 1,
 				Inputs:         []*types.TxInput{types.NewCoinbaseInput(nil)},
-				Outputs:        []*types.TxOutput{types.NewIntraOutput(*consensus.BTMAssetID, 41250000000, cp)},
+				Outputs:        []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 41250000000, cp)},
 			}),
 		},
 	}
@@ -359,7 +359,7 @@ func TestGasOverBlockLimit(t *testing.T) {
 				types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 10000000000, 0, cp),
 			},
 			Outputs: []*types.TxOutput{
-				types.NewIntraOutput(*consensus.BTMAssetID, 9000000000, cp),
+				types.NewIntraChainOutput(*consensus.BTMAssetID, 9000000000, cp),
 			},
 		}))
 	}
@@ -385,7 +385,7 @@ func TestSetTransactionStatus(t *testing.T) {
 			Height:                1,
 			Timestamp:             1523352601,
 			PreviousBlockId:       &bc.Hash{V0: 0},
-			TransactionsRoot:      &bc.Hash{V0: 3413931728524254295, V1: 300490676707850231, V2: 1886132055969225110, V3: 10216139531293906088},
+			TransactionsRoot:      &bc.Hash{V0: 10011341401654852692, V1: 8144266100226420640, V2: 18332298251154128538, V3: 7663092454615786384},
 			TransactionStatusHash: &bc.Hash{V0: 8682965660674182538, V1: 8424137560837623409, V2: 6979974817894224946, V3: 4673809519342015041},
 		},
 		Transactions: []*bc.Tx{
@@ -393,7 +393,7 @@ func TestSetTransactionStatus(t *testing.T) {
 				Version:        1,
 				SerializedSize: 1,
 				Inputs:         []*types.TxInput{types.NewCoinbaseInput(nil)},
-				Outputs:        []*types.TxOutput{types.NewIntraOutput(*consensus.BTMAssetID, 41449998224, cp)},
+				Outputs:        []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 41449998224, cp)},
 			}),
 			types.MapTx(&types.TxData{
 				Version:        1,
@@ -403,8 +403,8 @@ func TestSetTransactionStatus(t *testing.T) {
 					types.NewSpendInput([][]byte{}, *newHash(8), bc.AssetID{V0: 1}, 1000, 0, []byte{byte(vm.OP_FALSE)}),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewIntraOutput(*consensus.BTMAssetID, 888, cp),
-					types.NewIntraOutput(bc.AssetID{V0: 1}, 1000, cp),
+					types.NewIntraChainOutput(*consensus.BTMAssetID, 888, cp),
+					types.NewIntraChainOutput(bc.AssetID{V0: 1}, 1000, cp),
 				},
 			}),
 			types.MapTx(&types.TxData{
@@ -414,7 +414,7 @@ func TestSetTransactionStatus(t *testing.T) {
 					types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewIntraOutput(*consensus.BTMAssetID, 888, cp),
+					types.NewIntraChainOutput(*consensus.BTMAssetID, 888, cp),
 				},
 			}),
 		},
