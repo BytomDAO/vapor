@@ -5,7 +5,7 @@ import (
 )
 
 // VoteOutput satisfies the TypedOutput interface and represents a vote transaction.
-type VoteOutput struct {
+type VoteTxOutput struct {
 	OutputCommitment
 	// Unconsumed suffixes of the commitment and witness extensible strings.
 	CommitmentSuffix []byte
@@ -16,7 +16,7 @@ type VoteOutput struct {
 func NewVoteOutput(assetID bc.AssetID, amount uint64, controlProgram []byte, vote []byte) *TxOutput {
 	return &TxOutput{
 		AssetVersion: 1,
-		TypedOutput: &VoteOutput{
+		TypedOutput: &VoteTxOutput{
 			OutputCommitment: OutputCommitment{
 				AssetAmount: bc.AssetAmount{
 					AssetId: &assetID,
@@ -30,4 +30,4 @@ func NewVoteOutput(assetID bc.AssetID, amount uint64, controlProgram []byte, vot
 	}
 }
 
-func (it *VoteOutput) OutputType() uint8 { return VoteOutputType }
+func (it *VoteTxOutput) OutputType() uint8 { return VoteOutputType }
