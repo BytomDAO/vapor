@@ -94,6 +94,13 @@ message CrossChainOutput {
   uint64      ordinal         = 3;
 }
 
+message VoteOutput {
+  ValueSource source          = 1;
+  Program     control_program = 2;
+  uint64      ordinal         = 3;
+  bytes       vote            = 4;
+}
+
 message Retirement {
   ValueSource source   = 1;
   uint64      ordinal  = 2;
