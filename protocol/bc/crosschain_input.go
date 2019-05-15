@@ -8,7 +8,7 @@ import "io"
 func (CrossChainInput) typ() string { return "crosschaininput1" }
 
 func (s *CrossChainInput) writeForHash(w io.Writer) {
-	mustWriteForHash(w, s.MainChainOutputId)
+	mustWriteForHash(w, s.MainchainOutputId)
 }
 
 // SetDestination will link the CrossChainInput to the output
@@ -21,9 +21,9 @@ func (s *CrossChainInput) SetDestination(id *Hash, val *AssetAmount, pos uint64)
 }
 
 // NewCrossChainInput creates a new CrossChainInput.
-func NewCrossChainInput(mainChainOutputID *Hash, ordinal uint64) *CrossChainInput {
+func NewCrossChainInput(mainchainOutputID *Hash, ordinal uint64) *CrossChainInput {
 	return &CrossChainInput{
-		MainChainOutputId: mainChainOutputID,
+		MainchainOutputId: mainchainOutputID,
 		Ordinal:           ordinal,
 	}
 }
