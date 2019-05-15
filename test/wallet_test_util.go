@@ -140,14 +140,6 @@ func (ctx *walletTestContext) getPubkey(keyAlias string) *chainkd.XPub {
 	return nil
 }
 
-func (ctx *walletTestContext) createAsset(accountAlias string, assetAlias string) (*asset.Asset, error) {
-	acc, err := ctx.Wallet.AccountMgr.FindByAlias(accountAlias)
-	if err != nil {
-		return nil, err
-	}
-	return ctx.Wallet.AssetReg.Define(acc.XPubs, len(acc.XPubs), nil, 0, assetAlias, nil)
-}
-
 func (ctx *walletTestContext) newBlock(txs []*types.Tx, coinbaseAccount string) (*types.Block, error) {
 	controlProgram, err := ctx.createControlProgram(coinbaseAccount, true)
 	if err != nil {

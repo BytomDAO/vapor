@@ -7,19 +7,14 @@ import (
 	"sync"
 
 	"github.com/golang/groupcache/lru"
-	"golang.org/x/crypto/sha3"
 
 	"github.com/vapor/blockchain/signers"
-	"github.com/vapor/common"
 	"github.com/vapor/consensus"
-	"github.com/vapor/crypto/ed25519"
-	"github.com/vapor/crypto/ed25519/chainkd"
 	dbm "github.com/vapor/database/leveldb"
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/vm/vmutil"
 )
 
 // DefaultNativeAsset native BTM asset
@@ -110,72 +105,6 @@ type Asset struct {
 	IssuanceProgram   chainjson.HexBytes     `json:"issue_program"`
 	RawDefinitionByte chainjson.HexBytes     `json:"raw_definition_byte"`
 	DefinitionMap     map[string]interface{} `json:"definition"`
-}
-
-func (reg *Registry) getNextAssetIndex() uint64 {
-	reg.assetIndexMu.Lock()
-	defer reg.assetIndexMu.Unlock()
-
-	nextIndex := uint64(1)
-	if rawIndex := reg.db.Get(assetIndexKey); rawIndex != nil {
-		nextIndex = common.BytesToUnit64(rawIndex) + 1
-	}
-
-	reg.db.Set(assetIndexKey, common.Unit64ToBytes(nextIndex))
-	return nextIndex
-}
-
-// Define defines a new Asset.
-func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, limitHeight int64, alias string, issuanceProgram chainjson.HexBytes) (*Asset, error) {
-	var err error
-	var assetSigner *signers.Signer
-
-	alias = strings.ToUpper(strings.TrimSpace(alias))
-	if alias == "" {
-		return nil, errors.Wrap(ErrNullAlias)
-	}
-
-	if alias == consensus.BTMAlias {
-		return nil, ErrInternalAsset
-	}
-
-	rawDefinition, err := serializeAssetDef(definition)
-	if err != nil {
-		return nil, ErrSerializing
-	}
-
-	vmver := uint64(1)
-	if len(issuanceProgram) == 0 {
-		if len(xpubs) == 0 {
-			return nil, errors.Wrap(signers.ErrNoXPubs)
-		}
-
-		nextAssetIndex := reg.getNextAssetIndex()
-		assetSigner, err = signers.Create("asset", xpubs, quorum, nextAssetIndex, signers.BIP0032)
-		if err != nil {
-			return nil, err
-		}
-
-		path := signers.GetBip0032Path(assetSigner, signers.AssetKeySpace)
-		derivedXPubs := chainkd.DeriveXPubs(assetSigner.XPubs, path)
-		derivedPKs := chainkd.XPubKeys(derivedXPubs)
-		issuanceProgram, vmver, err = multisigIssuanceProgram(derivedPKs, assetSigner.Quorum, limitHeight)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	defHash := bc.NewHash(sha3.Sum256(rawDefinition))
-	a := &Asset{
-		DefinitionMap:     definition,
-		RawDefinitionByte: rawDefinition,
-		VMVersion:         vmver,
-		IssuanceProgram:   issuanceProgram,
-		AssetID:           bc.ComputeAssetID(issuanceProgram, vmver, &defHash),
-		Signer:            assetSigner,
-		Alias:             &alias,
-	}
-	return a, reg.SaveAsset(a, alias)
 }
 
 // SaveAsset store asset
@@ -361,17 +290,6 @@ func serializeAssetDef(def map[string]interface{}) ([]byte, error) {
 		def = make(map[string]interface{}, 0)
 	}
 	return json.MarshalIndent(def, "", "  ")
-}
-
-func multisigIssuanceProgram(pubkeys []ed25519.PublicKey, nrequired int, blockHeight int64) (program []byte, vmversion uint64, err error) {
-	issuanceProg, err := vmutil.P2SPMultiSigProgramWithHeight(pubkeys, nrequired, blockHeight)
-	if err != nil {
-		return nil, 0, err
-	}
-	builder := vmutil.NewBuilder()
-	builder.AddRawBytes(issuanceProg)
-	prog, err := builder.Build()
-	return prog, 1, err
 }
 
 //UpdateAssetAlias updates asset alias
