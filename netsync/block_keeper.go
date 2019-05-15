@@ -379,11 +379,6 @@ func (bk *blockKeeper) startSync() bool {
 }
 
 func (bk *blockKeeper) syncWorker() {
-	genesisBlock, err := bk.chain.GetBlockByHeight(0)
-	if err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on handleStatusRequestMsg get genesis")
-		return
-	}
 	syncTicker := time.NewTicker(syncCycle)
 	defer syncTicker.Stop()
 
@@ -402,7 +397,7 @@ func (bk *blockKeeper) syncWorker() {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on syncWorker broadcast new block")
 		}
 
-		if err = bk.peers.broadcastNewStatus(block, genesisBlock); err != nil {
+		if err = bk.peers.broadcastNewStatus(block); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on syncWorker broadcast new status")
 		}
 	}

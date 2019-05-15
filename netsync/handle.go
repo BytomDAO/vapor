@@ -44,7 +44,7 @@ type Switch interface {
 	AddReactor(name string, reactor p2p.Reactor) p2p.Reactor
 	AddBannedPeer(string) error
 	StopPeerGracefully(string)
-	NodeInfo() *p2p.NodeInfo
+	NodeInfo() p2p.NodeInfo
 	Start() (bool, error)
 	Stop() bool
 	IsListening() bool
@@ -304,14 +304,7 @@ func (sm *SyncManager) handleMineBlockMsg(peer *peer, msg *MineBlockMessage) {
 }
 
 func (sm *SyncManager) handleStatusRequestMsg(peer BasePeer) {
-	bestHeader := sm.chain.BestBlockHeader()
-	genesisBlock, err := sm.chain.GetBlockByHeight(0)
-	if err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on handleStatusRequestMsg get genesis")
-	}
-
-	genesisHash := genesisBlock.Hash()
-	msg := NewStatusResponseMessage(bestHeader, &genesisHash)
+	msg := NewStatusResponseMessage(sm.chain.BestBlockHeader())
 	if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
 		sm.peers.removePeer(peer.ID())
 	}
@@ -322,13 +315,6 @@ func (sm *SyncManager) handleStatusResponseMsg(basePeer BasePeer, msg *StatusRes
 		peer.setStatus(msg.Height, msg.GetHash())
 		return
 	}
-
-	if genesisHash := msg.GetGenesisHash(); sm.genesisHash != *genesisHash {
-		log.WithFields(log.Fields{"module": logModule, "remote genesis": genesisHash.String(), "local genesis": sm.genesisHash.String()}).Warn("fail hand shake due to differnt genesis")
-		return
-	}
-
-	sm.peers.addPeer(basePeer, msg.Height, msg.GetHash())
 }
 
 func (sm *SyncManager) handleTransactionMsg(peer *peer, msg *TransactionMessage) {
@@ -350,7 +336,7 @@ func (sm *SyncManager) IsListening() bool {
 	return sm.sw.IsListening()
 }
 
-func (sm *SyncManager) NodeInfo() *p2p.NodeInfo {
+func (sm *SyncManager) NodeInfo() p2p.NodeInfo {
 	return sm.sw.NodeInfo()
 }
 
@@ -447,7 +433,6 @@ func (sm *SyncManager) Start() error {
 	go sm.txBroadcastLoop()
 	go sm.minedBroadcastLoop()
 	go sm.txSyncLoop()
-
 	return nil
 }
 

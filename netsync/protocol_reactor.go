@@ -1,18 +1,11 @@
 package netsync
 
 import (
-	"time"
-
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/errors"
 	"github.com/vapor/p2p"
 	"github.com/vapor/p2p/connection"
-)
-
-const (
-	handshakeTimeout    = 10 * time.Second
-	handshakeCheckPerid = 500 * time.Millisecond
 )
 
 var (
@@ -62,26 +55,13 @@ func (pr *ProtocolReactor) OnStop() {
 
 // AddPeer implements Reactor by sending our state to peer.
 func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
+	pr.peers.addPeer(peer)
 	if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{&StatusRequestMessage{}}); !ok {
 		return errStatusRequest
 	}
 
-	checkTicker := time.NewTicker(handshakeCheckPerid)
-	defer checkTicker.Stop()
-	timeout := time.NewTimer(handshakeTimeout)
-	defer timeout.Stop()
-	for {
-		select {
-		case <-checkTicker.C:
-			if exist := pr.peers.getPeer(peer.Key); exist != nil {
-				pr.sm.syncTransactions(peer.Key)
-				return nil
-			}
-
-		case <-timeout.C:
-			return errProtocolHandshakeTimeout
-		}
-	}
+	pr.sm.syncTransactions(peer.Key)
+	return nil
 }
 
 // RemovePeer implements Reactor by removing peer from the pool.

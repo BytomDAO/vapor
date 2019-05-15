@@ -120,6 +120,8 @@ func (nw *NetWork) HandsShake(nodeA, nodeB *SyncManager) (*P2PPeer, *P2PPeer, er
 
 	nodeA.handleStatusRequestMsg(&A2B)
 	nodeB.handleStatusRequestMsg(&B2A)
+	nodeA.peers.addPeer(&A2B)
+	nodeB.peers.addPeer(&B2A)
 
 	A2B.setAsync(true)
 	B2A.setAsync(true)
