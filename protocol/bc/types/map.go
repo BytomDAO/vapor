@@ -69,7 +69,6 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 	}
 
 	var (
-		// TODO:
 		spends    []*bc.Spend
 		issuances []*bc.Issuance
 		crossIns  []*bc.CrossChainInput
@@ -156,11 +155,15 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 	for _, issuance := range issuances {
 		issuance.SetDestination(&muxID, issuance.Value, issuance.Ordinal)
 	}
+	for _, crossIn := range crossIns {
+		crossIn.SetDestination(&muxID, crossIn.Value, crossIn.Ordinal)
+	}
 
 	if coinbase != nil {
 		coinbase.SetDestination(&muxID, mux.Sources[0].Value, 0)
 	}
 
+	// TODO:
 	// convert types.outputs to the bc.output
 	var resultIDs []*bc.Hash
 	for i, out := range tx.Outputs {
