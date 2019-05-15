@@ -27,6 +27,12 @@ func MapTx(oldTx *TxData) *bc.Tx {
 		case *bc.Issuance:
 			ord = e.Ordinal
 
+		case *bc.CrossChainInput:
+			ord = e.Ordinal
+			if *e.WitnessDestination.Value.AssetId == *consensus.BTMAssetID {
+				tx.GasInputIDs = append(tx.GasInputIDs, id)
+			}
+
 		case *bc.Spend:
 			ord = e.Ordinal
 			spentOutputIDs[*e.SpentOutputId] = true
