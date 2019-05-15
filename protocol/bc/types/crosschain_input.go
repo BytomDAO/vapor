@@ -14,12 +14,14 @@ type CrossChainInput struct {
 // NewCrossChainInput create a new CrossChainInput struct.
 // The source is created/issued by trusted federation and hence there is no need
 // to refer to it.
-func NewCrossChainInput(arguments [][]byte, assetID bc.AssetID, amount uint64, controlProgram []byte) *TxInput {
+func NewCrossChainInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amount, sourcePos uint64, controlProgram []byte) *TxInput {
 	sc := SpendCommitment{
 		AssetAmount: bc.AssetAmount{
 			AssetId: &assetID,
 			Amount:  amount,
 		},
+		SourceID:       sourceID,
+		SourcePosition: sourcePos,
 		VMVersion:      1,
 		ControlProgram: controlProgram,
 	}

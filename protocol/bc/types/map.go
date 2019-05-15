@@ -72,6 +72,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 		// TODO:
 		spends    []*bc.Spend
 		issuances []*bc.Issuance
+		crossIns  []*bc.CrossChainInput
 		coinbase  *bc.Coinbase
 	)
 
@@ -133,7 +134,14 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			}
 
 		case *CrossChainInput:
-			// TODO:
+			crossIn := bc.NewCrossChainInput(&inp.SourceID, &inp.AssetAmount, uint64(i)) // ???
+			crossIn.WitnessArguments = inp.Arguments
+			crossInID := addEntry(crossIn)
+			muxSources[i] = &bc.ValueSource{
+				Ref:   &crossInID,
+				Value: &inp.AssetAmount,
+			}
+			crossIns = append(crossIns, crossIn)
 		}
 	}
 
