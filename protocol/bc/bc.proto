@@ -121,7 +121,7 @@ message Spend {
 }
 
 message CrossChainInput {
-  Hash             mainchain_output_id     = 1;
+  Hash             mainchain_output_id = 1;
   ValueDestination witness_destination = 2;
   repeated bytes   witness_arguments   = 3;
   uint64           ordinal             = 4;
