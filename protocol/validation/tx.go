@@ -5,7 +5,6 @@ import (
 	"math"
 
 	"github.com/vapor/consensus"
-	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/errors"
 	"github.com/vapor/math/checked"
 	"github.com/vapor/protocol/bc"
@@ -224,6 +223,13 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errors.Wrap(err, "checking output source")
 		}
 
+	case *bc.VoteOutput:
+		vs2 := *vs
+		vs2.sourcePos = 0
+		if err = checkValidSrc(&vs2, e.Source); err != nil {
+			return errors.Wrap(err, "checking output source")
+		}
+
 	case *bc.Retirement:
 		vs2 := *vs
 		vs2.sourcePos = 0
@@ -417,6 +423,12 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 		}
 		src = ref.Source
 
+	case *bc.VoteOutput:
+		if vd.Position != 0 {
+			return errors.Wrapf(ErrPosition, "invalid position %d for output destination", vd.Position)
+		}
+		src = ref.Source
+
 	case *bc.Retirement:
 		if vd.Position != 0 {
 			return errors.Wrapf(ErrPosition, "invalid position %d for retirement destination", vd.Position)
@@ -452,61 +464,6 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 	return nil
 }
 
-func checkStandardTx(tx *bc.Tx, blockHeight uint64) error {
-	for _, id := range tx.InputIDs {
-		if blockHeight >= ruleAA && id.IsZero() {
-			return ErrEmptyInputIDs
-		}
-	}
-
-	for _, id := range tx.GasInputIDs {
-		spend, err := tx.Spend(id)
-		if err != nil {
-			continue
-		}
-
-		intraChainSpentOutput, err := tx.IntraChainOutput(*spend.SpentOutputId)
-		if err != nil {
-			return err
-		}
-
-		if !segwit.IsP2WScript(intraChainSpentOutput.ControlProgram.Code) {
-			return ErrNotStandardTx
-		}
-	}
-
-	for _, id := range tx.ResultIds {
-		e, ok := tx.Entries[*id]
-		if !ok {
-			return errors.Wrapf(bc.ErrMissingEntry, "id %x", id.Bytes())
-		}
-
-		var prog []byte
-		switch e := e.(type) {
-		case *bc.IntraChainOutput:
-			if *e.Source.Value.AssetId != *consensus.BTMAssetID {
-				continue
-			}
-			prog = e.ControlProgram.Code
-
-		case *bc.CrossChainOutput:
-			if *e.Source.Value.AssetId != *consensus.BTMAssetID {
-				continue
-			}
-			prog = e.ControlProgram.Code
-
-		default:
-			continue
-		}
-
-		if !segwit.IsP2WScript(prog) {
-			return ErrNotStandardTx
-		}
-	}
-
-	return nil
-}
-
 func checkTimeRange(tx *bc.Tx, block *bc.Block) error {
 	if tx.TimeRange == 0 {
 		return nil
@@ -529,9 +486,6 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
 		return gasStatus, ErrWrongTransactionSize
 	}
 	if err := checkTimeRange(tx, block); err != nil {
-		return gasStatus, err
-	}
-	if err := checkStandardTx(tx, block.Height); err != nil {
 		return gasStatus, err
 	}
 
