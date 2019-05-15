@@ -163,7 +163,6 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 		coinbase.SetDestination(&muxID, mux.Sources[0].Value, 0)
 	}
 
-	// TODO:
 	// convert types.outputs to the bc.output
 	var resultIDs []*bc.Hash
 	for i, out := range tx.Outputs {
