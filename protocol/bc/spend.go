@@ -22,7 +22,7 @@ func (s *Spend) SetDestination(id *Hash, val *AssetAmount, pos uint64) {
 }
 
 // NewSpend creates a new Spend.
-func NewSpend(spentOutputID *Hash, value *AssetAmount, ordinal uint64) *Spend {
+func NewSpend(spentOutputID *Hash, ordinal uint64) *Spend {
 	return &Spend{
 		SpentOutputId: spentOutputID,
 		Ordinal:       ordinal,
