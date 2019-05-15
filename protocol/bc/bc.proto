@@ -104,15 +104,6 @@ message Retirement {
   uint64      ordinal  = 2;
 }
 
-message Issuance {
-  Hash             nonce_hash               = 1;
-  AssetAmount      value                    = 2;
-  ValueDestination witness_destination      = 3;
-  AssetDefinition  witness_asset_definition = 4;
-  repeated bytes   witness_arguments        = 5;
-  uint64           ordinal                  = 6;
-}
-
 message Spend {
   Hash             spent_output_id     = 1;
   ValueDestination witness_destination = 2;

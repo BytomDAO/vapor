@@ -192,17 +192,6 @@ func (w *Wallet) BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInp
 		for _, arg := range arguments {
 			in.WitnessArguments = append(in.WitnessArguments, arg)
 		}
-	case *bc.Issuance:
-		in.Type = "issue"
-		in.IssuanceProgram = orig.IssuanceProgram()
-		arguments := orig.Arguments()
-		for _, arg := range arguments {
-			in.WitnessArguments = append(in.WitnessArguments, arg)
-		}
-		if assetDefinition := orig.AssetDefinition(); isValidJSON(assetDefinition) {
-			assetDefinition := json.RawMessage(assetDefinition)
-			in.AssetDefinition = &assetDefinition
-		}
 	case *bc.Coinbase:
 		in.Type = "coinbase"
 		in.Arbitrary = e.Arbitrary

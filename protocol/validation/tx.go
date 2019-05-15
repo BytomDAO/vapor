@@ -231,26 +231,6 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errors.Wrap(err, "checking retirement source")
 		}
 
-	case *bc.Issuance:
-		computedAssetID := e.WitnessAssetDefinition.ComputeAssetID()
-		if computedAssetID != *e.Value.AssetId {
-			return errors.WithDetailf(ErrMismatchedAssetID, "asset ID is %x, issuance wants %x", computedAssetID.Bytes(), e.Value.AssetId.Bytes())
-		}
-
-		gasLeft, err := vm.Verify(NewTxVMContext(vs, e, e.WitnessAssetDefinition.IssuanceProgram, e.WitnessArguments), vs.gasStatus.GasLeft)
-		if err != nil {
-			return errors.Wrap(err, "checking issuance program")
-		}
-		if err = vs.gasStatus.updateUsage(gasLeft); err != nil {
-			return err
-		}
-
-		destVS := *vs
-		destVS.destPos = 0
-		if err = checkValidDest(&destVS, e.WitnessDestination); err != nil {
-			return errors.Wrap(err, "checking issuance destination")
-		}
-
 	case *bc.Spend:
 		if e.SpentOutputId == nil {
 			return errors.Wrap(ErrMissingField, "spend without spent output ID")
@@ -343,12 +323,6 @@ func checkValidSrc(vstate *validationState, vs *bc.ValueSource) error {
 	case *bc.Coinbase:
 		if vs.Position != 0 {
 			return errors.Wrapf(ErrPosition, "invalid position %d for coinbase source", vs.Position)
-		}
-		dest = ref.WitnessDestination
-
-	case *bc.Issuance:
-		if vs.Position != 0 {
-			return errors.Wrapf(ErrPosition, "invalid position %d for issuance source", vs.Position)
 		}
 		dest = ref.WitnessDestination
 

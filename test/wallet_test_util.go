@@ -85,14 +85,6 @@ func (t *wtTransaction) create(ctx *walletTestContext) (*types.Tx, error) {
 			if err := generator.AddSpendInput(input.AccountAlias, input.AssetAlias, input.Amount); err != nil {
 				return nil, err
 			}
-		case "issue":
-			_, err := ctx.createAsset(input.AccountAlias, input.AssetAlias)
-			if err != nil {
-				return nil, err
-			}
-			if err := generator.AddIssuanceInput(input.AssetAlias, input.Amount); err != nil {
-				return nil, err
-			}
 		}
 	}
 

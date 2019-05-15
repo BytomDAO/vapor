@@ -4,7 +4,6 @@ import (
 	"github.com/vapor/consensus"
 	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/vm/vmutil"
 )
 
 // EstimateTxGasInfo estimate transaction consumed gas
@@ -33,16 +32,6 @@ func EstimateTxGas(template Template) (*EstimateTxGasInfo, error) {
 				totalWitnessSize += baseP2WSHSize
 				totalP2WSHGas += baseP2WSHGas
 			}
-
-		case types.IssuanceInputType:
-			issuanceProgram := input.IssuanceProgram()
-			if height := vmutil.GetIssuanceProgramRestrictHeight(issuanceProgram); height > 0 {
-				// the gas for issue program with checking block height
-				totalIssueGas += 5
-			}
-			baseIssueSize, baseIssueGas := estimateIssueGas(template.SigningInstructions[pos])
-			totalWitnessSize += baseIssueSize
-			totalIssueGas += baseIssueGas
 		}
 	}
 

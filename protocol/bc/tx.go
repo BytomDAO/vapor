@@ -71,16 +71,3 @@ func (tx *Tx) Spend(id Hash) (*Spend, error) {
 	}
 	return sp, nil
 }
-
-// Issuance try to get the issuance entry by given hash
-func (tx *Tx) Issuance(id Hash) (*Issuance, error) {
-	e, ok := tx.Entries[id]
-	if !ok || e == nil {
-		return nil, errors.Wrapf(ErrMissingEntry, "id %x", id.Bytes())
-	}
-	iss, ok := e.(*Issuance)
-	if !ok {
-		return nil, errors.Wrapf(ErrEntryType, "entry %x has unexpected type %T", id.Bytes(), e)
-	}
-	return iss, nil
-}
