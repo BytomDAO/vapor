@@ -982,8 +982,7 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 		result.assetDef = []byte{2}
 	}
 	if result.assetID.IsZero() {
-		refdatahash := hashData(result.assetDef)
-		result.assetID = bc.ComputeAssetID(result.issuanceProg.Code, result.issuanceProg.VmVersion, &refdatahash)
+		result.assetID = bc.AssetID{V0: 9999}
 	}
 
 	if result.txVersion == 0 {

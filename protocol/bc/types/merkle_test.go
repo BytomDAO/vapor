@@ -81,7 +81,7 @@ func TestMerkleRoot(t *testing.T) {
 
 func TestDuplicateLeaves(t *testing.T) {
 	trueProg := []byte{byte(vm.OP_TRUE)}
-	assetID := bc.ComputeAssetID(trueProg, 1, &bc.EmptyStringHash)
+	assetID := bc.AssetID{V0: 9999}
 	txs := make([]*bc.Tx, 6)
 	for i := uint64(0); i < 6; i++ {
 		txs[i] = NewTx(TxData{
@@ -111,7 +111,7 @@ func TestDuplicateLeaves(t *testing.T) {
 
 func TestAllDuplicateLeaves(t *testing.T) {
 	trueProg := []byte{byte(vm.OP_TRUE)}
-	assetID := bc.ComputeAssetID(trueProg, 1, &bc.EmptyStringHash)
+	assetID := bc.AssetID{V0: 9999}
 
 	tx := NewTx(TxData{
 		Version: 1,
@@ -421,7 +421,7 @@ func mockTransactions(txCount int) ([]*Tx, []*bc.Tx) {
 	var txs []*Tx
 	var bcTxs []*bc.Tx
 	trueProg := []byte{byte(vm.OP_TRUE)}
-	assetID := bc.ComputeAssetID(trueProg, 1, &bc.EmptyStringHash)
+	assetID := bc.AssetID{V0: 9999}
 	for i := uint64(0); i < uint64(txCount); i++ {
 		tx := NewTx(TxData{
 			Version: 1,

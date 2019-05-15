@@ -16,7 +16,7 @@ type EstimateTxGasInfo struct {
 
 // EstimateTxGas estimate consumed neu for transaction
 func EstimateTxGas(template Template) (*EstimateTxGasInfo, error) {
-	var baseP2WSHSize, totalWitnessSize, baseP2WSHGas, totalP2WPKHGas, totalP2WSHGas, totalIssueGas int64
+	var baseP2WSHSize, totalWitnessSize, baseP2WSHGas, totalP2WPKHGas, totalP2WSHGas int64
 	baseSize := int64(176) // inputSize(112) + outputSize(64)
 	baseP2WPKHSize := int64(98)
 	baseP2WPKHGas := int64(1409)
@@ -40,21 +40,18 @@ func EstimateTxGas(template Template) (*EstimateTxGasInfo, error) {
 		flexibleGas += baseP2WPKHGas + (baseSize+baseP2WPKHSize)*consensus.StorageGasRate
 	} else if totalP2WSHGas > 0 {
 		flexibleGas += baseP2WSHGas + (baseSize+baseP2WSHSize)*consensus.StorageGasRate
-	} else if totalIssueGas > 0 {
-		totalIssueGas += baseP2WPKHGas
-		totalWitnessSize += baseSize + baseP2WPKHSize
 	}
 
 	// the total transaction storage gas
 	totalTxSizeGas := (int64(template.Transaction.TxData.SerializedSize) + totalWitnessSize) * consensus.StorageGasRate
 
 	// the total transaction gas is composed of storage and virtual machines
-	totalGas := totalTxSizeGas + totalP2WPKHGas + totalP2WSHGas + totalIssueGas + flexibleGas
+	totalGas := totalTxSizeGas + totalP2WPKHGas + totalP2WSHGas + flexibleGas
 	return &EstimateTxGasInfo{
 		TotalNeu:    totalGas * consensus.VMGasRate,
 		FlexibleNeu: flexibleGas * consensus.VMGasRate,
 		StorageNeu:  totalTxSizeGas * consensus.VMGasRate,
-		VMNeu:       (totalP2WPKHGas + totalP2WSHGas + totalIssueGas) * consensus.VMGasRate,
+		VMNeu:       (totalP2WPKHGas + totalP2WSHGas) * consensus.VMGasRate,
 	}, nil
 }
 
@@ -75,22 +72,6 @@ func estimateP2WSHGas(sigInst *SigningInstruction) (int64, int64) {
 			if int64(len(t.Keys)) == 1 && int64(t.Quorum) == 1 {
 				gas += 27
 			}
-		}
-	}
-	return witnessSize, gas
-}
-
-// estimateIssueGas return the witness size and the gas consumed to execute the virtual machine for issuance program
-func estimateIssueGas(sigInst *SigningInstruction) (int64, int64) {
-	var witnessSize, gas int64
-	for _, witness := range sigInst.WitnessComponents {
-		switch t := witness.(type) {
-		case *SignatureWitness:
-			witnessSize += 65 * int64(t.Quorum)
-			gas += 1065*int64(len(t.Keys)) + 72*int64(t.Quorum) + 316
-		case *RawTxSigWitness:
-			witnessSize += 65 * int64(t.Quorum)
-			gas += 1065*int64(len(t.Keys)) + 72*int64(t.Quorum) + 316
 		}
 	}
 	return witnessSize, gas

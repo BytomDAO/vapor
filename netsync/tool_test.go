@@ -170,7 +170,7 @@ func mockTxs(txCount int) ([]*types.Tx, []*bc.Tx) {
 	var txs []*types.Tx
 	var bcTxs []*bc.Tx
 	trueProg := mockControlProgram(60)
-	assetID := bc.ComputeAssetID(trueProg, 1, &bc.EmptyStringHash)
+	assetID := bc.AssetID{V0: 9999}
 	for i := uint64(0); i < uint64(txCount); i++ {
 		tx := types.NewTx(types.TxData{
 			Version: 1,
