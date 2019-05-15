@@ -230,6 +230,17 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		}
 
 	case *bc.CrossChainInput:
+		// TODO:
+		// 1. which program to use
+		// 2. gas related???
+		gasLeft, err := vm.Verify(NewTxVMContext(vs, e, e.WitnessAssetDefinition.IssuanceProgram, e.WitnessArguments), vs.gasStatus.GasLeft)
+		if err != nil {
+			return errors.Wrap(err, "checking issuance program")
+		}
+		if err = vs.gasStatus.updateUsage(gasLeft); err != nil {
+			return err
+		}
+
 		vs2 := *vs
 		vs2.destPos = 0
 		if err = checkValidDest(&vs2, e.WitnessDestination); err != nil {
