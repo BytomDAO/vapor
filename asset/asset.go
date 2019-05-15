@@ -8,7 +8,6 @@ import (
 
 	"github.com/golang/groupcache/lru"
 
-	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/consensus"
 	dbm "github.com/vapor/database/leveldb"
 	chainjson "github.com/vapor/encoding/json"
@@ -32,12 +31,10 @@ var (
 )
 
 func initNativeAsset() {
-	signer := &signers.Signer{Type: "internal"}
 	alias := consensus.BTMAlias
 
 	definitionBytes, _ := serializeAssetDef(consensus.BTMDefinitionMap)
 	DefaultNativeAsset = &Asset{
-		Signer:            signer,
 		AssetID:           *consensus.BTMAssetID,
 		Alias:             &alias,
 		VMVersion:         1,
@@ -98,11 +95,9 @@ type Registry struct {
 
 //Asset describe asset on bytom chain
 type Asset struct {
-	*signers.Signer
 	AssetID           bc.AssetID             `json:"id"`
 	Alias             *string                `json:"alias"`
 	VMVersion         uint64                 `json:"vm_version"`
-	IssuanceProgram   chainjson.HexBytes     `json:"issue_program"`
 	RawDefinitionByte chainjson.HexBytes     `json:"raw_definition_byte"`
 	DefinitionMap     map[string]interface{} `json:"definition"`
 }

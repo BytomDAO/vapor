@@ -9,7 +9,6 @@ import (
 	"github.com/vapor/account"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/query"
-	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/common"
 	"github.com/vapor/consensus"
 	"github.com/vapor/consensus/segwit"
@@ -51,7 +50,6 @@ func (w *Wallet) getExternalDefinition(assetID *bc.AssetID) json.RawMessage {
 		Alias:             &alias,
 		DefinitionMap:     definitionMap,
 		RawDefinitionByte: definitionByte,
-		Signer:            &signers.Signer{Type: "external"},
 	}
 
 	if err := w.AssetReg.SaveAsset(externalAsset, alias); err != nil {
