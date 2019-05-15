@@ -69,6 +69,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 	}
 
 	var (
+		// TODO:
 		spends    []*bc.Spend
 		issuances []*bc.Issuance
 		coinbase  *bc.Coinbase
@@ -130,6 +131,9 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 				Ref:   &coinbaseID,
 				Value: &value,
 			}
+
+		case *CrossChainInput:
+			// TODO:
 		}
 	}
 

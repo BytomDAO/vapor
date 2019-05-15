@@ -11,10 +11,9 @@ import (
 
 // serflag variables for input types.
 const (
-	IssuanceInputType uint8 = iota
+	CrossChainInputType uint8 = iota
 	SpendInputType
 	CoinbaseInputType
-	CrossChainInputType
 )
 
 type (
