@@ -172,6 +172,13 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			o := bc.NewCrossChainOutput(src, prog, uint64(i))
 			resultID = addEntry(o)
 
+		case out.OutputType() == VoteOutputType:
+			// non-retirement vote tx
+			voteOut, _ := out.TypedOutput.(*VoteTxOutput)
+			prog := &bc.Program{out.VMVersion(), out.ControlProgram()}
+			o := bc.NewVoteOutput(src, prog, uint64(i), voteOut.Vote)
+			resultID = addEntry(o)
+
 		default:
 			log.Warn("unknown outType")
 		}
