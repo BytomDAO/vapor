@@ -109,7 +109,7 @@ func nextLeaderTimeHelper(startBlockHeight, bestBlockHeight, startTime, nodeOrde
 	latestRoundBlockHeight := startBlockHeight + (bestBlockHeight - startBlockHeight) / roundBlockNums * roundBlockNums
 	nextBlockHeight := latestRoundBlockHeight + blockNumEachNode * nodeOrder
 
-	if bestBlockHeight > nextBlockHeight && bestBlockHeight - nextBlockHeight >= blockNumEachNode {
+	if int64(bestBlockHeight - nextBlockHeight) >= blockNumEachNode {
 		nextBlockHeight += roundBlockNums
 		if nextBlockHeight > endBlockHeight {
 			return nil, errHasNoChanceProductBlock
