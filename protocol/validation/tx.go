@@ -229,6 +229,13 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errors.Wrap(err, "checking retirement source")
 		}
 
+	case *bc.CrossChainInput:
+		vs2 := *vs
+		vs2.destPos = 0
+		if err = checkValidDest(&vs2, e.WitnessDestination); err != nil {
+			return errors.Wrap(err, "checking cross-chain input destination")
+		}
+
 	case *bc.Issuance:
 		computedAssetID := e.WitnessAssetDefinition.ComputeAssetID()
 		if computedAssetID != *e.Value.AssetId {
