@@ -26,7 +26,6 @@ type Config struct {
 	Wallet    *WalletConfig    `mapstructure:"wallet"`
 	Auth      *RPCAuthConfig   `mapstructure:"auth"`
 	Web       *WebConfig       `mapstructure:"web"`
-	Simd      *SimdConfig      `mapstructure:"simd"`
 	Websocket *WebsocketConfig `mapstructure:"ws"`
 }
 
@@ -38,7 +37,6 @@ func DefaultConfig() *Config {
 		Wallet:     DefaultWalletConfig(),
 		Auth:       DefaultRPCAuthConfig(),
 		Web:        DefaultWebConfig(),
-		Simd:       DefaultSimdConfig(),
 		Websocket:  DefaultWebsocketConfig(),
 	}
 }
@@ -119,6 +117,9 @@ type BaseConfig struct {
 
 	// log file name
 	LogFile string `mapstructure:"log_file"`
+
+	// Cipher Service Provider
+	// CipherServiceProvider string `mapstructure:"csp"`
 }
 
 // Default configurable base parameters.
@@ -131,6 +132,7 @@ func DefaultBaseConfig() BaseConfig {
 		DBPath:            "data",
 		KeysPath:          "keystore",
 		NodeAlias:         "",
+		// CipherServiceProvider: "ed25519",
 	}
 }
 
@@ -191,10 +193,6 @@ type WebConfig struct {
 	Closed bool `mapstructure:"closed"`
 }
 
-type SimdConfig struct {
-	Enable bool `mapstructure:"enable"`
-}
-
 type WebsocketConfig struct {
 	MaxNumWebsockets     int `mapstructure:"max_num_websockets"`
 	MaxNumConcurrentReqs int `mapstructure:"max_num_concurrent_reqs"`
@@ -221,13 +219,6 @@ func DefaultWalletConfig() *WalletConfig {
 		Rescan:   false,
 		TxIndex:  false,
 		MaxTxFee: uint64(1000000000),
-	}
-}
-
-// Default configurable web parameters.
-func DefaultSimdConfig() *SimdConfig {
-	return &SimdConfig{
-		Enable: false,
 	}
 }
 

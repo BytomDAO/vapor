@@ -12,7 +12,6 @@ import (
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/consensus"
-	"github.com/vapor/consensus/difficulty"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/database"
 	dbm "github.com/vapor/database/leveldb"
@@ -175,15 +174,6 @@ func InsertChain(chain *protocol.Chain, txPool *protocol.TxPool, txs []*types.Tx
 		fmt.Println("txsize:", uint64(block.Transactions[1].SerializedSize))
 	}
 
-	seed, err := chain.CalcNextSeed(&block.PreviousBlockHash)
-	if err != nil {
-		return err
-	}
-
-	if err := SolveBlock(seed, block); err != nil {
-		return err
-	}
-
 	if _, err := chain.ProcessBlock(block); err != nil {
 		return err
 	}
@@ -192,19 +182,6 @@ func InsertChain(chain *protocol.Chain, txPool *protocol.TxPool, txs []*types.Tx
 }
 
 func processNewTxch(txPool *protocol.TxPool) {
-}
-
-func SolveBlock(seed *bc.Hash, block *types.Block) error {
-	maxNonce := ^uint64(0) // 2^64 - 1
-	header := &block.BlockHeader
-	for i := uint64(0); i < maxNonce; i++ {
-		header.Nonce = i
-		headerHash := header.Hash()
-		if difficulty.CheckProofOfWork(&headerHash, seed, header.Bits) {
-			return nil
-		}
-	}
-	return nil
 }
 
 func MockSimpleUtxo(index uint64, assetID *bc.AssetID, amount uint64, ctrlProg *account.CtrlProgram) *account.UTXO {
@@ -272,7 +249,7 @@ func AddTxInputFromUtxo(utxo *account.UTXO, singer *signers.Signer) (*types.TxIn
 }
 
 func AddTxOutput(assetID bc.AssetID, amount uint64, controlProgram []byte) *types.TxOutput {
-	out := types.NewTxOutput(assetID, amount, controlProgram)
+	out := types.NewIntraChainOutput(assetID, amount, controlProgram)
 	return out
 }
 

@@ -17,7 +17,7 @@ var initFilesCmd = &cobra.Command{
 }
 
 func init() {
-	initFilesCmd.Flags().String("chain_id", config.ChainID, "Select [mainnet] or [testnet] or [solonet]")
+	initFilesCmd.Flags().String("chain_id", config.ChainID, "Select [mainnet] or [testnet] or [solonet] or [vapor]")
 
 	RootCmd.AddCommand(initFilesCmd)
 }
@@ -30,7 +30,7 @@ func initFiles(cmd *cobra.Command, args []string) {
 	}
 
 	switch config.ChainID {
-	case "mainnet", "testnet":
+	case "mainnet", "testnet", "vapor":
 		cfg.EnsureRoot(config.RootDir, config.ChainID)
 	default:
 		cfg.EnsureRoot(config.RootDir, "solonet")

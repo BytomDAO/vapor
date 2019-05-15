@@ -23,7 +23,7 @@ var testTxs = []*types.Tx{
 			types.NewSpendInput(nil, bc.NewHash([32]byte{0x01}), *consensus.BTMAssetID, 1, 1, []byte{0x51}),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, 1, []byte{0x6a}),
+			types.NewIntraChainOutput(*consensus.BTMAssetID, 1, []byte{0x6a}),
 		},
 	}),
 	//tx1
@@ -33,7 +33,7 @@ var testTxs = []*types.Tx{
 			types.NewSpendInput(nil, bc.NewHash([32]byte{0x01}), *consensus.BTMAssetID, 1, 1, []byte{0x51}),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, 1, []byte{0x6b}),
+			types.NewIntraChainOutput(*consensus.BTMAssetID, 1, []byte{0x6b}),
 		},
 	}),
 	//tx2
@@ -45,30 +45,31 @@ var testTxs = []*types.Tx{
 			types.NewSpendInput(nil, bc.NewHash([32]byte{0x02}), bc.NewAssetID([32]byte{0xa1}), 4, 1, []byte{0x51}),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, 1, []byte{0x6b}),
-			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 4, []byte{0x61}),
+			types.NewIntraChainOutput(*consensus.BTMAssetID, 1, []byte{0x6b}),
+			types.NewIntraChainOutput(bc.NewAssetID([32]byte{0xa1}), 4, []byte{0x61}),
 		},
 	}),
 	//tx3
 	types.NewTx(types.TxData{
+
 		SerializedSize: 100,
 		Inputs: []*types.TxInput{
-			types.NewSpendInput(nil, testutil.MustDecodeHash("dbea684b5c5153ed7729669a53d6c59574f26015a3e1eb2a0e8a1c645425a764"), bc.NewAssetID([32]byte{0xa1}), 4, 1, []byte{0x61}),
+			types.NewSpendInput(nil, testutil.MustDecodeHash("7d3f8e8474775f9fab2a7370529f0569a2199b22a5a83d235a036f50de3e8c84"), bc.NewAssetID([32]byte{0xa1}), 4, 1, []byte{0x61}),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 3, []byte{0x62}),
-			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 1, []byte{0x63}),
+			types.NewIntraChainOutput(bc.NewAssetID([32]byte{0xa1}), 3, []byte{0x62}),
+			types.NewIntraChainOutput(bc.NewAssetID([32]byte{0xa1}), 1, []byte{0x63}),
 		},
 	}),
 	//tx4
 	types.NewTx(types.TxData{
 		SerializedSize: 100,
 		Inputs: []*types.TxInput{
-			types.NewSpendInput(nil, testutil.MustDecodeHash("d84d0be0fd08e7341f2d127749bb0d0844d4560f53bd54861cee9981fd922cad"), bc.NewAssetID([32]byte{0xa1}), 3, 0, []byte{0x62}),
+			types.NewSpendInput(nil, testutil.MustDecodeHash("9a26cde504a5d7190dbed119280276f9816d9c2b7d20c768b312be57930fe840"), bc.NewAssetID([32]byte{0xa1}), 3, 0, []byte{0x62}),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 2, []byte{0x64}),
-			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 1, []byte{0x65}),
+			types.NewIntraChainOutput(bc.NewAssetID([32]byte{0xa1}), 2, []byte{0x64}),
+			types.NewIntraChainOutput(bc.NewAssetID([32]byte{0xa1}), 1, []byte{0x65}),
 		},
 	}),
 	//tx5
@@ -78,7 +79,7 @@ var testTxs = []*types.Tx{
 			types.NewSpendInput(nil, bc.NewHash([32]byte{0x01}), *consensus.BTMAssetID, 1, 1, []byte{0x51}),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, 0, []byte{0x51}),
+			types.NewIntraChainOutput(*consensus.BTMAssetID, 0, []byte{0x51}),
 		},
 	}),
 	//tx6
@@ -86,11 +87,11 @@ var testTxs = []*types.Tx{
 		SerializedSize: 100,
 		Inputs: []*types.TxInput{
 			types.NewSpendInput(nil, bc.NewHash([32]byte{0x01}), *consensus.BTMAssetID, 3, 1, []byte{0x51}),
-			types.NewSpendInput(nil, testutil.MustDecodeHash("d84d0be0fd08e7341f2d127749bb0d0844d4560f53bd54861cee9981fd922cad"), bc.NewAssetID([32]byte{0xa1}), 3, 0, []byte{0x62}),
+			types.NewSpendInput(nil, testutil.MustDecodeHash("9a26cde504a5d7190dbed119280276f9816d9c2b7d20c768b312be57930fe840"), bc.NewAssetID([32]byte{0xa1}), 3, 0, []byte{0x62}),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, 2, []byte{0x51}),
-			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 0, []byte{0x65}),
+			types.NewIntraChainOutput(*consensus.BTMAssetID, 2, []byte{0x51}),
+			types.NewIntraChainOutput(bc.NewAssetID([32]byte{0xa1}), 0, []byte{0x65}),
 		},
 	}),
 }

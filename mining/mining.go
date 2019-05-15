@@ -47,7 +47,7 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 	if err = builder.AddInput(types.NewCoinbaseInput(arbitrary), &txbuilder.SigningInstruction{}); err != nil {
 		return nil, err
 	}
-	if err = builder.AddOutput(types.NewTxOutput(*consensus.BTMAssetID, amount, script)); err != nil {
+	if err = builder.AddOutput(types.NewIntraChainOutput(*consensus.BTMAssetID, amount, script)); err != nil {
 		return nil, err
 	}
 	_, txData, err := builder.Build()
@@ -83,10 +83,6 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	preBlockHeader := c.BestBlockHeader()
 	preBlockHash := preBlockHeader.Hash()
 	nextBlockHeight := preBlockHeader.Height + 1
-	nextBits, err := c.CalcNextBits(&preBlockHash)
-	if err != nil {
-		return nil, err
-	}
 
 	b = &types.Block{
 		BlockHeader: types.BlockHeader{
@@ -95,7 +91,6 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			PreviousBlockHash: preBlockHash,
 			Timestamp:         uint64(time.Now().Unix()),
 			BlockCommitment:   types.BlockCommitment{},
-			Bits:              nextBits,
 		},
 	}
 	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: nextBlockHeight}}

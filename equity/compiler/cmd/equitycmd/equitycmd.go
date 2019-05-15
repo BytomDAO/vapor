@@ -13,7 +13,7 @@ import (
 
 var (
 	// generateInstPath is the directory (need to combine with GOPATH) for store generated contract instance
-	generateInstPath = "/src/github.com/bytom/equity/instance/"
+	generateInstPath = "/src/github.com/vapor/equity/instance/"
 )
 
 func main() {

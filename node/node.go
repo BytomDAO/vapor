@@ -27,8 +27,6 @@ import (
 	"github.com/vapor/env"
 	"github.com/vapor/event"
 	"github.com/vapor/mining/cpuminer"
-	"github.com/vapor/mining/miningpool"
-	"github.com/vapor/mining/tensority"
 	"github.com/vapor/net/websocket"
 	"github.com/vapor/netsync"
 	"github.com/vapor/p2p"
@@ -56,7 +54,6 @@ type Node struct {
 	chain           *protocol.Chain
 	txfeed          *txfeed.Tracker
 	cpuMiner        *cpuminer.CPUMiner
-	miningPool      *miningpool.MiningPool
 	miningEnable    bool
 }
 
@@ -153,14 +150,7 @@ func NewNode(config *cfg.Config) *Node {
 	}
 
 	node.cpuMiner = cpuminer.NewCPUMiner(chain, accounts, txPool, dispatcher)
-	node.miningPool = miningpool.NewMiningPool(chain, accounts, txPool, dispatcher)
-
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
-
-	if config.Simd.Enable {
-		tensority.UseSIMD = true
-	}
-
 	return node
 }
 
@@ -210,7 +200,7 @@ func launchWebBrowser(port string) {
 }
 
 func (n *Node) initAndstartAPIServer() {
-	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.cpuMiner, n.miningPool, n.chain, n.config, n.accessTokens, n.eventDispatcher, n.notificationMgr)
+	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.cpuMiner, n.chain, n.config, n.accessTokens, n.eventDispatcher, n.notificationMgr)
 
 	listenAddr := env.String("LISTEN", n.config.ApiAddress)
 	env.Parse()
@@ -270,8 +260,4 @@ func (n *Node) RunForever() {
 
 func (n *Node) NodeInfo() *p2p.NodeInfo {
 	return n.syncManager.NodeInfo()
-}
-
-func (n *Node) MiningPool() *miningpool.MiningPool {
-	return n.miningPool
 }

@@ -10,7 +10,7 @@ import (
 )
 
 var defaultEntry = map[bc.Hash]bc.Entry{
-	bc.Hash{V0: 0}: &bc.Output{
+	bc.Hash{V0: 0}: &bc.IntraChainOutput{
 		Source: &bc.ValueSource{
 			Value: &bc.AssetAmount{
 				AssetId: &bc.AssetID{V0: 0},
@@ -20,14 +20,14 @@ var defaultEntry = map[bc.Hash]bc.Entry{
 }
 
 var gasOnlyTxEntry = map[bc.Hash]bc.Entry{
-	bc.Hash{V1: 0}: &bc.Output{
+	bc.Hash{V1: 0}: &bc.IntraChainOutput{
 		Source: &bc.ValueSource{
 			Value: &bc.AssetAmount{
 				AssetId: consensus.BTMAssetID,
 			},
 		},
 	},
-	bc.Hash{V1: 1}: &bc.Output{
+	bc.Hash{V1: 1}: &bc.IntraChainOutput{
 		Source: &bc.ValueSource{
 			Value: &bc.AssetAmount{
 				AssetId: &bc.AssetID{V0: 999},

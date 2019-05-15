@@ -14,6 +14,7 @@ import (
 
 	"github.com/vapor/common"
 	"github.com/vapor/crypto/ed25519"
+	"github.com/vapor/crypto/sha3pool"
 	"github.com/vapor/p2p/netutil"
 )
 
@@ -83,6 +84,7 @@ type transport interface {
 	send(remote *Node, ptype nodeEvent, p interface{}) (hash []byte)
 
 	localAddr() *net.UDPAddr
+	getNetID() uint64
 	Close()
 }
 
@@ -113,6 +115,12 @@ type topicSearchResult struct {
 type timeoutEvent struct {
 	ev   nodeEvent
 	node *Node
+}
+
+func hash(target []byte) common.Hash {
+	var h [32]byte
+	sha3pool.Sum256(h[:], target)
+	return common.BytesToHash(h[:])
 }
 
 func newNetwork(conn transport, ourPubkey ed25519.PublicKey, dbPath string, netrestrict *netutil.Netlist) (*Network, error) {
@@ -193,7 +201,7 @@ func (net *Network) SetFallbackNodes(nodes []*Node) error {
 		// Recompute cpy.sha because the node might not have been
 		// created by NewNode or ParseNode.
 		cpy := *n
-		cpy.sha = common.BytesToHash(n.ID[:])
+		cpy.sha = hash(n.ID[:])
 		nursery = append(nursery, &cpy)
 	}
 	net.reqRefresh(nursery)
@@ -203,7 +211,7 @@ func (net *Network) SetFallbackNodes(nodes []*Node) error {
 // Resolve searches for a specific node with the given ID.
 // It returns nil if the node could not be found.
 func (net *Network) Resolve(targetID NodeID) *Node {
-	result := net.lookup(common.BytesToHash(targetID[:]), true)
+	result := net.lookup(hash(targetID[:]), true)
 	for _, n := range result {
 		if n.ID == targetID {
 			return n
@@ -220,7 +228,7 @@ func (net *Network) Resolve(targetID NodeID) *Node {
 //
 // The local node may be included in the result.
 func (net *Network) Lookup(targetID NodeID) []*Node {
-	return net.lookup(common.BytesToHash(targetID[:]), false)
+	return net.lookup(hash(targetID[:]), false)
 }
 
 func (net *Network) lookup(target common.Hash, stopOnMatch bool) []*Node {
@@ -775,7 +783,7 @@ func (q *findnodeQuery) start(net *Network) bool {
 	// Satisfy queries against the local node directly.
 	if q.remote == net.tab.self {
 		log.WithFields(log.Fields{"module": logModule}).Debug("findnodeQuery self")
-		closest := net.tab.closest(common.BytesToHash(q.target[:]), bucketSize)
+		closest := net.tab.closest(q.target, bucketSize)
 
 		q.reply <- closest.entries
 		return true
@@ -1135,8 +1143,7 @@ func (net *Network) handleKnownPong(n *Node, pkt *ingressPacket) error {
 func (net *Network) handleQueryEvent(n *Node, ev nodeEvent, pkt *ingressPacket) (*nodeState, error) {
 	switch ev {
 	case findnodePacket:
-		target := common.BytesToHash(pkt.data.(*findnode).Target[:])
-		results := net.tab.closest(target, bucketSize).entries
+		results := net.tab.closest(hash(pkt.data.(*findnode).Target[:]), bucketSize).entries
 		net.conn.sendNeighbours(n, results)
 		return n.state, nil
 	case neighborsPacket:
@@ -1162,7 +1169,7 @@ func (net *Network) handleQueryEvent(n *Node, ev nodeEvent, pkt *ingressPacket) 
 	case topicRegisterPacket:
 		//fmt.Println("got topicRegisterPacket")
 		regdata := pkt.data.(*topicRegister)
-		pong, err := net.checkTopicRegister(regdata)
+		pong, err := net.checkTopicRegister(regdata, net.conn.getNetID())
 		if err != nil {
 			//fmt.Println(err)
 			return n.state, fmt.Errorf("bad waiting ticket: %v", err)
@@ -1198,9 +1205,9 @@ func (net *Network) handleQueryEvent(n *Node, ev nodeEvent, pkt *ingressPacket) 
 	}
 }
 
-func (net *Network) checkTopicRegister(data *topicRegister) (*pong, error) {
+func (net *Network) checkTopicRegister(data *topicRegister, netID uint64) (*pong, error) {
 	var pongpkt ingressPacket
-	if err := decodePacket(data.Pong, &pongpkt); err != nil {
+	if err := decodePacket(data.Pong, &pongpkt, netID); err != nil {
 		return nil, err
 	}
 	if pongpkt.ev != pongPacket {

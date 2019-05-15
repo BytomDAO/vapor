@@ -177,7 +177,7 @@ func TestBuildBtmTxChain(t *testing.T) {
 
 			gotOutput := []uint64{}
 			for _, output := range tpl.Transaction.Outputs {
-				gotOutput = append(gotOutput, output.Amount/chainTxMergeGas)
+				gotOutput = append(gotOutput, output.AssetAmount().Amount/chainTxMergeGas)
 			}
 
 			if !testutil.DeepEqual(c.wantInput[i], gotInput) {

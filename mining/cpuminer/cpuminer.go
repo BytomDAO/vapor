@@ -7,7 +7,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/account"
-	"github.com/vapor/consensus/difficulty"
 	"github.com/vapor/event"
 	"github.com/vapor/mining"
 	"github.com/vapor/protocol"
@@ -42,10 +41,6 @@ type CPUMiner struct {
 // target difficulty.
 func (m *CPUMiner) solveBlock(block *types.Block, ticker *time.Ticker, quit chan struct{}) bool {
 	header := &block.BlockHeader
-	seed, err := m.chain.CalcNextSeed(&header.PreviousBlockHash)
-	if err != nil {
-		return false
-	}
 
 	for i := uint64(0); i <= maxNonce; i++ {
 		select {
@@ -58,11 +53,7 @@ func (m *CPUMiner) solveBlock(block *types.Block, ticker *time.Ticker, quit chan
 		default:
 		}
 
-		header.Nonce = i
-		headerHash := header.Hash()
-		if difficulty.CheckProofOfWork(&headerHash, seed, header.Bits) {
-			return true
-		}
+		//Mining logic here
 	}
 	return false
 }

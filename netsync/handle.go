@@ -6,7 +6,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tendermint/go-crypto"
 	cfg "github.com/vapor/config"
 	"github.com/vapor/consensus"
 	"github.com/vapor/event"
@@ -31,7 +30,6 @@ var (
 type Chain interface {
 	BestBlockHeader() *types.BlockHeader
 	BestBlockHeight() uint64
-	CalcNextSeed(*bc.Hash) (*bc.Hash, error)
 	GetBlockByHash(*bc.Hash) (*types.Block, error)
 	GetBlockByHeight(uint64) (*types.Block, error)
 	GetHeaderByHash(*bc.Hash) (*types.BlockHeader, error)
@@ -353,9 +351,6 @@ func (sm *SyncManager) IsListening() bool {
 }
 
 func (sm *SyncManager) NodeInfo() *p2p.NodeInfo {
-	if sm.config.VaultMode {
-		return p2p.NewNodeInfo(sm.config, crypto.PubKeyEd25519{}, "")
-	}
 	return sm.sw.NodeInfo()
 }
 

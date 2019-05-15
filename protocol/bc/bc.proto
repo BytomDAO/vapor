@@ -55,9 +55,8 @@ message BlockHeader {
   uint64            timestamp               = 4;
   Hash              transactions_root       = 5;
   Hash              transaction_status_hash = 6;
-  uint64            nonce                   = 7;
-  uint64            bits                    = 8;
-  TransactionStatus transaction_status      = 9;
+  TransactionStatus transaction_status      = 7;
+  repeated bytes    witness_arguments       = 8;
 }
 
 message TxHeader {
@@ -88,10 +87,23 @@ message Coinbase {
   bytes            arbitrary           = 2;
 }
 
-message Output {
+message IntraChainOutput {
   ValueSource source          = 1;
   Program     control_program = 2;
   uint64      ordinal         = 3;
+}
+
+message CrossChainOutput {
+  ValueSource source          = 1;
+  Program     control_program = 2;
+  uint64      ordinal         = 3;
+}
+
+message VoteOutput {
+  ValueSource source          = 1;
+  Program     control_program = 2;
+  uint64      ordinal         = 3;
+  bytes       vote            = 4;
 }
 
 message Retirement {

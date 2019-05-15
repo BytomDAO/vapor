@@ -32,7 +32,7 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 		destPos = &e.WitnessDestination.Position
 
 	case *bc.Spend:
-		spentOutput := tx.Entries[*e.SpentOutputId].(*bc.Output)
+		spentOutput := tx.Entries[*e.SpentOutputId].(*bc.IntraChainOutput)
 		a1 := spentOutput.Source.Value.AssetId.Bytes()
 		assetID = &a1
 		amount = &spentOutput.Source.Value.Amount
@@ -113,7 +113,7 @@ func (ec *entryContext) checkOutput(index uint64, amount uint64, assetID []byte,
 		}
 
 		switch e := e.(type) {
-		case *bc.Output:
+		case *bc.IntraChainOutput:
 			return check(e.ControlProgram, e.Source.Value), nil
 
 		case *bc.Retirement:

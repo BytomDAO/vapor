@@ -130,7 +130,7 @@ func mockBlocks(startBlock *types.Block, height uint64) []*types.Block {
 	blocks := []*types.Block{}
 	indexBlock := &types.Block{}
 	if startBlock == nil {
-		indexBlock = &types.Block{BlockHeader: types.BlockHeader{Nonce: uint64(rand.Uint32())}}
+		indexBlock = &types.Block{BlockHeader: types.BlockHeader{Version: uint64(rand.Uint32())}}
 		blocks = append(blocks, indexBlock)
 	} else {
 		indexBlock = startBlock
@@ -141,7 +141,7 @@ func mockBlocks(startBlock *types.Block, height uint64) []*types.Block {
 			BlockHeader: types.BlockHeader{
 				Height:            indexBlock.Height + 1,
 				PreviousBlockHash: indexBlock.Hash(),
-				Nonce:             uint64(rand.Uint32()),
+				Version:           uint64(rand.Uint32()),
 			},
 		}
 		blocks = append(blocks, block)
@@ -178,7 +178,7 @@ func mockTxs(txCount int) ([]*types.Tx, []*bc.Tx) {
 		tx := types.NewTx(types.TxData{
 			Version: 1,
 			Inputs:  []*types.TxInput{issuanceInp},
-			Outputs: []*types.TxOutput{types.NewTxOutput(assetID, 1, trueProg)},
+			Outputs: []*types.TxOutput{types.NewIntraChainOutput(assetID, 1, trueProg)},
 		})
 		txs = append(txs, tx)
 		bcTxs = append(bcTxs, tx.Tx)
