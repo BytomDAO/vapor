@@ -21,25 +21,10 @@ const (
 	blockNumEachNode  = 3
 )
 
-type consensusNodeManager struct {
-	consensusNodes       []*consensusNode
-	effectiveStartHeight uint64
-	store                *database.Store
-	chain                *protocol.Chain
-	sync.RWMutex
-}
-
-func newConsensusNodeManager(store *database.Store) *consensusNodeManager {
-	return &consensusNodeManager{
-		consensusNodes:       []*consensusNode{},
-		effectiveStartHeight: 1,
-		store:                store,
-	}
-}
-
 type consensusNode struct {
 	pubkey  string
 	voteNum uint64
+	order   int64
 }
 
 type consensusNodeSlice []*consensusNode
@@ -47,6 +32,23 @@ type consensusNodeSlice []*consensusNode
 func (c consensusNodeSlice) Len() int           { return len(c) }
 func (c consensusNodeSlice) Less(i, j int) bool { return c[i].voteNum > c[j].voteNum }
 func (c consensusNodeSlice) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
+
+type consensusNodeManager struct {
+	consensusNodeMap     map[string]*consensusNode
+	effectiveStartHeight uint64
+	store                *database.Store
+	chain                *protocol.Chain
+	sync.RWMutex
+}
+
+func newConsensusNodeManager(store *database.Store, chain *protocol.Chain) *consensusNodeManager {
+	return &consensusNodeManager{
+		consensusNodeMap:     make(map[string]*consensusNode),
+		effectiveStartHeight: 1,
+		chain:                chain,
+		store:                store,
+	}
+}
 
 func (c *consensusNodeManager) isConsensusPubkey(height uint64, pubkey []byte) (bool, error) {
 	defer c.RUnlock()
@@ -56,24 +58,18 @@ func (c *consensusNodeManager) isConsensusPubkey(height uint64, pubkey []byte) (
 	}
 
 	var err error
-	var consensusNodes []*consensusNode
-	if height >= c.effectiveStartHeight {
-		consensusNodes = c.consensusNodes
+	consensusNodeMap := c.consensusNodeMap
 	// query history vote result
-	} else if height < c.effectiveStartHeight {
-		consensusNodes, err = c.getConsensusNodesByVoteResult(height / roundVoteBlockNums)
+	if height < c.effectiveStartHeight {
+		consensusNodeMap, err = c.getConsensusNodesByVoteResult(height / roundVoteBlockNums)
 		if err != nil {
 			return false, err
 		}
 	}
 
 	encodePubkey := hex.EncodeToString(pubkey)
-	for _, node := range consensusNodes {
-		if node.pubkey == encodePubkey {
-			return true, nil
-		}
-	}
-	return false, nil
+	_, exist := consensusNodeMap[encodePubkey]
+	return exist, nil
 }
 
 func (c *consensusNodeManager) nextLeaderTime(pubkey []byte) (*time.Time, error) {
@@ -81,14 +77,13 @@ func (c *consensusNodeManager) nextLeaderTime(pubkey []byte) (*time.Time, error)
 	c.RLock()
 
 	prevRoundLastBlockHeight := c.effectiveStartHeight - 1
-	prevRoundLastBlock, err := c.chain.GetBlockByHeight(prevRoundLastBlockHeight)
+	prevRoundLastBlock, err := c.chain.GetHeaderByHeight(prevRoundLastBlockHeight)
 	if err != nil {
 		return nil, err
 	}
 
 	// The timestamp of the block can only be accurate to the second, so take the ceil of timestamp
-	begin := (int64(prevRoundLastBlock.Timestamp) + 1) * 1000
-	now := time.Now().UnixNano() / 1e6
+	beginTime := (int64(prevRoundLastBlock.Timestamp) + 1) * 1000 + blockTimeInterval
 
 	rvbn := roundVoteBlockNums
 	// Exclude genesis block
@@ -96,29 +91,25 @@ func (c *consensusNodeManager) nextLeaderTime(pubkey []byte) (*time.Time, error)
 		rvbn--
 	}
 	roundVoteTime := int64(rvbn * blockTimeInterval)
-
-	if now - begin >= roundVoteTime {
+	endTime := beginTime + roundVoteTime
+	now := time.Now().UnixNano() / 1e6
+	if now >= endTime {
 		return nil, fmt.Errorf("the node has not completed block synchronization")
 	}
 
 	roundBlockTime := int64(blockNumEachNode * numOfConsensusNode * blockTimeInterval)
-	latestRoundBeginTime := begin + ((now - begin) / roundBlockTime) * roundBlockTime
+	latestRoundBeginTime := beginTime + ((now - beginTime) / roundBlockTime) * roundBlockTime
 
 	encodePubkey := hex.EncodeToString(pubkey)
-	var nodeSeq int64 = -1
-	for i, node := range c.consensusNodes {
-		if node.pubkey == encodePubkey {
-			nodeSeq = int64(i)
-		}
-	}
-	if nodeSeq == -1 {
+	consensusNode, ok := c.consensusNodeMap[encodePubkey]
+	if !ok {
 		return nil, fmt.Errorf("pubkey:%s is not consensus node", encodePubkey)
 	}
 
-	nextLeaderTimestamp := latestRoundBeginTime + (blockNumEachNode * blockTimeInterval) * nodeSeq
-	if now - nextLeaderTimestamp >= 0 {
+	nextLeaderTimestamp := latestRoundBeginTime + (blockNumEachNode * blockTimeInterval) * consensusNode.order
+	if now - nextLeaderTimestamp >= blockNumEachNode * blockTimeInterval {
 		nextLeaderTimestamp += roundBlockTime
-		if nextLeaderTimestamp - begin > roundVoteTime {
+		if nextLeaderTimestamp > endTime {
 			return nil, fmt.Errorf("pubkey:%s has no chance to product a block in this round of voting", pubkey)
 		}
 	}
@@ -135,17 +126,17 @@ func (c *consensusNodeManager) UpdateConsensusNodes(voteSeq uint64) error {
 		return nil
 	}
 
-	consensusNodes, err := c.getConsensusNodesByVoteResult(voteSeq)
+	consensusNodeMap, err := c.getConsensusNodesByVoteResult(voteSeq)
 	if err != nil {
 		return err
 	}
 
-	c.consensusNodes = consensusNodes
+	c.consensusNodeMap = consensusNodeMap
 	c.effectiveStartHeight = voteSeq * roundVoteBlockNums
 	return nil
 }
 
-func (c *consensusNodeManager) getConsensusNodesByVoteResult(voteSeq uint64) ([]*consensusNode, error) {
+func (c *consensusNodeManager) getConsensusNodesByVoteResult(voteSeq uint64) (map[string]*consensusNode, error) {
 	voteResult, err := c.store.GetVoteResult(voteSeq)
 	if err != nil {
 		return nil, err
@@ -167,5 +158,10 @@ func (c *consensusNodeManager) getConsensusNodesByVoteResult(voteSeq uint64) ([]
 	// TODO not consider the same number of votes
 	sort.Sort(consensusNodeSlice(nodes))
 
-	return nodes[0:numOfConsensusNode], nil
+	result := make(map[string]*consensusNode)
+	for i, node := range nodes {
+		node.order = int64(i)
+		result[node.pubkey] = node
+	}
+	return result, nil
 }
