@@ -264,6 +264,7 @@ func (t *TxInput) writeInputWitness(w io.Writer) error {
 	if t.AssetVersion != 1 {
 		return nil
 	}
+
 	switch inp := t.TypedInput.(type) {
 	case *IssuanceInput:
 		if _, err := blockchain.WriteVarstr31(w, inp.AssetDefinition); err != nil {

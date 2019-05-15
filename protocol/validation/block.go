@@ -46,7 +46,7 @@ func checkCoinbaseAmount(b *bc.Block, amount uint64) error {
 		return errors.Wrap(ErrWrongCoinbaseTransaction, "have more than 1 output")
 	}
 
-	output, err := tx.Output(*tx.TxHeader.ResultIds[0])
+	output, err := tx.IntraChainOutput(*tx.TxHeader.ResultIds[0])
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func ValidateBlock(b *bc.Block, parent *state.BlockNode) error {
 		return errors.Wrap(err, "computing transaction id merkle root")
 	}
 	if txMerkleRoot != *b.TransactionsRoot {
-		return errors.WithDetailf(errMismatchedMerkleRoot, "transaction id merkle root")
+		return errors.WithDetailf(errMismatchedMerkleRoot, "transaction id merkle root. compute: %v, given: %v", txMerkleRoot, *b.TransactionsRoot)
 	}
 
 	txStatusHash, err := types.TxStatusMerkleRoot(b.TransactionStatus.VerifyStatus)

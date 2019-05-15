@@ -38,8 +38,8 @@ func (b *TemplateBuilder) AddInput(in *types.TxInput, sigInstruction *SigningIns
 
 // AddOutput add outputs of transactions
 func (b *TemplateBuilder) AddOutput(o *types.TxOutput) error {
-	if o.Amount > math.MaxInt64 {
-		return errors.WithDetailf(ErrBadAmount, "amount %d exceeds maximum value 2^63", o.Amount)
+	if o.AssetAmount().Amount > math.MaxInt64 {
+		return errors.WithDetailf(ErrBadAmount, "amount %d exceeds maximum value 2^63", o.AssetAmount().Amount)
 	}
 	b.outputs = append(b.outputs, o)
 	return nil

@@ -145,8 +145,8 @@ func CalculateTxFee(tx *types.Tx) (fee uint64) {
 	}
 
 	for _, output := range tx.Outputs {
-		if *output.AssetId == *consensus.BTMAssetID {
-			totalOutputBTM += output.Amount
+		if *output.AssetAmount().AssetId == *consensus.BTMAssetID {
+			totalOutputBTM += output.AssetAmount().Amount
 		}
 	}
 

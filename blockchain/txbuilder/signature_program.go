@@ -51,8 +51,8 @@ func buildSigProgram(tpl *Template, index uint32) ([]byte, error) {
 	for i, out := range tpl.Transaction.Outputs {
 		c := &payConstraint{
 			Index:       i,
-			AssetAmount: out.AssetAmount,
-			Program:     out.ControlProgram,
+			AssetAmount: out.AssetAmount(),
+			Program:     out.ControlProgram(),
 		}
 		constraints = append(constraints, c)
 	}

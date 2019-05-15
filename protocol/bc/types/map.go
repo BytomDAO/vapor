@@ -1,6 +1,8 @@
 package types
 
 import (
+	log "github.com/sirupsen/logrus"
+
 	"github.com/vapor/consensus"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/vm"
@@ -99,7 +101,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 				Value:    &inp.AssetAmount,
 				Position: inp.SourcePosition,
 			}
-			prevout := bc.NewOutput(src, prog, 0) // ordinal doesn't matter for prevouts, only for result outputs
+			prevout := bc.NewIntraChainOutput(src, prog, 0) // ordinal doesn't matter for prevouts, only for result outputs
 			prevoutID := addEntry(prevout)
 			// create entry for spend
 			spend := bc.NewSpend(&prevoutID, uint64(i))
@@ -117,9 +119,10 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			coinbaseID := addEntry(coinbase)
 
 			out := tx.Outputs[0]
+			value := out.AssetAmount()
 			muxSources[i] = &bc.ValueSource{
 				Ref:   &coinbaseID,
-				Value: &out.AssetAmount,
+				Value: &value,
 			}
 		}
 	}
@@ -129,7 +132,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 
 	// connect the inputs to the mux
 	for _, spend := range spends {
-		spentOutput := entryMap[*spend.SpentOutputId].(*bc.Output)
+		spentOutput := entryMap[*spend.SpentOutputId].(*bc.IntraChainOutput)
 		spend.SetDestination(&muxID, spentOutput.Source.Value, spend.Ordinal)
 	}
 	for _, issuance := range issuances {
@@ -143,21 +146,34 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 	// convert types.outputs to the bc.output
 	var resultIDs []*bc.Hash
 	for i, out := range tx.Outputs {
+		value := out.AssetAmount()
 		src := &bc.ValueSource{
 			Ref:      &muxID,
-			Value:    &out.AssetAmount,
+			Value:    &value,
 			Position: uint64(i),
 		}
 		var resultID bc.Hash
-		if vmutil.IsUnspendable(out.ControlProgram) {
+		switch {
+		// must deal with retirement first due to cases' priorities in the switch statement
+		case vmutil.IsUnspendable(out.ControlProgram()):
 			// retirement
 			r := bc.NewRetirement(src, uint64(i))
 			resultID = addEntry(r)
-		} else {
-			// non-retirement
-			prog := &bc.Program{out.VMVersion, out.ControlProgram}
-			o := bc.NewOutput(src, prog, uint64(i))
+
+		case out.OutputType() == IntraChainOutputType:
+			// non-retirement intra-chain tx
+			prog := &bc.Program{out.VMVersion(), out.ControlProgram()}
+			o := bc.NewIntraChainOutput(src, prog, uint64(i))
 			resultID = addEntry(o)
+
+		case out.OutputType() == CrossChainOutputType:
+			// non-retirement cross-chain tx
+			prog := &bc.Program{out.VMVersion(), out.ControlProgram()}
+			o := bc.NewCrossChainOutput(src, prog, uint64(i))
+			resultID = addEntry(o)
+
+		default:
+			log.Warn("unknown outType")
 		}
 
 		dest := &bc.ValueDestination{
