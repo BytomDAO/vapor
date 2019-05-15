@@ -6,55 +6,12 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 
-	"github.com/vapor/consensus"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
 
-var txs = []*types.Tx{
-	types.NewTx(types.TxData{
-		SerializedSize: uint64(50),
-		Inputs:         []*types.TxInput{types.NewCoinbaseInput([]byte{0x01})},
-		Outputs:        []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 5000, nil)},
-	}),
-	types.NewTx(types.TxData{
-		SerializedSize: uint64(51),
-		Inputs:         []*types.TxInput{types.NewCoinbaseInput([]byte{0x01, 0x02})},
-		Outputs:        []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 5000, nil)},
-	}),
-	types.NewTx(types.TxData{
-		SerializedSize: uint64(52),
-		Inputs:         []*types.TxInput{types.NewCoinbaseInput([]byte{0x01, 0x02, 0x03})},
-		Outputs:        []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 5000, nil)},
-	}),
-	types.NewTx(types.TxData{
-		SerializedSize: uint64(52),
-		Inputs:         []*types.TxInput{types.NewCoinbaseInput([]byte{0x01, 0x02, 0x03})},
-		Outputs:        []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 2000, nil)},
-	}),
-	types.NewTx(types.TxData{
-		SerializedSize: uint64(52),
-		Inputs:         []*types.TxInput{types.NewCoinbaseInput([]byte{0x01, 0x02, 0x03})},
-		Outputs:        []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 10000, nil)},
-	}),
-}
 
-func TestTransactionMessage(t *testing.T) {
-	for _, tx := range txs {
-		txMsg, err := NewTransactionMessage(tx)
-		if err != nil {
-			t.Fatalf("create tx msg err:%s", err)
-		}
 
-		gotTx, err := txMsg.GetTransaction()
-		if err != nil {
-			t.Fatalf("get txs from txsMsg err:%s", err)
-		}
-		if !reflect.DeepEqual(*tx.Tx, *gotTx.Tx) {
-			t.Errorf("txs msg test err: got %s\nwant %s", spew.Sdump(tx.Tx), spew.Sdump(gotTx.Tx))
-		}
-	}
-}
 
 var testBlock = &types.Block{
 	BlockHeader: types.BlockHeader{
@@ -66,7 +23,6 @@ var testBlock = &types.Block{
 			TransactionStatusHash:  bc.Hash{V0: uint64(0x55)},
 		},
 	},
-	Transactions: txs,
 }
 
 func TestBlockMessage(t *testing.T) {
@@ -84,42 +40,9 @@ func TestBlockMessage(t *testing.T) {
 		t.Errorf("block msg test err: got %s\nwant %s", spew.Sdump(gotBlock.BlockHeader), spew.Sdump(testBlock.BlockHeader))
 	}
 
-	for i, tx := range gotBlock.Transactions {
-		if !reflect.DeepEqual(tx.Tx, txs[i].Tx) {
-			t.Errorf("block msg test err: got %s\nwant %s", spew.Sdump(tx.Tx), spew.Sdump(txs[i].Tx))
-		}
-	}
 
 	blockMsg.RawBlock[1] = blockMsg.RawBlock[1] + 0x1
 	_, err = blockMsg.GetBlock()
-	if err == nil {
-		t.Fatalf("get mine block err")
-	}
-}
-
-func TestMinedBlockMessage(t *testing.T) {
-	blockMsg, err := NewMinedBlockMessage(testBlock)
-	if err != nil {
-		t.Fatalf("create new block msg err:%s", err)
-	}
-
-	gotBlock, err := blockMsg.GetMineBlock()
-	if err != nil {
-		t.Fatalf("got block err:%s", err)
-	}
-
-	if !reflect.DeepEqual(gotBlock.BlockHeader, testBlock.BlockHeader) {
-		t.Errorf("block msg test err: got %s\nwant %s", spew.Sdump(gotBlock.BlockHeader), spew.Sdump(testBlock.BlockHeader))
-	}
-
-	for i, tx := range gotBlock.Transactions {
-		if !reflect.DeepEqual(tx.Tx, txs[i].Tx) {
-			t.Errorf("block msg test err: got %s\nwant %s", spew.Sdump(tx.Tx), spew.Sdump(txs[i].Tx))
-		}
-	}
-
-	blockMsg.RawBlock[1] = blockMsg.RawBlock[1] + 0x1
-	_, err = blockMsg.GetMineBlock()
 	if err == nil {
 		t.Fatalf("get mine block err")
 	}
@@ -214,7 +137,6 @@ var testBlocks = []*types.Block{
 				TransactionStatusHash:  bc.Hash{V0: uint64(0x55)},
 			},
 		},
-		Transactions: txs,
 	},
 	{
 		BlockHeader: types.BlockHeader{
@@ -226,7 +148,6 @@ var testBlocks = []*types.Block{
 				TransactionStatusHash:  bc.Hash{V0: uint64(0x55)},
 			},
 		},
-		Transactions: txs,
 	},
 }
 
@@ -243,12 +164,6 @@ func TestBlocksMessage(t *testing.T) {
 	for _, gotBlock := range gotBlocks {
 		if !reflect.DeepEqual(gotBlock.BlockHeader, testBlock.BlockHeader) {
 			t.Errorf("block msg test err: got %s\nwant %s", spew.Sdump(gotBlock.BlockHeader), spew.Sdump(testBlock.BlockHeader))
-		}
-
-		for i, tx := range gotBlock.Transactions {
-			if !reflect.DeepEqual(tx.Tx, txs[i].Tx) {
-				t.Errorf("block msg test err: got %s\nwant %s", spew.Sdump(tx.Tx), spew.Sdump(txs[i].Tx))
-			}
 		}
 	}
 }
