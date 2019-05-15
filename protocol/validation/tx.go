@@ -12,8 +12,6 @@ import (
 	"github.com/vapor/protocol/vm"
 )
 
-const ruleAA = 142500
-
 // validate transaction error
 var (
 	ErrTxVersion                 = errors.New("invalid transaction version")
@@ -452,9 +450,9 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 	return nil
 }
 
-func checkStandardTx(tx *bc.Tx, blockHeight uint64) error {
+func checkStandardTx(tx *bc.Tx) error {
 	for _, id := range tx.InputIDs {
-		if blockHeight >= ruleAA && id.IsZero() {
+		if id.IsZero() {
 			return ErrEmptyInputIDs
 		}
 	}
@@ -531,7 +529,7 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
 	if err := checkTimeRange(tx, block); err != nil {
 		return gasStatus, err
 	}
-	if err := checkStandardTx(tx, block.Height); err != nil {
+	if err := checkStandardTx(tx); err != nil {
 		return gasStatus, err
 	}
 
