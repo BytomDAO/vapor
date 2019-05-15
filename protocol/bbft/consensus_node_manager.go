@@ -21,10 +21,14 @@ const (
 	blockNumEachNode  = 3
 )
 
+var (
+	errHasNoChanceProductBlock = errors.New("the node has no chance to product a block in this round of voting")
+)
+
 type consensusNode struct {
 	pubkey  string
 	voteNum uint64
-	order   int64
+	order   uint64
 }
 
 type consensusNodeSlice []*consensusNode
@@ -76,44 +80,43 @@ func (c *consensusNodeManager) nextLeaderTime(pubkey []byte) (*time.Time, error)
 	defer c.RLock()
 	c.RLock()
 
-	prevRoundLastBlockHeight := c.effectiveStartHeight - 1
-	prevRoundLastBlock, err := c.chain.GetHeaderByHeight(prevRoundLastBlockHeight)
-	if err != nil {
-		return nil, err
-	}
-
-	// The timestamp of the block can only be accurate to the second, so take the ceil of timestamp
-	beginTime := (int64(prevRoundLastBlock.Timestamp) + 1) * 1000 + blockTimeInterval
-
-	rvbn := roundVoteBlockNums
-	// Exclude genesis block
-	if prevRoundLastBlockHeight == 0 {
-		rvbn--
-	}
-	roundVoteTime := int64(rvbn * blockTimeInterval)
-	endTime := beginTime + roundVoteTime
-	now := time.Now().UnixNano() / 1e6
-	if now >= endTime {
-		return nil, fmt.Errorf("the node has not completed block synchronization")
-	}
-
-	roundBlockTime := int64(blockNumEachNode * numOfConsensusNode * blockTimeInterval)
-	latestRoundBeginTime := beginTime + ((now - beginTime) / roundBlockTime) * roundBlockTime
-
 	encodePubkey := hex.EncodeToString(pubkey)
 	consensusNode, ok := c.consensusNodeMap[encodePubkey]
 	if !ok {
 		return nil, fmt.Errorf("pubkey:%s is not consensus node", encodePubkey)
 	}
 
-	nextLeaderTimestamp := latestRoundBeginTime + (blockNumEachNode * blockTimeInterval) * consensusNode.order
-	if now - nextLeaderTimestamp >= blockNumEachNode * blockTimeInterval {
-		nextLeaderTimestamp += roundBlockTime
-		if nextLeaderTimestamp > endTime {
-			return nil, fmt.Errorf("pubkey:%s has no chance to product a block in this round of voting", pubkey)
+	startBlockHeight := c.effectiveStartHeight
+	bestBlockHeight := c.chain.BestBlockHeight()
+	
+	prevRoundLastBlock, err := c.chain.GetHeaderByHeight(startBlockHeight - 1)
+	if err != nil {
+		return nil, err
+	}
+
+	startTime := prevRoundLastBlock.Timestamp * 1000 + blockTimeInterval
+	return nextLeaderTimeHelper(startBlockHeight, bestBlockHeight, startTime, consensusNode.order)
+}
+
+func nextLeaderTimeHelper(startBlockHeight, bestBlockHeight, startTime, nodeOrder uint64) (*time.Time, error) {
+	endBlockHeight := startBlockHeight + roundVoteBlockNums
+	// exclude genesis block
+	if startBlockHeight == 1 {
+		endBlockHeight--
+	}
+
+	roundBlockNums := uint64(blockNumEachNode * numOfConsensusNode)
+	latestRoundBlockHeight := startBlockHeight + (bestBlockHeight - startBlockHeight) / roundBlockNums * roundBlockNums
+	nextBlockHeight := latestRoundBlockHeight + blockNumEachNode * nodeOrder
+
+	if bestBlockHeight > nextBlockHeight && bestBlockHeight - nextBlockHeight >= blockNumEachNode {
+		nextBlockHeight += roundBlockNums
+		if nextBlockHeight > endBlockHeight {
+			return nil, errHasNoChanceProductBlock
 		}
 	}
-	
+
+	nextLeaderTimestamp := int64(startTime + (nextBlockHeight - startBlockHeight) * blockTimeInterval)
 	nextLeaderTime := time.Unix(nextLeaderTimestamp / 1000, (nextLeaderTimestamp % 1000) * 1e6)
 	return &nextLeaderTime, nil
 }
@@ -160,7 +163,7 @@ func (c *consensusNodeManager) getConsensusNodesByVoteResult(voteSeq uint64) (ma
 
 	result := make(map[string]*consensusNode)
 	for i, node := range nodes {
-		node.order = int64(i)
+		node.order = uint64(i)
 		result[node.pubkey] = node
 	}
 	return result, nil
