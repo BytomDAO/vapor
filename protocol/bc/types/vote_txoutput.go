@@ -4,7 +4,7 @@ import (
 	"github.com/vapor/protocol/bc"
 )
 
-// VoteOutput satisfies the TypedOutput interface and represents a cross-chain transaction.
+// VoteOutput satisfies the TypedOutput interface and represents a vote transaction.
 type VoteOutput struct {
 	OutputCommitment
 	// Unconsumed suffixes of the commitment and witness extensible strings.

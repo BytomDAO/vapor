@@ -61,12 +61,16 @@ func TestSerializationVoteTxOutput(t *testing.T) {
 	voteTxOutput := NewVoteOutput(assetID, 1000, []byte("TestSerializationTxOutput"), []byte("af594006a40837d9f028daabb6d589df0b9138daefad5683e5233c2646279217294a8d532e60863bcf196625a35fb8ceeffa3c09610eb92dcfb655a947f13269"))
 
 	wantHex := strings.Join([]string{
-		"01", // asset version
-		"3e", // serialization length
+		"01",   // asset version
+		"c101", // serialization length
+		"02",   // outType
+		"8001",
+		"6166353934303036613430383337643966303238646161626236643538396466306239313338646165666164353638336535323333633236343632373932313732393461386435333265363038363362636631393636323561333566623863656566666133633039363130656239326463666236353561393437663133323639",
+		"3d",
 		"81756fdab39a17163b0ce582ee4ee256fb4d1e156c692b997d608a42ecb38d47", // assetID
-		"92c30f", // amount
-		"01",     // version
-		"19",     // control program length
+		"e807", // amount
+		"01",   // version
+		"19",   // control program length
 		"5465737453657269616c697a6174696f6e54784f7574707574", // control program
 		"00", // witness length
 	}, "")
