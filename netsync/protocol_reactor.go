@@ -62,26 +62,12 @@ func (pr *ProtocolReactor) OnStop() {
 
 // AddPeer implements Reactor by sending our state to peer.
 func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
-	if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{&StatusRequestMessage{}}); !ok {
-		return errStatusRequest
+	pr.sm.AddPeer(peer)
+	if err := pr.sm.SendStatus(peer); err != nil {
+		return err
 	}
-
-	checkTicker := time.NewTicker(handshakeCheckPerid)
-	defer checkTicker.Stop()
-	timeout := time.NewTimer(handshakeTimeout)
-	defer timeout.Stop()
-	for {
-		select {
-		case <-checkTicker.C:
-			if exist := pr.peers.getPeer(peer.Key); exist != nil {
-				pr.sm.syncTransactions(peer.Key)
-				return nil
-			}
-
-		case <-timeout.C:
-			return errProtocolHandshakeTimeout
-		}
-	}
+	pr.sm.syncTransactions(peer.Key)
+	return nil
 }
 
 // RemovePeer implements Reactor by removing peer from the pool.
