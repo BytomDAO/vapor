@@ -113,7 +113,11 @@ func (t *TxInput) Arguments() [][]byte {
 	switch inp := t.TypedInput.(type) {
 	case *IssuanceInput:
 		return inp.Arguments
+
 	case *SpendInput:
+		return inp.Arguments
+
+	case *CrossChainInput:
 		return inp.Arguments
 	}
 	return nil
@@ -124,7 +128,11 @@ func (t *TxInput) SetArguments(args [][]byte) {
 	switch inp := t.TypedInput.(type) {
 	case *IssuanceInput:
 		inp.Arguments = args
+
 	case *SpendInput:
+		inp.Arguments = args
+
+	case *CrossChainInput:
 		inp.Arguments = args
 	}
 }
