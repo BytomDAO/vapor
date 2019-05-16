@@ -127,6 +127,8 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 		if _, err = io.ReadFull(r, icType[:]); err != nil {
 			return errors.Wrap(err, "reading input commitment type")
 		}
+
+		// TODO:
 		switch icType[0] {
 		case SpendInputType:
 			si := new(SpendInput)
@@ -161,6 +163,11 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 			if inp.Arguments, err = blockchain.ReadVarstrList(r); err != nil {
 				return err
 			}
+
+		case *CrossChainInput:
+			if inp.Arguments, err = blockchain.ReadVarstrList(r); err != nil {
+				return err
+			}
 		}
 		return nil
 	})
@@ -181,6 +188,7 @@ func (t *TxInput) writeTo(w io.Writer) error {
 	return errors.Wrap(err, "writing input witness")
 }
 
+// TODO:
 func (t *TxInput) writeInputCommitment(w io.Writer) (err error) {
 	if t.AssetVersion != 1 {
 		return nil
@@ -211,6 +219,10 @@ func (t *TxInput) writeInputWitness(w io.Writer) error {
 
 	switch inp := t.TypedInput.(type) {
 	case *SpendInput:
+		_, err := blockchain.WriteVarstrList(w, inp.Arguments)
+		return err
+
+	case *CrossChainInput:
 		_, err := blockchain.WriteVarstrList(w, inp.Arguments)
 		return err
 	}
