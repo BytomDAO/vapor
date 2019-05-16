@@ -277,22 +277,21 @@ func (tp *TxPool) addTransaction(txD *TxDesc) error {
 	txD.Added = time.Now()
 	tp.pool[tx.ID] = txD
 	for _, id := range tx.ResultIds {
-		var assetID *bc.AssetID
-		output, err := tx.IntraChainOutput(*id)
+		var assetID bc.AssetID
+		outputEntry, err := tx.Entry(*id)
 		if err != nil {
-			// error due to it's a retirement, utxo doesn't care this output type so skip it
-			output, err := tx.VoteOutput(*id)
-			if err != nil {
-				continue
-			}
-			assetID = output.Source.Value.AssetId
+			continue
+		}
+		switch output := outputEntry.(type) {
+		case *bc.IntraChainOutput:
+			assetID = *output.Source.Value.AssetId
+		case *bc.VoteOutput:
+			assetID = *output.Source.Value.AssetId
+		default:
+			continue
 		}
 
-		if assetID == nil {
-			assetID = output.Source.Value.AssetId
-		}
-
-		if !txD.StatusFail || *assetID == *consensus.BTMAssetID {
+		if !txD.StatusFail || assetID == *consensus.BTMAssetID {
 			tp.utxo[*id] = tx
 		}
 	}

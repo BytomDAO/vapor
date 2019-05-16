@@ -5,6 +5,7 @@ import (
 	"math"
 
 	"github.com/vapor/consensus"
+	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/errors"
 	"github.com/vapor/math/checked"
 	"github.com/vapor/protocol/bc"
@@ -459,6 +460,32 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 	}
 	if !eq {
 		return errors.Wrapf(ErrMismatchedValue, "destination value %v disagrees with %v", src.Value, vd.Value)
+	}
+
+	return nil
+}
+
+func checkStandardTx(tx *bc.Tx, blockHeight uint64) error {
+	for _, id := range tx.InputIDs {
+		if blockHeight >= ruleAA && id.IsZero() {
+			return ErrEmptyInputIDs
+		}
+	}
+
+	for _, id := range tx.GasInputIDs {
+		spend, err := tx.Spend(id)
+		if err != nil {
+			continue
+		}
+
+		intraChainSpentOutput, err := tx.IntraChainOutput(*spend.SpentOutputId)
+		if err != nil {
+			return err
+		}
+
+		if !segwit.IsP2WScript(intraChainSpentOutput.ControlProgram.Code) {
+			return ErrNotStandardTx
+		}
 	}
 
 	return nil
