@@ -59,6 +59,15 @@ func (tx *Tx) CrossChainOutput(id Hash) (*CrossChainOutput, error) {
 	return o, nil
 }
 
+// Entry try to get the  entry by given hash
+func (tx *Tx) Entry(id Hash) (Entry, error) {
+	e, ok := tx.Entries[id]
+	if !ok || e == nil {
+		return nil, errors.Wrapf(ErrMissingEntry, "id %x", id.Bytes())
+	}
+	return e, nil
+}
+
 // Spend try to get the spend entry by given hash
 func (tx *Tx) Spend(id Hash) (*Spend, error) {
 	e, ok := tx.Entries[id]
