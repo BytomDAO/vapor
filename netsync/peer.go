@@ -23,7 +23,7 @@ const (
 	defaultBanThreshold = uint32(100)
 )
 
-var errSendStatusMsg =errors.New("send status msg fail")
+var errSendStatusMsg = errors.New("send status msg fail")
 
 //BasePeer is the interface for connection level peer
 type BasePeer interface {
@@ -320,7 +320,7 @@ func (p *peer) sendTransactions(txs []*types.Tx) (bool, error) {
 
 func (p *peer) sendStatus(header *types.BlockHeader) error {
 	msg := NewStatusMessage(header)
-	if ok:=p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg});!ok{
+	if ok := p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
 		return errSendStatusMsg
 	}
 	p.markNewStatus(header.Height)
@@ -410,6 +410,7 @@ func (ps *peerSet) broadcastMinedBlock(block *types.Block) error {
 			continue
 		}
 		peer.markBlock(&hash)
+		peer.markNewStatus(block.Height)
 	}
 	return nil
 }
