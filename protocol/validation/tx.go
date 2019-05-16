@@ -478,16 +478,24 @@ func checkStandardTx(tx *bc.Tx, blockHeight uint64) error {
 			continue
 		}
 
-		intraChainSpentOutput, err := tx.IntraChainOutput(*spend.SpentOutputId)
+		code := []byte{}
+		outputEntry, err := tx.Entry(*spend.SpentOutputId)
 		if err != nil {
 			return err
 		}
+		switch output := outputEntry.(type) {
+		case *bc.IntraChainOutput:
+			code = output.ControlProgram.Code
+		case *bc.VoteOutput:
+			code = output.ControlProgram.Code
+		default:
+			return errors.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", id.Bytes(), outputEntry)
+		}
 
-		if !segwit.IsP2WScript(intraChainSpentOutput.ControlProgram.Code) {
+		if !segwit.IsP2WScript(code) {
 			return ErrNotStandardTx
 		}
 	}
-
 	return nil
 }
 
