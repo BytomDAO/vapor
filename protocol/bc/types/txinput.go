@@ -14,6 +14,7 @@ const (
 	IssuanceInputType uint8 = iota
 	SpendInputType
 	CoinbaseInputType
+	UnvoteInputType
 )
 
 type (
