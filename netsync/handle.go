@@ -304,14 +304,7 @@ func (sm *SyncManager) handleMineBlockMsg(peer *peer, msg *MineBlockMessage) {
 }
 
 func (sm *SyncManager) handleStatusRequestMsg(peer BasePeer) {
-	bestHeader := sm.chain.BestBlockHeader()
-	genesisBlock, err := sm.chain.GetBlockByHeight(0)
-	if err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on handleStatusRequestMsg get genesis")
-	}
-
-	genesisHash := genesisBlock.Hash()
-	msg := NewStatusResponseMessage(bestHeader, &genesisHash)
+	msg := NewStatusResponseMessage(sm.chain.BestBlockHeader())
 	if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
 		sm.peers.removePeer(peer.ID())
 	}
@@ -320,11 +313,6 @@ func (sm *SyncManager) handleStatusRequestMsg(peer BasePeer) {
 func (sm *SyncManager) handleStatusResponseMsg(basePeer BasePeer, msg *StatusResponseMessage) {
 	if peer := sm.peers.getPeer(basePeer.ID()); peer != nil {
 		peer.setStatus(msg.Height, msg.GetHash())
-		return
-	}
-
-	if genesisHash := msg.GetGenesisHash(); sm.genesisHash != *genesisHash {
-		log.WithFields(log.Fields{"module": logModule, "remote genesis": genesisHash.String(), "local genesis": sm.genesisHash.String()}).Warn("fail hand shake due to differnt genesis")
 		return
 	}
 
