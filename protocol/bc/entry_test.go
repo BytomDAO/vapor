@@ -9,7 +9,6 @@ func BenchmarkEntryID(b *testing.B) {
 	m := NewMux([]*ValueSource{{Position: 1}}, &Program{Code: []byte{1}, VmVersion: 1})
 
 	entries := []Entry{
-		NewIssuance(nil, &AssetAmount{}, 0),
 		m,
 		NewTxHeader(1, 1, 0, nil),
 		NewIntraChainOutput(&ValueSource{}, &Program{Code: []byte{1}, VmVersion: 1}, 0),
@@ -32,10 +31,6 @@ func TestEntryID(t *testing.T) {
 		entry         Entry
 		expectEntryID string
 	}{
-		{
-			entry:         NewIssuance(&Hash{V0: 0, V1: 1, V2: 2, V3: 3}, &AssetAmount{&AssetID{V0: 1, V1: 2, V2: 3, V3: 4}, 100}, 1),
-			expectEntryID: "3012b9b6da3962bb2388cdf5db7f3b93a2b696fcc70e79bc5da1238a6d66ae73",
-		},
 		{
 			entry: NewMux(
 				[]*ValueSource{

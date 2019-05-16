@@ -24,9 +24,6 @@ func MapTx(oldTx *TxData) *bc.Tx {
 	for id, e := range entries {
 		var ord uint64
 		switch e := e.(type) {
-		case *bc.Issuance:
-			ord = e.Ordinal
-
 		case *bc.Spend:
 			ord = e.Ordinal
 			spentOutputIDs[*e.SpentOutputId] = true
@@ -63,36 +60,13 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 	}
 
 	var (
-		spends    []*bc.Spend
-		issuances []*bc.Issuance
-		coinbase  *bc.Coinbase
+		spends   []*bc.Spend
+		coinbase *bc.Coinbase
 	)
 
 	muxSources := make([]*bc.ValueSource, len(tx.Inputs))
 	for i, input := range tx.Inputs {
 		switch inp := input.TypedInput.(type) {
-		case *IssuanceInput:
-			nonceHash := inp.NonceHash()
-			assetDefHash := inp.AssetDefinitionHash()
-			value := input.AssetAmount()
-
-			issuance := bc.NewIssuance(&nonceHash, &value, uint64(i))
-			issuance.WitnessAssetDefinition = &bc.AssetDefinition{
-				Data: &assetDefHash,
-				IssuanceProgram: &bc.Program{
-					VmVersion: inp.VMVersion,
-					Code:      inp.IssuanceProgram,
-				},
-			}
-			issuance.WitnessArguments = inp.Arguments
-			issuanceID := addEntry(issuance)
-
-			muxSources[i] = &bc.ValueSource{
-				Ref:   &issuanceID,
-				Value: &value,
-			}
-			issuances = append(issuances, issuance)
-
 		case *SpendInput:
 			// create entry for prevout
 			prog := &bc.Program{VmVersion: inp.VMVersion, Code: inp.ControlProgram}
@@ -134,9 +108,6 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 	for _, spend := range spends {
 		spentOutput := entryMap[*spend.SpentOutputId].(*bc.IntraChainOutput)
 		spend.SetDestination(&muxID, spentOutput.Source.Value, spend.Ordinal)
-	}
-	for _, issuance := range issuances {
-		issuance.SetDestination(&muxID, issuance.Value, issuance.Ordinal)
 	}
 
 	if coinbase != nil {

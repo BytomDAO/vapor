@@ -14,7 +14,6 @@ func TestCheckOutput(t *testing.T) {
 	tx := types.NewTx(types.TxData{
 		Inputs: []*types.TxInput{
 			types.NewSpendInput(nil, bc.Hash{}, bc.NewAssetID([32]byte{1}), 5, 1, []byte("spendprog")),
-			types.NewIssuanceInput(nil, 6, []byte("issueprog"), nil, nil),
 		},
 		Outputs: []*types.TxOutput{
 			types.NewIntraChainOutput(bc.NewAssetID([32]byte{3}), 8, []byte("wrongprog")),

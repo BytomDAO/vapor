@@ -137,161 +137,6 @@ func TestValidateUglyTx(t *testing.T) {
 		},
 		{
 			category: "input output unbalance",
-			desc:     "issuance asset, no corresponding output",
-			insts:    []*signingInst{singleSignInst, singleSignInst},
-			txData: types.TxData{
-				Version: 1,
-				Inputs: []*types.TxInput{
-					types.NewSpendInput(nil,
-						bc.Hash{V0: 14760873410800997144, V1: 1698395500822741684, V2: 5965908492734661392, V3: 9445539829830863994},
-						*consensus.BTMAssetID, 10000000000, 0, nil),
-					types.NewIssuanceInput( // assetID: 97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f
-						testutil.MustDecodeHexString("fd0aec4229deb281"),
-						10000000000,
-						nil,
-						nil,
-						testutil.MustDecodeHexString("7b0a202022646563696d616c73223a20382c0a2020226465736372697074696f6e223a207b7d2c0a2020226e616d65223a2022222c0a20202273796d626f6c223a2022220a7d"),
-					),
-				},
-				Outputs: []*types.TxOutput{
-					types.NewIntraChainOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-				},
-			},
-			err:      true,
-			gasValid: false,
-		},
-		{
-			category: "input output unbalance",
-			desc:     "issuance asset A, output asset B",
-			insts:    []*signingInst{singleSignInst, singleSignInst},
-			txData: types.TxData{
-				Version: 1,
-				Inputs: []*types.TxInput{
-					types.NewSpendInput(nil,
-						bc.Hash{V0: 14760873410800997144, V1: 1698395500822741684, V2: 5965908492734661392, V3: 9445539829830863994},
-						*consensus.BTMAssetID, 10000000000, 0, nil),
-					types.NewIssuanceInput( // assetID: 97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f
-						testutil.MustDecodeHexString("fd0aec4229deb281"),
-						10000000000,
-						nil,
-						nil,
-						testutil.MustDecodeHexString("7b0a202022646563696d616c73223a20382c0a2020226465736372697074696f6e223a207b7d2c0a2020226e616d65223a2022222c0a20202273796d626f6c223a2022220a7d"),
-					),
-				},
-				Outputs: []*types.TxOutput{
-					types.NewIntraChainOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewIntraChainOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707e"), 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-				},
-			},
-			err:      true,
-			gasValid: false,
-		},
-		{
-			category: "input output unbalance",
-			desc:     "sum of output asset A greater than issuance asset A",
-			insts:    []*signingInst{singleSignInst, singleSignInst},
-			txData: types.TxData{
-				Version: 1,
-				Inputs: []*types.TxInput{
-					types.NewSpendInput(nil,
-						bc.Hash{V0: 14760873410800997144, V1: 1698395500822741684, V2: 5965908492734661392, V3: 9445539829830863994},
-						*consensus.BTMAssetID, 10000000000, 0, nil),
-					types.NewIssuanceInput( // assetID: 97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f
-						testutil.MustDecodeHexString("fd0aec4229deb281"),
-						10000000000,
-						nil,
-						nil,
-						testutil.MustDecodeHexString("7b0a202022646563696d616c73223a20382c0a2020226465736372697074696f6e223a207b7d2c0a2020226e616d65223a2022222c0a20202273796d626f6c223a2022220a7d"),
-					),
-				},
-				Outputs: []*types.TxOutput{
-					types.NewIntraChainOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewIntraChainOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 20000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-				},
-			},
-			err:      true,
-			gasValid: false,
-		},
-		{
-			category: "input output unbalance",
-			desc:     "sum of output asset A less than issuance asset A",
-			insts:    []*signingInst{singleSignInst, singleSignInst},
-			txData: types.TxData{
-				Version: 1,
-				Inputs: []*types.TxInput{
-					types.NewSpendInput(nil,
-						bc.Hash{V0: 14760873410800997144, V1: 1698395500822741684, V2: 5965908492734661392, V3: 9445539829830863994},
-						*consensus.BTMAssetID, 10000000000, 0, nil),
-					types.NewIssuanceInput( // assetID: 97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f
-						testutil.MustDecodeHexString("fd0aec4229deb281"),
-						10000000000,
-						nil,
-						nil,
-						testutil.MustDecodeHexString("7b0a202022646563696d616c73223a20382c0a2020226465736372697074696f6e223a207b7d2c0a2020226e616d65223a2022222c0a20202273796d626f6c223a2022220a7d"),
-					),
-				},
-				Outputs: []*types.TxOutput{
-					types.NewIntraChainOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewIntraChainOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 5000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-				},
-			},
-			err:      true,
-			gasValid: false,
-		},
-		{
-			category: "input output unbalance",
-			desc:     "sum of retire asset A greater than issuance asset A",
-			insts:    []*signingInst{singleSignInst, singleSignInst},
-			txData: types.TxData{
-				Version: 1,
-				Inputs: []*types.TxInput{
-					types.NewSpendInput(nil,
-						bc.Hash{V0: 14760873410800997144, V1: 1698395500822741684, V2: 5965908492734661392, V3: 9445539829830863994},
-						*consensus.BTMAssetID, 10000000000, 0, nil),
-					types.NewIssuanceInput( // assetID: 97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f
-						testutil.MustDecodeHexString("fd0aec4229deb281"),
-						10000000000,
-						nil,
-						nil,
-						testutil.MustDecodeHexString("7b0a202022646563696d616c73223a20382c0a2020226465736372697074696f6e223a207b7d2c0a2020226e616d65223a2022222c0a20202273796d626f6c223a2022220a7d"),
-					),
-				},
-				Outputs: []*types.TxOutput{
-					types.NewIntraChainOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewIntraChainOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 20000000000, testutil.MustDecodeHexString("6a")),
-				},
-			},
-			err:      true,
-			gasValid: false,
-		},
-		{
-			category: "input output unbalance",
-			desc:     "sum of retire asset A less than issuance asset A",
-			insts:    []*signingInst{singleSignInst, singleSignInst},
-			txData: types.TxData{
-				Version: 1,
-				Inputs: []*types.TxInput{
-					types.NewSpendInput(nil,
-						bc.Hash{V0: 14760873410800997144, V1: 1698395500822741684, V2: 5965908492734661392, V3: 9445539829830863994},
-						*consensus.BTMAssetID, 10000000000, 0, nil),
-					types.NewIssuanceInput( // assetID: 97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f
-						testutil.MustDecodeHexString("fd0aec4229deb281"),
-						10000000000,
-						nil,
-						nil,
-						testutil.MustDecodeHexString("7b0a202022646563696d616c73223a20382c0a2020226465736372697074696f6e223a207b7d2c0a2020226e616d65223a2022222c0a20202273796d626f6c223a2022220a7d"),
-					),
-				},
-				Outputs: []*types.TxOutput{
-					types.NewIntraChainOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewIntraChainOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 5000000000, testutil.MustDecodeHexString("6a")),
-				},
-			},
-			err:      true,
-			gasValid: false,
-		},
-		{
-			category: "input output unbalance",
 			desc:     "spend asset A, no corresponding output",
 			insts:    []*signingInst{singleSignInst, singleSignInst},
 			txData: types.TxData{
@@ -518,70 +363,6 @@ func TestValidateUglyTx(t *testing.T) {
 		},
 		{
 			category: "overflow",
-			desc:     "issuance non btm input overflow",
-			insts:    []*signingInst{singleSignInst, singleSignInst, singleSignInst},
-			txData: types.TxData{
-				Version: 1,
-				Inputs: []*types.TxInput{
-					types.NewSpendInput(nil,
-						bc.Hash{V0: 6970879411704044573, V1: 10086395903308657573, V2: 10107608596190358115, V3: 8645856247221333302},
-						*consensus.BTMAssetID, 10000000000, 1, nil),
-					types.NewIssuanceInput( // assetID: 97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f
-						testutil.MustDecodeHexString("fd0aec4229deb281"),
-						math.MaxInt64,
-						nil,
-						[][]byte{
-							testutil.MustDecodeHexString("e8f301f7bd3b1e4ca853b15559b3a253a4f5f9c7efba233ab0f6896bec23adc6a816c350e08f6b8ac5bc23eb5720173f9190805328af581f34a7fe561358d100"),
-						},
-						testutil.MustDecodeHexString("7b0a202022646563696d616c73223a20382c0a2020226465736372697074696f6e223a207b7d2c0a2020226e616d65223a2022222c0a20202273796d626f6c223a2022220a7d"),
-					),
-					types.NewIssuanceInput( // assetID: 97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f
-						testutil.MustDecodeHexString("fd0aec4229deb281"),
-						10000000000,
-						nil,
-						nil,
-						testutil.MustDecodeHexString("7b0a202022646563696d616c73223a20382c0a2020226465736372697074696f6e223a207b7d2c0a2020226e616d65223a2022222c0a20202273796d626f6c223a2022220a7d"),
-					),
-				},
-				Outputs: []*types.TxOutput{
-					types.NewIntraChainOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewIntraChainOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-				},
-			},
-			err:      true,
-			gasValid: false,
-		},
-		{
-			category: "overflow",
-			desc:     "sum of spend and issuance non btm input overflow",
-			insts:    []*signingInst{singleSignInst, singleSignInst, singleSignInst},
-			txData: types.TxData{
-				Version: 1,
-				Inputs: []*types.TxInput{
-					types.NewSpendInput(nil,
-						bc.Hash{V0: 6970879411704044573, V1: 10086395903308657573, V2: 10107608596190358115, V3: 8645856247221333302},
-						*consensus.BTMAssetID, 10000000000, 1, nil),
-					types.NewIssuanceInput( // assetID: 97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f
-						testutil.MustDecodeHexString("fd0aec4229deb281"),
-						math.MaxInt64,
-						nil,
-						nil,
-						testutil.MustDecodeHexString("7b0a202022646563696d616c73223a20382c0a2020226465736372697074696f6e223a207b7d2c0a2020226e616d65223a2022222c0a20202273796d626f6c223a2022220a7d"),
-					),
-					types.NewSpendInput(nil,
-						bc.Hash{V0: 6970879411704044573, V1: 10086395903308657573, V2: 10107608596190358115, V3: 8645856247221333302},
-						testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 100, 0, nil),
-				},
-				Outputs: []*types.TxOutput{
-					types.NewIntraChainOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewIntraChainOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 100, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-				},
-			},
-			err:      true,
-			gasValid: false,
-		},
-		{
-			category: "overflow",
 			desc:     "spend btm output overflow",
 			insts:    []*signingInst{singleSignInst, singleSignInst},
 			txData: types.TxData{
@@ -761,60 +542,6 @@ func TestValidateUglyTx(t *testing.T) {
 			gasValid: true,
 		},
 		{
-			category: "verify signature fail",
-			desc:     "issuance non btm single sign",
-			insts:    []*signingInst{singleSignInst, multiSignInst},
-			txData: types.TxData{
-				Version: 1,
-				Inputs: []*types.TxInput{
-					types.NewSpendInput(nil,
-						bc.Hash{V0: 14760873410800997144, V1: 1698395500822741684, V2: 5965908492734661392, V3: 9445539829830863994},
-						*consensus.BTMAssetID, 10000000000, 0, nil),
-					types.NewIssuanceInput(
-						testutil.MustDecodeHexString("fd0aec4229deb281"),
-						10000000000,
-						// wrong issuance program
-						testutil.MustDecodeHexString("ae20c38173d800e62f63bd08cfaa9bc905e4a34a61ad841d7ad6c70ead0fb48196995151ad"),
-						nil,
-						nil,
-					),
-				},
-				Outputs: []*types.TxOutput{
-					types.NewIntraChainOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewIntraChainOutput(testutil.MustDecodeAsset("bf5f8da2334590ee095148ccdcf4d806b26a47a6d9e9e857ef6c2de79aee4f14"), 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-				},
-			},
-			err:      true,
-			gasValid: true,
-		},
-		{
-			category: "verify signature fail",
-			desc:     "issuance non btm multi sign",
-			insts:    []*signingInst{singleSignInst, multiSignInst},
-			txData: types.TxData{
-				Version: 1,
-				Inputs: []*types.TxInput{
-					types.NewSpendInput(nil,
-						bc.Hash{V0: 14760873410800997144, V1: 1698395500822741684, V2: 5965908492734661392, V3: 9445539829830863994},
-						*consensus.BTMAssetID, 10000000000, 0, nil),
-					types.NewIssuanceInput(
-						testutil.MustDecodeHexString("fd0aec4229deb281"),
-						10000000000,
-						// wrong issuance program
-						testutil.MustDecodeHexString("ae20ce8639c5dc70cb2b12f89a057670602eb013fc54a10ce22bd4691c62cf546b7b2081bdd879bcbce7f58e1731841c6b3deac242efa00e75124fe559fa531c0c5bb820b40b6eec74288ee4bae67191f135512454b52640cfd7be95dc84be0f02281dce20247b6e6f9230a987ef61c66820268e7b766d28c1ce7aa2c550b34e294167f340205096211460415888768a48b121013711aa711634bb9ff7341a7bd072c31525875355ad"),
-						nil,
-						testutil.MustDecodeHexString("7b0a202022646563696d616c73223a20382c0a2020226465736372697074696f6e223a207b7d2c0a2020226e616d65223a2022222c0a20202273796d626f6c223a2022220a7d"),
-					),
-				},
-				Outputs: []*types.TxOutput{
-					types.NewIntraChainOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewIntraChainOutput(testutil.MustDecodeAsset("776f0a421e9176a03061d388aff4ab3b1bcd32e53a090d593a466706c69e3d3f"), 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-				},
-			},
-			err:      true,
-			gasValid: true,
-		},
-		{
 			category: "double spend",
 			desc:     "btm asset double spend",
 			insts:    []*signingInst{singleSignInst, singleSignInst},
@@ -914,25 +641,6 @@ func mockCtrlProgram(txData types.TxData, insts []*signingInst) {
 				panic(err)
 			}
 			inp.ControlProgram = program.ControlProgram
-		case *types.IssuanceInput:
-			if inp.IssuanceProgram != nil {
-				continue
-			}
-			assetSigner, err := signers.Create("asset", xPubs, insts[i].quorum, insts[i].keyIndex, signers.BIP0032)
-			if err != nil {
-				panic(err)
-			}
-
-			path := signers.GetBip0032Path(assetSigner, signers.AssetKeySpace)
-			derivedXPubs := chainkd.DeriveXPubs(assetSigner.XPubs, path)
-			derivedPKs := chainkd.XPubKeys(derivedXPubs)
-
-			issuanceProg, err := vmutil.P2SPMultiSigProgramWithHeight(derivedPKs, insts[i].quorum, 0)
-			if err != nil {
-				panic(err)
-			}
-
-			inp.IssuanceProgram = issuanceProg
 		}
 	}
 }
@@ -971,15 +679,6 @@ func mockSignTx(tx *types.Tx, insts []*signingInst) {
 				}
 
 				arguments = append(arguments, script)
-			}
-			inp.Arguments = arguments
-		case *types.IssuanceInput:
-			path := signers.GetBip0032Path(&signers.Signer{KeyIndex: inst.keyIndex, DeriveRule: signers.BIP0032}, signers.AssetKeySpace)
-			xPrvs, _ := mustGetRootKeys(inst.rootPrvKeys)
-			for _, xPrv := range xPrvs {
-				childPrv := xPrv.Derive(path)
-				sigHashBytes := tx.SigHash(uint32(i)).Byte32()
-				arguments = append(arguments, childPrv.Sign(sigHashBytes[:]))
 			}
 			inp.Arguments = arguments
 		}
