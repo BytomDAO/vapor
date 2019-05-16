@@ -523,7 +523,6 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
 	if err := checkTimeRange(tx, block); err != nil {
 		return gasStatus, err
 	}
-
 	if err := checkStandardTx(tx, block.Height); err != nil {
 		return gasStatus, err
 	}
