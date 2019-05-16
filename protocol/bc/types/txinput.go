@@ -34,7 +34,6 @@ type (
 
 var errBadAssetID = errors.New("asset ID does not match other issuance parameters")
 
-// TODO:
 // AssetAmount return the asset id and amount of the txinput.
 func (t *TxInput) AssetAmount() bc.AssetAmount {
 	switch inp := t.TypedInput.(type) {
@@ -44,9 +43,14 @@ func (t *TxInput) AssetAmount() bc.AssetAmount {
 			AssetId: &assetID,
 			Amount:  inp.Amount,
 		}
+
 	case *SpendInput:
 		return inp.AssetAmount
+
+	case *CrossChainInput:
+		return inp.AssetAmount
 	}
+
 	return bc.AssetAmount{}
 }
 
@@ -55,9 +59,9 @@ func (t *TxInput) AssetID() bc.AssetID {
 	switch inp := t.TypedInput.(type) {
 	case *IssuanceInput:
 		return inp.AssetID()
+
 	case *SpendInput:
 		return *inp.AssetId
-
 	}
 	return bc.AssetID{}
 }
