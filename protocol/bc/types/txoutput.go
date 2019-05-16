@@ -206,7 +206,7 @@ func (to *TxOutput) writeOutputCommitment(w io.Writer) error {
 
 // ComputeOutputID assembles an intra-chain(!) output entry given a spend
 // commitment and computes and returns its corresponding entry ID.
-func ComputeOutputID(sc *SpendCommitment) (h bc.Hash, err error) {
+func ComputeOutputID(sc *SpendCommitment, inputType uint8, vote []byte) (h bc.Hash, err error) {
 	defer func() {
 		if r, ok := recover().(error); ok {
 			err = r
@@ -217,7 +217,14 @@ func ComputeOutputID(sc *SpendCommitment) (h bc.Hash, err error) {
 		Value:    &sc.AssetAmount,
 		Position: sc.SourcePosition,
 	}
-	o := bc.NewIntraChainOutput(src, &bc.Program{VmVersion: sc.VMVersion, Code: sc.ControlProgram}, 0)
+	var o bc.Entry
+	switch inputType {
+	case SpendInputType:
+		o = bc.NewIntraChainOutput(src, &bc.Program{VmVersion: sc.VMVersion, Code: sc.ControlProgram}, 0)
+	case UnvoteInputType:
+		o = bc.NewVoteOutput(src, &bc.Program{VmVersion: sc.VMVersion, Code: sc.ControlProgram}, 0, vote)
+	default:
+	}
 
 	h = bc.EntryID(o)
 	return h, nil
