@@ -393,10 +393,6 @@ func (bk *blockKeeper) syncWorker() {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on syncWorker get best block")
 		}
 
-		if err := bk.peers.broadcastMinedBlock(block); err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on syncWorker broadcast new block")
-		}
-
 		if err = bk.peers.broadcastNewStatus(block); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on syncWorker broadcast new status")
 		}
