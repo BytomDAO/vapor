@@ -9,7 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/crypto/ed25519/chainkd"
+	vcrypto "github.com/vapor/crypto"
 	"github.com/vapor/errors"
 	"github.com/vapor/math/checked"
 	"github.com/vapor/protocol/bc"
@@ -173,7 +173,7 @@ func AddContractArgs(sigInst *SigningInstruction, arguments []ContractArgument) 
 			for _, p := range rawTxSig.Path {
 				path = append(path, []byte(p))
 			}
-			sigInst.AddRawWitnessKeys([]chainkd.XPub{rawTxSig.RootXPub}, path, 1)
+			sigInst.AddRawWitnessKeys([]vcrypto.XPubKeyer{rawTxSig.RootXPub}, path, 1)
 
 		case "data":
 			data := &DataArgument{}

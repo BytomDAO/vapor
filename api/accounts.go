@@ -11,15 +11,15 @@ import (
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/common"
 	"github.com/vapor/consensus"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	vcrypto "github.com/vapor/crypto"
 	"github.com/vapor/protocol/vm/vmutil"
 )
 
 // POST /create-account
 func (a *API) createAccount(ctx context.Context, ins struct {
-	RootXPubs []chainkd.XPub `json:"root_xpubs"`
-	Quorum    int            `json:"quorum"`
-	Alias     string         `json:"alias"`
+	RootXPubs []vcrypto.XPubKeyer `json:"root_xpubs"`
+	Quorum    int                 `json:"quorum"`
+	Alias     string              `json:"alias"`
 }) Response {
 	acc, err := a.wallet.AccountMgr.Create(ins.RootXPubs, ins.Quorum, ins.Alias, signers.BIP0044)
 	if err != nil {

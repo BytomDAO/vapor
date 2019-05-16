@@ -3,7 +3,7 @@ package txbuilder
 import (
 	"encoding/json"
 
-	"github.com/vapor/crypto/ed25519/chainkd"
+	vcrypto "github.com/vapor/crypto"
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/errors"
 )
@@ -11,7 +11,7 @@ import (
 // AddWitnessKeys adds a SignatureWitness with the given quorum and
 // list of keys derived by applying the derivation path to each of the
 // xpubs.
-func (si *SigningInstruction) AddWitnessKeys(xpubs []chainkd.XPub, path [][]byte, quorum int) {
+func (si *SigningInstruction) AddWitnessKeys(xpubs []vcrypto.XPubKeyer, path [][]byte, quorum int) {
 	hexPath := make([]chainjson.HexBytes, 0, len(path))
 	for _, p := range path {
 		hexPath = append(hexPath, p)
@@ -32,7 +32,7 @@ func (si *SigningInstruction) AddWitnessKeys(xpubs []chainkd.XPub, path [][]byte
 // AddRawWitnessKeys adds a SignatureWitness with the given quorum and
 // list of keys derived by applying the derivation path to each of the
 // xpubs.
-func (si *SigningInstruction) AddRawWitnessKeys(xpubs []chainkd.XPub, path [][]byte, quorum int) {
+func (si *SigningInstruction) AddRawWitnessKeys(xpubs []vcrypto.XPubKeyer, path [][]byte, quorum int) {
 	hexPath := make([]chainjson.HexBytes, 0, len(path))
 	for _, p := range path {
 		hexPath = append(hexPath, p)

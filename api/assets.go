@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/vapor/asset"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	vcrypto "github.com/vapor/crypto"
 	chainjson "github.com/vapor/encoding/json"
 
 	log "github.com/sirupsen/logrus"
@@ -14,7 +14,7 @@ import (
 // POST /create-asset
 func (a *API) createAsset(ctx context.Context, ins struct {
 	Alias           string                 `json:"alias"`
-	RootXPubs       []chainkd.XPub         `json:"root_xpubs"`
+	RootXPubs       []vcrypto.XPubKeyer    `json:"root_xpubs"`
 	Quorum          int                    `json:"quorum"`
 	Definition      map[string]interface{} `json:"definition"`
 	LimitHeight     int64                  `json:"limit_height"`

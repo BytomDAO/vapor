@@ -8,7 +8,8 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	vcrypto "github.com/vapor/crypto"
+	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 )
 
 const (
@@ -21,8 +22,8 @@ type XKey struct {
 	ID      uuid.UUID
 	KeyType string
 	Alias   string
-	XPrv    chainkd.XPrv
-	XPub    chainkd.XPub
+	XPrv    vcrypto.XPrvKeyer
+	XPub    vcrypto.XPubKeyer
 }
 
 type keyStore interface {
@@ -87,9 +88,11 @@ func writeKeyFile(file string, content []byte) error {
 }
 
 func zeroKey(k *XKey) {
-	b := k.XPrv
-	for i := range b {
-		b[i] = 0
+	switch xpk := k.XPrv.(type) {
+	case edchainkd.XPrv:
+		for i := range xpk {
+			xpk[i] = 0
+		}
 	}
 }
 

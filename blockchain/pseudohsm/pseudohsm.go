@@ -12,7 +12,8 @@ import (
 
 	"github.com/pborman/uuid"
 
-	"github.com/vapor/crypto/ed25519/chainkd"
+	vcrypto "github.com/vapor/crypto"
+	"github.com/vapor/crypto/csp"
 	"github.com/vapor/errors"
 	mnem "github.com/vapor/wallet/mnemonic"
 )
@@ -39,9 +40,9 @@ type HSM struct {
 
 // XPub type for pubkey for anyone can see
 type XPub struct {
-	Alias string       `json:"alias"`
-	XPub  chainkd.XPub `json:"xpub"`
-	File  string       `json:"file"`
+	Alias string            `json:"alias"`
+	XPub  vcrypto.XPubKeyer `json:"xpub"`
+	File  string            `json:"file"`
 }
 
 // New method for HSM struct
@@ -106,7 +107,7 @@ func (h *HSM) ImportKeyFromMnemonic(alias string, auth string, mnemonic string, 
 func (h *HSM) createKeyFromMnemonic(alias string, auth string, mnemonic string) (*XPub, error) {
 	// Generate a Bip32 HD wallet for the mnemonic and a user supplied password
 	seed := mnem.NewSeed(mnemonic, "")
-	xprv, xpub, err := chainkd.NewXKeys(bytes.NewBuffer(seed))
+	xprv, xpub, err := csp.NewXKeys(bytes.NewBuffer(seed))
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +144,7 @@ func (h *HSM) createChainKDKey(alias string, auth string, language string) (*XPu
 }
 
 // UpdateKeyAlias update key alias
-func (h *HSM) UpdateKeyAlias(xpub chainkd.XPub, newAlias string) error {
+func (h *HSM) UpdateKeyAlias(xpub vcrypto.XPubKeyer, newAlias string) error {
 	h.cacheMu.Lock()
 	defer h.cacheMu.Unlock()
 
@@ -197,7 +198,7 @@ func (h *HSM) ListKeys() []XPub {
 // XSign looks up the xprv given the xpub, optionally derives a new
 // xprv with the given path (but does not store the new xprv), and
 // signs the given msg.
-func (h *HSM) XSign(xpub chainkd.XPub, path [][]byte, msg []byte, auth string) ([]byte, error) {
+func (h *HSM) XSign(xpub vcrypto.XPubKeyer, path [][]byte, msg []byte, auth string) ([]byte, error) {
 	xprv, err := h.LoadChainKDKey(xpub, auth)
 	if err != nil {
 		return nil, err
@@ -209,7 +210,7 @@ func (h *HSM) XSign(xpub chainkd.XPub, path [][]byte, msg []byte, auth string) (
 }
 
 //LoadChainKDKey get xprv from xpub
-func (h *HSM) LoadChainKDKey(xpub chainkd.XPub, auth string) (xprv chainkd.XPrv, err error) {
+func (h *HSM) LoadChainKDKey(xpub vcrypto.XPubKeyer, auth string) (xprv vcrypto.XPrvKeyer, err error) {
 	h.cacheMu.Lock()
 	defer h.cacheMu.Unlock()
 
@@ -227,7 +228,7 @@ func (h *HSM) LoadChainKDKey(xpub chainkd.XPub, auth string) (xprv chainkd.XPrv,
 
 // XDelete deletes the key matched by xpub if the passphrase is correct.
 // If a contains no filename, the address must match a unique key.
-func (h *HSM) XDelete(xpub chainkd.XPub, auth string) error {
+func (h *HSM) XDelete(xpub vcrypto.XPubKeyer, auth string) error {
 	// Decrypting the key isn't really necessary, but we do
 	// it anyway to check the password and zero out the key
 	// immediately afterwards.
@@ -252,7 +253,7 @@ func (h *HSM) XDelete(xpub chainkd.XPub, auth string) error {
 	return err
 }
 
-func (h *HSM) loadDecryptedKey(xpub chainkd.XPub, auth string) (XPub, *XKey, error) {
+func (h *HSM) loadDecryptedKey(xpub vcrypto.XPubKeyer, auth string) (XPub, *XKey, error) {
 	h.cache.maybeReload()
 	h.cache.mu.Lock()
 	xpb, err := h.cache.find(XPub{XPub: xpub})
@@ -266,7 +267,7 @@ func (h *HSM) loadDecryptedKey(xpub chainkd.XPub, auth string) (XPub, *XKey, err
 }
 
 // ResetPassword reset passphrase for an existing xpub
-func (h *HSM) ResetPassword(xpub chainkd.XPub, oldAuth, newAuth string) error {
+func (h *HSM) ResetPassword(xpub vcrypto.XPubKeyer, oldAuth, newAuth string) error {
 	xpb, xkey, err := h.loadDecryptedKey(xpub, oldAuth)
 	if err != nil {
 		return err
@@ -280,6 +281,6 @@ func (h *HSM) HasAlias(alias string) bool {
 }
 
 // HasKey check whether the private key exists
-func (h *HSM) HasKey(xprv chainkd.XPrv) bool {
+func (h *HSM) HasKey(xprv vcrypto.XPrvKeyer) bool {
 	return h.cache.hasKey(xprv.XPub())
 }

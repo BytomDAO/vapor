@@ -8,6 +8,7 @@ import (
 	"github.com/vapor/account"
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/consensus"
+	"github.com/vapor/crypto/csp"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -924,8 +925,8 @@ func mockCtrlProgram(txData types.TxData, insts []*signingInst) {
 			}
 
 			path := signers.GetBip0032Path(assetSigner, signers.AssetKeySpace)
-			derivedXPubs := chainkd.DeriveXPubs(assetSigner.XPubs, path)
-			derivedPKs := chainkd.XPubKeys(derivedXPubs)
+			derivedXPubs := csp.DeriveXPubs(assetSigner.XPubs, path)
+			derivedPKs := csp.XPubKeys(derivedXPubs)
 
 			issuanceProg, err := vmutil.P2SPMultiSigProgramWithHeight(derivedPKs, insts[i].quorum, 0)
 			if err != nil {
@@ -963,8 +964,8 @@ func mockSignTx(tx *types.Tx, insts []*signingInst) {
 				derivePK := childPrv.XPub()
 				arguments = append(arguments, derivePK.PublicKey())
 			} else {
-				derivedXPubs := chainkd.DeriveXPubs(xPubs, path)
-				derivedPKs := chainkd.XPubKeys(derivedXPubs)
+				derivedXPubs := csp.DeriveXPubs(xPubs, path)
+				derivedPKs := csp.XPubKeys(derivedXPubs)
 				script, err := vmutil.P2SPMultiSigProgram(derivedPKs, inst.quorum)
 				if err != nil {
 					panic(err)

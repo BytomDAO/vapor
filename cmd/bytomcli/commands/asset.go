@@ -8,7 +8,8 @@ import (
 	jww "github.com/spf13/jwalterweatherman"
 
 	"encoding/hex"
-	"github.com/vapor/crypto/ed25519/chainkd"
+
+	vcrypto "github.com/vapor/crypto"
 	"github.com/vapor/util"
 )
 
@@ -38,7 +39,7 @@ var createAssetCmd = &cobra.Command{
 		var ins assetIns
 
 		for _, x := range args[1:] {
-			xpub := chainkd.XPub{}
+			xpub := vcrypto.XPubKeyer{}
 			if err := xpub.UnmarshalText([]byte(x)); err != nil {
 				jww.ERROR.Println(err)
 				os.Exit(util.ErrLocalExe)

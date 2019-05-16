@@ -162,14 +162,22 @@ func TestSignAndVerifyMessage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// derivedXPub verify success
-	if !ed25519.Verify(derivedXPub.PublicKey(), []byte(msg), sig) {
-		t.Fatal("right derivedXPub verify sign failed")
+	dePublicKey := derivedXPub.PublicKey()
+	switch pubKey := dePublicKey.(type) {
+	case ed25519.PublicKey:
+		// derivedXPub verify success
+		if !ed25519.Verify(pubKey, []byte(msg), sig) {
+			t.Fatal("right derivedXPub verify sign failed")
+		}
 	}
 
-	// rootXPub verify failed
-	if ed25519.Verify(xpub.XPub.PublicKey(), []byte(msg), sig) {
-		t.Fatal("right rootXPub verify derivedXPub sign succeed")
+	roPublicKey := xpub.XPub.PublicKey()
+	switch pubKey := roPublicKey.(type) {
+	case ed25519.PublicKey:
+		// rootXPub verify failed
+		if ed25519.Verify(pubKey, []byte(msg), sig) {
+			t.Fatal("right rootXPub verify derivedXPub sign succeed")
+		}
 	}
 
 	err = hsm.XDelete(xpub.XPub, "password")

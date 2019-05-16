@@ -13,13 +13,19 @@ func NewXKeys(r io.Reader) (xprv XPrv, xpub XPub, err error) {
 	if err != nil {
 		return
 	}
-	return xprv, xprv.XPub(), nil
+	if xpubkey, ok := xprv.XPub().(XPub); ok {
+		return xprv, xpubkey, nil
+	}
+	return xprv, xpub, nil
 }
 
 func XPubKeys(xpubs []XPub) []ed25519.PublicKey {
 	res := make([]ed25519.PublicKey, 0, len(xpubs))
 	for _, xpub := range xpubs {
-		res = append(res, xpub.PublicKey())
+		publicKey := xpub.PublicKey()
+		if pk, ok := publicKey.(ed25519.PublicKey); ok {
+			res = append(res, pk)
+		}
 	}
 	return res
 }
@@ -28,7 +34,9 @@ func DeriveXPubs(xpubs []XPub, path [][]byte) []XPub {
 	res := make([]XPub, 0, len(xpubs))
 	for _, xpub := range xpubs {
 		d := xpub.Derive(path)
-		res = append(res, d)
+		if xpk, ok := d.(XPub); ok {
+			res = append(res, xpk)
+		}
 	}
 	return res
 }

@@ -18,7 +18,7 @@ import (
 	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/crypto"
 	"github.com/vapor/crypto/csp"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/crypto/sha3pool"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
@@ -137,7 +137,7 @@ func (m *Manager) AddUnconfirmedUtxo(utxos []*UTXO) {
 }
 
 // CreateAccount creates a new Account.
-func CreateAccount(xpubs []chainkd.XPub, quorum int, alias string, acctIndex uint64, deriveRule uint8) (*Account, error) {
+func CreateAccount(xpubs []crypto.XPubKeyer, quorum int, alias string, acctIndex uint64, deriveRule uint8) (*Account, error) {
 	if acctIndex >= HardenedKeyStart {
 		return nil, ErrAccountIndex
 	}
@@ -193,7 +193,7 @@ func (m *Manager) SaveAccount(account *Account) error {
 }
 
 // Create creates and save a new Account.
-func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string, deriveRule uint8) (*Account, error) {
+func (m *Manager) Create(xpubs []crypto.XPubKeyer, quorum int, alias string, deriveRule uint8) (*Account, error) {
 	m.accountMu.Lock()
 	defer m.accountMu.Unlock()
 
@@ -425,7 +425,7 @@ func (m *Manager) GetAccountByProgram(program *CtrlProgram) (*Account, error) {
 }
 
 // GetAccountByXPubsIndex get account by xPubs and index
-func (m *Manager) GetAccountByXPubsIndex(xPubs []chainkd.XPub, index uint64) (*Account, error) {
+func (m *Manager) GetAccountByXPubsIndex(xPubs []crypto.XPubKeyer, index uint64) (*Account, error) {
 	accounts, err := m.ListAccounts("")
 	if err != nil {
 		return nil, err
@@ -651,10 +651,13 @@ func CreateCtrlProgram(account *Account, addrIdx uint64, change bool) (cp *CtrlP
 }
 
 func createP2PKH(account *Account, path [][]byte) (*CtrlProgram, error) {
-	// derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedXPubs := csp.DeriveXPubs(account.XPubs, path)
 	derivedPK := derivedXPubs[0].PublicKey()
-	pubHash := crypto.Ripemd160(derivedPK)
+	pubHash := make([]byte, 0)
+	switch dpk := derivedPK.(type) {
+	case ed25519.PublicKey:
+		pubHash = crypto.Ripemd160(dpk)
+	}
 
 	address, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.ActiveNetParams)
 	if err != nil {
@@ -674,8 +677,6 @@ func createP2PKH(account *Account, path [][]byte) (*CtrlProgram, error) {
 }
 
 func createP2SH(account *Account, path [][]byte) (*CtrlProgram, error) {
-	// derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
-	// derivedPKs := chainkd.XPubKeys(derivedXPubs)
 	derivedXPubs := csp.DeriveXPubs(account.XPubs, path)
 	derivedPKs := csp.XPubKeys(derivedXPubs)
 	signScript, err := vmutil.P2SPMultiSigProgram(derivedPKs, account.Quorum)
@@ -701,11 +702,12 @@ func createP2SH(account *Account, path [][]byte) (*CtrlProgram, error) {
 	}, nil
 }
 
-func GetAccountIndexKey(xpubs []chainkd.XPub) []byte {
+func GetAccountIndexKey(xpubs []crypto.XPubKeyer) []byte {
 	var hash [32]byte
 	var xPubs []byte
-	cpy := append([]chainkd.XPub{}, xpubs[:]...)
-	sort.Sort(signers.SortKeys(cpy))
+	cpy := append([]crypto.XPubKeyer{}, xpubs[:]...)
+	// switch
+	sort.Sort(signers.EdSortKeys(cpy))
 	for _, xpub := range cpy {
 		xPubs = append(xPubs, xpub[:]...)
 	}

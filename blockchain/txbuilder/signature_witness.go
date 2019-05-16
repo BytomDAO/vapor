@@ -6,7 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/crypto/ed25519/chainkd"
+	vcrypto "github.com/vapor/crypto"
 	"github.com/vapor/crypto/sha3pool"
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/errors"
@@ -33,7 +33,7 @@ type (
 	}
 
 	keyID struct {
-		XPub           chainkd.XPub         `json:"xpub"`
+		XPub           vcrypto.XPubKeyer    `json:"xpub"`
 		DerivationPath []chainjson.HexBytes `json:"derivation_path"`
 	}
 )

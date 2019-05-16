@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/vapor/crypto/ed25519/chainkd"
+	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 )
 
 func TestRestore(t *testing.T) {
@@ -69,7 +69,7 @@ func TestRestore(t *testing.T) {
 		}
 
 		for _, key := range test.wantKeys {
-			var xPub chainkd.XPub
+			var xPub edchainkd.XPub
 			data, _ := hex.DecodeString(key)
 			copy(xPub[:], data)
 
@@ -77,5 +77,15 @@ func TestRestore(t *testing.T) {
 				t.Errorf("error restore key: can't find key %v", key)
 			}
 		}
+		// TODO: sm2 test should be here
+		// for _, key := range test.wantKeys {
+		// 	var xPub edchainkd.XPub
+		// 	data, _ := hex.DecodeString(key)
+		// 	copy(xPub[:], data)
+
+		// 	if !hsm.cache.hasKey(xPub) {
+		// 		t.Errorf("error restore key: can't find key %v", key)
+		// 	}
+		// }
 	}
 }

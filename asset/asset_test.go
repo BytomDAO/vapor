@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/vapor/consensus"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	vcrypto "github.com/vapor/crypto"
 	"github.com/vapor/database"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/event"
@@ -21,7 +21,7 @@ import (
 func TestDefineAssetWithLowercase(t *testing.T) {
 	reg := mockNewRegistry(t)
 	alias := "lower"
-	asset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, 0, alias, nil)
+	asset, err := reg.Define([]vcrypto.XPubKeyer{testutil.TestXPub}, 1, nil, 0, alias, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +33,7 @@ func TestDefineAssetWithLowercase(t *testing.T) {
 func TestDefineAssetWithSpaceTrimed(t *testing.T) {
 	reg := mockNewRegistry(t)
 	alias := " WITH SPACE "
-	asset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, 0, alias, nil)
+	asset, err := reg.Define([]vcrypto.XPubKeyer{testutil.TestXPub}, 1, nil, 0, alias, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,12 +45,12 @@ func TestDefineAssetWithSpaceTrimed(t *testing.T) {
 func TestDefineAsset(t *testing.T) {
 	ctx := context.Background()
 	reg := mockNewRegistry(t)
-	asset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, 0, "asset-alias", nil)
+	asset, err := reg.Define([]vcrypto.XPubKeyer{testutil.TestXPub}, 1, nil, 0, "asset-alias", nil)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
 
-	limitAsset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, 100, "limit-asset", nil)
+	limitAsset, err := reg.Define([]vcrypto.XPubKeyer{testutil.TestXPub}, 1, nil, 100, "limit-asset", nil)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
@@ -70,7 +70,7 @@ func TestDefineAsset(t *testing.T) {
 
 func TestDefineBtmAsset(t *testing.T) {
 	reg := mockNewRegistry(t)
-	_, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, 0, consensus.BTMAlias, nil)
+	_, err := reg.Define([]vcrypto.XPubKeyer{testutil.TestXPub}, 1, nil, 0, consensus.BTMAlias, nil)
 	if err == nil {
 		testutil.FatalErr(t, err)
 	}
@@ -79,7 +79,7 @@ func TestDefineBtmAsset(t *testing.T) {
 func TestFindAssetByID(t *testing.T) {
 	ctx := context.Background()
 	reg := mockNewRegistry(t)
-	keys := []chainkd.XPub{testutil.TestXPub}
+	keys := []vcrypto.XPubKeyer{testutil.TestXPub}
 	asset, err := reg.Define(keys, 1, nil, 0, "TESTASSET", nil)
 	if err != nil {
 		testutil.FatalErr(t, err)
@@ -101,7 +101,7 @@ func TestUpdateAssetAlias(t *testing.T) {
 	oldAlias := "OLD_ALIAS"
 	newAlias := "NEW_ALIAS"
 
-	asset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, 0, oldAlias, nil)
+	asset, err := reg.Define([]vcrypto.XPubKeyer{testutil.TestXPub}, 1, nil, 0, oldAlias, nil)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
@@ -135,12 +135,12 @@ func TestListAssets(t *testing.T) {
 	firstAlias := "FIRST_ALIAS"
 	secondAlias := "SECOND_ALIAS"
 
-	firstAsset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, 0, firstAlias, nil)
+	firstAsset, err := reg.Define([]vcrypto.XPubKeyer{testutil.TestXPub}, 1, nil, 0, firstAlias, nil)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
 
-	secondAsset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, 0, secondAlias, nil)
+	secondAsset, err := reg.Define([]vcrypto.XPubKeyer{testutil.TestXPub}, 1, nil, 0, secondAlias, nil)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}

@@ -6,14 +6,14 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/blockchain/txbuilder"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	vcrypto "github.com/vapor/crypto"
 )
 
 type createKeyResp struct {
-	Alias    string       `json:"alias"`
-	XPub     chainkd.XPub `json:"xpub"`
-	File     string       `json:"file"`
-	Mnemonic string       `json:"mnemonic,omitempty"`
+	Alias    string            `json:"alias"`
+	XPub     vcrypto.XPubKeyer `json:"xpub"`
+	File     string            `json:"file"`
+	Mnemonic string            `json:"mnemonic,omitempty"`
 }
 
 func (a *API) pseudohsmCreateKey(ctx context.Context, in struct {
@@ -40,8 +40,8 @@ func (a *API) pseudohsmCreateKey(ctx context.Context, in struct {
 }
 
 func (a *API) pseudohsmUpdateKeyAlias(ctx context.Context, in struct {
-	XPub     chainkd.XPub `json:"xpub"`
-	NewAlias string       `json:"new_alias"`
+	XPub     vcrypto.XPubKeyer `json:"xpub"`
+	NewAlias string            `json:"new_alias"`
 }) Response {
 	if err := a.wallet.Hsm.UpdateKeyAlias(in.XPub, in.NewAlias); err != nil {
 		return NewErrorResponse(err)
@@ -54,8 +54,8 @@ func (a *API) pseudohsmListKeys(ctx context.Context) Response {
 }
 
 func (a *API) pseudohsmDeleteKey(ctx context.Context, x struct {
-	Password string       `json:"password"`
-	XPub     chainkd.XPub `json:"xpub"`
+	Password string            `json:"password"`
+	XPub     vcrypto.XPubKeyer `json:"xpub"`
 }) Response {
 	if err := a.wallet.Hsm.XDelete(x.XPub, x.Password); err != nil {
 		return NewErrorResponse(err)
@@ -102,7 +102,7 @@ func (a *API) signTemplates(ctx context.Context, x struct {
 	return NewSuccessResponse(&signTemplatesResp{Tx: x.Txs, SignComplete: signComplete})
 }
 
-func (a *API) pseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {
+func (a *API) pseudohsmSignTemplate(ctx context.Context, xpub vcrypto.XPubKeyer, path [][]byte, data [32]byte, password string) ([]byte, error) {
 	return a.wallet.Hsm.XSign(xpub, path, data[:], password)
 }
 
@@ -112,9 +112,9 @@ type ResetPasswordResp struct {
 }
 
 func (a *API) pseudohsmResetPassword(ctx context.Context, ins struct {
-	XPub        chainkd.XPub `json:"xpub"`
-	OldPassword string       `json:"old_password"`
-	NewPassword string       `json:"new_password"`
+	XPub        vcrypto.XPubKeyer `json:"xpub"`
+	OldPassword string            `json:"old_password"`
+	NewPassword string            `json:"new_password"`
 }) Response {
 	resp := &ResetPasswordResp{Changed: false}
 	if err := a.wallet.Hsm.ResetPassword(ins.XPub, ins.OldPassword, ins.NewPassword); err != nil {
@@ -130,8 +130,8 @@ type CheckPasswordResp struct {
 }
 
 func (a *API) pseudohsmCheckPassword(ctx context.Context, ins struct {
-	XPub     chainkd.XPub `json:"xpub"`
-	Password string       `json:"password"`
+	XPub     vcrypto.XPubKeyer `json:"xpub"`
+	Password string            `json:"password"`
 }) Response {
 	resp := &CheckPasswordResp{CheckResult: false}
 	if _, err := a.wallet.Hsm.LoadChainKDKey(ins.XPub, ins.Password); err != nil {

@@ -7,7 +7,7 @@ import (
 
 	jww "github.com/spf13/jwalterweatherman"
 
-	"github.com/vapor/crypto/ed25519/chainkd"
+	vcrypto "github.com/vapor/crypto"
 	"github.com/vapor/encoding/json"
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/util"
@@ -15,15 +15,15 @@ import (
 
 // accountIns is used for account related request.
 type accountIns struct {
-	RootXPubs   []chainkd.XPub `json:"root_xpubs"`
-	Quorum      int            `json:"quorum"`
-	Alias       string         `json:"alias"`
-	AccessToken string         `json:"access_token"`
+	RootXPubs   []vcrypto.XPubKeyer `json:"root_xpubs"`
+	Quorum      int                 `json:"quorum"`
+	Alias       string              `json:"alias"`
+	AccessToken string              `json:"access_token"`
 }
 
 // assetIns is used for asset related request.
 type assetIns struct {
-	RootXPubs       []chainkd.XPub         `json:"root_xpubs"`
+	RootXPubs       []vcrypto.XPubKeyer    `json:"root_xpubs"`
 	Quorum          int                    `json:"quorum"`
 	Alias           string                 `json:"alias"`
 	Definition      map[string]interface{} `json:"definition"`

@@ -9,15 +9,16 @@ import (
 	"github.com/vapor/common"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto"
+	vcrypto "github.com/vapor/crypto"
+	"github.com/vapor/crypto/csp"
 	"github.com/vapor/crypto/ed25519"
-	"github.com/vapor/crypto/ed25519/chainkd"
 	chainjson "github.com/vapor/encoding/json"
 )
 
 // SignMsgResp is response for sign message
 type SignMsgResp struct {
-	Signature   string       `json:"signature"`
-	DerivedXPub chainkd.XPub `json:"derived_xpub"`
+	Signature   string            `json:"signature"`
+	DerivedXPub vcrypto.XPubKeyer `json:"derived_xpub"`
 }
 
 func (a *API) signMessage(ctx context.Context, ins struct {
@@ -39,7 +40,7 @@ func (a *API) signMessage(ctx context.Context, ins struct {
 	if err != nil {
 		return NewErrorResponse(err)
 	}
-	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
+	derivedXPubs := csp.DeriveXPubs(account.XPubs, path)
 
 	sig, err := a.wallet.Hsm.XSign(account.XPubs[0], path, ins.Message, ins.Password)
 	if err != nil {
@@ -58,7 +59,7 @@ type VerifyMsgResp struct {
 
 func (a *API) verifyMessage(ctx context.Context, ins struct {
 	Address     string             `json:"address"`
-	DerivedXPub chainkd.XPub       `json:"derived_xpub"`
+	DerivedXPub vcrypto.XPubKeyer  `json:"derived_xpub"`
 	Message     chainjson.HexBytes `json:"message"`
 	Signature   string             `json:"signature"`
 }) Response {

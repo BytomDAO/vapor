@@ -8,7 +8,7 @@ import (
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/common"
 	"github.com/vapor/consensus"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	"github.com/vapor/crypto/csp"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -329,7 +329,7 @@ func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.S
 	}
 
 	sigInst.AddRawWitnessKeys(signer.XPubs, path, signer.Quorum)
-	derivedXPubs := chainkd.DeriveXPubs(signer.XPubs, path)
+	derivedXPubs := csp.DeriveXPubs(signer.XPubs, path)
 
 	switch address.(type) {
 	case *common.AddressWitnessPubKeyHash:
@@ -337,7 +337,7 @@ func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.S
 		sigInst.WitnessComponents = append(sigInst.WitnessComponents, txbuilder.DataWitness([]byte(derivedPK)))
 
 	case *common.AddressWitnessScriptHash:
-		derivedPKs := chainkd.XPubKeys(derivedXPubs)
+		derivedPKs := csp.XPubKeys(derivedXPubs)
 		script, err := vmutil.P2SPMultiSigProgram(derivedPKs, signer.Quorum)
 		if err != nil {
 			return nil, nil, err

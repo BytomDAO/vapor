@@ -1,11 +1,13 @@
 package chainkd
 
 import (
+	"crypto"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha512"
 	"io"
 
+	vcrypto "github.com/vapor/crypto"
 	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/crypto/ed25519/ecmath"
 )
@@ -31,7 +33,6 @@ func NewXPrv(r io.Reader) (xprv XPrv, err error) {
 	return RootXPrv(entropy[:]), nil
 }
 
-// RootXPrv takes a seed binary string and produces a new xprv.
 func RootXPrv(seed []byte) (xprv XPrv) {
 	h := hmac.New(sha512.New, []byte{'R', 'o', 'o', 't'})
 	h.Write(seed)
@@ -41,16 +42,18 @@ func RootXPrv(seed []byte) (xprv XPrv) {
 }
 
 // XPub derives an extended public key from a given xprv.
-func (xprv XPrv) XPub() (xpub XPub) {
-	var scalar ecmath.Scalar
-	copy(scalar[:], xprv[:32])
+func (xprv XPrv) XPub() (xpub vcrypto.XPubKeyer) {
+	if xpubkey, ok := xpub.(XPub); ok {
+		var scalar ecmath.Scalar
+		copy(scalar[:], xprv[:32])
 
-	var P ecmath.Point
-	P.ScMulBase(&scalar)
-	buf := P.Encode()
+		var P ecmath.Point
+		P.ScMulBase(&scalar)
+		buf := P.Encode()
 
-	copy(xpub[:32], buf[:])
-	copy(xpub[32:], xprv[32:])
+		copy(xpubkey[:32], buf[:])
+		copy(xpubkey[32:], xprv[32:])
+	}
 
 	return
 }
@@ -77,15 +80,15 @@ func (xprv XPrv) hardenedChild(sel []byte) (res XPrv) {
 }
 
 func (xprv XPrv) nonhardenedChild(sel []byte) (res XPrv) {
-	xpub := xprv.XPub()
+	if xpub, ok := xprv.XPub().(XPub); ok {
+		h := hmac.New(sha512.New, xpub[32:])
+		h.Write([]byte{'N'})
+		h.Write(xpub[:32])
+		h.Write(sel)
+		h.Sum(res[:0])
 
-	h := hmac.New(sha512.New, xpub[32:])
-	h.Write([]byte{'N'})
-	h.Write(xpub[:32])
-	h.Write(sel)
-	h.Sum(res[:0])
-
-	pruneIntermediateScalar(res[:32])
+		pruneIntermediateScalar(res[:32])
+	}
 
 	// Unrolled the following loop:
 	// var carry int
@@ -208,7 +211,7 @@ func (xpub XPub) Child(sel []byte) (res XPub) {
 // Derive generates a child xprv by recursively deriving
 // non-hardened child xprvs over the list of selectors:
 // `Derive([a,b,c,...]) == Child(a).Child(b).Child(c)...`
-func (xprv XPrv) Derive(path [][]byte) XPrv {
+func (xprv XPrv) Derive(path [][]byte) vcrypto.XPrvKeyer {
 	res := xprv
 	for _, p := range path {
 		res = res.Child(p, false)
@@ -216,10 +219,21 @@ func (xprv XPrv) Derive(path [][]byte) XPrv {
 	return res
 }
 
+// // Derive generates a child xpub by recursively deriving
+// // non-hardened child xpubs over the list of selectors:
+// // `Derive([a,b,c,...]) == Child(a).Child(b).Child(c)...`
+// func (xpub XPub) Derive(path [][]byte) XPub {
+// 	res := xpub
+// 	for _, p := range path {
+// 		res = res.Child(p)
+// 	}
+// 	return res
+// }
+
 // Derive generates a child xpub by recursively deriving
 // non-hardened child xpubs over the list of selectors:
 // `Derive([a,b,c,...]) == Child(a).Child(b).Child(c)...`
-func (xpub XPub) Derive(path [][]byte) XPub {
+func (xpub XPub) Derive(path [][]byte) vcrypto.XPubKeyer {
 	res := xpub
 	for _, p := range path {
 		res = res.Child(p)
@@ -236,7 +250,11 @@ func (xprv XPrv) Sign(msg []byte) []byte {
 // Verify checks an EdDSA signature using public key
 // extracted from the first 32 bytes of the xpub.
 func (xpub XPub) Verify(msg []byte, sig []byte) bool {
-	return ed25519.Verify(xpub.PublicKey(), msg, sig)
+	publicKey := xpub.PublicKey()
+	if pk, ok := publicKey.(ed25519.PublicKey); ok {
+		return ed25519.Verify(pk, msg, sig)
+	}
+	return false
 }
 
 // ExpandedPrivateKey generates a 64-byte key where
@@ -252,8 +270,13 @@ func (xprv XPrv) ExpandedPrivateKey() ExpandedPrivateKey {
 	return res[:]
 }
 
+// // PublicKey extracts the ed25519 public key from an xpub.
+// func (xpub XPub) PublicKey() ed25519.PublicKey {
+// 	return ed25519.PublicKey(xpub[:32])
+// }
+
 // PublicKey extracts the ed25519 public key from an xpub.
-func (xpub XPub) PublicKey() ed25519.PublicKey {
+func (xpub XPub) PublicKey() crypto.PublicKey {
 	return ed25519.PublicKey(xpub[:32])
 }
 

@@ -3,14 +3,14 @@ package txbuilder
 import (
 	"context"
 
-	"github.com/vapor/crypto/ed25519/chainkd"
+	vcrypto "github.com/vapor/crypto"
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/errors"
 )
 
 // SignFunc is the function passed into Sign that produces
 // a signature for a given xpub, derivation path, and hash.
-type SignFunc func(context.Context, chainkd.XPub, [][]byte, [32]byte, string) ([]byte, error)
+type SignFunc func(context.Context, vcrypto.XPubKeyer, [][]byte, [32]byte, string) ([]byte, error)
 
 // MaterializeWitnesses takes a filled in Template and "materializes"
 // each witness component, turning it into a vector of arguments for

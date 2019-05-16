@@ -15,7 +15,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/crypto/ed25519/chainkd"
+	vcrypto "github.com/vapor/crypto"
+	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 )
 
 // Minimum amount of time between cache reloads. This limit applies if the platform does
@@ -53,20 +54,20 @@ type keyCache struct {
 	watcher  *watcher
 	mu       sync.Mutex
 	all      keysByFile
-	byPubs   map[chainkd.XPub][]XPub
+	byPubs   map[vcrypto.XPubKeyer][]XPub
 	throttle *time.Timer
 }
 
 func newKeyCache(keydir string) *keyCache {
 	kc := &keyCache{
 		keydir: keydir,
-		byPubs: make(map[chainkd.XPub][]XPub),
+		byPubs: make(map[vcrypto.XPubKeyer][]XPub),
 	}
 	kc.watcher = newWatcher(kc)
 	return kc
 }
 
-func (kc *keyCache) hasKey(xpub chainkd.XPub) bool {
+func (kc *keyCache) hasKey(xpub vcrypto.XPubKeyer) bool {
 	kc.maybeReload()
 	kc.mu.Lock()
 	defer kc.mu.Unlock()
@@ -135,9 +136,10 @@ func (kc *keyCache) maybeReload() {
 func (kc *keyCache) find(xpub XPub) (XPub, error) {
 	// Limit search to xpub candidates if possible.
 	matches := kc.all
-	if (xpub.XPub != chainkd.XPub{}) {
-		matches = kc.byPubs[xpub.XPub]
-	}
+	// if (xpub.XPub != vcrypto.XPubKeyer{}) {
+	// 	matches = kc.byPubs[xpub.XPub]
+	// }
+	matches = kc.byPubs[xpub.XPub]
 	if xpub.File != "" {
 		// If only the basename is specified, complete the path.
 		if !strings.ContainsRune(xpub.File, filepath.Separator) {
@@ -148,9 +150,10 @@ func (kc *keyCache) find(xpub XPub) (XPub, error) {
 				return matches[i], nil
 			}
 		}
-		if (xpub.XPub == chainkd.XPub{}) {
-			return XPub{}, ErrLoadKey
-		}
+		// if (xpub.XPub == vcrypto.XPubKeyer{}) {
+		// 	return XPub{}, ErrLoadKey
+		// }
+		return XPub{}, ErrLoadKey
 	}
 	switch len(matches) {
 	case 1:
@@ -158,10 +161,19 @@ func (kc *keyCache) find(xpub XPub) (XPub, error) {
 	case 0:
 		return XPub{}, ErrLoadKey
 	default:
-		err := &AmbiguousKeyError{Pubkey: hex.EncodeToString(xpub.XPub[:]), Matches: make([]XPub, len(matches))}
+		err := &AmbiguousKeyError{Pubkey: xpubToString(xpub.XPub), Matches: make([]XPub, len(matches))}
 		copy(err.Matches, matches)
 		return XPub{}, err
 	}
+}
+
+func xpubToString(xpub vcrypto.XPubKeyer) (str string) {
+	switch xpbk := xpub.(type) {
+	case edchainkd.XPub:
+		return hex.EncodeToString(xpbk[:])
+	}
+
+	return
 }
 
 // reload caches addresses of existing key.
@@ -191,8 +203,8 @@ func (kc *keyCache) scan() ([]XPub, error) {
 		buf     = new(bufio.Reader)
 		keys    []XPub
 		keyJSON struct {
-			Alias string       `json:"alias"`
-			XPub  chainkd.XPub `json:"xpub"`
+			Alias string            `json:"alias"`
+			XPub  vcrypto.XPubKeyer `json:"xpub"`
 		}
 	)
 	for _, fi := range files {

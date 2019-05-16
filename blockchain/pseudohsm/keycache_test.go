@@ -1,7 +1,6 @@
 package pseudohsm
 
 import (
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -14,7 +13,8 @@ import (
 
 	"github.com/cespare/cp"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	vcrypto "github.com/vapor/crypto"
+	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 )
 
 var (
@@ -118,37 +118,37 @@ func TestCacheAddDeleteOrder(t *testing.T) {
 		{
 			Alias: "bm1pvheagygs9d72stp79u9vduhmdyjpnvud0y89y7",
 			File:  "-309830980",
-			XPub:  tmpPubkeys(t, r),
+			XPub:  tmpEdPubkeys(t, r),
 		},
 		{
 			Alias: "bm1pyk3qny8gzem6p4fx8t5d344tnldguv8lvx2aww",
 			File:  "ggg",
-			XPub:  tmpPubkeys(t, r),
+			XPub:  tmpEdPubkeys(t, r),
 		},
 		{
 			Alias: "bm1p6s0ckxrudy7hqht4n5fhcs4gp69krv3c84jn9x",
 			File:  "zzzzzz-the-very-last-one.keyXXX",
-			XPub:  tmpPubkeys(t, r),
+			XPub:  tmpEdPubkeys(t, r),
 		},
 		{
 			Alias: "bm1p7xkfhsw50y44t63mk0dfxxkvuyg6t3s0r6xs54",
 			File:  "SOMETHING.key",
-			XPub:  tmpPubkeys(t, r),
+			XPub:  tmpEdPubkeys(t, r),
 		},
 		{
 			Alias: "bm1peu9ql7x8c7aeca60j40sg5w4kylpf7l3jmau0g",
 			File:  "UTC--2016-03-22T12-57-55.920751759Z--bm1peu9ql7x8c7aeca60j40sg5w4kylpf7l3jmau0g",
-			XPub:  tmpPubkeys(t, r),
+			XPub:  tmpEdPubkeys(t, r),
 		},
 		{
 			Alias: "bm1p0s68e4ggp0vy5ue2lztsxvl2smpnqp9al8jyvh",
 			File:  "aaa",
-			XPub:  tmpPubkeys(t, r),
+			XPub:  tmpEdPubkeys(t, r),
 		},
 		{
 			Alias: "bm1pjq8ttfl7ppqtcc5qqff0s45p7ew9l9pjmlu5xw",
 			File:  "zzz",
-			XPub:  tmpPubkeys(t, r),
+			XPub:  tmpEdPubkeys(t, r),
 		},
 	}
 	for _, a := range keys {
@@ -177,7 +177,7 @@ func TestCacheAddDeleteOrder(t *testing.T) {
 	for i := 0; i < len(keys); i += 2 {
 		cache.delete(wantKeys[i])
 	}
-	cache.delete(XPub{Alias: "bm1pug2xpcvpzepdf0paulnndhpxtpjvre8ypd0jtj", File: "something", XPub: tmpPubkeys(t, r)})
+	cache.delete(XPub{Alias: "bm1pug2xpcvpzepdf0paulnndhpxtpjvre8ypd0jtj", File: "something", XPub: tmpEdPubkeys(t, r)})
 
 	// Check content again after deletion.
 	wantKeysAfterDelete := []XPub{
@@ -205,17 +205,17 @@ func TestCacheFind(t *testing.T) {
 	cache.watcher.running = true // prevent unexpected reloads
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 
-	dup := tmpPubkeys(t, r)
+	dup := tmpEdPubkeys(t, r)
 	keys := []XPub{
 		{
 			Alias: "bm1pmv9kg68j3edvqrv62lxllev4ugjv0zf6g5pwf6",
 			File:  filepath.Join(dir, "a.key"),
-			XPub:  tmpPubkeys(t, r),
+			XPub:  tmpEdPubkeys(t, r),
 		},
 		{
 			Alias: "bm1ptspg4x6kjjp642gdpzan0ynq9zr7z4m34nqpet",
 			File:  filepath.Join(dir, "b.key"),
-			XPub:  tmpPubkeys(t, r),
+			XPub:  tmpEdPubkeys(t, r),
 		},
 		{
 			Alias: "bm1pmlpy0946zsvdg29v80gw0mkq2n0ghkg0fpmhav",
@@ -235,7 +235,7 @@ func TestCacheFind(t *testing.T) {
 	nomatchKey := XPub{
 		Alias: "bm1pu2vmgps4d9e3mrsuzp58w777apky4rjgn5rn9e",
 		File:  filepath.Join(dir, "something"),
-		XPub:  tmpPubkeys(t, r),
+		XPub:  tmpEdPubkeys(t, r),
 	}
 	tests := []struct {
 		Query      XPub
@@ -256,7 +256,7 @@ func TestCacheFind(t *testing.T) {
 		{
 			Query: XPub{XPub: keys[2].XPub},
 			WantError: &AmbiguousKeyError{
-				Pubkey:  hex.EncodeToString(keys[2].XPub[:]),
+				Pubkey:  xpubToString(keys[2].XPub),
 				Matches: []XPub{keys[2], keys[3]},
 			},
 		},
@@ -287,9 +287,9 @@ func tmpManager(t *testing.T) (string, *keyCache) {
 	return d, newKeyCache(d)
 }
 
-func tmpPubkeys(t *testing.T, r *rand.Rand) chainkd.XPub {
+func tmpEdPubkeys(t *testing.T, r *rand.Rand) vcrypto.XPubKeyer {
 
-	var xpub chainkd.XPub
+	var xpub edchainkd.XPub
 	pick := "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	bytes := []byte(pick)
 	result := []byte{}
@@ -300,3 +300,18 @@ func tmpPubkeys(t *testing.T, r *rand.Rand) chainkd.XPub {
 	copy(xpub[:], result[:])
 	return xpub
 }
+
+// TODO: Sm2 test......
+// func tmpSmPubkeys(t *testing.T, r *rand.Rand) vcrypto.XPubKeyer {
+
+// 	var xpub edchaind.XPub
+// 	pick := "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+// 	bytes := []byte(pick)
+// 	result := []byte{}
+
+// 	for i := 0; i < 64; i++ {
+// 		result = append(result, bytes[r.Intn(len(bytes))])
+// 	}
+// 	copy(xpub[:], result[:])
+// 	return xpub
+// }

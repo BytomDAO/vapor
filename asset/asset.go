@@ -2,6 +2,7 @@ package asset
 
 import (
 	"context"
+	"crypto"
 	"encoding/json"
 	"strings"
 	"sync"
@@ -12,8 +13,8 @@ import (
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/common"
 	"github.com/vapor/consensus"
-	"github.com/vapor/crypto/ed25519"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	vcrypto "github.com/vapor/crypto"
+	"github.com/vapor/crypto/csp"
 	dbm "github.com/vapor/database/leveldb"
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/errors"
@@ -126,7 +127,7 @@ func (reg *Registry) getNextAssetIndex() uint64 {
 }
 
 // Define defines a new Asset.
-func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, limitHeight int64, alias string, issuanceProgram chainjson.HexBytes) (*Asset, error) {
+func (reg *Registry) Define(xpubs []vcrypto.XPubKeyer, quorum int, definition map[string]interface{}, limitHeight int64, alias string, issuanceProgram chainjson.HexBytes) (*Asset, error) {
 	var err error
 	var assetSigner *signers.Signer
 
@@ -157,8 +158,8 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 		}
 
 		path := signers.GetBip0032Path(assetSigner, signers.AssetKeySpace)
-		derivedXPubs := chainkd.DeriveXPubs(assetSigner.XPubs, path)
-		derivedPKs := chainkd.XPubKeys(derivedXPubs)
+		derivedXPubs := csp.DeriveXPubs(assetSigner.XPubs, path)
+		derivedPKs := csp.XPubKeys(derivedXPubs)
 		issuanceProgram, vmver, err = multisigIssuanceProgram(derivedPKs, assetSigner.Quorum, limitHeight)
 		if err != nil {
 			return nil, err
@@ -363,7 +364,7 @@ func serializeAssetDef(def map[string]interface{}) ([]byte, error) {
 	return json.MarshalIndent(def, "", "  ")
 }
 
-func multisigIssuanceProgram(pubkeys []ed25519.PublicKey, nrequired int, blockHeight int64) (program []byte, vmversion uint64, err error) {
+func multisigIssuanceProgram(pubkeys []crypto.PublicKey, nrequired int, blockHeight int64) (program []byte, vmversion uint64, err error) {
 	issuanceProg, err := vmutil.P2SPMultiSigProgramWithHeight(pubkeys, nrequired, blockHeight)
 	if err != nil {
 		return nil, 0, err

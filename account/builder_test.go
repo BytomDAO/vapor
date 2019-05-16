@@ -8,7 +8,7 @@ import (
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/consensus"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	vcrypto "github.com/vapor/crypto"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/testutil"
 )
@@ -143,7 +143,7 @@ func TestBuildBtmTxChain(t *testing.T) {
 		},
 	}
 
-	acct, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, "testAccount", signers.BIP0044)
+	acct, err := m.Create([]vcrypto.XPubKeyer{testutil.TestXPub}, 1, "testAccount", signers.BIP0044)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -2,6 +2,7 @@ package txbuilder
 
 import (
 	"context"
+	"crypto"
 	"encoding/hex"
 	"encoding/json"
 	"math"
@@ -13,7 +14,8 @@ import (
 
 	"github.com/vapor/common"
 	"github.com/vapor/consensus"
-	"github.com/vapor/crypto"
+	vcrypto "github.com/vapor/crypto"
+	"github.com/vapor/crypto/csp"
 	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	chainjson "github.com/vapor/encoding/json"
@@ -91,19 +93,19 @@ func TestBuild(t *testing.T) {
 }
 
 func TestSignatureWitnessMaterialize(t *testing.T) {
-	privkey1, pubkey1, err := chainkd.NewXKeys(nil)
+	privkey1, pubkey1, err := csp.NewXKeys(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	privkey2, pubkey2, err := chainkd.NewXKeys(nil)
+	privkey2, pubkey2, err := csp.NewXKeys(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	privkey3, pubkey3, err := chainkd.NewXKeys(nil)
+	privkey3, pubkey3, err := csp.NewXKeys(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	issuanceProg, _ := vmutil.P2SPMultiSigProgram([]ed25519.PublicKey{pubkey1.PublicKey(), pubkey2.PublicKey(), pubkey3.PublicKey()}, 2)
+	issuanceProg, _ := vmutil.P2SPMultiSigProgram([]crypto.PublicKey{pubkey1.PublicKey(), pubkey2.PublicKey(), pubkey3.PublicKey()}, 2)
 	assetID := bc.ComputeAssetID(issuanceProg, 1, &bc.EmptyStringHash)
 	outscript := mustDecodeHex("76a914c5d128911c28776f56baaac550963f7b88501dc388c0")
 	unsigned := types.NewTx(types.TxData{
@@ -258,13 +260,18 @@ func TestCheckBlankCheck(t *testing.T) {
 }
 
 func TestCreateTxByUtxo(t *testing.T) {
-	xprv, xpub, err := chainkd.NewXKeys(nil)
+	xprv, xpub, err := csp.NewXKeys(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	pub := xpub.PublicKey()
-	pubHash := crypto.Ripemd160(pub)
+	pubHash := make([]byte, 0)
+	switch pubKey := pub.(type) {
+	case ed25519.PublicKey:
+		pubHash = vcrypto.Ripemd160(pubKey)
+	}
+
 	program, err := vmutil.P2WPKHProgram([]byte(pubHash))
 	if err != nil {
 		t.Fatal(err)
@@ -310,7 +317,11 @@ func TestCreateTxByUtxo(t *testing.T) {
 
 	h := tpl.Hash(0).Byte32()
 	sig := xprv.Sign(h[:])
-	data := []byte(pub)
+	data := make([]byte, 0)
+	switch pubKey := pub.(type) {
+	case ed25519.PublicKey:
+		data = []byte(pubKey)
+	}
 
 	// Test with more signatures than required, in correct order
 	tpl.SigningInstructions = []*SigningInstruction{{
@@ -338,6 +349,7 @@ func TestAddContractArgs(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// TODO: it should use map[string]string adapt several algorithm
 	var xpub chainkd.XPub
 	copy(xpub[:], hexXpub)
 

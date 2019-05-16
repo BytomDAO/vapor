@@ -13,8 +13,8 @@ import (
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/consensus"
+	vcrypto "github.com/vapor/crypto"
 	"github.com/vapor/crypto/ed25519"
-	"github.com/vapor/crypto/ed25519/chainkd"
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
@@ -329,8 +329,8 @@ type PubKeyInfo struct {
 
 // AccountPubkey is detail of account pubkey info
 type AccountPubkey struct {
-	RootXPub    chainkd.XPub `json:"root_xpub"`
-	PubKeyInfos []PubKeyInfo `json:"pubkey_infos"`
+	RootXPub    vcrypto.XPubKeyer `json:"root_xpub"`
+	PubKeyInfos []PubKeyInfo      `json:"pubkey_infos"`
 }
 
 func getPubkey(account *account.Account, change bool, index uint64) (*ed25519.PublicKey, []chainjson.HexBytes, error) {

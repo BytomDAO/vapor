@@ -4,7 +4,9 @@ package signers
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/vapor/crypto/ed25519/chainkd"
+
+	"github.com/vapor/crypto"
+	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
 )
 
@@ -53,11 +55,11 @@ var (
 // which is composed of a set of keys as well as
 // the amount of signatures needed for quorum.
 type Signer struct {
-	Type       string         `json:"type"`
-	XPubs      []chainkd.XPub `json:"xpubs"`
-	Quorum     int            `json:"quorum"`
-	KeyIndex   uint64         `json:"key_index"`
-	DeriveRule uint8          `json:"derive_rule"`
+	Type       string             `json:"type"`
+	XPubs      []crypto.XPubKeyer `json:"xpubs"`
+	Quorum     int                `json:"quorum"`
+	KeyIndex   uint64             `json:"key_index"`
+	DeriveRule uint8              `json:"derive_rule"`
 }
 
 // GetBip0032Path returns the complete path for bip0032 derived keys
@@ -107,12 +109,12 @@ func Path(s *Signer, ks keySpace, change bool, addrIndex uint64) ([][]byte, erro
 }
 
 // Create creates and stores a Signer in the database
-func Create(signerType string, xpubs []chainkd.XPub, quorum int, keyIndex uint64, deriveRule uint8) (*Signer, error) {
+func Create(signerType string, xpubs []crypto.XPubKeyer, quorum int, keyIndex uint64, deriveRule uint8) (*Signer, error) {
 	if len(xpubs) == 0 {
 		return nil, errors.Wrap(ErrNoXPubs)
 	}
 
-	xpubsMap := map[chainkd.XPub]bool{}
+	xpubsMap := map[crypto.XPubKeyer]bool{}
 	for _, xpub := range xpubs {
 		if _, ok := xpubsMap[xpub]; ok {
 			return nil, errors.WithDetailf(ErrDupeXPub, "duplicated key=%x", xpub)
@@ -133,8 +135,8 @@ func Create(signerType string, xpubs []chainkd.XPub, quorum int, keyIndex uint64
 	}, nil
 }
 
-type SortKeys []chainkd.XPub
+type EdSortKeys []edchainkd.XPub
 
-func (s SortKeys) Len() int           { return len(s) }
-func (s SortKeys) Less(i, j int) bool { return bytes.Compare(s[i][:], s[j][:]) < 0 }
-func (s SortKeys) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s EdSortKeys) Len() int           { return len(s) }
+func (s EdSortKeys) Less(i, j int) bool { return bytes.Compare(s[i][:], s[j][:]) < 0 }
+func (s EdSortKeys) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }

@@ -1,10 +1,10 @@
 package vmutil
 
 import (
+	"crypto"
 	"encoding/hex"
 	"testing"
 
-	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/errors"
 )
 
@@ -46,38 +46,38 @@ func TestP2SPMultiSigProgram(t *testing.T) {
 	pub3, _ := hex.DecodeString("8bcd251d9f4e03877130b6e6f1d577eda562375f07c3cdfad8f1d541002fd1a3")
 
 	tests := []struct {
-		pubkeys     []ed25519.PublicKey
+		pubkeys     []crypto.PublicKey
 		nrequired   int
 		wantProgram string
 		wantErr     error
 	}{
 		{
-			pubkeys:     []ed25519.PublicKey{pub1},
+			pubkeys:     []crypto.PublicKey{pub1},
 			nrequired:   1,
 			wantProgram: "ae20988650ff921c82d47a953527894f792572ba63197c56e5fe79e5df0c444d6bb65151ad",
 		},
 		{
-			pubkeys:     []ed25519.PublicKey{pub1, pub2},
+			pubkeys:     []crypto.PublicKey{pub1, pub2},
 			nrequired:   2,
 			wantProgram: "ae20988650ff921c82d47a953527894f792572ba63197c56e5fe79e5df0c444d6bb6207192bf4eac0789ee19c88dfa87861cf59e215820f7bdb7be02761d9ed92e6c625252ad",
 		},
 		{
-			pubkeys:     []ed25519.PublicKey{pub1, pub2, pub3},
+			pubkeys:     []crypto.PublicKey{pub1, pub2, pub3},
 			nrequired:   2,
 			wantProgram: "ae20988650ff921c82d47a953527894f792572ba63197c56e5fe79e5df0c444d6bb6207192bf4eac0789ee19c88dfa87861cf59e215820f7bdb7be02761d9ed92e6c62208bcd251d9f4e03877130b6e6f1d577eda562375f07c3cdfad8f1d541002fd1a35253ad",
 		},
 		{
-			pubkeys:   []ed25519.PublicKey{pub1},
+			pubkeys:   []crypto.PublicKey{pub1},
 			nrequired: -1,
 			wantErr:   errors.WithDetail(ErrBadValue, "negative quorum"),
 		},
 		{
-			pubkeys:   []ed25519.PublicKey{pub1},
+			pubkeys:   []crypto.PublicKey{pub1},
 			nrequired: 0,
 			wantErr:   errors.WithDetail(ErrBadValue, "quorum empty with non-empty pubkey list"),
 		},
 		{
-			pubkeys:   []ed25519.PublicKey{pub1, pub2},
+			pubkeys:   []crypto.PublicKey{pub1, pub2},
 			nrequired: 3,
 			wantErr:   errors.WithDetail(ErrBadValue, "quorum too big"),
 		},
@@ -105,69 +105,69 @@ func TestP2SPMultiSigProgramWithHeight(t *testing.T) {
 	pub3, _ := hex.DecodeString("8bcd251d9f4e03877130b6e6f1d577eda562375f07c3cdfad8f1d541002fd1a3")
 
 	tests := []struct {
-		pubkeys     []ed25519.PublicKey
+		pubkeys     []crypto.PublicKey
 		nrequired   int
 		height      int64
 		wantProgram string
 		wantErr     error
 	}{
 		{
-			pubkeys:     []ed25519.PublicKey{pub1},
+			pubkeys:     []crypto.PublicKey{pub1},
 			nrequired:   1,
 			wantProgram: "ae20988650ff921c82d47a953527894f792572ba63197c56e5fe79e5df0c444d6bb65151ad",
 		},
 		{
-			pubkeys:     []ed25519.PublicKey{pub1, pub2},
+			pubkeys:     []crypto.PublicKey{pub1, pub2},
 			nrequired:   2,
 			wantProgram: "ae20988650ff921c82d47a953527894f792572ba63197c56e5fe79e5df0c444d6bb6207192bf4eac0789ee19c88dfa87861cf59e215820f7bdb7be02761d9ed92e6c625252ad",
 		},
 		{
-			pubkeys:     []ed25519.PublicKey{pub1, pub2, pub3},
+			pubkeys:     []crypto.PublicKey{pub1, pub2, pub3},
 			nrequired:   2,
 			wantProgram: "ae20988650ff921c82d47a953527894f792572ba63197c56e5fe79e5df0c444d6bb6207192bf4eac0789ee19c88dfa87861cf59e215820f7bdb7be02761d9ed92e6c62208bcd251d9f4e03877130b6e6f1d577eda562375f07c3cdfad8f1d541002fd1a35253ad",
 		},
 		{
-			pubkeys:   []ed25519.PublicKey{pub1},
+			pubkeys:   []crypto.PublicKey{pub1},
 			nrequired: 1,
 			height:    -1,
 			wantErr:   errors.WithDetail(ErrBadValue, "negative blockHeight"),
 		},
 		{
-			pubkeys:     []ed25519.PublicKey{pub1},
+			pubkeys:     []crypto.PublicKey{pub1},
 			nrequired:   1,
 			height:      0,
 			wantProgram: "ae20988650ff921c82d47a953527894f792572ba63197c56e5fe79e5df0c444d6bb65151ad",
 		},
 		{
-			pubkeys:     []ed25519.PublicKey{pub1},
+			pubkeys:     []crypto.PublicKey{pub1},
 			nrequired:   1,
 			height:      200,
 			wantProgram: "01c8cda069ae20988650ff921c82d47a953527894f792572ba63197c56e5fe79e5df0c444d6bb65151ad",
 		},
 		{
-			pubkeys:     []ed25519.PublicKey{pub1, pub2},
+			pubkeys:     []crypto.PublicKey{pub1, pub2},
 			nrequired:   2,
 			height:      200,
 			wantProgram: "01c8cda069ae20988650ff921c82d47a953527894f792572ba63197c56e5fe79e5df0c444d6bb6207192bf4eac0789ee19c88dfa87861cf59e215820f7bdb7be02761d9ed92e6c625252ad",
 		},
 		{
-			pubkeys:     []ed25519.PublicKey{pub1, pub2, pub3},
+			pubkeys:     []crypto.PublicKey{pub1, pub2, pub3},
 			nrequired:   2,
 			height:      200,
 			wantProgram: "01c8cda069ae20988650ff921c82d47a953527894f792572ba63197c56e5fe79e5df0c444d6bb6207192bf4eac0789ee19c88dfa87861cf59e215820f7bdb7be02761d9ed92e6c62208bcd251d9f4e03877130b6e6f1d577eda562375f07c3cdfad8f1d541002fd1a35253ad",
 		},
 		{
-			pubkeys:   []ed25519.PublicKey{pub1},
+			pubkeys:   []crypto.PublicKey{pub1},
 			nrequired: -1,
 			wantErr:   errors.WithDetail(ErrBadValue, "negative quorum"),
 		},
 		{
-			pubkeys:   []ed25519.PublicKey{pub1},
+			pubkeys:   []crypto.PublicKey{pub1},
 			nrequired: 0,
 			wantErr:   errors.WithDetail(ErrBadValue, "quorum empty with non-empty pubkey list"),
 		},
 		{
-			pubkeys:   []ed25519.PublicKey{pub1, pub2},
+			pubkeys:   []crypto.PublicKey{pub1, pub2},
 			nrequired: 3,
 			wantErr:   errors.WithDetail(ErrBadValue, "quorum too big"),
 		},

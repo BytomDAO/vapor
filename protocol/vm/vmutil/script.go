@@ -1,6 +1,8 @@
 package vmutil
 
 import (
+	"crypto"
+
 	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/vm"
@@ -17,14 +19,17 @@ func IsUnspendable(prog []byte) bool {
 	return len(prog) > 0 && prog[0] == byte(vm.OP_FAIL)
 }
 
-func (b *Builder) addP2SPMultiSig(pubkeys []ed25519.PublicKey, nrequired int) error {
+func (b *Builder) addP2SPMultiSig(pubkeys []crypto.PublicKey, nrequired int) error {
 	if err := checkMultiSigParams(int64(nrequired), int64(len(pubkeys))); err != nil {
 		return err
 	}
 
 	b.AddOp(vm.OP_TXSIGHASH) // stack is now [... NARGS SIG SIG SIG PREDICATEHASH]
 	for _, p := range pubkeys {
-		b.AddData(p)
+		switch pt := p.(type) {
+		case ed25519.PublicKey:
+			b.AddData(pt)
+		}
 	}
 	b.AddInt64(int64(nrequired))    // stack is now [... SIG SIG SIG PREDICATEHASH PUB PUB PUB M]
 	b.AddInt64(int64(len(pubkeys))) // stack is now [... SIG SIG SIG PREDICATEHASH PUB PUB PUB M N]
@@ -93,7 +98,7 @@ func P2SHProgram(scriptHash []byte) ([]byte, error) {
 }
 
 // P2SPMultiSigProgram generates the script for control transaction output
-func P2SPMultiSigProgram(pubkeys []ed25519.PublicKey, nrequired int) ([]byte, error) {
+func P2SPMultiSigProgram(pubkeys []crypto.PublicKey, nrequired int) ([]byte, error) {
 	builder := NewBuilder()
 	if err := builder.addP2SPMultiSig(pubkeys, nrequired); err != nil {
 		return nil, err
@@ -102,7 +107,7 @@ func P2SPMultiSigProgram(pubkeys []ed25519.PublicKey, nrequired int) ([]byte, er
 }
 
 // P2SPMultiSigProgramWithHeight generates the script with block height for control transaction output
-func P2SPMultiSigProgramWithHeight(pubkeys []ed25519.PublicKey, nrequired int, blockHeight int64) ([]byte, error) {
+func P2SPMultiSigProgramWithHeight(pubkeys []crypto.PublicKey, nrequired int, blockHeight int64) ([]byte, error) {
 	builder := NewBuilder()
 	if blockHeight > 0 {
 		builder.AddInt64(blockHeight)

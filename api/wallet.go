@@ -6,7 +6,7 @@ import (
 	"github.com/vapor/account"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/pseudohsm"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	vcrypto "github.com/vapor/crypto"
 	"github.com/vapor/errors"
 )
 
@@ -99,7 +99,7 @@ func (a *API) getWalletInfo() Response {
 }
 
 func (a *API) recoveryFromRootXPubs(ctx context.Context, in struct {
-	XPubs []chainkd.XPub `json:"xpubs"`
+	XPubs []vcrypto.XPubKeyer `json:"xpubs"`
 }) Response {
 	if err := a.wallet.RecoveryMgr.AcctResurrect(in.XPubs); err != nil {
 		return NewErrorResponse(err)

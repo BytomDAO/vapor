@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 
-	"github.com/vapor/crypto/ed25519/chainkd"
+	vcrypto "github.com/vapor/crypto"
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/util"
 )
@@ -36,7 +36,7 @@ var deleteKeyCmd = &cobra.Command{
 	Short: "Delete a key",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		xpub := new(chainkd.XPub)
+		xpub := vcrypto.XPubKeyer{}
 		if err := xpub.UnmarshalText([]byte(args[0])); err != nil {
 			jww.ERROR.Println("delete-key:", err)
 			os.Exit(util.ErrLocalExe)
@@ -44,7 +44,7 @@ var deleteKeyCmd = &cobra.Command{
 
 		var key = struct {
 			Password string
-			XPub     chainkd.XPub `json:"xpub"`
+			XPub     vcrypto.XPubKeyer `json:"xpub"`
 		}{XPub: *xpub, Password: args[1]}
 
 		if _, exitCode := util.ClientCall("/delete-key", &key); exitCode != util.Success {
@@ -73,15 +73,15 @@ var updateKeyAliasCmd = &cobra.Command{
 	Short: "Update key alias",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		xpub := new(chainkd.XPub)
+		xpub := vcrypto.XPubKeyer{}
 		if err := xpub.UnmarshalText([]byte(args[0])); err != nil {
 			jww.ERROR.Println("update-key-alias xpub not valid:", err)
 			os.Exit(util.ErrLocalExe)
 		}
 
 		ins := struct {
-			XPub     chainkd.XPub `json:"xpub"`
-			NewAlias string       `json:"new_alias"`
+			XPub     vcrypto.XPubKeyer `json:"xpub"`
+			NewAlias string            `json:"new_alias"`
 		}{XPub: *xpub, NewAlias: args[1]}
 
 		if _, exitCode := util.ClientCall("/update-key-alias", &ins); exitCode != util.Success {
@@ -96,16 +96,16 @@ var resetKeyPwdCmd = &cobra.Command{
 	Short: "Reset key password",
 	Args:  cobra.ExactArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {
-		xpub := new(chainkd.XPub)
+		xpub := vcrypto.XPubKeyer{}
 		if err := xpub.UnmarshalText([]byte(args[0])); err != nil {
 			jww.ERROR.Println("reset-key-password args not valid:", err)
 			os.Exit(util.ErrLocalExe)
 		}
 
 		ins := struct {
-			XPub        chainkd.XPub `json:"xpub"`
-			OldPassword string       `json:"old_password"`
-			NewPassword string       `json:"new_password"`
+			XPub        vcrypto.XPubKeyer `json:"xpub"`
+			OldPassword string            `json:"old_password"`
+			NewPassword string            `json:"new_password"`
 		}{XPub: *xpub, OldPassword: args[1], NewPassword: args[2]}
 
 		data, exitCode := util.ClientCall("/reset-key-password", &ins)
@@ -122,15 +122,15 @@ var checkKeyPwdCmd = &cobra.Command{
 	Short: "check key password",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		xpub := new(chainkd.XPub)
+		xpub := vcrypto.XPubKeyer{}
 		if err := xpub.UnmarshalText([]byte(args[0])); err != nil {
 			jww.ERROR.Println("check-key-password args not valid:", err)
 			os.Exit(util.ErrLocalExe)
 		}
 
 		ins := struct {
-			XPub     chainkd.XPub `json:"xpub"`
-			Password string       `json:"password"`
+			XPub     vcrypto.XPubKeyer `json:"xpub"`
+			Password string            `json:"password"`
 		}{XPub: *xpub, Password: args[1]}
 
 		data, exitCode := util.ClientCall("/check-key-password", &ins)
@@ -172,7 +172,7 @@ var verifyMsgCmd = &cobra.Command{
 	Short: "verify signature for specified message",
 	Args:  cobra.ExactArgs(4),
 	Run: func(cmd *cobra.Command, args []string) {
-		xpub := chainkd.XPub{}
+		xpub := vcrypto.XPubKeyer{}
 		if err := xpub.UnmarshalText([]byte(args[1])); err != nil {
 			jww.ERROR.Println(err)
 			os.Exit(util.ErrLocalExe)
@@ -186,7 +186,7 @@ var verifyMsgCmd = &cobra.Command{
 
 		var req = struct {
 			Address     string             `json:"address"`
-			DerivedXPub chainkd.XPub       `json:"derived_xpub"`
+			DerivedXPub vcrypto.XPubKeyer  `json:"derived_xpub"`
 			Message     chainjson.HexBytes `json:"message"`
 			Signature   string             `json:"signature"`
 		}{Address: args[0], DerivedXPub: xpub, Message: message, Signature: args[3]}

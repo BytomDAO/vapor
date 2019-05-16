@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/pborman/uuid"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	"github.com/vapor/crypto/csp"
 )
 
 const (
@@ -48,7 +48,7 @@ func TestKeyEncryptDecrypt(t *testing.T) {
 }
 
 func TestGenerateFile(t *testing.T) {
-	xprv, xpub, err := chainkd.NewXKeys(nil)
+	xprv, xpub, err := csp.NewXKeys(nil)
 	if err != nil {
 		t.Fatal(err)
 	}

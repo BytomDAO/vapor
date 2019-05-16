@@ -3,7 +3,7 @@ package query
 import (
 	"encoding/json"
 
-	"github.com/vapor/crypto/ed25519/chainkd"
+	vcrypto "github.com/vapor/crypto"
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/protocol/bc"
 )
@@ -58,12 +58,12 @@ type AnnotatedOutput struct {
 
 //AnnotatedAccount means an annotated account.
 type AnnotatedAccount struct {
-	ID         string         `json:"id"`
-	Alias      string         `json:"alias,omitempty"`
-	XPubs      []chainkd.XPub `json:"xpubs"`
-	Quorum     int            `json:"quorum"`
-	KeyIndex   uint64         `json:"key_index"`
-	DeriveRule uint8          `json:"derive_rule"`
+	ID         string              `json:"id"`
+	Alias      string              `json:"alias,omitempty"`
+	XPubs      []vcrypto.XPubKeyer `json:"xpubs"`
+	Quorum     int                 `json:"quorum"`
+	KeyIndex   uint64              `json:"key_index"`
+	DeriveRule uint8               `json:"derive_rule"`
 }
 
 //AnnotatedAsset means an annotated asset.
@@ -80,11 +80,11 @@ type AnnotatedAsset struct {
 
 //AnnotatedSigner means an annotated signer for asset.
 type AnnotatedSigner struct {
-	Type       string         `json:"type"`
-	XPubs      []chainkd.XPub `json:"xpubs"`
-	Quorum     int            `json:"quorum"`
-	KeyIndex   uint64         `json:"key_index"`
-	DeriveRule uint8          `json:"derive_rule"`
+	Type       string              `json:"type"`
+	XPubs      []vcrypto.XPubKeyer `json:"xpubs"`
+	Quorum     int                 `json:"quorum"`
+	KeyIndex   uint64              `json:"key_index"`
+	DeriveRule uint8               `json:"derive_rule"`
 }
 
 //AnnotatedUTXO means an annotated utxo.

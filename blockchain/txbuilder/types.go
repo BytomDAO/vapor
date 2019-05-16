@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/vapor/crypto/ed25519/chainkd"
+	vcrypto "github.com/vapor/crypto"
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -48,7 +48,7 @@ type ContractArgument struct {
 
 // RawTxSigArgument is signature-related argument for run contract
 type RawTxSigArgument struct {
-	RootXPub chainkd.XPub         `json:"xpub"`
+	RootXPub vcrypto.XPubKeyer    `json:"xpub"`
 	Path     []chainjson.HexBytes `json:"derivation_path"`
 }
 

@@ -50,6 +50,7 @@ func (h *HSM) Restore(image *KeyImage) error {
 			return ErrXPubFormat
 		}
 
+		// TODO: it should use map[string]string to adapt several algorithm
 		var xPub chainkd.XPub
 		copy(xPub[:], data)
 		if h.cache.hasKey(xPub) {

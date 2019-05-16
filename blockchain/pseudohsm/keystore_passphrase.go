@@ -19,6 +19,7 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/vapor/crypto"
 	"github.com/vapor/crypto/ed25519/chainkd"
+	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/crypto/randentropy"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"
@@ -89,7 +90,15 @@ func EncryptKey(key *XKey, auth string, scryptN, scryptP int) ([]byte, error) {
 		return nil, err
 	}
 	encryptKey := derivedKey[:16]
-	keyBytes := key.XPrv[:]
+	keyBytes := make([]byte, 0)
+	xpubKey := make([]byte, 0)
+	switch xprvk := key.XPrv.(type) {
+	case edchainkd.XPrv:
+		keyBytes = append(keyBytes, xprvk[:]...)
+		if xpk, ok := key.XPub.(edchainkd.XPub); ok {
+			xpubKey = append(xpubKey, xpk[:]...)
+		}
+	}
 
 	iv := randentropy.GetEntropyCSPRNG(aes.BlockSize) // 16
 	cipherText, err := aesCTRXOR(encryptKey, keyBytes, iv)
@@ -121,7 +130,7 @@ func EncryptKey(key *XKey, auth string, scryptN, scryptP int) ([]byte, error) {
 		key.KeyType,
 		version,
 		key.Alias,
-		hex.EncodeToString(key.XPub[:]),
+		hex.EncodeToString(xpubKey[:]),
 	}
 	return json.Marshal(encryptedKeyJSON)
 }
@@ -148,6 +157,7 @@ func DecryptKey(keyjson []byte, auth string) (*XKey, error) {
 	if err != nil {
 		return nil, err
 	}
+	// TODO: it should use map[string]string adapt several algorithm
 	var xprv chainkd.XPrv
 	copy(xprv[:], keyBytes[:])
 	xpub := xprv.XPub()
