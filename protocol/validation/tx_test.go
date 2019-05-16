@@ -366,15 +366,6 @@ func TestTxValidation(t *testing.T) {
 		{
 			desc: "unbalanced mux amounts",
 			f: func() {
-				mux.Sources[0].Value.Amount++
-				iss := tx.Entries[*mux.Sources[0].Ref].(*bc.Issuance)
-				iss.WitnessDestination.Value.Amount++
-			},
-			err: ErrUnbalanced,
-		},
-		{
-			desc: "unbalanced mux amounts",
-			f: func() {
 				mux.WitnessDestinations[0].Value.Amount++
 			},
 			err: ErrUnbalanced,
@@ -386,15 +377,6 @@ func TestTxValidation(t *testing.T) {
 				mux.WitnessDestinations[0].Value.Amount++
 			},
 			err: nil,
-		},
-		{
-			desc: "overflowing mux source amounts",
-			f: func() {
-				mux.Sources[0].Value.Amount = math.MaxInt64
-				iss := tx.Entries[*mux.Sources[0].Ref].(*bc.Issuance)
-				iss.WitnessDestination.Value.Amount = math.MaxInt64
-			},
-			err: ErrOverflow,
 		},
 		{
 			desc: "underflowing mux destination amounts",
@@ -448,21 +430,6 @@ func TestTxValidation(t *testing.T) {
 			err: ErrMismatchedReference,
 		},
 		{
-			desc: "mismatched input dest and mux source",
-			f: func() {
-				fixture2 := sample(t, fixture)
-				tx2 := types.NewTx(*fixture2.tx).Tx
-				input2ID := tx2.InputIDs[2]
-				input2 := tx2.Entries[input2ID].(*bc.Spend)
-				dest2Ref := input2.WitnessDestination.Ref
-				dest2 := tx2.Entries[*dest2Ref].(*bc.Mux)
-				tx.Entries[*dest2Ref] = dest2
-				tx.Entries[input2ID] = input2
-				mux.Sources[0].Ref = &input2ID
-			},
-			err: ErrMismatchedReference,
-		},
-		{
 			desc: "invalid mux destination position",
 			f: func() {
 				mux.WitnessDestinations[0].Position = 1
@@ -495,14 +462,6 @@ func TestTxValidation(t *testing.T) {
 				tx.Version = 2
 				tx.ResultIds = nil
 			},
-		},
-		{
-			desc: "issuance program failure",
-			f: func() {
-				iss := txIssuance(t, tx, 0)
-				iss.WitnessArguments[0] = []byte{}
-			},
-			err: vm.ErrFalseVMResult,
 		},
 		{
 			desc: "spend control program failure",
@@ -572,24 +531,6 @@ func TestTxValidation(t *testing.T) {
 				}
 			},
 			err: ErrMismatchedValue,
-		},
-		{
-			desc: "mismatched witness asset destination",
-			f: func() {
-				issuanceID := mux.Sources[0].Ref
-				issuance := tx.Entries[*issuanceID].(*bc.Issuance)
-				issuance.WitnessAssetDefinition.Data = &bc.Hash{V0: 9999}
-			},
-			err: ErrMismatchedAssetID,
-		},
-		{
-			desc: "issuance witness position greater than length of mux sources",
-			f: func() {
-				issuanceID := mux.Sources[0].Ref
-				issuance := tx.Entries[*issuanceID].(*bc.Issuance)
-				issuance.WitnessDestination.Position = uint64(len(mux.Sources) + 1)
-			},
-			err: ErrPosition,
 		},
 		{
 			desc: "normal coinbase tx",
@@ -1041,8 +982,7 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 		result.assetDef = []byte{2}
 	}
 	if result.assetID.IsZero() {
-		refdatahash := hashData(result.assetDef)
-		result.assetID = bc.ComputeAssetID(result.issuanceProg.Code, result.issuanceProg.VmVersion, &refdatahash)
+		result.assetID = bc.AssetID{V0: 9999}
 	}
 
 	if result.txVersion == 0 {
@@ -1062,7 +1002,7 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 		args2 := [][]byte{{6}, {7}}
 
 		result.txInputs = []*types.TxInput{
-			types.NewIssuanceInput([]byte{3}, 10, result.issuanceProg.Code, result.issuanceArgs, result.assetDef),
+			types.NewSpendInput(nil, *newHash(9), result.assetID, 10, 0, []byte{byte(vm.OP_TRUE)}),
 			types.NewSpendInput(args1, *newHash(5), result.assetID, 20, 0, cp1),
 			types.NewSpendInput(args2, *newHash(8), result.assetID, 40, 0, cp2),
 		}
@@ -1127,15 +1067,6 @@ func newHash(n byte) *bc.Hash {
 func newAssetID(n byte) *bc.AssetID {
 	a := bc.NewAssetID([32]byte{n})
 	return &a
-}
-
-func txIssuance(t *testing.T, tx *bc.Tx, index int) *bc.Issuance {
-	id := tx.InputIDs[index]
-	res, err := tx.Issuance(id)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return res
 }
 
 func txSpend(t *testing.T, tx *bc.Tx, index int) *bc.Spend {

@@ -59,6 +59,15 @@ func (tx *Tx) CrossChainOutput(id Hash) (*CrossChainOutput, error) {
 	return o, nil
 }
 
+// Entry try to get the  entry by given hash
+func (tx *Tx) Entry(id Hash) (Entry, error) {
+	e, ok := tx.Entries[id]
+	if !ok || e == nil {
+		return nil, errors.Wrapf(ErrMissingEntry, "id %x", id.Bytes())
+	}
+	return e, nil
+}
+
 // Spend try to get the spend entry by given hash
 func (tx *Tx) Spend(id Hash) (*Spend, error) {
 	e, ok := tx.Entries[id]
@@ -72,15 +81,15 @@ func (tx *Tx) Spend(id Hash) (*Spend, error) {
 	return sp, nil
 }
 
-// Issuance try to get the issuance entry by given hash
-func (tx *Tx) Issuance(id Hash) (*Issuance, error) {
+// VoteOutput try to get the vote output entry by given hash
+func (tx *Tx) VoteOutput(id Hash) (*VoteOutput, error) {
 	e, ok := tx.Entries[id]
 	if !ok || e == nil {
 		return nil, errors.Wrapf(ErrMissingEntry, "id %x", id.Bytes())
 	}
-	iss, ok := e.(*Issuance)
+	o, ok := e.(*VoteOutput)
 	if !ok {
 		return nil, errors.Wrapf(ErrEntryType, "entry %x has unexpected type %T", id.Bytes(), e)
 	}
-	return iss, nil
+	return o, nil
 }

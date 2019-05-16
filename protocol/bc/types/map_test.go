@@ -21,24 +21,6 @@ func TestMapSpendTx(t *testing.T) {
 				NewIntraChainOutput(*consensus.BTMAssetID, 80, []byte{1}),
 			},
 		},
-		&TxData{
-			Inputs: []*TxInput{
-				NewIssuanceInput([]byte("nonce"), 254354, []byte("issuanceProgram"), [][]byte{[]byte("arguments1"), []byte("arguments2")}, []byte("assetDefinition")),
-			},
-			Outputs: []*TxOutput{
-				NewIntraChainOutput(*consensus.BTMAssetID, 80, []byte{1}),
-			},
-		},
-		&TxData{
-			Inputs: []*TxInput{
-				NewIssuanceInput([]byte("nonce"), 254354, []byte("issuanceProgram"), [][]byte{[]byte("arguments1"), []byte("arguments2")}, []byte("assetDefinition")),
-				NewSpendInput(nil, testutil.MustDecodeHash("db7b16ac737440d6e38559996ddabb207d7ce84fbd6f3bfd2525d234761dc863"), *consensus.BTMAssetID, 88, 3, []byte{1}),
-			},
-			Outputs: []*TxOutput{
-				NewIntraChainOutput(*consensus.BTMAssetID, 80, []byte{1}),
-				NewIntraChainOutput(*consensus.BTMAssetID, 80, []byte{1}),
-			},
-		},
 	}
 
 	for _, txData := range cases {
@@ -53,10 +35,6 @@ func TestMapSpendTx(t *testing.T) {
 				t.Errorf("entryMap contains nothing for tx.InputIDs[%d] (%x)", i, tx.InputIDs[i].Bytes())
 			}
 			switch newInput := resultEntry.(type) {
-			case *bc.Issuance:
-				if *newInput.Value.AssetId != oldIn.AssetID() || newInput.Value.Amount != oldIn.Amount() {
-					t.Errorf("tx.InputIDs[%d]'s asset amount is not equal after map'", i)
-				}
 			case *bc.Spend:
 				spendOut, err := tx.IntraChainOutput(*newInput.SpentOutputId)
 				if err != nil {

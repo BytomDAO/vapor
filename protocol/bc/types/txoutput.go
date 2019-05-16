@@ -13,6 +13,7 @@ import (
 const (
 	IntraChainOutputType uint8 = iota
 	CrossChainOutputType
+	VoteOutputType
 )
 
 type (
@@ -39,6 +40,9 @@ func (to *TxOutput) OutputCommitment() OutputCommitment {
 	case *CrossChainOutput:
 		return outp.OutputCommitment
 
+	case *VoteTxOutput:
+		return outp.OutputCommitment
+
 	default:
 		return OutputCommitment{}
 	}
@@ -51,6 +55,9 @@ func (to *TxOutput) AssetAmount() bc.AssetAmount {
 		return outp.AssetAmount
 
 	case *CrossChainOutput:
+		return outp.AssetAmount
+
+	case *VoteTxOutput:
 		return outp.AssetAmount
 
 	default:
@@ -67,6 +74,9 @@ func (to *TxOutput) ControlProgram() []byte {
 	case *CrossChainOutput:
 		return outp.ControlProgram
 
+	case *VoteTxOutput:
+		return outp.ControlProgram
+
 	default:
 		return nil
 	}
@@ -79,6 +89,9 @@ func (to *TxOutput) VMVersion() uint64 {
 		return outp.VMVersion
 
 	case *CrossChainOutput:
+		return outp.VMVersion
+
+	case *VoteTxOutput:
 		return outp.VMVersion
 
 	default:
@@ -114,6 +127,17 @@ func (to *TxOutput) readFrom(r *blockchain.Reader) (err error) {
 			to.TypedOutput = out
 			if out.CommitmentSuffix, err = out.OutputCommitment.readFrom(r, to.AssetVersion); err != nil {
 				return errors.Wrap(err, "reading cross-chain output commitment")
+			}
+
+		case VoteOutputType:
+			out := new(VoteTxOutput)
+			to.TypedOutput = out
+			if out.Vote, err = blockchain.ReadVarstr31(r); err != nil {
+				return errors.Wrap(err, "reading vote output vote")
+			}
+
+			if out.CommitmentSuffix, err = out.OutputCommitment.readFrom(r, to.AssetVersion); err != nil {
+				return errors.Wrap(err, "reading vote output commitment")
 			}
 
 		default:
@@ -162,6 +186,15 @@ func (to *TxOutput) writeOutputCommitment(w io.Writer) error {
 
 	case *CrossChainOutput:
 		if _, err := w.Write([]byte{CrossChainOutputType}); err != nil {
+			return err
+		}
+		return outp.OutputCommitment.writeExtensibleString(w, outp.CommitmentSuffix, to.AssetVersion)
+
+	case *VoteTxOutput:
+		if _, err := w.Write([]byte{VoteOutputType}); err != nil {
+			return err
+		}
+		if _, err := blockchain.WriteVarstr31(w, outp.Vote); err != nil {
 			return err
 		}
 		return outp.OutputCommitment.writeExtensibleString(w, outp.CommitmentSuffix, to.AssetVersion)

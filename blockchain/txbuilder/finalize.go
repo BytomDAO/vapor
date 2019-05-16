@@ -91,8 +91,6 @@ func checkTxSighashCommitment(tx *types.Tx) error {
 		switch t := inp.TypedInput.(type) {
 		case *types.SpendInput:
 			args = t.Arguments
-		case *types.IssuanceInput:
-			args = t.Arguments
 		}
 		// Note: These numbers will need to change if more args are added such that the minimum length changes
 		switch {

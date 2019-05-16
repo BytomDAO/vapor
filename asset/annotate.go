@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 
 	"github.com/vapor/blockchain/query"
-	chainjson "github.com/vapor/encoding/json"
-	"github.com/vapor/protocol/vm/vmutil"
 )
 
 func isValidJSON(b []byte) bool {
@@ -30,18 +28,7 @@ func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
 		VMVersion:         a.VMVersion,
 		RawDefinitionByte: a.RawDefinitionByte,
 		Definition:        &jsonDefinition,
-		IssuanceProgram:   chainjson.HexBytes(a.IssuanceProgram),
 	}
 
-	annotatedAsset.LimitHeight = vmutil.GetIssuanceProgramRestrictHeight(a.IssuanceProgram)
-	if a.Signer != nil {
-		annotatedAsset.AnnotatedSigner = query.AnnotatedSigner{
-			Type:       a.Signer.Type,
-			XPubs:      a.Signer.XPubs,
-			Quorum:     a.Signer.Quorum,
-			KeyIndex:   a.Signer.KeyIndex,
-			DeriveRule: a.Signer.DeriveRule,
-		}
-	}
 	return annotatedAsset, nil
 }

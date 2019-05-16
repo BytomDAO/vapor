@@ -14,6 +14,7 @@ import (
 	"github.com/vapor/crypto/ed25519/chainkd"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/event"
+	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/testutil"
 )
@@ -52,10 +53,7 @@ func TestWalletUnconfirmedTxs(t *testing.T) {
 	controlProg.KeyIndex = 1
 
 	reg := asset.NewRegistry(testDB, nil)
-	asset, err := reg.Define([]chainkd.XPub{xpub1.XPub}, 1, nil, 0, "TESTASSET", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	asset := bc.AssetID{V0: 5}
 
 	dispatcher := event.NewDispatcher()
 	w := mockWallet(testDB, accountManager, reg, nil, dispatcher, false)
@@ -63,7 +61,7 @@ func TestWalletUnconfirmedTxs(t *testing.T) {
 	btmUtxo := mockUTXO(controlProg, consensus.BTMAssetID)
 	utxos = append(utxos, btmUtxo)
 
-	OtherUtxo := mockUTXO(controlProg, &asset.AssetID)
+	OtherUtxo := mockUTXO(controlProg, &asset)
 	utxos = append(utxos, OtherUtxo)
 	_, txData, err := mockTxData(utxos, testAccount)
 	if err != nil {
