@@ -524,6 +524,10 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
 		return gasStatus, err
 	}
 
+	if err := checkStandardTx(tx, block.Height); err != nil {
+		return gasStatus, err
+	}
+
 	vs := &validationState{
 		block:     block,
 		tx:        tx,
