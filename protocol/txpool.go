@@ -280,7 +280,7 @@ func (tp *TxPool) addTransaction(txD *TxDesc) error {
 		var assetID bc.AssetID
 		outputEntry, err := tx.Entry(*id)
 		if err != nil {
-			continue
+			return err
 		}
 		switch output := outputEntry.(type) {
 		case *bc.IntraChainOutput:
