@@ -23,6 +23,8 @@ const (
 	defaultBanThreshold = uint32(100)
 )
 
+var errSendStatusMsg =errors.New("send status msg fail")
+
 //BasePeer is the interface for connection level peer
 type BasePeer interface {
 	Addr() net.Addr
@@ -67,12 +69,10 @@ type peer struct {
 	filterAdds  *set.Set // Set of addresses that the spv node cares about.
 }
 
-func newPeer(height uint64, hash *bc.Hash, basePeer BasePeer) *peer {
+func newPeer(basePeer BasePeer) *peer {
 	return &peer{
 		BasePeer:    basePeer,
 		services:    basePeer.ServiceFlag(),
-		height:      height,
-		hash:        hash,
 		knownTxs:    set.New(),
 		knownBlocks: set.New(),
 		filterAdds:  set.New(),
@@ -318,6 +318,15 @@ func (p *peer) sendTransactions(txs []*types.Tx) (bool, error) {
 	return true, nil
 }
 
+func (p *peer) sendStatus(header *types.BlockHeader) error {
+	msg := NewStatusMessage(header)
+	if ok:=p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg});!ok{
+		return errSendStatusMsg
+	}
+	p.markNewStatus(header.Height)
+	return nil
+}
+
 func (p *peer) setStatus(height uint64, hash *bc.Hash) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
@@ -356,12 +365,12 @@ func (ps *peerSet) addBanScore(peerID string, persistent, transient uint32, reas
 	ps.removePeer(peerID)
 }
 
-func (ps *peerSet) addPeer(peer BasePeer, height uint64, hash *bc.Hash) {
+func (ps *peerSet) addPeer(peer BasePeer) {
 	ps.mtx.Lock()
 	defer ps.mtx.Unlock()
 
 	if _, ok := ps.peers[peer.ID()]; !ok {
-		ps.peers[peer.ID()] = newPeer(height, hash, peer)
+		ps.peers[peer.ID()] = newPeer(peer)
 		return
 	}
 	log.WithField("module", logModule).Warning("add existing peer to blockKeeper")
@@ -406,7 +415,7 @@ func (ps *peerSet) broadcastMinedBlock(block *types.Block) error {
 }
 
 func (ps *peerSet) broadcastNewStatus(bestBlock *types.Block) error {
-	msg := NewStatusResponseMessage(&bestBlock.BlockHeader)
+	msg := NewStatusMessage(&bestBlock.BlockHeader)
 	peers := ps.peersWithoutNewStatus(bestBlock.Height)
 	for _, peer := range peers {
 		if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {

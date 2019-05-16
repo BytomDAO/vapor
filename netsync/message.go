@@ -23,8 +23,7 @@ const (
 	HeadersResponseByte = byte(0x13)
 	BlocksRequestByte   = byte(0x14)
 	BlocksResponseByte  = byte(0x15)
-	StatusRequestByte   = byte(0x20)
-	StatusResponseByte  = byte(0x21)
+	StatusByte          = byte(0x21)
 	NewTransactionByte  = byte(0x30)
 	NewMineBlockByte    = byte(0x40)
 	FilterLoadByte      = byte(0x50)
@@ -49,8 +48,7 @@ var _ = wire.RegisterInterface(
 	wire.ConcreteType{&HeadersMessage{}, HeadersResponseByte},
 	wire.ConcreteType{&GetBlocksMessage{}, BlocksRequestByte},
 	wire.ConcreteType{&BlocksMessage{}, BlocksResponseByte},
-	wire.ConcreteType{&StatusRequestMessage{}, StatusRequestByte},
-	wire.ConcreteType{&StatusResponseMessage{}, StatusResponseByte},
+	wire.ConcreteType{&StatusMessage{}, StatusByte},
 	wire.ConcreteType{&TransactionMessage{}, NewTransactionByte},
 	wire.ConcreteType{&MineBlockMessage{}, NewMineBlockByte},
 	wire.ConcreteType{&FilterLoadMessage{}, FilterLoadByte},
@@ -274,34 +272,27 @@ func (m *BlocksMessage) String() string {
 	return fmt.Sprintf("{blocks_length: %d}", len(m.RawBlocks))
 }
 
-//StatusRequestMessage status request msg
-type StatusRequestMessage struct{}
-
-func (m *StatusRequestMessage) String() string {
-	return "{}"
-}
-
 //StatusResponseMessage get status response msg
-type StatusResponseMessage struct {
+type StatusMessage struct {
 	Height  uint64
 	RawHash [32]byte
 }
 
 //NewStatusResponseMessage construct get status response msg
-func NewStatusResponseMessage(blockHeader *types.BlockHeader) *StatusResponseMessage {
-	return &StatusResponseMessage{
+func NewStatusMessage(blockHeader *types.BlockHeader) *StatusMessage {
+	return &StatusMessage{
 		Height:  blockHeader.Height,
 		RawHash: blockHeader.Hash().Byte32(),
 	}
 }
 
 //GetHash get hash from msg
-func (m *StatusResponseMessage) GetHash() *bc.Hash {
+func (m *StatusMessage) GetHash() *bc.Hash {
 	hash := bc.NewHash(m.RawHash)
 	return &hash
 }
 
-func (m *StatusResponseMessage) String() string {
+func (m *StatusMessage) String() string {
 	return fmt.Sprintf("{height: %d, hash: %s}", m.Height, hex.EncodeToString(m.RawHash[:]))
 }
 

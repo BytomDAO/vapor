@@ -10,9 +10,6 @@ import (
 	"github.com/vapor/protocol/bc/types"
 )
 
-
-
-
 var testBlock = &types.Block{
 	BlockHeader: types.BlockHeader{
 		Version:   1,
@@ -39,7 +36,6 @@ func TestBlockMessage(t *testing.T) {
 	if !reflect.DeepEqual(gotBlock.BlockHeader, testBlock.BlockHeader) {
 		t.Errorf("block msg test err: got %s\nwant %s", spew.Sdump(gotBlock.BlockHeader), spew.Sdump(testBlock.BlockHeader))
 	}
-
 
 	blockMsg.RawBlock[1] = blockMsg.RawBlock[1] + 0x1
 	_, err = blockMsg.GetBlock()
@@ -168,8 +164,8 @@ func TestBlocksMessage(t *testing.T) {
 	}
 }
 
-func TestStatusResponseMessage(t *testing.T) {
-	statusResponseMsg := NewStatusResponseMessage(&testBlock.BlockHeader)
+func TestStatusMessage(t *testing.T) {
+	statusResponseMsg := NewStatusMessage(&testBlock.BlockHeader)
 	gotHash := statusResponseMsg.GetHash()
 	if !reflect.DeepEqual(*gotHash, testBlock.Hash()) {
 		t.Errorf("status response msg test err: got %s\nwant %s", spew.Sdump(*gotHash), spew.Sdump(testBlock.Hash()))
