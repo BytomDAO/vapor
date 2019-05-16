@@ -34,6 +34,7 @@ type (
 
 var errBadAssetID = errors.New("asset ID does not match other issuance parameters")
 
+// TODO:
 // AssetAmount return the asset id and amount of the txinput.
 func (t *TxInput) AssetAmount() bc.AssetAmount {
 	switch inp := t.TypedInput.(type) {

@@ -230,11 +230,9 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		}
 
 	case *bc.CrossChainInput:
-		// TODO:
-		// 1. which program to use
 		gasLeftTemp := vs.gasStatus.GasLeft
 		vs.gasStatus.GasLeft = consensus.DefaultGasCredit
-		_, err := vm.Verify(NewTxVMContext(vs, e, nil, nil), vs.gasStatus.GasLeft)
+		_, err := vm.Verify(NewTxVMContext(vs, e, e.CrossInProgram, e.WitnessArguments), vs.gasStatus.GasLeft)
 		if err != nil {
 			return errors.Wrap(err, "checking issuance program")
 		}

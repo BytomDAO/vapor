@@ -124,6 +124,7 @@ message CrossChainInput {
   Hash             mainchain_output_id = 1;
   AssetAmount      value               = 2;
   ValueDestination witness_destination = 3;
-  repeated bytes   witness_arguments   = 4;
-  uint64           ordinal             = 5;
+  Program          control_program     = 4;
+  repeated bytes   witness_arguments   = 5;
+  uint64           ordinal             = 6;
 }
