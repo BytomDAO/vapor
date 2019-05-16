@@ -873,7 +873,7 @@ func TestStandardTx(t *testing.T) {
 		if c.f != nil {
 			c.f()
 		}
-		if err := checkStandardTx(tx); err != c.err {
+		if err := checkStandardTx(tx, 0); err != c.err {
 			t.Errorf("case #%d (%s) got error %t, want %t", i, c.desc, err, c.err)
 		}
 	}
