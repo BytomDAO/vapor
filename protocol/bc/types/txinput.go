@@ -113,7 +113,6 @@ func (t *TxInput) SpentOutputID() (o bc.Hash, err error) {
 	return o, err
 }
 
-// TODO:
 func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 	if t.AssetVersion, err = blockchain.ReadVarint63(r); err != nil {
 		return err
@@ -128,7 +127,6 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 			return errors.Wrap(err, "reading input commitment type")
 		}
 
-		// TODO:
 		switch icType[0] {
 		case SpendInputType:
 			si := new(SpendInput)
@@ -141,6 +139,13 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 			ci := new(CoinbaseInput)
 			t.TypedInput = ci
 			if ci.Arbitrary, err = blockchain.ReadVarstr31(r); err != nil {
+				return err
+			}
+
+		case CrossChainInputType:
+			ci := new(CrossChainInput)
+			t.TypedInput = ci
+			if ci.SpendCommitmentSuffix, err = ci.SpendCommitment.readFrom(r, 1); err != nil {
 				return err
 			}
 
@@ -188,7 +193,6 @@ func (t *TxInput) writeTo(w io.Writer) error {
 	return errors.Wrap(err, "writing input witness")
 }
 
-// TODO:
 func (t *TxInput) writeInputCommitment(w io.Writer) (err error) {
 	if t.AssetVersion != 1 {
 		return nil
@@ -196,6 +200,12 @@ func (t *TxInput) writeInputCommitment(w io.Writer) (err error) {
 
 	switch inp := t.TypedInput.(type) {
 	case *SpendInput:
+		if _, err = w.Write([]byte{SpendInputType}); err != nil {
+			return err
+		}
+		return inp.SpendCommitment.writeExtensibleString(w, inp.SpendCommitmentSuffix, t.AssetVersion)
+
+	case *CrossChainInput:
 		if _, err = w.Write([]byte{SpendInputType}); err != nil {
 			return err
 		}
