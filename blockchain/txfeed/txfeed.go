@@ -353,9 +353,6 @@ func buildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
 		in.Type = "spend"
 		in.ControlProgram = orig.ControlProgram()
 		in.SpentOutputID = e.SpentOutputId
-	case *bc.Issuance:
-		in.Type = "issue"
-		in.IssuanceProgram = orig.IssuanceProgram()
 	}
 
 	return in

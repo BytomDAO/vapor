@@ -25,11 +25,6 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 	)
 
 	switch e := entry.(type) {
-	case *bc.Issuance:
-		a1 := e.Value.AssetId.Bytes()
-		assetID = &a1
-		amount = &e.Value.Amount
-		destPos = &e.WitnessDestination.Position
 
 	case *bc.Spend:
 		spentOutput := tx.Entries[*e.SpentOutputId].(*bc.IntraChainOutput)
@@ -147,19 +142,6 @@ func (ec *entryContext) checkOutput(index uint64, amount uint64, assetID []byte,
 	switch e := ec.entry.(type) {
 	case *bc.Mux:
 		return checkMux(e)
-
-	case *bc.Issuance:
-		d, ok := ec.entries[*e.WitnessDestination.Ref]
-		if !ok {
-			return false, errors.Wrapf(bc.ErrMissingEntry, "entry for issuance destination %x not found", e.WitnessDestination.Ref.Bytes())
-		}
-		if m, ok := d.(*bc.Mux); ok {
-			return checkMux(m)
-		}
-		if index != 0 {
-			return false, errors.Wrapf(vm.ErrBadValue, "index %d >= 1", index)
-		}
-		return checkEntry(d)
 
 	case *bc.Spend:
 		d, ok := ec.entries[*e.WitnessDestination.Ref]

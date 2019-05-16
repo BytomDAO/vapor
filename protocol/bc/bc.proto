@@ -31,11 +31,6 @@ message AssetAmount {
   uint64  amount   = 2;
 }
 
-message AssetDefinition {
-  Program issuance_program = 1;
-  Hash    data             = 2;
-}
-
 message ValueSource {
   Hash        ref      = 1;
   AssetAmount value    = 2;
@@ -109,15 +104,6 @@ message VoteOutput {
 message Retirement {
   ValueSource source   = 1;
   uint64      ordinal  = 2;
-}
-
-message Issuance {
-  Hash             nonce_hash               = 1;
-  AssetAmount      value                    = 2;
-  ValueDestination witness_destination      = 3;
-  AssetDefinition  witness_asset_definition = 4;
-  repeated bytes   witness_arguments        = 5;
-  uint64           ordinal                  = 6;
 }
 
 message Spend {

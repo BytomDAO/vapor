@@ -1,7 +1,6 @@
 package test
 
 import (
-	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -72,14 +71,6 @@ func (g *TxGenerator) createAccount(name string, keys []string, quorum int) erro
 	}
 	_, err := g.AccountManager.Create(xpubs, quorum, name, signers.BIP0044)
 	return err
-}
-
-func (g *TxGenerator) createAsset(accountAlias string, assetAlias string) (*asset.Asset, error) {
-	acc, err := g.AccountManager.FindByAlias(accountAlias)
-	if err != nil {
-		return nil, err
-	}
-	return g.Assets.Define(acc.XPubs, len(acc.XPubs), nil, 0, assetAlias, nil)
 }
 
 func (g *TxGenerator) mockUtxo(accountAlias, assetAlias string, amount uint64) (*account.UTXO, error) {
@@ -180,26 +171,6 @@ func (g *TxGenerator) AddTxInputFromUtxo(utxo *account.UTXO, accountAlias string
 		return err
 	}
 	return g.AddTxInput(txInput, signInst)
-}
-
-// AddIssuanceInput add a issue input
-func (g *TxGenerator) AddIssuanceInput(assetAlias string, amount uint64) error {
-	asset, err := g.Assets.FindByAlias(assetAlias)
-	if err != nil {
-		return err
-	}
-
-	var nonce [8]byte
-	_, err = rand.Read(nonce[:])
-	if err != nil {
-		return err
-	}
-	issuanceInput := types.NewIssuanceInput(nonce[:], amount, asset.IssuanceProgram, nil, asset.RawDefinitionByte)
-	signInstruction := &txbuilder.SigningInstruction{}
-	path := signers.GetBip0032Path(asset.Signer, signers.AssetKeySpace)
-	signInstruction.AddRawWitnessKeys(asset.Signer.XPubs, path, asset.Signer.Quorum)
-	g.Builder.RestrictMinTime(time.Now())
-	return g.Builder.AddInput(issuanceInput, signInstruction)
 }
 
 // AddTxOutput add a tx output

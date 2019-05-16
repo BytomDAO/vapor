@@ -149,15 +149,12 @@ func TestWalletUpdate(t *testing.T) {
 	controlProg.KeyIndex = 1
 
 	reg := asset.NewRegistry(testDB, chain)
-	asset, err := reg.Define([]chainkd.XPub{xpub1.XPub}, 1, nil, 0, "TESTASSET", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	asset := bc.AssetID{V0: 5}
 
 	utxos := []*account.UTXO{}
 	btmUtxo := mockUTXO(controlProg, consensus.BTMAssetID)
 	utxos = append(utxos, btmUtxo)
-	OtherUtxo := mockUTXO(controlProg, &asset.AssetID)
+	OtherUtxo := mockUTXO(controlProg, &asset)
 	utxos = append(utxos, OtherUtxo)
 
 	_, txData, err := mockTxData(utxos, testAccount)
@@ -293,15 +290,12 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 	controlProg.KeyIndex = 1
 
 	reg := asset.NewRegistry(testDB, chain)
-	asset, err := reg.Define([]chainkd.XPub{xpub1.XPub}, 1, nil, 0, "TESTASSET", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	asset := bc.AssetID{V0: 5}
 
 	utxos := []*account.UTXO{}
 	btmUtxo := mockUTXO(controlProg, consensus.BTMAssetID)
 	utxos = append(utxos, btmUtxo)
-	OtherUtxo := mockUTXO(controlProg, &asset.AssetID)
+	OtherUtxo := mockUTXO(controlProg, &asset)
 	utxos = append(utxos, OtherUtxo)
 
 	_, txData, err := mockTxData(utxos, testAccount)

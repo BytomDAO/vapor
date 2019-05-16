@@ -224,31 +224,18 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errors.Wrap(err, "checking output source")
 		}
 
+	case *bc.VoteOutput:
+		vs2 := *vs
+		vs2.sourcePos = 0
+		if err = checkValidSrc(&vs2, e.Source); err != nil {
+			return errors.Wrap(err, "checking output source")
+		}
+
 	case *bc.Retirement:
 		vs2 := *vs
 		vs2.sourcePos = 0
 		if err = checkValidSrc(&vs2, e.Source); err != nil {
 			return errors.Wrap(err, "checking retirement source")
-		}
-
-	case *bc.Issuance:
-		computedAssetID := e.WitnessAssetDefinition.ComputeAssetID()
-		if computedAssetID != *e.Value.AssetId {
-			return errors.WithDetailf(ErrMismatchedAssetID, "asset ID is %x, issuance wants %x", computedAssetID.Bytes(), e.Value.AssetId.Bytes())
-		}
-
-		gasLeft, err := vm.Verify(NewTxVMContext(vs, e, e.WitnessAssetDefinition.IssuanceProgram, e.WitnessArguments), vs.gasStatus.GasLeft)
-		if err != nil {
-			return errors.Wrap(err, "checking issuance program")
-		}
-		if err = vs.gasStatus.updateUsage(gasLeft); err != nil {
-			return err
-		}
-
-		destVS := *vs
-		destVS.destPos = 0
-		if err = checkValidDest(&destVS, e.WitnessDestination); err != nil {
-			return errors.Wrap(err, "checking issuance destination")
 		}
 
 	case *bc.Spend:
@@ -346,12 +333,6 @@ func checkValidSrc(vstate *validationState, vs *bc.ValueSource) error {
 		}
 		dest = ref.WitnessDestination
 
-	case *bc.Issuance:
-		if vs.Position != 0 {
-			return errors.Wrapf(ErrPosition, "invalid position %d for issuance source", vs.Position)
-		}
-		dest = ref.WitnessDestination
-
 	case *bc.Spend:
 		if vs.Position != 0 {
 			return errors.Wrapf(ErrPosition, "invalid position %d for spend source", vs.Position)
@@ -417,6 +398,12 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 		}
 		src = ref.Source
 
+	case *bc.VoteOutput:
+		if vd.Position != 0 {
+			return errors.Wrapf(ErrPosition, "invalid position %d for output destination", vd.Position)
+		}
+		src = ref.Source
+
 	case *bc.Retirement:
 		if vd.Position != 0 {
 			return errors.Wrapf(ErrPosition, "invalid position %d for retirement destination", vd.Position)
@@ -465,45 +452,24 @@ func checkStandardTx(tx *bc.Tx, blockHeight uint64) error {
 			continue
 		}
 
-		intraChainSpentOutput, err := tx.IntraChainOutput(*spend.SpentOutputId)
+		code := []byte{}
+		outputEntry, err := tx.Entry(*spend.SpentOutputId)
 		if err != nil {
 			return err
 		}
-
-		if !segwit.IsP2WScript(intraChainSpentOutput.ControlProgram.Code) {
-			return ErrNotStandardTx
-		}
-	}
-
-	for _, id := range tx.ResultIds {
-		e, ok := tx.Entries[*id]
-		if !ok {
-			return errors.Wrapf(bc.ErrMissingEntry, "id %x", id.Bytes())
-		}
-
-		var prog []byte
-		switch e := e.(type) {
+		switch output := outputEntry.(type) {
 		case *bc.IntraChainOutput:
-			if *e.Source.Value.AssetId != *consensus.BTMAssetID {
-				continue
-			}
-			prog = e.ControlProgram.Code
-
-		case *bc.CrossChainOutput:
-			if *e.Source.Value.AssetId != *consensus.BTMAssetID {
-				continue
-			}
-			prog = e.ControlProgram.Code
-
+			code = output.ControlProgram.Code
+		case *bc.VoteOutput:
+			code = output.ControlProgram.Code
 		default:
-			continue
+			return errors.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", id.Bytes(), outputEntry)
 		}
 
-		if !segwit.IsP2WScript(prog) {
+		if !segwit.IsP2WScript(code) {
 			return ErrNotStandardTx
 		}
 	}
-
 	return nil
 }
 
