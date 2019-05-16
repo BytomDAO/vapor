@@ -62,6 +62,9 @@ func (t *TxInput) AssetID() bc.AssetID {
 
 	case *SpendInput:
 		return *inp.AssetId
+
+	case *CrossChainInput:
+		return *inp.AssetAmount.AssetId
 	}
 	return bc.AssetID{}
 }
@@ -71,8 +74,12 @@ func (t *TxInput) Amount() uint64 {
 	switch inp := t.TypedInput.(type) {
 	case *IssuanceInput:
 		return inp.Amount
+
 	case *SpendInput:
 		return inp.Amount
+
+	case *CrossChainInput:
+		return inp.AssetAmount.Amount
 	}
 	return 0
 }
