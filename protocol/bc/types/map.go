@@ -98,6 +98,28 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 				Ref:   &coinbaseID,
 				Value: &value,
 			}
+
+		case *UnvoteInput:
+			// create entry for prevout
+			prog := &bc.Program{VmVersion: inp.VMVersion, Code: inp.ControlProgram}
+			src := &bc.ValueSource{
+				Ref:      &inp.SourceID,
+				Value:    &inp.AssetAmount,
+				Position: inp.SourcePosition,
+			}
+			prevout := bc.NewVoteOutput(src, prog, 0, inp.Vote) // ordinal doesn't matter for prevouts, only for result outputs
+			prevoutID := addEntry(prevout)
+			// create entry for spend
+			spend := bc.NewSpend(&prevoutID, uint64(i))
+			spend.WitnessArguments = inp.Arguments
+			spendID := addEntry(spend)
+			// setup mux
+			muxSources[i] = &bc.ValueSource{
+				Ref:   &spendID,
+				Value: &inp.AssetAmount,
+			}
+			spends = append(spends, spend)
+
 		}
 	}
 
