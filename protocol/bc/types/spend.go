@@ -6,7 +6,7 @@ import (
 
 // SpendInput satisfies the TypedInput interface and represents a spend transaction.
 type SpendInput struct {
-	SpendCommitmentSuffix []byte   // The unconsumed suffix of the output commitment
+	SpendCommitmentSuffix []byte   // The unconsumed suffix of the spend commitment
 	Arguments             [][]byte // Witness
 	SpendCommitment
 }

@@ -112,3 +112,12 @@ message Spend {
   repeated bytes   witness_arguments   = 3;
   uint64           ordinal             = 4;
 }
+
+message CrossChainInput {
+  Hash             mainchain_output_id = 1;
+  AssetAmount      value               = 2;
+  ValueDestination witness_destination = 3;
+  Program          control_program     = 4;
+  repeated bytes   witness_arguments   = 5;
+  uint64           ordinal             = 6;
+}
