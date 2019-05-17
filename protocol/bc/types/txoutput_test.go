@@ -106,6 +106,8 @@ func TestComputeOutputID(t *testing.T) {
 	btmAssetID := testutil.MustDecodeAsset("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
 	cases := []struct {
 		sc           *SpendCommitment
+		inputType    uint8
+		vote         []byte
 		wantOutputID string
 	}{
 		{
@@ -116,6 +118,8 @@ func TestComputeOutputID(t *testing.T) {
 				VMVersion:      1,
 				ControlProgram: testutil.MustDecodeHexString("0014cb9f2391bafe2bc1159b2c4c8a0f17ba1b4dd94e"),
 			},
+			inputType:    SpendInputType,
+			vote:         nil,
 			wantOutputID: "73eea4d38b22ffd60fc30d0941f3875f45e29d424227bfde100193a08568605b",
 		},
 		{
@@ -126,12 +130,38 @@ func TestComputeOutputID(t *testing.T) {
 				VMVersion:      1,
 				ControlProgram: testutil.MustDecodeHexString("001418549d84daf53344d32563830c7cf979dc19d5c0"),
 			},
+			inputType:    SpendInputType,
+			vote:         nil,
 			wantOutputID: "8371e76fd1c873503a326268bfd286ffe13009a0f1140d2c858e8187825696ab",
+		},
+		{
+			sc: &SpendCommitment{
+				AssetAmount:    bc.AssetAmount{AssetId: &btmAssetID, Amount: 999},
+				SourceID:       testutil.MustDecodeHash("993d3797fa3b2d958f300e599987dc10904b13f56ce89d158f60f9131424e0e2"),
+				SourcePosition: 2,
+				VMVersion:      1,
+				ControlProgram: testutil.MustDecodeHexString("00145c47f3a0dd3e1e9956fe5b0f897072ed33f9efb9"),
+			},
+			inputType:    UnvoteInputType,
+			vote:         []byte("af594006a40837d9f028daabb6d589df0b9138daefad5683e5233c2646279217294a8d532e60863bcf196625a35fb8ceeffa3c09610eb92dcfb655a947f13269"),
+			wantOutputID: "c95701822db14f5c647158762e4d4b9bff270bfd3040f0ca32cb87c18e377429",
+		},
+		{
+			sc: &SpendCommitment{
+				AssetAmount:    bc.AssetAmount{AssetId: &btmAssetID, Amount: 999},
+				SourceID:       testutil.MustDecodeHash("993d3797fa3b2d958f300e599987dc10904b13f56ce89d158f60f9131424e0e2"),
+				SourcePosition: 2,
+				VMVersion:      1,
+				ControlProgram: testutil.MustDecodeHexString("00145c47f3a0dd3e1e9956fe5b0f897072ed33f9efb9"),
+			},
+			inputType:    UnvoteInputType,
+			vote:         []byte(""),
+			wantOutputID: "8f17b871f3fd07bfe778e92c272e26d4bb19258c90af08310ef32feb526eaf9c",
 		},
 	}
 
 	for _, c := range cases {
-		outputID, err := ComputeOutputID(c.sc)
+		outputID, err := ComputeOutputID(c.sc, c.inputType, c.vote)
 		if err != nil {
 			t.Fatal(err)
 		}
