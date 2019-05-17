@@ -213,7 +213,7 @@ func (sw *Switch) AddBannedPeer(ip string) error {
 // NOTE: This performs a blocking handshake before the peer is added.
 // CONTRACT: If error is returned, peer is nil, and conn is immediately closed.
 func (sw *Switch) AddPeer(pc *peerConn, isLAN bool) error {
-	peerNodeInfo, err := pc.HandshakeTimeout(sw.nodeInfo, time.Duration(sw.peerConfig.HandshakeTimeout))
+	peerNodeInfo, err := pc.HandshakeTimeout(sw.nodeInfo, sw.peerConfig.HandshakeTimeout)
 	if err != nil {
 		return err
 	}
@@ -458,7 +458,7 @@ func (sw *Switch) filterConnByIP(ip string) error {
 }
 
 func (sw *Switch) filterConnByPeer(peer *Peer) error {
-	if err := sw.checkBannedPeer(peer.RemoteAddrHost()); err != nil {
+	if err := sw.checkBannedPeer(peer.remoteAddrHost()); err != nil {
 		return err
 	}
 
@@ -506,7 +506,7 @@ func (sw *Switch) dialPeerWorker(a *NetAddress, wg *sync.WaitGroup) {
 func (sw *Switch) dialPeers(addresses []*NetAddress) {
 	connectedPeers := make(map[string]struct{})
 	for _, peer := range sw.Peers().List() {
-		connectedPeers[peer.RemoteAddrHost()] = struct{}{}
+		connectedPeers[peer.remoteAddrHost()] = struct{}{}
 	}
 
 	var wg sync.WaitGroup

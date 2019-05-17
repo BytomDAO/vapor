@@ -72,14 +72,14 @@ func (info *NodeInfo) compatibleWith(other *NodeInfo, versionCompatibleWith Vers
 	return nil
 }
 
-//ListenHost peer listener ip address
+//listenHost peer listener ip address
 func (info NodeInfo) listenHost() string {
 	host, _, _ := net.SplitHostPort(info.ListenAddr)
 	return host
 }
 
-//RemoteAddrHost peer external ip address
-func (info NodeInfo) RemoteAddrHost() string {
+//remoteAddrHost peer external ip address
+func (info NodeInfo) remoteAddrHost() string {
 	host, _, _ := net.SplitHostPort(info.RemoteAddr)
 	return host
 }
