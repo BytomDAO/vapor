@@ -212,15 +212,17 @@ func (sw *Switch) AddBannedPeer(ip string) error {
 // NOTE: This performs a blocking handshake before the peer is added.
 // CONTRACT: If error is returned, peer is nil, and conn is immediately closed.
 func (sw *Switch) AddPeer(pc *peerConn, isLAN bool) error {
-	peerNodeInfo, err := pc.HandshakeTimeout(sw.nodeInfo, sw.peerConfig.HandshakeTimeout)
+	nodeInfo := sw.NodeInfo()
+	peerNodeInfo, err := pc.HandshakeTimeout(&nodeInfo, time.Duration(sw.peerConfig.HandshakeTimeout))
 	if err != nil {
 		return err
 	}
 
-	if err := version.Status.CheckUpdate(sw.nodeInfo.Version, peerNodeInfo.Version, peerNodeInfo.RemoteAddr); err != nil {
+	if err := version.Status.CheckUpdate(nodeInfo.Version, peerNodeInfo.Version, peerNodeInfo.RemoteAddr); err != nil {
 		return err
 	}
-	if err := sw.nodeInfo.CompatibleWith(peerNodeInfo); err != nil {
+
+	if err := nodeInfo.compatibleWith(peerNodeInfo, version.CompatibleWith); err != nil {
 		return err
 	}
 
@@ -338,8 +340,8 @@ func (sw *Switch) NumPeers() (lan, outbound, inbound, dialing int) {
 
 // NodeInfo returns the switch's NodeInfo.
 // NOTE: Not goroutine safe.
-func (sw *Switch) NodeInfo() *NodeInfo {
-	return sw.nodeInfo
+func (sw *Switch) NodeInfo() NodeInfo {
+	return *sw.nodeInfo
 }
 
 //Peers return switch peerset
@@ -455,18 +457,18 @@ func (sw *Switch) delBannedPeer(addr string) error {
 }
 
 func (sw *Switch) filterConnByIP(ip string) error {
-	if ip == sw.nodeInfo.listenHost() {
+	if ip == sw.NodeInfo().ListenHost() {
 		return ErrConnectSelf
 	}
 	return sw.checkBannedPeer(ip)
 }
 
 func (sw *Switch) filterConnByPeer(peer *Peer) error {
-	if err := sw.checkBannedPeer(peer.remoteAddrHost()); err != nil {
+	if err := sw.checkBannedPeer(peer.RemoteAddrHost()); err != nil {
 		return err
 	}
 
-	if sw.nodeInfo.getPubkey().Equals(peer.PubKey().Wrap()) {
+	if sw.NodeInfo().PubKey.Equals(peer.PubKey().Wrap()) {
 		return ErrConnectSelf
 	}
 
@@ -510,7 +512,7 @@ func (sw *Switch) dialPeerWorker(a *NetAddress, wg *sync.WaitGroup) {
 func (sw *Switch) dialPeers(addresses []*NetAddress) {
 	connectedPeers := make(map[string]struct{})
 	for _, peer := range sw.Peers().List() {
-		connectedPeers[peer.remoteAddrHost()] = struct{}{}
+		connectedPeers[peer.RemoteAddrHost()] = struct{}{}
 	}
 
 	var wg sync.WaitGroup

@@ -258,6 +258,6 @@ func (n *Node) RunForever() {
 	})
 }
 
-func (n *Node) NodeInfo() *p2p.NodeInfo {
+func (n *Node) NodeInfo() p2p.NodeInfo {
 	return n.syncManager.NodeInfo()
 }
