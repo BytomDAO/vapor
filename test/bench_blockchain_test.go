@@ -12,7 +12,7 @@ import (
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/consensus"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	vcrypto "github.com/vapor/crypto"
 	"github.com/vapor/database"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/database/storage"
@@ -380,7 +380,7 @@ func MockTxsP2PKH(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum int)
 	txs := []*types.Tx{}
 	for i := 0; i < txNumber; i++ {
 		testAccountAlias := fmt.Sprintf("testAccount%d", i)
-		testAccount, err := accountManager.Create([]chainkd.XPub{xpub.XPub}, 1, testAccountAlias, signers.BIP0044)
+		testAccount, err := accountManager.Create([]vcrypto.XPubKeyer{xpub.XPub}, 1, testAccountAlias, signers.BIP0044)
 		if err != nil {
 			return nil, err
 		}
@@ -427,7 +427,7 @@ func MockTxsP2SH(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum int) 
 	txs := []*types.Tx{}
 	for i := 0; i < txNumber; i++ {
 		testAccountAlias := fmt.Sprintf("testAccount%d", i)
-		testAccount, err := accountManager.Create([]chainkd.XPub{xpub1.XPub, xpub2.XPub}, 2, testAccountAlias, signers.BIP0044)
+		testAccount, err := accountManager.Create([]vcrypto.XPubKeyer{xpub1.XPub, xpub2.XPub}, 2, testAccountAlias, signers.BIP0044)
 		if err != nil {
 			return nil, err
 		}
@@ -473,7 +473,7 @@ func MockTxsMultiSign(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum 
 	txs := []*types.Tx{}
 	for i := 0; i < txNumber; i++ {
 		testAccountAlias := fmt.Sprintf("testAccount%d", i)
-		testAccount, err := accountManager.Create([]chainkd.XPub{xpub1.XPub, xpub2.XPub}, 2, testAccountAlias, signers.BIP0044)
+		testAccount, err := accountManager.Create([]vcrypto.XPubKeyer{xpub1.XPub, xpub2.XPub}, 2, testAccountAlias, signers.BIP0044)
 		if err != nil {
 			return nil, err
 		}

@@ -9,7 +9,7 @@ import (
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/csp"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/validation"
@@ -902,7 +902,7 @@ type signingInst struct {
 
 func mockCtrlProgram(txData types.TxData, insts []*signingInst) {
 	for i, input := range txData.Inputs {
-		_, xPubs := mustGetRootKeys(insts[i].rootPrvKeys)
+		_, xPubs := mustGetEdRootKeys(insts[i].rootPrvKeys)
 
 		switch inp := input.TypedInput.(type) {
 		case *types.SpendInput:
@@ -952,7 +952,7 @@ func mockSignTx(tx *types.Tx, insts []*signingInst) {
 				panic(err)
 			}
 
-			xPrvs, xPubs := mustGetRootKeys(inst.rootPrvKeys)
+			xPrvs, xPubs := mustGetEdRootKeys(inst.rootPrvKeys)
 			for _, xPrv := range xPrvs {
 				childPrv := xPrv.Derive(path)
 				sigHashBytes := tx.SigHash(uint32(i)).Byte32()
@@ -976,7 +976,7 @@ func mockSignTx(tx *types.Tx, insts []*signingInst) {
 			inp.Arguments = arguments
 		case *types.IssuanceInput:
 			path := signers.GetBip0032Path(&signers.Signer{KeyIndex: inst.keyIndex, DeriveRule: signers.BIP0032}, signers.AssetKeySpace)
-			xPrvs, _ := mustGetRootKeys(inst.rootPrvKeys)
+			xPrvs, _ := mustGetEdRootKeys(inst.rootPrvKeys)
 			for _, xPrv := range xPrvs {
 				childPrv := xPrv.Derive(path)
 				sigHashBytes := tx.SigHash(uint32(i)).Byte32()
@@ -987,9 +987,10 @@ func mockSignTx(tx *types.Tx, insts []*signingInst) {
 	}
 }
 
-func mustGetRootKeys(prvs []string) ([]chainkd.XPrv, []chainkd.XPub) {
-	xPubs := make([]chainkd.XPub, len(prvs))
-	xPrvs := make([]chainkd.XPrv, len(prvs))
+// must get ed25519 test keys
+func mustGetEdRootKeys(prvs []string) ([]edchainkd.XPrv, []edchainkd.XPub) {
+	xPubs := make([]edchainkd.XPub, len(prvs))
+	xPrvs := make([]edchainkd.XPrv, len(prvs))
 	for i, xPrv := range prvs {
 		xPrvBytes, err := hex.DecodeString(xPrv)
 		if err != nil {
@@ -1002,8 +1003,30 @@ func mustGetRootKeys(prvs []string) ([]chainkd.XPrv, []chainkd.XPub) {
 
 		var dest [64]byte
 		copy(dest[:], xPrv)
-		xPrvs[i] = chainkd.XPrv(dest)
+		xPrvs[i] = edchainkd.XPrv(dest)
 		xPubs[i] = xPrvs[i].XPub()
 	}
 	return xPrvs, xPubs
 }
+
+// TODO: must get sm2 test keys
+// func mustGetEdRootKeys(prvs []string) ([]edchainkd.XPrv, []edchainkd.XPub) {
+// 	xPubs := make([]edchainkd.XPub, len(prvs))
+// 	xPrvs := make([]edchainkd.XPrv, len(prvs))
+// 	for i, xPrv := range prvs {
+// 		xPrvBytes, err := hex.DecodeString(xPrv)
+// 		if err != nil {
+// 			panic(err)
+// 		}
+
+// 		if len(xPrvBytes) != 64 {
+// 			panic("the size of xPrv must 64")
+// 		}
+
+// 		var dest [64]byte
+// 		copy(dest[:], xPrv)
+// 		xPrvs[i] = edchainkd.XPrv(dest)
+// 		xPubs[i] = xPrvs[i].XPub()
+// 	}
+// 	return xPrvs, xPubs
+// }

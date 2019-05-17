@@ -19,6 +19,7 @@ import (
 	"github.com/vapor/crypto"
 	"github.com/vapor/crypto/csp"
 	"github.com/vapor/crypto/ed25519"
+	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/crypto/sha3pool"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
@@ -705,11 +706,17 @@ func createP2SH(account *Account, path [][]byte) (*CtrlProgram, error) {
 func GetAccountIndexKey(xpubs []crypto.XPubKeyer) []byte {
 	var hash [32]byte
 	var xPubs []byte
-	cpy := append([]crypto.XPubKeyer{}, xpubs[:]...)
-	// switch
-	sort.Sort(signers.EdSortKeys(cpy))
-	for _, xpub := range cpy {
-		xPubs = append(xPubs, xpub[:]...)
+	switch xpbs := xpubs[0].(type) {
+	case edchainkd.XPub:
+		// for i := 0; i < len(xpubs); i++ {
+
+		// }
+		cpy := append([]edchainkd.XPub{}, xpubs[:]...)
+
+		sort.Sort(signers.EdSortKeys(cpy))
+		for _, xpub := range cpy {
+			xPubs = append(xPubs, xpub[:]...)
+		}
 	}
 	sha3pool.Sum256(hash[:], xPubs)
 	return append(accountIndexPrefix, hash[:]...)

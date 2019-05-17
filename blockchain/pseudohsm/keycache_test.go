@@ -13,7 +13,6 @@ import (
 
 	"github.com/cespare/cp"
 	"github.com/davecgh/go-spew/spew"
-	vcrypto "github.com/vapor/crypto"
 	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 )
 
@@ -287,7 +286,7 @@ func tmpManager(t *testing.T) (string, *keyCache) {
 	return d, newKeyCache(d)
 }
 
-func tmpEdPubkeys(t *testing.T, r *rand.Rand) vcrypto.XPubKeyer {
+func tmpEdPubkeys(t *testing.T, r *rand.Rand) edchainkd.XPub {
 
 	var xpub edchainkd.XPub
 	pick := "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"

@@ -4,7 +4,8 @@ import (
 	"fmt"
 
 	cfg "github.com/vapor/config"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	vcrypto "github.com/vapor/crypto"
+	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/util"
 )
 
@@ -52,14 +53,15 @@ func testKey() bool {
 	}
 
 	fmt.Println("dataMap", dataMap)
-	xpub := new(chainkd.XPub)
+	// TODO: it will adapt sm2
+	xpub := new(edchainkd.XPub)
 	if err := xpub.UnmarshalText([]byte(dataMap["xpub"].(string))); err != nil {
 		return false
 	}
 
 	var key1 = struct {
 		Password string
-		XPub     chainkd.XPub `json:"xpubs"`
+		XPub     vcrypto.XPubKeyer `json:"xpubs"`
 	}{XPub: *xpub, Password: "123456"}
 
 	if _, exitCode := util.ClientCall("/delete-key", &key1); exitCode != util.Success {

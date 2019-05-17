@@ -10,7 +10,7 @@ import (
 
 	"github.com/vapor/account"
 	"github.com/vapor/blockchain/signers"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	vcrypto "github.com/vapor/crypto"
 	"github.com/vapor/crypto/sha3pool"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
@@ -130,7 +130,7 @@ func newAddressRecoveryState(recoveryWindow uint64, account *account.Account) *a
 // recoveryState used to record the status of a recovery process.
 type recoveryState struct {
 	// XPubs recovery account xPubs
-	XPubs []chainkd.XPub
+	XPubs []vcrypto.XPubKeyer
 
 	// The time to start the recovery task, used to detemine whether
 	// recovery task is completed.
@@ -224,7 +224,7 @@ func (m *recoveryManager) AddrResurrect(accts []*account.Account) error {
 	return nil
 }
 
-func (m *recoveryManager) AcctResurrect(xPubs []chainkd.XPub) error {
+func (m *recoveryManager) AcctResurrect(xPubs []vcrypto.XPubKeyer) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -258,7 +258,7 @@ func (m *recoveryManager) commitStatusInfo() error {
 	return nil
 }
 
-func genAcctAlias(xPubs []chainkd.XPub, index uint64) string {
+func genAcctAlias(xPubs []vcrypto.XPubKeyer, index uint64) string {
 	var tmp []byte
 	for _, xPub := range xPubs {
 		tmp = append(tmp, xPub[:6]...)

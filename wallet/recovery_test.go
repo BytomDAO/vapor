@@ -15,7 +15,7 @@ import (
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/common"
 	"github.com/vapor/consensus"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	vcrypto "github.com/vapor/crypto"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
@@ -83,7 +83,7 @@ func CreateTxBuilder(baseUtxo *account.UTXO, signer *signers.Signer) (*txbuilder
 	return tplBuilder, nil
 }
 
-func MockTxsP2PKH(acctMgr *account.Manager, xPub chainkd.XPub, multiTypeAccount bool) ([]*types.Tx, error) {
+func MockTxsP2PKH(acctMgr *account.Manager, xPub vcrypto.XPubKeyer, multiTypeAccount bool) ([]*types.Tx, error) {
 	txs := []*types.Tx{}
 	accts := []*account.Account{}
 	for i := uint32(1); i < 32; i = i + 1 + rand.Uint32()%5 {
@@ -92,7 +92,7 @@ func MockTxsP2PKH(acctMgr *account.Manager, xPub chainkd.XPub, multiTypeAccount 
 		if multiTypeAccount {
 			deriveRule = uint8(rand.Uint32() % 2)
 		}
-		acct, err := account.CreateAccount([]chainkd.XPub{xPub}, 1, alias, uint64(i), deriveRule)
+		acct, err := account.CreateAccount([]vcrypto.XPubKeyer{xPub}, 1, alias, uint64(i), deriveRule)
 		if err != nil {
 			return nil, err
 		}
@@ -149,17 +149,17 @@ func TestXPubsRecoveryLock(t *testing.T) {
 	acctMgr := account.NewManager(testDB, nil)
 	recoveryMgr := newRecoveryManager(testDB, acctMgr)
 	recoveryMgr.state = newRecoveryState()
-	recoveryMgr.state.XPubs = []chainkd.XPub{xpub.XPub}
+	recoveryMgr.state.XPubs = []vcrypto.XPubKeyer{xpub.XPub}
 	recoveryMgr.state.XPubsStatus = newBranchRecoveryState(acctRecoveryWindow)
 
 	recoveryMgr.state.StartTime = time.Now()
 	recoveryMgr.commitStatusInfo()
 
-	if err := recoveryMgr.AcctResurrect([]chainkd.XPub{xpub.XPub}); err != nil {
+	if err := recoveryMgr.AcctResurrect([]vcrypto.XPubKeyer{xpub.XPub}); err != nil {
 		t.Fatal("TestXPubsRecoveryLock err:", err)
 	}
 
-	if err := recoveryMgr.AcctResurrect([]chainkd.XPub{xpub.XPub}); err != errors.Root(ErrRecoveryBusy) {
+	if err := recoveryMgr.AcctResurrect([]vcrypto.XPubKeyer{xpub.XPub}); err != errors.Root(ErrRecoveryBusy) {
 		t.Fatal("TestXPubsRecoveryLock err:", err)
 	}
 
@@ -172,7 +172,7 @@ func TestXPubsRecoveryLock(t *testing.T) {
 		t.Fatal("TestXPubsRecoveryLock err:", err)
 	}
 	recoveryMgr.finished()
-	if err := recoveryMgr.AcctResurrect([]chainkd.XPub{xpub.XPub}); err != nil {
+	if err := recoveryMgr.AcctResurrect([]vcrypto.XPubKeyer{xpub.XPub}); err != nil {
 		t.Fatal("TestXPubsRecoveryLock err:", err)
 	}
 }
@@ -197,10 +197,10 @@ func TestExtendScanAddresses(t *testing.T) {
 
 	acctMgr := account.NewManager(testDB, nil)
 	recoveryMgr := newRecoveryManager(testDB, acctMgr)
-	acc1 := &account.Account{ID: "testA", Alias: "test1", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub.XPub}, KeyIndex: 1, DeriveRule: signers.BIP0044}}
+	acc1 := &account.Account{ID: "testA", Alias: "test1", Signer: &signers.Signer{XPubs: []vcrypto.XPubKeyer{xpub.XPub}, KeyIndex: 1, DeriveRule: signers.BIP0044}}
 	acc2 := &account.Account{ID: "testB", Alias: "test2"}
-	acc3 := &account.Account{ID: "testC", Alias: "test3", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub.XPub}, KeyIndex: 2, DeriveRule: 3}}
-	acc4 := &account.Account{ID: "testD", Alias: "test4", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub.XPub}, KeyIndex: 3, DeriveRule: signers.BIP0032}}
+	acc3 := &account.Account{ID: "testC", Alias: "test3", Signer: &signers.Signer{XPubs: []vcrypto.XPubKeyer{xpub.XPub}, KeyIndex: 2, DeriveRule: 3}}
+	acc4 := &account.Account{ID: "testD", Alias: "test4", Signer: &signers.Signer{XPubs: []vcrypto.XPubKeyer{xpub.XPub}, KeyIndex: 3, DeriveRule: signers.BIP0032}}
 
 	recoveryMgr.state.stateForScope(acc1)
 	recoveryMgr.state.stateForScope(acc3)
@@ -257,12 +257,12 @@ func TestRecoveryFromXPubs(t *testing.T) {
 	recoveryMgr := newRecoveryManager(recoveryDB, recAcctMgr)
 
 	cases := []struct {
-		xPubs []chainkd.XPub
+		xPubs []vcrypto.XPubKeyer
 		err   error
 	}{
-		{[]chainkd.XPub{xpub.XPub}, nil},
-		{[]chainkd.XPub{xpub.XPub, xpub.XPub}, signers.ErrDupeXPub},
-		{[]chainkd.XPub{}, signers.ErrNoXPubs},
+		{[]vcrypto.XPubKeyer{xpub.XPub}, nil},
+		{[]vcrypto.XPubKeyer{xpub.XPub, xpub.XPub}, signers.ErrDupeXPub},
+		{[]vcrypto.XPubKeyer{}, signers.ErrNoXPubs},
 	}
 
 	for _, c := range cases {
@@ -345,7 +345,7 @@ func TestRecoveryByRescanAccount(t *testing.T) {
 
 	recoveryMgr := newRecoveryManager(recoveryDB, recAcctMgr)
 
-	acct := &account.Account{ID: "testA", Alias: "test1", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub.XPub}, KeyIndex: 1, DeriveRule: 3}}
+	acct := &account.Account{ID: "testA", Alias: "test1", Signer: &signers.Signer{XPubs: []vcrypto.XPubKeyer{xpub.XPub}, KeyIndex: 1, DeriveRule: 3}}
 
 	cases := []struct {
 		accounts []*account.Account
@@ -420,9 +420,9 @@ func TestReportFound(t *testing.T) {
 
 	acctMgr := account.NewManager(testDB, nil)
 	recoveryMgr := newRecoveryManager(testDB, acctMgr)
-	acc1 := &account.Account{ID: "testA", Alias: "test1", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub1.XPub}, KeyIndex: 1, DeriveRule: signers.BIP0044}}
-	acc2 := &account.Account{ID: "testB", Alias: "test2", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub2.XPub}, KeyIndex: 1, DeriveRule: signers.BIP0032}}
-	acc3 := &account.Account{ID: "testC", Alias: "test3", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub2.XPub}, KeyIndex: 2, DeriveRule: signers.BIP0044}}
+	acc1 := &account.Account{ID: "testA", Alias: "test1", Signer: &signers.Signer{XPubs: []vcrypto.XPubKeyer{xpub1.XPub}, KeyIndex: 1, DeriveRule: signers.BIP0044}}
+	acc2 := &account.Account{ID: "testB", Alias: "test2", Signer: &signers.Signer{XPubs: []vcrypto.XPubKeyer{xpub2.XPub}, KeyIndex: 1, DeriveRule: signers.BIP0032}}
+	acc3 := &account.Account{ID: "testC", Alias: "test3", Signer: &signers.Signer{XPubs: []vcrypto.XPubKeyer{xpub2.XPub}, KeyIndex: 2, DeriveRule: signers.BIP0044}}
 
 	cp1 := &account.CtrlProgram{AccountID: acc1.ID, Address: "address1", KeyIndex: 10, Change: false}
 	cp2 := &account.CtrlProgram{AccountID: acc1.ID, Address: "address1", KeyIndex: 20, Change: true}
@@ -440,7 +440,7 @@ func TestReportFound(t *testing.T) {
 	}
 
 	recoveryMgr.state.XPubsStatus = newBranchRecoveryState(acctRecoveryWindow)
-	recoveryMgr.state.XPubs = []chainkd.XPub{xpub1.XPub}
+	recoveryMgr.state.XPubs = []vcrypto.XPubKeyer{xpub1.XPub}
 	recoveryMgr.state.stateForScope(acc1)
 	recoveryMgr.state.stateForScope(acc2)
 	recoveryMgr.state.stateForScope(acc3)
@@ -506,7 +506,7 @@ func TestLoadStatusInfo(t *testing.T) {
 	recoveryMgr := newRecoveryManager(testDB, acctMgr)
 	// StatusInit init recovery status manager.
 	recoveryMgr.state = newRecoveryState()
-	recoveryMgr.state.XPubs = []chainkd.XPub{xpub.XPub}
+	recoveryMgr.state.XPubs = []vcrypto.XPubKeyer{xpub.XPub}
 	recoveryMgr.state.XPubsStatus = newBranchRecoveryState(acctRecoveryWindow)
 
 	recoveryMgr.state.StartTime = time.Now()
@@ -537,7 +537,7 @@ func TestLoadStatusInfo(t *testing.T) {
 		t.Fatalf("TestLoadStatusInfo StartTime reload err")
 	}
 
-	acct := &account.Account{ID: "testA", Alias: "test1", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub.XPub}, KeyIndex: 1, DeriveRule: 3}}
+	acct := &account.Account{ID: "testA", Alias: "test1", Signer: &signers.Signer{XPubs: []vcrypto.XPubKeyer{xpub.XPub}, KeyIndex: 1, DeriveRule: 3}}
 	recoveryMgr.state.AccountsStatus[acct.ID] = newAddressRecoveryState(addrRecoveryWindow, acct)
 	if err := recoveryMgr.commitStatusInfo(); err != nil {
 		t.Fatal("TestLoadStatusInfo err:", err)
@@ -635,7 +635,7 @@ func TestContractIndexResidue(t *testing.T) {
 	contractIndexResidue := uint64(5)
 	acctMgr := account.NewManager(testDB, nil)
 	recoveryMgr := newRecoveryManager(testDB, acctMgr)
-	acct := &account.Account{ID: "testA", Alias: "test1", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub1.XPub}, KeyIndex: 1, DeriveRule: signers.BIP0044}}
+	acct := &account.Account{ID: "testA", Alias: "test1", Signer: &signers.Signer{XPubs: []vcrypto.XPubKeyer{xpub1.XPub}, KeyIndex: 1, DeriveRule: signers.BIP0044}}
 
 	cp1 := &account.CtrlProgram{AccountID: acct.ID, Address: "address1", KeyIndex: 10, Change: false}
 
@@ -648,7 +648,7 @@ func TestContractIndexResidue(t *testing.T) {
 	}
 
 	recoveryMgr.state.XPubsStatus = newBranchRecoveryState(acctRecoveryWindow)
-	recoveryMgr.state.XPubs = []chainkd.XPub{xpub1.XPub}
+	recoveryMgr.state.XPubs = []vcrypto.XPubKeyer{xpub1.XPub}
 	recoveryMgr.state.stateForScope(acct)
 
 	cases := []struct {

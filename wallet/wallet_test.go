@@ -15,7 +15,7 @@ import (
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/config"
 	"github.com/vapor/consensus"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	vcrypto "github.com/vapor/crypto"
 	"github.com/vapor/database"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/event"
@@ -136,7 +136,7 @@ func TestWalletUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testAccount, err := accountManager.Create([]chainkd.XPub{xpub1.XPub}, 1, "testAccount", signers.BIP0044)
+	testAccount, err := accountManager.Create([]vcrypto.XPubKeyer{xpub1.XPub}, 1, "testAccount", signers.BIP0044)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +149,7 @@ func TestWalletUpdate(t *testing.T) {
 	controlProg.KeyIndex = 1
 
 	reg := asset.NewRegistry(testDB, chain)
-	asset, err := reg.Define([]chainkd.XPub{xpub1.XPub}, 1, nil, 0, "TESTASSET", nil)
+	asset, err := reg.Define([]vcrypto.XPubKeyer{xpub1.XPub}, 1, nil, 0, "TESTASSET", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -280,7 +280,7 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testAccount, err := accountManager.Create([]chainkd.XPub{xpub1.XPub}, 1, "testAccount", signers.BIP0044)
+	testAccount, err := accountManager.Create([]vcrypto.XPubKeyer{xpub1.XPub}, 1, "testAccount", signers.BIP0044)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -293,7 +293,7 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 	controlProg.KeyIndex = 1
 
 	reg := asset.NewRegistry(testDB, chain)
-	asset, err := reg.Define([]chainkd.XPub{xpub1.XPub}, 1, nil, 0, "TESTASSET", nil)
+	asset, err := reg.Define([]vcrypto.XPubKeyer{xpub1.XPub}, 1, nil, 0, "TESTASSET", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

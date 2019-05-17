@@ -9,7 +9,7 @@ import (
 	"github.com/vapor/account"
 	"github.com/vapor/blockchain/pseudohsm"
 	"github.com/vapor/blockchain/signers"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	vcrypto "github.com/vapor/crypto"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/validation"
@@ -42,7 +42,7 @@ func TestP2PKH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testAccount, err := accountManager.Create([]chainkd.XPub{xpub.XPub}, 1, "testAccount", signers.BIP0044)
+	testAccount, err := accountManager.Create([]vcrypto.XPubKeyer{xpub.XPub}, 1, "testAccount", signers.BIP0044)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,12 +93,12 @@ func TestBip0032P2PKH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testAccount, err := accountManager.Create([]chainkd.XPub{xpub.XPub}, 1, "testAccount1", signers.BIP0044)
+	testAccount, err := accountManager.Create([]vcrypto.XPubKeyer{xpub.XPub}, 1, "testAccount1", signers.BIP0044)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	signer, err := signers.Create("account", []chainkd.XPub{xpub.XPub}, 1, 2, signers.BIP0032)
+	signer, err := signers.Create("account", []vcrypto.XPubKeyer{xpub.XPub}, 1, 2, signers.BIP0032)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +162,7 @@ func TestP2SH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testAccount, err := accountManager.Create([]chainkd.XPub{xpub1.XPub, xpub2.XPub}, 2, "testAccount", signers.BIP0044)
+	testAccount, err := accountManager.Create([]vcrypto.XPubKeyer{xpub1.XPub, xpub2.XPub}, 2, "testAccount", signers.BIP0044)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -223,11 +223,11 @@ func TestBip0032P2SH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testAccount, err := accountManager.Create([]chainkd.XPub{xpub1.XPub, xpub2.XPub}, 2, "testAccount", signers.BIP0044)
+	testAccount, err := accountManager.Create([]vcrypto.XPubKeyer{xpub1.XPub, xpub2.XPub}, 2, "testAccount", signers.BIP0044)
 	if err != nil {
 		t.Fatal(err)
 	}
-	signer, err := signers.Create("account", []chainkd.XPub{xpub1.XPub, xpub2.XPub}, 2, 2, signers.BIP0032)
+	signer, err := signers.Create("account", []vcrypto.XPubKeyer{xpub1.XPub, xpub2.XPub}, 2, 2, signers.BIP0032)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -296,7 +296,7 @@ func TestMutilNodeSign(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testAccount, err := accountManager.Create([]chainkd.XPub{xpub1.XPub, xpub2.XPub}, 2, "testAccount", signers.BIP0044)
+	testAccount, err := accountManager.Create([]vcrypto.XPubKeyer{xpub1.XPub, xpub2.XPub}, 2, "testAccount", signers.BIP0044)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -367,12 +367,12 @@ func TestBip0032MutilNodeSign(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testAccount, err := accountManager.Create([]chainkd.XPub{xpub1.XPub, xpub2.XPub}, 2, "testAccount", signers.BIP0044)
+	testAccount, err := accountManager.Create([]vcrypto.XPubKeyer{xpub1.XPub, xpub2.XPub}, 2, "testAccount", signers.BIP0044)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	signer, err := signers.Create("account", []chainkd.XPub{xpub1.XPub, xpub2.XPub}, 2, 2, signers.BIP0032)
+	signer, err := signers.Create("account", []vcrypto.XPubKeyer{xpub1.XPub, xpub2.XPub}, 2, 2, signers.BIP0032)
 	if err != nil {
 		t.Fatal(err)
 	}

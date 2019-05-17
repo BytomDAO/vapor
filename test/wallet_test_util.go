@@ -11,7 +11,7 @@ import (
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/pseudohsm"
 	"github.com/vapor/blockchain/signers"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/event"
 	"github.com/vapor/protocol"
@@ -138,7 +138,8 @@ func (ctx *walletTestContext) createControlProgram(accountName string, change bo
 	return ctx.Wallet.AccountMgr.CreateAddress(acc.ID, change)
 }
 
-func (ctx *walletTestContext) getPubkey(keyAlias string) *chainkd.XPub {
+func (ctx *walletTestContext) getPubkey(keyAlias string) *edchainkd.XPub {
+	// TODO: it will adapt sm2 test util
 	pubKeys := ctx.Wallet.Hsm.ListKeys()
 	for i, key := range pubKeys {
 		if key.Alias == keyAlias {
@@ -170,7 +171,8 @@ func (ctx *walletTestContext) createKey(name string, password string) error {
 }
 
 func (ctx *walletTestContext) createAccount(name string, keys []string, quorum int) error {
-	xpubs := []chainkd.XPub{}
+	// TODO: it will adapt sm2 test util
+	xpubs := []edchainkd.XPub{}
 	for _, alias := range keys {
 		xpub := ctx.getPubkey(alias)
 		if xpub == nil {
