@@ -9,12 +9,13 @@ type CrossChainInput struct {
 	SpendCommitmentSuffix []byte   // The unconsumed suffix of the spend commitment
 	Arguments             [][]byte // Witness
 	SpendCommitment
+	AssetDefinition []byte
 }
 
 // NewCrossChainInput create a new CrossChainInput struct.
 // The source is created/issued by trusted federation and hence there is no need
 // to refer to it.
-func NewCrossChainInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amount, sourcePos uint64, controlProgram []byte) *TxInput {
+func NewCrossChainInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amount, sourcePos uint64, controlProgram, assetDefinition []byte) *TxInput {
 	sc := SpendCommitment{
 		AssetAmount: bc.AssetAmount{
 			AssetId: &assetID,
@@ -27,9 +28,10 @@ func NewCrossChainInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID
 	}
 	return &TxInput{
 		AssetVersion: 1,
-		TypedInput: &SpendInput{
+		TypedInput: &CrossChainInput{
 			SpendCommitment: sc,
 			Arguments:       arguments,
+			AssetDefinition: assetDefinition,
 		},
 	}
 }
