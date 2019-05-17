@@ -107,7 +107,15 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			}
 
 		case *CrossChainInput:
-			crossIn := bc.NewCrossChainInput(&inp.SourceID, &inp.AssetAmount, uint64(i))
+			prog := &bc.Program{VmVersion: inp.VMVersion, Code: inp.ControlProgram}
+			src := &bc.ValueSource{
+				Ref:      &inp.SourceID,
+				Value:    &inp.AssetAmount,
+				Position: inp.SourcePosition,
+			}
+			prevout := bc.NewCrossChainOutput(src, prog, 0) // ordinal doesn't matter
+			outputID := bc.EntryID(prevout)
+			crossIn := bc.NewCrossChainInput(&outputID, &inp.AssetAmount, uint64(i))
 			crossIn.WitnessArguments = inp.Arguments
 			crossInID := addEntry(crossIn)
 			muxSources[i] = &bc.ValueSource{
