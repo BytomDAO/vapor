@@ -109,6 +109,10 @@ func newSyncManager(config *cfg.Config, sw Switch, chain Chain, txPool *core.TxP
 	return manager, nil
 }
 
+func (sm *SyncManager) AddPeer(peer BasePeer) {
+	sm.peers.addPeer(peer)
+}
+
 //BestPeer return the highest p2p peerInfo
 func (sm *SyncManager) BestPeer() *PeerInfo {
 	bestPeer := sm.peers.bestPeer(consensus.SFFullNode)
@@ -303,32 +307,11 @@ func (sm *SyncManager) handleMineBlockMsg(peer *peer, msg *MineBlockMessage) {
 	peer.setStatus(block.Height, &hash)
 }
 
-func (sm *SyncManager) handleStatusRequestMsg(peer BasePeer) {
-	bestHeader := sm.chain.BestBlockHeader()
-	genesisBlock, err := sm.chain.GetBlockByHeight(0)
-	if err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on handleStatusRequestMsg get genesis")
-	}
-
-	genesisHash := genesisBlock.Hash()
-	msg := NewStatusResponseMessage(bestHeader, &genesisHash)
-	if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
-		sm.peers.removePeer(peer.ID())
-	}
-}
-
-func (sm *SyncManager) handleStatusResponseMsg(basePeer BasePeer, msg *StatusResponseMessage) {
+func (sm *SyncManager) handleStatusMsg(basePeer BasePeer, msg *StatusMessage) {
 	if peer := sm.peers.getPeer(basePeer.ID()); peer != nil {
 		peer.setStatus(msg.Height, msg.GetHash())
 		return
 	}
-
-	if genesisHash := msg.GetGenesisHash(); sm.genesisHash != *genesisHash {
-		log.WithFields(log.Fields{"module": logModule, "remote genesis": genesisHash.String(), "local genesis": sm.genesisHash.String()}).Warn("fail hand shake due to differnt genesis")
-		return
-	}
-
-	sm.peers.addPeer(basePeer, msg.Height, msg.GetHash())
 }
 
 func (sm *SyncManager) handleTransactionMsg(peer *peer, msg *TransactionMessage) {
@@ -363,7 +346,7 @@ func (sm *SyncManager) PeerCount() int {
 
 func (sm *SyncManager) processMsg(basePeer BasePeer, msgType byte, msg BlockchainMessage) {
 	peer := sm.peers.getPeer(basePeer.ID())
-	if peer == nil && msgType != StatusResponseByte && msgType != StatusRequestByte {
+	if peer == nil {
 		return
 	}
 
@@ -381,11 +364,8 @@ func (sm *SyncManager) processMsg(basePeer BasePeer, msgType byte, msg Blockchai
 	case *BlockMessage:
 		sm.handleBlockMsg(peer, msg)
 
-	case *StatusRequestMessage:
-		sm.handleStatusRequestMsg(basePeer)
-
-	case *StatusResponseMessage:
-		sm.handleStatusResponseMsg(basePeer, msg)
+	case *StatusMessage:
+		sm.handleStatusMsg(basePeer, msg)
 
 	case *TransactionMessage:
 		sm.handleTransactionMsg(peer, msg)
@@ -424,6 +404,19 @@ func (sm *SyncManager) processMsg(basePeer BasePeer, msgType byte, msg Blockchai
 			"message_type": reflect.TypeOf(msg),
 		}).Error("unhandled message type")
 	}
+}
+
+func (sm *SyncManager) SendStatus(peer BasePeer) error {
+	p := sm.peers.getPeer(peer.ID())
+	if p == nil {
+		return errors.New("invalid peer")
+	}
+
+	if err := p.sendStatus(sm.chain.BestBlockHeader()); err != nil {
+		sm.peers.removePeer(p.ID())
+		return err
+	}
+	return nil
 }
 
 func (sm *SyncManager) Start() error {
