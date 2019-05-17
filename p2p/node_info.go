@@ -3,6 +3,7 @@ package p2p
 import (
 	"fmt"
 	"net"
+
 	"github.com/tendermint/go-crypto"
 
 	cfg "github.com/vapor/config"
@@ -71,10 +72,6 @@ func (info *NodeInfo) compatibleWith(other *NodeInfo, versionCompatibleWith Vers
 	return nil
 }
 
-func (info *NodeInfo) getPubkey() crypto.PubKeyEd25519 {
-	return info.PubKey
-}
-
 //ListenHost peer listener ip address
 func (info NodeInfo) ListenHost() string {
 	host, _, _ := net.SplitHostPort(info.ListenAddr)
@@ -85,11 +82,6 @@ func (info NodeInfo) ListenHost() string {
 func (info NodeInfo) RemoteAddrHost() string {
 	host, _, _ := net.SplitHostPort(info.RemoteAddr)
 	return host
-}
-
-//GetNetwork get node info network field
-func (info *NodeInfo) GetNetwork() string {
-	return info.Network
 }
 
 //String representation
