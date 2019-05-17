@@ -107,7 +107,7 @@ func (b *bbft) AppendBlock(block *types.Block) error {
 	}
 
 	voteResult.LastBlockHeight++
-	voteResult.Finalized = block.Height % roundVoteBlockNums == 0
+	voteResult.Finalized = (block.Height + 1) % roundVoteBlockNums == 0
 	return store.SaveVoteResult(voteResult)
 }
 
@@ -151,7 +151,7 @@ func (b *bbft) ValidateBlock(block *types.Block, parent *state.BlockNode) (uint6
 	}
 
 	if signNum == 0 {
-		return 0, errors.New("invalid block, no valid signature")
+		return 0, errors.New("no valid signature")
 	}
 
 	if err := validation.ValidateBlock(types.MapBlock(block), parent); err != nil {
@@ -169,8 +169,7 @@ func (b *bbft) ValidateBlock(block *types.Block, parent *state.BlockNode) (uint6
 // if some signature is invalid, they will be reset to nil
 func (b *bbft) validateSign(block *types.Block) (uint64, error) {
 	var correctSignNum uint64
-	blockHeight := block.Height
-	consensusNodeMap, err := b.consensusNodeManager.getConsensusNodesByVoteResult(blockHeight / roundVoteBlockNums)
+	consensusNodeMap, err := b.consensusNodeManager.getConsensusNodesByVoteResult(block.Height)
 	if err != nil {
 		return 0, err
 	}

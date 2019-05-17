@@ -55,7 +55,7 @@ func (c *consensusNodeManager) getConsensusNode(height uint64, pubkey []byte) (*
 	consensusNodeMap := c.consensusNodeMap
 	// query history vote result
 	if height < c.effectiveStartHeight {
-		consensusNodeMap, err = c.getConsensusNodesByVoteResult(height / roundVoteBlockNums)
+		consensusNodeMap, err = c.getConsensusNodesByVoteResult(height)
 		if err != nil {
 			return nil, err
 		}
@@ -66,31 +66,41 @@ func (c *consensusNodeManager) getConsensusNode(height uint64, pubkey []byte) (*
 }
 
 // UpdateConsensusNodes used to update consensus node after each round of voting
-func (c *consensusNodeManager) UpdateConsensusNodes(voteSeq uint64) error {
+func (c *consensusNodeManager) UpdateConsensusNodes(blockHeight uint64) error {
 	defer c.Unlock()
 	c.Lock()
-	if voteSeq <= c.effectiveStartHeight / roundVoteBlockNums {
+	if blockHeight <= c.effectiveStartHeight {
 		return nil
 	}
 
-	consensusNodeMap, err := c.getConsensusNodesByVoteResult(voteSeq)
+	consensusNodeMap, err := c.getConsensusNodesByVoteResult(blockHeight)
 	if err != nil {
 		return err
 	}
 
 	c.consensusNodeMap = consensusNodeMap
-	c.effectiveStartHeight = voteSeq * roundVoteBlockNums
+	c.effectiveStartHeight = blockHeight / roundVoteBlockNums * roundVoteBlockNums
 	return nil
 }
 
-func (c *consensusNodeManager) getConsensusNodesByVoteResult(voteSeq uint64) (map[string]*consensusNode, error) {
-	voteResult, err := c.store.GetVoteResult(voteSeq)
+func (c *consensusNodeManager) getConsensusNodesByVoteResult(blockHeight uint64) (map[string]*consensusNode, error) {
+	defer c.RUnlock()
+	c.RLock()
+	if blockHeight >= c.effectiveStartHeight + roundVoteBlockNums {
+		return nil, errors.New("the given block height is greater than current vote start height")
+	}
+
+	if blockHeight >= c.effectiveStartHeight {
+		return c.consensusNodeMap, nil
+	}
+
+	voteResult, err := c.store.GetVoteResult(blockHeight / roundVoteBlockNums)
 	if err != nil {
 		return nil, err
 	}
 
 	if voteResult == nil {
-		return nil, errors.New("can not find vote result by given vote sequence")
+		return nil, errors.New("can not find vote result by given block height")
 	}
 
 	if !voteResult.Finalized {
