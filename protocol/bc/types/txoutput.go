@@ -224,6 +224,7 @@ func ComputeOutputID(sc *SpendCommitment, inputType uint8, vote []byte) (h bc.Ha
 	case UnvoteInputType:
 		o = bc.NewVoteOutput(src, &bc.Program{VmVersion: sc.VMVersion, Code: sc.ControlProgram}, 0, vote)
 	default:
+		return h, fmt.Errorf("Input type error:[%v]", inputType)
 	}
 
 	h = bc.EntryID(o)
