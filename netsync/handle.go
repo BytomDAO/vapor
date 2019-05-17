@@ -44,7 +44,6 @@ type Switch interface {
 	AddReactor(name string, reactor p2p.Reactor) p2p.Reactor
 	AddBannedPeer(string) error
 	StopPeerGracefully(string)
-	NodeInfo() *p2p.NodeInfo
 	Start() (bool, error)
 	Stop() bool
 	IsListening() bool
@@ -331,10 +330,6 @@ func (sm *SyncManager) IsListening() bool {
 		return false
 	}
 	return sm.sw.IsListening()
-}
-
-func (sm *SyncManager) NodeInfo() *p2p.NodeInfo {
-	return sm.sw.NodeInfo()
 }
 
 func (sm *SyncManager) PeerCount() int {

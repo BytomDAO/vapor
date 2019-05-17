@@ -85,9 +85,6 @@ type BaseConfig struct {
 	// This should be set in viper so it can unmarshal into this struct
 	RootDir string `mapstructure:"home"`
 
-	//The alias of the node
-	NodeAlias string `mapstructure:"node_alias"`
-
 	//The ID of the network to json
 	ChainID string `mapstructure:"chain_id"`
 
@@ -131,8 +128,6 @@ func DefaultBaseConfig() BaseConfig {
 		DBBackend:         "leveldb",
 		DBPath:            "data",
 		KeysPath:          "keystore",
-		NodeAlias:         "",
-		// CipherServiceProvider: "ed25519",
 	}
 }
 
