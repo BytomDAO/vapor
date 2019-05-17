@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"reflect"
-	"strconv"
 	"time"
 
 	"github.com/btcsuite/go-socks/socks"
@@ -110,6 +109,11 @@ func newPeerConn(rawConn net.Conn, outbound bool, ourNodePrivKey crypto.PrivKeyE
 		return nil, errors.Wrap(err, "Error creating peer")
 	}
 
+	// Remove deadline
+	if err := rawConn.SetDeadline(time.Time{}); err != nil {
+		return nil, err
+	}
+
 	return &peerConn{
 		config:   config,
 		outbound: outbound,
@@ -206,15 +210,8 @@ func (p *Peer) Send(chID byte, msg interface{}) bool {
 
 // ServiceFlag return the ServiceFlag of this peer
 func (p *Peer) ServiceFlag() consensus.ServiceFlag {
-	services := consensus.SFFullNode
-	if len(p.Other) == 0 {
-		return services
-	}
-
-	if serviceFlag, err := strconv.ParseUint(p.Other[0], 10, 64); err == nil {
-		services = consensus.ServiceFlag(serviceFlag)
-	}
-	return services
+	// ServiceFlag return the ServiceFlag of this peer
+	return p.NodeInfo.ServiceFlag
 }
 
 // String representation.

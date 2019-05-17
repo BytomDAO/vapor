@@ -106,13 +106,27 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 				Value: &value,
 			}
 
-		case *CrossChainInput:
+		case *UnvoteInput:
 			prog := &bc.Program{VmVersion: inp.VMVersion, Code: inp.ControlProgram}
 			src := &bc.ValueSource{
 				Ref:      &inp.SourceID,
 				Value:    &inp.AssetAmount,
 				Position: inp.SourcePosition,
 			}
+			prevout := bc.NewVoteOutput(src, prog, 0, inp.Vote) // ordinal doesn't matter for prevouts, only for result outputs
+			prevoutID := addEntry(prevout)
+			// create entry for spend
+			spend := bc.NewSpend(&prevoutID, uint64(i))
+			spend.WitnessArguments = inp.Arguments
+			spendID := addEntry(spend)
+			// setup mux
+			muxSources[i] = &bc.ValueSource{
+				Ref:   &spendID,
+				Value: &inp.AssetAmount,
+			}
+			spends = append(spends, spend)
+
+		case *CrossChainInput:
 			prevout := bc.NewCrossChainOutput(src, prog, 0) // ordinal doesn't matter
 			outputID := bc.EntryID(prevout)
 			crossIn := bc.NewCrossChainInput(&outputID, &inp.AssetAmount, uint64(i))
@@ -123,6 +137,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 				Value: &inp.AssetAmount,
 			}
 			crossIns = append(crossIns, crossIn)
+
 		}
 	}
 

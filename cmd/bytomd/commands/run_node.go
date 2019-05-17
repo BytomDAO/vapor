@@ -85,11 +85,8 @@ func runNode(cmd *cobra.Command, args []string) error {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal("failed to start node")
 	}
 
-	nodeInfo := n.NodeInfo()
 	log.WithFields(log.Fields{
 		"module":   logModule,
-		"version":  nodeInfo.Version,
-		"network":  nodeInfo.Network,
 		"duration": time.Since(startTime),
 	}).Info("start node complete")
 
