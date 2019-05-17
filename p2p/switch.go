@@ -151,6 +151,7 @@ func newSwitch(config *cfg.Config, discv discv, lanDiscv lanDiscv, blacklistDB d
 	sw.AddListener(l)
 	sw.BaseService = *cmn.NewBaseService(nil, "P2P Switch", sw)
 	trust.Init()
+	log.WithFields(log.Fields{"module": logModule, "nodeInfo": sw.nodeInfo}).Info("init p2p network")
 	return sw, nil
 }
 
@@ -220,7 +221,8 @@ func (sw *Switch) AddPeer(pc *peerConn, isLAN bool) error {
 	if err := version.Status.CheckUpdate(sw.nodeInfo.Version, peerNodeInfo.Version, peerNodeInfo.RemoteAddr); err != nil {
 		return err
 	}
-	if err := sw.nodeInfo.CompatibleWith(peerNodeInfo); err != nil {
+
+	if err := sw.nodeInfo.compatibleWith(peerNodeInfo, version.CompatibleWith); err != nil {
 		return err
 	}
 
@@ -334,12 +336,6 @@ func (sw *Switch) NumPeers() (lan, outbound, inbound, dialing int) {
 	}
 	dialing = sw.dialing.Size()
 	return
-}
-
-// NodeInfo returns the switch's NodeInfo.
-// NOTE: Not goroutine safe.
-func (sw *Switch) NodeInfo() *NodeInfo {
-	return sw.nodeInfo
 }
 
 //Peers return switch peerset
@@ -466,7 +462,7 @@ func (sw *Switch) filterConnByPeer(peer *Peer) error {
 		return err
 	}
 
-	if sw.nodeInfo.getPubkey().Equals(peer.PubKey().Wrap()) {
+	if sw.nodeInfo.PubKey.Equals(peer.PubKey().Wrap()) {
 		return ErrConnectSelf
 	}
 
@@ -515,7 +511,7 @@ func (sw *Switch) dialPeers(addresses []*NetAddress) {
 
 	var wg sync.WaitGroup
 	for _, address := range addresses {
-		if sw.NodeInfo().ListenAddr == address.String() {
+		if sw.nodeInfo.ListenAddr == address.String() {
 			continue
 		}
 		if dialling := sw.IsDialing(address); dialling {

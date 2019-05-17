@@ -29,7 +29,6 @@ import (
 	"github.com/vapor/mining/cpuminer"
 	"github.com/vapor/net/websocket"
 	"github.com/vapor/netsync"
-	"github.com/vapor/p2p"
 	"github.com/vapor/protocol"
 	w "github.com/vapor/wallet"
 )
@@ -256,8 +255,4 @@ func (n *Node) RunForever() {
 	cmn.TrapSignal(func() {
 		n.Stop()
 	})
-}
-
-func (n *Node) NodeInfo() *p2p.NodeInfo {
-	return n.syncManager.NodeInfo()
 }

@@ -49,8 +49,6 @@ func (tx *Tx) SetInputArguments(n uint32, args [][]byte) {
 	id := tx.Tx.InputIDs[n]
 	e := tx.Entries[id]
 	switch e := e.(type) {
-	case *bc.Issuance:
-		e.WitnessArguments = args
 	case *bc.Spend:
 		e.WitnessArguments = args
 	}

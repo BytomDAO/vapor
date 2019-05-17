@@ -94,6 +94,19 @@ var testTxs = []*types.Tx{
 			types.NewIntraChainOutput(bc.NewAssetID([32]byte{0xa1}), 0, []byte{0x65}),
 		},
 	}),
+	//tx7
+	types.NewTx(types.TxData{
+		SerializedSize: 150,
+		TimeRange:      0,
+		Inputs: []*types.TxInput{
+			types.NewSpendInput(nil, bc.NewHash([32]byte{0x01}), *consensus.BTMAssetID, 1, 1, []byte{0x51}),
+			types.NewSpendInput(nil, bc.NewHash([32]byte{0x02}), bc.NewAssetID([32]byte{0xa1}), 4, 1, []byte{0x51}),
+		},
+		Outputs: []*types.TxOutput{
+			types.NewIntraChainOutput(*consensus.BTMAssetID, 1, []byte{0x6b}),
+			types.NewVoteOutput(bc.NewAssetID([32]byte{0xa1}), 4, []byte{0x61}, []byte("a8f410b9f7cd9ce352d215ed17c85559c351dc8d18ed89ad403ca28cfc423f612e04a1c9584f945c286c47ec1e5b8405c65ff56e31f44a2627aca4f77e03936f")),
+		},
+	}),
 }
 
 type mockStore struct{}
@@ -286,6 +299,51 @@ func TestAddTransaction(t *testing.T) {
 			},
 			addTx: &TxDesc{
 				Tx:         testTxs[2],
+				StatusFail: true,
+			},
+		},
+		{
+			before: &TxPool{
+				pool:            map[bc.Hash]*TxDesc{},
+				utxo:            map[bc.Hash]*types.Tx{},
+				eventDispatcher: dispatcher,
+			},
+			after: &TxPool{
+				pool: map[bc.Hash]*TxDesc{
+					testTxs[7].ID: {
+						Tx:         testTxs[7],
+						StatusFail: false,
+					},
+				},
+				utxo: map[bc.Hash]*types.Tx{
+					*testTxs[7].ResultIds[0]: testTxs[7],
+					*testTxs[7].ResultIds[1]: testTxs[7],
+				},
+			},
+			addTx: &TxDesc{
+				Tx:         testTxs[7],
+				StatusFail: false,
+			},
+		},
+		{
+			before: &TxPool{
+				pool:            map[bc.Hash]*TxDesc{},
+				utxo:            map[bc.Hash]*types.Tx{},
+				eventDispatcher: dispatcher,
+			},
+			after: &TxPool{
+				pool: map[bc.Hash]*TxDesc{
+					testTxs[7].ID: {
+						Tx:         testTxs[7],
+						StatusFail: true,
+					},
+				},
+				utxo: map[bc.Hash]*types.Tx{
+					*testTxs[7].ResultIds[0]: testTxs[7],
+				},
+			},
+			addTx: &TxDesc{
+				Tx:         testTxs[7],
 				StatusFail: true,
 			},
 		},

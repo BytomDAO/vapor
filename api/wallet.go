@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/vapor/account"
-	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/pseudohsm"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
@@ -18,16 +17,12 @@ func (a *API) walletError() Response {
 // WalletImage hold the ziped wallet data
 type WalletImage struct {
 	AccountImage *account.Image      `json:"account_image"`
-	AssetImage   *asset.Image        `json:"asset_image"`
 	KeyImages    *pseudohsm.KeyImage `json:"key_images"`
 }
 
 func (a *API) restoreWalletImage(ctx context.Context, image WalletImage) Response {
 	if err := a.wallet.Hsm.Restore(image.KeyImages); err != nil {
 		return NewErrorResponse(errors.Wrap(err, "restore key images"))
-	}
-	if err := a.wallet.AssetReg.Restore(image.AssetImage); err != nil {
-		return NewErrorResponse(errors.Wrap(err, "restore asset image"))
 	}
 	if err := a.wallet.AccountMgr.Restore(image.AccountImage); err != nil {
 		return NewErrorResponse(errors.Wrap(err, "restore account image"))
@@ -51,10 +46,6 @@ func (a *API) backupWalletImage() Response {
 	if err != nil {
 		return NewErrorResponse(errors.Wrap(err, "backup key images"))
 	}
-	assetImage, err := a.wallet.AssetReg.Backup()
-	if err != nil {
-		return NewErrorResponse(errors.Wrap(err, "backup asset image"))
-	}
 	accountImage, err := a.wallet.AccountMgr.Backup()
 	if err != nil {
 		return NewErrorResponse(errors.Wrap(err, "backup account image"))
@@ -62,7 +53,6 @@ func (a *API) backupWalletImage() Response {
 
 	image := &WalletImage{
 		KeyImages:    keyImages,
-		AssetImage:   assetImage,
 		AccountImage: accountImage,
 	}
 	return NewSuccessResponse(image)
