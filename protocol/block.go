@@ -7,7 +7,6 @@ import (
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
-	"github.com/vapor/protocol/validation"
 )
 
 var (
@@ -87,6 +86,10 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
+	if err := c.bbft.AppendBlock(block); err != nil {
+		return err
+	}
+
 	node := c.index.GetNode(&bcBlock.ID)
 	if err := c.setState(node, utxoView); err != nil {
 		return err
@@ -119,6 +122,10 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 		if err := utxoView.DetachBlock(detachBlock, txStatus); err != nil {
 			return err
 		}
+		
+		if err := c.bbft.DetachBlock(b); err != nil {
+			return err
+		}
 
 		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Debug("detach from mainchain")
 	}
@@ -141,6 +148,10 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			return err
 		}
 
+		if err := c.bbft.AppendBlock(b); err != nil {
+			return err
+		}
+
 		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Debug("attach from mainchain")
 	}
 
@@ -150,16 +161,12 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 // SaveBlock will validate and save block into storage
 func (c *Chain) saveBlock(block *types.Block) error {
 	bcBlock := types.MapBlock(block)
-	parent := c.index.GetNode(&block.PreviousBlockHash)
-
-	if err := validation.ValidateBlock(bcBlock, parent); err != nil {
-		return errors.Sub(ErrBadBlock, err)
-	}
 	if err := c.store.SaveBlock(block, bcBlock.TransactionStatus); err != nil {
 		return err
 	}
 
 	c.orphanManage.Delete(&bcBlock.ID)
+	parent := c.index.GetNode(&block.PreviousBlockHash)
 	node, err := state.NewBlockNode(&block.BlockHeader, parent)
 	if err != nil {
 		return err
@@ -228,9 +235,15 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 		return c.orphanManage.BlockExist(&blockHash), nil
 	}
 
-	if parent := c.index.GetNode(&block.PreviousBlockHash); parent == nil {
+	parent := c.index.GetNode(&block.PreviousBlockHash)
+	if parent == nil {
 		c.orphanManage.Add(block)
 		return true, nil
+	}
+
+	signNum, err := c.bbft.ValidateBlock(block, parent)
+	if err != nil {
+		return false, errors.Sub(ErrBadBlock, err)
 	}
 
 	if err := c.saveBlock(block); err != nil {
@@ -238,6 +251,11 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	}
 
 	bestBlock := c.saveSubBlock(block)
+	if signNum < numOfConsensusNode * 2 / 3 {
+		log.WithFields(log.Fields{"module": logModule}).Debug("number of signature of block less than consensusNode * 2/3")
+		return false, nil
+	}
+
 	bestBlockHash := bestBlock.Hash()
 	bestNode := c.index.GetNode(&bestBlockHash)
 

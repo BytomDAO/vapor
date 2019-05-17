@@ -1,4 +1,4 @@
-package bbft
+package protocol
 
 import (
 	"testing"

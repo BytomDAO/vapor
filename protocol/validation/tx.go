@@ -224,6 +224,13 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errors.Wrap(err, "checking output source")
 		}
 
+	case *bc.VoteOutput:
+		vs2 := *vs
+		vs2.sourcePos = 0
+		if err = checkValidSrc(&vs2, e.Source); err != nil {
+			return errors.Wrap(err, "checking vote output source")
+		}
+
 	case *bc.Retirement:
 		vs2 := *vs
 		vs2.sourcePos = 0

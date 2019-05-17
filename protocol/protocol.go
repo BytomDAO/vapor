@@ -19,6 +19,7 @@ type Chain struct {
 	orphanManage   *OrphanManage
 	txPool         *TxPool
 	store          Store
+	bbft           *bbft
 	processBlockCh chan *processBlockMsg
 
 	cond     sync.Cond
@@ -31,6 +32,7 @@ func NewChain(store Store, txPool *TxPool) (*Chain, error) {
 		orphanManage:   NewOrphanManage(),
 		txPool:         txPool,
 		store:          store,
+		bbft:           &bbft{consensusNodeManager: newConsensusNodeManager(store)},
 		processBlockCh: make(chan *processBlockMsg, maxProcessBlockChSize),
 	}
 	c.cond.L = new(sync.Mutex)
@@ -135,6 +137,11 @@ func (c *Chain) BlockWaiter(height uint64) <-chan struct{} {
 	}()
 
 	return ch
+}
+
+// GetIndex return chain index
+func (c *Chain) GetIndex() *state.BlockIndex {
+	return c.index
 }
 
 // GetTxPool return chain txpool.

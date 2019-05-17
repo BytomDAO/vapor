@@ -16,9 +16,11 @@ type Store interface {
 	GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error)
 	GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error
 	GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)
+	GetVoteResult(uint64) (*state.VoteResult, error)
 
 	LoadBlockIndex(uint64) (*state.BlockIndex, error)
 	SaveBlock(*types.Block, *bc.TransactionStatus) error
+	SaveVoteResult(*state.VoteResult) error
 	SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint) error
 }
 
