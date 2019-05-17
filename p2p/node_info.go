@@ -73,7 +73,7 @@ func (info *NodeInfo) compatibleWith(other *NodeInfo, versionCompatibleWith Vers
 }
 
 //ListenHost peer listener ip address
-func (info NodeInfo) ListenHost() string {
+func (info NodeInfo) listenHost() string {
 	host, _, _ := net.SplitHostPort(info.ListenAddr)
 	return host
 }
@@ -86,5 +86,5 @@ func (info NodeInfo) RemoteAddrHost() string {
 
 //String representation
 func (info NodeInfo) String() string {
-	return fmt.Sprintf("NodeInfo{pk: %v, moniker: %v, network: %v [listen %v], service: %v,version: %v (%v)}", info.PubKey, info.Moniker, info.Network, info.ListenAddr, info.Version, info.ServiceFlag, info.Other)
+	return fmt.Sprintf("NodeInfo{pk: %v, moniker: %v, network: %v [listen %v],networkID: %x, service: %v,version: %v (%v)}", info.PubKey, info.Moniker, info.Network, info.ListenAddr, info.NetworkID, info.ServiceFlag, info.Version, info.Other)
 }

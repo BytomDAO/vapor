@@ -151,6 +151,7 @@ func newSwitch(config *cfg.Config, discv discv, lanDiscv lanDiscv, blacklistDB d
 	sw.AddListener(l)
 	sw.BaseService = *cmn.NewBaseService(nil, "P2P Switch", sw)
 	trust.Init()
+	log.WithFields(log.Fields{"module": logModule, "nodeInfo": sw.nodeInfo}).Info("start network")
 	return sw, nil
 }
 
@@ -212,17 +213,16 @@ func (sw *Switch) AddBannedPeer(ip string) error {
 // NOTE: This performs a blocking handshake before the peer is added.
 // CONTRACT: If error is returned, peer is nil, and conn is immediately closed.
 func (sw *Switch) AddPeer(pc *peerConn, isLAN bool) error {
-	nodeInfo := sw.NodeInfo()
-	peerNodeInfo, err := pc.HandshakeTimeout(&nodeInfo, time.Duration(sw.peerConfig.HandshakeTimeout))
+	peerNodeInfo, err := pc.HandshakeTimeout(sw.nodeInfo, time.Duration(sw.peerConfig.HandshakeTimeout))
 	if err != nil {
 		return err
 	}
 
-	if err := version.Status.CheckUpdate(nodeInfo.Version, peerNodeInfo.Version, peerNodeInfo.RemoteAddr); err != nil {
+	if err := version.Status.CheckUpdate(sw.nodeInfo.Version, peerNodeInfo.Version, peerNodeInfo.RemoteAddr); err != nil {
 		return err
 	}
 
-	if err := nodeInfo.compatibleWith(peerNodeInfo, version.CompatibleWith); err != nil {
+	if err := sw.nodeInfo.compatibleWith(peerNodeInfo, version.CompatibleWith); err != nil {
 		return err
 	}
 
@@ -338,12 +338,6 @@ func (sw *Switch) NumPeers() (lan, outbound, inbound, dialing int) {
 	return
 }
 
-// NodeInfo returns the switch's NodeInfo.
-// NOTE: Not goroutine safe.
-func (sw *Switch) NodeInfo() NodeInfo {
-	return *sw.nodeInfo
-}
-
 //Peers return switch peerset
 func (sw *Switch) Peers() *PeerSet {
 	return sw.peers
@@ -457,7 +451,7 @@ func (sw *Switch) delBannedPeer(addr string) error {
 }
 
 func (sw *Switch) filterConnByIP(ip string) error {
-	if ip == sw.NodeInfo().ListenHost() {
+	if ip == sw.nodeInfo.listenHost() {
 		return ErrConnectSelf
 	}
 	return sw.checkBannedPeer(ip)
@@ -468,7 +462,7 @@ func (sw *Switch) filterConnByPeer(peer *Peer) error {
 		return err
 	}
 
-	if sw.NodeInfo().PubKey.Equals(peer.PubKey().Wrap()) {
+	if sw.nodeInfo.PubKey.Equals(peer.PubKey().Wrap()) {
 		return ErrConnectSelf
 	}
 
@@ -517,7 +511,7 @@ func (sw *Switch) dialPeers(addresses []*NetAddress) {
 
 	var wg sync.WaitGroup
 	for _, address := range addresses {
-		if sw.NodeInfo().ListenAddr == address.String() {
+		if sw.nodeInfo.ListenAddr == address.String() {
 			continue
 		}
 		if dialling := sw.IsDialing(address); dialling {
