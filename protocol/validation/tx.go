@@ -238,6 +238,18 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errors.Wrap(err, "checking retirement source")
 		}
 
+	case *bc.CrossChainInput:
+		_, err := vm.Verify(NewTxVMContext(vs, e, e.ControlProgram, e.WitnessArguments), consensus.DefaultGasCredit)
+		if err != nil {
+			return errors.Wrap(err, "checking cross-chain input control program")
+		}
+
+		vs2 := *vs
+		vs2.destPos = 0
+		if err = checkValidDest(&vs2, e.WitnessDestination); err != nil {
+			return errors.Wrap(err, "checking cross-chain input destination")
+		}
+
 	case *bc.Spend:
 		if e.SpentOutputId == nil {
 			return errors.Wrap(ErrMissingField, "spend without spent output ID")
@@ -246,7 +258,6 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		if err != nil {
 			return errors.Wrap(err, "getting spend prevout")
 		}
-
 		gasLeft, err := vm.Verify(NewTxVMContext(vs, e, spentOutput.ControlProgram, e.WitnessArguments), vs.gasStatus.GasLeft)
 		if err != nil {
 			return errors.Wrap(err, "checking control program")
@@ -254,7 +265,6 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		if err = vs.gasStatus.updateUsage(gasLeft); err != nil {
 			return err
 		}
-
 		eq, err := spentOutput.Source.Value.Equal(e.WitnessDestination.Value)
 		if err != nil {
 			return err
@@ -269,7 +279,6 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 				e.WitnessDestination.Value.AssetId.Bytes(),
 			)
 		}
-
 		vs2 := *vs
 		vs2.destPos = 0
 		if err = checkValidDest(&vs2, e.WitnessDestination); err != nil {
@@ -333,6 +342,12 @@ func checkValidSrc(vstate *validationState, vs *bc.ValueSource) error {
 		}
 		dest = ref.WitnessDestination
 
+	case *bc.CrossChainInput:
+		if vs.Position != 0 {
+			return errors.Wrapf(ErrPosition, "invalid position %d for cross-chain input source", vs.Position)
+		}
+		dest = ref.WitnessDestination
+
 	case *bc.Spend:
 		if vs.Position != 0 {
 			return errors.Wrapf(ErrPosition, "invalid position %d for spend source", vs.Position)
@@ -346,7 +361,7 @@ func checkValidSrc(vstate *validationState, vs *bc.ValueSource) error {
 		dest = ref.WitnessDestinations[vs.Position]
 
 	default:
-		return errors.Wrapf(bc.ErrEntryType, "value source is %T, should be coinbase, issuance, spend, or mux", e)
+		return errors.Wrapf(bc.ErrEntryType, "value source is %T, should be coinbase, cross-chain input, spend, or mux", e)
 	}
 
 	if dest.Ref == nil || *dest.Ref != vstate.entryID {
