@@ -176,8 +176,18 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 
-	return err
+	switch inp := t.TypedInput.(type) {
+	case *CrossChainInput:
+		if inp.AssetDefinition, err = blockchain.ReadVarstr31(r); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (t *TxInput) writeTo(w io.Writer) error {
@@ -189,8 +199,18 @@ func (t *TxInput) writeTo(w io.Writer) error {
 		return errors.Wrap(err, "writing input commitment")
 	}
 
-	_, err := blockchain.WriteExtensibleString(w, t.WitnessSuffix, t.writeInputWitness)
-	return errors.Wrap(err, "writing input witness")
+	if _, err := blockchain.WriteExtensibleString(w, t.WitnessSuffix, t.writeInputWitness); err != nil {
+		return errors.Wrap(err, "writing input witness")
+	}
+
+	switch inp := t.TypedInput.(type) {
+	case *CrossChainInput:
+		if _, err := blockchain.WriteVarstr31(w, inp.AssetDefinition); err != nil {
+			return errors.Wrap(err, "writing AssetDefinition")
+		}
+	}
+
+	return nil
 }
 
 func (t *TxInput) writeInputCommitment(w io.Writer) (err error) {
