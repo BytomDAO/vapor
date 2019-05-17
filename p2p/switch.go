@@ -151,7 +151,7 @@ func newSwitch(config *cfg.Config, discv discv, lanDiscv lanDiscv, blacklistDB d
 	sw.AddListener(l)
 	sw.BaseService = *cmn.NewBaseService(nil, "P2P Switch", sw)
 	trust.Init()
-	log.WithFields(log.Fields{"module": logModule, "nodeInfo": sw.nodeInfo}).Info("start network")
+	log.WithFields(log.Fields{"module": logModule, "nodeInfo": sw.nodeInfo}).Info("init p2p network")
 	return sw, nil
 }
 
