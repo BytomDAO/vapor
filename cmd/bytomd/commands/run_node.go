@@ -88,8 +88,10 @@ func runNode(cmd *cobra.Command, args []string) error {
 	nodeInfo := n.NodeInfo()
 	log.WithFields(log.Fields{
 		"module":   logModule,
+		"moniker":  nodeInfo.Moniker,
 		"version":  nodeInfo.Version,
 		"network":  nodeInfo.Network,
+		"service":  nodeInfo.ServiceFlag,
 		"duration": time.Since(startTime),
 	}).Info("start node complete")
 
