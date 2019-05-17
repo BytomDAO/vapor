@@ -239,13 +239,10 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		}
 
 	case *bc.CrossChainInput:
-		gasLeftTemp := vs.gasStatus.GasLeft
-		vs.gasStatus.GasLeft = consensus.DefaultGasCredit
-		_, err := vm.Verify(NewTxVMContext(vs, e, e.ControlProgram, e.WitnessArguments), vs.gasStatus.GasLeft)
+		_, err := vm.Verify(NewTxVMContext(vs, e, e.ControlProgram, e.WitnessArguments), consensus.DefaultGasCredit)
 		if err != nil {
 			return errors.Wrap(err, "checking cross-chain input control program")
 		}
-		vs.gasStatus.GasLeft = gasLeftTemp
 
 		vs2 := *vs
 		vs2.destPos = 0
