@@ -24,6 +24,12 @@ func MapTx(oldTx *TxData) *bc.Tx {
 	for id, e := range entries {
 		var ord uint64
 		switch e := e.(type) {
+		case *bc.CrossChainInput:
+			ord = e.Ordinal
+			if *e.WitnessDestination.Value.AssetId == *consensus.BTMAssetID {
+				tx.GasInputIDs = append(tx.GasInputIDs, id)
+			}
+
 		case *bc.Spend:
 			ord = e.Ordinal
 			spentOutputIDs[*e.SpentOutputId] = true
@@ -61,6 +67,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 
 	var (
 		spends   []*bc.Spend
+		crossIns []*bc.CrossChainInput
 		coinbase *bc.Coinbase
 	)
 
@@ -100,7 +107,6 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			}
 
 		case *UnvoteInput:
-			// create entry for prevout
 			prog := &bc.Program{VmVersion: inp.VMVersion, Code: inp.ControlProgram}
 			src := &bc.ValueSource{
 				Ref:      &inp.SourceID,
@@ -120,6 +126,24 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			}
 			spends = append(spends, spend)
 
+		case *CrossChainInput:
+			prog := &bc.Program{VmVersion: inp.VMVersion, Code: inp.ControlProgram}
+			src := &bc.ValueSource{
+				Ref:      &inp.SourceID,
+				Value:    &inp.AssetAmount,
+				Position: inp.SourcePosition,
+			}
+			prevout := bc.NewCrossChainOutput(src, prog, 0) // ordinal doesn't matter
+			outputID := bc.EntryID(prevout)
+			crossIn := bc.NewCrossChainInput(&outputID, &inp.AssetAmount, uint64(i))
+			crossIn.WitnessArguments = inp.Arguments
+			crossInID := addEntry(crossIn)
+			muxSources[i] = &bc.ValueSource{
+				Ref:   &crossInID,
+				Value: &inp.AssetAmount,
+			}
+			crossIns = append(crossIns, crossIn)
+
 		}
 	}
 
@@ -135,6 +159,10 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 		case *bc.VoteOutput:
 			spend.SetDestination(&muxID, spentOutput.Source.Value, spend.Ordinal)
 		}
+	}
+
+	for _, crossIn := range crossIns {
+		crossIn.SetDestination(&muxID, crossIn.Value, crossIn.Ordinal)
 	}
 
 	if coinbase != nil {
