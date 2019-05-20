@@ -87,6 +87,47 @@ func TestBuildIntra(t *testing.T) {
 	}
 }
 
+func TestBuildCrossOut(t *testing.T) {
+	ctx := context.Background()
+
+	assetID1 := bc.NewAssetID([32]byte{1})
+	assetID2 := bc.NewAssetID([32]byte{2})
+
+	actions := []Action{
+		newControlProgramAction(bc.AssetAmount{AssetId: &assetID2, Amount: 6}, []byte("dest")),
+		testAction(bc.AssetAmount{AssetId: &assetID1, Amount: 5}),
+	}
+	expiryTime := time.Now().Add(time.Minute)
+	got, err := Build(ctx, nil, actions, expiryTime, 0)
+	if err != nil {
+		testutil.FatalErr(t, err)
+	}
+
+	want := &Template{
+		Transaction: types.NewTx(types.TxData{
+			Version: 1,
+			Inputs: []*types.TxInput{
+				types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), assetID1, 5, 0, nil),
+			},
+			Outputs: []*types.TxOutput{
+				types.NewIntraChainOutput(assetID2, 6, []byte("dest")),
+				types.NewIntraChainOutput(assetID1, 5, []byte("change")),
+			},
+		}),
+		SigningInstructions: []*SigningInstruction{{
+			WitnessComponents: []witnessComponent{},
+		}},
+	}
+
+	if !testutil.DeepEqual(got.Transaction.TxData, want.Transaction.TxData) {
+		t.Errorf("got tx:\n%s\nwant tx:\n%s", spew.Sdump(got.Transaction.TxData), spew.Sdump(want.Transaction.TxData))
+	}
+
+	if !testutil.DeepEqual(got.SigningInstructions, want.SigningInstructions) {
+		t.Errorf("got signing instructions:\n\t%#v\nwant signing instructions:\n\t%#v", got.SigningInstructions, want.SigningInstructions)
+	}
+}
+
 func mustDecodeHex(str string) []byte {
 	data, err := hex.DecodeString(str)
 	if err != nil {
