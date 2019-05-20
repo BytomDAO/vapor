@@ -145,7 +145,6 @@ func DecodeCrossOutAction(data []byte) (Action, error) {
 	return a, err
 }
 
-// TODO:
 type crossOutAction struct {
 	bc.AssetAmount
 	Arbitrary json.HexBytes `json:"arbitrary"`
@@ -164,14 +163,10 @@ func (a *crossOutAction) Build(ctx context.Context, b *TemplateBuilder) error {
 		return MissingFieldsError(missing...)
 	}
 
-	program, err := vmutil.RetireProgram(a.Arbitrary)
-	if err != nil {
-		return err
-	}
-	out := types.NewIntraChainOutput(*a.AssetId, a.Amount, program)
+	out := types.NewCrossChainOutput(*a.AssetId, a.Amount, a.Arbitrary)
 	return b.AddOutput(out)
 }
 
 func (a *crossOutAction) ActionType() string {
-	return "cross-out"
+	return "cross_out"
 }
