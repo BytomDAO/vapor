@@ -87,6 +87,13 @@ func TestBuildIntra(t *testing.T) {
 	}
 }
 
+func newCrossOutAction(assetAmt bc.AssetAmount, arbitrary []byte) *crossOutAction {
+	return &crossOutAction{
+		AssetAmount: assetAmt,
+		Arbitrary:   arbitrary,
+	}
+}
+
 func TestBuildCrossOut(t *testing.T) {
 	ctx := context.Background()
 
@@ -94,7 +101,7 @@ func TestBuildCrossOut(t *testing.T) {
 	assetID2 := bc.NewAssetID([32]byte{2})
 
 	actions := []Action{
-		newControlProgramAction(bc.AssetAmount{AssetId: &assetID2, Amount: 6}, []byte("dest")),
+		newCrossOutAction(bc.AssetAmount{AssetId: &assetID2, Amount: 6}, []byte("back_to_main")),
 		testAction(bc.AssetAmount{AssetId: &assetID1, Amount: 5}),
 	}
 	expiryTime := time.Now().Add(time.Minute)
@@ -110,7 +117,7 @@ func TestBuildCrossOut(t *testing.T) {
 				types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), assetID1, 5, 0, nil),
 			},
 			Outputs: []*types.TxOutput{
-				types.NewIntraChainOutput(assetID2, 6, []byte("dest")),
+				types.NewCrossChainOutput(assetID2, 6, []byte("back_to_main")),
 				types.NewIntraChainOutput(assetID1, 5, []byte("change")),
 			},
 		}),
