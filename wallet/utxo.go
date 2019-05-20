@@ -202,6 +202,7 @@ func txInToUtxos(tx *types.Tx, statusFail bool) []*account.UTXO {
 				ControlProgram: resOut.ControlProgram.Code,
 				SourceID:       *resOut.Source.Ref,
 				SourcePos:      resOut.Source.Position,
+				Vote:           resOut.Vote,
 			}
 
 		default:
@@ -251,6 +252,7 @@ func txOutToUtxos(tx *types.Tx, statusFail bool, vaildHeight uint64) []*account.
 				SourceID:       *bcOut.Source.Ref,
 				SourcePos:      bcOut.Source.Position,
 				ValidHeight:    vaildHeight,
+				Vote:           bcOut.Vote,
 			}
 
 		default:

@@ -1,11 +1,9 @@
 package state
 
 import (
-	"errors"
-
 	"github.com/vapor/consensus"
 	"github.com/vapor/database/storage"
-	e "github.com/vapor/errors"
+	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 )
 
@@ -35,7 +33,7 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFa
 		case *bc.VoteOutput:
 			assetID = *output.Source.Value.AssetId
 		default:
-			return e.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", prevout.Bytes(), entryOutput)
+			return errors.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", prevout.Bytes(), entryOutput)
 		}
 
 		if statusFail && assetID != *consensus.BTMAssetID {
@@ -117,7 +115,7 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 		case *bc.VoteOutput:
 			assetID = *output.Source.Value.AssetId
 		default:
-			return e.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", prevout.Bytes(), entryOutput)
+			return errors.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", prevout.Bytes(), entryOutput)
 		}
 
 		if statusFail && assetID != *consensus.BTMAssetID {
