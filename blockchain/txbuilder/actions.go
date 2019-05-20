@@ -137,3 +137,39 @@ func (a *retireAction) Build(ctx context.Context, b *TemplateBuilder) error {
 func (a *retireAction) ActionType() string {
 	return "retire"
 }
+
+// DecodeCrossInAction convert input data to action struct
+func DecodeCrossInAction(data []byte) (Action, error) {
+	a := new(crossInAction)
+	err := stdjson.Unmarshal(data, a)
+	return a, err
+}
+
+type crossInAction struct {
+	bc.AssetAmount
+	Arbitrary json.HexBytes `json:"arbitrary"`
+}
+
+func (a *crossInAction) Build(ctx context.Context, b *TemplateBuilder) error {
+	var missing []string
+	if a.AssetId.IsZero() {
+		missing = append(missing, "asset_id")
+	}
+	if a.Amount == 0 {
+		missing = append(missing, "amount")
+	}
+	if len(missing) > 0 {
+		return MissingFieldsError(missing...)
+	}
+
+	program, err := vmutil.RetireProgram(a.Arbitrary)
+	if err != nil {
+		return err
+	}
+	out := types.NewIntraChainOutput(*a.AssetId, a.Amount, program)
+	return b.AddOutput(out)
+}
+
+func (a *crossInAction) ActionType() string {
+	return "cross_chain_in"
+}
