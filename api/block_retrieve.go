@@ -93,10 +93,14 @@ func (a *API) getBlock(ins BlockReq) Response {
 		}
 
 		resOutID := orig.ResultIds[0]
-		resOut, ok := orig.Entries[*resOutID].(*bc.IntraChainOutput)
-		if ok {
+		switch resOut := orig.Entries[*resOutID].(type) {
+		case *bc.IntraChainOutput:
 			tx.MuxID = *resOut.Source.Ref
-		} else {
+		case *bc.CrossChainOutput:
+			tx.MuxID = *resOut.Source.Ref
+		case *bc.VoteOutput:
+			tx.MuxID = *resOut.Source.Ref
+		case *bc.Retirement:
 			resRetire, _ := orig.Entries[*resOutID].(*bc.Retirement)
 			tx.MuxID = *resRetire.Source.Ref
 		}
