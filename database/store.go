@@ -136,7 +136,7 @@ func (s *Store) GetStoreStatus() *protocol.BlockStoreState {
 func (s *Store) GetVoteResult(seq uint64) (*state.VoteResult, error) {
 	data := s.db.Get(calcVoteResultKey(seq))
 	if data == nil {
-		return nil, nil
+		return nil, protocol.ErrNotFoundVoteResult
 	}
 
 	vr := &state.VoteResult{}

@@ -1,10 +1,16 @@
 package protocol
 
 import (
+	"errors"
+
 	"github.com/vapor/database/storage"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
+)
+
+var (
+	ErrNotFoundVoteResult = errors.New("can't find the vote result by given sequence")
 )
 
 // Store provides storage interface for blockchain data

@@ -241,8 +241,7 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 		return true, nil
 	}
 
-	signNum, err := c.bbft.ValidateBlock(block, parent)
-	if err != nil {
+	if err := c.bbft.ValidateBlock(block, parent); err != nil {
 		return false, errors.Sub(ErrBadBlock, err)
 	}
 
@@ -251,11 +250,6 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	}
 
 	bestBlock := c.saveSubBlock(block)
-	if signNum < numOfConsensusNode * 2 / 3 {
-		log.WithFields(log.Fields{"module": logModule}).Debug("number of signature of block less than consensusNode * 2/3")
-		return false, nil
-	}
-
 	bestBlockHash := bestBlock.Hash()
 	bestNode := c.index.GetNode(&bestBlockHash)
 

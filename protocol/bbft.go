@@ -14,7 +14,6 @@ import (
 
 var (
 	errHasNoChanceProductBlock = errors.New("the node has no chance to product a block in this round of voting")
-	errBlockSyncNotComplete    = errors.New("current node block synchronization is not complete")
 )
 
 type bbft struct {
@@ -29,14 +28,14 @@ func newBbft(store Store) *bbft {
 
 // IsConsensusPubkey determine whether a public key is a consensus node at a specified height
 func (b *bbft) IsConsensusPubkey(height uint64, pubkey []byte) (bool, error) {
-	node, err := b.consensusNodeManager.getConsensusNode(height, pubkey)
+	node, err := b.consensusNodeManager.getConsensusNode(height, hex.EncodeToString(pubkey))
 	return node != nil, err
 }
 
 // NextLeaderTime returns the start time of the specified public key as the next leader node
 func (b *bbft) NextLeaderTime(pubkey []byte, bestBlockHeight, prevRoundLastBlockTimestamp uint64) (*time.Time, error) {
 	startTime := prevRoundLastBlockTimestamp*1000 + blockTimeInterval
-	consensusNode, err := b.consensusNodeManager.getConsensusNode(bestBlockHeight, pubkey)
+	consensusNode, err := b.consensusNodeManager.getConsensusNode(bestBlockHeight, hex.EncodeToString(pubkey))
 	if err != nil {
 		return nil, err
 	}
@@ -46,9 +45,6 @@ func (b *bbft) NextLeaderTime(pubkey []byte, bestBlockHeight, prevRoundLastBlock
 		return nil, err
 	}
 
-	if nextLeaderTime.UnixNano() < time.Now().UnixNano() {
-		return nil, errBlockSyncNotComplete
-	}
 	return nextLeaderTime, nil
 }
 
@@ -79,7 +75,7 @@ func (b *bbft) AppendBlock(block *types.Block) error {
 	voteSeq := block.Height / roundVoteBlockNums
 	store := b.consensusNodeManager.store
 	voteResult, err := store.GetVoteResult(voteSeq)
-	if err != nil {
+	if err != nil && err != ErrNotFoundVoteResult {
 		return nil
 	}
 
@@ -119,10 +115,6 @@ func (b *bbft) DetachBlock(block *types.Block) error {
 		return nil
 	}
 
-	if voteResult == nil {
-		return nil
-	}
-
 	if voteResult.LastBlockHeight != block.Height {
 		return errors.New("bbft detach block error, the block height is not equals last block height of vote result")
 	}
@@ -143,26 +135,26 @@ func (b *bbft) DetachBlock(block *types.Block) error {
 	return store.SaveVoteResult(voteResult)
 }
 
-// ValidateBlock verify whether the block is valid, and return the number of correct signature
-func (b *bbft) ValidateBlock(block *types.Block, parent *state.BlockNode) (uint64, error) {
+// ValidateBlock verify whether the block is valid
+func (b *bbft) ValidateBlock(block *types.Block, parent *state.BlockNode) error {
 	signNum, err := b.validateSign(block)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	if signNum == 0 {
-		return 0, errors.New("no valid signature")
+		return errors.New("no valid signature")
 	}
 
 	if err := validation.ValidateBlock(types.MapBlock(block), parent); err != nil {
-		return 0, err
+		return err
 	}
 
 	if err := b.signBlock(block); err != nil {
-		return 0, err
+		return err
 	}
 	
-	return signNum+1, nil 
+	return nil 
 }
 
 // validateSign verify the signatures of block, and return the number of correct signature
@@ -174,16 +166,27 @@ func (b *bbft) validateSign(block *types.Block) (uint64, error) {
 		return 0, err
 	}
 
+	hasBlockerSign := false
 	for pubkey, node := range consensusNodeMap {
 		if len(block.Witness) <= int(node.order) {
 			continue
 		}
 		if ed25519.Verify(ed25519.PublicKey(pubkey), block.Hash().Bytes(), block.Witness[node.order]) {
 			correctSignNum++
+			isBlocker, err := b.consensusNodeManager.isBlocker(block.Height, pubkey)
+			if err != nil {
+				return 0, err
+			}
+			if isBlocker {
+				hasBlockerSign = true
+			}
 		} else {
 			// discard the invalid signature
 			block.Witness[node.order] = nil
 		}
+	}
+	if !hasBlockerSign {
+		return 0, errors.New("the block has no signature of the blocker")
 	}
 	return correctSignNum, nil
 }
@@ -191,7 +194,7 @@ func (b *bbft) validateSign(block *types.Block) (uint64, error) {
 func (b *bbft) signBlock(block *types.Block) error {
 	var xprv chainkd.XPrv
 	xpub := [64]byte(xprv.XPub())
-	node, err := b.consensusNodeManager.getConsensusNode(block.Height, xpub[:])
+	node, err := b.consensusNodeManager.getConsensusNode(block.Height, hex.EncodeToString(xpub[:]))
 	if err != nil {
 		return err
 	}

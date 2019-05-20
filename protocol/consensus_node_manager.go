@@ -1,7 +1,6 @@
 package protocol
 
 import (
-	"encoding/hex"
 	"sort"
 	"sync"
 
@@ -44,7 +43,7 @@ func newConsensusNodeManager(store Store) *consensusNodeManager {
 	}
 }
 
-func (c *consensusNodeManager) getConsensusNode(height uint64, pubkey []byte) (*consensusNode, error) {
+func (c *consensusNodeManager) getConsensusNode(height uint64, pubkey string) (*consensusNode, error) {
 	defer c.RUnlock()
 	c.RLock()
 	if height >= c.effectiveStartHeight + roundVoteBlockNums {
@@ -61,8 +60,22 @@ func (c *consensusNodeManager) getConsensusNode(height uint64, pubkey []byte) (*
 		}
 	}
 
-	encodePubkey := hex.EncodeToString(pubkey)
-	return consensusNodeMap[encodePubkey], nil
+	return consensusNodeMap[pubkey], nil
+}
+
+func (c *consensusNodeManager) isBlocker(height uint64, pubkey string) (bool, error) {
+	consensusNodeMap, err := c.getConsensusNodesByVoteResult(height)
+	if err != nil {
+		return false, err
+	}
+
+	blockerNode, exist := consensusNodeMap[pubkey]
+	if !exist {
+		return false, nil
+	}
+
+	startHeight := height / roundVoteBlockNums * roundVoteBlockNums
+	return (height - startHeight - blockerNode.order) % numOfConsensusNode == 0, nil
 }
 
 // UpdateConsensusNodes used to update consensus node after each round of voting
@@ -97,10 +110,6 @@ func (c *consensusNodeManager) getConsensusNodesByVoteResult(blockHeight uint64)
 	voteResult, err := c.store.GetVoteResult(blockHeight / roundVoteBlockNums)
 	if err != nil {
 		return nil, err
-	}
-
-	if voteResult == nil {
-		return nil, errors.New("can not find vote result by given block height")
 	}
 
 	if !voteResult.Finalized {
