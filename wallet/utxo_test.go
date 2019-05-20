@@ -619,9 +619,25 @@ func TestTxOutToUtxos(t *testing.T) {
 					types.NewIntraChainOutput(*consensus.BTMAssetID, 5, []byte{0x54}),
 				},
 			}),
-			statusFail:  true,
+			statusFail:  false,
 			vaildHeight: 0,
 			wantUtxos: []*account.UTXO{
+				&account.UTXO{
+					OutputID:       bc.Hash{V0: 8675398163687045889, V1: 7549510466747714094, V2: 13693077838209211470, V3: 6878568403630757599},
+					AssetID:        bc.AssetID{V0: 1},
+					Amount:         2,
+					ControlProgram: []byte{0x51},
+					SourceID:       bc.Hash{V0: 968805671293010031, V1: 9297014342000792994, V2: 16963674611624423333, V3: 2728293460397542670},
+					SourcePos:      0,
+				},
+				&account.UTXO{
+					OutputID:       bc.Hash{V0: 10393356437681643401, V1: 233963481123580514, V2: 17312171816916184445, V3: 16199332547392196559},
+					AssetID:        bc.AssetID{V0: 1},
+					Amount:         3,
+					ControlProgram: []byte{0x52},
+					SourceID:       bc.Hash{V0: 968805671293010031, V1: 9297014342000792994, V2: 16963674611624423333, V3: 2728293460397542670},
+					SourcePos:      1,
+				},
 				&account.UTXO{
 					OutputID:       bc.Hash{V0: 7067560744282869147, V1: 8991714784298240423, V2: 2595857933262917893, V3: 11490631006811252506},
 					AssetID:        *consensus.BTMAssetID,
