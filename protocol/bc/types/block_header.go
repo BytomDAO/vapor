@@ -17,14 +17,14 @@ type BlockHeader struct {
 	Version           uint64  // The version of the block.
 	Height            uint64  // The height of the block.
 	PreviousBlockHash bc.Hash // The hash of the previous block.
-	Timestamp         uint64  // The time of the block in seconds.
+	Timestamp         uint64  // The time of the block in milliseconds.
 	BlockCommitment
 	BlockWitness
 }
 
 // Time returns the time represented by the Timestamp in block header.
 func (bh *BlockHeader) Time() time.Time {
-	return time.Unix(int64(bh.Timestamp), 0).UTC()
+	return time.Unix(0, int64(bh.Timestamp)*int64(time.Millisecond)).UTC()
 }
 
 // Hash returns complete hash of the block header.

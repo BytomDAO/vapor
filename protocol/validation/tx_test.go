@@ -809,7 +809,7 @@ func TestTimeRange(t *testing.T) {
 	block := &bc.Block{
 		BlockHeader: &bc.BlockHeader{
 			Height:    333,
-			Timestamp: 1521625823,
+			Timestamp: 1521625823000,
 		},
 	}
 
