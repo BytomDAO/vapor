@@ -242,12 +242,27 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		if e.SpentOutputId == nil {
 			return errors.Wrap(ErrMissingField, "spend without spent output ID")
 		}
-		spentOutput, err := vs.tx.IntraChainOutput(*e.SpentOutputId)
+		var (
+			controlProgram *bc.Program
+			value          *bc.AssetAmount
+		)
+		entryOutput, err := vs.tx.Entry(*e.SpentOutputId)
 		if err != nil {
 			return errors.Wrap(err, "getting spend prevout")
 		}
 
-		gasLeft, err := vm.Verify(NewTxVMContext(vs, e, spentOutput.ControlProgram, e.WitnessArguments), vs.gasStatus.GasLeft)
+		switch output := entryOutput.(type) {
+		case *bc.IntraChainOutput:
+			controlProgram = output.ControlProgram
+			value = output.Source.Value
+		case *bc.VoteOutput:
+			controlProgram = output.ControlProgram
+			value = output.Source.Value
+		default:
+			return errors.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", e.SpentOutputId.Bytes(), entryOutput)
+		}
+
+		gasLeft, err := vm.Verify(NewTxVMContext(vs, e, controlProgram, e.WitnessArguments), vs.gasStatus.GasLeft)
 		if err != nil {
 			return errors.Wrap(err, "checking control program")
 		}
@@ -255,7 +270,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return err
 		}
 
-		eq, err := spentOutput.Source.Value.Equal(e.WitnessDestination.Value)
+		eq, err := value.Equal(e.WitnessDestination.Value)
 		if err != nil {
 			return err
 		}
@@ -263,8 +278,8 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errors.WithDetailf(
 				ErrMismatchedValue,
 				"previous output is for %d unit(s) of %x, spend wants %d unit(s) of %x",
-				spentOutput.Source.Value.Amount,
-				spentOutput.Source.Value.AssetId.Bytes(),
+				value.Amount,
+				value.AssetId.Bytes(),
 				e.WitnessDestination.Value.Amount,
 				e.WitnessDestination.Value.AssetId.Bytes(),
 			)

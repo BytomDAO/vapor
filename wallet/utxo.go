@@ -170,24 +170,46 @@ func txInToUtxos(tx *types.Tx, statusFail bool) []*account.UTXO {
 			continue
 		}
 
-		resOut, err := tx.IntraChainOutput(*sp.SpentOutputId)
+		entryOutput, err := tx.Entry(*sp.SpentOutputId)
 		if err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("txInToUtxos fail on get resOut")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("txInToUtxos fail on get entryOutput")
 			continue
 		}
 
-		if statusFail && *resOut.Source.Value.AssetId != *consensus.BTMAssetID {
+		utxo := &account.UTXO{}
+		switch resOut := entryOutput.(type) {
+		case *bc.IntraChainOutput:
+			if statusFail && *resOut.Source.Value.AssetId != *consensus.BTMAssetID {
+				continue
+			}
+			utxo = &account.UTXO{
+				OutputID:       *sp.SpentOutputId,
+				AssetID:        *resOut.Source.Value.AssetId,
+				Amount:         resOut.Source.Value.Amount,
+				ControlProgram: resOut.ControlProgram.Code,
+				SourceID:       *resOut.Source.Ref,
+				SourcePos:      resOut.Source.Position,
+			}
+
+		case *bc.VoteOutput:
+			if statusFail && *resOut.Source.Value.AssetId != *consensus.BTMAssetID {
+				continue
+			}
+			utxo = &account.UTXO{
+				OutputID:       *sp.SpentOutputId,
+				AssetID:        *resOut.Source.Value.AssetId,
+				Amount:         resOut.Source.Value.Amount,
+				ControlProgram: resOut.ControlProgram.Code,
+				SourceID:       *resOut.Source.Ref,
+				SourcePos:      resOut.Source.Position,
+			}
+
+		default:
+			log.WithFields(log.Fields{"module": logModule}).Error("txInToUtxos fail on get resOut")
 			continue
 		}
 
-		utxos = append(utxos, &account.UTXO{
-			OutputID:       *sp.SpentOutputId,
-			AssetID:        *resOut.Source.Value.AssetId,
-			Amount:         resOut.Source.Value.Amount,
-			ControlProgram: resOut.ControlProgram.Code,
-			SourceID:       *resOut.Source.Ref,
-			SourcePos:      resOut.Source.Position,
-		})
+		utxos = append(utxos, utxo)
 	}
 	return utxos
 }
@@ -195,24 +217,48 @@ func txInToUtxos(tx *types.Tx, statusFail bool) []*account.UTXO {
 func txOutToUtxos(tx *types.Tx, statusFail bool, vaildHeight uint64) []*account.UTXO {
 	utxos := []*account.UTXO{}
 	for i, out := range tx.Outputs {
-		bcOut, err := tx.IntraChainOutput(*tx.ResultIds[i])
+		entryOutput, err := tx.Entry(*tx.ResultIds[i])
 		if err != nil {
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("txOutToUtxos fail on get entryOutput")
 			continue
 		}
 
-		if statusFail && *out.AssetAmount().AssetId != *consensus.BTMAssetID {
+		utxo := &account.UTXO{}
+		switch bcOut := entryOutput.(type) {
+		case *bc.IntraChainOutput:
+			if statusFail && *out.AssetAmount().AssetId != *consensus.BTMAssetID {
+				continue
+			}
+			utxo = &account.UTXO{
+				OutputID:       *tx.OutputID(i),
+				AssetID:        *out.AssetAmount().AssetId,
+				Amount:         out.AssetAmount().Amount,
+				ControlProgram: out.ControlProgram(),
+				SourceID:       *bcOut.Source.Ref,
+				SourcePos:      bcOut.Source.Position,
+				ValidHeight:    vaildHeight,
+			}
+
+		case *bc.VoteOutput:
+			if statusFail && *out.AssetAmount().AssetId != *consensus.BTMAssetID {
+				continue
+			}
+			utxo = &account.UTXO{
+				OutputID:       *tx.OutputID(i),
+				AssetID:        *out.AssetAmount().AssetId,
+				Amount:         out.AssetAmount().Amount,
+				ControlProgram: out.ControlProgram(),
+				SourceID:       *bcOut.Source.Ref,
+				SourcePos:      bcOut.Source.Position,
+				ValidHeight:    vaildHeight,
+			}
+
+		default:
+			log.WithFields(log.Fields{"module": logModule}).Error("txOutToUtxos fail on get bcOut")
 			continue
 		}
 
-		utxos = append(utxos, &account.UTXO{
-			OutputID:       *tx.OutputID(i),
-			AssetID:        *out.AssetAmount().AssetId,
-			Amount:         out.AssetAmount().Amount,
-			ControlProgram: out.ControlProgram(),
-			SourceID:       *bcOut.Source.Ref,
-			SourcePos:      bcOut.Source.Position,
-			ValidHeight:    vaildHeight,
-		})
+		utxos = append(utxos, utxo)
 	}
 	return utxos
 }
