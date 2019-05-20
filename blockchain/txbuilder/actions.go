@@ -44,9 +44,9 @@ func (a *controlAddressAction) Build(ctx context.Context, b *TemplateBuilder) er
 	if err != nil {
 		return err
 	}
+
 	redeemContract := address.ScriptAddress()
 	program := []byte{}
-
 	switch address.(type) {
 	case *common.AddressWitnessPubKeyHash:
 		program, err = vmutil.P2WPKHProgram(redeemContract)
@@ -147,11 +147,14 @@ func DecodeCrossOutAction(data []byte) (Action, error) {
 
 type crossOutAction struct {
 	bc.AssetAmount
-	Arbitrary json.HexBytes `json:"arbitrary"`
+	Address string `json:"address"`
 }
 
 func (a *crossOutAction) Build(ctx context.Context, b *TemplateBuilder) error {
 	var missing []string
+	if a.Address == "" {
+		missing = append(missing, "address")
+	}
 	if a.AssetId.IsZero() {
 		missing = append(missing, "asset_id")
 	}
@@ -162,7 +165,26 @@ func (a *crossOutAction) Build(ctx context.Context, b *TemplateBuilder) error {
 		return MissingFieldsError(missing...)
 	}
 
-	out := types.NewCrossChainOutput(*a.AssetId, a.Amount, a.Arbitrary)
+	address, err := common.DecodeAddress(a.Address, &consensus.ActiveNetParams)
+	if err != nil {
+		return err
+	}
+
+	redeemContract := address.ScriptAddress()
+	program := []byte{}
+	switch address.(type) {
+	case *common.AddressWitnessPubKeyHash:
+		program, err = vmutil.P2WPKHProgram(redeemContract)
+	case *common.AddressWitnessScriptHash:
+		program, err = vmutil.P2WSHProgram(redeemContract)
+	default:
+		return errors.New("unsupport address type")
+	}
+	if err != nil {
+		return err
+	}
+
+	out := types.NewCrossChainOutput(*a.AssetId, a.Amount, program)
 	return b.AddOutput(out)
 }
 
