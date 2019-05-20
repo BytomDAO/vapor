@@ -87,10 +87,15 @@ func TestBuildIntra(t *testing.T) {
 	}
 }
 
-func newCrossOutAction(assetAmt bc.AssetAmount, arbitrary []byte) *crossOutAction {
+func newCrossOutAction(assetAmt bc.AssetAmount, redeemContract []byte) *crossOutAction {
+	address, err := common.NewAddressWitnessPubKeyHash(redeemContract, &consensus.MainNetParams)
+	if err != nil {
+		panic(err)
+	}
+
 	return &crossOutAction{
 		AssetAmount: assetAmt,
-		Address:     "bm1pvheagygs9d72stp79u9vduhmdyjpnvud0y89y7",
+		Address:     address.String(),
 	}
 }
 
@@ -100,8 +105,10 @@ func TestBuildCrossOut(t *testing.T) {
 	assetID1 := bc.NewAssetID([32]byte{1})
 	assetID2 := bc.NewAssetID([32]byte{2})
 
+	redeemContract := make([]byte, 20)
+	controlProgram := append([]byte{0x00, byte(len(redeemContract))}, redeemContract...)
 	actions := []Action{
-		newCrossOutAction(bc.AssetAmount{AssetId: &assetID2, Amount: 6}, []byte("back_to_main")),
+		newCrossOutAction(bc.AssetAmount{AssetId: &assetID2, Amount: 6}, redeemContract),
 		testAction(bc.AssetAmount{AssetId: &assetID1, Amount: 5}),
 	}
 	expiryTime := time.Now().Add(time.Minute)
@@ -117,7 +124,7 @@ func TestBuildCrossOut(t *testing.T) {
 				types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), assetID1, 5, 0, nil),
 			},
 			Outputs: []*types.TxOutput{
-				types.NewCrossChainOutput(assetID2, 6, []byte("back_to_main")),
+				types.NewCrossChainOutput(assetID2, 6, controlProgram),
 				types.NewIntraChainOutput(assetID1, 5, []byte("change")),
 			},
 		}),
