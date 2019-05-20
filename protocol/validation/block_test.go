@@ -33,14 +33,14 @@ func TestCheckBlockTime(t *testing.T) {
 		},
 		{
 			desc:       "timestamp greater than max limit (blocktest#1006)",
-			blockTime:  9999999999,
-			parentTime: []uint64{1520000000},
+			blockTime:  99999999990000,
+			parentTime: []uint64{15200000000000},
 			err:        errBadTimestamp,
 		},
 		{
 			desc:       "timestamp of the block and the parent block are both greater than max limit (blocktest#1007)",
-			blockTime:  uint64(time.Now().Unix()) + consensus.MaxTimeOffsetSeconds + 2,
-			parentTime: []uint64{uint64(time.Now().Unix()) + consensus.MaxTimeOffsetSeconds + 1},
+			blockTime:  uint64(time.Now().UnixNano()/int64(time.Millisecond)) + consensus.MaxTimeOffsetMs + 2000,
+			parentTime: []uint64{uint64(time.Now().UnixNano()/int64(time.Millisecond)) + consensus.MaxTimeOffsetMs + 1000},
 			err:        errBadTimestamp,
 		},
 	}
@@ -154,14 +154,14 @@ func TestValidateBlockHeader(t *testing.T) {
 				BlockHeader: &bc.BlockHeader{
 					Version:         1,
 					Height:          1,
-					Timestamp:       1523352601,
+					Timestamp:       1523352601000,
 					PreviousBlockId: &bc.Hash{V0: 0},
 				},
 			},
 			parent: &state.BlockNode{
 				Version:   1,
 				Height:    0,
-				Timestamp: 1523352600,
+				Timestamp: 1523352600000,
 				Hash:      bc.Hash{V0: 0},
 			},
 			err: nil,
@@ -230,7 +230,7 @@ func TestValidateBlock(t *testing.T) {
 				BlockHeader: &bc.BlockHeader{
 					Version:          1,
 					Height:           1,
-					Timestamp:        1523352601,
+					Timestamp:        1523352601000,
 					PreviousBlockId:  &bc.Hash{V0: 0},
 					TransactionsRoot: &bc.Hash{V0: 1},
 				},
@@ -246,7 +246,7 @@ func TestValidateBlock(t *testing.T) {
 			parent: &state.BlockNode{
 				Version:   1,
 				Height:    0,
-				Timestamp: 1523352600,
+				Timestamp: 1523352600000,
 				Hash:      bc.Hash{V0: 0},
 			},
 			err: errMismatchedMerkleRoot,
@@ -258,7 +258,7 @@ func TestValidateBlock(t *testing.T) {
 				BlockHeader: &bc.BlockHeader{
 					Version:               1,
 					Height:                1,
-					Timestamp:             1523352601,
+					Timestamp:             1523352601000,
 					PreviousBlockId:       &bc.Hash{V0: 0},
 					TransactionsRoot:      &bc.Hash{V0: 6294987741126419124, V1: 12520373106916389157, V2: 5040806596198303681, V3: 1151748423853876189},
 					TransactionStatusHash: &bc.Hash{V0: 1},
@@ -275,7 +275,7 @@ func TestValidateBlock(t *testing.T) {
 			parent: &state.BlockNode{
 				Version:   1,
 				Height:    0,
-				Timestamp: 1523352600,
+				Timestamp: 1523352600000,
 				Hash:      bc.Hash{V0: 0},
 			},
 			err: errMismatchedMerkleRoot,
@@ -287,7 +287,7 @@ func TestValidateBlock(t *testing.T) {
 				BlockHeader: &bc.BlockHeader{
 					Version:         1,
 					Height:          1,
-					Timestamp:       1523352601,
+					Timestamp:       1523352601000,
 					PreviousBlockId: &bc.Hash{V0: 0},
 				},
 				Transactions: []*bc.Tx{
@@ -308,7 +308,7 @@ func TestValidateBlock(t *testing.T) {
 			parent: &state.BlockNode{
 				Version:   1,
 				Height:    0,
-				Timestamp: 1523352600,
+				Timestamp: 1523352600000,
 				Hash:      bc.Hash{V0: 0},
 			},
 			err: ErrWrongCoinbaseTransaction,
@@ -329,7 +329,7 @@ func TestGasOverBlockLimit(t *testing.T) {
 	parent := &state.BlockNode{
 		Version:   1,
 		Height:    0,
-		Timestamp: 1523352600,
+		Timestamp: 1523352600000,
 		Hash:      bc.Hash{V0: 0},
 	}
 	block := &bc.Block{
@@ -337,7 +337,7 @@ func TestGasOverBlockLimit(t *testing.T) {
 		BlockHeader: &bc.BlockHeader{
 			Version:          1,
 			Height:           1,
-			Timestamp:        1523352601,
+			Timestamp:        1523352601000,
 			PreviousBlockId:  &bc.Hash{V0: 0},
 			TransactionsRoot: &bc.Hash{V0: 1},
 		},
@@ -375,7 +375,7 @@ func TestSetTransactionStatus(t *testing.T) {
 	parent := &state.BlockNode{
 		Version:   1,
 		Height:    0,
-		Timestamp: 1523352600,
+		Timestamp: 1523352600000,
 		Hash:      bc.Hash{V0: 0},
 	}
 	block := &bc.Block{
@@ -383,7 +383,7 @@ func TestSetTransactionStatus(t *testing.T) {
 		BlockHeader: &bc.BlockHeader{
 			Version:               1,
 			Height:                1,
-			Timestamp:             1523352601,
+			Timestamp:             1523352601000,
 			PreviousBlockId:       &bc.Hash{V0: 0},
 			TransactionsRoot:      &bc.Hash{V0: 10011341401654852692, V1: 8144266100226420640, V2: 18332298251154128538, V3: 7663092454615786384},
 			TransactionStatusHash: &bc.Hash{V0: 8682965660674182538, V1: 8424137560837623409, V2: 6979974817894224946, V3: 4673809519342015041},

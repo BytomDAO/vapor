@@ -94,7 +94,7 @@ func (w *Wallet) RemoveUnconfirmedTx(txD *protocol.TxDesc) {
 func (w *Wallet) buildAnnotatedUnconfirmedTx(tx *types.Tx) *query.AnnotatedTx {
 	annotatedTx := &query.AnnotatedTx{
 		ID:        tx.ID,
-		Timestamp: uint64(time.Now().Unix()),
+		Timestamp: uint64(time.Now().UnixNano() / int64(time.Millisecond)),
 		Inputs:    make([]*query.AnnotatedInput, 0, len(tx.Inputs)),
 		Outputs:   make([]*query.AnnotatedOutput, 0, len(tx.Outputs)),
 		Size:      tx.SerializedSize,

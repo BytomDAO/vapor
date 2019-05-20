@@ -27,9 +27,9 @@ const (
 	TargetSecondsPerBlock = uint64(150)
 	SeedPerRetarget       = uint64(256)
 
-	// MaxTimeOffsetSeconds is the maximum number of seconds a block time is allowed to be ahead of the current time
-	MaxTimeOffsetSeconds = uint64(60 * 60)
-	MedianTimeBlocks     = 11
+	// MaxTimeOffsetMs is the maximum number of seconds a block time is allowed to be ahead of the current time
+	MaxTimeOffsetMs  = uint64(60 * 60 * 1000)
+	MedianTimeBlocks = 11
 
 	PayToWitnessPubKeyHashDataSize = 20
 	PayToWitnessScriptHashDataSize = 32
