@@ -24,6 +24,7 @@ type BlockNode struct {
 	Version                uint64
 	Height                 uint64
 	Timestamp              uint64
+	BlockWitness           [][]byte
 	TransactionsMerkleRoot bc.Hash
 	TransactionStatusHash  bc.Hash
 }
@@ -39,6 +40,7 @@ func NewBlockNode(bh *types.BlockHeader, parent *BlockNode) (*BlockNode, error) 
 		Version:                bh.Version,
 		Height:                 bh.Height,
 		Timestamp:              bh.Timestamp,
+		BlockWitness:           bh.BlockWitness.Witness,
 		TransactionsMerkleRoot: bh.TransactionsMerkleRoot,
 		TransactionStatusHash:  bh.TransactionStatusHash,
 	}
@@ -79,14 +81,16 @@ func (node *BlockNode) CalcPastMedianTime() uint64 {
 type BlockIndex struct {
 	sync.RWMutex
 
-	index     map[bc.Hash]*BlockNode
-	mainChain []*BlockNode
+	index       map[bc.Hash]*BlockNode
+	heightIndex map[uint64][]*BlockNode
+	mainChain   []*BlockNode
 }
 
 // NewBlockIndex will create a empty BlockIndex
 func NewBlockIndex() *BlockIndex {
 	return &BlockIndex{
 		index:     make(map[bc.Hash]*BlockNode),
+		heightIndex: make(map[uint64][]*BlockNode),
 		mainChain: make([]*BlockNode, 0, approxNodesPerDay),
 	}
 }
@@ -95,6 +99,7 @@ func NewBlockIndex() *BlockIndex {
 func (bi *BlockIndex) AddNode(node *BlockNode) {
 	bi.Lock()
 	bi.index[node.Hash] = node
+	bi.heightIndex[node.Height] = append(bi.heightIndex[node.Height], node)
 	bi.Unlock()
 }
 
@@ -143,6 +148,13 @@ func (bi *BlockIndex) NodeByHeight(height uint64) *BlockNode {
 	bi.RLock()
 	defer bi.RUnlock()
 	return bi.nodeByHeight(height)
+}
+
+// NodesByHeight return all block nodes at the specified height.
+func (bi *BlockIndex) NodesByHeight(height uint64) []*BlockNode {
+	bi.RLock()
+	defer bi.RUnlock()
+	return bi.heightIndex[height]
 }
 
 // SetMainChain will set the the mainChain array

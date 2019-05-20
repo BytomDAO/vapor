@@ -224,13 +224,18 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 }
 
 // SaveChainStatus save the core's newest status && delete old status
-func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint) error {
+func (s *Store) SaveChainStatus(node *state.BlockNode, irreversibleNode *state.BlockNode, view *state.UtxoViewpoint) error {
 	batch := s.db.NewBatch()
 	if err := saveUtxoView(batch, view); err != nil {
 		return err
 	}
 
-	bytes, err := json.Marshal(protocol.BlockStoreState{Height: node.Height, Hash: &node.Hash})
+	bytes, err := json.Marshal(protocol.BlockStoreState{
+		Height:             node.Height,
+		Hash:               &node.Hash,
+		IrreversibleHeight: irreversibleNode.Height,
+		IrreversibleHash:   &irreversibleNode.Hash,
+	})
 	if err != nil {
 		return err
 	}

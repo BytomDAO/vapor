@@ -22,8 +22,9 @@ type Chain struct {
 	bbft           *bbft
 	processBlockCh chan *processBlockMsg
 
-	cond     sync.Cond
-	bestNode *state.BlockNode
+	cond                  sync.Cond
+	bestNode              *state.BlockNode
+	lastIrreversibleNode  *state.BlockNode
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
@@ -32,7 +33,6 @@ func NewChain(store Store, txPool *TxPool) (*Chain, error) {
 		orphanManage:   NewOrphanManage(),
 		txPool:         txPool,
 		store:          store,
-		bbft:           &bbft{consensusNodeManager: newConsensusNodeManager(store)},
 		processBlockCh: make(chan *processBlockMsg, maxProcessBlockChSize),
 	}
 	c.cond.L = new(sync.Mutex)
@@ -52,6 +52,7 @@ func NewChain(store Store, txPool *TxPool) (*Chain, error) {
 
 	c.bestNode = c.index.GetNode(storeStatus.Hash)
 	c.index.SetMainChain(c.bestNode)
+	c.bbft = newBbft(store, c.index)
 	go c.blockProcesser()
 	return c, nil
 }
@@ -79,7 +80,7 @@ func (c *Chain) initChainStatus() error {
 	if err != nil {
 		return err
 	}
-	return c.store.SaveChainStatus(node, utxoView)
+	return c.store.SaveChainStatus(node, node, utxoView)
 }
 
 // BestBlockHeight returns the current height of the blockchain.
@@ -108,8 +109,8 @@ func (c *Chain) InMainChain(hash bc.Hash) bool {
 }
 
 // This function must be called with mu lock in above level
-func (c *Chain) setState(node *state.BlockNode, view *state.UtxoViewpoint) error {
-	if err := c.store.SaveChainStatus(node, view); err != nil {
+func (c *Chain) setState(node *state.BlockNode, irreversibleNode *state.BlockNode, view *state.UtxoViewpoint) error {
+	if err := c.store.SaveChainStatus(node, irreversibleNode, view); err != nil {
 		return err
 	}
 

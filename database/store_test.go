@@ -155,11 +155,11 @@ func TestSaveChainStatus(t *testing.T) {
 		},
 	}
 
-	if err := store.SaveChainStatus(node, view); err != nil {
+	if err := store.SaveChainStatus(node, node, view); err != nil {
 		t.Fatal(err)
 	}
 
-	expectStatus := &protocol.BlockStoreState{Height: node.Height, Hash: &node.Hash}
+	expectStatus := &protocol.BlockStoreState{Height: node.Height, Hash: &node.Hash, IrreversibleHeight: node.Height, IrreversibleHash: &node.Hash}
 	if !testutil.DeepEqual(store.GetStoreStatus(), expectStatus) {
 		t.Errorf("got block status:%v, expect block status:%v", store.GetStoreStatus(), expectStatus)
 	}

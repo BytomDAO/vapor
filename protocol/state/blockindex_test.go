@@ -121,8 +121,9 @@ func TestSetMainChain(t *testing.T) {
 // MockBlockIndex will mock a empty BlockIndex
 func MockBlockIndex() *BlockIndex {
 	return &BlockIndex{
-		index:     make(map[bc.Hash]*BlockNode),
-		mainChain: make([]*BlockNode, 0, 2),
+		index:       make(map[bc.Hash]*BlockNode),
+		heightIndex: make(map[uint64][]*BlockNode),
+		mainChain:   make([]*BlockNode, 0, 2),
 	}
 }
 
