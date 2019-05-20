@@ -150,7 +150,6 @@ type crossOutAction struct {
 	Arbitrary json.HexBytes `json:"arbitrary"`
 }
 
-// TODO:
 func (a *crossOutAction) Build(ctx context.Context, b *TemplateBuilder) error {
 	var missing []string
 	if a.AssetId.IsZero() {

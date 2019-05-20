@@ -46,7 +46,7 @@ func newControlProgramAction(assetAmt bc.AssetAmount, script []byte) *controlPro
 	}
 }
 
-func TestBuild(t *testing.T) {
+func TestBuildIntra(t *testing.T) {
 	ctx := context.Background()
 
 	assetID1 := bc.NewAssetID([32]byte{1})
