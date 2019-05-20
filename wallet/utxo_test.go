@@ -497,6 +497,7 @@ func TestTxInToUtxos(t *testing.T) {
 					AssetID:        bc.AssetID{V0: 1},
 					Amount:         1,
 					ControlProgram: []byte{0x51},
+					Vote:           []byte("af594006a40837d9f028daabb6d589df0b9138daefad5683e5233c2646279217294a8d532e60863bcf196625a35fb8ceeffa3c09610eb92dcfb655a947f13269"),
 					SourceID:       bc.Hash{V0: 1},
 					SourcePos:      1,
 				},
