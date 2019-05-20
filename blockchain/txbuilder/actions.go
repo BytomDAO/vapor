@@ -167,5 +167,5 @@ func (a *crossOutAction) Build(ctx context.Context, b *TemplateBuilder) error {
 }
 
 func (a *crossOutAction) ActionType() string {
-	return "cross_out"
+	return "cross_chain_out"
 }
