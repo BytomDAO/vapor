@@ -90,7 +90,7 @@ func TestBuildIntra(t *testing.T) {
 func newCrossOutAction(assetAmt bc.AssetAmount, arbitrary []byte) *crossOutAction {
 	return &crossOutAction{
 		AssetAmount: assetAmt,
-		Arbitrary:   arbitrary,
+		Address:     "bm1pvheagygs9d72stp79u9vduhmdyjpnvud0y89y7",
 	}
 }
 
