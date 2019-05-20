@@ -107,6 +107,7 @@ func TestBuildCrossOut(t *testing.T) {
 
 	redeemContract := make([]byte, 20)
 	controlProgram := append([]byte{0x00, byte(len(redeemContract))}, redeemContract...)
+
 	actions := []Action{
 		newCrossOutAction(bc.AssetAmount{AssetId: &assetID2, Amount: 6}, redeemContract),
 		testAction(bc.AssetAmount{AssetId: &assetID1, Amount: 5}),
