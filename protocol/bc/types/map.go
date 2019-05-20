@@ -152,8 +152,13 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 
 	// connect the inputs to the mux
 	for _, spend := range spends {
-		spentOutput := entryMap[*spend.SpentOutputId].(*bc.IntraChainOutput)
-		spend.SetDestination(&muxID, spentOutput.Source.Value, spend.Ordinal)
+		switch spentOutput := entryMap[*spend.SpentOutputId].(type) {
+		case *bc.IntraChainOutput:
+			spend.SetDestination(&muxID, spentOutput.Source.Value, spend.Ordinal)
+
+		case *bc.VoteOutput:
+			spend.SetDestination(&muxID, spentOutput.Source.Value, spend.Ordinal)
+		}
 	}
 
 	for _, crossIn := range crossIns {

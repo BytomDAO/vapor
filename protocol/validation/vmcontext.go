@@ -25,15 +25,23 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 	)
 
 	switch e := entry.(type) {
-
 	case *bc.Spend:
-		spentOutput := tx.Entries[*e.SpentOutputId].(*bc.IntraChainOutput)
-		a1 := spentOutput.Source.Value.AssetId.Bytes()
-		assetID = &a1
-		amount = &spentOutput.Source.Value.Amount
-		destPos = &e.WitnessDestination.Position
-		s := e.SpentOutputId.Bytes()
-		spentOutputID = &s
+		switch spentOutput := tx.Entries[*e.SpentOutputId].(type) {
+		case *bc.IntraChainOutput:
+			a1 := spentOutput.Source.Value.AssetId.Bytes()
+			assetID = &a1
+			amount = &spentOutput.Source.Value.Amount
+			destPos = &e.WitnessDestination.Position
+			s := e.SpentOutputId.Bytes()
+			spentOutputID = &s
+		case *bc.VoteOutput:
+			a1 := spentOutput.Source.Value.AssetId.Bytes()
+			assetID = &a1
+			amount = &spentOutput.Source.Value.Amount
+			destPos = &e.WitnessDestination.Position
+			s := e.SpentOutputId.Bytes()
+			spentOutputID = &s
+		}
 	}
 
 	var txSigHash *[]byte
@@ -109,6 +117,9 @@ func (ec *entryContext) checkOutput(index uint64, amount uint64, assetID []byte,
 
 		switch e := e.(type) {
 		case *bc.IntraChainOutput:
+			return check(e.ControlProgram, e.Source.Value), nil
+
+		case *bc.VoteOutput:
 			return check(e.ControlProgram, e.Source.Value), nil
 
 		case *bc.Retirement:

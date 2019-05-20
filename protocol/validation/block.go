@@ -46,12 +46,17 @@ func checkCoinbaseAmount(b *bc.Block, amount uint64) error {
 		return errors.Wrap(ErrWrongCoinbaseTransaction, "have more than 1 output")
 	}
 
-	output, err := tx.IntraChainOutput(*tx.TxHeader.ResultIds[0])
-	if err != nil {
-		return err
+	var SourceAmount uint64
+	switch output := tx.Entries[*tx.TxHeader.ResultIds[0]].(type) {
+	case *bc.IntraChainOutput:
+		SourceAmount = output.Source.Value.Amount
+	case *bc.VoteOutput:
+		SourceAmount = output.Source.Value.Amount
+	default:
+		return errors.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", tx.TxHeader.ResultIds[0].Bytes(), output)
 	}
 
-	if output.Source.Value.Amount != amount {
+	if SourceAmount != amount {
 		return errors.Wrap(ErrWrongCoinbaseTransaction, "dismatch output amount")
 	}
 	return nil

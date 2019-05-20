@@ -1,10 +1,9 @@
 package state
 
 import (
-	"errors"
-
 	"github.com/vapor/consensus"
 	"github.com/vapor/database/storage"
+	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 )
 
@@ -22,11 +21,22 @@ func NewUtxoViewpoint() *UtxoViewpoint {
 
 func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFail bool) error {
 	for _, prevout := range tx.SpentOutputIDs {
-		spentOutput, err := tx.IntraChainOutput(prevout)
+		assetID := bc.AssetID{}
+		entryOutput, err := tx.Entry(prevout)
 		if err != nil {
 			return err
 		}
-		if statusFail && *spentOutput.Source.Value.AssetId != *consensus.BTMAssetID {
+
+		switch output := entryOutput.(type) {
+		case *bc.IntraChainOutput:
+			assetID = *output.Source.Value.AssetId
+		case *bc.VoteOutput:
+			assetID = *output.Source.Value.AssetId
+		default:
+			return errors.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", prevout.Bytes(), entryOutput)
+		}
+
+		if statusFail && assetID != *consensus.BTMAssetID {
 			continue
 		}
 
@@ -44,12 +54,23 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFa
 	}
 
 	for _, id := range tx.TxHeader.ResultIds {
-		output, err := tx.IntraChainOutput(*id)
+		assetID := bc.AssetID{}
+		entryOutput, err := tx.Entry(*id)
 		if err != nil {
-			// error due to it's a retirement, utxo doesn't care this output type so skip it
 			continue
 		}
-		if statusFail && *output.Source.Value.AssetId != *consensus.BTMAssetID {
+
+		switch output := entryOutput.(type) {
+		case *bc.IntraChainOutput:
+			assetID = *output.Source.Value.AssetId
+		case *bc.VoteOutput:
+			assetID = *output.Source.Value.AssetId
+		default:
+			// due to it's a retirement, utxo doesn't care this output type so skip it
+			continue
+		}
+
+		if statusFail && assetID != *consensus.BTMAssetID {
 			continue
 		}
 
@@ -82,11 +103,22 @@ func (view *UtxoViewpoint) CanSpend(hash *bc.Hash) bool {
 
 func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 	for _, prevout := range tx.SpentOutputIDs {
-		spentOutput, err := tx.IntraChainOutput(prevout)
+		assetID := bc.AssetID{}
+		entryOutput, err := tx.Entry(prevout)
 		if err != nil {
 			return err
 		}
-		if statusFail && *spentOutput.Source.Value.AssetId != *consensus.BTMAssetID {
+
+		switch output := entryOutput.(type) {
+		case *bc.IntraChainOutput:
+			assetID = *output.Source.Value.AssetId
+		case *bc.VoteOutput:
+			assetID = *output.Source.Value.AssetId
+		default:
+			return errors.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", prevout.Bytes(), entryOutput)
+		}
+
+		if statusFail && assetID != *consensus.BTMAssetID {
 			continue
 		}
 
@@ -102,12 +134,23 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 	}
 
 	for _, id := range tx.TxHeader.ResultIds {
-		output, err := tx.IntraChainOutput(*id)
+		assetID := bc.AssetID{}
+		entryOutput, err := tx.Entry(*id)
 		if err != nil {
-			// error due to it's a retirement, utxo doesn't care this output type so skip it
 			continue
 		}
-		if statusFail && *output.Source.Value.AssetId != *consensus.BTMAssetID {
+
+		switch output := entryOutput.(type) {
+		case *bc.IntraChainOutput:
+			assetID = *output.Source.Value.AssetId
+		case *bc.VoteOutput:
+			assetID = *output.Source.Value.AssetId
+		default:
+			// due to it's a retirement, utxo doesn't care this output type so skip it
+			continue
+		}
+
+		if statusFail && assetID != *consensus.BTMAssetID {
 			continue
 		}
 
