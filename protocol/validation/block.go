@@ -26,7 +26,7 @@ var (
 )
 
 func checkBlockTime(b *bc.Block, parent *state.BlockNode) error {
-	if b.Timestamp > uint64(time.Now().Unix())+consensus.MaxTimeOffsetSeconds {
+	if b.Timestamp > uint64(time.Now().UnixNano()/int64(time.Millisecond))+consensus.MaxTimeOffsetMs {
 		return errBadTimestamp
 	}
 

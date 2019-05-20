@@ -271,7 +271,7 @@ func (t *TxInput) writeInputCommitment(w io.Writer) (err error) {
 		return inp.SpendCommitment.writeExtensibleString(w, inp.SpendCommitmentSuffix, t.AssetVersion)
 
 	case *CrossChainInput:
-		if _, err = w.Write([]byte{SpendInputType}); err != nil {
+		if _, err = w.Write([]byte{CrossChainInputType}); err != nil {
 			return err
 		}
 		return inp.SpendCommitment.writeExtensibleString(w, inp.SpendCommitmentSuffix, t.AssetVersion)

@@ -89,7 +89,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			Version:           1,
 			Height:            nextBlockHeight,
 			PreviousBlockHash: preBlockHash,
-			Timestamp:         uint64(time.Now().Unix()),
+			Timestamp:         uint64(time.Now().UnixNano() / int64(time.Millisecond)),
 			BlockCommitment:   types.BlockCommitment{},
 		},
 	}
