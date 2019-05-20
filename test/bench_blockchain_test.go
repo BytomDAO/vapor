@@ -249,7 +249,7 @@ func AddTxInputFromUtxo(utxo *account.UTXO, singer *signers.Signer) (*types.TxIn
 }
 
 func AddTxOutput(assetID bc.AssetID, amount uint64, controlProgram []byte) *types.TxOutput {
-	out := types.NewTxOutput(assetID, amount, controlProgram)
+	out := types.NewIntraChainOutput(assetID, amount, controlProgram)
 	return out
 }
 

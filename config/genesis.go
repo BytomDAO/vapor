@@ -22,7 +22,7 @@ func GenesisTx() *types.Tx {
 			types.NewCoinbaseInput([]byte("Information is power. -- Jan/11/2013. Computing is power. -- Apr/24/2018.")),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, consensus.InitialBlockSubsidy, contract),
+			types.NewIntraChainOutput(*consensus.BTMAssetID, consensus.InitialBlockSubsidy, contract),
 		},
 	}
 	return types.NewTx(txData)
@@ -124,8 +124,9 @@ func soloNetGenesisBlock() *types.Block {
 // GenesisBlock will return genesis block
 func GenesisBlock() *types.Block {
 	return map[string]func() *types.Block{
-		"main": mainNetGenesisBlock,
-		"test": testNetGenesisBlock,
-		"solo": soloNetGenesisBlock,
+		"main":  mainNetGenesisBlock,
+		"test":  testNetGenesisBlock,
+		"solo":  soloNetGenesisBlock,
+		"vapor": soloNetGenesisBlock,
 	}[consensus.ActiveNetParams.Name]()
 }

@@ -332,7 +332,7 @@ func (m *recoveryManager) extendScanAddresses(accountID string, change bool) err
 func (m *recoveryManager) processBlock(b *types.Block) error {
 	for _, tx := range b.Transactions {
 		for _, output := range tx.Outputs {
-			if cp, ok := m.addresses[getCPHash(output.ControlProgram)]; ok {
+			if cp, ok := m.addresses[getCPHash(output.ControlProgram())]; ok {
 				status, ok := m.state.AccountsStatus[cp.AccountID]
 				if !ok {
 					return ErrInvalidAcctID

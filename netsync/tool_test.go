@@ -4,7 +4,6 @@ import (
 	"errors"
 	"math/rand"
 	"net"
-	"time"
 
 	wire "github.com/tendermint/go-wire"
 	"github.com/tendermint/tmlibs/flowrate"
@@ -118,8 +117,8 @@ func (nw *NetWork) HandsShake(nodeA, nodeB *SyncManager) (*P2PPeer, *P2PPeer, er
 	A2B.SetConnection(&B2A, nodeB)
 	B2A.SetConnection(&A2B, nodeA)
 
-	nodeA.handleStatusRequestMsg(&A2B)
-	nodeB.handleStatusRequestMsg(&B2A)
+	nodeA.AddPeer(&A2B)
+	nodeB.AddPeer(&B2A)
 
 	A2B.setAsync(true)
 	B2A.setAsync(true)
@@ -170,15 +169,13 @@ func mockSync(blocks []*types.Block) *SyncManager {
 func mockTxs(txCount int) ([]*types.Tx, []*bc.Tx) {
 	var txs []*types.Tx
 	var bcTxs []*bc.Tx
-	for i := 0; i < txCount; i++ {
-		trueProg := mockControlProgram(60)
-		assetID := bc.ComputeAssetID(trueProg, 1, &bc.EmptyStringHash)
-		now := []byte(time.Now().String())
-		issuanceInp := types.NewIssuanceInput(now, 1, trueProg, nil, nil)
+	trueProg := mockControlProgram(60)
+	assetID := bc.AssetID{V0: 9999}
+	for i := uint64(0); i < uint64(txCount); i++ {
 		tx := types.NewTx(types.TxData{
 			Version: 1,
-			Inputs:  []*types.TxInput{issuanceInp},
-			Outputs: []*types.TxOutput{types.NewTxOutput(assetID, 1, trueProg)},
+			Inputs:  []*types.TxInput{types.NewSpendInput(nil, bc.Hash{V0: i + 1}, assetID, i, i, trueProg)},
+			Outputs: []*types.TxOutput{types.NewIntraChainOutput(assetID, 1, trueProg)},
 		})
 		txs = append(txs, tx)
 		bcTxs = append(bcTxs, tx.Tx)

@@ -117,9 +117,9 @@ func checkBlankCheck(tx *types.TxData) error {
 		}
 	}
 	for _, out := range tx.Outputs {
-		assetMap[*out.AssetId], ok = checked.SubInt64(assetMap[*out.AssetId], int64(out.Amount))
+		assetMap[*out.AssetAmount().AssetId], ok = checked.SubInt64(assetMap[*out.AssetAmount().AssetId], int64(out.AssetAmount().Amount))
 		if !ok {
-			return errors.WithDetailf(ErrBadAmount, "cumulative amounts for asset %x overflow the allowed asset amount 2^63", out.AssetId.Bytes())
+			return errors.WithDetailf(ErrBadAmount, "cumulative amounts for asset %x overflow the allowed asset amount 2^63", out.AssetAmount().AssetId.Bytes())
 		}
 	}
 

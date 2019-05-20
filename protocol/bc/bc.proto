@@ -31,11 +31,6 @@ message AssetAmount {
   uint64  amount   = 2;
 }
 
-message AssetDefinition {
-  Program issuance_program = 1;
-  Hash    data             = 2;
-}
-
 message ValueSource {
   Hash        ref      = 1;
   AssetAmount value    = 2;
@@ -87,10 +82,23 @@ message Coinbase {
   bytes            arbitrary           = 2;
 }
 
-message Output {
+message IntraChainOutput {
   ValueSource source          = 1;
   Program     control_program = 2;
   uint64      ordinal         = 3;
+}
+
+message CrossChainOutput {
+  ValueSource source          = 1;
+  Program     control_program = 2;
+  uint64      ordinal         = 3;
+}
+
+message VoteOutput {
+  ValueSource source          = 1;
+  Program     control_program = 2;
+  uint64      ordinal         = 3;
+  bytes       vote            = 4;
 }
 
 message Retirement {
@@ -98,18 +106,18 @@ message Retirement {
   uint64      ordinal  = 2;
 }
 
-message Issuance {
-  Hash             nonce_hash               = 1;
-  AssetAmount      value                    = 2;
-  ValueDestination witness_destination      = 3;
-  AssetDefinition  witness_asset_definition = 4;
-  repeated bytes   witness_arguments        = 5;
-  uint64           ordinal                  = 6;
-}
-
 message Spend {
   Hash             spent_output_id     = 1;
   ValueDestination witness_destination = 2;
   repeated bytes   witness_arguments   = 3;
   uint64           ordinal             = 4;
+}
+
+message CrossChainInput {
+  Hash             mainchain_output_id = 1;
+  AssetAmount      value               = 2;
+  ValueDestination witness_destination = 3;
+  Program          control_program     = 4;
+  repeated bytes   witness_arguments   = 5;
+  uint64           ordinal             = 6;
 }

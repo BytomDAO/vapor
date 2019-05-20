@@ -210,7 +210,21 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			}
 		}
 
-	case *bc.Output:
+	case *bc.IntraChainOutput:
+		vs2 := *vs
+		vs2.sourcePos = 0
+		if err = checkValidSrc(&vs2, e.Source); err != nil {
+			return errors.Wrap(err, "checking output source")
+		}
+
+	case *bc.CrossChainOutput:
+		vs2 := *vs
+		vs2.sourcePos = 0
+		if err = checkValidSrc(&vs2, e.Source); err != nil {
+			return errors.Wrap(err, "checking output source")
+		}
+
+	case *bc.VoteOutput:
 		vs2 := *vs
 		vs2.sourcePos = 0
 		if err = checkValidSrc(&vs2, e.Source); err != nil {
@@ -224,35 +238,26 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errors.Wrap(err, "checking retirement source")
 		}
 
-	case *bc.Issuance:
-		computedAssetID := e.WitnessAssetDefinition.ComputeAssetID()
-		if computedAssetID != *e.Value.AssetId {
-			return errors.WithDetailf(ErrMismatchedAssetID, "asset ID is %x, issuance wants %x", computedAssetID.Bytes(), e.Value.AssetId.Bytes())
-		}
-
-		gasLeft, err := vm.Verify(NewTxVMContext(vs, e, e.WitnessAssetDefinition.IssuanceProgram, e.WitnessArguments), vs.gasStatus.GasLeft)
+	case *bc.CrossChainInput:
+		_, err := vm.Verify(NewTxVMContext(vs, e, e.ControlProgram, e.WitnessArguments), consensus.DefaultGasCredit)
 		if err != nil {
-			return errors.Wrap(err, "checking issuance program")
-		}
-		if err = vs.gasStatus.updateUsage(gasLeft); err != nil {
-			return err
+			return errors.Wrap(err, "checking cross-chain input control program")
 		}
 
-		destVS := *vs
-		destVS.destPos = 0
-		if err = checkValidDest(&destVS, e.WitnessDestination); err != nil {
-			return errors.Wrap(err, "checking issuance destination")
+		vs2 := *vs
+		vs2.destPos = 0
+		if err = checkValidDest(&vs2, e.WitnessDestination); err != nil {
+			return errors.Wrap(err, "checking cross-chain input destination")
 		}
 
 	case *bc.Spend:
 		if e.SpentOutputId == nil {
 			return errors.Wrap(ErrMissingField, "spend without spent output ID")
 		}
-		spentOutput, err := vs.tx.Output(*e.SpentOutputId)
+		spentOutput, err := vs.tx.IntraChainOutput(*e.SpentOutputId)
 		if err != nil {
 			return errors.Wrap(err, "getting spend prevout")
 		}
-
 		gasLeft, err := vm.Verify(NewTxVMContext(vs, e, spentOutput.ControlProgram, e.WitnessArguments), vs.gasStatus.GasLeft)
 		if err != nil {
 			return errors.Wrap(err, "checking control program")
@@ -260,7 +265,6 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		if err = vs.gasStatus.updateUsage(gasLeft); err != nil {
 			return err
 		}
-
 		eq, err := spentOutput.Source.Value.Equal(e.WitnessDestination.Value)
 		if err != nil {
 			return err
@@ -275,7 +279,6 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 				e.WitnessDestination.Value.AssetId.Bytes(),
 			)
 		}
-
 		vs2 := *vs
 		vs2.destPos = 0
 		if err = checkValidDest(&vs2, e.WitnessDestination); err != nil {
@@ -339,9 +342,9 @@ func checkValidSrc(vstate *validationState, vs *bc.ValueSource) error {
 		}
 		dest = ref.WitnessDestination
 
-	case *bc.Issuance:
+	case *bc.CrossChainInput:
 		if vs.Position != 0 {
-			return errors.Wrapf(ErrPosition, "invalid position %d for issuance source", vs.Position)
+			return errors.Wrapf(ErrPosition, "invalid position %d for cross-chain input source", vs.Position)
 		}
 		dest = ref.WitnessDestination
 
@@ -358,7 +361,7 @@ func checkValidSrc(vstate *validationState, vs *bc.ValueSource) error {
 		dest = ref.WitnessDestinations[vs.Position]
 
 	default:
-		return errors.Wrapf(bc.ErrEntryType, "value source is %T, should be coinbase, issuance, spend, or mux", e)
+		return errors.Wrapf(bc.ErrEntryType, "value source is %T, should be coinbase, cross-chain input, spend, or mux", e)
 	}
 
 	if dest.Ref == nil || *dest.Ref != vstate.entryID {
@@ -398,7 +401,19 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 
 	var src *bc.ValueSource
 	switch ref := e.(type) {
-	case *bc.Output:
+	case *bc.IntraChainOutput:
+		if vd.Position != 0 {
+			return errors.Wrapf(ErrPosition, "invalid position %d for output destination", vd.Position)
+		}
+		src = ref.Source
+
+	case *bc.CrossChainOutput:
+		if vd.Position != 0 {
+			return errors.Wrapf(ErrPosition, "invalid position %d for output destination", vd.Position)
+		}
+		src = ref.Source
+
+	case *bc.VoteOutput:
 		if vd.Position != 0 {
 			return errors.Wrapf(ErrPosition, "invalid position %d for output destination", vd.Position)
 		}
@@ -417,7 +432,7 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 		src = ref.Sources[vd.Position]
 
 	default:
-		return errors.Wrapf(bc.ErrEntryType, "value destination is %T, should be output, retirement, or mux", e)
+		return errors.Wrapf(bc.ErrEntryType, "value destination is %T, should be intra-chain/cross-chain output, retirement, or mux", e)
 	}
 
 	if src.Ref == nil || *src.Ref != vs.entryID {
@@ -451,28 +466,22 @@ func checkStandardTx(tx *bc.Tx, blockHeight uint64) error {
 		if err != nil {
 			continue
 		}
-		spentOutput, err := tx.Output(*spend.SpentOutputId)
+
+		code := []byte{}
+		outputEntry, err := tx.Entry(*spend.SpentOutputId)
 		if err != nil {
 			return err
 		}
-
-		if !segwit.IsP2WScript(spentOutput.ControlProgram.Code) {
-			return ErrNotStandardTx
-		}
-	}
-
-	for _, id := range tx.ResultIds {
-		e, ok := tx.Entries[*id]
-		if !ok {
-			return errors.Wrapf(bc.ErrMissingEntry, "id %x", id.Bytes())
+		switch output := outputEntry.(type) {
+		case *bc.IntraChainOutput:
+			code = output.ControlProgram.Code
+		case *bc.VoteOutput:
+			code = output.ControlProgram.Code
+		default:
+			return errors.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", id.Bytes(), outputEntry)
 		}
 
-		output, ok := e.(*bc.Output)
-		if !ok || *output.Source.Value.AssetId != *consensus.BTMAssetID {
-			continue
-		}
-
-		if !segwit.IsP2WScript(output.ControlProgram.Code) {
+		if !segwit.IsP2WScript(code) {
 			return ErrNotStandardTx
 		}
 	}
@@ -487,6 +496,7 @@ func checkTimeRange(tx *bc.Tx, block *bc.Block) error {
 	if tx.TimeRange < block.Height {
 		return ErrBadTimeRange
 	}
+
 	return nil
 }
 

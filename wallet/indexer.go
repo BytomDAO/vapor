@@ -9,7 +9,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/account"
-	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/query"
 	"github.com/vapor/crypto/sha3pool"
 	dbm "github.com/vapor/database/leveldb"
@@ -87,15 +86,8 @@ func saveExternalAssetDefinition(b *types.Block, walletDB dbm.DB) {
 	defer storeBatch.Write()
 
 	for _, tx := range b.Transactions {
-		for _, orig := range tx.Inputs {
-			if ii, ok := orig.TypedInput.(*types.IssuanceInput); ok {
-				if isValidJSON(ii.AssetDefinition) {
-					assetID := ii.AssetID()
-					if assetExist := walletDB.Get(asset.ExtAssetKey(&assetID)); assetExist == nil {
-						storeBatch.Set(asset.ExtAssetKey(&assetID), ii.AssetDefinition)
-					}
-				}
-			}
+		for _, _ = range tx.Inputs {
+			// handle cross chain input here
 		}
 	}
 }
@@ -160,7 +152,7 @@ transactionLoop:
 		statusFail, _ := txStatus.GetStatus(pos)
 		for _, v := range tx.Outputs {
 			var hash [32]byte
-			sha3pool.Sum256(hash[:], v.ControlProgram)
+			sha3pool.Sum256(hash[:], v.ControlProgram())
 
 			if bytes := w.DB.Get(account.ContractKey(hash)); bytes != nil {
 				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))

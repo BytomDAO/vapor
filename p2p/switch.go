@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 	cfg "github.com/vapor/config"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519"
+	"github.com/vapor/crypto/sha3pool"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 	"github.com/vapor/event"
@@ -33,6 +35,8 @@ const (
 
 	minNumOutboundPeers = 4
 	maxNumLANPeers      = 5
+	//magicNumber used to generate unique netID
+	magicNumber = uint64(0x054c5638)
 )
 
 //pre-define errors for connecting fail
@@ -84,6 +88,16 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 	var discv *dht.Network
 	var lanDiscv *mdns.LANDiscover
 
+	//generate unique netID
+	var data []byte
+	var h [32]byte
+	data = append(data, cfg.GenesisBlock().Hash().Bytes()...)
+	magic := make([]byte, 8)
+	binary.BigEndian.PutUint64(magic, magicNumber)
+	data = append(data, magic[:]...)
+	sha3pool.Sum256(h[:], data)
+	netID := binary.BigEndian.Uint64(h[:8])
+
 	blacklistDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
 	config.P2P.PrivateKey, err = config.NodeKey()
 	if err != nil {
@@ -101,7 +115,7 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 	if !config.VaultMode {
 		// Create listener
 		l, listenAddr = GetListener(config.P2P)
-		discv, err = dht.NewDiscover(config, ed25519.PrivateKey(bytes), l.ExternalAddress().Port)
+		discv, err = dht.NewDiscover(config, ed25519.PrivateKey(bytes), l.ExternalAddress().Port, netID)
 		if err != nil {
 			return nil, err
 		}
@@ -110,11 +124,11 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 		}
 	}
 
-	return newSwitch(config, discv, lanDiscv, blacklistDB, l, privKey, listenAddr)
+	return newSwitch(config, discv, lanDiscv, blacklistDB, l, privKey, listenAddr, netID)
 }
 
 // newSwitch creates a new Switch with the given config.
-func newSwitch(config *cfg.Config, discv discv, lanDiscv lanDiscv, blacklistDB dbm.DB, l Listener, priv crypto.PrivKeyEd25519, listenAddr string) (*Switch, error) {
+func newSwitch(config *cfg.Config, discv discv, lanDiscv lanDiscv, blacklistDB dbm.DB, l Listener, priv crypto.PrivKeyEd25519, listenAddr string, netID uint64) (*Switch, error) {
 	sw := &Switch{
 		Config:       config,
 		peerConfig:   DefaultPeerConfig(config.P2P),
@@ -127,7 +141,7 @@ func newSwitch(config *cfg.Config, discv discv, lanDiscv lanDiscv, blacklistDB d
 		discv:        discv,
 		lanDiscv:     lanDiscv,
 		db:           blacklistDB,
-		nodeInfo:     NewNodeInfo(config, priv.PubKey().Unwrap().(crypto.PubKeyEd25519), listenAddr),
+		nodeInfo:     NewNodeInfo(config, priv.PubKey().Unwrap().(crypto.PubKeyEd25519), listenAddr, netID),
 		bannedPeer:   make(map[string]time.Time),
 	}
 	if err := sw.loadBannedPeers(); err != nil {
@@ -137,6 +151,7 @@ func newSwitch(config *cfg.Config, discv discv, lanDiscv lanDiscv, blacklistDB d
 	sw.AddListener(l)
 	sw.BaseService = *cmn.NewBaseService(nil, "P2P Switch", sw)
 	trust.Init()
+	log.WithFields(log.Fields{"module": logModule, "nodeInfo": sw.nodeInfo}).Info("init p2p network")
 	return sw, nil
 }
 
@@ -206,7 +221,8 @@ func (sw *Switch) AddPeer(pc *peerConn, isLAN bool) error {
 	if err := version.Status.CheckUpdate(sw.nodeInfo.Version, peerNodeInfo.Version, peerNodeInfo.RemoteAddr); err != nil {
 		return err
 	}
-	if err := sw.nodeInfo.CompatibleWith(peerNodeInfo); err != nil {
+
+	if err := sw.nodeInfo.compatibleWith(peerNodeInfo, version.CompatibleWith); err != nil {
 		return err
 	}
 
@@ -320,12 +336,6 @@ func (sw *Switch) NumPeers() (lan, outbound, inbound, dialing int) {
 	}
 	dialing = sw.dialing.Size()
 	return
-}
-
-// NodeInfo returns the switch's NodeInfo.
-// NOTE: Not goroutine safe.
-func (sw *Switch) NodeInfo() *NodeInfo {
-	return sw.nodeInfo
 }
 
 //Peers return switch peerset
@@ -452,7 +462,7 @@ func (sw *Switch) filterConnByPeer(peer *Peer) error {
 		return err
 	}
 
-	if sw.nodeInfo.getPubkey().Equals(peer.PubKey().Wrap()) {
+	if sw.nodeInfo.PubKey.Equals(peer.PubKey().Wrap()) {
 		return ErrConnectSelf
 	}
 
@@ -501,7 +511,7 @@ func (sw *Switch) dialPeers(addresses []*NetAddress) {
 
 	var wg sync.WaitGroup
 	for _, address := range addresses {
-		if sw.NodeInfo().ListenAddr == address.String() {
+		if sw.nodeInfo.ListenAddr == address.String() {
 			continue
 		}
 		if dialling := sw.IsDialing(address); dialling {
