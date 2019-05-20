@@ -79,12 +79,17 @@ func (w *Wallet) detachUtxos(batch dbm.Batch, b *types.Block, txStatus *bc.Trans
 	for txIndex := len(b.Transactions) - 1; txIndex >= 0; txIndex-- {
 		tx := b.Transactions[txIndex]
 		for j := range tx.Outputs {
-			resOut, err := tx.IntraChainOutput(*tx.ResultIds[j])
-			if err != nil {
+			code := []byte{}
+			switch resOut := tx.Entries[*tx.ResultIds[j]].(type) {
+			case *bc.IntraChainOutput:
+				code = resOut.ControlProgram.Code
+			case *bc.VoteOutput:
+				code = resOut.ControlProgram.Code
+			default:
 				continue
 			}
 
-			if segwit.IsP2WScript(resOut.ControlProgram.Code) {
+			if segwit.IsP2WScript(code) {
 				batch.Delete(account.StandardUTXOKey(*tx.ResultIds[j]))
 			} else {
 				batch.Delete(account.ContractUTXOKey(*tx.ResultIds[j]))
