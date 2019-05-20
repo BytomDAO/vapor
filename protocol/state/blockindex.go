@@ -24,7 +24,7 @@ type BlockNode struct {
 	Version                uint64
 	Height                 uint64
 	Timestamp              uint64
-	BlockWitness           [][]byte
+	BlockWitness           *common.BitMap
 	TransactionsMerkleRoot bc.Hash
 	TransactionStatusHash  bc.Hash
 }
@@ -40,9 +40,14 @@ func NewBlockNode(bh *types.BlockHeader, parent *BlockNode) (*BlockNode, error) 
 		Version:                bh.Version,
 		Height:                 bh.Height,
 		Timestamp:              bh.Timestamp,
-		BlockWitness:           bh.BlockWitness.Witness,
 		TransactionsMerkleRoot: bh.TransactionsMerkleRoot,
 		TransactionStatusHash:  bh.TransactionStatusHash,
+	}
+
+	for i, witness := range bh.Witness {
+		if len(witness) != 0 {
+			node.BlockWitness.Set(uint(i))
+		}
 	}
 	return node, nil
 }

@@ -12,19 +12,13 @@ import (
 	"github.com/vapor/protocol/validation"
 )
 
-var (
-	errHasNoChanceProductBlock = errors.New("the node has no chance to product a block in this round of voting")
-)
-
 type bbft struct {
 	consensusNodeManager *consensusNodeManager
-	blockIndex           *state.BlockIndex
 }
 
 func newBbft(store Store, blockIndex *state.BlockIndex) *bbft {
 	return &bbft{
-		consensusNodeManager: newConsensusNodeManager(store),
-		blockIndex:           blockIndex,
+		consensusNodeManager: newConsensusNodeManager(store, blockIndex),
 	}
 }
 
@@ -44,42 +38,8 @@ func (b *bbft) isIrreversible(block *types.Block) bool {
 }
 
 // NextLeaderTime returns the start time of the specified public key as the next leader node
-func (b *bbft) NextLeaderTime(pubkey []byte, bestBlockHeight, prevRoundLastBlockTimestamp uint64) (*time.Time, error) {
-	startTime := prevRoundLastBlockTimestamp + blockTimeInterval
-	consensusNode, err := b.consensusNodeManager.getConsensusNode(bestBlockHeight, hex.EncodeToString(pubkey))
-	if err != nil {
-		return nil, err
-	}
-
-	nextLeaderTime, err := nextLeaderTimeHelper(b.consensusNodeManager.effectiveStartHeight, bestBlockHeight, startTime, consensusNode.order)
-	if err != nil {
-		return nil, err
-	}
-
-	return nextLeaderTime, nil
-}
-
-func nextLeaderTimeHelper(startBlockHeight, bestBlockHeight, startTime, nodeOrder uint64) (*time.Time, error) {
-	endBlockHeight := startBlockHeight + roundVoteBlockNums
-	// exclude genesis block
-	if startBlockHeight == 1 {
-		endBlockHeight--
-	}
-
-	roundBlockNums := uint64(blockNumEachNode * numOfConsensusNode)
-	latestRoundBlockHeight := startBlockHeight + (bestBlockHeight-startBlockHeight)/roundBlockNums*roundBlockNums
-	nextBlockHeight := latestRoundBlockHeight + blockNumEachNode*nodeOrder
-
-	if int64(bestBlockHeight-nextBlockHeight) >= blockNumEachNode {
-		nextBlockHeight += roundBlockNums
-		if nextBlockHeight > endBlockHeight {
-			return nil, errHasNoChanceProductBlock
-		}
-	}
-
-	nextLeaderTimestamp := int64(startTime + (nextBlockHeight-startBlockHeight)*blockTimeInterval)
-	nextLeaderTime := time.Unix(nextLeaderTimestamp/1000, (nextLeaderTimestamp%1000)*1e6)
-	return &nextLeaderTime, nil
+func (b *bbft) NextLeaderTime(pubkey []byte) (*time.Time, error) {
+	return b.consensusNodeManager.nextLeaderTime(pubkey)
 }
 
 func (b *bbft) AppendBlock(block *types.Block) error {
@@ -196,9 +156,9 @@ func (b *bbft) validateSign(block *types.Block) (uint64, error) {
 			continue
 		}
 
-		blocks := b.blockIndex.NodesByHeight(block.Height)
+		blocks := b.consensusNodeManager.blockIndex.NodesByHeight(block.Height)
 		for _, b := range blocks {
-			if b.Hash != block.Hash() && (b.BlockWitness[node.order] != nil || len(b.BlockWitness[node.order]) != 0) {
+			if b.Hash != block.Hash() && b.BlockWitness.Test(uint(node.order)) {
 				// Consensus node is signed twice with the same block height, discard the signature
 				block.Witness[node.order] = nil
 				break
@@ -207,7 +167,7 @@ func (b *bbft) validateSign(block *types.Block) (uint64, error) {
 
 		if ed25519.Verify(ed25519.PublicKey(pubkey), block.Hash().Bytes(), block.Witness[node.order]) {
 			correctSignNum++
-			isBlocker, err := b.consensusNodeManager.isBlocker(block.Height, pubkey)
+			isBlocker, err := b.consensusNodeManager.isBlocker(block.Height, block.Timestamp, pubkey)
 			if err != nil {
 				return 0, err
 			}
