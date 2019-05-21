@@ -22,6 +22,62 @@ var (
 	chainTxMergeGas = uint64(10000000)
 )
 
+// DecodeCrossInAction convert input data to action struct
+func (m *Manager) DecodeCrossInAction(data []byte) (Action, error) {
+	a := new(crossInAction)
+	err := stdjson.Unmarshal(data, a)
+	return a, err
+}
+
+type crossInAction struct {
+	bc.AssetAmount
+	// Address string `json:"address"`
+}
+
+func (a *crossInAction) Build(ctx context.Context, b *TemplateBuilder) error {
+	var missing []string
+	// if a.Address == "" {
+	// 	missing = append(missing, "address")
+	// }
+	if a.AssetId.IsZero() {
+		missing = append(missing, "asset_id")
+	}
+	if a.Amount == 0 {
+		missing = append(missing, "amount")
+	}
+	if len(missing) > 0 {
+		return MissingFieldsError(missing...)
+	}
+
+	// address, err := common.DecodeAddress(a.Address, &consensus.MainNetParams)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// redeemContract := address.ScriptAddress()
+	// program := []byte{}
+	// switch address.(type) {
+	// case *common.AddressWitnessPubKeyHash:
+	// 	program, err = vmutil.P2WPKHProgram(redeemContract)
+	// case *common.AddressWitnessScriptHash:
+	// 	program, err = vmutil.P2WSHProgram(redeemContract)
+	// default:
+	// 	return errors.New("unsupport address type")
+	// }
+	// if err != nil {
+	// 	return err
+	// }
+
+	// out := types.NewCrossChainOutput(*a.AssetId, a.Amount, program)
+	// in :=  types.NewCrossChainInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amount, sourcePos uint64, controlProgram, assetDefinition []byte)
+	in := types.NewCrossChainInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil, nil)
+	return b.AddInput(in)
+}
+
+func (a *crossInAction) ActionType() string {
+	return "cross_chain_in"
+}
+
 //DecodeSpendAction unmarshal JSON-encoded data of spend action
 func (m *Manager) DecodeSpendAction(data []byte) (txbuilder.Action, error) {
 	a := &spendAction{accounts: m}

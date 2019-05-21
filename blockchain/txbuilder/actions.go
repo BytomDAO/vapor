@@ -102,60 +102,6 @@ func (a *controlProgramAction) ActionType() string {
 	return "control_program"
 }
 
-// DecodeCrossInAction convert input data to action struct
-func DecodeCrossInAction(data []byte) (Action, error) {
-	a := new(crossInAction)
-	err := stdjson.Unmarshal(data, a)
-	return a, err
-}
-
-type crossInAction struct {
-	bc.AssetAmount
-	Address string `json:"address"`
-}
-
-func (a *crossInAction) Build(ctx context.Context, b *TemplateBuilder) error {
-	var missing []string
-	if a.Address == "" {
-		missing = append(missing, "address")
-	}
-	if a.AssetId.IsZero() {
-		missing = append(missing, "asset_id")
-	}
-	if a.Amount == 0 {
-		missing = append(missing, "amount")
-	}
-	if len(missing) > 0 {
-		return MissingFieldsError(missing...)
-	}
-
-	address, err := common.DecodeAddress(a.Address, &consensus.MainNetParams)
-	if err != nil {
-		return err
-	}
-
-	redeemContract := address.ScriptAddress()
-	program := []byte{}
-	switch address.(type) {
-	case *common.AddressWitnessPubKeyHash:
-		program, err = vmutil.P2WPKHProgram(redeemContract)
-	case *common.AddressWitnessScriptHash:
-		program, err = vmutil.P2WSHProgram(redeemContract)
-	default:
-		return errors.New("unsupport address type")
-	}
-	if err != nil {
-		return err
-	}
-
-	out := types.NewCrossChainOutput(*a.AssetId, a.Amount, program)
-	return b.AddOutput(out)
-}
-
-func (a *crossInAction) ActionType() string {
-	return "cross_chain_in"
-}
-
 // DecodeCrossOutAction convert input data to action struct
 func DecodeCrossOutAction(data []byte) (Action, error) {
 	a := new(crossOutAction)
