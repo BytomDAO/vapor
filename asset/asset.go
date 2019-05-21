@@ -33,7 +33,7 @@ var (
 func initNativeAsset() {
 	alias := consensus.BTMAlias
 
-	definitionBytes, _ := serializeAssetDef(consensus.BTMDefinitionMap)
+	definitionBytes, _ := SerializeAssetDef(consensus.BTMDefinitionMap)
 	DefaultNativeAsset = &Asset{
 		AssetID:           *consensus.BTMAssetID,
 		Alias:             &alias,
@@ -275,12 +275,12 @@ func (reg *Registry) ListAssets(id string) ([]*Asset, error) {
 	return assets, nil
 }
 
-// serializeAssetDef produces a canonical byte representation of an asset
+// SerializeAssetDef produces a canonical byte representation of an asset
 // definition. Currently, this is implemented using pretty-printed JSON.
 // As is the standard for Go's map[string] serialization, object keys will
 // appear in lexicographic order. Although this is mostly meant for machine
 // consumption, the JSON is pretty-printed for easy reading.
-func serializeAssetDef(def map[string]interface{}) ([]byte, error) {
+func SerializeAssetDef(def map[string]interface{}) ([]byte, error) {
 	if def == nil {
 		def = make(map[string]interface{}, 0)
 	}

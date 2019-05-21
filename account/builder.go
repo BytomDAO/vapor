@@ -5,11 +5,13 @@ import (
 	// TODO: stdjson?
 	"encoding/json"
 
+	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/common"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
+	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -33,8 +35,9 @@ func (m *Manager) DecodeCrossInAction(data []byte) (txbuilder.Action, error) {
 
 type crossInAction struct {
 	bc.AssetAmount
-	SourceID  string `json:"source_id"` // AnnotatedUTXO
-	SourcePos uint64 `json:"source_pos"`
+	SourceID        string                 `json:"source_id"` // AnnotatedUTXO
+	SourcePos       uint64                 `json:"source_pos"`
+	AssetDefinition map[string]interface{} `json:"asset_definition"`
 }
 
 // type AnnotatedInput struct {
@@ -65,9 +68,19 @@ func (a *crossInAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder)
 		return txbuilder.MissingFieldsError(missing...)
 	}
 
-	sourceID := testutil.MustDecodeHash(a.SourceID)
+	// handle asset definition
+	rawDefinition, err := asset.SerializeAssetDef(a.AssetDefinition)
+	if err != nil {
+		return asset.ErrSerializing
+	}
+	if !chainjson.IsValidJSON(rawDefinition) {
+		return errors.New("asset definition is not in valid json format")
+	}
+	// TODO: check duplicate
+
 	// in :=  types.NewCrossChainInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amount, sourcePos uint64, controlProgram, assetDefinition []byte)
-	in := types.NewCrossChainInput(nil, sourceID, *a.AssetId, a.Amount, a.SourcePos, nil, nil)
+	sourceID := testutil.MustDecodeHash(a.SourceID)
+	in := types.NewCrossChainInput(nil, sourceID, *a.AssetId, a.Amount, a.SourcePos, nil, rawDefinition)
 	return b.AddInput(in, nil)
 }
 
