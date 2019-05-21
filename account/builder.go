@@ -37,6 +37,22 @@ type crossInAction struct {
 	SourcePos uint64 `json:"source_pos"`
 }
 
+// type AnnotatedInput struct {
+// 	Type             string               `json:"type"`
+// 	AssetID          bc.AssetID           `json:"asset_id"`
+// 	AssetAlias       string               `json:"asset_alias,omitempty"`
+// 	AssetDefinition  *json.RawMessage     `json:"asset_definition,omitempty"`
+// 	Amount           uint64               `json:"amount"`
+// 	ControlProgram   chainjson.HexBytes   `json:"control_program,omitempty"`
+// 	Address          string               `json:"address,omitempty"`
+// 	SpentOutputID    *bc.Hash             `json:"spent_output_id,omitempty"`
+// 	AccountID        string               `json:"account_id,omitempty"`
+// 	AccountAlias     string               `json:"account_alias,omitempty"`
+// 	Arbitrary        chainjson.HexBytes   `json:"arbitrary,omitempty"`
+// 	InputID          bc.Hash              `json:"input_id"`
+// 	WitnessArguments []chainjson.HexBytes `json:"witness_arguments"`
+// }
+
 func (a *crossInAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
 	var missing []string
 	if a.AssetId.IsZero() {
