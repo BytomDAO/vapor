@@ -32,16 +32,12 @@ func (m *Manager) DecodeCrossInAction(data []byte) (txbuilder.Action, error) {
 
 type crossInAction struct {
 	bc.AssetAmount
-	// Address string `json:"address"`
 	SourceID  string `json:"source_id"` // AnnotatedUTXO
 	SourcePos uint64 `json:"source_pos"`
 }
 
 func (a *crossInAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
 	var missing []string
-	// if a.Address == "" {
-	// 	missing = append(missing, "address")
-	// }
 	if a.AssetId.IsZero() {
 		missing = append(missing, "asset_id")
 	}
@@ -51,25 +47,6 @@ func (a *crossInAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder)
 	if len(missing) > 0 {
 		return txbuilder.MissingFieldsError(missing...)
 	}
-
-	// address, err := common.DecodeAddress(a.Address, &consensus.MainNetParams)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// redeemContract := address.ScriptAddress()
-	// program := []byte{}
-	// switch address.(type) {
-	// case *common.AddressWitnessPubKeyHash:
-	// 	program, err = vmutil.P2WPKHProgram(redeemContract)
-	// case *common.AddressWitnessScriptHash:
-	// 	program, err = vmutil.P2WSHProgram(redeemContract)
-	// default:
-	// 	return errors.New("unsupport address type")
-	// }
-	// if err != nil {
-	// 	return err
-	// }
 
 	// in :=  types.NewCrossChainInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amount, sourcePos uint64, controlProgram, assetDefinition []byte)
 	in := types.NewCrossChainInput(nil, bc.Hash{}, *a.AssetId, a.Amount, a.SourcePos, nil, nil)
