@@ -442,8 +442,8 @@ func (a *unvoteAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) 
 
 		// Don't insert the control program until callbacks are executed.
 		a.accounts.insertControlProgramDelayed(b, acp)
-		if err = b.AddOutput(types.NewIntraChainOutput(*a.AssetId, res.change, acp.ControlProgram)); err != nil {
-			return errors.Wrap(err, "adding change output")
+		if err = b.AddOutput(types.NewVoteOutput(*a.AssetId, res.change, acp.ControlProgram, a.Vote)); err != nil {
+			return errors.Wrap(err, "adding change voteOutput")
 		}
 	}
 	return nil
