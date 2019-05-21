@@ -2,6 +2,7 @@ package account
 
 import (
 	"context"
+	// TODO: stdjson?
 	"encoding/json"
 
 	"github.com/vapor/blockchain/signers"
@@ -23,9 +24,9 @@ var (
 )
 
 // DecodeCrossInAction convert input data to action struct
-func (m *Manager) DecodeCrossInAction(data []byte) (Action, error) {
+func (m *Manager) DecodeCrossInAction(data []byte) (txbuilder.Action, error) {
 	a := new(crossInAction)
-	err := stdjson.Unmarshal(data, a)
+	err := json.Unmarshal(data, a)
 	return a, err
 }
 
@@ -34,7 +35,7 @@ type crossInAction struct {
 	// Address string `json:"address"`
 }
 
-func (a *crossInAction) Build(ctx context.Context, b *TemplateBuilder) error {
+func (a *crossInAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
 	var missing []string
 	// if a.Address == "" {
 	// 	missing = append(missing, "address")
@@ -46,7 +47,7 @@ func (a *crossInAction) Build(ctx context.Context, b *TemplateBuilder) error {
 		missing = append(missing, "amount")
 	}
 	if len(missing) > 0 {
-		return MissingFieldsError(missing...)
+		return txbuilder.MissingFieldsError(missing...)
 	}
 
 	// address, err := common.DecodeAddress(a.Address, &consensus.MainNetParams)
@@ -71,7 +72,7 @@ func (a *crossInAction) Build(ctx context.Context, b *TemplateBuilder) error {
 	// out := types.NewCrossChainOutput(*a.AssetId, a.Amount, program)
 	// in :=  types.NewCrossChainInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amount, sourcePos uint64, controlProgram, assetDefinition []byte)
 	in := types.NewCrossChainInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil, nil)
-	return b.AddInput(in)
+	return b.AddInput(in, nil)
 }
 
 func (a *crossInAction) ActionType() string {
