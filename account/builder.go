@@ -94,6 +94,7 @@ func (a *crossInAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder)
 	}
 
 	// TODO: IssuanceProgram vs arguments?
+	// TODO: also need to hard-code mapTx
 	// TODO: save AssetDefinition
 
 	// txin := types.NewIssuanceInput(nonce[:], a.Amount, asset.IssuanceProgram, nil, asset.RawDefinitionByte)
