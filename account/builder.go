@@ -28,12 +28,13 @@ var (
 
 // DecodeCrossInAction convert input data to action struct
 func (m *Manager) DecodeCrossInAction(data []byte) (txbuilder.Action, error) {
-	a := new(crossInAction)
+	a := &spendAction{accounts: m}
 	err := json.Unmarshal(data, a)
 	return a, err
 }
 
 type crossInAction struct {
+	accounts *Manager
 	bc.AssetAmount
 	SourceID        string                 `json:"source_id"` // AnnotatedUTXO
 	SourcePos       uint64                 `json:"source_pos"`
@@ -68,7 +69,8 @@ func (a *crossInAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder)
 		return txbuilder.MissingFieldsError(missing...)
 	}
 
-	// handle asset definition
+	// Handle asset definition.
+	// Asset issuance's legality is guaranteed by the federation.
 	rawDefinition, err := asset.SerializeAssetDef(a.AssetDefinition)
 	if err != nil {
 		return asset.ErrSerializing
@@ -77,6 +79,24 @@ func (a *crossInAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder)
 		return errors.New("asset definition is not in valid json format")
 	}
 	// TODO: check duplicate
+	// id := fmt.Sprintf("%v", *a.AssetId)
+	// a.m.AssetReg.GetAsset(id)
+	a.accounts.AssetReg.GetAsset(*a.AssetId)
+
+	// txin := types.NewIssuanceInput(nonce[:], a.Amount, asset.IssuanceProgram, nil, asset.RawDefinitionByte)
+	// tplIn := &txbuilder.SigningInstruction{}
+	// if asset.Signer != nil {
+	// 	path := signers.GetBip0032Path(asset.Signer, signers.AssetKeySpace)
+	// 	tplIn.AddRawWitnessKeys(asset.Signer.XPubs, path, asset.Signer.Quorum)
+	// } else if a.Arguments != nil {
+	// 	if err := txbuilder.AddContractArgs(tplIn, a.Arguments); err != nil {
+	// 		return err
+	// 	}
+	// }
+
+	// log.Info("Issue action build")
+	// builder.RestrictMinTime(time.Now())
+	// return builder.AddInput(txin, tplIn)
 
 	// in :=  types.NewCrossChainInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amount, sourcePos uint64, controlProgram, assetDefinition []byte)
 	sourceID := testutil.MustDecodeHash(a.SourceID)
