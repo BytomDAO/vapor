@@ -14,6 +14,7 @@ import (
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/vm/vmutil"
+	"github.com/vapor/testutil"
 )
 
 var (
@@ -48,8 +49,9 @@ func (a *crossInAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder)
 		return txbuilder.MissingFieldsError(missing...)
 	}
 
+	sourceID := testutil.MustDecodeHash(a.SourceID)
 	// in :=  types.NewCrossChainInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amount, sourcePos uint64, controlProgram, assetDefinition []byte)
-	in := types.NewCrossChainInput(nil, bc.Hash{}, *a.AssetId, a.Amount, a.SourcePos, nil, nil)
+	in := types.NewCrossChainInput(nil, sourceID, *a.AssetId, a.Amount, a.SourcePos, nil, nil)
 	return b.AddInput(in, nil)
 }
 
