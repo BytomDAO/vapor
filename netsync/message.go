@@ -25,6 +25,7 @@ const (
 	BlocksResponseByte  = byte(0x15)
 	StatusByte          = byte(0x21)
 	NewTransactionByte  = byte(0x30)
+	NewTransactionsByte = byte(0x31)
 	NewMineBlockByte    = byte(0x40)
 	FilterLoadByte      = byte(0x50)
 	FilterAddByte       = byte(0x51)
@@ -33,6 +34,7 @@ const (
 	MerkleResponseByte  = byte(0x61)
 
 	maxBlockchainResponseSize = 22020096 + 2
+	txsMsgMaxTxNum            = 1024
 )
 
 //BlockchainMessage is a generic message for this reactor.
@@ -50,6 +52,7 @@ var _ = wire.RegisterInterface(
 	wire.ConcreteType{&BlocksMessage{}, BlocksResponseByte},
 	wire.ConcreteType{&StatusMessage{}, StatusByte},
 	wire.ConcreteType{&TransactionMessage{}, NewTransactionByte},
+	wire.ConcreteType{&TransactionsMessage{}, NewTransactionsByte},
 	wire.ConcreteType{&MineBlockMessage{}, NewMineBlockByte},
 	wire.ConcreteType{&FilterLoadMessage{}, FilterLoadByte},
 	wire.ConcreteType{&FilterAddMessage{}, FilterAddByte},
@@ -325,6 +328,43 @@ func (m *TransactionMessage) String() string {
 		return "{err: wrong message}"
 	}
 	return fmt.Sprintf("{tx_size: %d, tx_hash: %s}", len(m.RawTx), tx.ID.String())
+}
+
+//TransactionsMessage notify new txs msg
+type TransactionsMessage struct {
+	RawTxs [][]byte
+}
+
+//NewTransactionsMessage construct notify new txs msg
+func NewTransactionsMessage(txs []*types.Tx) (*TransactionsMessage, error) {
+	rawTxs := make([][]byte, 0, len(txs))
+	for _, tx := range txs {
+		rawTx, err := tx.TxData.MarshalText()
+		if err != nil {
+			return nil, err
+		}
+
+		rawTxs = append(rawTxs, rawTx)
+	}
+	return &TransactionsMessage{RawTxs: rawTxs}, nil
+}
+
+//GetTransactions get txs from msg
+func (m *TransactionsMessage) GetTransactions() ([]*types.Tx, error) {
+	txs := make([]*types.Tx, 0, len(m.RawTxs))
+	for _, rawTx := range m.RawTxs {
+		tx := &types.Tx{}
+		if err := tx.UnmarshalText(rawTx); err != nil {
+			return nil, err
+		}
+
+		txs = append(txs, tx)
+	}
+	return txs, nil
+}
+
+func (m *TransactionsMessage) String() string {
+	return fmt.Sprintf("{tx_num: %d}", len(m.RawTxs))
 }
 
 //MineBlockMessage new mined block msg
