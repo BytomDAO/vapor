@@ -39,6 +39,7 @@ type crossInAction struct {
 	SourceID        string                 `json:"source_id"` // AnnotatedUTXO
 	SourcePos       uint64                 `json:"source_pos"`
 	AssetDefinition map[string]interface{} `json:"asset_definition"`
+	UpdateAssetDef  bool                   `json:"update_asset_definition"`
 }
 
 // type AnnotatedInput struct {
@@ -78,17 +79,20 @@ func (a *crossInAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder)
 	if !chainjson.IsValidJSON(rawDefinition) {
 		return errors.New("asset definition is not in valid json format")
 	}
-	// TODO: check duplicate
 	if preAsset, _ := a.accounts.assetReg.GetAsset(a.AssetId.String()); preAsset != nil {
-		preRawDefinition, _ := asset.SerializeAssetDef(a.AssetDefinition)
+		// GetAsset() doesn't unmashall for RawDefinitionBytes
+		preRawDefinition, err := asset.SerializeAssetDef(preAsset.DefinitionMap)
 		if err != nil {
 			return asset.ErrSerializing
 		}
 
-		if !testutil.DeepEqual(preRawDefinition, rawDefinition) {
+		if !testutil.DeepEqual(preRawDefinition, rawDefinition) && !UpdateAssetDef {
 			return errors.New("asset definition mismatch with previous definition")
 		}
+		// TODO: update asset def here?
 	}
+
+	// TODO: save AssetDefinition
 
 	// txin := types.NewIssuanceInput(nonce[:], a.Amount, asset.IssuanceProgram, nil, asset.RawDefinitionByte)
 	// tplIn := &txbuilder.SigningInstruction{}
