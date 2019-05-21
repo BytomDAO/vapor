@@ -33,7 +33,8 @@ func (m *Manager) DecodeCrossInAction(data []byte) (txbuilder.Action, error) {
 type crossInAction struct {
 	bc.AssetAmount
 	// Address string `json:"address"`
-	SourcePos uint64 `json:"source_position"`
+	SourceID  string `json:"source_id"` // AnnotatedUTXO
+	SourcePos uint64 `json:"source_pos"`
 }
 
 func (a *crossInAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
