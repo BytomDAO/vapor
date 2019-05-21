@@ -79,7 +79,16 @@ func (a *crossInAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder)
 		return errors.New("asset definition is not in valid json format")
 	}
 	// TODO: check duplicate
-	a.accounts.assetReg.GetAsset(a.AssetId.String())
+	if preAsset, _ := a.accounts.assetReg.GetAsset(a.AssetId.String()); preAsset != nil {
+		preRawDefinition, _ := asset.SerializeAssetDef(a.AssetDefinition)
+		if err != nil {
+			return asset.ErrSerializing
+		}
+
+		if !testutil.DeepEqual(preRawDefinition, rawDefinition) {
+			return errors.New("asset definition mismatch with previous definition")
+		}
+	}
 
 	// txin := types.NewIssuanceInput(nonce[:], a.Amount, asset.IssuanceProgram, nil, asset.RawDefinitionByte)
 	// tplIn := &txbuilder.SigningInstruction{}
