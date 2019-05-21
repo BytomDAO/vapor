@@ -249,8 +249,9 @@ func (c *Chain) blockProcesser() {
 // ProcessBlock is the entry for handle block insert
 func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	if block.Height <= c.lastIrreversibleNode.Height {
-		return false, nil
+		return false, errors.New("block height below the irreversible block height")
 	}
+	
 	blockHash := block.Hash()
 	if c.BlockExist(&blockHash) {
 		log.WithFields(log.Fields{"module": logModule, "hash": blockHash.String(), "height": block.Height}).Info("block has been processed")

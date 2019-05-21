@@ -7,9 +7,14 @@ import (
 	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
+	"github.com/vapor/math/checked"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
 	"github.com/vapor/protocol/validation"
+)
+
+var (
+	errVotingOperationOverFlow = errors.New("voting operation result overflow")
 )
 
 type bbft struct {
@@ -68,14 +73,24 @@ func (b *bbft) AppendBlock(block *types.Block) error {
 			if !ok {
 				continue
 			}
-			voteResult.NumOfVote[hex.EncodeToString(unVoteInput.Vote)] -= unVoteInput.Amount
+			
+			pubkey := hex.EncodeToString(unVoteInput.Vote)
+			voteResult.NumOfVote[pubkey], ok = checked.SubUint64(voteResult.NumOfVote[pubkey], unVoteInput.Amount)
+			if !ok {
+				return errVotingOperationOverFlow
+			}
 		}
 		for _, output := range tx.Outputs {
 			voteOutput, ok := output.TypedOutput.(*types.VoteTxOutput)
 			if !ok {
 				continue
 			}
-			voteResult.NumOfVote[hex.EncodeToString(voteOutput.Vote)] += voteOutput.Amount
+
+			pubkey := hex.EncodeToString(voteOutput.Vote)
+			voteResult.NumOfVote[pubkey], ok = checked.AddUint64(voteResult.NumOfVote[pubkey], voteOutput.Amount)
+			if !ok {
+				return errVotingOperationOverFlow
+			}
 		}
 	}
 
@@ -102,14 +117,24 @@ func (b *bbft) DetachBlock(block *types.Block) error {
 			if !ok {
 				continue
 			}
-			voteResult.NumOfVote[hex.EncodeToString(unVoteInput.Vote)] += unVoteInput.Amount
+			
+			pubkey := hex.EncodeToString(unVoteInput.Vote)
+			voteResult.NumOfVote[pubkey], ok = checked.AddUint64(voteResult.NumOfVote[pubkey], unVoteInput.Amount)
+			if !ok {
+				return errVotingOperationOverFlow
+			}
 		}
 		for _, output := range tx.Outputs {
 			voteOutput, ok := output.TypedOutput.(*types.VoteTxOutput)
 			if !ok {
 				continue
 			}
-			voteResult.NumOfVote[hex.EncodeToString(voteOutput.Vote)] -= voteOutput.Amount
+			
+			pubkey := hex.EncodeToString(voteOutput.Vote)
+			voteResult.NumOfVote[pubkey], ok = checked.SubUint64(voteResult.NumOfVote[pubkey], voteOutput.Amount)
+			if !ok {
+				return errVotingOperationOverFlow
+			}
 		}
 	}
 
