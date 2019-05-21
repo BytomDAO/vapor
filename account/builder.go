@@ -33,6 +33,7 @@ func (m *Manager) DecodeCrossInAction(data []byte) (txbuilder.Action, error) {
 type crossInAction struct {
 	bc.AssetAmount
 	// Address string `json:"address"`
+	SourcePos uint64 `json:"source_position"`
 }
 
 func (a *crossInAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
@@ -69,9 +70,8 @@ func (a *crossInAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder)
 	// 	return err
 	// }
 
-	// out := types.NewCrossChainOutput(*a.AssetId, a.Amount, program)
 	// in :=  types.NewCrossChainInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amount, sourcePos uint64, controlProgram, assetDefinition []byte)
-	in := types.NewCrossChainInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil, nil)
+	in := types.NewCrossChainInput(nil, bc.Hash{}, *a.AssetId, a.Amount, a.SourcePos, nil, nil)
 	return b.AddInput(in, nil)
 }
 
