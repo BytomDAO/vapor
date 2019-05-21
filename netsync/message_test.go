@@ -6,9 +6,77 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 
+	"github.com/vapor/consensus"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
+
+var txs = []*types.Tx{
+	types.NewTx(types.TxData{
+		SerializedSize: uint64(52),
+		Inputs:         []*types.TxInput{types.NewCoinbaseInput([]byte{0x01})},
+		Outputs:        []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 5000, nil)},
+	}),
+	types.NewTx(types.TxData{
+		SerializedSize: uint64(53),
+		Inputs:         []*types.TxInput{types.NewCoinbaseInput([]byte{0x01, 0x02})},
+		Outputs:        []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 5000, nil)},
+	}),
+	types.NewTx(types.TxData{
+		SerializedSize: uint64(54),
+		Inputs:         []*types.TxInput{types.NewCoinbaseInput([]byte{0x01, 0x02, 0x03})},
+		Outputs:        []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 5000, nil)},
+	}),
+	types.NewTx(types.TxData{
+		SerializedSize: uint64(54),
+		Inputs:         []*types.TxInput{types.NewCoinbaseInput([]byte{0x01, 0x02, 0x03})},
+		Outputs:        []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 2000, nil)},
+	}),
+	types.NewTx(types.TxData{
+		SerializedSize: uint64(54),
+		Inputs:         []*types.TxInput{types.NewCoinbaseInput([]byte{0x01, 0x02, 0x03})},
+		Outputs:        []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 10000, nil)},
+	}),
+}
+
+func TestTransactionMessage(t *testing.T) {
+	for _, tx := range txs {
+		txMsg, err := NewTransactionMessage(tx)
+		if err != nil {
+			t.Fatalf("create tx msg err:%s", err)
+		}
+
+		gotTx, err := txMsg.GetTransaction()
+		if err != nil {
+			t.Fatalf("get txs from txsMsg err:%s", err)
+		}
+		if !reflect.DeepEqual(*tx.Tx, *gotTx.Tx) {
+			t.Errorf("txs msg test err: got %s\nwant %s", spew.Sdump(tx.Tx), spew.Sdump(gotTx.Tx))
+		}
+	}
+}
+
+func TestTransactionsMessage(t *testing.T) {
+	txsMsg, err := NewTransactionsMessage(txs)
+	if err != nil {
+		t.Fatalf("create txs msg err:%s", err)
+	}
+
+	gotTxs, err := txsMsg.GetTransactions()
+	if err != nil {
+		t.Fatalf("get txs from txsMsg err:%s", err)
+	}
+
+	if len(gotTxs) != len(txs) {
+		t.Fatal("txs msg test err: number of txs not match ")
+	}
+
+	for i, tx := range txs {
+		if !reflect.DeepEqual(tx.Tx, gotTxs[i].Tx) {
+			t.Errorf("txs msg test err: got %s\nwant %s", spew.Sdump(tx.Tx), spew.Sdump(gotTxs[i].Tx))
+		}
+	}
+}
 
 var testBlock = &types.Block{
 	BlockHeader: types.BlockHeader{
