@@ -2,13 +2,14 @@ package account
 
 import (
 	"context"
-	"encoding/json"
+	stdjson "encoding/json"
 
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/common"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
+	"github.com/vapor/encoding/json"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -25,7 +26,7 @@ var (
 //DecodeSpendAction unmarshal JSON-encoded data of spend action
 func (m *Manager) DecodeSpendAction(data []byte) (txbuilder.Action, error) {
 	a := &spendAction{accounts: m}
-	return a, json.Unmarshal(data, a)
+	return a, stdjson.Unmarshal(data, a)
 }
 
 type spendAction struct {
@@ -77,7 +78,7 @@ func (m *Manager) reserveBtmUtxoChain(builder *txbuilder.TemplateBuilder, accoun
 	utxos := []*UTXO{}
 	for gasAmount := uint64(0); reservedAmount < gasAmount+amount; gasAmount = calcMergeGas(len(utxos)) {
 		reserveAmount := amount + gasAmount - reservedAmount
-		res, err := m.utxoKeeper.Reserve(accountID, consensus.BTMAssetID, reserveAmount, useUnconfirmed, builder.MaxTime())
+		res, err := m.utxoKeeper.Reserve(accountID, consensus.BTMAssetID, reserveAmount, useUnconfirmed, nil, builder.MaxTime())
 		if err != nil {
 			return nil, err
 		}
@@ -218,7 +219,7 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 		return errors.Wrap(err, "get account info")
 	}
 
-	res, err := a.accounts.utxoKeeper.Reserve(a.AccountID, a.AssetId, a.Amount, a.UseUnconfirmed, b.MaxTime())
+	res, err := a.accounts.utxoKeeper.Reserve(a.AccountID, a.AssetId, a.Amount, a.UseUnconfirmed, nil, b.MaxTime())
 	if err != nil {
 		return errors.Wrap(err, "reserving utxos")
 	}
@@ -254,7 +255,7 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 //DecodeSpendUTXOAction unmarshal JSON-encoded data of spend utxo action
 func (m *Manager) DecodeSpendUTXOAction(data []byte) (txbuilder.Action, error) {
 	a := &spendUTXOAction{accounts: m}
-	return a, json.Unmarshal(data, a)
+	return a, stdjson.Unmarshal(data, a)
 }
 
 type spendUTXOAction struct {
@@ -378,4 +379,72 @@ func (m *Manager) insertControlProgramDelayed(b *txbuilder.TemplateBuilder, acp 
 		}
 		return m.SaveControlPrograms(acps...)
 	})
+}
+
+//DecodeUnvoteAction unmarshal JSON-encoded data of spend action
+func (m *Manager) DecodeUnvoteAction(data []byte) (txbuilder.Action, error) {
+	a := &unvoteAction{accounts: m}
+	return a, stdjson.Unmarshal(data, a)
+}
+
+type unvoteAction struct {
+	accounts *Manager
+	bc.AssetAmount
+	AccountID      string        `json:"account_id"`
+	Vote           json.HexBytes `json:"vote"`
+	UseUnconfirmed bool          `json:"use_unconfirmed"`
+}
+
+func (a *unvoteAction) ActionType() string {
+	return "unvote"
+}
+
+func (a *unvoteAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
+	var missing []string
+	if a.AccountID == "" {
+		missing = append(missing, "account_id")
+	}
+	if a.AssetId.IsZero() {
+		missing = append(missing, "asset_id")
+	}
+	if len(missing) > 0 {
+		return txbuilder.MissingFieldsError(missing...)
+	}
+
+	acct, err := a.accounts.FindByID(a.AccountID)
+	if err != nil {
+		return errors.Wrap(err, "get account info")
+	}
+
+	res, err := a.accounts.utxoKeeper.Reserve(a.AccountID, a.AssetId, a.Amount, a.UseUnconfirmed, a.Vote, b.MaxTime())
+	if err != nil {
+		return errors.Wrap(err, "reserving utxos")
+	}
+
+	// Cancel the reservation if the build gets rolled back.
+	b.OnRollback(func() { a.accounts.utxoKeeper.Cancel(res.id) })
+	for _, r := range res.utxos {
+		txInput, sigInst, err := UtxoToInputs(acct.Signer, r)
+		if err != nil {
+			return errors.Wrap(err, "creating inputs")
+		}
+
+		if err = b.AddInput(txInput, sigInst); err != nil {
+			return errors.Wrap(err, "adding inputs")
+		}
+	}
+
+	if res.change > 0 {
+		acp, err := a.accounts.CreateAddress(a.AccountID, true)
+		if err != nil {
+			return errors.Wrap(err, "creating control program")
+		}
+
+		// Don't insert the control program until callbacks are executed.
+		a.accounts.insertControlProgramDelayed(b, acp)
+		if err = b.AddOutput(types.NewIntraChainOutput(*a.AssetId, res.change, acp.ControlProgram)); err != nil {
+			return errors.Wrap(err, "adding change output")
+		}
+	}
+	return nil
 }
