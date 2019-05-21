@@ -119,6 +119,7 @@ func (c *Chain) setState(node *state.BlockNode, irreversibleNode *state.BlockNod
 
 	c.index.SetMainChain(node)
 	c.bestNode = node
+	c.lastIrreversibleNode = irreversibleNode
 
 	log.WithFields(log.Fields{"module": logModule, "height": c.bestNode.Height, "hash": c.bestNode.Hash.String()}).Debug("chain best status has been update")
 	c.cond.Broadcast()

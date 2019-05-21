@@ -44,9 +44,10 @@ func NewBlockNode(bh *types.BlockHeader, parent *BlockNode) (*BlockNode, error) 
 		TransactionStatusHash:  bh.TransactionStatusHash,
 	}
 
+	node.BlockWitness = common.NewBitMap(uint64(len(bh.Witness)))
 	for i, witness := range bh.Witness {
 		if len(witness) != 0 {
-			node.BlockWitness.Set(uint(i))
+			node.BlockWitness.Set(uint64(i))
 		}
 	}
 	return node, nil

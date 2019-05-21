@@ -39,12 +39,12 @@ func (b *bbft) isIrreversible(block *types.Block) bool {
 		return false
 	}
 
-	return signNum > (numOfConsensusNode / 3 * 2)
+	return signNum > (numOfConsensusNode * 2 / 3)
 }
 
 // NextLeaderTime returns the start time of the specified public key as the next leader node
-func (b *bbft) NextLeaderTime(pubkey []byte) (*time.Time, error) {
-	return b.consensusNodeManager.nextLeaderTime(pubkey)
+func (b *bbft) NextLeaderTime(pubkey []byte, bestBlockTimestamp, bestBlockHeight uint64) (*time.Time, error) {
+	return b.consensusNodeManager.nextLeaderTime(pubkey, bestBlockTimestamp, bestBlockHeight)
 }
 
 func (b *bbft) AppendBlock(block *types.Block) error {
@@ -183,7 +183,10 @@ func (b *bbft) validateSign(block *types.Block) (uint64, error) {
 
 		blocks := b.consensusNodeManager.blockIndex.NodesByHeight(block.Height)
 		for _, b := range blocks {
-			if b.Hash != block.Hash() && b.BlockWitness.Test(uint(node.order)) {
+			if b.Hash == block.Hash() {
+				continue
+			}
+			if ok, err := b.BlockWitness.Test(node.order); err != nil && ok {
 				// Consensus node is signed twice with the same block height, discard the signature
 				block.Witness[node.order] = nil
 				break

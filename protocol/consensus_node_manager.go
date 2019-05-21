@@ -93,20 +93,14 @@ func (c *consensusNodeManager) isBlocker(height uint64, blockTimestamp uint64, p
 	return blockTimestamp >= begin && blockTimestamp < end, nil
 }
 
-func (c *consensusNodeManager) nextLeaderTime(pubkey []byte) (*time.Time, error) {
+func (c *consensusNodeManager) nextLeaderTime(pubkey []byte, bestBlockTimestamp, bestBlockHeight uint64) (*time.Time, error) {
 	defer c.RUnlock()
 	c.RLock()
 
 	startHeight := c.effectiveStartHeight
 	prevRoundLastBlock := c.blockIndex.NodeByHeight(startHeight - 1)
 	startTime := prevRoundLastBlock.Timestamp + blockTimeInterval
-	rvbn := roundVoteBlockNums
-	// Exclude genesis block
-	if prevRoundLastBlock.Height == 0 {
-		rvbn--
-	}
-	roundVoteTime := uint64(rvbn * blockTimeInterval)
-	endTime := startTime + roundVoteTime
+	endTime := bestBlockTimestamp + (roundVoteBlockNums - bestBlockHeight % roundVoteBlockNums) * blockTimeInterval
 	
 	consensusNode, exist := c.consensusNodeMap[hex.EncodeToString(pubkey)]
 	if !exist {

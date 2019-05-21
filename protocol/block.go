@@ -120,7 +120,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 
 		if b.Height <= irreversibleNode.Height {
 			log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Debug("detach fail, the block is irreversible")
-			return nil
+			return errors.New("the height of rollback block below the height of irreversible block")
 		}
 		detachBlocks = append(detachBlocks, b)
 	}
@@ -249,7 +249,7 @@ func (c *Chain) blockProcesser() {
 // ProcessBlock is the entry for handle block insert
 func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	if block.Height <= c.lastIrreversibleNode.Height {
-		return false, errors.New("block height below the irreversible block height")
+		return false, errors.New("the height of block below the height of irreversible block")
 	}
 	
 	blockHash := block.Hash()
