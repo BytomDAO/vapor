@@ -48,7 +48,7 @@ func newControlProgramAction(assetAmt bc.AssetAmount, script []byte) *controlPro
 	}
 }
 
-func TestBuild(t *testing.T) {
+func TestBuildIntra(t *testing.T) {
 	ctx := context.Background()
 
 	assetID1 := bc.NewAssetID([32]byte{1})
@@ -72,6 +72,62 @@ func TestBuild(t *testing.T) {
 			},
 			Outputs: []*types.TxOutput{
 				types.NewIntraChainOutput(assetID2, 6, []byte("dest")),
+				types.NewIntraChainOutput(assetID1, 5, []byte("change")),
+			},
+		}),
+		SigningInstructions: []*SigningInstruction{{
+			WitnessComponents: []witnessComponent{},
+		}},
+	}
+
+	if !testutil.DeepEqual(got.Transaction.TxData, want.Transaction.TxData) {
+		t.Errorf("got tx:\n%s\nwant tx:\n%s", spew.Sdump(got.Transaction.TxData), spew.Sdump(want.Transaction.TxData))
+	}
+
+	if !testutil.DeepEqual(got.SigningInstructions, want.SigningInstructions) {
+		t.Errorf("got signing instructions:\n\t%#v\nwant signing instructions:\n\t%#v", got.SigningInstructions, want.SigningInstructions)
+	}
+}
+
+func newCrossOutAction(assetAmt bc.AssetAmount, redeemContract []byte) *crossOutAction {
+	address, err := common.NewAddressWitnessPubKeyHash(redeemContract, &consensus.MainNetParams)
+	if err != nil {
+		panic(err)
+	}
+
+	return &crossOutAction{
+		AssetAmount: assetAmt,
+		Address:     address.String(),
+	}
+}
+
+func TestBuildCrossOut(t *testing.T) {
+	ctx := context.Background()
+
+	assetID1 := bc.NewAssetID([32]byte{1})
+	assetID2 := bc.NewAssetID([32]byte{2})
+
+	redeemContract := make([]byte, 20)
+	controlProgram := append([]byte{0x00, byte(len(redeemContract))}, redeemContract...)
+
+	actions := []Action{
+		newCrossOutAction(bc.AssetAmount{AssetId: &assetID2, Amount: 6}, redeemContract),
+		testAction(bc.AssetAmount{AssetId: &assetID1, Amount: 5}),
+	}
+	expiryTime := time.Now().Add(time.Minute)
+	got, err := Build(ctx, nil, actions, expiryTime, 0)
+	if err != nil {
+		testutil.FatalErr(t, err)
+	}
+
+	want := &Template{
+		Transaction: types.NewTx(types.TxData{
+			Version: 1,
+			Inputs: []*types.TxInput{
+				types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), assetID1, 5, 0, nil),
+			},
+			Outputs: []*types.TxOutput{
+				types.NewCrossChainOutput(assetID2, 6, controlProgram),
 				types.NewIntraChainOutput(assetID1, 5, []byte("change")),
 			},
 		}),

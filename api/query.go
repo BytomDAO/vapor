@@ -204,6 +204,8 @@ func (a *API) getUnconfirmedTx(ctx context.Context, filter struct {
 	switch out := resOut.(type) {
 	case *bc.IntraChainOutput:
 		tx.MuxID = *out.Source.Ref
+	case *bc.VoteOutput:
+		tx.MuxID = *out.Source.Ref
 	case *bc.Retirement:
 		tx.MuxID = *out.Source.Ref
 	}

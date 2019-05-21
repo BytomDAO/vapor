@@ -14,7 +14,7 @@ var testBlock = &types.Block{
 	BlockHeader: types.BlockHeader{
 		Version:   1,
 		Height:    0,
-		Timestamp: 1528945000,
+		Timestamp: 1528945000000,
 		BlockCommitment: types.BlockCommitment{
 			TransactionsMerkleRoot: bc.Hash{V0: uint64(0x11)},
 			TransactionStatusHash:  bc.Hash{V0: uint64(0x55)},
@@ -48,7 +48,7 @@ var testHeaders = []*types.BlockHeader{
 	{
 		Version:   1,
 		Height:    0,
-		Timestamp: 1528945000,
+		Timestamp: 1528945000000,
 		BlockCommitment: types.BlockCommitment{
 			TransactionsMerkleRoot: bc.Hash{V0: uint64(0x11)},
 			TransactionStatusHash:  bc.Hash{V0: uint64(0x55)},
@@ -57,7 +57,7 @@ var testHeaders = []*types.BlockHeader{
 	{
 		Version:   1,
 		Height:    1,
-		Timestamp: 1528945000,
+		Timestamp: 1528945000000,
 		BlockCommitment: types.BlockCommitment{
 			TransactionsMerkleRoot: bc.Hash{V0: uint64(0x11)},
 			TransactionStatusHash:  bc.Hash{V0: uint64(0x55)},
@@ -66,7 +66,7 @@ var testHeaders = []*types.BlockHeader{
 	{
 		Version:   1,
 		Height:    3,
-		Timestamp: 1528945000,
+		Timestamp: 1528945000000,
 		BlockCommitment: types.BlockCommitment{
 			TransactionsMerkleRoot: bc.Hash{V0: uint64(0x11)},
 			TransactionStatusHash:  bc.Hash{V0: uint64(0x55)},
@@ -127,7 +127,7 @@ var testBlocks = []*types.Block{
 		BlockHeader: types.BlockHeader{
 			Version:   1,
 			Height:    0,
-			Timestamp: 1528945000,
+			Timestamp: 1528945000000,
 			BlockCommitment: types.BlockCommitment{
 				TransactionsMerkleRoot: bc.Hash{V0: uint64(0x11)},
 				TransactionStatusHash:  bc.Hash{V0: uint64(0x55)},
@@ -138,7 +138,7 @@ var testBlocks = []*types.Block{
 		BlockHeader: types.BlockHeader{
 			Version:   1,
 			Height:    0,
-			Timestamp: 1528945000,
+			Timestamp: 1528945000000,
 			BlockCommitment: types.BlockCommitment{
 				TransactionsMerkleRoot: bc.Hash{V0: uint64(0x11)},
 				TransactionStatusHash:  bc.Hash{V0: uint64(0x55)},
