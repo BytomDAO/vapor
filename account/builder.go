@@ -58,7 +58,7 @@ type crossInAction struct {
 // 	WitnessArguments []chainjson.HexBytes `json:"witness_arguments"`
 // }
 
-func (a *crossInAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
+func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBuilder) error {
 	var missing []string
 	if a.AssetId.IsZero() {
 		missing = append(missing, "asset_id")
@@ -97,25 +97,25 @@ func (a *crossInAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder)
 	// TODO: also need to hard-code mapTx
 	// TODO: save AssetDefinition
 
-	// txin := types.NewIssuanceInput(nonce[:], a.Amount, asset.IssuanceProgram, nil, asset.RawDefinitionByte)
-	// tplIn := &txbuilder.SigningInstruction{}
-	// if asset.Signer != nil {
-	// 	path := signers.GetBip0032Path(asset.Signer, signers.AssetKeySpace)
-	// 	tplIn.AddRawWitnessKeys(asset.Signer.XPubs, path, asset.Signer.Quorum)
-	// } else if a.Arguments != nil {
-	// 	if err := txbuilder.AddContractArgs(tplIn, a.Arguments); err != nil {
-	// 		return err
-	// 	}
-	// }
-
-	// log.Info("Issue action build")
-	// builder.RestrictMinTime(time.Now())
-	// return builder.AddInput(txin, tplIn)
-
 	// in :=  types.NewCrossChainInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amount, sourcePos uint64, controlProgram, assetDefinition []byte)
+	// txin := types.NewIssuanceInput(nonce[:], a.Amount, asset.IssuanceProgram, nil, asset.RawDefinitionByte)
+	// input's arguments will be set when signing
 	sourceID := testutil.MustDecodeHash(a.SourceID)
-	in := types.NewCrossChainInput(nil, sourceID, *a.AssetId, a.Amount, a.SourcePos, nil, rawDefinition)
-	return b.AddInput(in, nil)
+	txin := types.NewCrossChainInput(nil, sourceID, *a.AssetId, a.Amount, a.SourcePos, nil, rawDefinition)
+	tplIn := &txbuilder.SigningInstruction{}
+	if false {
+		// if asset.Signer != nil {
+		// path := signers.GetBip0032Path(asset.Signer, signers.AssetKeySpace)
+		// tplIn.AddRawWitnessKeys(asset.Signer.XPubs, path, asset.Signer.Quorum)
+	} else if a.Arguments != nil {
+		if err := txbuilder.AddContractArgs(tplIn, a.Arguments); err != nil {
+			return err
+		}
+	}
+
+	log.Info("cross-chain input action build")
+	builder.RestrictMinTime(time.Now())
+	return builder.AddInput(txin, tplIn)
 }
 
 func (a *crossInAction) ActionType() string {
