@@ -706,13 +706,14 @@ func createP2SH(account *Account, path [][]byte) (*CtrlProgram, error) {
 func GetAccountIndexKey(xpubs []crypto.XPubKeyer) []byte {
 	var hash [32]byte
 	var xPubs []byte
-	switch xpbs := xpubs[0].(type) {
+	switch xpubs[0].(type) {
 	case edchainkd.XPub:
-		// for i := 0; i < len(xpubs); i++ {
-
-		// }
-		cpy := append([]edchainkd.XPub{}, xpubs[:]...)
-
+		cpy := []edchainkd.XPub{}
+		for _, x := range xpubs {
+			if v, ok := x.(edchainkd.XPub); ok {
+				cpy = append(cpy, v)
+			}
+		}
 		sort.Sort(signers.EdSortKeys(cpy))
 		for _, xpub := range cpy {
 			xPubs = append(xPubs, xpub[:]...)

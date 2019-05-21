@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"crypto"
 	"encoding/hex"
 	"fmt"
 
@@ -333,7 +334,7 @@ type AccountPubkey struct {
 	PubKeyInfos []PubKeyInfo      `json:"pubkey_infos"`
 }
 
-func getPubkey(account *account.Account, change bool, index uint64) (*ed25519.PublicKey, []chainjson.HexBytes, error) {
+func getPubkey(account *account.Account, change bool, index uint64) (*crypto.PublicKey, []chainjson.HexBytes, error) {
 	rawPath, err := signers.Path(account.Signer, signers.AccountKeySpace, change, index)
 	if err != nil {
 		return nil, nil, err
@@ -374,13 +375,16 @@ func (a *API) listPubKeys(ctx context.Context, ins struct {
 			if err != nil {
 				return NewErrorResponse(err)
 			}
-			if ins.PublicKey != "" && ins.PublicKey != hex.EncodeToString(*pubkey) {
-				continue
+			switch pbk := (*pubkey).(type) {
+			case ed25519.PublicKey:
+				if ins.PublicKey != "" && ins.PublicKey != hex.EncodeToString(pbk) {
+					continue
+				}
+				pubKeyInfos = append(pubKeyInfos, PubKeyInfo{
+					Pubkey: hex.EncodeToString(pbk),
+					Path:   path,
+				})
 			}
-			pubKeyInfos = append(pubKeyInfos, PubKeyInfo{
-				Pubkey: hex.EncodeToString(*pubkey),
-				Path:   path,
-			})
 		}
 	} else if account.DeriveRule == signers.BIP0044 {
 		idx := a.wallet.AccountMgr.GetBip44ContractIndex(account.ID, true)
@@ -389,13 +393,16 @@ func (a *API) listPubKeys(ctx context.Context, ins struct {
 			if err != nil {
 				return NewErrorResponse(err)
 			}
-			if ins.PublicKey != "" && ins.PublicKey != hex.EncodeToString(*pubkey) {
-				continue
+			switch pbk := (*pubkey).(type) {
+			case ed25519.PublicKey:
+				if ins.PublicKey != "" && ins.PublicKey != hex.EncodeToString(pbk) {
+					continue
+				}
+				pubKeyInfos = append(pubKeyInfos, PubKeyInfo{
+					Pubkey: hex.EncodeToString(pbk),
+					Path:   path,
+				})
 			}
-			pubKeyInfos = append(pubKeyInfos, PubKeyInfo{
-				Pubkey: hex.EncodeToString(*pubkey),
-				Path:   path,
-			})
 		}
 
 		idx = a.wallet.AccountMgr.GetBip44ContractIndex(account.ID, false)
@@ -404,13 +411,16 @@ func (a *API) listPubKeys(ctx context.Context, ins struct {
 			if err != nil {
 				return NewErrorResponse(err)
 			}
-			if ins.PublicKey != "" && ins.PublicKey != hex.EncodeToString(*pubkey) {
-				continue
+			switch pbk := (*pubkey).(type) {
+			case ed25519.PublicKey:
+				if ins.PublicKey != "" && ins.PublicKey != hex.EncodeToString(pbk) {
+					continue
+				}
+				pubKeyInfos = append(pubKeyInfos, PubKeyInfo{
+					Pubkey: hex.EncodeToString(pbk),
+					Path:   path,
+				})
 			}
-			pubKeyInfos = append(pubKeyInfos, PubKeyInfo{
-				Pubkey: hex.EncodeToString(*pubkey),
-				Path:   path,
-			})
 		}
 	}
 

@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 
-	vcrypto "github.com/vapor/crypto"
+	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/util"
 )
 
@@ -58,7 +58,8 @@ var createAccountCmd = &cobra.Command{
 		ins := accountIns{}
 
 		for _, x := range args[1:] {
-			xpub := vcrypto.XPubKeyer{}
+			// TODO: adapt sm2
+			xpub := &edchainkd.XPub{}
 			if err := xpub.UnmarshalText([]byte(x)); err != nil {
 				jww.ERROR.Println(err)
 				os.Exit(util.ErrLocalExe)

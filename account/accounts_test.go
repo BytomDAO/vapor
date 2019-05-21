@@ -196,6 +196,7 @@ func TestGetAccountIndexKey(t *testing.T) {
 	xpubs1 := []vcrypto.XPubKeyer{xpub1.XPub, xpub2.XPub}
 	xpubs2 := []vcrypto.XPubKeyer{xpub2.XPub, xpub1.XPub}
 	if !reflect.DeepEqual(GetAccountIndexKey(xpubs1), GetAccountIndexKey(xpubs2)) {
+		// fmt.Printf("xpubs1 is: %s, xpubs2 is: %s", xpubs1, xpubs2)
 		t.Fatal("GetAccountIndexKey test err")
 	}
 

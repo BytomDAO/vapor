@@ -11,6 +11,7 @@ import (
 	"github.com/vapor/account"
 	"github.com/vapor/blockchain/signers"
 	vcrypto "github.com/vapor/crypto"
+	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/crypto/sha3pool"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
@@ -261,7 +262,10 @@ func (m *recoveryManager) commitStatusInfo() error {
 func genAcctAlias(xPubs []vcrypto.XPubKeyer, index uint64) string {
 	var tmp []byte
 	for _, xPub := range xPubs {
-		tmp = append(tmp, xPub[:6]...)
+		switch xpub := xPub.(type) {
+		case edchainkd.XPub:
+			tmp = append(tmp, xpub[:6]...)
+		}
 	}
 	return fmt.Sprintf("%x:%x", tmp, index)
 }

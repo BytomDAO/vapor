@@ -69,7 +69,11 @@ func (a *API) verifyMessage(ctx context.Context, ins struct {
 	}
 
 	derivedPK := ins.DerivedXPub.PublicKey()
-	pubHash := crypto.Ripemd160(derivedPK)
+	pubHash := make([]byte, 20)
+	switch dpk := derivedPK.(type) {
+	case ed25519.PublicKey:
+		pubHash = crypto.Ripemd160(dpk)
+	}
 	addressPubHash, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.ActiveNetParams)
 	if err != nil {
 		return NewErrorResponse(err)
@@ -80,8 +84,12 @@ func (a *API) verifyMessage(ctx context.Context, ins struct {
 		return NewSuccessResponse(VerifyMsgResp{VerifyResult: false})
 	}
 
-	if ed25519.Verify(ins.DerivedXPub.PublicKey(), ins.Message, sig) {
-		return NewSuccessResponse(VerifyMsgResp{VerifyResult: true})
+	switch dpk := derivedPK.(type) {
+	case ed25519.PublicKey:
+		if ed25519.Verify(dpk, ins.Message, sig) {
+			return NewSuccessResponse(VerifyMsgResp{VerifyResult: true})
+		}
 	}
+
 	return NewSuccessResponse(VerifyMsgResp{VerifyResult: false})
 }
