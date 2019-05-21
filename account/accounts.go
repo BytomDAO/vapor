@@ -3,6 +3,7 @@ package account
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"sort"
 	"strings"
@@ -405,6 +406,7 @@ func (m *Manager) FindByID(id string) (*Account, error) {
 
 	account := &Account{}
 	if err := json.Unmarshal(rawAccount, account); err != nil {
+		fmt.Print("1111111....")
 		return nil, err
 	}
 
