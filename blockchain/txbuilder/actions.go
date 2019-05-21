@@ -102,20 +102,23 @@ func (a *controlProgramAction) ActionType() string {
 	return "control_program"
 }
 
-// DecodeRetireAction convert input data to action struct
-func DecodeRetireAction(data []byte) (Action, error) {
-	a := new(retireAction)
+// DecodeCrossInAction convert input data to action struct
+func DecodeCrossInAction(data []byte) (Action, error) {
+	a := new(crossInAction)
 	err := stdjson.Unmarshal(data, a)
 	return a, err
 }
 
-type retireAction struct {
+type crossInAction struct {
 	bc.AssetAmount
-	Arbitrary json.HexBytes `json:"arbitrary"`
+	Address string `json:"address"`
 }
 
-func (a *retireAction) Build(ctx context.Context, b *TemplateBuilder) error {
+func (a *crossInAction) Build(ctx context.Context, b *TemplateBuilder) error {
 	var missing []string
+	if a.Address == "" {
+		missing = append(missing, "address")
+	}
 	if a.AssetId.IsZero() {
 		missing = append(missing, "asset_id")
 	}
@@ -126,16 +129,31 @@ func (a *retireAction) Build(ctx context.Context, b *TemplateBuilder) error {
 		return MissingFieldsError(missing...)
 	}
 
-	program, err := vmutil.RetireProgram(a.Arbitrary)
+	address, err := common.DecodeAddress(a.Address, &consensus.MainNetParams)
 	if err != nil {
 		return err
 	}
-	out := types.NewIntraChainOutput(*a.AssetId, a.Amount, program)
+
+	redeemContract := address.ScriptAddress()
+	program := []byte{}
+	switch address.(type) {
+	case *common.AddressWitnessPubKeyHash:
+		program, err = vmutil.P2WPKHProgram(redeemContract)
+	case *common.AddressWitnessScriptHash:
+		program, err = vmutil.P2WSHProgram(redeemContract)
+	default:
+		return errors.New("unsupport address type")
+	}
+	if err != nil {
+		return err
+	}
+
+	out := types.NewCrossChainOutput(*a.AssetId, a.Amount, program)
 	return b.AddOutput(out)
 }
 
-func (a *retireAction) ActionType() string {
-	return "retire"
+func (a *crossInAction) ActionType() string {
+	return "cross_chain_in"
 }
 
 // DecodeCrossOutAction convert input data to action struct
@@ -190,4 +208,40 @@ func (a *crossOutAction) Build(ctx context.Context, b *TemplateBuilder) error {
 
 func (a *crossOutAction) ActionType() string {
 	return "cross_chain_out"
+}
+
+// DecodeRetireAction convert input data to action struct
+func DecodeRetireAction(data []byte) (Action, error) {
+	a := new(retireAction)
+	err := stdjson.Unmarshal(data, a)
+	return a, err
+}
+
+type retireAction struct {
+	bc.AssetAmount
+	Arbitrary json.HexBytes `json:"arbitrary"`
+}
+
+func (a *retireAction) Build(ctx context.Context, b *TemplateBuilder) error {
+	var missing []string
+	if a.AssetId.IsZero() {
+		missing = append(missing, "asset_id")
+	}
+	if a.Amount == 0 {
+		missing = append(missing, "amount")
+	}
+	if len(missing) > 0 {
+		return MissingFieldsError(missing...)
+	}
+
+	program, err := vmutil.RetireProgram(a.Arbitrary)
+	if err != nil {
+		return err
+	}
+	out := types.NewIntraChainOutput(*a.AssetId, a.Amount, program)
+	return b.AddOutput(out)
+}
+
+func (a *retireAction) ActionType() string {
+	return "retire"
 }
