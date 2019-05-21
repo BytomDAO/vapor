@@ -79,9 +79,7 @@ func (a *crossInAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder)
 		return errors.New("asset definition is not in valid json format")
 	}
 	// TODO: check duplicate
-	// id := fmt.Sprintf("%v", *a.AssetId)
-	// a.m.AssetReg.GetAsset(id)
-	a.accounts.AssetReg.GetAsset(*a.AssetId)
+	a.accounts.assetReg.GetAsset(a.AssetId.String())
 
 	// txin := types.NewIssuanceInput(nonce[:], a.Amount, asset.IssuanceProgram, nil, asset.RawDefinitionByte)
 	// tplIn := &txbuilder.SigningInstruction{}

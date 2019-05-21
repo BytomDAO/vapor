@@ -221,7 +221,7 @@ func mockAccountManager(t *testing.T) *Manager {
 		t.Fatal(err)
 	}
 
-	return NewManager(testDB, chain)
+	return NewManager(testDB, chain, nil)
 }
 
 func (m *Manager) createTestAccount(t testing.TB, alias string, tags map[string]interface{}) *Account {

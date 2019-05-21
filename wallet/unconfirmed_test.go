@@ -29,7 +29,7 @@ func TestWalletUnconfirmedTxs(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 
-	accountManager := account.NewManager(testDB, nil)
+	accountManager := account.NewManager(testDB, nil, nil)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)

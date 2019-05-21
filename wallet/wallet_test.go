@@ -125,7 +125,7 @@ func TestWalletUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	accountManager := account.NewManager(testDB, chain)
+	accountManager := account.NewManager(testDB, chain, nil)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -266,7 +266,7 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	accountManager := account.NewManager(testDB, chain)
+	accountManager := account.NewManager(testDB, chain, nil)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
