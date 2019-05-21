@@ -76,6 +76,7 @@ func (a *crossInAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder)
 	if err != nil {
 		return asset.ErrSerializing
 	}
+	// TODO: may need to skip here
 	if !chainjson.IsValidJSON(rawDefinition) {
 		return errors.New("asset definition is not in valid json format")
 	}
@@ -92,6 +93,7 @@ func (a *crossInAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder)
 		// TODO: update asset def here?
 	}
 
+	// TODO: IssuanceProgram vs arguments?
 	// TODO: save AssetDefinition
 
 	// txin := types.NewIssuanceInput(nonce[:], a.Amount, asset.IssuanceProgram, nil, asset.RawDefinitionByte)
