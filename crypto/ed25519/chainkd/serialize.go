@@ -60,3 +60,8 @@ func (xprv *XPrv) UnmarshalText(inp []byte) error {
 func (xprv XPrv) String() string {
 	return hex.EncodeToString(xprv.Bytes())
 }
+
+// func (xpub *XPub) UnmarshalJSON(b []byte) error {
+
+// 	return nil
+// }

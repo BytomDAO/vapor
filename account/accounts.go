@@ -122,6 +122,32 @@ type Manager struct {
 	accountMu sync.Mutex
 }
 
+type EdSigner struct {
+	Type       string           `json:"type"`
+	XPubs      []edchainkd.XPub `json:"xpubs"`
+	Quorum     int              `json:"quorum"`
+	KeyIndex   uint64           `json:"key_index"`
+	DeriveRule uint8            `json:"derive_rule"`
+}
+
+type EdAccount struct {
+	*EdSigner
+	ID    string `json:"id"`
+	Alias string `json:"alias"`
+}
+
+// func (account *Account) UnmarshalJSON(b []byte) error {
+// 	edAccount := new(EdAccount)
+// 	if err := json.Unmarshal(b, edAccount); err != nil {
+// 		return err
+// 	}
+
+// 	account.Type = edAccount.Type
+// 	switch xpubs := acc
+// 	account.XPubs{edAccount.XPubs}
+// 	return nil
+// }
+
 // NewManager creates a new account manager
 func NewManager(walletDB dbm.DB, chain *protocol.Chain) *Manager {
 	return &Manager{
@@ -155,7 +181,7 @@ func CreateAccount(xpubs []crypto.XPubKeyer, quorum int, alias string, acctIndex
 }
 
 func (m *Manager) saveAccount(account *Account, updateIndex bool) error {
-	fmt.Println("account.XPubs is:", account.XPubs)
+	fmt.Println("saveAccount account.XPubs is:", account)
 	rawAccount, err := json.Marshal(account)
 	///////
 	fmt.Println("rawaccount is:", rawAccount)
