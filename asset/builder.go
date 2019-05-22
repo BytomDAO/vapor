@@ -39,8 +39,11 @@ type crossInAction struct {
 // TODO: also need to hard-code mapTx
 func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBuilder) error {
 	var missing []string
-	if len(a.FedXPubs) == 0 {
+	if len(a.FedXPubs) <= 1 {
 		missing = append(missing, "fed_xpubs")
+	}
+	if a.Quorum == 0 {
+		missing = append(missing, "fed_quorum")
 	}
 	if a.SourceID == "" {
 		missing = append(missing, "source_id")

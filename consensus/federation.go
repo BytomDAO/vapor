@@ -8,6 +8,11 @@ import (
 	"github.com/vapor/crypto/ed25519/chainkd"
 )
 
+type Federation struct {
+	XPubs  []chainkd.XPub
+	Quorum int
+}
+
 const (
 	FedXPubs = ""
 	Quorum   = 1
