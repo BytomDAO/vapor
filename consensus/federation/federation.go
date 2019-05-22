@@ -36,12 +36,14 @@ type federation struct {
 func parseFedConfig() *federation {
 	fed := &federation{}
 	if err := json.Unmarshal([]byte(fedCfgJson), fed); err != nil {
-		log.Fatalf("invalid federation config json")
+		log.Fatalln("invalid federation config json")
 	}
 
 	return fed
 }
 
+// CheckFedConfig checks the high-level rule for federation config, whereas
+// signers.Create checks the low-level rule
 func CheckFedConfig() error {
 	fed := parseFedConfig()
 	if len(fed.XPubs) <= 1 {
@@ -59,7 +61,7 @@ func GetFederation() *federation {
 	// use 1 for AssetKeyIndex
 	assetSigner, err := signers.Create("asset", fed.XPubs, fed.Quorum, 1, signers.BIP0032)
 	if err != nil {
-		panic("fail to create federation assetSigner")
+		log.Fatalf("fail to create federation assetSigner: %v", err)
 	}
 
 	fed.Path = signers.GetBip0032Path(assetSigner, signers.AssetKeySpace)
@@ -68,7 +70,7 @@ func GetFederation() *federation {
 	if pegInScript, err := buildPegInScript(derivedPKs, assetSigner.Quorum); err == nil {
 		fed.PegInScript = pegInScript
 	} else {
-		panic("fail to build peg-in script")
+		log.Fatalf("fail to build peg-in script: %v", err)
 	}
 
 	return fed
