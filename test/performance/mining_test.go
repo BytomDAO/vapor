@@ -19,7 +19,7 @@ func BenchmarkNewBlockTpl(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	accountManager := account.NewManager(testDB, chain, nil)
+	accountManager := account.NewManager(testDB, chain)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

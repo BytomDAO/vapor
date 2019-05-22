@@ -11,7 +11,6 @@ import (
 	"github.com/golang/groupcache/lru"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/common"
@@ -107,7 +106,6 @@ type Manager struct {
 	db         dbm.DB
 	chain      *protocol.Chain
 	utxoKeeper *utxoKeeper
-	assetReg   *asset.Registry
 
 	cacheMu    sync.Mutex
 	cache      *lru.Cache
@@ -121,11 +119,10 @@ type Manager struct {
 }
 
 // NewManager creates a new account manager
-func NewManager(walletDB dbm.DB, chain *protocol.Chain, assetReg *asset.Registry) *Manager {
+func NewManager(walletDB dbm.DB, chain *protocol.Chain) *Manager {
 	return &Manager{
 		db:          walletDB,
 		chain:       chain,
-		assetReg:    assetReg,
 		utxoKeeper:  newUtxoKeeper(chain.BestBlockHeight, walletDB),
 		cache:       lru.New(maxAccountCache),
 		aliasCache:  lru.New(maxAccountCache),

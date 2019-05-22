@@ -185,7 +185,7 @@ func (w *Wallet) BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInp
 		in.Type = "cross_chain_in"
 		in.ControlProgram = orig.ControlProgram()
 		in.Address = w.getAddressFromControlProgram(in.ControlProgram)
-		in.SpentOutputID = e.MainnetOutputId
+		in.SpentOutputID = e.MainchainOutputId
 		arguments := orig.Arguments()
 		for _, arg := range arguments {
 			in.WitnessArguments = append(in.WitnessArguments, arg)
