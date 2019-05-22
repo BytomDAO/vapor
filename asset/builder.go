@@ -16,13 +16,13 @@ import (
 
 // DecodeCrossInAction convert input data to action struct
 func (r *Registry) DecodeCrossInAction(data []byte) (txbuilder.Action, error) {
-	a := &crossInAction{assets: r}
+	a := &crossInAction{reg: r}
 	err := stdjson.Unmarshal(data, a)
 	return a, err
 }
 
 type crossInAction struct {
-	assets *Registry
+	reg *Registry
 	bc.AssetAmount
 	SourceID        string                 `json:"source_id"` // AnnotatedUTXO
 	SourcePos       uint64                 `json:"source_pos"`
@@ -69,7 +69,7 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 	var err error
 	// Handle asset definition.
 	// Asset issuance's legality is guaranteed by the federation.
-	if preAsset, _ := a.assets.GetAsset(a.AssetId.String()); preAsset != nil {
+	if preAsset, _ := a.reg.GetAsset(a.AssetId.String()); preAsset != nil {
 		asset = preAsset
 	} else {
 		asset.RawDefinitionByte, err = serializeAssetDef(a.AssetDefinition)
@@ -77,10 +77,17 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 			return ErrSerializing
 		}
 
-		// TODO: save AssetDefinition
 		if !chainjson.IsValidJSON(asset.RawDefinitionByte) {
 			return errors.New("asset definition is not in valid json format")
 		}
+
+		asset.DefinitionMap = a.AssetDefinition
+		asset.VMVersion = 1
+		// TODO: asset.IssuanceProgram
+		asset.AssetID = *a.AssetId
+		extAlias := a.AssetId.String()
+		asset.Alias = &(extAlias)
+		a.reg.SaveAsset(asset, extAlias)
 	}
 
 	arguments := [][]byte{}
