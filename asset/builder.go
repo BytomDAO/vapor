@@ -70,7 +70,9 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 	var err error
 	// Handle asset definition.
 	// Asset issuance's legality is guaranteed by the federation.
-	if preAsset, _ := a.assets.GetAsset(a.AssetId.String()); preAsset == nil {
+	if preAsset, _ := a.assets.GetAsset(a.AssetId.String()); preAsset != nil {
+		asset = preAsset
+	} else {
 		asset.RawDefinitionByte, err = serializeAssetDef(a.AssetDefinition)
 		if err != nil {
 			return ErrSerializing
@@ -87,7 +89,6 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 		arguments = append(arguments, argument)
 	}
 	sourceID := testutil.MustDecodeHash(a.SourceID)
-	// TODO: refactor rawDefinition
 	txin := types.NewCrossChainInput(arguments, sourceID, *a.AssetId, a.Amount, a.SourcePos, a.Program, asset.RawDefinitionByte)
 	log.Info("cross-chain input action build")
 	builder.RestrictMinTime(time.Now())
