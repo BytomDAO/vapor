@@ -155,7 +155,7 @@ func TestSaveChainStatus(t *testing.T) {
 		},
 	}
 
-	if err := store.SaveChainStatus(node, node, view); err != nil {
+	if err := store.SaveChainStatus(node, node, view, []*state.VoteResult{}); err != nil {
 		t.Fatal(err)
 	}
 

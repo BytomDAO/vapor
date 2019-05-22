@@ -7,6 +7,7 @@ import (
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
+	"github.com/vapor/protocol/validation"
 )
 
 var (
@@ -73,7 +74,7 @@ func (c *Chain) calcReorganizeNodes(node *state.BlockNode) ([]*state.BlockNode, 
 }
 
 func (c *Chain) connectBlock(block *types.Block) (err error) {
-	irreversibleNode := c.lastIrreversibleNode
+	irreversibleNode := c.bestIrreversibleNode
 	bcBlock := types.MapBlock(block)
 	if bcBlock.TransactionStatus, err = c.store.GetTransactionStatus(&bcBlock.ID); err != nil {
 		return err
@@ -87,7 +88,8 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
-	if err := c.bbft.AppendBlock(block); err != nil {
+	voteResult, err := c.bbft.ApplyBlock(block)
+	if err != nil {
 		return err
 	}
 
@@ -96,7 +98,7 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		irreversibleNode = node
 	}
 
-	if err := c.setState(node, irreversibleNode, utxoView); err != nil {
+	if err := c.setState(node, irreversibleNode, utxoView, []*state.VoteResult{voteResult}); err != nil {
 		return err
 	}
 
@@ -109,9 +111,9 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 	attachNodes, detachNodes := c.calcReorganizeNodes(node)
 	utxoView := state.NewUtxoViewpoint()
-	irreversibleNode := c.lastIrreversibleNode
+	voteResults := []*state.VoteResult{}
+	irreversibleNode := c.bestIrreversibleNode
 	
-	var detachBlocks []*types.Block
 	for _, detachNode := range detachNodes {
 		b, err := c.store.GetBlock(&detachNode.Hash)
 		if err != nil {
@@ -119,13 +121,9 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 		}
 
 		if b.Height <= irreversibleNode.Height {
-			log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Debug("detach fail, the block is irreversible")
 			return errors.New("the height of rollback block below the height of irreversible block")
 		}
-		detachBlocks = append(detachBlocks, b)
-	}
 
-	for _, b := range detachBlocks {
 		detachBlock := types.MapBlock(b)
 		if err := c.store.GetTransactionsUtxo(utxoView, detachBlock.Transactions); err != nil {
 			return err
@@ -138,9 +136,12 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			return err
 		}
 		
-		if err := c.bbft.DetachBlock(b); err != nil {
+		voteResult, err := c.bbft.DetachBlock(b)
+		if err != nil {
 			return err
 		}
+
+		voteResults = append(voteResults, voteResult)
 
 		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Debug("detach from mainchain")
 	}
@@ -163,9 +164,12 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			return err
 		}
 
-		if err := c.bbft.AppendBlock(b); err != nil {
+		voteResult, err := c.bbft.ApplyBlock(b)
+		if err != nil {
 			return err
 		}
+
+		voteResults = append(voteResults, voteResult)
 
 		if c.bbft.isIrreversible(b) && b.Height > irreversibleNode.Height {
 			irreversibleNode = attachNode
@@ -174,7 +178,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Debug("attach from mainchain")
 	}
 
-	return c.setState(node, irreversibleNode, utxoView)
+	return c.setState(node, irreversibleNode, utxoView, voteResults)
 }
 
 // SaveBlock will validate and save block into storage
@@ -248,7 +252,7 @@ func (c *Chain) blockProcesser() {
 
 // ProcessBlock is the entry for handle block insert
 func (c *Chain) processBlock(block *types.Block) (bool, error) {
-	if block.Height <= c.lastIrreversibleNode.Height {
+	if block.Height <= c.bestIrreversibleNode.Height {
 		return false, errors.New("the height of block below the height of irreversible block")
 	}
 	
@@ -264,7 +268,15 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 		return true, nil
 	}
 
-	if err := c.bbft.ValidateBlock(block, parent); err != nil {
+	if err := c.bbft.ValidateBlock(block); err != nil {
+		return false, errors.Sub(ErrBadBlock, err)
+	}
+
+	if err := validation.ValidateBlock(types.MapBlock(block), parent); err != nil {
+		return false, errors.Sub(ErrBadBlock, err)
+	}
+
+	if err := c.bbft.SignBlock(block); err != nil {
 		return false, errors.Sub(ErrBadBlock, err)
 	}
 

@@ -11,11 +11,11 @@ var (
 )
 
 type BitMap struct {
-	size uint64
+	size uint32
 	arr []int32
 }
 
-func NewBitMap(size uint64) *BitMap {
+func NewBitMap(size uint32) *BitMap {
 	obj := &BitMap{size: size}
 	num := (size + bitLen - 1) / bitLen
 	arr := make([]int32, num)
@@ -23,7 +23,7 @@ func NewBitMap(size uint64) *BitMap {
 	return obj
 }
 
-func (b *BitMap) Set(index uint64) error {
+func (b *BitMap) Set(index uint32) error {
 	if index >= b.size {
 		return errIndexOutOfBounds
 	}
@@ -33,7 +33,7 @@ func (b *BitMap) Set(index uint64) error {
 	return nil
 }
 
-func (b *BitMap) Clean(index uint64) error {
+func (b *BitMap) Clean(index uint32) error {
 	if index >= b.size {
 		return errIndexOutOfBounds
 	}
@@ -43,7 +43,7 @@ func (b *BitMap) Clean(index uint64) error {
 	return nil
 }
 
-func (b *BitMap) Test(index uint64) (bool, error) {
+func (b *BitMap) Test(index uint32) (bool, error) {
 	if index >= b.size {
 		return false, errIndexOutOfBounds
 	}

@@ -22,9 +22,9 @@ type Chain struct {
 	bbft           *bbft
 	processBlockCh chan *processBlockMsg
 
-	cond                  sync.Cond
-	bestNode              *state.BlockNode
-	lastIrreversibleNode  *state.BlockNode
+	cond                 sync.Cond
+	bestNode             *state.BlockNode
+	bestIrreversibleNode *state.BlockNode
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
@@ -80,7 +80,7 @@ func (c *Chain) initChainStatus() error {
 	if err != nil {
 		return err
 	}
-	return c.store.SaveChainStatus(node, node, utxoView)
+	return c.store.SaveChainStatus(node, node, utxoView, []*state.VoteResult{})
 }
 
 // BestBlockHeight returns the current height of the blockchain.
@@ -109,8 +109,8 @@ func (c *Chain) InMainChain(hash bc.Hash) bool {
 }
 
 // This function must be called with mu lock in above level
-func (c *Chain) setState(node *state.BlockNode, irreversibleNode *state.BlockNode, view *state.UtxoViewpoint) error {
-	if err := c.store.SaveChainStatus(node, irreversibleNode, view); err != nil {
+func (c *Chain) setState(node *state.BlockNode, irreversibleNode *state.BlockNode, view *state.UtxoViewpoint, vrs []*state.VoteResult) error {
+	if err := c.store.SaveChainStatus(node, irreversibleNode, view, vrs); err != nil {
 		return err
 	}
 
@@ -119,7 +119,7 @@ func (c *Chain) setState(node *state.BlockNode, irreversibleNode *state.BlockNod
 
 	c.index.SetMainChain(node)
 	c.bestNode = node
-	c.lastIrreversibleNode = irreversibleNode
+	c.bestIrreversibleNode = irreversibleNode
 
 	log.WithFields(log.Fields{"module": logModule, "height": c.bestNode.Height, "hash": c.bestNode.Hash.String()}).Debug("chain best status has been update")
 	c.cond.Broadcast()
@@ -139,11 +139,6 @@ func (c *Chain) BlockWaiter(height uint64) <-chan struct{} {
 	}()
 
 	return ch
-}
-
-// GetIndex return chain index
-func (c *Chain) GetIndex() *state.BlockIndex {
-	return c.index
 }
 
 // GetTxPool return chain txpool.
