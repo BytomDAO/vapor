@@ -66,7 +66,7 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 
 	// Handle asset definition.
 	// Asset issuance's legality is guaranteed by the federation.
-	rawDefinition, err := SerializeAssetDef(a.AssetDefinition)
+	rawDefinition, err := serializeAssetDef(a.AssetDefinition)
 	if err != nil {
 		return ErrSerializing
 	}
@@ -76,7 +76,7 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 	}
 	if preAsset, _ := a.assets.GetAsset(a.AssetId.String()); preAsset != nil {
 		// GetAsset() doesn't unmashall for RawDefinitionBytes
-		preRawDefinition, err := SerializeAssetDef(preAsset.DefinitionMap)
+		preRawDefinition, err := serializeAssetDef(preAsset.DefinitionMap)
 		if err != nil {
 			return ErrSerializing
 		}
