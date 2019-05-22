@@ -49,12 +49,16 @@ func (b *bbft) NextLeaderTime(pubkey []byte, bestBlockTimestamp, bestBlockHeight
 	return b.consensusNodeManager.nextLeaderTime(pubkey, bestBlockTimestamp, bestBlockHeight)
 }
 
-func (b *bbft) ApplyBlock(block *types.Block) (*state.VoteResult, error) {
+func (b *bbft) ApplyBlock(voteResultMap map[uint64]*state.VoteResult, block *types.Block) (err error) {
 	voteSeq := block.Height / roundVoteBlockNums
-	store := b.consensusNodeManager.store
-	voteResult, err := store.GetVoteResult(voteSeq)
-	if err != nil && err != ErrNotFoundVoteResult {
-		return nil, err
+	voteResult := voteResultMap[voteSeq]
+
+	if voteResult == nil {
+		store := b.consensusNodeManager.store
+		voteResult, err = store.GetVoteResult(voteSeq)
+		if err != nil && err != ErrNotFoundVoteResult {
+			return err
+		}
 	}
 
 	if voteResult == nil {
@@ -65,8 +69,10 @@ func (b *bbft) ApplyBlock(block *types.Block) (*state.VoteResult, error) {
 		}
 	}
 
+	voteResultMap[voteSeq] = voteResult
+
 	if voteResult.LastBlockHeight+1 != block.Height {
-		return nil, errors.New("bbft append block error, the block height is not equals last block height plus 1 of vote result")
+		return errors.New("bbft append block error, the block height is not equals last block height plus 1 of vote result")
 	}
 
 	for _, tx := range block.Transactions {
@@ -79,7 +85,7 @@ func (b *bbft) ApplyBlock(block *types.Block) (*state.VoteResult, error) {
 			pubkey := hex.EncodeToString(unVoteInput.Vote)
 			voteResult.NumOfVote[pubkey], ok = checked.SubUint64(voteResult.NumOfVote[pubkey], unVoteInput.Amount)
 			if !ok {
-				return nil, errVotingOperationOverFlow
+				return errVotingOperationOverFlow
 			}
 		}
 		for _, output := range tx.Outputs {
@@ -91,26 +97,31 @@ func (b *bbft) ApplyBlock(block *types.Block) (*state.VoteResult, error) {
 			pubkey := hex.EncodeToString(voteOutput.Vote)
 			voteResult.NumOfVote[pubkey], ok = checked.AddUint64(voteResult.NumOfVote[pubkey], voteOutput.Amount)
 			if !ok {
-				return nil, errVotingOperationOverFlow
+				return errVotingOperationOverFlow
 			}
 		}
 	}
 
 	voteResult.LastBlockHeight++
 	voteResult.Finalized = (block.Height+1)%roundVoteBlockNums == 0
-	return voteResult, nil
+	return nil
 }
 
-func (b *bbft) DetachBlock(block *types.Block) (*state.VoteResult, error) {
+func (b *bbft) DetachBlock(voteResultMap map[uint64]*state.VoteResult, block *types.Block) error {
 	voteSeq := block.Height / roundVoteBlockNums
-	store := b.consensusNodeManager.store
-	voteResult, err := store.GetVoteResult(voteSeq)
-	if err != nil {
-		return nil, err
+	voteResult := voteResultMap[voteSeq]
+
+	if voteResult == nil {
+		store := b.consensusNodeManager.store
+		voteResult, err := store.GetVoteResult(voteSeq)
+		if err != nil {
+			return err
+		}
+		voteResultMap[voteSeq] = voteResult
 	}
 
 	if voteResult.LastBlockHeight != block.Height {
-		return nil, errors.New("bbft detach block error, the block height is not equals last block height of vote result")
+		return errors.New("bbft detach block error, the block height is not equals last block height of vote result")
 	}
 
 	for _, tx := range block.Transactions {
@@ -123,7 +134,7 @@ func (b *bbft) DetachBlock(block *types.Block) (*state.VoteResult, error) {
 			pubkey := hex.EncodeToString(unVoteInput.Vote)
 			voteResult.NumOfVote[pubkey], ok = checked.AddUint64(voteResult.NumOfVote[pubkey], unVoteInput.Amount)
 			if !ok {
-				return nil, errVotingOperationOverFlow
+				return errVotingOperationOverFlow
 			}
 		}
 		for _, output := range tx.Outputs {
@@ -135,14 +146,14 @@ func (b *bbft) DetachBlock(block *types.Block) (*state.VoteResult, error) {
 			pubkey := hex.EncodeToString(voteOutput.Vote)
 			voteResult.NumOfVote[pubkey], ok = checked.SubUint64(voteResult.NumOfVote[pubkey], voteOutput.Amount)
 			if !ok {
-				return nil, errVotingOperationOverFlow
+				return errVotingOperationOverFlow
 			}
 		}
 	}
 
 	voteResult.LastBlockHeight--
 	voteResult.Finalized = false
-	return voteResult, nil
+	return nil
 }
 
 // ValidateBlock verify whether the block is valid

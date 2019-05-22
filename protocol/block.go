@@ -88,8 +88,8 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
-	voteResult, err := c.bbft.ApplyBlock(block)
-	if err != nil {
+	voteResultMap := make(map[uint64]*state.VoteResult)
+	if err := c.bbft.ApplyBlock(voteResultMap, block); err != nil {
 		return err
 	}
 
@@ -98,7 +98,7 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		irreversibleNode = node
 	}
 
-	if err := c.setState(node, irreversibleNode, utxoView, []*state.VoteResult{voteResult}); err != nil {
+	if err := c.setState(node, irreversibleNode, utxoView, voteResultMap); err != nil {
 		return err
 	}
 
@@ -111,7 +111,7 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 	attachNodes, detachNodes := c.calcReorganizeNodes(node)
 	utxoView := state.NewUtxoViewpoint()
-	voteResults := []*state.VoteResult{}
+	voteResultMap := make(map[uint64]*state.VoteResult)
 	irreversibleNode := c.bestIrreversibleNode
 	
 	for _, detachNode := range detachNodes {
@@ -136,12 +136,9 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			return err
 		}
 		
-		voteResult, err := c.bbft.DetachBlock(b)
-		if err != nil {
+		if err := c.bbft.DetachBlock(voteResultMap, b); err != nil {
 			return err
 		}
-
-		voteResults = append(voteResults, voteResult)
 
 		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Debug("detach from mainchain")
 	}
@@ -164,12 +161,9 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			return err
 		}
 
-		voteResult, err := c.bbft.ApplyBlock(b)
-		if err != nil {
+		if err := c.bbft.ApplyBlock(voteResultMap, b); err != nil {
 			return err
 		}
-
-		voteResults = append(voteResults, voteResult)
 
 		if c.bbft.isIrreversible(b) && b.Height > irreversibleNode.Height {
 			irreversibleNode = attachNode
@@ -178,7 +172,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Debug("attach from mainchain")
 	}
 
-	return c.setState(node, irreversibleNode, utxoView, voteResults)
+	return c.setState(node, irreversibleNode, utxoView, voteResultMap)
 }
 
 // SaveBlock will validate and save block into storage
