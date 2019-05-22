@@ -12,7 +12,6 @@ import (
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/testutil"
 )
 
 // DecodeCrossInAction convert input data to action struct
@@ -88,7 +87,12 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 	for _, argument := range a.Arguments {
 		arguments = append(arguments, argument)
 	}
-	sourceID := testutil.MustDecodeHash(a.SourceID)
+
+	var sourceID bc.Hash
+	if err := sourceID.UnmarshalText([]byte(a.SourceID)); err != nil {
+		return errors.New("invalid source ID format")
+	}
+
 	txin := types.NewCrossChainInput(arguments, sourceID, *a.AssetId, a.Amount, a.SourcePos, a.Program, asset.RawDefinitionByte)
 	log.Info("cross-chain input action build")
 	builder.RestrictMinTime(time.Now())
