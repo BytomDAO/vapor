@@ -177,13 +177,25 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 
 // SaveBlock will validate and save block into storage
 func (c *Chain) saveBlock(block *types.Block) error {
+	if err := c.bbft.ValidateBlock(block); err != nil {
+		return errors.Sub(ErrBadBlock, err)
+	}
+
+	parent := c.index.GetNode(&block.PreviousBlockHash)
+	if err := validation.ValidateBlock(types.MapBlock(block), parent); err != nil {
+		return errors.Sub(ErrBadBlock, err)
+	}
+
+	if err := c.bbft.SignBlock(block); err != nil {
+		return errors.Sub(ErrBadBlock, err)
+	}
+
 	bcBlock := types.MapBlock(block)
 	if err := c.store.SaveBlock(block, bcBlock.TransactionStatus); err != nil {
 		return err
 	}
 
 	c.orphanManage.Delete(&bcBlock.ID)
-	parent := c.index.GetNode(&block.PreviousBlockHash)
 	node, err := state.NewBlockNode(&block.BlockHeader, parent)
 	if err != nil {
 		return err
@@ -260,18 +272,6 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	if parent == nil {
 		c.orphanManage.Add(block)
 		return true, nil
-	}
-
-	if err := c.bbft.ValidateBlock(block); err != nil {
-		return false, errors.Sub(ErrBadBlock, err)
-	}
-
-	if err := validation.ValidateBlock(types.MapBlock(block), parent); err != nil {
-		return false, errors.Sub(ErrBadBlock, err)
-	}
-
-	if err := c.bbft.SignBlock(block); err != nil {
-		return false, errors.Sub(ErrBadBlock, err)
 	}
 
 	if err := c.saveBlock(block); err != nil {
