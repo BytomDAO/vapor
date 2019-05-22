@@ -10,6 +10,7 @@ import (
 
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/blockchain/txbuilder"
+	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	chainjson "github.com/vapor/encoding/json"
@@ -31,20 +32,12 @@ type crossInAction struct {
 	bc.AssetAmount
 	SourceID        string                 `json:"source_id"`
 	SourcePos       uint64                 `json:"source_pos"`
-	FedXPubs        []chainkd.XPub         `json:"fed_xpubs"`
-	Quorum          int                    `json:"fed_quorum"`
 	AssetDefinition map[string]interface{} `json:"asset_definition"`
 }
 
 // TODO: also need to hard-code mapTx
 func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBuilder) error {
 	var missing []string
-	if len(a.FedXPubs) <= 1 {
-		missing = append(missing, "fed_xpubs")
-	}
-	if a.Quorum == 0 {
-		missing = append(missing, "fed_quorum")
-	}
 	if a.SourceID == "" {
 		missing = append(missing, "source_id")
 	}
@@ -87,7 +80,7 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 		a.reg.SaveExtAsset(asset, extAlias)
 	}
 
-	assetSigner, err := signers.Create("asset", a.FedXPubs, a.Quorum, 1, signers.BIP0032)
+	assetSigner, err := signers.Create("asset", consensus.Federation().XPubs, consensus.Federation().Quorum, 1, signers.BIP0032)
 	if err != nil {
 		return err
 	}

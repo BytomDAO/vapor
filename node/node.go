@@ -59,9 +59,21 @@ type Node struct {
 // NewNode create bytom node
 func NewNode(config *cfg.Config) *Node {
 	ctx := context.Background()
+
+	if err := consensus.CheckFedConfig(); err == nil {
+		log.WithFields(log.Fields{
+			"module":     logModule,
+			"fed_xpubs":  consensus.Federation().XPubs,
+			"fed_quorum": consensus.Federation().Quorum,
+		}).Info()
+	} else {
+		cmn.Exit("Error: " + err.Error())
+	}
+
 	if err := lockDataDirectory(config); err != nil {
 		cmn.Exit("Error: " + err.Error())
 	}
+
 	initLogFile(config)
 	initActiveNetParams(config)
 	initCommonConfig(config)
