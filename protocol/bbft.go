@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/vapor/crypto/ed25519"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
 	"github.com/vapor/math/checked"
 	"github.com/vapor/protocol/bc/types"
@@ -81,7 +81,7 @@ func (b *bbft) ApplyBlock(voteResultMap map[uint64]*state.VoteResult, block *typ
 			if !ok {
 				continue
 			}
-			
+
 			pubkey := hex.EncodeToString(unVoteInput.Vote)
 			voteResult.NumOfVote[pubkey], ok = checked.SubUint64(voteResult.NumOfVote[pubkey], unVoteInput.Amount)
 			if !ok {
@@ -130,7 +130,7 @@ func (b *bbft) DetachBlock(voteResultMap map[uint64]*state.VoteResult, block *ty
 			if !ok {
 				continue
 			}
-			
+
 			pubkey := hex.EncodeToString(unVoteInput.Vote)
 			voteResult.NumOfVote[pubkey], ok = checked.AddUint64(voteResult.NumOfVote[pubkey], unVoteInput.Amount)
 			if !ok {
@@ -142,7 +142,7 @@ func (b *bbft) DetachBlock(voteResultMap map[uint64]*state.VoteResult, block *ty
 			if !ok {
 				continue
 			}
-			
+
 			pubkey := hex.EncodeToString(voteOutput.Vote)
 			voteResult.NumOfVote[pubkey], ok = checked.SubUint64(voteResult.NumOfVote[pubkey], voteOutput.Amount)
 			if !ok {
@@ -219,18 +219,31 @@ func (b *bbft) validateSign(block *types.Block) (uint64, error) {
 
 // SignBlock signing the block if current node is consensus node
 func (b *bbft) SignBlock(block *types.Block) error {
-	var xprv chainkd.XPrv
-	xpub := [64]byte(xprv.XPub())
-	node, err := b.consensusNodeManager.getConsensusNode(block.Height, hex.EncodeToString(xpub[:]))
-	if err != nil && err != errNotFoundConsensusNode {
-		return err
-	}
+	var xprv edchainkd.XPrv
+	switch xpub := xprv.XPub().(type) {
+	case edchainkd.XPub:
+		node, err := b.consensusNodeManager.getConsensusNode(block.Height, hex.EncodeToString(xpub[:]))
+		if err != nil && err != errNotFoundConsensusNode {
+			return err
+		}
 
-	if node == nil {
-		return nil
-	}
+		if node == nil {
+			return nil
+		}
 
-	block.Witness[node.order] = xprv.Sign(block.Hash().Bytes())
+		block.Witness[node.order] = xprv.Sign(block.Hash().Bytes())
+	}
+	// // xpub := [64]byte(xprv.XPub())
+	// node, err := b.consensusNodeManager.getConsensusNode(block.Height, hex.EncodeToString(xpub[:]))
+	// if err != nil && err != errNotFoundConsensusNode {
+	// 	return err
+	// }
+
+	// if node == nil {
+	// 	return nil
+	// }
+
+	// block.Witness[node.order] = xprv.Sign(block.Hash().Bytes())
 	return nil
 }
 
