@@ -87,7 +87,14 @@ func saveExternalAssetDefinition(b *types.Block, walletDB dbm.DB) {
 
 	for _, tx := range b.Transactions {
 		for _, _ = range tx.Inputs {
-			// handle cross chain input here
+			if cci, ok := orig.TypedInput.(*types.CrossChainInput); ok {
+				if isValidJSON(cci.AssetDefinition) {
+					assetID := cci.AssetID()
+					if assetExist := walletDB.Get(asset.ExtAssetKey(&assetID)); assetExist == nil {
+						storeBatch.Set(asset.ExtAssetKey(&assetID), cci.AssetDefinition)
+					}
+				}
+			}
 		}
 	}
 }

@@ -32,7 +32,7 @@ type crossInAction struct {
 }
 
 // TODO: also need to hard-code mapTx
-// TODO: iter cross-in and save asset
+// TODO: iter cross-in and save asset, saveExternalAssetDefinition
 // TODO: federation can sign? check arguments length?
 func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBuilder) error {
 	var missing []string
@@ -82,11 +82,11 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 
 	var sourceID bc.Hash
 	if err := sourceID.UnmarshalText([]byte(a.SourceID)); err != nil {
-		return errors.New("invalid source ID format")
+		return errors.New("invalid sourceID format")
 	}
 
 	txin := types.NewCrossChainInput(arguments, sourceID, *a.AssetId, a.Amount, a.SourcePos, a.Program, asset.RawDefinitionByte)
-	log.Info("cross-chain input action build")
+	log.Info("cross-chain input action built")
 	builder.RestrictMinTime(time.Now())
 	return builder.AddInput(txin, &txbuilder.SigningInstruction{})
 }
