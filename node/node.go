@@ -22,6 +22,7 @@ import (
 	"github.com/vapor/blockchain/txfeed"
 	cfg "github.com/vapor/config"
 	"github.com/vapor/consensus"
+	"github.com/vapor/consensus/federation"
 	"github.com/vapor/database"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/env"
@@ -60,11 +61,11 @@ type Node struct {
 func NewNode(config *cfg.Config) *Node {
 	ctx := context.Background()
 
-	if err := consensus.CheckFedConfig(); err == nil {
+	if err := federation.CheckFedConfig(); err == nil {
 		log.WithFields(log.Fields{
 			"module":     logModule,
-			"fed_xpubs":  consensus.Federation().XPubs,
-			"fed_quorum": consensus.Federation().Quorum,
+			"fed_xpubs":  federation.GetFederation().XPubs,
+			"fed_quorum": federation.GetFederation().Quorum,
 		}).Info()
 	} else {
 		cmn.Exit("Error: " + err.Error())

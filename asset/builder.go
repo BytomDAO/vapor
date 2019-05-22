@@ -8,16 +8,12 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/blockchain/txbuilder"
-	"github.com/vapor/consensus"
-	"github.com/vapor/crypto/ed25519"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	"github.com/vapor/consensus/federation"
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/vm/vmutil"
 )
 
 // DecodeCrossInAction convert input data to action struct
@@ -80,45 +76,21 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 		a.reg.SaveExtAsset(asset, extAlias)
 	}
 
-	assetSigner, err := signers.Create("asset", consensus.Federation().XPubs, consensus.Federation().Quorum, 1, signers.BIP0032)
-	if err != nil {
-		return err
-	}
-
-	path := signers.GetBip0032Path(assetSigner, signers.AssetKeySpace)
-	derivedXPubs := chainkd.DeriveXPubs(assetSigner.XPubs, path)
-	derivedPKs := chainkd.XPubKeys(derivedXPubs)
-	pegInScript, err := buildPegInScript(derivedPKs, assetSigner.Quorum)
-	if err != nil {
-		return err
-	}
-
 	var sourceID bc.Hash
 	if err := sourceID.UnmarshalText([]byte(a.SourceID)); err != nil {
 		return errors.New("invalid sourceID format")
 	}
 
 	// arguments will be set when materializeWitnesses
-	txin := types.NewCrossChainInput(nil, sourceID, *a.AssetId, a.Amount, a.SourcePos, pegInScript, asset.RawDefinitionByte)
+	txin := types.NewCrossChainInput(nil, sourceID, *a.AssetId, a.Amount, a.SourcePos, federation.GetFederation().PegInScript, asset.RawDefinitionByte)
 	log.Info("cross-chain input action built")
 	builder.RestrictMinTime(time.Now())
 	tplIn := &txbuilder.SigningInstruction{}
-	tplIn.AddRawWitnessKeys(assetSigner.XPubs, path, assetSigner.Quorum)
+	tplIn.AddRawWitnessKeys(federation.GetFederation().XPubs, federation.GetFederation().Path, federation.GetFederation().Quorum)
 	a.reg.db.Set(sourceKey, []byte("true"))
 	return builder.AddInput(txin, tplIn)
 }
 
 func (a *crossInAction) ActionType() string {
 	return "cross_chain_in"
-}
-
-func buildPegInScript(pubkeys []ed25519.PublicKey, nrequired int) (program []byte, err error) {
-	controlProg, err := vmutil.P2SPMultiSigProgram(pubkeys, nrequired)
-	if err != nil {
-		return nil, err
-	}
-	builder := vmutil.NewBuilder()
-	builder.AddRawBytes(controlProg)
-	prog, err := builder.Build()
-	return prog, err
 }

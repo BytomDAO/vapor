@@ -1,4 +1,4 @@
-package consensus
+package federation
 
 import (
 	"encoding/json"
@@ -6,7 +6,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/vapor/blockchain/signers"
+	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/crypto/ed25519/chainkd"
+	"github.com/vapor/protocol/vm/vmutil"
 )
 
 const fedCfgJson = `
@@ -24,11 +27,13 @@ const fedCfgJson = `
 `
 
 type federation struct {
-	XPubs  []chainkd.XPub `json:"fed_xpubs"`
-	Quorum int            `json:"fed_quorum"`
+	XPubs       []chainkd.XPub `json:"fed_xpubs"`
+	Quorum      int            `json:"fed_quorum"`
+	Path        [][]byte
+	PegInScript []byte
 }
 
-func Federation() *federation {
+func parseFedConfig() *federation {
 	fed := &federation{}
 	if err := json.Unmarshal([]byte(fedCfgJson), fed); err != nil {
 		log.Fatalf("invalid federation config json")
@@ -38,7 +43,7 @@ func Federation() *federation {
 }
 
 func CheckFedConfig() error {
-	fed := Federation()
+	fed := parseFedConfig()
 	if len(fed.XPubs) <= 1 {
 		return errors.New("federation should have more than 1 member")
 	}
@@ -47,4 +52,34 @@ func CheckFedConfig() error {
 	}
 
 	return nil
+}
+
+func GetFederation() *federation {
+	fed := parseFedConfig()
+	assetSigner, err := signers.Create("asset", fed.XPubs, fed.Quorum, 1, signers.BIP0032)
+	if err != nil {
+		panic("fail to create federation assetSigner")
+	}
+
+	fed.Path = signers.GetBip0032Path(assetSigner, signers.AssetKeySpace)
+	derivedXPubs := chainkd.DeriveXPubs(assetSigner.XPubs, fed.Path)
+	derivedPKs := chainkd.XPubKeys(derivedXPubs)
+	if pegInScript, err := buildPegInScript(derivedPKs, assetSigner.Quorum); err == nil {
+		fed.PegInScript = pegInScript
+	} else {
+		panic("fail to build peg-in script")
+	}
+
+	return fed
+}
+
+func buildPegInScript(pubkeys []ed25519.PublicKey, nrequired int) (program []byte, err error) {
+	controlProg, err := vmutil.P2SPMultiSigProgram(pubkeys, nrequired)
+	if err != nil {
+		return nil, err
+	}
+	builder := vmutil.NewBuilder()
+	builder.AddRawBytes(controlProg)
+	prog, err := builder.Build()
+	return prog, err
 }
