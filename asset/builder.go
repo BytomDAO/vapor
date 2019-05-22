@@ -27,7 +27,7 @@ type crossInAction struct {
 	bc.AssetAmount
 	SourceID        string                       `json:"source_id"` // AnnotatedUTXO
 	SourcePos       uint64                       `json:"source_pos"`
-	Program         json.HexBytes                `json:"control_program"`
+	Program         chainjson.HexBytes           `json:"control_program"`
 	AssetDefinition map[string]interface{}       `json:"asset_definition"`
 	UpdateAssetDef  bool                         `json:"update_asset_definition"`
 	Arguments       []txbuilder.ContractArgument `json:"arguments"`
