@@ -3,6 +3,7 @@ package asset
 import (
 	"context"
 	stdjson "encoding/json"
+	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -55,6 +56,13 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 		return txbuilder.MissingFieldsError(missing...)
 	}
 
+	sourceKey := []byte(fmt.Sprintf("SC:%v:%v", a.SourceID, a.SourcePos))
+	a.reg.assetMu.Lock()
+	defer a.reg.assetMu.Unlock()
+	if existed := a.reg.db.Get(sourceKey); existed != nil {
+		return errors.New("mainchain output double spent")
+	}
+
 	var err error
 	asset := &Asset{}
 	if preAsset, _ := a.reg.GetAsset(a.AssetId.String()); preAsset != nil {
@@ -101,6 +109,7 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 	builder.RestrictMinTime(time.Now())
 	tplIn := &txbuilder.SigningInstruction{}
 	tplIn.AddRawWitnessKeys(assetSigner.XPubs, path, assetSigner.Quorum)
+	a.reg.db.Set(sourceKey, []byte("true"))
 	return builder.AddInput(txin, tplIn)
 }
 
