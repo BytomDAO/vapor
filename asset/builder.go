@@ -24,11 +24,12 @@ func (r *Registry) DecodeCrossInAction(data []byte) (txbuilder.Action, error) {
 type crossInAction struct {
 	reg *Registry
 	bc.AssetAmount
-	SourceID        string                 `json:"source_id"`
-	SourcePos       uint64                 `json:"source_pos"`
-	Program         chainjson.HexBytes     `json:"control_program"`
-	AssetDefinition map[string]interface{} `json:"asset_definition"`
-	Arguments       []chainjson.HexBytes   `json:"arguments"`
+	SourceID        string                       `json:"source_id"`
+	SourcePos       uint64                       `json:"source_pos"`
+	Program         chainjson.HexBytes           `json:"control_program"`
+	AssetDefinition map[string]interface{}       `json:"asset_definition"`
+	Arguments       []txbuilder.ContractArgument `json:"arguments"`
+	// Arguments []chainjson.HexBytes         `json:"arguments"`
 }
 
 // TODO: also need to hard-code mapTx
@@ -75,9 +76,14 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 		a.reg.SaveExtAsset(asset, extAlias)
 	}
 
-	arguments := [][]byte{}
-	for _, argument := range a.Arguments {
-		arguments = append(arguments, argument)
+	tplIn := &txbuilder.SigningInstruction{}
+	if asset.Signer != nil {
+		// path := signers.GetBip0032Path(asset.Signer, signers.AssetKeySpace)
+		// tplIn.AddRawWitnessKeys(asset.Signer.XPubs, path, asset.Signer.Quorum)
+	} else if a.Arguments != nil {
+		if err := txbuilder.AddContractArgs(tplIn, a.Arguments); err != nil {
+			return err
+		}
 	}
 
 	var sourceID bc.Hash
@@ -85,10 +91,10 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 		return errors.New("invalid sourceID format")
 	}
 
-	txin := types.NewCrossChainInput(arguments, sourceID, *a.AssetId, a.Amount, a.SourcePos, a.Program, asset.RawDefinitionByte)
+	txin := types.NewCrossChainInput(nil, sourceID, *a.AssetId, a.Amount, a.SourcePos, a.Program, asset.RawDefinitionByte)
 	log.Info("cross-chain input action built")
 	builder.RestrictMinTime(time.Now())
-	return builder.AddInput(txin, &txbuilder.SigningInstruction{})
+	return builder.AddInput(txin, tplIn)
 }
 
 func (a *crossInAction) ActionType() string {
