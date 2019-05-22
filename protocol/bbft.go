@@ -182,11 +182,11 @@ func (b *bbft) ProcessBlockSignature(signature, pubkey []byte, blockHeight uint6
 
 	isDoubleSign, err := b.checkDoubleSign(consensusNode.order, blockHeight, *blockHash)
 	if err != nil {
-		log.WithFields(log.Fields{"module": logModule, "blockHash": blockHash.String(), "pubkey": pubkey}).Warn("the consensus node double sign the same height of different block")
 		return false, err
 	}
 
 	if isDoubleSign {
+		log.WithFields(log.Fields{"module": logModule, "blockHash": blockHash.String(), "pubkey": pubkey}).Warn("the consensus node double sign the same height of different block")
 		return false, errDoubleSignBlock
 	}
 
@@ -297,6 +297,7 @@ func (b *bbft) checkDoubleSign(nodeOrder, blockHeight uint64, blockHash bc.Hash)
 				return false, err
 			}
 
+			// reset nil to discard signature
 			if err := b.updateBlockSignature(block, nodeOrder, nil); err != nil {
 				return false, err
 			}
