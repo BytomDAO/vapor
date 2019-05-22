@@ -31,19 +31,6 @@ type crossInAction struct {
 	Arguments       []chainjson.HexBytes   `json:"arguments"`
 }
 
-// func (reg *Registry) DefineCrossInAsset(a *Asset, alias string) error {
-//     defHash := bc.NewHash(sha3.Sum256(rawDefinition))
-//     a := &Asset{
-//         DefinitionMap:     definition,
-//         RawDefinitionByte: rawDefinition,
-//         VMVersion:         vmver,
-//         IssuanceProgram:   issuanceProgram,
-//         AssetID:           bc.ComputeAssetID(issuanceProgram, vmver, &defHash),
-//         Alias:             &alias,
-//     }
-//     return a, reg.SaveAsset(a, alias)
-// }
-
 // TODO: also need to hard-code mapTx
 // TODO: iter cross-in and save asset
 // TODO: federation can sign? check arguments length?
@@ -65,10 +52,8 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 		return txbuilder.MissingFieldsError(missing...)
 	}
 
-	asset := &Asset{}
 	var err error
-	// Handle asset definition.
-	// Asset issuance's legality is guaranteed by the federation.
+	asset := &Asset{}
 	if preAsset, _ := a.reg.GetAsset(a.AssetId.String()); preAsset != nil {
 		asset = preAsset
 	} else {
