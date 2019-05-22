@@ -33,6 +33,7 @@ type crossInAction struct {
 
 // TODO: also need to hard-code mapTx
 // TODO: federation can sign? check arguments length? will path be diff?
+// TODO: check replay
 func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBuilder) error {
 	var missing []string
 	if len(a.Program) == 0 {
