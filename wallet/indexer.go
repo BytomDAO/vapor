@@ -9,6 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/account"
+	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/query"
 	"github.com/vapor/crypto/sha3pool"
 	dbm "github.com/vapor/database/leveldb"
@@ -86,12 +87,12 @@ func saveExternalAssetDefinition(b *types.Block, walletDB dbm.DB) {
 	defer storeBatch.Write()
 
 	for _, tx := range b.Transactions {
-		for _, _ = range tx.Inputs {
+		for _, orig := range tx.Inputs {
 			if cci, ok := orig.TypedInput.(*types.CrossChainInput); ok {
-				if isValidJSON(cci.AssetDefinition) {
-					assetID := cci.AssetID()
-					if assetExist := walletDB.Get(asset.ExtAssetKey(&assetID)); assetExist == nil {
-						storeBatch.Set(asset.ExtAssetKey(&assetID), cci.AssetDefinition)
+				if chainjson.IsValidJSON(cci.AssetDefinition) {
+					assetID := cci.AssetId
+					if assetExist := walletDB.Get(asset.ExtAssetKey(assetID)); assetExist == nil {
+						storeBatch.Set(asset.ExtAssetKey(assetID), cci.AssetDefinition)
 					}
 				}
 			}
