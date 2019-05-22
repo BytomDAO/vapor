@@ -6,6 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/vapor/errors"
 	core "github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc/types"
 )
@@ -22,15 +23,21 @@ type txSyncMsg struct {
 }
 
 func (sm *SyncManager) syncTransactions(peerID string) {
-	pending := sm.txPool.GetTransactions()
-	if len(pending) == 0 {
+	txDescs := sm.txPool.GetTransactions()
+	if len(txDescs) == 0 {
+		return
+	}
+	//*TxDesc slice -> *types.Tx slice
+	txs := make([]*types.Tx, len(txDescs))
+	for i, batch := range txDescs {
+		txs[i] = batch.Tx
+	}
+	//get valid txs
+	validTxs := sm.peers.FilterValidTxs(peerID, txs)
+	if len(validTxs) == 0 {
 		return
 	}
 
-	txs := make([]*types.Tx, len(pending))
-	for i, batch := range pending {
-		txs[i] = batch.Tx
-	}
 	sm.txSyncCh <- &txSyncMsg{peerID, txs}
 }
 
@@ -50,7 +57,8 @@ func (sm *SyncManager) txBroadcastLoop() {
 			}
 
 			if ev.TxMsg.MsgType == core.MsgNewTx {
-				if err := sm.peers.broadcastTx(ev.TxMsg.Tx); err != nil {
+				txMsg, _ := newTxBroadcastMsg(ev.TxMsg.Tx, BlockchainChannel)
+				if err := sm.peers.BroadcastMsg(txMsg); err != nil {
 					log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on broadcast new tx.")
 					continue
 				}
@@ -72,7 +80,7 @@ func (sm *SyncManager) txSyncLoop() {
 
 	// send starts a sending a pack of transactions from the sync.
 	send := func(msg *txSyncMsg) {
-		peer := sm.peers.getPeer(msg.peerID)
+		peer := sm.peers.GetPeer(msg.peerID)
 		if peer == nil {
 			delete(pending, msg.peerID)
 			return
@@ -100,9 +108,16 @@ func (sm *SyncManager) txSyncLoop() {
 		}).Debug("txSyncLoop sending transactions")
 		sending = true
 		go func() {
-			err := peer.sendTransactions(sendTxs)
+			txsMsg, err := NewTransactionsMessage(sendTxs)
 			if err != nil {
-				sm.peers.removePeer(msg.peerID)
+				log.WithFields(log.Fields{"module": logModule, "error": err}).Debug("failed create transactions msg")
+				done <- err
+				return
+			}
+
+			if ok := sm.peers.SendMsg(msg.peerID, BlockchainChannel, txsMsg); !ok {
+				sm.peers.RemovePeer(msg.peerID)
+				err = errors.New("send txsMsg err")
 			}
 			done <- err
 		}()

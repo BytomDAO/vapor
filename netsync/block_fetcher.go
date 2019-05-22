@@ -4,6 +4,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 
+	"github.com/vapor/netsync/peers"
 	"github.com/vapor/protocol/bc"
 )
 
@@ -17,7 +18,7 @@ const (
 // and scheduling them for retrieval.
 type blockFetcher struct {
 	chain Chain
-	peers *peerSet
+	peers *peers.PeerSet
 
 	newBlockCh chan *blockMsg
 	queue      *prque.Prque
@@ -25,7 +26,7 @@ type blockFetcher struct {
 }
 
 //NewBlockFetcher creates a block fetcher to retrieve blocks of the new mined.
-func newBlockFetcher(chain Chain, peers *peerSet) *blockFetcher {
+func newBlockFetcher(chain Chain, peers *peers.PeerSet) *blockFetcher {
 	f := &blockFetcher{
 		chain:      chain,
 		peers:      peers,
@@ -75,12 +76,7 @@ func (f *blockFetcher) add(msg *blockMsg) {
 func (f *blockFetcher) insert(msg *blockMsg) {
 	isOrphan, err := f.chain.ProcessBlock(msg.block)
 	if err != nil {
-		peer := f.peers.getPeer(msg.peerID)
-		if peer == nil {
-			return
-		}
-
-		f.peers.addBanScore(msg.peerID, 20, 0, err.Error())
+		f.peers.AddBanScore(msg.peerID, 20, 0, err.Error())
 		return
 	}
 
@@ -88,12 +84,14 @@ func (f *blockFetcher) insert(msg *blockMsg) {
 		return
 	}
 
-	if err := f.peers.broadcastMinedBlock(msg.block); err != nil {
+	minedMsg, _ := newMinedBlockBroadcastMsg(msg.block, BlockchainChannel)
+	if err := f.peers.BroadcastMsg(minedMsg); err != nil {
+		//if err := f.peers.BroadcastMinedBlock(msg.block); err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("blockFetcher fail on broadcast new block")
 		return
 	}
-
-	if err := f.peers.broadcastNewStatus(msg.block); err != nil {
+	headMsg,_:=newStatusBroadcastMsg(&msg.block.BlockHeader,BlockchainChannel)
+	if err := f.peers.BroadcastMsg(headMsg); err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("blockFetcher fail on broadcast new status")
 		return
 	}

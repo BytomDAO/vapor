@@ -9,6 +9,7 @@ import (
 	cfg "github.com/vapor/config"
 	"github.com/vapor/consensus"
 	"github.com/vapor/event"
+	"github.com/vapor/netsync/peers"
 	"github.com/vapor/p2p"
 	core "github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
@@ -16,10 +17,8 @@ import (
 )
 
 const (
-	logModule             = "netsync"
-	maxTxChanSize         = 10000
-	maxFilterAddressSize  = 50
-	maxFilterAddressCount = 1000
+	logModule      = "netsync"
+	txsMsgMaxTxNum = 1024
 )
 
 var (
@@ -59,7 +58,7 @@ type SyncManager struct {
 	txPool       *core.TxPool
 	blockFetcher *blockFetcher
 	blockKeeper  *blockKeeper
-	peers        *peerSet
+	peers        *peers.PeerSet
 
 	txSyncCh chan *txSyncMsg
 	quitSync chan struct{}
@@ -70,7 +69,7 @@ type SyncManager struct {
 	txMsgSub        *event.Subscription
 }
 
-// CreateSyncManager create sync manager and set switch.
+// NewSyncManager create sync manager and set switch.
 func NewSyncManager(config *cfg.Config, chain Chain, txPool *core.TxPool, dispatcher *event.Dispatcher) (*SyncManager, error) {
 	sw, err := p2p.NewSwitch(config)
 	if err != nil {
@@ -80,13 +79,13 @@ func NewSyncManager(config *cfg.Config, chain Chain, txPool *core.TxPool, dispat
 	return newSyncManager(config, sw, chain, txPool, dispatcher)
 }
 
-//NewSyncManager create a sync manager
+//newSyncManager create a sync manager
 func newSyncManager(config *cfg.Config, sw Switch, chain Chain, txPool *core.TxPool, dispatcher *event.Dispatcher) (*SyncManager, error) {
 	genesisHeader, err := chain.GetHeaderByHeight(0)
 	if err != nil {
 		return nil, err
 	}
-	peers := newPeerSet(sw)
+	peers := peers.NewPeerSet(sw)
 	manager := &SyncManager{
 		sw:              sw,
 		genesisHash:     genesisHeader.Hash(),
@@ -102,25 +101,28 @@ func newSyncManager(config *cfg.Config, sw Switch, chain Chain, txPool *core.TxP
 	}
 
 	if !config.VaultMode {
-		protocolReactor := NewProtocolReactor(manager, peers)
+		protocolReactor := NewProtocolReactor(manager)
 		manager.sw.AddReactor("PROTOCOL", protocolReactor)
 	}
 	return manager, nil
 }
 
-func (sm *SyncManager) AddPeer(peer BasePeer) {
-	sm.peers.addPeer(peer)
+//AddPeer add peer to SyncManager PeerSet
+func (sm *SyncManager) AddPeer(peer peers.BasePeer) {
+	sm.peers.AddPeer(peer)
 }
 
 //BestPeer return the highest p2p peerInfo
-func (sm *SyncManager) BestPeer() *PeerInfo {
-	bestPeer := sm.peers.bestPeer(consensus.SFFullNode)
-	if bestPeer != nil {
-		return bestPeer.getPeerInfo()
+func (sm *SyncManager) BestPeer() *peers.PeerInfo {
+	peerID, bestHeight := sm.peers.BestPeerInfo(consensus.SFFullNode)
+	if peerID == "" || bestHeight == 0 {
+		return nil
 	}
-	return nil
+
+	return sm.peers.GetPeerInfo(peerID)
 }
 
+//DialPeerWithAddress
 func (sm *SyncManager) DialPeerWithAddress(addr *p2p.NetAddress) error {
 	if sm.config.VaultMode {
 		return errVaultModeDialPeer
@@ -129,61 +131,67 @@ func (sm *SyncManager) DialPeerWithAddress(addr *p2p.NetAddress) error {
 	return sm.sw.DialPeerWithAddress(addr)
 }
 
+//GetNetwork return chain id
 func (sm *SyncManager) GetNetwork() string {
 	return sm.config.ChainID
 }
 
 //GetPeerInfos return peer info of all peers
-func (sm *SyncManager) GetPeerInfos() []*PeerInfo {
-	return sm.peers.getPeerInfos()
+func (sm *SyncManager) GetPeerInfos() []*peers.PeerInfo {
+	return sm.peers.GetPeerInfos()
 }
 
 //IsCaughtUp check wheather the peer finish the sync
 func (sm *SyncManager) IsCaughtUp() bool {
-	peer := sm.peers.bestPeer(consensus.SFFullNode)
-	return peer == nil || peer.Height() <= sm.chain.BestBlockHeight()
+	bestPeerID, bestPeerHeight := sm.peers.BestPeerInfo(consensus.SFFullNode)
+	return bestPeerID == "" || bestPeerHeight <= sm.chain.BestBlockHeight()
+}
+
+//RemovePeer del peer from SyncManager PeerSet then disconnect with peer
+func (sm *SyncManager) RemovePeer(peer peers.BasePeer) {
+	sm.peers.RemovePeer(peer.ID())
 }
 
 //StopPeer try to stop peer by given ID
 func (sm *SyncManager) StopPeer(peerID string) error {
-	if peer := sm.peers.getPeer(peerID); peer == nil {
-		return errors.New("peerId not exist")
-	}
-	sm.peers.removePeer(peerID)
+	sm.peers.RemovePeer(peerID)
 	return nil
 }
 
-func (sm *SyncManager) handleBlockMsg(peer *peer, msg *BlockMessage) {
+func (sm *SyncManager) handleBlockMsg(peerID string, msg *BlockMessage) {
 	block, err := msg.GetBlock()
 	if err != nil {
 		return
 	}
-	sm.blockKeeper.processBlock(peer.ID(), block)
+	sm.blockKeeper.processBlock(peerID, block)
 }
 
-func (sm *SyncManager) handleBlocksMsg(peer *peer, msg *BlocksMessage) {
+func (sm *SyncManager) handleBlocksMsg(peerID string, msg *BlocksMessage) {
 	blocks, err := msg.GetBlocks()
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Debug("fail on handleBlocksMsg GetBlocks")
 		return
 	}
 
-	sm.blockKeeper.processBlocks(peer.ID(), blocks)
+	sm.blockKeeper.processBlocks(peerID, blocks)
 }
 
-func (sm *SyncManager) handleFilterAddMsg(peer *peer, msg *FilterAddMessage) {
-	peer.addFilterAddress(msg.Address)
+func (sm *SyncManager) handleFilterAddMsg(peerID string, msg *FilterAddMessage) {
+	var addresses [][]byte
+	addresses = append(addresses, msg.Address)
+	sm.peers.AddFilterAddresses(peerID, addresses)
+
 }
 
-func (sm *SyncManager) handleFilterClearMsg(peer *peer) {
-	peer.filterAdds.Clear()
+func (sm *SyncManager) handleFilterClearMsg(peerID string) {
+	sm.peers.ClearFilterAdds(peerID)
 }
 
-func (sm *SyncManager) handleFilterLoadMsg(peer *peer, msg *FilterLoadMessage) {
-	peer.addFilterAddresses(msg.Addresses)
+func (sm *SyncManager) handleFilterLoadMsg(peerID string, msg *FilterLoadMessage) {
+	sm.peers.AddFilterAddresses(peerID, msg.Addresses)
 }
 
-func (sm *SyncManager) handleGetBlockMsg(peer *peer, msg *GetBlockMessage) {
+func (sm *SyncManager) handleGetBlockMsg(peerID string, msg *GetBlockMessage) {
 	var block *types.Block
 	var err error
 	if msg.Height != 0 {
@@ -195,17 +203,19 @@ func (sm *SyncManager) handleGetBlockMsg(peer *peer, msg *GetBlockMessage) {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on handleGetBlockMsg get block from chain")
 		return
 	}
-
-	ok, err := peer.sendBlock(block)
-	if !ok {
-		sm.peers.removePeer(peer.ID())
-	}
+	blockMsg, err := NewBlockMessage(block)
 	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on create block message")
+		return
+	}
+	ok := sm.peers.SendMsg(peerID, BlockchainChannel, blockMsg)
+	if !ok {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on handleGetBlockMsg sentBlock")
 	}
+	//todo:mark block
 }
 
-func (sm *SyncManager) handleGetBlocksMsg(peer *peer, msg *GetBlocksMessage) {
+func (sm *SyncManager) handleGetBlocksMsg(peerID string, msg *GetBlocksMessage) {
 	blocks, err := sm.blockKeeper.locateBlocks(msg.GetBlockLocator(), msg.GetStopHash())
 	if err != nil || len(blocks) == 0 {
 		return
@@ -216,43 +226,49 @@ func (sm *SyncManager) handleGetBlocksMsg(peer *peer, msg *GetBlocksMessage) {
 	for _, block := range blocks {
 		rawData, err := block.MarshalText()
 		if err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on handleGetBlocksMsg marshal block")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("failed on handleGetBlocksMsg marshal block")
 			continue
 		}
 
-		if totalSize+len(rawData) > maxBlockchainResponseSize/2 {
+		if totalSize+len(rawData) > MaxBlockchainResponseSize/2 {
 			break
 		}
 		totalSize += len(rawData)
 		sendBlocks = append(sendBlocks, block)
 	}
-
-	ok, err := peer.sendBlocks(sendBlocks)
-	if !ok {
-		sm.peers.removePeer(peer.ID())
-	}
+	blocksMsg, err := NewBlocksMessage(blocks)
 	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Warn("failed on create blocks msg")
+		return
+	}
+	ok := sm.peers.SendMsg(peerID, BlockchainChannel, blocksMsg)
+	if !ok {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on handleGetBlocksMsg sentBlock")
 	}
+	//todo: mark block
 }
 
-func (sm *SyncManager) handleGetHeadersMsg(peer *peer, msg *GetHeadersMessage) {
+func (sm *SyncManager) handleGetHeadersMsg(peerID string, msg *GetHeadersMessage) {
 	headers, err := sm.blockKeeper.locateHeaders(msg.GetBlockLocator(), msg.GetStopHash())
 	if err != nil || len(headers) == 0 {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Debug("fail on handleGetHeadersMsg locateHeaders")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Debug("failed on handleGetHeadersMsg locateHeaders")
 		return
 	}
 
-	ok, err := peer.sendHeaders(headers)
-	if !ok {
-		sm.peers.removePeer(peer.ID())
-	}
+	headersMsg, err := NewHeadersMessage(headers)
 	if err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on handleGetHeadersMsg sentBlock")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Warn("fail on create headers msg")
+		return
+	}
+
+	ok := sm.peers.SendMsg(peerID, BlockchainChannel, headersMsg)
+
+	if !ok {
+		log.WithFields(log.Fields{"module": logModule}).Error("fail on handleGetHeadersMsg sentBlock")
 	}
 }
 
-func (sm *SyncManager) handleGetMerkleBlockMsg(peer *peer, msg *GetMerkleBlockMessage) {
+func (sm *SyncManager) handleGetMerkleBlockMsg(peerID string, msg *GetMerkleBlockMessage) {
 	var err error
 	var block *types.Block
 	if msg.Height != 0 {
@@ -272,28 +288,42 @@ func (sm *SyncManager) handleGetMerkleBlockMsg(peer *peer, msg *GetMerkleBlockMe
 		return
 	}
 
-	ok, err := peer.sendMerkleBlock(block, txStatus)
-	if err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on handleGetMerkleBlockMsg sentMerkleBlock")
+	merkleBlockMsg := NewMerkleBlockMessage()
+	if err := merkleBlockMsg.SetRawBlockHeader(block.BlockHeader); err != nil {
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on handleGetMerkleBlockMsg set block header")
 		return
 	}
 
+	relatedTxs, relatedStatuses := sm.peers.GetRelatedTxAndStatus(peerID, block.Transactions, txStatus)
+
+	txHashes, txFlags := types.GetTxMerkleTreeProof(block.Transactions, relatedTxs)
+	if err := merkleBlockMsg.SetTxInfo(txHashes, txFlags, relatedTxs); err != nil {
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on handleGetMerkleBlockMsg set tx info")
+		return
+	}
+
+	statusHashes := types.GetStatusMerkleTreeProof(txStatus.VerifyStatus, txFlags)
+	if err := merkleBlockMsg.SetStatusInfo(statusHashes, relatedStatuses); err != nil {
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on handleGetMerkleBlockMsg set status info")
+		return
+	}
+	ok := sm.peers.SendMsg(peerID, BlockchainChannel, merkleBlockMsg)
 	if !ok {
-		sm.peers.removePeer(peer.ID())
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on handleGetMerkleBlockMsg sentMerkleBlock")
 	}
 }
 
-func (sm *SyncManager) handleHeadersMsg(peer *peer, msg *HeadersMessage) {
+func (sm *SyncManager) handleHeadersMsg(peerID string, msg *HeadersMessage) {
 	headers, err := msg.GetHeaders()
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Debug("fail on handleHeadersMsg GetHeaders")
 		return
 	}
 
-	sm.blockKeeper.processHeaders(peer.ID(), headers)
+	sm.blockKeeper.processHeaders(peerID, headers)
 }
 
-func (sm *SyncManager) handleMineBlockMsg(peer *peer, msg *MineBlockMessage) {
+func (sm *SyncManager) handleMineBlockMsg(peerID string, msg *MineBlockMessage) {
 	block, err := msg.GetMineBlock()
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on handleMineBlockMsg GetMineBlock")
@@ -301,52 +331,49 @@ func (sm *SyncManager) handleMineBlockMsg(peer *peer, msg *MineBlockMessage) {
 	}
 
 	hash := block.Hash()
-	peer.markBlock(&hash)
-	sm.blockFetcher.processNewBlock(&blockMsg{peerID: peer.ID(), block: block})
-	peer.setStatus(block.Height, &hash)
+	sm.peers.MarkBlock(peerID, &hash)
+	sm.blockFetcher.processNewBlock(&blockMsg{peerID: peerID, block: block})
+	sm.peers.SetStatus(peerID, block.Height, &hash)
 }
 
-func (sm *SyncManager) handleStatusMsg(basePeer BasePeer, msg *StatusMessage) {
-	if peer := sm.peers.getPeer(basePeer.ID()); peer != nil {
-		peer.setStatus(msg.Height, msg.GetHash())
-		return
-	}
+func (sm *SyncManager) handleStatusMsg(peerID string, msg *StatusMessage) {
+	sm.peers.SetStatus(peerID, msg.Height, msg.GetHash())
 }
 
-func (sm *SyncManager) handleTransactionMsg(peer *peer, msg *TransactionMessage) {
+func (sm *SyncManager) handleTransactionMsg(peerID string, msg *TransactionMessage) {
 	tx, err := msg.GetTransaction()
 	if err != nil {
-		sm.peers.addBanScore(peer.ID(), 0, 10, "fail on get tx from message")
+		sm.peers.AddBanScore(peerID, 0, 10, "fail on get tx from message")
 		return
 	}
 
 	if isOrphan, err := sm.chain.ValidateTx(tx); err != nil && err != core.ErrDustTx && !isOrphan {
-		sm.peers.addBanScore(peer.ID(), 10, 0, "fail on validate tx transaction")
+		sm.peers.AddBanScore(peerID, 10, 0, "fail on validate tx transaction")
 	}
-	sm.peers.markTx(peer.ID(), tx.ID)
 }
 
-func (sm *SyncManager) handleTransactionsMsg(peer *peer, msg *TransactionsMessage) {
+func (sm *SyncManager) handleTransactionsMsg(peerID string, msg *TransactionsMessage) {
 	txs, err := msg.GetTransactions()
 	if err != nil {
-		sm.peers.addBanScore(peer.ID(), 0, 20, "fail on get txs from message")
+		sm.peers.AddBanScore(peerID, 0, 20, "fail on get txs from message")
 		return
 	}
 
 	if len(txs) > txsMsgMaxTxNum {
-		sm.peers.addBanScore(peer.ID(), 20, 0, "exceeded the maximum tx number limit")
+		sm.peers.AddBanScore(peerID, 20, 0, "exceeded the maximum tx number limit")
 		return
 	}
 
 	for _, tx := range txs {
 		if isOrphan, err := sm.chain.ValidateTx(tx); err != nil && !isOrphan {
-			sm.peers.addBanScore(peer.ID(), 10, 0, "fail on validate tx transaction")
+			sm.peers.AddBanScore(peerID, 10, 0, "fail on validate tx transaction")
 			return
 		}
-		sm.peers.markTx(peer.ID(), tx.ID)
+		sm.peers.MarkTx(peerID, &tx.ID)
 	}
 }
 
+//IsListening
 func (sm *SyncManager) IsListening() bool {
 	if sm.config.VaultMode {
 		return false
@@ -361,82 +388,78 @@ func (sm *SyncManager) PeerCount() int {
 	return len(sm.sw.Peers().List())
 }
 
-func (sm *SyncManager) processMsg(basePeer BasePeer, msgType byte, msg BlockchainMessage) {
-	peer := sm.peers.getPeer(basePeer.ID())
-	if peer == nil {
+func (sm *SyncManager) processMsg(peerID string, msgType byte, msg BlockchainMessage) {
+	if sm.peers.GetPeer(peerID) == nil {
 		return
 	}
 
 	log.WithFields(log.Fields{
 		"module":  logModule,
-		"peer":    basePeer.Addr(),
+		"peer":    peerID,
 		"type":    reflect.TypeOf(msg),
 		"message": msg.String(),
 	}).Info("receive message from peer")
 
 	switch msg := msg.(type) {
 	case *GetBlockMessage:
-		sm.handleGetBlockMsg(peer, msg)
+		sm.handleGetBlockMsg(peerID, msg)
 
 	case *BlockMessage:
-		sm.handleBlockMsg(peer, msg)
+		sm.handleBlockMsg(peerID, msg)
 
 	case *StatusMessage:
-		sm.handleStatusMsg(basePeer, msg)
+		sm.handleStatusMsg(peerID, msg)
 
 	case *TransactionMessage:
-		sm.handleTransactionMsg(peer, msg)
+		sm.handleTransactionMsg(peerID, msg)
 
 	case *TransactionsMessage:
-		sm.handleTransactionsMsg(peer, msg)
+		sm.handleTransactionsMsg(peerID, msg)
 
 	case *MineBlockMessage:
-		sm.handleMineBlockMsg(peer, msg)
+		sm.handleMineBlockMsg(peerID, msg)
 
 	case *GetHeadersMessage:
-		sm.handleGetHeadersMsg(peer, msg)
+		sm.handleGetHeadersMsg(peerID, msg)
 
 	case *HeadersMessage:
-		sm.handleHeadersMsg(peer, msg)
+		sm.handleHeadersMsg(peerID, msg)
 
 	case *GetBlocksMessage:
-		sm.handleGetBlocksMsg(peer, msg)
+		sm.handleGetBlocksMsg(peerID, msg)
 
 	case *BlocksMessage:
-		sm.handleBlocksMsg(peer, msg)
+		sm.handleBlocksMsg(peerID, msg)
 
 	case *FilterLoadMessage:
-		sm.handleFilterLoadMsg(peer, msg)
+		sm.handleFilterLoadMsg(peerID, msg)
 
 	case *FilterAddMessage:
-		sm.handleFilterAddMsg(peer, msg)
+		sm.handleFilterAddMsg(peerID, msg)
 
 	case *FilterClearMessage:
-		sm.handleFilterClearMsg(peer)
+		sm.handleFilterClearMsg(peerID)
 
 	case *GetMerkleBlockMessage:
-		sm.handleGetMerkleBlockMsg(peer, msg)
+		sm.handleGetMerkleBlockMsg(peerID, msg)
 
 	default:
 		log.WithFields(log.Fields{
 			"module":       logModule,
-			"peer":         basePeer.Addr(),
+			"peerID":       peerID,
 			"message_type": reflect.TypeOf(msg),
 		}).Error("unhandled message type")
 	}
 }
 
-func (sm *SyncManager) SendStatus(peer BasePeer) error {
-	p := sm.peers.getPeer(peer.ID())
-	if p == nil {
-		return errors.New("invalid peer")
+func (sm *SyncManager) SendStatus(peerID string) bool {
+	msg := NewStatusMessage(sm.chain.BestBlockHeader())
+	ok := sm.peers.SendMsg(peerID, BlockchainChannel, msg)
+	if !ok {
+		log.WithFields(log.Fields{"module": logModule}).Error("fail on send status msg")
 	}
-
-	if err := p.sendStatus(sm.chain.BestBlockHeader()); err != nil {
-		sm.peers.removePeer(p.ID())
-		return err
-	}
-	return nil
+	//todo: mark status
+	return ok
 }
 
 func (sm *SyncManager) Start() error {
@@ -487,8 +510,9 @@ func (sm *SyncManager) minedBroadcastLoop() {
 				log.WithFields(log.Fields{"module": logModule}).Error("event type error")
 				continue
 			}
-
-			if err := sm.peers.broadcastMinedBlock(&ev.Block); err != nil {
+			minedMsg, _ := newMinedBlockBroadcastMsg(&ev.Block, BlockchainChannel)
+			if err := sm.peers.BroadcastMsg(minedMsg); err != nil {
+				//if err := sm.peers.broadcastMinedBlock(&ev.Block); err != nil {
 				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on broadcast mine block")
 				continue
 			}

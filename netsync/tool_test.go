@@ -9,6 +9,7 @@ import (
 	"github.com/tendermint/tmlibs/flowrate"
 
 	"github.com/vapor/consensus"
+	"github.com/vapor/netsync/peers"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/test/mock"
@@ -65,8 +66,8 @@ func (p *P2PPeer) TrySend(b byte, msg interface{}) bool {
 	if p.async {
 		p.msgCh <- msgBytes
 	} else {
-		msgType, msg, _ := DecodeMessage(msgBytes)
-		p.remoteNode.processMsg(p.srcPeer, msgType, msg)
+		msgType, msg, _ := message.DecodeMessage(msgBytes)
+		p.remoteNode.processMsg(p.srcPeer.ID(), msgType, msg)
 	}
 	return true
 }
@@ -77,8 +78,8 @@ func (p *P2PPeer) setAsync(b bool) {
 
 func (p *P2PPeer) postMan() {
 	for msgBytes := range p.msgCh {
-		msgType, msg, _ := DecodeMessage(msgBytes)
-		p.remoteNode.processMsg(p.srcPeer, msgType, msg)
+		msgType, msg, _ := message.DecodeMessage(msgBytes)
+		p.remoteNode.processMsg(p.srcPeer.ID(), msgType, msg)
 	}
 }
 
@@ -151,7 +152,7 @@ func mockBlocks(startBlock *types.Block, height uint64) []*types.Block {
 
 func mockSync(blocks []*types.Block) *SyncManager {
 	chain := mock.NewChain()
-	peers := newPeerSet(NewPeerSet())
+	peers := peers.NewPeerSet(NewPeerSet())
 	chain.SetBestBlockHeader(&blocks[len(blocks)-1].BlockHeader)
 	for _, block := range blocks {
 		chain.SetBlockByHeight(block.Height, block)

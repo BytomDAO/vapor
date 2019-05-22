@@ -1,8 +1,6 @@
 package netsync
 
 import (
-	"time"
-
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/errors"
@@ -10,29 +8,21 @@ import (
 	"github.com/vapor/p2p/connection"
 )
 
-const (
-	handshakeTimeout    = 10 * time.Second
-	handshakeCheckPerid = 500 * time.Millisecond
-)
-
 var (
-	errProtocolHandshakeTimeout = errors.New("Protocol handshake timeout")
-	errStatusRequest            = errors.New("Status request error")
+	errSendStatusMsg = errors.New("Status msg send error")
 )
 
 //ProtocolReactor handles new coming protocol message.
 type ProtocolReactor struct {
 	p2p.BaseReactor
 
-	sm    *SyncManager
-	peers *peerSet
+	sm *SyncManager
 }
 
 // NewProtocolReactor returns the reactor of whole blockchain.
-func NewProtocolReactor(sm *SyncManager, peers *peerSet) *ProtocolReactor {
+func NewProtocolReactor(sm *SyncManager) *ProtocolReactor {
 	pr := &ProtocolReactor{
-		sm:    sm,
-		peers: peers,
+		sm: sm,
 	}
 	pr.BaseReactor = *p2p.NewBaseReactor("ProtocolReactor", pr)
 	return pr
@@ -63,8 +53,8 @@ func (pr *ProtocolReactor) OnStop() {
 // AddPeer implements Reactor by sending our state to peer.
 func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 	pr.sm.AddPeer(peer)
-	if err := pr.sm.SendStatus(peer); err != nil {
-		return err
+	if ok := pr.sm.SendStatus(peer.ID()); !ok {
+		return errSendStatusMsg
 	}
 	pr.sm.syncTransactions(peer.Key)
 	return nil
@@ -72,7 +62,7 @@ func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 
 // RemovePeer implements Reactor by removing peer from the pool.
 func (pr *ProtocolReactor) RemovePeer(peer *p2p.Peer, reason interface{}) {
-	pr.peers.removePeer(peer.Key)
+	pr.sm.RemovePeer(peer)
 }
 
 // Receive implements Reactor by handling 4 types of messages (look below).
@@ -83,5 +73,5 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		return
 	}
 
-	pr.sm.processMsg(src, msgType, msg)
+	pr.sm.processMsg(src.ID(), msgType, msg)
 }

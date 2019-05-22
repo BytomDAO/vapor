@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/tendermint/go-wire"
+	wire "github.com/tendermint/go-wire"
 
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -33,8 +33,7 @@ const (
 	MerkleRequestByte   = byte(0x60)
 	MerkleResponseByte  = byte(0x61)
 
-	maxBlockchainResponseSize = 22020096 + 2
-	txsMsgMaxTxNum            = 1024
+	MaxBlockchainResponseSize = 22020096 + 2
 )
 
 //BlockchainMessage is a generic message for this reactor.
@@ -66,7 +65,7 @@ func DecodeMessage(bz []byte) (msgType byte, msg BlockchainMessage, err error) {
 	msgType = bz[0]
 	n := int(0)
 	r := bytes.NewReader(bz)
-	msg = wire.ReadBinary(struct{ BlockchainMessage }{}, r, maxBlockchainResponseSize, &n, &err).(struct{ BlockchainMessage }).BlockchainMessage
+	msg = wire.ReadBinary(struct{ BlockchainMessage }{}, r, MaxBlockchainResponseSize, &n, &err).(struct{ BlockchainMessage }).BlockchainMessage
 	if err != nil && n != len(bz) {
 		err = errors.New("DecodeMessage() had bytes left over")
 	}
@@ -77,6 +76,10 @@ func DecodeMessage(bz []byte) (msgType byte, msg BlockchainMessage, err error) {
 type GetBlockMessage struct {
 	Height  uint64
 	RawHash [32]byte
+}
+
+func NewGetBlockMessage(height uint64,hash [32]byte) *GetBlockMessage {
+	return &GetBlockMessage{Height: height,RawHash:hash}
 }
 
 //GetHash reutrn the hash of the request
@@ -453,7 +456,7 @@ type MerkleBlockMessage struct {
 	Flags          []byte
 }
 
-func (m *MerkleBlockMessage) setRawBlockHeader(bh types.BlockHeader) error {
+func (m *MerkleBlockMessage) SetRawBlockHeader(bh types.BlockHeader) error {
 	rawHeader, err := bh.MarshalText()
 	if err != nil {
 		return err
@@ -463,7 +466,7 @@ func (m *MerkleBlockMessage) setRawBlockHeader(bh types.BlockHeader) error {
 	return nil
 }
 
-func (m *MerkleBlockMessage) setTxInfo(txHashes []*bc.Hash, txFlags []uint8, relatedTxs []*types.Tx) error {
+func (m *MerkleBlockMessage) SetTxInfo(txHashes []*bc.Hash, txFlags []uint8, relatedTxs []*types.Tx) error {
 	for _, txHash := range txHashes {
 		m.TxHashes = append(m.TxHashes, txHash.Byte32())
 	}
@@ -479,7 +482,7 @@ func (m *MerkleBlockMessage) setTxInfo(txHashes []*bc.Hash, txFlags []uint8, rel
 	return nil
 }
 
-func (m *MerkleBlockMessage) setStatusInfo(statusHashes []*bc.Hash, relatedStatuses []*bc.TxVerifyResult) error {
+func (m *MerkleBlockMessage) SetStatusInfo(statusHashes []*bc.Hash, relatedStatuses []*bc.TxVerifyResult) error {
 	for _, statusHash := range statusHashes {
 		m.StatusHashes = append(m.StatusHashes, statusHash.Byte32())
 	}
