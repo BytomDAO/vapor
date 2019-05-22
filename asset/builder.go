@@ -37,7 +37,6 @@ type crossInAction struct {
 }
 
 // TODO: also need to hard-code mapTx
-// TODO: check replay
 func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBuilder) error {
 	var missing []string
 	if len(a.FedXPubs) == 0 {
@@ -93,7 +92,7 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 	path := signers.GetBip0032Path(assetSigner, signers.AssetKeySpace)
 	derivedXPubs := chainkd.DeriveXPubs(assetSigner.XPubs, path)
 	derivedPKs := chainkd.XPubKeys(derivedXPubs)
-	pegScript, err := buildPegScript(derivedPKs, assetSigner.Quorum)
+	pegInScript, err := buildPegInScript(derivedPKs, assetSigner.Quorum)
 	if err != nil {
 		return err
 	}
@@ -104,7 +103,7 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 	}
 
 	// arguments will be set when materializeWitnesses
-	txin := types.NewCrossChainInput(nil, sourceID, *a.AssetId, a.Amount, a.SourcePos, pegScript, asset.RawDefinitionByte)
+	txin := types.NewCrossChainInput(nil, sourceID, *a.AssetId, a.Amount, a.SourcePos, pegInScript, asset.RawDefinitionByte)
 	log.Info("cross-chain input action built")
 	builder.RestrictMinTime(time.Now())
 	tplIn := &txbuilder.SigningInstruction{}
@@ -117,7 +116,7 @@ func (a *crossInAction) ActionType() string {
 	return "cross_chain_in"
 }
 
-func buildPegScript(pubkeys []ed25519.PublicKey, nrequired int) (program []byte, err error) {
+func buildPegInScript(pubkeys []ed25519.PublicKey, nrequired int) (program []byte, err error) {
 	controlProg, err := vmutil.P2SPMultiSigProgram(pubkeys, nrequired)
 	if err != nil {
 		return nil, err
