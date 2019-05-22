@@ -7,7 +7,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/blockchain/txbuilder"
+	"github.com/vapor/crypto/ed25519/chainkd"
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
@@ -26,9 +28,11 @@ type crossInAction struct {
 	bc.AssetAmount
 	SourceID        string                       `json:"source_id"`
 	SourcePos       uint64                       `json:"source_pos"`
-	Program         chainjson.HexBytes           `json:"control_program"`
+	FedXPubs        []chainkd.XPub               `json:"fed_xpubs"`
+	Quorum          int                          `json:"fed_quorum"`
 	AssetDefinition map[string]interface{}       `json:"asset_definition"`
 	Arguments       []txbuilder.ContractArgument `json:"arguments"`
+	// Program         chainjson.HexBytes           `json:"control_program"`
 	// Arguments []chainjson.HexBytes         `json:"arguments"`
 }
 
@@ -37,9 +41,12 @@ type crossInAction struct {
 // TODO: check replay
 func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBuilder) error {
 	var missing []string
-	if len(a.Program) == 0 {
-		missing = append(missing, "control_program")
+	if len(a.FedXPubs) == 0 {
+		missing = append(missing, "fed_xpubs")
 	}
+	// if len(a.Program) == 0 {
+	// 	missing = append(missing, "control_program")
+	// }
 	if a.SourceID == "" {
 		missing = append(missing, "source_id")
 	}
@@ -69,7 +76,22 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 
 		asset.DefinitionMap = a.AssetDefinition
 		asset.VMVersion = 1
+
+		// TODO: asset.Signer
+		assetSigner, err := signers.Create("asset", a.FedXPubs, a.Quorum, 1, signers.BIP0032)
+		if err != nil {
+			return err
+		}
+
+		path := signers.GetBip0032Path(assetSigner, signers.AssetKeySpace)
+		derivedXPubs := chainkd.DeriveXPubs(assetSigner.XPubs, path)
+		derivedPKs := chainkd.XPubKeys(derivedXPubs)
 		// TODO: asset.IssuanceProgram
+		controlProgram, _, err := multisigCrossInProgram(derivedPKs, assetSigner.Quorum)
+		if err != nil {
+			return err
+		}
+
 		asset.AssetID = *a.AssetId
 		extAlias := a.AssetId.String()
 		asset.Alias = &(extAlias)
@@ -99,4 +121,15 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 
 func (a *crossInAction) ActionType() string {
 	return "cross_chain_in"
+}
+
+func multisigCrossInProgram(pubkeys []ed25519.PublicKey, nrequired int) (program []byte, vmversion uint64, err error) {
+	controlProg, err := vmutil.P2SPMultiSigProgram(pubkeys, nrequired)
+	if err != nil {
+		return nil, 0, err
+	}
+	builder := vmutil.NewBuilder()
+	builder.AddRawBytes(controlProg)
+	prog, err := builder.Build()
+	return prog, 1, err
 }
