@@ -31,7 +31,6 @@ type crossInAction struct {
 	AssetDefinition map[string]interface{} `json:"asset_definition"`
 }
 
-// TODO: also need to hard-code mapTx
 func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBuilder) error {
 	var missing []string
 	if a.SourceID == "" {
@@ -83,7 +82,7 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 
 	fed := federation.GetFederation()
 	// arguments will be set when materializeWitnesses
-	txin := types.NewCrossChainInput(nil, sourceID, *a.AssetId, a.Amount, a.SourcePos, fed.PegInScript, asset.RawDefinitionByte)
+	txin := types.NewCrossChainInput(nil, sourceID, *a.AssetId, a.Amount, a.SourcePos, fed.ControlProgram, asset.RawDefinitionByte)
 	log.Info("cross-chain input action built")
 	builder.RestrictMinTime(time.Now())
 	tplIn := &txbuilder.SigningInstruction{}

@@ -4,6 +4,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/consensus"
+	"github.com/vapor/consensus/federation"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/vm"
 	"github.com/vapor/protocol/vm/vmutil"
@@ -127,7 +128,9 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			spends = append(spends, spend)
 
 		case *CrossChainInput:
-			prog := &bc.Program{VmVersion: inp.VMVersion, Code: inp.ControlProgram}
+			// hard code peg-in control program in consensus level, may need to
+			// deal with soft fork (federation members change) in the future
+			prog := &bc.Program{VmVersion: inp.VMVersion, Code: federation.GetFederation().ControlProgram}
 			src := &bc.ValueSource{
 				Ref:      &inp.SourceID,
 				Value:    &inp.AssetAmount,

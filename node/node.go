@@ -64,10 +64,10 @@ func NewNode(config *cfg.Config) *Node {
 	if err := federation.CheckFedConfig(); err == nil {
 		fed := federation.GetFederation()
 		log.WithFields(log.Fields{
-			"module":          logModule,
-			"fed_xpubs":       fed.XPubs,
-			"fed_quorum":      fed.Quorum,
-			"fed_peginscript": fed.PegInScript,
+			"module":             logModule,
+			"fed_xpubs":          fed.XPubs,
+			"fed_quorum":         fed.Quorum,
+			"fed_controlprogram": fed.ControlProgram,
 		}).Info()
 	} else {
 		cmn.Exit("Error: " + err.Error())

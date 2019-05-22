@@ -27,10 +27,10 @@ const fedCfgJson = `
 `
 
 type federation struct {
-	XPubs       []chainkd.XPub `json:"fed_xpubs"`
-	Quorum      int            `json:"fed_quorum"`
-	Path        [][]byte
-	PegInScript []byte
+	XPubs          []chainkd.XPub `json:"fed_xpubs"`
+	Quorum         int            `json:"fed_quorum"`
+	Path           [][]byte
+	ControlProgram []byte
 }
 
 func parseFedConfig() *federation {
@@ -67,8 +67,8 @@ func GetFederation() *federation {
 	fed.Path = signers.GetBip0032Path(assetSigner, signers.AssetKeySpace)
 	derivedXPubs := chainkd.DeriveXPubs(assetSigner.XPubs, fed.Path)
 	derivedPKs := chainkd.XPubKeys(derivedXPubs)
-	if pegInScript, err := buildPegInScript(derivedPKs, assetSigner.Quorum); err == nil {
-		fed.PegInScript = pegInScript
+	if controlProgram, err := buildPegInControlProgram(derivedPKs, assetSigner.Quorum); err == nil {
+		fed.ControlProgram = controlProgram
 	} else {
 		log.Fatalf("fail to build peg-in script: %v", err)
 	}
@@ -76,7 +76,7 @@ func GetFederation() *federation {
 	return fed
 }
 
-func buildPegInScript(pubkeys []ed25519.PublicKey, nrequired int) (program []byte, err error) {
+func buildPegInControlProgram(pubkeys []ed25519.PublicKey, nrequired int) (program []byte, err error) {
 	controlProg, err := vmutil.P2SPMultiSigProgram(pubkeys, nrequired)
 	if err != nil {
 		return nil, err
