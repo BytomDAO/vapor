@@ -1,7 +1,9 @@
 package wallet
 
 import (
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"reflect"
@@ -16,6 +18,7 @@ import (
 	"github.com/vapor/config"
 	"github.com/vapor/consensus"
 	vcrypto "github.com/vapor/crypto"
+	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/database"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/event"
@@ -276,11 +279,22 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	fmt.Println("TestMemPoolTxQueryLoop xpub1 is:", xpub1)
 
-	testAccount, err := accountManager.Create([]vcrypto.XPubKeyer{xpub1.XPub}, 1, "testAccount", signers.BIP0044)
+	edXPub := new(edchainkd.XPub)
+	edXPubKey, _ := hex.DecodeString("e0072a38408cfe4b70d322f8ed2d8acecab41615d2f091ddcd0d0622a8003de915569bd3e316d7e3c44ebebd21bfcc84f6428e60dbf17bef34f2e04a62f6cd2b")
+	copy(edXPub[:], edXPubKey[:])
+	xpub2 := pseudohsm.XPub{
+		Alias: "",
+		XPub:  edXPub,
+		File:  "",
+	}
+
+	testAccount, err := accountManager.Create([]vcrypto.XPubKeyer{xpub2.XPub}, 1, "testAccount", signers.BIP0044)
 	if err != nil {
 		t.Fatal(err)
 	}
+	fmt.Println("TestMemPoolTxQueryLoop testAccount is:", testAccount)
 
 	controlProg, err := accountManager.CreateAddress(testAccount.ID, false)
 	if err != nil {

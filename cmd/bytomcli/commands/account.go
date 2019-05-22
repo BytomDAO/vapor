@@ -59,7 +59,7 @@ var createAccountCmd = &cobra.Command{
 
 		for _, x := range args[1:] {
 			// TODO: adapt sm2
-			xpub := &edchainkd.XPub{}
+			xpub := new(edchainkd.XPub)
 			if err := xpub.UnmarshalText([]byte(x)); err != nil {
 				jww.ERROR.Println(err)
 				os.Exit(util.ErrLocalExe)

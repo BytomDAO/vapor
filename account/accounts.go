@@ -4,6 +4,7 @@ package account
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"reflect"
 	"sort"
 	"strings"
@@ -154,7 +155,12 @@ func CreateAccount(xpubs []crypto.XPubKeyer, quorum int, alias string, acctIndex
 }
 
 func (m *Manager) saveAccount(account *Account, updateIndex bool) error {
+	fmt.Println("account.XPubs is:", account.XPubs)
 	rawAccount, err := json.Marshal(account)
+	///////
+	fmt.Println("rawaccount is:", rawAccount)
+	os.Stdout.Write(rawAccount)
+	///////
 	if err != nil {
 		return ErrMarshalAccount
 	}
@@ -259,6 +265,7 @@ func (m *Manager) CreateAddress(accountID string, change bool) (cp *CtrlProgram,
 
 	account, err := m.FindByID(accountID)
 	if err != nil {
+		fmt.Println("CreateAddress 22", err)
 		return nil, err
 	}
 
@@ -405,8 +412,11 @@ func (m *Manager) FindByID(id string) (*Account, error) {
 	}
 
 	account := &Account{}
+	fmt.Println("FindByID rawaccount is:", rawAccount, "====")
+	os.Stdout.Write(rawAccount)
+	fmt.Println("====")
 	if err := json.Unmarshal(rawAccount, account); err != nil {
-		fmt.Print("1111111....")
+		fmt.Print("FindByID err: ", err)
 		return nil, err
 	}
 

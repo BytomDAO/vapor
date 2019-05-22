@@ -42,20 +42,19 @@ func RootXPrv(seed []byte) (xprv XPrv) {
 }
 
 // XPub derives an extended public key from a given xprv.
-func (xprv XPrv) XPub() (xpub vcrypto.XPubKeyer) {
-	if xpubkey, ok := xpub.(XPub); ok {
-		var scalar ecmath.Scalar
-		copy(scalar[:], xprv[:32])
+func (xprv XPrv) XPub() vcrypto.XPubKeyer {
+	xpub := XPub{}
+	var scalar ecmath.Scalar
+	copy(scalar[:], xprv[:32])
 
-		var P ecmath.Point
-		P.ScMulBase(&scalar)
-		buf := P.Encode()
+	var P ecmath.Point
+	P.ScMulBase(&scalar)
+	buf := P.Encode()
 
-		copy(xpubkey[:32], buf[:])
-		copy(xpubkey[32:], xprv[32:])
-	}
+	copy(xpub[:32], buf[:])
+	copy(xpub[32:], xprv[32:])
 
-	return
+	return xpub
 }
 
 // Child derives a child xprv based on `selector` string and `hardened` flag.
@@ -219,17 +218,6 @@ func (xprv XPrv) Derive(path [][]byte) vcrypto.XPrvKeyer {
 	return res
 }
 
-// // Derive generates a child xpub by recursively deriving
-// // non-hardened child xpubs over the list of selectors:
-// // `Derive([a,b,c,...]) == Child(a).Child(b).Child(c)...`
-// func (xpub XPub) Derive(path [][]byte) XPub {
-// 	res := xpub
-// 	for _, p := range path {
-// 		res = res.Child(p)
-// 	}
-// 	return res
-// }
-
 // Derive generates a child xpub by recursively deriving
 // non-hardened child xpubs over the list of selectors:
 // `Derive([a,b,c,...]) == Child(a).Child(b).Child(c)...`
@@ -269,11 +257,6 @@ func (xprv XPrv) ExpandedPrivateKey() ExpandedPrivateKey {
 	copy(res[:32], xprv[:32])
 	return res[:]
 }
-
-// // PublicKey extracts the ed25519 public key from an xpub.
-// func (xpub XPub) PublicKey() ed25519.PublicKey {
-// 	return ed25519.PublicKey(xpub[:32])
-// }
 
 // PublicKey extracts the ed25519 public key from an xpub.
 func (xpub XPub) PublicKey() crypto.PublicKey {

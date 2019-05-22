@@ -1,6 +1,7 @@
 package chainkd
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/vapor/crypto/ed25519"
@@ -15,6 +16,8 @@ func NewXKeys(r io.Reader) (xprv XPrv, xpub XPub, err error) {
 	}
 	if xpubkey, ok := xprv.XPub().(XPub); ok {
 		return xprv, xpubkey, nil
+	} else {
+		fmt.Println("create xpubkey failed.")
 	}
 	return xprv, xpub, nil
 }

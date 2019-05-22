@@ -2,7 +2,9 @@ package chainkd
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"errors"
+	"fmt"
 )
 
 const (
@@ -57,4 +59,15 @@ func (xprv *XPrv) UnmarshalText(inp []byte) error {
 
 func (xprv XPrv) String() string {
 	return hex.EncodeToString(xprv.Bytes())
+}
+
+// UnmarshalJSON satisfies the json.Unmarshaler interface.
+func (xpub *XPub) UnmarshalJSON(data []byte) error {
+	fmt.Println("UnmarshalJSON")
+	var xPubKey XPub
+	if err := json.Unmarshal(data, &xPubKey); err != nil {
+		return err
+	}
+	copy(xpub[:], xPubKey[:])
+	return nil
 }
