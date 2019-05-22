@@ -27,7 +27,7 @@ func (a *API) actionDecoder(action string) (func([]byte) (txbuilder.Action, erro
 		"control_program":              txbuilder.DecodeControlProgramAction,
 		"cross_chain_out":              txbuilder.DecodeCrossOutAction,
 		"retire":                       txbuilder.DecodeRetireAction,
-		"cross_chain_in":               a.wallet.AccountMgr.DecodeCrossInAction,
+		"cross_chain_in":               a.wallet.AssetReg.DecodeCrossInAction,
 		"spend_account":                a.wallet.AccountMgr.DecodeSpendAction,
 		"spend_account_unspent_output": a.wallet.AccountMgr.DecodeSpendUTXOAction,
 	}
