@@ -29,15 +29,32 @@ type crossInAction struct {
 	SourcePos       uint64                 `json:"source_pos"`
 	Program         chainjson.HexBytes     `json:"control_program"`
 	AssetDefinition map[string]interface{} `json:"asset_definition"`
-	UpdateAssetDef  bool                   `json:"update_asset_definition"`
 	Arguments       []chainjson.HexBytes   `json:"arguments"`
 }
 
+// func (reg *Registry) DefineCrossInAsset(a *Asset, alias string) error {
+//     defHash := bc.NewHash(sha3.Sum256(rawDefinition))
+//     a := &Asset{
+//         DefinitionMap:     definition,
+//         RawDefinitionByte: rawDefinition,
+//         VMVersion:         vmver,
+//         IssuanceProgram:   issuanceProgram,
+//         AssetID:           bc.ComputeAssetID(issuanceProgram, vmver, &defHash),
+//         Alias:             &alias,
+//     }
+//     return a, reg.SaveAsset(a, alias)
+// }
+
 // TODO: also need to hard-code mapTx
+// TODO: iter cross-in and save asset
+// TODO: federation can sign? check arguments length?
 func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBuilder) error {
 	var missing []string
 	if len(a.Program) == 0 {
 		missing = append(missing, "control_program")
+	}
+	if a.SourceID == "" {
+		missing = append(missing, "source_id")
 	}
 	if a.AssetId.IsZero() {
 		missing = append(missing, "asset_id")
@@ -49,34 +66,20 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 		return txbuilder.MissingFieldsError(missing...)
 	}
 
+	asset := &Asset{}
+	var err error
 	// Handle asset definition.
 	// Asset issuance's legality is guaranteed by the federation.
-	rawDefinition, err := serializeAssetDef(a.AssetDefinition)
-	if err != nil {
-		return ErrSerializing
-	}
-	if preAsset, _ := a.assets.GetAsset(a.AssetId.String()); preAsset != nil {
-		// GetAsset() doesn't unmashall for RawDefinitionBytes, so we need to
-		// serialize DefinitionMap on our own
-		preRawDefinition, err := serializeAssetDef(preAsset.DefinitionMap)
+	if preAsset, _ := a.assets.GetAsset(a.AssetId.String()); preAsset == nil {
+		asset.RawDefinitionByte, err = serializeAssetDef(a.AssetDefinition)
 		if err != nil {
 			return ErrSerializing
 		}
 
-		if !testutil.DeepEqual(preRawDefinition, rawDefinition) && !a.UpdateAssetDef {
-			return errors.New("asset definition mismatch with previous definition")
-		} else if !testutil.DeepEqual(preRawDefinition, rawDefinition) {
-			// update asset def
-			// TODO: maybe merge with save
-			if !chainjson.IsValidJSON(rawDefinition) {
-				return errors.New("asset definition is not in valid json format")
-			}
+		// TODO: save AssetDefinition
+		if !chainjson.IsValidJSON(asset.RawDefinitionByte) {
+			return errors.New("asset definition is not in valid json format")
 		}
-	}
-
-	// TODO: save AssetDefinition
-	if !chainjson.IsValidJSON(rawDefinition) {
-		return errors.New("asset definition is not in valid json format")
 	}
 
 	arguments := [][]byte{}
@@ -84,7 +87,8 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 		arguments = append(arguments, argument)
 	}
 	sourceID := testutil.MustDecodeHash(a.SourceID)
-	txin := types.NewCrossChainInput(arguments, sourceID, *a.AssetId, a.Amount, a.SourcePos, a.Program, rawDefinition)
+	// TODO: refactor rawDefinition
+	txin := types.NewCrossChainInput(arguments, sourceID, *a.AssetId, a.Amount, a.SourcePos, a.Program, asset.RawDefinitionByte)
 	log.Info("cross-chain input action build")
 	builder.RestrictMinTime(time.Now())
 	return builder.AddInput(txin, &txbuilder.SigningInstruction{})
