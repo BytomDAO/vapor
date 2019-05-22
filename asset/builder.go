@@ -25,29 +25,13 @@ func (r *Registry) DecodeCrossInAction(data []byte) (txbuilder.Action, error) {
 type crossInAction struct {
 	assets *Registry
 	bc.AssetAmount
-	SourceID        string                       `json:"source_id"` // AnnotatedUTXO
-	SourcePos       uint64                       `json:"source_pos"`
-	Program         chainjson.HexBytes           `json:"control_program"`
-	AssetDefinition map[string]interface{}       `json:"asset_definition"`
-	UpdateAssetDef  bool                         `json:"update_asset_definition"`
-	Arguments       []txbuilder.ContractArgument `json:"arguments"`
+	SourceID        string                 `json:"source_id"` // AnnotatedUTXO
+	SourcePos       uint64                 `json:"source_pos"`
+	Program         chainjson.HexBytes     `json:"control_program"`
+	AssetDefinition map[string]interface{} `json:"asset_definition"`
+	UpdateAssetDef  bool                   `json:"update_asset_definition"`
+	Arguments       []chainjson.HexBytes   `json:"arguments"`
 }
-
-// type AnnotatedInput struct {
-//  Type             string               `json:"type"`
-//  AssetID          bc.AssetID           `json:"asset_id"`
-//  AssetAlias       string               `json:"asset_alias,omitempty"`
-//  AssetDefinition  *json.RawMessage     `json:"asset_definition,omitempty"`
-//  Amount           uint64               `json:"amount"`
-//  ControlProgram   chainjson.HexBytes   `json:"control_program,omitempty"`
-//  Address          string               `json:"address,omitempty"`
-//  SpentOutputID    *bc.Hash             `json:"spent_output_id,omitempty"`
-//  AccountID        string               `json:"account_id,omitempty"`
-//  AccountAlias     string               `json:"account_alias,omitempty"`
-//  Arbitrary        chainjson.HexBytes   `json:"arbitrary,omitempty"`
-//  InputID          bc.Hash              `json:"input_id"`
-//  WitnessArguments []chainjson.HexBytes `json:"witness_arguments"`
-// }
 
 func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBuilder) error {
 	var missing []string
@@ -90,11 +74,12 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 	// TODO: also need to hard-code mapTx
 	// TODO: save AssetDefinition
 
+	arguments := [][]byte{}
+	for _, argument := range a.Arguments {
+		arguments = append(arguments, argument)
+	}
 	sourceID := testutil.MustDecodeHash(a.SourceID)
-	// input's arguments will be set when signing
-	// arguments?
-	// in :=  types.NewCrossChainInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amount, sourcePos uint64, controlProgram, assetDefinition []byte)
-	txin := types.NewCrossChainInput(nil, sourceID, *a.AssetId, a.Amount, a.SourcePos, a.Program, rawDefinition)
+	txin := types.NewCrossChainInput(arguments, sourceID, *a.AssetId, a.Amount, a.SourcePos, a.Program, rawDefinition)
 	log.Info("cross-chain input action build")
 	builder.RestrictMinTime(time.Now())
 	return builder.AddInput(txin, &txbuilder.SigningInstruction{})
