@@ -33,6 +33,7 @@ type crossInAction struct {
 	Arguments       []chainjson.HexBytes   `json:"arguments"`
 }
 
+// TODO: also need to hard-code mapTx
 func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBuilder) error {
 	var missing []string
 	if len(a.Program) == 0 {
@@ -54,12 +55,9 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 	if err != nil {
 		return ErrSerializing
 	}
-	// TODO: may need to skip here
-	if !chainjson.IsValidJSON(rawDefinition) {
-		return errors.New("asset definition is not in valid json format")
-	}
 	if preAsset, _ := a.assets.GetAsset(a.AssetId.String()); preAsset != nil {
-		// GetAsset() doesn't unmashall for RawDefinitionBytes
+		// GetAsset() doesn't unmashall for RawDefinitionBytes, so we need to
+		// serialize DefinitionMap on our own
 		preRawDefinition, err := serializeAssetDef(preAsset.DefinitionMap)
 		if err != nil {
 			return ErrSerializing
@@ -67,12 +65,19 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 
 		if !testutil.DeepEqual(preRawDefinition, rawDefinition) && !a.UpdateAssetDef {
 			return errors.New("asset definition mismatch with previous definition")
+		} else if !testutil.DeepEqual(preRawDefinition, rawDefinition) {
+			// update asset def
+			// TODO: maybe merge with save
+			if !chainjson.IsValidJSON(rawDefinition) {
+				return errors.New("asset definition is not in valid json format")
+			}
 		}
-		// TODO: update asset def here?
 	}
 
-	// TODO: also need to hard-code mapTx
 	// TODO: save AssetDefinition
+	if !chainjson.IsValidJSON(rawDefinition) {
+		return errors.New("asset definition is not in valid json format")
+	}
 
 	arguments := [][]byte{}
 	for _, argument := range a.Arguments {
