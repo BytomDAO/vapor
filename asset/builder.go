@@ -24,7 +24,7 @@ func (r *Registry) DecodeCrossInAction(data []byte) (txbuilder.Action, error) {
 type crossInAction struct {
 	reg *Registry
 	bc.AssetAmount
-	SourceID        string                 `json:"source_id"` // AnnotatedUTXO
+	SourceID        string                 `json:"source_id"`
 	SourcePos       uint64                 `json:"source_pos"`
 	Program         chainjson.HexBytes     `json:"control_program"`
 	AssetDefinition map[string]interface{} `json:"asset_definition"`
@@ -32,8 +32,7 @@ type crossInAction struct {
 }
 
 // TODO: also need to hard-code mapTx
-// TODO: iter cross-in and save asset, saveExternalAssetDefinition
-// TODO: federation can sign? check arguments length?
+// TODO: federation can sign? check arguments length? will path be diff?
 func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBuilder) error {
 	var missing []string
 	if len(a.Program) == 0 {
@@ -72,7 +71,7 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 		asset.AssetID = *a.AssetId
 		extAlias := a.AssetId.String()
 		asset.Alias = &(extAlias)
-		a.reg.SaveAsset(asset, extAlias)
+		a.reg.SaveExtAsset(asset, extAlias)
 	}
 
 	arguments := [][]byte{}
