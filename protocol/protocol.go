@@ -114,6 +114,10 @@ func (c *Chain) setState(node *state.BlockNode, irreversibleNode *state.BlockNod
 		return err
 	}
 
+	if err := c.bbft.UpdateConsensusNodes(node.Height); err != nil {
+		return err
+	}
+
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
 

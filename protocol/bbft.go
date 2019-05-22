@@ -233,3 +233,8 @@ func (b *bbft) SignBlock(block *types.Block) error {
 	block.Witness[node.order] = xprv.Sign(block.Hash().Bytes())
 	return nil
 }
+
+// UpdateConsensusNodes used to update consensus node after each round of voting
+func (b *bbft) UpdateConsensusNodes(blockHeight uint64) error {
+	return b.consensusNodeManager.updateConsensusNodes(blockHeight)
+}
