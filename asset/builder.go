@@ -33,22 +33,16 @@ type crossInAction struct {
 	FedXPubs        []chainkd.XPub         `json:"fed_xpubs"`
 	Quorum          int                    `json:"fed_quorum"`
 	AssetDefinition map[string]interface{} `json:"asset_definition"`
-	// Arguments       []txbuilder.ContractArgument `json:"arguments"`
-	// Program         chainjson.HexBytes           `json:"control_program"`
-	// Arguments []chainjson.HexBytes         `json:"arguments"`
 }
 
 // TODO: also need to hard-code mapTx
-// TODO: federation can sign? check arguments length? will path be diff?
+// TODO: check setArgs
 // TODO: check replay
 func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBuilder) error {
 	var missing []string
 	if len(a.FedXPubs) == 0 {
 		missing = append(missing, "fed_xpubs")
 	}
-	// if len(a.Program) == 0 {
-	// 	missing = append(missing, "control_program")
-	// }
 	if a.SourceID == "" {
 		missing = append(missing, "source_id")
 	}
@@ -92,20 +86,10 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 	path := signers.GetBip0032Path(assetSigner, signers.AssetKeySpace)
 	derivedXPubs := chainkd.DeriveXPubs(assetSigner.XPubs, path)
 	derivedPKs := chainkd.XPubKeys(derivedXPubs)
-	// TODO: asset.IssuanceProgram
 	pegScript, err := buildPegScript(derivedPKs, assetSigner.Quorum)
 	if err != nil {
 		return err
 	}
-
-	tplIn := &txbuilder.SigningInstruction{}
-	tplIn.AddRawWitnessKeys(assetSigner.XPubs, path, assetSigner.Quorum)
-
-	// else if a.Arguments != nil {
-	// 	if err := txbuilder.AddContractArgs(tplIn, a.Arguments); err != nil {
-	// 		return err
-	// 	}
-	// }
 
 	var sourceID bc.Hash
 	if err := sourceID.UnmarshalText([]byte(a.SourceID)); err != nil {
@@ -115,6 +99,8 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 	txin := types.NewCrossChainInput(nil, sourceID, *a.AssetId, a.Amount, a.SourcePos, pegScript, asset.RawDefinitionByte)
 	log.Info("cross-chain input action built")
 	builder.RestrictMinTime(time.Now())
+	tplIn := &txbuilder.SigningInstruction{}
+	tplIn.AddRawWitnessKeys(assetSigner.XPubs, path, assetSigner.Quorum)
 	return builder.AddInput(txin, tplIn)
 }
 
