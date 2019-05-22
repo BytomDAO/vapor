@@ -138,12 +138,6 @@ func getAccountFromACP(program []byte, walletDB dbm.DB) (*account.Account, error
 
 var emptyJSONObject = json.RawMessage(`{}`)
 
-func isValidJSON(b []byte) bool {
-	var v interface{}
-	err := json.Unmarshal(b, &v)
-	return err == nil
-}
-
 func (w *Wallet) buildAnnotatedTransaction(orig *types.Tx, b *types.Block, statusFail bool, indexInBlock int) *query.AnnotatedTx {
 	tx := &query.AnnotatedTx{
 		ID:                     orig.ID,
