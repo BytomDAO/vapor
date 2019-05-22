@@ -9,11 +9,13 @@ import (
 
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/blockchain/txbuilder"
+	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/vm/vmutil"
 )
 
 // DecodeCrossInAction convert input data to action struct
@@ -26,12 +28,12 @@ func (r *Registry) DecodeCrossInAction(data []byte) (txbuilder.Action, error) {
 type crossInAction struct {
 	reg *Registry
 	bc.AssetAmount
-	SourceID        string                       `json:"source_id"`
-	SourcePos       uint64                       `json:"source_pos"`
-	FedXPubs        []chainkd.XPub               `json:"fed_xpubs"`
-	Quorum          int                          `json:"fed_quorum"`
-	AssetDefinition map[string]interface{}       `json:"asset_definition"`
-	Arguments       []txbuilder.ContractArgument `json:"arguments"`
+	SourceID        string                 `json:"source_id"`
+	SourcePos       uint64                 `json:"source_pos"`
+	FedXPubs        []chainkd.XPub         `json:"fed_xpubs"`
+	Quorum          int                    `json:"fed_quorum"`
+	AssetDefinition map[string]interface{} `json:"asset_definition"`
+	// Arguments       []txbuilder.ContractArgument `json:"arguments"`
 	// Program         chainjson.HexBytes           `json:"control_program"`
 	// Arguments []chainjson.HexBytes         `json:"arguments"`
 }
@@ -76,44 +78,41 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 
 		asset.DefinitionMap = a.AssetDefinition
 		asset.VMVersion = 1
-
-		// TODO: asset.Signer
-		assetSigner, err := signers.Create("asset", a.FedXPubs, a.Quorum, 1, signers.BIP0032)
-		if err != nil {
-			return err
-		}
-
-		path := signers.GetBip0032Path(assetSigner, signers.AssetKeySpace)
-		derivedXPubs := chainkd.DeriveXPubs(assetSigner.XPubs, path)
-		derivedPKs := chainkd.XPubKeys(derivedXPubs)
-		// TODO: asset.IssuanceProgram
-		controlProgram, _, err := multisigCrossInProgram(derivedPKs, assetSigner.Quorum)
-		if err != nil {
-			return err
-		}
-
 		asset.AssetID = *a.AssetId
 		extAlias := a.AssetId.String()
 		asset.Alias = &(extAlias)
 		a.reg.SaveExtAsset(asset, extAlias)
 	}
 
-	tplIn := &txbuilder.SigningInstruction{}
-	if asset.Signer != nil {
-		// path := signers.GetBip0032Path(asset.Signer, signers.AssetKeySpace)
-		// tplIn.AddRawWitnessKeys(asset.Signer.XPubs, path, asset.Signer.Quorum)
-	} else if a.Arguments != nil {
-		if err := txbuilder.AddContractArgs(tplIn, a.Arguments); err != nil {
-			return err
-		}
+	assetSigner, err := signers.Create("asset", a.FedXPubs, a.Quorum, 1, signers.BIP0032)
+	if err != nil {
+		return err
 	}
+
+	path := signers.GetBip0032Path(assetSigner, signers.AssetKeySpace)
+	derivedXPubs := chainkd.DeriveXPubs(assetSigner.XPubs, path)
+	derivedPKs := chainkd.XPubKeys(derivedXPubs)
+	// TODO: asset.IssuanceProgram
+	pegScript, err := buildPegScript(derivedPKs, assetSigner.Quorum)
+	if err != nil {
+		return err
+	}
+
+	tplIn := &txbuilder.SigningInstruction{}
+	tplIn.AddRawWitnessKeys(assetSigner.XPubs, path, assetSigner.Quorum)
+
+	// else if a.Arguments != nil {
+	// 	if err := txbuilder.AddContractArgs(tplIn, a.Arguments); err != nil {
+	// 		return err
+	// 	}
+	// }
 
 	var sourceID bc.Hash
 	if err := sourceID.UnmarshalText([]byte(a.SourceID)); err != nil {
 		return errors.New("invalid sourceID format")
 	}
 
-	txin := types.NewCrossChainInput(nil, sourceID, *a.AssetId, a.Amount, a.SourcePos, a.Program, asset.RawDefinitionByte)
+	txin := types.NewCrossChainInput(nil, sourceID, *a.AssetId, a.Amount, a.SourcePos, pegScript, asset.RawDefinitionByte)
 	log.Info("cross-chain input action built")
 	builder.RestrictMinTime(time.Now())
 	return builder.AddInput(txin, tplIn)
@@ -123,13 +122,13 @@ func (a *crossInAction) ActionType() string {
 	return "cross_chain_in"
 }
 
-func multisigCrossInProgram(pubkeys []ed25519.PublicKey, nrequired int) (program []byte, vmversion uint64, err error) {
+func buildPegScript(pubkeys []ed25519.PublicKey, nrequired int) (program []byte, err error) {
 	controlProg, err := vmutil.P2SPMultiSigProgram(pubkeys, nrequired)
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 	builder := vmutil.NewBuilder()
 	builder.AddRawBytes(controlProg)
 	prog, err := builder.Build()
-	return prog, 1, err
+	return prog, err
 }
