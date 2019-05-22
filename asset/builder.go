@@ -36,7 +36,6 @@ type crossInAction struct {
 }
 
 // TODO: also need to hard-code mapTx
-// TODO: check setArgs
 // TODO: check replay
 func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBuilder) error {
 	var missing []string
@@ -96,6 +95,7 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 		return errors.New("invalid sourceID format")
 	}
 
+	// arguments will be set when materializeWitnesses
 	txin := types.NewCrossChainInput(nil, sourceID, *a.AssetId, a.Amount, a.SourcePos, pegScript, asset.RawDefinitionByte)
 	log.Info("cross-chain input action built")
 	builder.RestrictMinTime(time.Now())
