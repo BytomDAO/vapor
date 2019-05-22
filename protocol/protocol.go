@@ -19,10 +19,12 @@ type Chain struct {
 	orphanManage   *OrphanManage
 	txPool         *TxPool
 	store          Store
+	bbft           *bbft
 	processBlockCh chan *processBlockMsg
 
-	cond     sync.Cond
-	bestNode *state.BlockNode
+	cond                 sync.Cond
+	bestNode             *state.BlockNode
+	bestIrreversibleNode *state.BlockNode
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
@@ -50,6 +52,7 @@ func NewChain(store Store, txPool *TxPool) (*Chain, error) {
 
 	c.bestNode = c.index.GetNode(storeStatus.Hash)
 	c.index.SetMainChain(c.bestNode)
+	c.bbft = newBbft(store, c.index)
 	go c.blockProcesser()
 	return c, nil
 }
@@ -77,7 +80,7 @@ func (c *Chain) initChainStatus() error {
 	if err != nil {
 		return err
 	}
-	return c.store.SaveChainStatus(node, utxoView)
+	return c.store.SaveChainStatus(node, node, utxoView, map[uint64]*state.VoteResult{})
 }
 
 // BestBlockHeight returns the current height of the blockchain.
@@ -106,16 +109,21 @@ func (c *Chain) InMainChain(hash bc.Hash) bool {
 }
 
 // This function must be called with mu lock in above level
-func (c *Chain) setState(node *state.BlockNode, view *state.UtxoViewpoint) error {
-	if err := c.store.SaveChainStatus(node, view); err != nil {
+func (c *Chain) setState(node *state.BlockNode, irreversibleNode *state.BlockNode, view *state.UtxoViewpoint, voteMap map[uint64]*state.VoteResult) error {
+	if err := c.store.SaveChainStatus(node, irreversibleNode, view, voteMap); err != nil {
 		return err
 	}
 
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
 
+	if err := c.bbft.UpdateConsensusNodes(node.Height); err != nil {
+		return err
+	}
+
 	c.index.SetMainChain(node)
 	c.bestNode = node
+	c.bestIrreversibleNode = irreversibleNode
 
 	log.WithFields(log.Fields{"module": logModule, "height": c.bestNode.Height, "hash": c.bestNode.Hash.String()}).Debug("chain best status has been update")
 	c.cond.Broadcast()
