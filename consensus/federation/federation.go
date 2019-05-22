@@ -56,6 +56,7 @@ func CheckFedConfig() error {
 
 func GetFederation() *federation {
 	fed := parseFedConfig()
+	// use 1 for AssetKeyIndex
 	assetSigner, err := signers.Create("asset", fed.XPubs, fed.Quorum, 1, signers.BIP0032)
 	if err != nil {
 		panic("fail to create federation assetSigner")

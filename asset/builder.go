@@ -81,12 +81,13 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 		return errors.New("invalid sourceID format")
 	}
 
+	fed := federation.GetFederation()
 	// arguments will be set when materializeWitnesses
-	txin := types.NewCrossChainInput(nil, sourceID, *a.AssetId, a.Amount, a.SourcePos, federation.GetFederation().PegInScript, asset.RawDefinitionByte)
+	txin := types.NewCrossChainInput(nil, sourceID, *a.AssetId, a.Amount, a.SourcePos, fed.PegInScript, asset.RawDefinitionByte)
 	log.Info("cross-chain input action built")
 	builder.RestrictMinTime(time.Now())
 	tplIn := &txbuilder.SigningInstruction{}
-	tplIn.AddRawWitnessKeys(federation.GetFederation().XPubs, federation.GetFederation().Path, federation.GetFederation().Quorum)
+	tplIn.AddRawWitnessKeys(fed.XPubs, fed.Path, fed.Quorum)
 	a.reg.db.Set(sourceKey, []byte("true"))
 	return builder.AddInput(txin, tplIn)
 }
