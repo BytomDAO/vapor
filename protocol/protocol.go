@@ -114,12 +114,12 @@ func (c *Chain) setState(node *state.BlockNode, irreversibleNode *state.BlockNod
 		return err
 	}
 
+	c.cond.L.Lock()
+	defer c.cond.L.Unlock()
+
 	if err := c.bbft.UpdateConsensusNodes(node.Height); err != nil {
 		return err
 	}
-
-	c.cond.L.Lock()
-	defer c.cond.L.Unlock()
 
 	c.index.SetMainChain(node)
 	c.bestNode = node
