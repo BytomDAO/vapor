@@ -27,6 +27,7 @@ type crossInAction struct {
 	bc.AssetAmount
 	SourceID        string                       `json:"source_id"` // AnnotatedUTXO
 	SourcePos       uint64                       `json:"source_pos"`
+	Program         json.HexBytes                `json:"control_program"`
 	AssetDefinition map[string]interface{}       `json:"asset_definition"`
 	UpdateAssetDef  bool                         `json:"update_asset_definition"`
 	Arguments       []txbuilder.ContractArgument `json:"arguments"`
@@ -50,6 +51,9 @@ type crossInAction struct {
 
 func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBuilder) error {
 	var missing []string
+	if len(a.Program) == 0 {
+		missing = append(missing, "control_program")
+	}
 	if a.AssetId.IsZero() {
 		missing = append(missing, "asset_id")
 	}
@@ -83,29 +87,17 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 		// TODO: update asset def here?
 	}
 
-	// TODO: IssuanceProgram vs arguments?
 	// TODO: also need to hard-code mapTx
 	// TODO: save AssetDefinition
 
-	// in :=  types.NewCrossChainInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amount, sourcePos uint64, controlProgram, assetDefinition []byte)
-	// txin := types.NewIssuanceInput(nonce[:], a.Amount, asset.IssuanceProgram, nil, asset.RawDefinitionByte)
-	// input's arguments will be set when signing
 	sourceID := testutil.MustDecodeHash(a.SourceID)
-	txin := types.NewCrossChainInput(nil, sourceID, *a.AssetId, a.Amount, a.SourcePos, nil, rawDefinition)
-	tplIn := &txbuilder.SigningInstruction{}
-	if false {
-		// if asset.Signer != nil {
-		// path := signers.GetBip0032Path(asset.Signer, signers.AssetKeySpace)
-		// tplIn.AddRawWitnessKeys(asset.Signer.XPubs, path, asset.Signer.Quorum)
-	} else if a.Arguments != nil {
-		if err := txbuilder.AddContractArgs(tplIn, a.Arguments); err != nil {
-			return err
-		}
-	}
-
+	// input's arguments will be set when signing
+	// arguments?
+	// in :=  types.NewCrossChainInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amount, sourcePos uint64, controlProgram, assetDefinition []byte)
+	txin := types.NewCrossChainInput(nil, sourceID, *a.AssetId, a.Amount, a.SourcePos, a.Program, rawDefinition)
 	log.Info("cross-chain input action build")
 	builder.RestrictMinTime(time.Now())
-	return builder.AddInput(txin, tplIn)
+	return builder.AddInput(txin, &txbuilder.SigningInstruction{})
 }
 
 func (a *crossInAction) ActionType() string {
