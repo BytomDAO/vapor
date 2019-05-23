@@ -56,8 +56,8 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 		return ErrSerializing
 	}
 
-	// need to fill in issuance program here
-	// arguments will be set when materializeWitnesses
+	// 1. arguments will be set when materializeWitnesses
+	// 2. need to fill in issuance program here
 	txin := types.NewCrossChainInput(nil, a.SourceID, *a.AssetId, a.Amount, a.SourcePos, nil, rawDefinitionByte)
 	log.Info("cross-chain input action built")
 	tplIn := &txbuilder.SigningInstruction{}
