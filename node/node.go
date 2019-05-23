@@ -70,7 +70,7 @@ func NewNode(config *cfg.Config) *Node {
 			"fed_controlprogram": fed.ControlProgram,
 		}).Info()
 	} else {
-		cmn.Exit("Error: " + err.Error())
+		log.Fatal("Error:", err)
 	}
 
 	if err := lockDataDirectory(config); err != nil {
