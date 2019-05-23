@@ -52,7 +52,7 @@ func NewChain(store Store, txPool *TxPool) (*Chain, error) {
 
 	c.bestNode = c.index.GetNode(storeStatus.Hash)
 	c.index.SetMainChain(c.bestNode)
-	c.bbft = newBbft(store, c.index)
+	c.bbft = newBbft(store, c.index, c.orphanManage)
 	go c.blockProcesser()
 	return c, nil
 }
