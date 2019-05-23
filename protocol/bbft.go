@@ -11,6 +11,7 @@ import (
 	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
+	"github.com/vapor/event"
 	"github.com/vapor/math/checked"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -31,13 +32,15 @@ type bbft struct {
 	consensusNodeManager *consensusNodeManager
 	orphanManage         *OrphanManage
 	signatureCache       *lru.Cache
+	eventDispatcher      *event.Dispatcher
 }
 
-func newBbft(store Store, blockIndex *state.BlockIndex, orphanManage *OrphanManage) *bbft {
+func newBbft(store Store, blockIndex *state.BlockIndex, orphanManage *OrphanManage, eventDispatcher *event.Dispatcher) *bbft {
 	return &bbft{
 		orphanManage:         orphanManage,
 		consensusNodeManager: newConsensusNodeManager(store, blockIndex),
 		signatureCache:       lru.New(maxSignatureCacheSize),
+		eventDispatcher:      eventDispatcher,
 	}
 }
 
@@ -306,20 +309,21 @@ func (b *bbft) checkDoubleSign(nodeOrder, blockHeight uint64, blockHash bc.Hash)
 }
 
 // SignBlock signing the block if current node is consensus node
-func (b *bbft) SignBlock(block *types.Block) error {
+func (b *bbft) SignBlock(block *types.Block) ([]byte, error) {
 	var xprv chainkd.XPrv
 	xpub := [64]byte(xprv.XPub())
 	node, err := b.consensusNodeManager.getConsensusNode(block.Height, hex.EncodeToString(xpub[:]))
 	if err != nil && err != errNotFoundConsensusNode {
-		return err
+		return nil, err
 	}
 
 	if node == nil {
-		return nil
+		return nil, nil
 	}
 
-	block.Witness[node.order] = xprv.Sign(block.Hash().Bytes())
-	return nil
+	signature := xprv.Sign(block.Hash().Bytes())
+	block.Witness[node.order] = signature
+	return signature, nil
 }
 
 // UpdateConsensusNodes used to update consensus node after each round of voting
