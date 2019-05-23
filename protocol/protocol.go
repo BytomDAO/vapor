@@ -26,7 +26,6 @@ type Chain struct {
 	cond                 sync.Cond
 	bestNode             *state.BlockNode
 	bestIrreversibleNode *state.BlockNode
-	eventDispatcher      *event.Dispatcher
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
