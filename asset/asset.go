@@ -102,33 +102,6 @@ type Asset struct {
 	DefinitionMap     map[string]interface{} `json:"definition"`
 }
 
-// SaveExtAsset store external asset
-func (reg *Registry) SaveExtAsset(a *Asset) error {
-	reg.assetMu.Lock()
-	defer reg.assetMu.Unlock()
-
-	aliasKey := aliasKey(a.AssetID.String())
-	if existed := reg.db.Get(aliasKey); existed != nil {
-		return ErrDuplicateAlias
-	}
-
-	assetKey := ExtAssetKey(&a.AssetID)
-	if existAsset := reg.db.Get(assetKey); existAsset != nil {
-		return ErrDuplicateAsset
-	}
-
-	rawAsset, err := json.Marshal(a)
-	if err != nil {
-		return ErrMarshalAsset
-	}
-
-	storeBatch := reg.db.NewBatch()
-	storeBatch.Set(aliasKey, []byte(a.AssetID.String()))
-	storeBatch.Set(assetKey, rawAsset)
-	storeBatch.Write()
-	return nil
-}
-
 // SaveAsset store asset
 func (reg *Registry) SaveAsset(a *Asset, alias string) error {
 	reg.assetMu.Lock()

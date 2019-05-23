@@ -9,7 +9,6 @@ import (
 
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/consensus/federation"
-	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -52,31 +51,14 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 		return errors.New("mainchain output double spent")
 	}
 
-	var err error
-	asset := &Asset{}
-	if preAsset, _ := a.reg.GetAsset(a.AssetId.String()); preAsset != nil {
-		asset = preAsset
-	} else {
-		asset.RawDefinitionByte, err = serializeAssetDef(a.AssetDefinition)
-		if err != nil {
-			return ErrSerializing
-		}
-
-		if !chainjson.IsValidJSON(asset.RawDefinitionByte) {
-			return errors.New("asset definition is not in valid json format")
-		}
-
-		asset.DefinitionMap = a.AssetDefinition
-		asset.VMVersion = 1
-		asset.AssetID = *a.AssetId
-		extAlias := a.AssetId.String()
-		asset.Alias = &(extAlias)
-		a.reg.SaveExtAsset(asset)
+	rawDefinitionByte, err := serializeAssetDef(a.AssetDefinition)
+	if err != nil {
+		return ErrSerializing
 	}
 
 	fed := federation.GetFederation()
 	// arguments will be set when materializeWitnesses
-	txin := types.NewCrossChainInput(nil, a.SourceID, *a.AssetId, a.Amount, a.SourcePos, fed.ControlProgram, asset.RawDefinitionByte)
+	txin := types.NewCrossChainInput(nil, a.SourceID, *a.AssetId, a.Amount, a.SourcePos, fed.ControlProgram, rawDefinitionByte)
 	log.Info("cross-chain input action built")
 	tplIn := &txbuilder.SigningInstruction{}
 	tplIn.AddRawWitnessKeys(fed.XPubs, fed.Path, fed.Quorum)
