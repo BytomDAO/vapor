@@ -56,11 +56,12 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 		return ErrSerializing
 	}
 
-	fed := federation.GetFederation()
+	// need to fill in issuance program here
 	// arguments will be set when materializeWitnesses
-	txin := types.NewCrossChainInput(nil, a.SourceID, *a.AssetId, a.Amount, a.SourcePos, fed.ControlProgram, rawDefinitionByte)
+	txin := types.NewCrossChainInput(nil, a.SourceID, *a.AssetId, a.Amount, a.SourcePos, nil, rawDefinitionByte)
 	log.Info("cross-chain input action built")
 	tplIn := &txbuilder.SigningInstruction{}
+	fed := federation.GetFederation()
 	tplIn.AddRawWitnessKeys(fed.XPubs, fed.Path, fed.Quorum)
 	a.reg.db.Set(sourceKey, []byte("true"))
 	return builder.AddInput(txin, tplIn)
