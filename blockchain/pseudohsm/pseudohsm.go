@@ -16,6 +16,7 @@ import (
 
 	vcrypto "github.com/vapor/crypto"
 	"github.com/vapor/crypto/csp"
+	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
 	mnem "github.com/vapor/wallet/mnemonic"
 )
@@ -211,9 +212,13 @@ func (h *HSM) XSign(xpub vcrypto.XPubKeyer, path [][]byte, msg []byte, auth stri
 		return nil, err
 	}
 	if len(path) > 0 {
-		xprv = xprv.Derive(path)
+		switch xprvkey := xprv.(type) {
+		case edchainkd.XPrv:
+			xprvk := xprvkey.Derive(path)
+			return xprvk.Sign(msg), nil
+		}
 	}
-	return xprv.Sign(msg), nil
+	return nil, nil
 }
 
 //LoadChainKDKey get xprv from xpub
@@ -289,5 +294,9 @@ func (h *HSM) HasAlias(alias string) bool {
 
 // HasKey check whether the private key exists
 func (h *HSM) HasKey(xprv vcrypto.XPrvKeyer) bool {
-	return h.cache.hasKey(xprv.XPub())
+	switch xprvkey := xprv.(type) {
+	case edchainkd.XPrv:
+		return h.cache.hasKey(xprvkey.XPub())
+	}
+	return false
 }

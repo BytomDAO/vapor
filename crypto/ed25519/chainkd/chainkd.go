@@ -6,7 +6,6 @@ import (
 	"crypto/sha512"
 	"io"
 
-	vcrypto "github.com/vapor/crypto"
 	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/crypto/ed25519/ecmath"
 )
@@ -32,6 +31,7 @@ func NewXPrv(r io.Reader) (xprv XPrv, err error) {
 	return RootXPrv(entropy[:]), nil
 }
 
+// RootXPrv takes a seed binary string and produces a new xprv.
 func RootXPrv(seed []byte) (xprv XPrv) {
 	h := hmac.New(sha512.New, []byte{'R', 'o', 'o', 't'})
 	h.Write(seed)
@@ -41,8 +41,7 @@ func RootXPrv(seed []byte) (xprv XPrv) {
 }
 
 // XPub derives an extended public key from a given xprv.
-func (xprv XPrv) XPub() vcrypto.XPubKeyer {
-	xpub := XPub{}
+func (xprv XPrv) XPub() (xpub XPub) {
 	var scalar ecmath.Scalar
 	copy(scalar[:], xprv[:32])
 
@@ -53,7 +52,7 @@ func (xprv XPrv) XPub() vcrypto.XPubKeyer {
 	copy(xpub[:32], buf[:])
 	copy(xpub[32:], xprv[32:])
 
-	return xpub
+	return
 }
 
 // Child derives a child xprv based on `selector` string and `hardened` flag.
@@ -78,15 +77,15 @@ func (xprv XPrv) hardenedChild(sel []byte) (res XPrv) {
 }
 
 func (xprv XPrv) nonhardenedChild(sel []byte) (res XPrv) {
-	if xpub, ok := xprv.XPub().(XPub); ok {
-		h := hmac.New(sha512.New, xpub[32:])
-		h.Write([]byte{'N'})
-		h.Write(xpub[:32])
-		h.Write(sel)
-		h.Sum(res[:0])
+	xpub := xprv.XPub()
 
-		pruneIntermediateScalar(res[:32])
-	}
+	h := hmac.New(sha512.New, xpub[32:])
+	h.Write([]byte{'N'})
+	h.Write(xpub[:32])
+	h.Write(sel)
+	h.Sum(res[:0])
+
+	pruneIntermediateScalar(res[:32])
 
 	// Unrolled the following loop:
 	// var carry int
@@ -209,7 +208,7 @@ func (xpub XPub) Child(sel []byte) (res XPub) {
 // Derive generates a child xprv by recursively deriving
 // non-hardened child xprvs over the list of selectors:
 // `Derive([a,b,c,...]) == Child(a).Child(b).Child(c)...`
-func (xprv XPrv) Derive(path [][]byte) vcrypto.XPrvKeyer {
+func (xprv XPrv) Derive(path [][]byte) XPrv {
 	res := xprv
 	for _, p := range path {
 		res = res.Child(p, false)
@@ -220,7 +219,7 @@ func (xprv XPrv) Derive(path [][]byte) vcrypto.XPrvKeyer {
 // Derive generates a child xpub by recursively deriving
 // non-hardened child xpubs over the list of selectors:
 // `Derive([a,b,c,...]) == Child(a).Child(b).Child(c)...`
-func (xpub XPub) Derive(path [][]byte) vcrypto.XPubKeyer {
+func (xpub XPub) Derive(path [][]byte) XPub {
 	res := xpub
 	for _, p := range path {
 		res = res.Child(p)

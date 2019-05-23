@@ -1,7 +1,6 @@
 package chainkd
 
 import (
-	"fmt"
 	"io"
 
 	"github.com/vapor/crypto/ed25519"
@@ -14,12 +13,7 @@ func NewXKeys(r io.Reader) (xprv XPrv, xpub XPub, err error) {
 	if err != nil {
 		return
 	}
-	if xpubkey, ok := xprv.XPub().(XPub); ok {
-		return xprv, xpubkey, nil
-	} else {
-		fmt.Println("create xpubkey failed.")
-	}
-	return xprv, xpub, nil
+	return xprv, xprv.XPub(), nil
 }
 
 func XPubKeys(xpubs []XPub) []ed25519.PublicKey {
@@ -34,9 +28,7 @@ func DeriveXPubs(xpubs []XPub, path [][]byte) []XPub {
 	res := make([]XPub, 0, len(xpubs))
 	for _, xpub := range xpubs {
 		d := xpub.Derive(path)
-		if xpk, ok := d.(XPub); ok {
-			res = append(res, xpk)
-		}
+		res = append(res, d)
 	}
 	return res
 }
