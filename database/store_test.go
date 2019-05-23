@@ -15,9 +15,13 @@ import (
 )
 
 func TestLoadBlockIndex(t *testing.T) {
-	defer os.RemoveAll("temp")
+	config.CommonConfig = config.DefaultConfig()
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	store := NewStore(testDB)
+	defer func() {
+		testDB.Close()
+		os.RemoveAll("temp")
+	}()
 
 	block := config.GenesisBlock()
 	txStatus := bc.NewTransactionStatus()
@@ -70,8 +74,11 @@ func TestLoadBlockIndexBestHeight(t *testing.T) {
 		},
 	}
 
-	defer os.RemoveAll("temp")
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	defer func() {
+		testDB.Close()
+		os.RemoveAll("temp")
+	}()
 	store := NewStore(testDB)
 	var savedBlocks []types.Block
 
@@ -104,9 +111,12 @@ func TestLoadBlockIndexBestHeight(t *testing.T) {
 }
 
 func TestLoadBlockIndexEquals(t *testing.T) {
-	defer os.RemoveAll("temp")
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	store := NewStore(testDB)
+	defer func() {
+		testDB.Close()
+		os.RemoveAll("temp")
+	}()
 
 	block := config.GenesisBlock()
 	txStatus := bc.NewTransactionStatus()
@@ -142,8 +152,12 @@ func TestLoadBlockIndexEquals(t *testing.T) {
 	}
 }
 func TestSaveChainStatus(t *testing.T) {
-	defer os.RemoveAll("temp")
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	defer func() {
+		testDB.Close()
+		os.RemoveAll("temp")
+	}()
+
 	store := NewStore(testDB)
 
 	node := &state.BlockNode{Height: 100, Hash: bc.Hash{V0: 0, V1: 1, V2: 2, V3: 3}}
@@ -181,8 +195,12 @@ func TestSaveChainStatus(t *testing.T) {
 }
 
 func TestSaveBlock(t *testing.T) {
-	defer os.RemoveAll("temp")
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	defer func() {
+		testDB.Close()
+		os.RemoveAll("temp")
+	}()
+
 	store := NewStore(testDB)
 
 	block := config.GenesisBlock()
