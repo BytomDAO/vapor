@@ -4,7 +4,6 @@ import (
 	"context"
 	stdjson "encoding/json"
 	"fmt"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -79,7 +78,6 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 	// arguments will be set when materializeWitnesses
 	txin := types.NewCrossChainInput(nil, a.SourceID, *a.AssetId, a.Amount, a.SourcePos, fed.ControlProgram, asset.RawDefinitionByte)
 	log.Info("cross-chain input action built")
-	builder.RestrictMinTime(time.Now())
 	tplIn := &txbuilder.SigningInstruction{}
 	tplIn.AddRawWitnessKeys(fed.XPubs, fed.Path, fed.Quorum)
 	a.reg.db.Set(sourceKey, []byte("true"))
