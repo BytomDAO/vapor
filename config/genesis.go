@@ -1,14 +1,28 @@
 package config
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/consensus"
+	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/vm/vmutil"
 )
+
+func GenesisFederation(c *FederationConfig) (res *[32]byte) {
+	derivedPKs := chainkd.XPubKeys(c.Xpubs)
+	fedpegScript, _ := vmutil.P2SPMultiSigProgram(derivedPKs, c.Quorum)
+	hasher := sha256.New()
+	hasher.Write(fedpegScript)
+	resSlice := hasher.Sum(nil)
+	res = new([32]byte)
+	copy(res[:], resSlice)
+	return
+}
 
 func GenesisTx() *types.Tx {
 	contract, err := hex.DecodeString("00148c9d063ff74ee6d9ffa88d83aeb038068366c4c4")
@@ -16,10 +30,12 @@ func GenesisTx() *types.Tx {
 		log.Panicf("fail on decode genesis tx output control program")
 	}
 
+	coinbaseInput := GenesisFederation(CommonConfig.Federation)
+
 	txData := types.TxData{
 		Version: 1,
 		Inputs: []*types.TxInput{
-			types.NewCoinbaseInput([]byte("Information is power. -- Jan/11/2013. Computing is power. -- Apr/24/2018.")),
+			types.NewCoinbaseInput(coinbaseInput[:]),
 		},
 		Outputs: []*types.TxOutput{
 			types.NewIntraChainOutput(*consensus.BTMAssetID, consensus.InitialBlockSubsidy, contract),
