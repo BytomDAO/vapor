@@ -1,6 +1,7 @@
 package federation
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 
@@ -29,7 +30,6 @@ const fedCfgJson = `
 type federation struct {
 	XPubs          []chainkd.XPub `json:"xpubs"`
 	Quorum         int            `json:"quorum"`
-	Path           [][]byte
 	ControlProgram []byte
 }
 
@@ -58,16 +58,8 @@ func CheckFedConfig() error {
 
 func GetFederation() *federation {
 	fed := parseFedConfig()
-	// use 1 for AssetKeyIndex
-	assetSigner, err := signers.Create("asset", fed.XPubs, fed.Quorum, 1, signers.BIP0032)
-	if err != nil {
-		log.Fatalf("fail to create federation assetSigner: %v", err)
-	}
-
-	fed.Path = signers.GetBip0032Path(assetSigner, signers.AssetKeySpace)
-	derivedXPubs := chainkd.DeriveXPubs(assetSigner.XPubs, fed.Path)
-	derivedPKs := chainkd.XPubKeys(derivedXPubs)
-	if controlProgram, err := buildPegInControlProgram(derivedPKs, assetSigner.Quorum); err == nil {
+	PublicKeys := chainkd.XPubKeys(fed.XPubs)
+	if controlProgram, err := fed.buildPegInControlProgram(PublicKeys); err == nil {
 		fed.ControlProgram = controlProgram
 	} else {
 		log.Fatalf("fail to build peg-in script: %v", err)
@@ -76,13 +68,22 @@ func GetFederation() *federation {
 	return fed
 }
 
-func buildPegInControlProgram(pubkeys []ed25519.PublicKey, nrequired int) (program []byte, err error) {
-	controlProg, err := vmutil.P2SPMultiSigProgram(pubkeys, nrequired)
+func (f *federation) buildPegInControlProgram(pubkeys []ed25519.PublicKey) (program []byte, err error) {
+	controlProg, err := vmutil.P2SPMultiSigProgram(pubkeys, f.Quorum)
 	if err != nil {
 		return nil, err
 	}
+
 	builder := vmutil.NewBuilder()
 	builder.AddRawBytes(controlProg)
-	prog, err := builder.Build()
-	return prog, err
+	return builder.Build()
+}
+
+func (f *federation) Path() [][]byte {
+	var path [][]byte
+	signerPath := [9]byte{byte(signers.AssetKeySpace)}
+	// federation AssetKeyIndex is 1
+	binary.LittleEndian.PutUint64(signerPath[1:], 1)
+	path = append(path, signerPath[:])
+	return path
 }

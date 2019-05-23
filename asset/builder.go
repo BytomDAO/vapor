@@ -62,7 +62,7 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 	log.Info("cross-chain input action built")
 	tplIn := &txbuilder.SigningInstruction{}
 	fed := federation.GetFederation()
-	tplIn.AddRawWitnessKeys(fed.XPubs, fed.Path, fed.Quorum)
+	tplIn.AddRawWitnessKeys(fed.XPubs, fed.Path(), fed.Quorum)
 	a.reg.db.Set(sourceKey, []byte("true"))
 	return builder.AddInput(txin, tplIn)
 }
