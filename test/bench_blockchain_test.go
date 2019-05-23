@@ -11,6 +11,7 @@ import (
 	"github.com/vapor/blockchain/pseudohsm"
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/blockchain/txbuilder"
+	"github.com/vapor/config"
 	"github.com/vapor/consensus"
 	vcrypto "github.com/vapor/crypto"
 	"github.com/vapor/database"
@@ -137,10 +138,11 @@ func GenerateChainData(dirPath string, testDB dbm.DB, txNumber, otherAssetNum in
 		return nil, nil, nil, err
 	}
 
+	config.CommonConfig = config.DefaultConfig()
 	store := database.NewStore(testDB)
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
-	chain, err := protocol.NewChain(store, txPool)
+	chain, err := protocol.NewChain(store, txPool, dispatcher)
 	if err != nil {
 		return nil, nil, nil, err
 	}

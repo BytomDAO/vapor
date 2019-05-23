@@ -47,7 +47,9 @@ func NewBlockNode(bh *types.BlockHeader, parent *BlockNode) (*BlockNode, error) 
 	node.BlockWitness = common.NewBitMap(uint32(len(bh.Witness)))
 	for i, witness := range bh.Witness {
 		if len(witness) != 0 {
-			node.BlockWitness.Set(uint32(i))
+			if err := node.BlockWitness.Set(uint32(i)); err != nil {
+				return nil, err
+			}
 		}
 	}
 	return node, nil

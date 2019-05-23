@@ -9,6 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
 
@@ -25,6 +26,11 @@ var (
 )
 
 type NewMinedBlockEvent struct{ Block types.Block }
+
+type BlockSignatureEvent struct { 
+	BlockHash bc.Hash
+	Signature []byte 
+}
 
 // TypeMuxEvent is a time-tagged notification pushed to subscribers.
 type TypeMuxEvent struct {

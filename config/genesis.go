@@ -6,9 +6,29 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/consensus"
+	"github.com/vapor/crypto"
+	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/vm/vmutil"
 )
+
+func GenesisArguments(c *Config) []byte {
+	pubKeys := chainkd.XPubKeys(c.Federation.Xpubs)
+	fedpegScript, err := vmutil.P2SPMultiSigProgram(pubKeys, c.Federation.Quorum)
+	if err != nil {
+		log.Panicf("fail on decode genesis arguments for federation")
+	}
+
+	scriptHash := crypto.Sha256(fedpegScript)
+
+	control, err := vmutil.P2WSHProgram(scriptHash)
+	if err != nil {
+		log.Panicf("Fail converts scriptHash to program on GenesisArguments: %v", err)
+	}
+
+	return control
+}
 
 func GenesisTx() *types.Tx {
 	contract, err := hex.DecodeString("00148c9d063ff74ee6d9ffa88d83aeb038068366c4c4")
@@ -16,10 +36,12 @@ func GenesisTx() *types.Tx {
 		log.Panicf("fail on decode genesis tx output control program")
 	}
 
+	coinbaseInput := GenesisArguments(CommonConfig)
+
 	txData := types.TxData{
 		Version: 1,
 		Inputs: []*types.TxInput{
-			types.NewCoinbaseInput([]byte("Information is power. -- Jan/11/2013. Computing is power. -- Apr/24/2018.")),
+			types.NewCoinbaseInput(coinbaseInput[:]),
 		},
 		Outputs: []*types.TxOutput{
 			types.NewIntraChainOutput(*consensus.BTMAssetID, consensus.InitialBlockSubsidy, contract),

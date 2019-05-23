@@ -7,6 +7,7 @@ import (
 	"github.com/vapor/account"
 	"github.com/vapor/blockchain/pseudohsm"
 	"github.com/vapor/blockchain/txbuilder"
+	"github.com/vapor/config"
 	"github.com/vapor/consensus"
 	vcrypto "github.com/vapor/crypto"
 	"github.com/vapor/database"
@@ -25,10 +26,11 @@ const (
 
 // MockChain mock chain with genesis block
 func MockChain(testDB dbm.DB) (*protocol.Chain, *database.Store, *protocol.TxPool, error) {
+	config.CommonConfig = config.DefaultConfig()
 	store := database.NewStore(testDB)
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
-	chain, err := protocol.NewChain(store, txPool)
+	chain, err := protocol.NewChain(store, txPool, dispatcher)
 	return chain, store, txPool, err
 }
 
