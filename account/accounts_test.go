@@ -7,10 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vapor/config"
-
 	"github.com/vapor/blockchain/pseudohsm"
 	"github.com/vapor/blockchain/signers"
+	"github.com/vapor/config"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/database"
 	dbm "github.com/vapor/database/leveldb"
