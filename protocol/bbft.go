@@ -177,7 +177,11 @@ func (b *bbft) DetachBlock(voteResultMap map[uint64]*state.VoteResult, block *ty
 func (b *bbft) ProcessBlockSignature(signature, pubkey []byte, blockHeight uint64, blockHash *bc.Hash) (bool, error) {
 	consensusNode, err := b.consensusNodeManager.getConsensusNode(blockHeight, hex.EncodeToString(pubkey))
 	if err != nil {
-		return false, nil
+		return false, err
+	}
+
+	if !ed25519.Verify(ed25519.PublicKey(pubkey), blockHash.Bytes(), signature) {
+		return false, errInvalidSignature
 	}
 
 	isDoubleSign, err := b.checkDoubleSign(consensusNode.order, blockHeight, *blockHash)
@@ -188,10 +192,6 @@ func (b *bbft) ProcessBlockSignature(signature, pubkey []byte, blockHeight uint6
 	if isDoubleSign {
 		log.WithFields(log.Fields{"module": logModule, "blockHash": blockHash.String(), "pubkey": pubkey}).Warn("the consensus node double sign the same height of different block")
 		return false, errDoubleSignBlock
-	}
-
-	if !ed25519.Verify(ed25519.PublicKey(pubkey), blockHash.Bytes(), signature) {
-		return false, errInvalidSignature
 	}
 
 	orphanBlock, ok := b.orphanManage.Get(blockHash)
@@ -245,7 +245,6 @@ func (b *bbft) validateSign(block *types.Block) (uint64, error) {
 		}
 
 		blockHash := block.Hash()
-
 		if block.Witness[node.order] == nil {
 			key := fmt.Sprintf("%s:%s", blockHash.String(), pubkey)
 			signature, ok := b.signatureCache.Get(key)
@@ -254,25 +253,25 @@ func (b *bbft) validateSign(block *types.Block) (uint64, error) {
 			}
 		}
 
-		isDoubleSign, err := b.checkDoubleSign(node.order, block.Height, block.Hash())
-		if err != nil {
-			return 0, err
-		}
-
-		if isDoubleSign {
-			log.WithFields(log.Fields{"module": logModule, "blockHash": blockHash.String(), "pubkey": pubkey}).Warn("the consensus node double sign the same height of different block")
-			// Consensus node is signed twice with the same block height, discard the signature
-			block.Witness[node.order] = nil
-		}
-
 		if ed25519.Verify(ed25519.PublicKey(pubkey), blockHash.Bytes(), block.Witness[node.order]) {
-			correctSignNum++
-			isBlocker, err := b.consensusNodeManager.isBlocker(block.Height, block.Timestamp, pubkey)
+			isDoubleSign, err := b.checkDoubleSign(node.order, block.Height, block.Hash())
 			if err != nil {
 				return 0, err
 			}
-			if isBlocker {
-				hasBlockerSign = true
+
+			if isDoubleSign {
+				log.WithFields(log.Fields{"module": logModule, "blockHash": blockHash.String(), "pubkey": pubkey}).Warn("the consensus node double sign the same height of different block")
+				// Consensus node is signed twice with the same block height, discard the signature
+				block.Witness[node.order] = nil
+			} else {
+				correctSignNum++
+				isBlocker, err := b.consensusNodeManager.isBlocker(block.Height, block.Timestamp, pubkey)
+				if err != nil {
+					return 0, err
+				}
+				if isBlocker {
+					hasBlockerSign = true
+				}
 			}
 		} else {
 			// discard the invalid signature
