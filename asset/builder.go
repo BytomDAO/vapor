@@ -72,7 +72,7 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 		asset.AssetID = *a.AssetId
 		extAlias := a.AssetId.String()
 		asset.Alias = &(extAlias)
-		a.reg.SaveExtAsset(asset, extAlias)
+		a.reg.SaveExtAsset(asset)
 	}
 
 	var sourceID bc.Hash

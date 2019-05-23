@@ -103,11 +103,11 @@ type Asset struct {
 }
 
 // SaveExtAsset store external asset
-func (reg *Registry) SaveExtAsset(a *Asset, alias string) error {
+func (reg *Registry) SaveExtAsset(a *Asset) error {
 	reg.assetMu.Lock()
 	defer reg.assetMu.Unlock()
 
-	aliasKey := aliasKey(alias)
+	aliasKey := aliasKey(a.AssetID.String())
 	if existed := reg.db.Get(aliasKey); existed != nil {
 		return ErrDuplicateAlias
 	}
