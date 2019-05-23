@@ -14,7 +14,7 @@ import (
 
 const fedCfgJson = `
 {
-    "fed_xpubs" : [
+    "xpubs" : [
     	"7f23aae65ee4307c38d342699e328f21834488e18191ebd66823d220b5a58303496c9d09731784372bade78d5e9a4a6249b2cfe2e3a85464e5a4017aa5611e47",
     	"585e20143db413e45fbc82f03cb61f177e9916ef1df0012daa8cbf6dbb1025ce8f98e51ae319327b63505b64fdbbf6d36ef916d79e6dd67d51b0bfe76fe544c5",
     	"b58170b51ca61604028ba1cb412377dfc2bc6567c0afc84c83aae1c0c297d0227ccf568561df70851f4144bbf069b525129f2434133c145e35949375b22a6c9d",
@@ -22,13 +22,13 @@ const fedCfgJson = `
     	"d72fb92fa13bf3e0deb39de3a47c8d6eef5584719f7877c82a4c009f78fddf924d9706d48f15b2c782ec80b6bdd621a1f7ba2a0044b0e6f92245de9436885cb9",
     	"6798460919e8dc7095ee8b9f9d65033ef3da8c2334813149da5a1e52e9c6da07ba7d0e7379baaa0c8bdcb21890a54e6b7290bee077c645ee4b74b0c1ae9da59a"
     ],
-    "fed_quorum" : 4
+    "quorum" : 4
 }
 `
 
 type federation struct {
-	XPubs          []chainkd.XPub `json:"fed_xpubs"`
-	Quorum         int            `json:"fed_quorum"`
+	XPubs          []chainkd.XPub `json:"xpubs"`
+	Quorum         int            `json:"quorum"`
 	Path           [][]byte
 	ControlProgram []byte
 }
