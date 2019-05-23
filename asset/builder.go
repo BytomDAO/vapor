@@ -29,6 +29,8 @@ type crossInAction struct {
 	AssetDefinition map[string]interface{} `json:"asset_definition"`
 }
 
+// TODO: filter double spent utxo in txpool?
+// TODO: roll back unconfirmed or orphan?
 func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBuilder) error {
 	var missing []string
 	if a.SourceID.IsZero() {
@@ -44,13 +46,6 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 		return txbuilder.MissingFieldsError(missing...)
 	}
 
-	sourceKey := []byte(fmt.Sprintf("SC:%v:%v", a.SourceID, a.SourcePos))
-	a.reg.assetMu.Lock()
-	defer a.reg.assetMu.Unlock()
-	if existed := a.reg.db.Get(sourceKey); existed != nil {
-		return errors.New("mainchain output double spent")
-	}
-
 	rawDefinitionByte, err := serializeAssetDef(a.AssetDefinition)
 	if err != nil {
 		return ErrSerializing
@@ -64,7 +59,6 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 	tplIn := &txbuilder.SigningInstruction{}
 	fed := federation.GetFederation()
 	tplIn.AddRawWitnessKeys(fed.XPubs, fed.Path(), fed.Quorum)
-	a.reg.db.Set(sourceKey, []byte("true"))
 	return builder.AddInput(txin, tplIn)
 }
 
