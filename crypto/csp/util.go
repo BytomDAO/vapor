@@ -22,7 +22,10 @@ func NewXKeys(r io.Reader) (xprv vcrypto.XPrvKeyer, xpub vcrypto.XPubKeyer, err 
 func XPubKeys(xpubs []vcrypto.XPubKeyer) []crypto.PublicKey {
 	res := make([]crypto.PublicKey, 0, len(xpubs))
 	for _, xpub := range xpubs {
-		res = append(res, xpub.PublicKey())
+		switch xpb := xpub.(type) {
+		case edchainkd.XPub:
+			res = append(res, xpb.PublicKey())
+		}
 	}
 	return res
 }
@@ -30,8 +33,11 @@ func XPubKeys(xpubs []vcrypto.XPubKeyer) []crypto.PublicKey {
 func DeriveXPubs(xpubs []vcrypto.XPubKeyer, path [][]byte) []vcrypto.XPubKeyer {
 	res := make([]vcrypto.XPubKeyer, 0, len(xpubs))
 	for _, xpub := range xpubs {
-		d := xpub.Derive(path)
-		res = append(res, d)
+		switch xpb := xpub.(type) {
+		case edchainkd.XPub:
+			d := xpb.Derive(path)
+			res = append(res, d)
+		}
 	}
 	return res
 }

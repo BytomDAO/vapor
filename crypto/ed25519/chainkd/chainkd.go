@@ -1,7 +1,6 @@
 package chainkd
 
 import (
-	"crypto"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha512"
@@ -238,11 +237,7 @@ func (xprv XPrv) Sign(msg []byte) []byte {
 // Verify checks an EdDSA signature using public key
 // extracted from the first 32 bytes of the xpub.
 func (xpub XPub) Verify(msg []byte, sig []byte) bool {
-	publicKey := xpub.PublicKey()
-	if pk, ok := publicKey.(ed25519.PublicKey); ok {
-		return ed25519.Verify(pk, msg, sig)
-	}
-	return false
+	return ed25519.Verify(xpub.PublicKey(), msg, sig)
 }
 
 // ExpandedPrivateKey generates a 64-byte key where
@@ -259,7 +254,7 @@ func (xprv XPrv) ExpandedPrivateKey() ExpandedPrivateKey {
 }
 
 // PublicKey extracts the ed25519 public key from an xpub.
-func (xpub XPub) PublicKey() crypto.PublicKey {
+func (xpub XPub) PublicKey() ed25519.PublicKey {
 	return ed25519.PublicKey(xpub[:32])
 }
 

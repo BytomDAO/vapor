@@ -1,16 +1,15 @@
 package testutil
 
 import (
-	"github.com/vapor/crypto"
-	"github.com/vapor/crypto/csp"
 	"github.com/vapor/crypto/ed25519"
+	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 )
 
 var (
-	TestXPub   crypto.XPubKeyer
-	TestXPrv   crypto.XPrvKeyer
-	TestEdPub  ed25519.PublicKey
-	TestEdPubs []ed25519.PublicKey
+	TestXPub edchainkd.XPub
+	TestXPrv edchainkd.XPrv
+	TestPub  ed25519.PublicKey
+	TestPubs []ed25519.PublicKey
 )
 
 type zeroReader struct{}
@@ -24,13 +23,10 @@ func (z zeroReader) Read(buf []byte) (int, error) {
 
 func init() {
 	var err error
-	_, TestXPub, err := csp.NewXKeys(zeroReader{})
+	TestXPrv, TestXPub, err = edchainkd.NewXKeys(zeroReader{})
 	if err != nil {
 		panic(err)
 	}
-	TestPub := TestXPub.PublicKey()
-	switch tpk := TestPub.(type) {
-	case ed25519.PublicKey:
-		TestEdPubs = []ed25519.PublicKey{tpk}
-	}
+	TestPub = TestXPub.PublicKey()
+	TestPubs = []ed25519.PublicKey{TestPub}
 }

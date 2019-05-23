@@ -25,10 +25,7 @@ func NewXKeys(r io.Reader) (xprv XPrv, xpub XPub, err error) {
 func XPubKeys(xpubs []XPub) []ed25519.PublicKey {
 	res := make([]ed25519.PublicKey, 0, len(xpubs))
 	for _, xpub := range xpubs {
-		publicKey := xpub.PublicKey()
-		if pk, ok := publicKey.(ed25519.PublicKey); ok {
-			res = append(res, pk)
-		}
+		res = append(res, xpub.PublicKey())
 	}
 	return res
 }
