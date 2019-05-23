@@ -247,7 +247,9 @@ func DefaultFederationConfig() *FederationConfig {
 }
 
 func xpub(str string) (xpub chainkd.XPub) {
-	xpub.UnmarshalText([]byte(str))
+	if err := xpub.UnmarshalText([]byte(str)); err != nil {
+		log.Panicf("Fail converts a string to xpub")
+	}
 	return xpub
 }
 

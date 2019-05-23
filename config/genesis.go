@@ -15,7 +15,11 @@ import (
 
 func GenesisArguments(c *Config) (res *[32]byte) {
 	pubKeys := chainkd.XPubKeys(c.Federation.Xpubs)
-	fedpegScript, _ := vmutil.P2SPMultiSigProgram(pubKeys, c.Federation.Quorum)
+	fedpegScript, err := vmutil.P2SPMultiSigProgram(pubKeys, c.Federation.Quorum)
+	if err != nil {
+		log.Panicf("fail on decode genesis arguments for federation")
+	}
+
 	hasher := sha256.New()
 	hasher.Write(fedpegScript)
 	resSlice := hasher.Sum(nil)
