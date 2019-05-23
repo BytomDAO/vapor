@@ -438,11 +438,14 @@ func (m *Manager) FindByID(id string) (*Account, error) {
 	}
 
 	account := &Account{}
+	fmt.Println("FindByID account is:111", account)
 	fmt.Println("FindByID rawaccount is:", rawAccount, "====")
 	os.Stdout.Write(rawAccount)
 	fmt.Println("====")
 	if err := json.Unmarshal(rawAccount, account); err != nil {
 		fmt.Print("FindByID err: ", err)
+		fmt.Println("FindByID account is:222", account)
+		fmt.Println("FindByID account.XPubs is:333", account.XPubs)
 		return nil, err
 	}
 
