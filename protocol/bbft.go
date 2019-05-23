@@ -11,6 +11,7 @@ import (
 	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
+	"github.com/vapor/event"
 	"github.com/vapor/math/checked"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -31,13 +32,15 @@ type bbft struct {
 	consensusNodeManager *consensusNodeManager
 	orphanManage         *OrphanManage
 	signatureCache       *lru.Cache
+	eventDispatcher      *event.Dispatcher
 }
 
-func newBbft(store Store, blockIndex *state.BlockIndex, orphanManage *OrphanManage) *bbft {
+func newBbft(store Store, blockIndex *state.BlockIndex, orphanManage *OrphanManage, eventDispatcher *event.Dispatcher) *bbft {
 	return &bbft{
 		orphanManage:         orphanManage,
 		consensusNodeManager: newConsensusNodeManager(store, blockIndex),
 		signatureCache:       lru.New(maxSignatureCacheSize),
+		eventDispatcher:      eventDispatcher,
 	}
 }
 
