@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/vapor/config"
+
 	"github.com/vapor/blockchain/pseudohsm"
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/crypto/ed25519/chainkd"
@@ -213,9 +215,9 @@ func mockAccountManager(t *testing.T) *Manager {
 
 	testDB := dbm.NewDB("testdb", "memdb", dirPath)
 	dispatcher := event.NewDispatcher()
-
 	store := database.NewStore(testDB)
 	txPool := protocol.NewTxPool(store, dispatcher)
+	config.CommonConfig = config.DefaultConfig()
 	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
 		t.Fatal(err)
