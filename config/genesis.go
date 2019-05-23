@@ -1,26 +1,31 @@
 package config
 
 import (
+	"crypto"
 	"encoding/hex"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/consensus"
-	"github.com/vapor/crypto"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	vcrypto "github.com/vapor/crypto"
+	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/vm/vmutil"
 )
 
 func GenesisArguments(c *Config) []byte {
-	pubKeys := chainkd.XPubKeys(c.Federation.Xpubs)
-	fedpegScript, err := vmutil.P2SPMultiSigProgram(pubKeys, c.Federation.Quorum)
+	pubKeys := edchainkd.XPubKeys(c.Federation.Xpubs)
+	cryptoPub := make([]crypto.PublicKey, 0)
+	for _, pub := range pubKeys {
+		cryptoPub = append(cryptoPub, pub)
+	}
+	fedpegScript, err := vmutil.P2SPMultiSigProgram(cryptoPub, c.Federation.Quorum)
 	if err != nil {
 		log.Panicf("fail on decode genesis arguments for federation")
 	}
 
-	scriptHash := crypto.Sha256(fedpegScript)
+	scriptHash := vcrypto.Sha256(fedpegScript)
 
 	control, err := vmutil.P2WSHProgram(scriptHash)
 	if err != nil {

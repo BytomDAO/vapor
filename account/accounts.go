@@ -20,7 +20,6 @@ import (
 	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/crypto"
 	"github.com/vapor/crypto/csp"
-	"github.com/vapor/crypto/ed25519"
 	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/crypto/sha3pool"
 	dbm "github.com/vapor/database/leveldb"
@@ -694,11 +693,11 @@ func CreateCtrlProgram(account *Account, addrIdx uint64, change bool) (cp *CtrlP
 
 func createP2PKH(account *Account, path [][]byte) (*CtrlProgram, error) {
 	derivedXPubs := csp.DeriveXPubs(account.XPubs, path)
-	derivedPK := derivedXPubs[0].PublicKey()
 	pubHash := make([]byte, 0)
-	switch dpk := derivedPK.(type) {
-	case ed25519.PublicKey:
-		pubHash = crypto.Ripemd160(dpk)
+	switch dxpub := derivedXPubs[0].(type) {
+	case edchainkd.XPub:
+		derivedPK := dxpub.PublicKey()
+		pubHash = crypto.Ripemd160(derivedPK)
 	}
 
 	address, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.ActiveNetParams)

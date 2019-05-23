@@ -9,7 +9,7 @@ import (
 	"github.com/vapor/common"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/csp"
-	"github.com/vapor/crypto/ed25519"
+	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/encoding/json"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
@@ -335,10 +335,10 @@ func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.S
 
 	switch address.(type) {
 	case *common.AddressWitnessPubKeyHash:
-		derivedPK := derivedXPubs[0].PublicKey()
-		switch dpk := derivedPK.(type) {
-		case ed25519.PublicKey:
-			sigInst.WitnessComponents = append(sigInst.WitnessComponents, txbuilder.DataWitness([]byte(dpk)))
+		switch dxpub := derivedXPubs[0].(type) {
+		case edchainkd.XPub:
+			derivedPK := dxpub.PublicKey()
+			sigInst.WitnessComponents = append(sigInst.WitnessComponents, txbuilder.DataWitness([]byte(derivedPK)))
 		}
 
 	case *common.AddressWitnessScriptHash:
