@@ -306,20 +306,21 @@ func (b *bbft) checkDoubleSign(nodeOrder, blockHeight uint64, blockHash bc.Hash)
 }
 
 // SignBlock signing the block if current node is consensus node
-func (b *bbft) SignBlock(block *types.Block) error {
+func (b *bbft) SignBlock(block *types.Block) ([]byte, error) {
 	var xprv chainkd.XPrv
 	xpub := [64]byte(xprv.XPub())
 	node, err := b.consensusNodeManager.getConsensusNode(block.Height, hex.EncodeToString(xpub[:]))
 	if err != nil && err != errNotFoundConsensusNode {
-		return err
+		return nil, err
 	}
 
 	if node == nil {
-		return nil
+		return nil, nil
 	}
 
-	block.Witness[node.order] = xprv.Sign(block.Hash().Bytes())
-	return nil
+	signature := xprv.Sign(block.Hash().Bytes())
+	block.Witness[node.order] = signature
+	return signature, nil
 }
 
 // UpdateConsensusNodes used to update consensus node after each round of voting

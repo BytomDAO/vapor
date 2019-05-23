@@ -8,6 +8,7 @@ import (
 	"github.com/vapor/config"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/event"
 	"github.com/vapor/protocol/state"
 )
 
@@ -25,6 +26,7 @@ type Chain struct {
 	cond                 sync.Cond
 	bestNode             *state.BlockNode
 	bestIrreversibleNode *state.BlockNode
+	eventDispatcher      *event.Dispatcher
 }
 
 // NewChain returns a new Chain using store as the underlying storage.

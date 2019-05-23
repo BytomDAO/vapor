@@ -4,6 +4,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/errors"
+	"github.com/vapor/event"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
@@ -186,8 +187,15 @@ func (c *Chain) saveBlock(block *types.Block) error {
 		return errors.Sub(ErrBadBlock, err)
 	}
 
-	if err := c.bbft.SignBlock(block); err != nil {
+	signature, err := c.bbft.SignBlock(block)
+	if err != nil {
 		return errors.Sub(ErrBadBlock, err)
+	}
+
+	if len(signature) != 0 {
+		if err := c.txPool.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: block.Hash(), Signature: signature}); err != nil {
+			return err
+		}
 	}
 
 	bcBlock := types.MapBlock(block)
@@ -292,4 +300,21 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 		return false, c.reorganizeChain(bestNode)
 	}
 	return false, nil
+}
+
+func (c *Chain) processBlockSignature(signature, pubkey []byte, blockHeight uint64, blockHash *bc.Hash) error {
+	isBestIrreversible, err := c.bbft.ProcessBlockSignature(signature, pubkey, blockHeight, blockHash)
+	if err != nil {
+		return err
+	}
+
+	if isBestIrreversible {
+		bestIrreversibleNode := c.index.GetNode(blockHash)
+		if err := c.store.SaveChainNodeStatus(c.bestNode, bestIrreversibleNode); err != nil {
+			return err
+		}
+
+		c.bestIrreversibleNode = bestIrreversibleNode
+	}
+	return nil
 }
