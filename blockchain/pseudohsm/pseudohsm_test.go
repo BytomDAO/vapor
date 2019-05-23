@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/vapor/crypto/ed25519"
+	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
 )
 
@@ -96,22 +97,33 @@ func TestPseudoHSMChainKDKeys(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !xpub.XPub.Verify(msg, sig) {
-		t.Error("expected verify to succeed")
+	switch xpubkey := xpub.XPub.(type) {
+	case edchainkd.XPub:
+		if !xpubkey.Verify(msg, sig) {
+			t.Error("expected verify to succeed")
+		}
 	}
-	if xpub2.XPub.Verify(msg, sig) {
-		t.Error("expected verify with wrong pubkey to fail")
+
+	switch xpubkey2 := xpub2.XPub.(type) {
+	case edchainkd.XPub:
+		if xpubkey2.Verify(msg, sig) {
+			t.Error("expected verify with wrong pubkey to fail")
+		}
 	}
+
 	path := [][]byte{{3, 2, 6, 3, 8, 2, 7}}
 	sig, err = hsm.XSign(xpub2.XPub, path, msg, "nopassword")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if xpub2.XPub.Verify(msg, sig) {
-		t.Error("expected verify with underived pubkey of sig from derived privkey to fail")
-	}
-	if !xpub2.XPub.Derive(path).Verify(msg, sig) {
-		t.Error("expected verify with derived pubkey of sig from derived privkey to succeed")
+	switch xpubkey2 := xpub2.XPub.(type) {
+	case edchainkd.XPub:
+		if xpubkey2.Verify(msg, sig) {
+			t.Error("expected verify with underived pubkey of sig from derived privkey to fail")
+		}
+		if !xpubkey2.Derive(path).Verify(msg, sig) {
+			t.Error("expected verify with derived pubkey of sig from derived privkey to succeed")
+		}
 	}
 
 	xpubs := hsm.ListKeys()
@@ -154,28 +166,21 @@ func TestSignAndVerifyMessage(t *testing.T) {
 	}
 
 	path := [][]byte{{3, 2, 6, 3, 8, 2, 7}}
-	derivedXPub := xpub.XPub.Derive(path)
-
 	msg := "this is a test message"
 	sig, err := hsm.XSign(xpub.XPub, path, []byte(msg), "password")
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	dePublicKey := derivedXPub.PublicKey()
-	switch pubKey := dePublicKey.(type) {
-	case ed25519.PublicKey:
+	switch xpubkey := xpub.XPub.(type) {
+	case edchainkd.XPub:
+		derivedXPub := xpubkey.Derive(path)
 		// derivedXPub verify success
-		if !ed25519.Verify(pubKey, []byte(msg), sig) {
+		if !ed25519.Verify(derivedXPub.PublicKey(), []byte(msg), sig) {
 			t.Fatal("right derivedXPub verify sign failed")
 		}
-	}
 
-	roPublicKey := xpub.XPub.PublicKey()
-	switch pubKey := roPublicKey.(type) {
-	case ed25519.PublicKey:
 		// rootXPub verify failed
-		if ed25519.Verify(pubKey, []byte(msg), sig) {
+		if ed25519.Verify(xpubkey.PublicKey(), []byte(msg), sig) {
 			t.Fatal("right rootXPub verify derivedXPub sign succeed")
 		}
 	}

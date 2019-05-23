@@ -3,7 +3,9 @@ package csp
 
 import (
 	"crypto"
+	"fmt"
 	"io"
+	"reflect"
 
 	vcrypto "github.com/vapor/crypto"
 	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
@@ -30,14 +32,36 @@ func XPubKeys(xpubs []vcrypto.XPubKeyer) []crypto.PublicKey {
 	return res
 }
 
+// func DeriveXPubs(xpubs []vcrypto.XPubKeyer, path [][]byte) []vcrypto.XPubKeyer {
+// 	res := make([]vcrypto.XPubKeyer, 0, len(xpubs))
+// 	for _, xpub := range xpubs {
+// 		switch xpb := xpub.(type) {
+// 		case edchainkd.XPub:
+// 			d := xpb.Derive(path)
+// 			res = append(res, d)
+// 			fmt.Println("DeriveXPubs d is:", d)
+// 		}
+// 	}
+// 	fmt.Println("DeriveXPubs len(res) is:", len(res))
+// 	return res
+// }
+
 func DeriveXPubs(xpubs []vcrypto.XPubKeyer, path [][]byte) []vcrypto.XPubKeyer {
 	res := make([]vcrypto.XPubKeyer, 0, len(xpubs))
 	for _, xpub := range xpubs {
-		switch xpb := xpub.(type) {
-		case edchainkd.XPub:
+		fmt.Println("DeriveXPubs =====", reflect.TypeOf(xpubs[0]))
+		if xpb, ok := xpub.(edchainkd.XPub); ok {
 			d := xpb.Derive(path)
 			res = append(res, d)
+			fmt.Println("DeriveXPubs d is:", d)
 		}
+		// switch xpb := xpub.(type) {
+		// case edchainkd.XPub:
+		// 	d := xpb.Derive(path)
+		// 	res = append(res, d)
+		// 	fmt.Println("DeriveXPubs d is:", d)
+		// }
 	}
+	fmt.Println("DeriveXPubs len(res) is:", len(res))
 	return res
 }

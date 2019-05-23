@@ -16,6 +16,7 @@ import (
 	"github.com/vapor/consensus"
 	vcrypto "github.com/vapor/crypto"
 	"github.com/vapor/crypto/ed25519"
+	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
@@ -341,8 +342,12 @@ func getPubkey(account *account.Account, change bool, index uint64) (*crypto.Pub
 	if err != nil {
 		return nil, nil, err
 	}
-	derivedXPub := account.XPubs[0].Derive(rawPath)
-	pubkey := derivedXPub.PublicKey()
+	var pubkey crypto.PublicKey
+	switch xpub := account.XPubs[0].(type) {
+	case edchainkd.XPub:
+		derivedXPub := xpub.Derive(rawPath)
+		pubkey = derivedXPub.PublicKey()
+	}
 	var path []chainjson.HexBytes
 	for _, p := range rawPath {
 		path = append(path, chainjson.HexBytes(p))

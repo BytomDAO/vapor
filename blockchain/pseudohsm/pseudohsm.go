@@ -3,9 +3,7 @@ package pseudohsm
 
 import (
 	"bytes"
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -73,7 +71,6 @@ func (h *HSM) XCreate(alias string, auth string, language string) (*XPub, *strin
 		return nil, nil, err
 	}
 	h.cache.add(*xpub)
-	fmt.Println("XCreate xpub is:", xpub)
 	return xpub, mnemonic, err
 }
 
@@ -111,9 +108,7 @@ func (h *HSM) ImportKeyFromMnemonic(alias string, auth string, mnemonic string, 
 func (h *HSM) createKeyFromMnemonic(alias string, auth string, mnemonic string) (*XPub, error) {
 	// Generate a Bip32 HD wallet for the mnemonic and a user supplied password
 	seed := mnem.NewSeed(mnemonic, "")
-	fmt.Println("createKeyFromMnemonic seed is:", hex.EncodeToString(seed))
 	xprv, xpub, err := csp.NewXKeys(bytes.NewBuffer(seed))
-	fmt.Println("createKeyFromMnemonic xprv is: ", xprv, " xpub is: ", xpub)
 	if err != nil {
 		return nil, err
 	}
@@ -142,12 +137,10 @@ func (h *HSM) createChainKDKey(alias string, auth string, language string) (*XPu
 	if err != nil {
 		return nil, nil, err
 	}
-	fmt.Println("createChainKDKey mnemonic is:", mnemonic)
 	xpub, err := h.createKeyFromMnemonic(alias, auth, mnemonic)
 	if err != nil {
 		return nil, nil, err
 	}
-	fmt.Println("createChainKDKey xpub is:", xpub)
 	return xpub, &mnemonic, nil
 }
 

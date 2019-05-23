@@ -3,7 +3,6 @@ package chainkd
 import (
 	"encoding/hex"
 	"errors"
-	"fmt"
 )
 
 const (
@@ -41,7 +40,6 @@ func (xpub *XPub) UnmarshalText(inp []byte) error {
 		return ErrBadKeyStr
 	}
 	_, err := hex.Decode(xpub[:], inp)
-	fmt.Println("UnmarshalText is:", xpub)
 	return err
 }
 

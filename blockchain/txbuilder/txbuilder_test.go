@@ -12,10 +12,9 @@ import (
 
 	"github.com/vapor/common"
 	"github.com/vapor/consensus"
-	vcrypto "github.com/vapor/crypto"
+	"github.com/vapor/crypto"
 	"github.com/vapor/crypto/csp"
-	"github.com/vapor/crypto/ed25519"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
@@ -227,16 +226,17 @@ func TestCreateTxByUtxo(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pub := xpub.PublicKey()
 	pubHash := make([]byte, 0)
-	switch pubKey := pub.(type) {
-	case ed25519.PublicKey:
-		pubHash = vcrypto.Ripemd160(pubKey)
-	}
-
-	program, err := vmutil.P2WPKHProgram([]byte(pubHash))
-	if err != nil {
-		t.Fatal(err)
+	program := make([]byte, 0)
+	pub := make([]byte, 0)
+	switch xpubkey := xpub.(type) {
+	case edchainkd.XPub:
+		pub = xpubkey.PublicKey()
+		pubHash = crypto.Ripemd160(pub)
+		program, err = vmutil.P2WPKHProgram([]byte(pubHash))
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	address, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.ActiveNetParams)
@@ -278,12 +278,12 @@ func TestCreateTxByUtxo(t *testing.T) {
 	}
 
 	h := tpl.Hash(0).Byte32()
-	sig := xprv.Sign(h[:])
-	data := make([]byte, 0)
-	switch pubKey := pub.(type) {
-	case ed25519.PublicKey:
-		data = []byte(pubKey)
+	sig := make([]byte, 0)
+	switch xprvkey := xprv.(type) {
+	case edchainkd.XPrv:
+		sig = xprvkey.Sign(h[:])
 	}
+	data := []byte(pub)
 
 	// Test with more signatures than required, in correct order
 	tpl.SigningInstructions = []*SigningInstruction{{
@@ -312,7 +312,7 @@ func TestAddContractArgs(t *testing.T) {
 	}
 
 	// TODO: it should use map[string]string adapt several algorithm
-	var xpub chainkd.XPub
+	var xpub edchainkd.XPub
 	copy(xpub[:], hexXpub)
 
 	rawTxSig := RawTxSigArgument{RootXPub: xpub, Path: []chainjson.HexBytes{{1, 1, 0, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0, 0}}}

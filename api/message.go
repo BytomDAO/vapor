@@ -12,6 +12,7 @@ import (
 	vcrypto "github.com/vapor/crypto"
 	"github.com/vapor/crypto/csp"
 	"github.com/vapor/crypto/ed25519"
+	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 	chainjson "github.com/vapor/encoding/json"
 )
 
@@ -68,25 +69,21 @@ func (a *API) verifyMessage(ctx context.Context, ins struct {
 		return NewErrorResponse(err)
 	}
 
-	derivedPK := ins.DerivedXPub.PublicKey()
-	pubHash := make([]byte, 20)
-	switch dpk := derivedPK.(type) {
-	case ed25519.PublicKey:
-		pubHash = crypto.Ripemd160(dpk)
-	}
-	addressPubHash, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.ActiveNetParams)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
+	switch dXPub := ins.DerivedXPub.(type) {
+	case edchainkd.XPub:
+		derivedPK := dXPub.PublicKey()
+		pubHash := crypto.Ripemd160(derivedPK)
+		addressPubHash, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.ActiveNetParams)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
 
-	address := addressPubHash.EncodeAddress()
-	if address != strings.TrimSpace(ins.Address) {
-		return NewSuccessResponse(VerifyMsgResp{VerifyResult: false})
-	}
+		address := addressPubHash.EncodeAddress()
+		if address != strings.TrimSpace(ins.Address) {
+			return NewSuccessResponse(VerifyMsgResp{VerifyResult: false})
+		}
 
-	switch dpk := derivedPK.(type) {
-	case ed25519.PublicKey:
-		if ed25519.Verify(dpk, ins.Message, sig) {
+		if ed25519.Verify(derivedPK, ins.Message, sig) {
 			return NewSuccessResponse(VerifyMsgResp{VerifyResult: true})
 		}
 	}

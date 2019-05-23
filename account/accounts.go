@@ -4,7 +4,6 @@ package account
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"reflect"
 	"sort"
 	"strings"
@@ -180,12 +179,7 @@ func CreateAccount(xpubs []crypto.XPubKeyer, quorum int, alias string, acctIndex
 }
 
 func (m *Manager) saveAccount(account *Account, updateIndex bool) error {
-	fmt.Println("saveAccount account.XPubs is:", account)
 	rawAccount, err := json.Marshal(account)
-	///////
-	fmt.Println("rawaccount is:", rawAccount)
-	os.Stdout.Write(rawAccount)
-	///////
 	if err != nil {
 		return ErrMarshalAccount
 	}
@@ -290,7 +284,6 @@ func (m *Manager) CreateAddress(accountID string, change bool) (cp *CtrlProgram,
 
 	account, err := m.FindByID(accountID)
 	if err != nil {
-		fmt.Println("CreateAddress 22", err)
 		return nil, err
 	}
 
@@ -437,14 +430,7 @@ func (m *Manager) FindByID(id string) (*Account, error) {
 	}
 
 	account := &Account{}
-	fmt.Println("FindByID account is:111", account)
-	fmt.Println("FindByID rawaccount is:", rawAccount, "====")
-	os.Stdout.Write(rawAccount)
-	fmt.Println("====")
 	if err := json.Unmarshal(rawAccount, account); err != nil {
-		fmt.Print("FindByID err: ", err)
-		fmt.Println("FindByID account is:222", account)
-		fmt.Println("FindByID account.XPubs is:333", account.XPubs)
 		return nil, err
 	}
 
@@ -692,13 +678,20 @@ func CreateCtrlProgram(account *Account, addrIdx uint64, change bool) (cp *CtrlP
 }
 
 func createP2PKH(account *Account, path [][]byte) (*CtrlProgram, error) {
+	fmt.Println("createP2PKH account.XPubs is:", account.XPubs)
 	derivedXPubs := csp.DeriveXPubs(account.XPubs, path)
+	fmt.Println("createP2PKH derivedXPubs is:", derivedXPubs)
 	pubHash := make([]byte, 0)
+	fmt.Println("createP2PKH len(derivedXPubs) is:", len(derivedXPubs))
+	if len(derivedXPubs) == 0 {
+		return nil, errors.New("no derived XPub.")
+	}
 	switch dxpub := derivedXPubs[0].(type) {
 	case edchainkd.XPub:
 		derivedPK := dxpub.PublicKey()
 		pubHash = crypto.Ripemd160(derivedPK)
 	}
+	fmt.Println("createP2PKH ...")
 
 	address, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.ActiveNetParams)
 	if err != nil {
