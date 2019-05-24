@@ -49,7 +49,7 @@ type Switch interface {
 	Peers() *p2p.PeerSet
 }
 
-//SyncManager Sync Manager is responsible for the business layer information synchronization
+//ChainManager is responsible for the business layer information synchronization
 type ChainManager struct {
 	sw          Switch
 	chain       Chain
@@ -65,7 +65,7 @@ type ChainManager struct {
 	txMsgSub        *event.Subscription
 }
 
-//NewSyncManager create a sync manager
+//NewChainManager create a chain sync manager.
 func NewChainManager(config *cfg.Config, sw Switch, chain Chain, txPool *core.TxPool, dispatcher *event.Dispatcher, peers *peers.PeerSet) (*ChainManager, error) {
 	manager := &ChainManager{
 		sw:              sw,

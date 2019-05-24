@@ -20,7 +20,7 @@ import (
 
 const (
 	maxKnownTxs           = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
-	maxKnownSigns         = 1024  // Maximum block signs to keep in the known list (prevent DOS)
+	maxKnownSignatures    = 1024  // Maximum block signatures to keep in the known list (prevent DOS)
 	maxKnownBlocks        = 1024  // Maximum block hashes to keep in the known list (prevent DOS)
 	defaultBanThreshold   = uint32(100)
 	maxFilterAddressSize  = 50
@@ -75,26 +75,26 @@ type PeerInfo struct {
 
 type Peer struct {
 	BasePeer
-	mtx         sync.RWMutex
-	services    consensus.ServiceFlag
-	height      uint64
-	hash        *bc.Hash
-	banScore    trust.DynamicBanScore
-	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
-	knownBlocks *set.Set // Set of block hashes known to be known by this peer
-	knownSigns  *set.Set // Set of block signs known to be known by this peer
-	knownStatus uint64   // Set of chain status known to be known by this peer
-	filterAdds  *set.Set // Set of addresses that the spv node cares about.
+	mtx             sync.RWMutex
+	services        consensus.ServiceFlag
+	height          uint64
+	hash            *bc.Hash
+	banScore        trust.DynamicBanScore
+	knownTxs        *set.Set // Set of transaction hashes known to be known by this peer
+	knownBlocks     *set.Set // Set of block hashes known to be known by this peer
+	knownSignatures *set.Set // Set of block signatures known to be known by this peer
+	knownStatus     uint64   // Set of chain status known to be known by this peer
+	filterAdds      *set.Set // Set of addresses that the spv node cares about.
 }
 
 func newPeer(basePeer BasePeer) *Peer {
 	return &Peer{
-		BasePeer:    basePeer,
-		services:    basePeer.ServiceFlag(),
-		knownTxs:    set.New(),
-		knownBlocks: set.New(),
-		knownSigns:  set.New(),
-		filterAdds:  set.New(),
+		BasePeer:        basePeer,
+		services:        basePeer.ServiceFlag(),
+		knownTxs:        set.New(),
+		knownBlocks:     set.New(),
+		knownSignatures: set.New(),
+		filterAdds:      set.New(),
 	}
 }
 
@@ -247,14 +247,14 @@ func (p *Peer) markNewStatus(height uint64) {
 	p.knownStatus = height
 }
 
-func (p *Peer) markSign(sign []byte) {
+func (p *Peer) markSign(signature []byte) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
-	for p.knownSigns.Size() >= maxKnownSigns {
-		p.knownSigns.Pop()
+	for p.knownSignatures.Size() >= maxKnownSignatures {
+		p.knownSignatures.Pop()
 	}
-	p.knownSigns.Add(sign)
+	p.knownSignatures.Add(signature)
 }
 
 func (p *Peer) markTransaction(hash *bc.Hash) {
@@ -280,13 +280,13 @@ func (ps *PeerSet) PeersWithoutBlock(hash bc.Hash) []string {
 	return peers
 }
 
-func (ps *PeerSet) PeersWithoutSign(sign []byte) []string {
+func (ps *PeerSet) PeersWithoutSign(signature []byte) []string {
 	ps.mtx.RLock()
 	defer ps.mtx.RUnlock()
 
 	var peers []string
 	for _, peer := range ps.peers {
-		if !peer.knownSigns.Has(sign) {
+		if !peer.knownSignatures.Has(signature) {
 			peers = append(peers, peer.ID())
 		}
 	}
@@ -570,12 +570,12 @@ func (ps *PeerSet) MarkBlock(peerID string, hash *bc.Hash) {
 	peer.MarkBlock(hash)
 }
 
-func (ps *PeerSet) MarkBlockSign(peerID string, sign []byte) {
+func (ps *PeerSet) MarkBlockSignature(peerID string, signature []byte) {
 	peer := ps.GetPeer(peerID)
 	if peer == nil {
 		return
 	}
-	peer.markSign(sign)
+	peer.markSign(signature)
 }
 
 func (ps *PeerSet) MarkStatus(peerID string, height uint64) {

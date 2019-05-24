@@ -14,8 +14,8 @@ import (
 
 //Consensus msg byte
 const (
-	BlockSignByte    = byte(0x10)
-	BlockProposeByte = byte(0x11)
+	BlockSignatureByte = byte(0x10)
+	BlockProposeByte   = byte(0x11)
 )
 
 //BlockchainMessage is a generic message for this reactor.
@@ -25,8 +25,8 @@ type ConsensusMessage interface {
 
 var _ = wire.RegisterInterface(
 	struct{ ConsensusMessage }{},
-	wire.ConcreteType{&BlockSignMessage{}, BlockSignByte},
-	wire.ConcreteType{&BlockProposeMessage{}, BlockProposeByte},
+	wire.ConcreteType{&BlockSignatureMsg{}, BlockSignatureByte},
+	wire.ConcreteType{&BlockProposeMsg{}, BlockProposeByte},
 )
 
 //decodeMessage decode msg
@@ -41,71 +41,70 @@ func decodeMessage(bz []byte) (msgType byte, msg ConsensusMessage, err error) {
 	return
 }
 
-type BlockSignMessage struct {
-	BlockID [32]byte
-	Height  uint64
-	Sign    []byte
-	Pubkey  []byte
+type BlockSignatureMsg struct {
+	BlockID   [32]byte
+	Height    uint64
+	Signature []byte
+	PeerID    [32]byte
 }
 
-//NewBlockSignMessage construct new mined block msg
-func NewBlockSignMessage(blockID [32]byte, height uint64, sign []byte, pubkey []byte) *BlockSignMessage {
-	return &BlockSignMessage{BlockID: blockID, Height: height, Sign: sign, Pubkey: pubkey}
+//NewBlockSignatureMessage construct new mined block msg
+func NewBlockSignatureMsg(blockID [32]byte, height uint64, signature []byte, peerId [32]byte) *BlockSignatureMsg {
+	return &BlockSignatureMsg{BlockID: blockID, Height: height, Signature: signature, PeerID: peerId}
 }
 
-func (bs *BlockSignMessage) String() string {
-	return fmt.Sprintf("{block_hash: %s,block_height: %d,sign:%s,pubkey:%s}", hex.EncodeToString(bs.BlockID[:]), bs.Height, hex.EncodeToString(bs.Sign), hex.EncodeToString(bs.Pubkey))
+func (bs *BlockSignatureMsg) String() string {
+	return fmt.Sprintf("{block_hash: %s,block_height: %d,signature:%s,peerID:%s}", hex.EncodeToString(bs.BlockID[:]), bs.Height, hex.EncodeToString(bs.Signature), hex.EncodeToString(bs.PeerID[:]))
 }
 
-type BlockSignBroadcastMsg struct {
-	sign      []byte
-	msg       *BlockSignMessage
+type SignatureBroadcastMsg struct {
+	signature []byte
+	msg       *BlockSignatureMsg
 	transChan byte
 }
 
-func NewBlockSignBroadcastMsg(blockID [32]byte, height uint64, sign []byte, pubkey []byte, transChan byte) *BlockSignBroadcastMsg {
-	msg := NewBlockSignMessage(blockID, height, sign, pubkey)
-	return &BlockSignBroadcastMsg{sign: sign, msg: msg, transChan: transChan}
+func NewSignatureBroadcastMsg(blockID [32]byte, height uint64, signature []byte, pubkey [32]byte, transChan byte) *SignatureBroadcastMsg {
+	msg := NewBlockSignatureMsg(blockID, height, signature, pubkey)
+	return &SignatureBroadcastMsg{signature: signature, msg: msg, transChan: transChan}
 }
 
-func (m *BlockSignBroadcastMsg) GetChan() byte {
-	return m.transChan
+func (s *SignatureBroadcastMsg) GetChan() byte {
+	return s.transChan
 }
 
-func (m *BlockSignBroadcastMsg) GetMsg() interface{} {
-	return struct{ ConsensusMessage }{m.msg}
+func (s *SignatureBroadcastMsg) GetMsg() interface{} {
+	return struct{ ConsensusMessage }{s.msg}
 }
 
-func (m *BlockSignBroadcastMsg) MsgString() string {
-	return m.msg.String()
+func (s *SignatureBroadcastMsg) MsgString() string {
+	return s.msg.String()
 }
 
-func (m *BlockSignBroadcastMsg) MarkSendRecord(ps *peers.PeerSet, peers []string) {
+func (s *SignatureBroadcastMsg) MarkSendRecord(ps *peers.PeerSet, peers []string) {
 	for _, peer := range peers {
-		ps.MarkBlockSign(peer, m.sign)
+		ps.MarkBlockSignature(peer, s.signature)
 	}
 }
 
-func (m *BlockSignBroadcastMsg) FilterTargetPeers(ps *peers.PeerSet) []string {
-	//TODO: SPV NODE FILTER
-	return ps.PeersWithoutSign(m.sign)
+func (m *SignatureBroadcastMsg) FilterTargetPeers(ps *peers.PeerSet) []string {
+	return ps.PeersWithoutSign(m.signature)
 }
 
-type BlockProposeMessage struct {
+type BlockProposeMsg struct {
 	RawBlock []byte
 }
 
-//NewBlockProposeMessage construct new mined block msg
-func NewBlockProposeMessage(block *types.Block) (*BlockProposeMessage, error) {
+//NewBlockProposeMsg construct new block propose msg
+func NewBlockProposeMsg(block *types.Block) (*BlockProposeMsg, error) {
 	rawBlock, err := block.MarshalText()
 	if err != nil {
 		return nil, err
 	}
-	return &BlockProposeMessage{RawBlock: rawBlock}, nil
+	return &BlockProposeMsg{RawBlock: rawBlock}, nil
 }
 
-//GetMineBlock get mine block from msg
-func (m *BlockProposeMessage) GetProposeBlock() (*types.Block, error) {
+//GetProposeBlock get propose block from msg
+func (m *BlockProposeMsg) GetProposeBlock() (*types.Block, error) {
 	block := &types.Block{}
 	if err := block.UnmarshalText(m.RawBlock); err != nil {
 		return nil, err
@@ -113,7 +112,7 @@ func (m *BlockProposeMessage) GetProposeBlock() (*types.Block, error) {
 	return block, nil
 }
 
-func (bp *BlockProposeMessage) String() string {
+func (bp *BlockProposeMsg) String() string {
 	block, err := bp.GetProposeBlock()
 	if err != nil {
 		return "{err: wrong message}"
@@ -122,42 +121,41 @@ func (bp *BlockProposeMessage) String() string {
 	return fmt.Sprintf("{block_height: %d, block_hash: %s}", block.Height, blockHash.String())
 }
 
-type BlockProposeBroadcastMsg struct {
+type ProposeBroadcastMsg struct {
 	block     *types.Block
-	msg       *BlockProposeMessage
+	msg       *BlockProposeMsg
 	transChan byte
 }
 
-func NewBlockProposeBroadcastMsg(block *types.Block, transChan byte) (*BlockProposeBroadcastMsg, error) {
-	msg, err := NewBlockProposeMessage(block)
+func NewBlockProposeBroadcastMsg(block *types.Block, transChan byte) (*ProposeBroadcastMsg, error) {
+	msg, err := NewBlockProposeMsg(block)
 	if err != nil {
 		return nil, err
 	}
-	return &BlockProposeBroadcastMsg{block: block, msg: msg, transChan: transChan}, nil
+	return &ProposeBroadcastMsg{block: block, msg: msg, transChan: transChan}, nil
 }
 
-func (m *BlockProposeBroadcastMsg) GetChan() byte {
-	return m.transChan
+func (p *ProposeBroadcastMsg) GetChan() byte {
+	return p.transChan
 }
 
-func (m *BlockProposeBroadcastMsg) GetMsg() interface{} {
-	return struct{ ConsensusMessage }{m.msg}
+func (p *ProposeBroadcastMsg) GetMsg() interface{} {
+	return struct{ ConsensusMessage }{p.msg}
 }
 
-func (m *BlockProposeBroadcastMsg) MsgString() string {
-	return m.msg.String()
+func (p *ProposeBroadcastMsg) MsgString() string {
+	return p.msg.String()
 }
 
-func (m *BlockProposeBroadcastMsg) MarkSendRecord(ps *peers.PeerSet, peers []string) {
-	hash := m.block.Hash()
-	height := m.block.Height
+func (p *ProposeBroadcastMsg) MarkSendRecord(ps *peers.PeerSet, peers []string) {
+	hash := p.block.Hash()
+	height := p.block.Height
 	for _, peer := range peers {
 		ps.MarkBlock(peer, &hash)
 		ps.MarkStatus(peer, height)
 	}
 }
 
-func (m *BlockProposeBroadcastMsg) FilterTargetPeers(ps *peers.PeerSet) []string {
-	//TODO: SPV NODE FILTER
-	return ps.PeersWithoutBlock(m.block.Hash())
+func (p *ProposeBroadcastMsg) FilterTargetPeers(ps *peers.PeerSet) []string {
+	return ps.PeersWithoutBlock(p.block.Hash())
 }

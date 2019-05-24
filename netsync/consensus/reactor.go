@@ -59,7 +59,7 @@ func (cr *ConsensusReactor) RemovePeer(peer *p2p.Peer, reason interface{}) {
 	cr.mgr.RemovePeer(peer.Key)
 }
 
-// Receive implements Reactor by handling 4 types of messages (look below).
+// Receive implements Reactor by handling messages.
 func (cr *ConsensusReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 	msgType, msg, err := decodeMessage(msgBytes)
 	if err != nil {

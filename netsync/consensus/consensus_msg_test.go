@@ -6,14 +6,15 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/tendermint/go-wire"
+
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
 
 var _ = wire.RegisterInterface(
 	struct{ ConsensusMessage }{},
-	wire.ConcreteType{&BlockSignMessage{}, BlockSignByte},
-	wire.ConcreteType{&BlockProposeMessage{}, BlockProposeByte},
+	wire.ConcreteType{&BlockSignatureMsg{}, BlockSignatureByte},
+	wire.ConcreteType{&BlockProposeMsg{}, BlockProposeByte},
 )
 
 func TestDecodeMessage(t *testing.T) {
@@ -22,16 +23,16 @@ func TestDecodeMessage(t *testing.T) {
 		msgType byte
 	}{
 		{
-			msg: &BlockSignMessage{
-				BlockID: [32]byte{0x01},
-				Height:  uint64(100),
-				Sign:    []byte{0x00},
-				Pubkey:  []byte{0x01},
+			msg: &BlockSignatureMsg{
+				BlockID:   [32]byte{0x01},
+				Height:    uint64(100),
+				Signature: []byte{0x00},
+				PeerID:    [32]byte{0x01},
 			},
-			msgType: BlockSignByte,
+			msgType: BlockSignatureByte,
 		},
 		{
-			msg: &BlockProposeMessage{
+			msg: &BlockProposeMsg{
 				RawBlock: []byte{0x01, 0x02},
 			},
 			msgType: BlockProposeByte,
@@ -53,21 +54,21 @@ func TestDecodeMessage(t *testing.T) {
 }
 
 func TestBlockSignBroadcastMsg(t *testing.T) {
-	blockSignMsg := &BlockSignMessage{
-		BlockID: [32]byte{0x01},
-		Height:  uint64(100),
-		Sign:    []byte{0x00},
-		Pubkey:  []byte{0x01},
+	blockSignMsg := &BlockSignatureMsg{
+		BlockID:   [32]byte{0x01},
+		Height:    uint64(100),
+		Signature: []byte{0x00},
+		PeerID:    [32]byte{0x01},
 	}
-	blockSignBroadcastMsg := NewBlockSignBroadcastMsg(blockSignMsg.BlockID, blockSignMsg.Height, blockSignMsg.Sign, blockSignMsg.Pubkey, ConsensusChannel)
+	blockSignBroadcastMsg := NewSignatureBroadcastMsg(blockSignMsg.BlockID, blockSignMsg.Height, blockSignMsg.Signature, blockSignMsg.PeerID, ConsensusChannel)
 
 	binMsg := wire.BinaryBytes(blockSignBroadcastMsg.GetMsg())
 	gotMsgType, gotMsg, err := decodeMessage(binMsg)
 	if err != nil {
 		t.Fatalf("decode Message err %s", err)
 	}
-	if gotMsgType != BlockSignByte {
-		t.Fatalf("decode Message type err. got:%d want:%d", gotMsgType, BlockSignByte)
+	if gotMsgType != BlockSignatureByte {
+		t.Fatalf("decode Message type err. got:%d want:%d", gotMsgType, BlockSignatureByte)
 	}
 	if !reflect.DeepEqual(gotMsg, blockSignMsg) {
 		t.Fatalf("decode Message err. got:%s\n want:%s", spew.Sdump(gotMsg), spew.Sdump(blockSignMsg))
@@ -75,7 +76,7 @@ func TestBlockSignBroadcastMsg(t *testing.T) {
 }
 
 func TestBlockProposeBroadcastMsg(t *testing.T) {
-	blockProposedmsg, _ := NewBlockProposeMessage(testBlock)
+	blockProposedmsg, _ := NewBlockProposeMsg(testBlock)
 
 	BlockProposeBroadcastMsg, _ := NewBlockProposeBroadcastMsg(testBlock, ConsensusChannel)
 
@@ -104,8 +105,8 @@ var testBlock = &types.Block{
 	},
 }
 
-func TestBlockProposeMessage(t *testing.T) {
-	blockMsg, err := NewBlockProposeMessage(testBlock)
+func TestBlockProposeMsg(t *testing.T) {
+	blockMsg, err := NewBlockProposeMsg(testBlock)
 	if err != nil {
 		t.Fatalf("create new mine block msg err:%s", err)
 	}
@@ -136,21 +137,21 @@ func TestBlockProposeMessage(t *testing.T) {
 	}
 }
 
-func TestBlockSignMessage(t *testing.T) {
-	msg := &BlockSignMessage{
-		BlockID: [32]byte{0x01},
-		Height:  uint64(100),
-		Sign:    []byte{0x00},
-		Pubkey:  []byte{0x01},
+func TestBlockSignatureMsg(t *testing.T) {
+	msg := &BlockSignatureMsg{
+		BlockID:   [32]byte{0x01},
+		Height:    uint64(100),
+		Signature: []byte{0x00},
+		PeerID:    [32]byte{0x01},
 	}
 
-	gotMsg := NewBlockSignMessage(msg.BlockID, msg.Height, msg.Sign, msg.Pubkey)
+	gotMsg := NewBlockSignatureMsg(msg.BlockID, msg.Height, msg.Signature, msg.PeerID)
 
 	if !reflect.DeepEqual(gotMsg, msg) {
-		t.Fatalf("test block sign message err. got:%s\n want:%s", spew.Sdump(gotMsg), spew.Sdump(msg))
+		t.Fatalf("test block signature message err. got:%s\n want:%s", spew.Sdump(gotMsg), spew.Sdump(msg))
 	}
-	wantString := "{block_hash: 0100000000000000000000000000000000000000000000000000000000000000,block_height: 100,sign:00,pubkey:01}"
+	wantString := "{block_hash: 0100000000000000000000000000000000000000000000000000000000000000,block_height: 100,signature:00,peerID:0100000000000000000000000000000000000000000000000000000000000000}"
 	if gotMsg.String() != wantString {
-		t.Fatalf("test block sign message err. got string:%s\n want string:%s", gotMsg.String(), wantString)
+		t.Fatalf("test block signature message err. got string:%s\n want string:%s", gotMsg.String(), wantString)
 	}
 }

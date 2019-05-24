@@ -12,11 +12,6 @@ import (
 	"github.com/vapor/p2p/connection"
 )
 
-var (
-	errProtocolHandshakeTimeout = errors.New("Protocol handshake timeout")
-	errStatusRequest            = errors.New("Status request error")
-)
-
 //ProtocolReactor handles new coming protocol message.
 type ProtocolReactor struct {
 	p2p.BaseReactor

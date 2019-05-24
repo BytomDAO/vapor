@@ -345,34 +345,34 @@ func TestNextCheckpoint(t *testing.T) {
 		},
 		{
 			checkPoints: []consensus.Checkpoint{
-				{10000, bc.Hash{V0: 1}},
+				{Height: 10000, Hash: bc.Hash{V0: 1}},
 			},
 			bestHeight: 5000,
-			want:       &consensus.Checkpoint{10000, bc.Hash{V0: 1}},
+			want:       &consensus.Checkpoint{Height: 10000, Hash: bc.Hash{V0: 1}},
 		},
 		{
 			checkPoints: []consensus.Checkpoint{
-				{10000, bc.Hash{V0: 1}},
-				{20000, bc.Hash{V0: 2}},
-				{30000, bc.Hash{V0: 3}},
+				{Height: 10000, Hash: bc.Hash{V0: 1}},
+				{Height: 20000, Hash: bc.Hash{V0: 2}},
+				{Height: 30000, Hash: bc.Hash{V0: 3}},
 			},
 			bestHeight: 15000,
-			want:       &consensus.Checkpoint{20000, bc.Hash{V0: 2}},
+			want:       &consensus.Checkpoint{Height: 20000, Hash: bc.Hash{V0: 2}},
 		},
 		{
 			checkPoints: []consensus.Checkpoint{
-				{10000, bc.Hash{V0: 1}},
-				{20000, bc.Hash{V0: 2}},
-				{30000, bc.Hash{V0: 3}},
+				{Height: 10000, Hash: bc.Hash{V0: 1}},
+				{Height: 20000, Hash: bc.Hash{V0: 2}},
+				{Height: 30000, Hash: bc.Hash{V0: 3}},
 			},
 			bestHeight: 10000,
-			want:       &consensus.Checkpoint{20000, bc.Hash{V0: 2}},
+			want:       &consensus.Checkpoint{Height: 20000, Hash: bc.Hash{V0: 2}},
 		},
 		{
 			checkPoints: []consensus.Checkpoint{
-				{10000, bc.Hash{V0: 1}},
-				{20000, bc.Hash{V0: 2}},
-				{30000, bc.Hash{V0: 3}},
+				{Height: 10000, Hash: bc.Hash{V0: 1}},
+				{Height: 20000, Hash: bc.Hash{V0: 2}},
+				{Height: 30000, Hash: bc.Hash{V0: 3}},
 			},
 			bestHeight: 35000,
 			want:       nil,

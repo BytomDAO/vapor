@@ -25,7 +25,7 @@ type blockFetcher struct {
 	msgSet     map[bc.Hash]*blockMsg
 }
 
-//NewBlockFetcher creates a block fetcher to retrieve blocks of the new mined.
+//NewBlockFetcher creates a block fetcher to retrieve blocks of the new propose.
 func newBlockFetcher(chain Chain, peers *peers.PeerSet) *blockFetcher {
 	f := &blockFetcher{
 		chain:      chain,
@@ -69,7 +69,7 @@ func (f *blockFetcher) add(msg *blockMsg) {
 			"module":       logModule,
 			"block height": msg.block.Height,
 			"block hash":   blockHash.String(),
-		}).Debug("blockFetcher receive mine block")
+		}).Debug("blockFetcher receive propose block")
 	}
 }
 

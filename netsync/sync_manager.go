@@ -34,7 +34,7 @@ type SyncManager struct {
 	peers        *peers.PeerSet
 }
 
-// CreateSyncManager create sync manager and set switch.
+// NewSyncManager create sync manager and set switch.
 func NewSyncManager(config *cfg.Config, chain Chain, txPool *core.TxPool, dispatcher *event.Dispatcher) (*SyncManager, error) {
 	sw, err := p2p.NewSwitch(config)
 	if err != nil {
