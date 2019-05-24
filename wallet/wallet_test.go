@@ -53,7 +53,10 @@ func TestWalletVersion(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer os.RemoveAll("temp")
+	defer func() {
+		testDB.Close()
+		os.RemoveAll("temp")
+	}()
 
 	dispatcher := event.NewDispatcher()
 	w := mockWallet(testDB, nil, nil, nil, dispatcher, false)
@@ -113,14 +116,18 @@ func TestWalletUpdate(t *testing.T) {
 	}
 	defer os.RemoveAll(dirPath)
 
+	config.CommonConfig = config.DefaultConfig()
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer os.RemoveAll("temp")
+	defer func() {
+		testDB.Close()
+		os.RemoveAll("temp")
+	}()
 
 	store := database.NewStore(testDB)
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
 
-	chain, err := protocol.NewChain(store, txPool)
+	chain, err := protocol.NewChain(store, txPool, dispatcher)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -206,13 +213,17 @@ func TestRescanWallet(t *testing.T) {
 	}
 	defer os.RemoveAll(dirPath)
 
+	config.CommonConfig = config.DefaultConfig()
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer os.RemoveAll("temp")
+	defer func() {
+		testDB.Close()
+		os.RemoveAll("temp")
+	}()
 
 	store := database.NewStore(testDB)
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
-	chain, err := protocol.NewChain(store, txPool)
+	chain, err := protocol.NewChain(store, txPool, dispatcher)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -253,15 +264,18 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(dirPath)
-
+	config.CommonConfig = config.DefaultConfig()
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
+	defer func() {
+		testDB.Close()
+		os.RemoveAll(dirPath)
+	}()
 
 	store := database.NewStore(testDB)
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
 
-	chain, err := protocol.NewChain(store, txPool)
+	chain, err := protocol.NewChain(store, txPool, dispatcher)
 	if err != nil {
 		t.Fatal(err)
 	}

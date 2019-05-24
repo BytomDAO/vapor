@@ -10,6 +10,7 @@ import (
 )
 
 func TestCalcReorganizeNodes(t *testing.T) {
+	config.CommonConfig = config.DefaultConfig()
 	c := &Chain{index: state.NewBlockIndex()}
 	header := config.GenesisBlock().BlockHeader
 	initNode, err := state.NewBlockNode(&header, nil)
@@ -55,6 +56,7 @@ func TestCalcReorganizeNodes(t *testing.T) {
 }
 
 func TestEdgeCalcReorganizeNodes(t *testing.T) {
+	config.CommonConfig = config.DefaultConfig()
 	header := config.GenesisBlock().BlockHeader
 	initNode, err := state.NewBlockNode(&header, nil)
 	if err != nil {
