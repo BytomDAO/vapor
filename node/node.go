@@ -2,6 +2,7 @@ package node
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"net"
 	"net/http"
@@ -22,7 +23,6 @@ import (
 	"github.com/vapor/blockchain/txfeed"
 	cfg "github.com/vapor/config"
 	"github.com/vapor/consensus"
-	"github.com/vapor/consensus/federation"
 	"github.com/vapor/database"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/env"
@@ -61,17 +61,12 @@ type Node struct {
 func NewNode(config *cfg.Config) *Node {
 	ctx := context.Background()
 
-	if err := federation.CheckFedConfig(); err == nil {
-		fed := federation.GetFederation()
-		log.WithFields(log.Fields{
-			"module":             logModule,
-			"fed_xpubs":          fed.XPubs,
-			"fed_quorum":         fed.Quorum,
-			"fed_controlprogram": fed.ControlProgram,
-		}).Info()
-	} else {
-		log.Fatal("Error:", err)
-	}
+	log.WithFields(log.Fields{
+		"module":             logModule,
+		"fed_xpubs":          config.Federation.Xpubs,
+		"fed_quorum":         config.Federation.Quorum,
+		"fed_controlprogram": hex.EncodeToString(cfg.GenesisArguments(config)),
+	}).Info()
 
 	if err := lockDataDirectory(config); err != nil {
 		cmn.Exit("Error: " + err.Error())
