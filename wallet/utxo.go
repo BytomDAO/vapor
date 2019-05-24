@@ -261,7 +261,7 @@ func txOutToUtxos(tx *types.Tx, statusFail bool, vaildHeight uint64) []*account.
 			}
 
 		default:
-			log.WithFields(log.Fields{"module": logModule}).Error("txOutToUtxos fail on get bcOut")
+			log.WithFields(log.Fields{"module": logModule}).Warn("txOutToUtxos fail on get bcOut")
 			continue
 		}
 
