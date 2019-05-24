@@ -76,6 +76,8 @@ func TestCreateAccount(t *testing.T) {
 	fmt.Println("found is:", found, "found xpub:", found.XPubs)
 	if !testutil.DeepEqual(account, found) {
 		t.Errorf("expected account %v to be recorded as %v", account, found)
+		//////////
+		t.Errorf("expected type of account %v to be recorded as %v", reflect.TypeOf(account.XPubs[0]), reflect.TypeOf(found.XPubs[0]))
 	}
 }
 

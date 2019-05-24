@@ -3,6 +3,7 @@ package chainkd
 import (
 	"encoding/hex"
 	"errors"
+	"fmt"
 )
 
 const (
@@ -59,7 +60,17 @@ func (xprv XPrv) String() string {
 	return hex.EncodeToString(xprv.Bytes())
 }
 
-// func (xpub *XPub) UnmarshalJSON(b []byte) error {
+func NewXPub(str string) (xpub *XPub, err error) {
+	if len(str) != 2*extendedPublicKeySize {
+		fmt.Println("str length is:", len(str))
+		fmt.Println("str is:", str)
+		return nil, errors.New("string length is invalid.")
+	}
+	if xpubBytes, err := hex.DecodeString(str); err != nil {
+		return nil, err
+	} else {
+		copy(xpub[:], xpubBytes[:])
+	}
 
-// 	return nil
-// }
+	return xpub, nil
+}

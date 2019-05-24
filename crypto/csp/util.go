@@ -49,12 +49,17 @@ func XPubKeys(xpubs []vcrypto.XPubKeyer) []crypto.PublicKey {
 func DeriveXPubs(xpubs []vcrypto.XPubKeyer, path [][]byte) []vcrypto.XPubKeyer {
 	res := make([]vcrypto.XPubKeyer, 0, len(xpubs))
 	for _, xpub := range xpubs {
-		fmt.Println("DeriveXPubs =====", reflect.TypeOf(xpubs[0]))
-		if xpb, ok := xpub.(edchainkd.XPub); ok {
-			d := xpb.Derive(path)
+		fmt.Println("DeriveXPubs type xpubs:", reflect.TypeOf(xpubs), "type xpubs[0]:", reflect.TypeOf(xpubs[0]))
+		fmt.Println("xpubs[0] is:", xpubs[0])
+		newxpub, err := edchainkd.NewXPub(reflect.ValueOf(xpub).String())
+		if err != nil {
+			fmt.Println("csp DeriveXPubs err:", err)
+		} else {
+			d := newxpub.Derive(path)
 			res = append(res, d)
 			fmt.Println("DeriveXPubs d is:", d)
 		}
+
 		// switch xpb := xpub.(type) {
 		// case edchainkd.XPub:
 		// 	d := xpb.Derive(path)
