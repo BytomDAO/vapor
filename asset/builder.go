@@ -3,13 +3,11 @@ package asset
 import (
 	"context"
 	stdjson "encoding/json"
-	"fmt"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/consensus/federation"
-	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
