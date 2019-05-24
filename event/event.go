@@ -27,9 +27,29 @@ var (
 
 type NewMinedBlockEvent struct{ Block types.Block }
 
-type BlockSignatureEvent struct { 
+type BlockSignatureEvent struct {
 	BlockHash bc.Hash
-	Signature []byte 
+	Signature []byte
+}
+
+//NewProposedBlockEvent the proposed block event which needs to broadcast.
+type NewProposedBlockEvent struct{ Block types.Block }
+
+//BlockSignEvent the signature which got from net.
+type BlockSignEvent struct {
+	PeerID  []byte
+	BlockID [32]byte
+	Height  uint64
+	Sign    []byte
+	Pubkey  []byte
+}
+
+//SendBlockSignEvent the signature event which needs to broadcast.
+type SendBlockSignEvent struct {
+	BlockID [32]byte
+	Height  uint64
+	Sign    []byte
+	Pubkey  []byte
 }
 
 // TypeMuxEvent is a time-tagged notification pushed to subscribers.

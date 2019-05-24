@@ -8,6 +8,7 @@ import (
 
 	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
+	"github.com/vapor/netsync/peers"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
@@ -27,7 +28,6 @@ var (
 	errAppendHeaders  = errors.New("fail to append list due to order dismatch")
 	errRequestTimeout = errors.New("request timeout")
 	errPeerDropped    = errors.New("Peer dropped")
-	errPeerMisbehave  = errors.New("peer is misbehave")
 )
 
 type blockMsg struct {
@@ -47,9 +47,9 @@ type headersMsg struct {
 
 type blockKeeper struct {
 	chain Chain
-	peers *peerSet
+	peers *peers.PeerSet
 
-	syncPeer         *peer
+	syncPeer         *peers.Peer
 	blockProcessCh   chan *blockMsg
 	blocksProcessCh  chan *blocksMsg
 	headersProcessCh chan *headersMsg
@@ -57,7 +57,7 @@ type blockKeeper struct {
 	headerList *list.List
 }
 
-func newBlockKeeper(chain Chain, peers *peerSet) *blockKeeper {
+func newBlockKeeper(chain Chain, peers *peers.PeerSet) *blockKeeper {
 	bk := &blockKeeper{
 		chain:            chain,
 		peers:            peers,
@@ -117,7 +117,7 @@ func (bk *blockKeeper) fastBlockSync(checkPoint *consensus.Checkpoint) error {
 	lastHeader := bk.headerList.Back().Value.(*types.BlockHeader)
 	for ; lastHeader.Hash() != checkPoint.Hash; lastHeader = bk.headerList.Back().Value.(*types.BlockHeader) {
 		if lastHeader.Height >= checkPoint.Height {
-			return errors.Wrap(errPeerMisbehave, "peer is not in the checkpoint branch")
+			return errors.Wrap(peers.ErrPeerMisbehave, "peer is not in the checkpoint branch")
 		}
 
 		lastHash := lastHeader.Hash()
@@ -127,7 +127,7 @@ func (bk *blockKeeper) fastBlockSync(checkPoint *consensus.Checkpoint) error {
 		}
 
 		if len(headers) == 0 {
-			return errors.Wrap(errPeerMisbehave, "requireHeaders return empty list")
+			return errors.Wrap(peers.ErrPeerMisbehave, "requireHeaders return empty list")
 		}
 
 		if err := bk.appendHeaderList(headers); err != nil {
@@ -144,7 +144,7 @@ func (bk *blockKeeper) fastBlockSync(checkPoint *consensus.Checkpoint) error {
 		}
 
 		if len(blocks) == 0 {
-			return errors.Wrap(errPeerMisbehave, "requireBlocks return empty list")
+			return errors.Wrap(peers.ErrPeerMisbehave, "requireBlocks return empty list")
 		}
 
 		for _, block := range blocks {
@@ -271,7 +271,7 @@ func (bk *blockKeeper) regularBlockSync(wantHeight uint64) error {
 }
 
 func (bk *blockKeeper) requireBlock(height uint64) (*types.Block, error) {
-	if ok := bk.syncPeer.getBlockByHeight(height); !ok {
+	if ok := bk.syncPeer.GetBlockByHeight(height); !ok {
 		return nil, errPeerDropped
 	}
 
@@ -295,7 +295,7 @@ func (bk *blockKeeper) requireBlock(height uint64) (*types.Block, error) {
 }
 
 func (bk *blockKeeper) requireBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*types.Block, error) {
-	if ok := bk.syncPeer.getBlocks(locator, stopHash); !ok {
+	if ok := bk.syncPeer.GetBlocks(locator, stopHash); !ok {
 		return nil, errPeerDropped
 	}
 
@@ -316,7 +316,7 @@ func (bk *blockKeeper) requireBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*
 }
 
 func (bk *blockKeeper) requireHeaders(locator []*bc.Hash, stopHash *bc.Hash) ([]*types.BlockHeader, error) {
-	if ok := bk.syncPeer.getHeaders(locator, stopHash); !ok {
+	if ok := bk.syncPeer.GetHeaders(locator, stopHash); !ok {
 		return nil, errPeerDropped
 	}
 
@@ -348,19 +348,19 @@ func (bk *blockKeeper) resetHeaderState() {
 
 func (bk *blockKeeper) startSync() bool {
 	checkPoint := bk.nextCheckpoint()
-	peer := bk.peers.bestPeer(consensus.SFFastSync | consensus.SFFullNode)
+	peer := bk.peers.BestPeer(consensus.SFFastSync | consensus.SFFullNode)
 	if peer != nil && checkPoint != nil && peer.Height() >= checkPoint.Height {
 		bk.syncPeer = peer
 		if err := bk.fastBlockSync(checkPoint); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on fastBlockSync")
-			bk.peers.errorHandler(peer.ID(), err)
+			bk.peers.ErrorHandler(peer.ID(), err)
 			return false
 		}
 		return true
 	}
 
 	blockHeight := bk.chain.BestBlockHeight()
-	peer = bk.peers.bestPeer(consensus.SFFullNode)
+	peer = bk.peers.BestPeer(consensus.SFFullNode)
 	if peer != nil && peer.Height() > blockHeight {
 		bk.syncPeer = peer
 		targetHeight := blockHeight + maxBlockPerMsg
@@ -370,7 +370,7 @@ func (bk *blockKeeper) startSync() bool {
 
 		if err := bk.regularBlockSync(targetHeight); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on regularBlockSync")
-			bk.peers.errorHandler(peer.ID(), err)
+			bk.peers.ErrorHandler(peer.ID(), err)
 			return false
 		}
 		return true
@@ -393,7 +393,7 @@ func (bk *blockKeeper) syncWorker() {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on syncWorker get best block")
 		}
 
-		if err = bk.peers.broadcastNewStatus(block); err != nil {
+		if err = bk.peers.BroadcastNewStatus(block); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on syncWorker broadcast new status")
 		}
 	}

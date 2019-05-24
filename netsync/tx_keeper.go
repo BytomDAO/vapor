@@ -21,8 +21,8 @@ type txSyncMsg struct {
 	txs    []*types.Tx
 }
 
-func (sm *SyncManager) syncTransactions(peerID string) {
-	pending := sm.txPool.GetTransactions()
+func (cm *ChainManager) syncTransactions(peerID string) {
+	pending := cm.txPool.GetTransactions()
 	if len(pending) == 0 {
 		return
 	}
@@ -31,13 +31,13 @@ func (sm *SyncManager) syncTransactions(peerID string) {
 	for i, batch := range pending {
 		txs[i] = batch.Tx
 	}
-	sm.txSyncCh <- &txSyncMsg{peerID, txs}
+	cm.txSyncCh <- &txSyncMsg{peerID, txs}
 }
 
-func (sm *SyncManager) txBroadcastLoop() {
+func (cm *ChainManager) txBroadcastLoop() {
 	for {
 		select {
-		case obj, ok := <-sm.txMsgSub.Chan():
+		case obj, ok := <-cm.txMsgSub.Chan():
 			if !ok {
 				log.WithFields(log.Fields{"module": logModule}).Warning("mempool tx msg subscription channel closed")
 				return
@@ -50,12 +50,12 @@ func (sm *SyncManager) txBroadcastLoop() {
 			}
 
 			if ev.TxMsg.MsgType == core.MsgNewTx {
-				if err := sm.peers.broadcastTx(ev.TxMsg.Tx); err != nil {
+				if err := cm.peers.BroadcastTx(ev.TxMsg.Tx); err != nil {
 					log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on broadcast new tx.")
 					continue
 				}
 			}
-		case <-sm.quitSync:
+		case <-cm.quitSync:
 			return
 		}
 	}
@@ -65,14 +65,14 @@ func (sm *SyncManager) txBroadcastLoop() {
 // connection. When a new peer appears, we relay all currently pending
 // transactions. In order to minimise egress bandwidth usage, we send
 // the transactions in small packs to one peer at a time.
-func (sm *SyncManager) txSyncLoop() {
+func (cm *ChainManager) txSyncLoop() {
 	pending := make(map[string]*txSyncMsg)
 	sending := false            // whether a send is active
 	done := make(chan error, 1) // result of the send
 
 	// send starts a sending a pack of transactions from the sync.
 	send := func(msg *txSyncMsg) {
-		peer := sm.peers.getPeer(msg.peerID)
+		peer := cm.peers.GetPeer(msg.peerID)
 		if peer == nil {
 			delete(pending, msg.peerID)
 			return
@@ -100,9 +100,9 @@ func (sm *SyncManager) txSyncLoop() {
 		}).Debug("txSyncLoop sending transactions")
 		sending = true
 		go func() {
-			err := peer.sendTransactions(sendTxs)
+			err := peer.SendTransactions(sendTxs)
 			if err != nil {
-				sm.peers.removePeer(msg.peerID)
+				cm.peers.RemovePeer(msg.peerID)
 			}
 			done <- err
 		}()
@@ -125,7 +125,7 @@ func (sm *SyncManager) txSyncLoop() {
 
 	for {
 		select {
-		case msg := <-sm.txSyncCh:
+		case msg := <-cm.txSyncCh:
 			pending[msg.peerID] = msg
 			if !sending {
 				send(msg)
