@@ -70,7 +70,6 @@ func NewXPub(str string) (*XPub, error) {
 	if xpubBytes, err := hex.DecodeString(str); err != nil {
 		return nil, err
 	} else {
-
 		fmt.Println("NewXPub xpub is:", xpub)
 		fmt.Println("NewXPub xpubBytes is:", xpubBytes)
 		copy(xpub[:], xpubBytes[:])

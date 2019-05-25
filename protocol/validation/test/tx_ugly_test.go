@@ -637,7 +637,11 @@ func mockCtrlProgram(txData types.TxData, insts []*signingInst) {
 			if inp.ControlProgram != nil {
 				continue
 			}
-			acc := &account.Account{Signer: &signers.Signer{KeyIndex: insts[i].keyIndex, DeriveRule: signers.BIP0044, XPubs: []vcrypto.XPubKeyer{xPubs}, Quorum: insts[i].quorum}}
+			xpubers := make([]vcrypto.XPubKeyer, len(xPubs))
+			for i, xpub := range xPubs {
+				xpubers[i] = xpub
+			}
+			acc := &account.Account{Signer: &signers.Signer{KeyIndex: insts[i].keyIndex, DeriveRule: signers.BIP0044, XPubs: xpubers, Quorum: insts[i].quorum}}
 			program, err := account.CreateCtrlProgram(acc, insts[i].ctrlProgramIndex, insts[i].change)
 			if err != nil {
 				panic(err)
@@ -673,7 +677,11 @@ func mockSignTx(tx *types.Tx, insts []*signingInst) {
 				derivePK := childPrv.XPub()
 				arguments = append(arguments, derivePK.PublicKey())
 			} else {
-				derivedXPubs := csp.DeriveXPubs([]vcrypto.XPubKeyer{xPubs}, path)
+				xpubers := make([]vcrypto.XPubKeyer, len(xPubs))
+				for i, xpub := range xPubs {
+					xpubers[i] = xpub
+				}
+				derivedXPubs := csp.DeriveXPubs(xpubers, path)
 				derivedPKs := csp.XPubKeys(derivedXPubs)
 				script, err := vmutil.P2SPMultiSigProgram(derivedPKs, inst.quorum)
 				if err != nil {

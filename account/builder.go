@@ -329,9 +329,13 @@ func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.S
 	if err != nil {
 		return nil, nil, err
 	}
-
 	sigInst.AddRawWitnessKeys(signer.XPubs, path, signer.Quorum)
 	derivedXPubs := csp.DeriveXPubs(signer.XPubs, path)
+
+	/////////
+	if len(derivedXPubs) == 0 {
+		panic("UtxoToInputs derivedXPubs is nil.")
+	}
 
 	switch address.(type) {
 	case *common.AddressWitnessPubKeyHash:

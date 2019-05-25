@@ -295,7 +295,7 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 	}
 	fmt.Println("TestMemPoolTxQueryLoop xpub1 is:", xpub1)
 
-	edXPub := new(edchainkd.XPub)
+	edXPub := edchainkd.XPub{}
 	edXPubKey, _ := hex.DecodeString("e0072a38408cfe4b70d322f8ed2d8acecab41615d2f091ddcd0d0622a8003de915569bd3e316d7e3c44ebebd21bfcc84f6428e60dbf17bef34f2e04a62f6cd2b")
 	copy(edXPub[:], edXPubKey[:])
 	xpub2 := pseudohsm.XPub{
@@ -303,12 +303,16 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 		XPub:  edXPub,
 		File:  "",
 	}
+	xpubers := make([]vcrypto.XPubKeyer, 1)
+	xpubers[0] = xpub2.XPub
 
-	testAccount, err := accountManager.Create([]vcrypto.XPubKeyer{xpub2.XPub}, 1, "testAccount", signers.BIP0044)
+	testAccount, err := accountManager.Create(xpubers, 1, "testAccount", signers.BIP0044)
 	if err != nil {
 		t.Fatal(err)
 	}
 	fmt.Println("TestMemPoolTxQueryLoop testAccount is:", testAccount)
+	fmt.Println("TestMemPoolTxQueryLoop testAccount xpubs is:", testAccount.XPubs[0])
+	fmt.Println("TestMemPoolTxQueryLoop testAccount xpubs type is:", reflect.TypeOf(testAccount.XPubs[0]))
 
 	controlProg, err := accountManager.CreateAddress(testAccount.ID, false)
 	if err != nil {
