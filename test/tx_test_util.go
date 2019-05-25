@@ -12,6 +12,7 @@ import (
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/common"
 	"github.com/vapor/consensus"
+	vcrypto "github.com/vapor/crypto"
 	"github.com/vapor/crypto/csp"
 	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/crypto/sha3pool"
@@ -53,9 +54,12 @@ func (g *TxGenerator) createKey(alias string, auth string) error {
 
 func (g *TxGenerator) getPubkey(keyAlias string) *edchainkd.XPub {
 	pubKeys := g.Hsm.ListKeys()
-	for i, key := range pubKeys {
+	for _, key := range pubKeys {
 		if key.Alias == keyAlias {
-			return &pubKeys[i].XPub
+			switch pbk := key.XPub.(type) {
+			case edchainkd.XPub:
+				return &pbk
+			}
 		}
 	}
 	return nil
@@ -71,7 +75,11 @@ func (g *TxGenerator) createAccount(name string, keys []string, quorum int) erro
 		}
 		xpubs = append(xpubs, *xpub)
 	}
-	_, err := g.AccountManager.Create(xpubs, quorum, name, signers.BIP0044)
+	xpubers := make([]vcrypto.XPubKeyer, len(xpubs))
+	for i, xpub := range xpubs {
+		xpubers[i] = xpub
+	}
+	_, err := g.AccountManager.Create(xpubers, quorum, name, signers.BIP0044)
 	return err
 }
 
@@ -304,8 +312,11 @@ func SignInstructionFor(input *types.SpendInput, db dbm.DB, signer *signers.Sign
 	case *common.AddressWitnessPubKeyHash:
 		sigInst.AddRawWitnessKeys(signer.XPubs, path, signer.Quorum)
 		derivedXPubs := csp.DeriveXPubs(signer.XPubs, path)
-		derivedPK := derivedXPubs[0].PublicKey()
-		sigInst.WitnessComponents = append(sigInst.WitnessComponents, txbuilder.DataWitness([]byte(derivedPK)))
+		switch dxpub := derivedXPubs[0].(type) {
+		case edchainkd.XPub:
+			derivedPK := dxpub.PublicKey()
+			sigInst.WitnessComponents = append(sigInst.WitnessComponents, txbuilder.DataWitness([]byte(derivedPK)))
+		}
 
 	case *common.AddressWitnessScriptHash:
 		sigInst.AddRawWitnessKeys(signer.XPubs, path, signer.Quorum)

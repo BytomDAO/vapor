@@ -8,6 +8,7 @@ import (
 	"github.com/vapor/account"
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/consensus"
+	vcrypto "github.com/vapor/crypto"
 	"github.com/vapor/crypto/csp"
 	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/protocol/bc"
@@ -636,7 +637,7 @@ func mockCtrlProgram(txData types.TxData, insts []*signingInst) {
 			if inp.ControlProgram != nil {
 				continue
 			}
-			acc := &account.Account{Signer: &signers.Signer{KeyIndex: insts[i].keyIndex, DeriveRule: signers.BIP0044, XPubs: xPubs, Quorum: insts[i].quorum}}
+			acc := &account.Account{Signer: &signers.Signer{KeyIndex: insts[i].keyIndex, DeriveRule: signers.BIP0044, XPubs: []vcrypto.XPubKeyer{xPubs}, Quorum: insts[i].quorum}}
 			program, err := account.CreateCtrlProgram(acc, insts[i].ctrlProgramIndex, insts[i].change)
 			if err != nil {
 				panic(err)
@@ -672,7 +673,7 @@ func mockSignTx(tx *types.Tx, insts []*signingInst) {
 				derivePK := childPrv.XPub()
 				arguments = append(arguments, derivePK.PublicKey())
 			} else {
-				derivedXPubs := csp.DeriveXPubs(xPubs, path)
+				derivedXPubs := csp.DeriveXPubs([]vcrypto.XPubKeyer{xPubs}, path)
 				derivedPKs := csp.XPubKeys(derivedXPubs)
 				script, err := vmutil.P2SPMultiSigProgram(derivedPKs, inst.quorum)
 				if err != nil {

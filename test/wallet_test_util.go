@@ -11,6 +11,7 @@ import (
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/pseudohsm"
 	"github.com/vapor/blockchain/signers"
+	vcrypto "github.com/vapor/crypto"
 	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/event"
@@ -135,7 +136,11 @@ func (ctx *walletTestContext) getPubkey(keyAlias string) *edchainkd.XPub {
 	pubKeys := ctx.Wallet.Hsm.ListKeys()
 	for i, key := range pubKeys {
 		if key.Alias == keyAlias {
-			return &pubKeys[i].XPub
+			switch xpub := pubKeys[i].XPub.(type) {
+			case edchainkd.XPub:
+				return &xpub
+			}
+
 		}
 	}
 	return nil
@@ -164,7 +169,11 @@ func (ctx *walletTestContext) createAccount(name string, keys []string, quorum i
 		}
 		xpubs = append(xpubs, *xpub)
 	}
-	_, err := ctx.Wallet.AccountMgr.Create(xpubs, quorum, name, signers.BIP0044)
+	xpubers := make([]vcrypto.XPubKeyer, len(xpubs))
+	for i, xpub := range xpubs {
+		xpubers[i] = xpub
+	}
+	_, err := ctx.Wallet.AccountMgr.Create(xpubers, quorum, name, signers.BIP0044)
 	return err
 }
 

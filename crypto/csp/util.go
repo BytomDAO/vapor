@@ -51,21 +51,21 @@ func DeriveXPubs(xpubs []vcrypto.XPubKeyer, path [][]byte) []vcrypto.XPubKeyer {
 	for _, xpub := range xpubs {
 		fmt.Println("DeriveXPubs type xpubs:", reflect.TypeOf(xpubs), "type xpubs[0]:", reflect.TypeOf(xpubs[0]))
 		fmt.Println("xpubs[0] is:", xpubs[0])
-		newxpub, err := edchainkd.NewXPub(reflect.ValueOf(xpub).String())
-		if err != nil {
-			fmt.Println("csp DeriveXPubs err:", err)
-		} else {
-			d := newxpub.Derive(path)
+		switch xpb := xpub.(type) {
+		case edchainkd.XPub:
+			d := xpb.Derive(path)
 			res = append(res, d)
 			fmt.Println("DeriveXPubs d is:", d)
+		default:
+			newxpub, err := edchainkd.NewXPub(reflect.ValueOf(xpub).String())
+			if err != nil {
+				fmt.Println("csp DeriveXPubs err:", err)
+			} else {
+				d := newxpub.Derive(path)
+				res = append(res, d)
+				fmt.Println("DeriveXPubs d is:", d)
+			}
 		}
-
-		// switch xpb := xpub.(type) {
-		// case edchainkd.XPub:
-		// 	d := xpb.Derive(path)
-		// 	res = append(res, d)
-		// 	fmt.Println("DeriveXPubs d is:", d)
-		// }
 	}
 	fmt.Println("DeriveXPubs len(res) is:", len(res))
 	return res
