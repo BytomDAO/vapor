@@ -60,8 +60,9 @@ func (xprv XPrv) String() string {
 	return hex.EncodeToString(xprv.Bytes())
 }
 
-func NewXPub(str string) (xpub *XPub, err error) {
-	if len(str) != 2*extendedPublicKeySize {
+func NewXPub(str string) (*XPub, error) {
+	xpub := new(XPub)
+	if len(str) != 2*64 {
 		fmt.Println("str length is:", len(str))
 		fmt.Println("str is:", str)
 		return nil, errors.New("string length is invalid.")
@@ -69,8 +70,10 @@ func NewXPub(str string) (xpub *XPub, err error) {
 	if xpubBytes, err := hex.DecodeString(str); err != nil {
 		return nil, err
 	} else {
+
+		fmt.Println("NewXPub xpub is:", xpub)
+		fmt.Println("NewXPub xpubBytes is:", xpubBytes)
 		copy(xpub[:], xpubBytes[:])
 	}
-
 	return xpub, nil
 }

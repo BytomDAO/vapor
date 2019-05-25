@@ -62,18 +62,20 @@ func TestCreateAccountWithSpaceTrimed(t *testing.T) {
 
 func TestCreateAccount(t *testing.T) {
 	m := mockAccountManager(t)
-	xpubs := []vcrypto.XPubKeyer{testutil.TestXPub}
-	account, err := m.Create(xpubs, 1, "test-alias", signers.BIP0044)
+	// xpubs := []vcrypto.XPubKeyer{testutil.TestXPub}
+	xpubers := make([]vcrypto.XPubKeyer, 1)
+	xpubers[0] = testutil.TestXPub
+	account, err := m.Create(xpubers, 1, "test-alias", signers.BIP0044)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
-	fmt.Println("account is:", account, "account xpub:", account.XPubs)
+	fmt.Println("TestCreateAccount account is:", account, "account xpub:", account.XPubs, "type of xpubs:", reflect.TypeOf(account.XPubs[0]))
 
 	found, err := m.FindByID(account.ID)
 	if err != nil {
 		t.Errorf("unexpected error %v", err)
 	}
-	fmt.Println("found is:", found, "found xpub:", found.XPubs)
+	fmt.Println("TestCreateAccount found is:", found, "found xpub:", found.XPubs, "type of xpubs:", reflect.TypeOf(found.XPubs[0]))
 	if !testutil.DeepEqual(account, found) {
 		t.Errorf("expected account %v to be recorded as %v", account, found)
 		//////////
