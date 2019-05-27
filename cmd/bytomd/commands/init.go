@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"encoding/json"
 	"os"
 	"path"
 
@@ -36,5 +37,25 @@ func initFiles(cmd *cobra.Command, args []string) {
 		cfg.EnsureRoot(config.RootDir, "solonet")
 	}
 
+	fedFile := config.FederationFile()
+	if _, err := os.Stat(fedFile); !os.IsNotExist(err) {
+		log.WithFields(log.Fields{"module": logModule, "config": fedFile}).Info("Already exists federation file.")
+		return
+	}
+
+	if err := exportFederationFile(fedFile); err != nil {
+		log.WithFields(log.Fields{"module": logModule, "config": fedFile, "error": err}).Info("exportFederationFile failed.")
+		return
+	}
+
 	log.WithFields(log.Fields{"module": logModule, "config": configFilePath}).Info("Initialized bytom")
+}
+
+func exportFederationFile(fedFile string) error {
+	file, err := os.Open(fedFile)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	return json.NewEncoder(file).Encode(config.Federation)
 }
