@@ -3,7 +3,8 @@ option go_package = "storage";
 package chain.core.txdb.internal.storage;
 
 message UtxoEntry {
-  bool   isCoinBase  = 1;
-  uint64 blockHeight = 2;
-  bool   spent       = 3;
+  bool   isCoinBase     = 1;
+  uint64 blockHeight    = 2;
+  bool   spent          = 3;
+  string mainchainOutID = 4;
 }

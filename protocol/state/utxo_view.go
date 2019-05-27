@@ -78,7 +78,7 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFa
 		if block != nil && len(block.Transactions) > 0 && block.Transactions[0].ID == tx.ID {
 			isCoinbase = true
 		}
-		view.Entries[*id] = storage.NewUtxoEntry(isCoinbase, block.Height, false)
+		view.Entries[*id] = storage.NewUtxoEntry(isCoinbase, block.Height, false, "")
 	}
 	return nil
 }
@@ -127,7 +127,7 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 			return errors.New("try to revert an unspent utxo")
 		}
 		if !ok {
-			view.Entries[prevout] = storage.NewUtxoEntry(false, 0, false)
+			view.Entries[prevout] = storage.NewUtxoEntry(false, 0, false, "")
 			continue
 		}
 		entry.UnspendOutput()
@@ -154,7 +154,7 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 			continue
 		}
 
-		view.Entries[*id] = storage.NewUtxoEntry(false, 0, true)
+		view.Entries[*id] = storage.NewUtxoEntry(false, 0, true, "")
 	}
 	return nil
 }
