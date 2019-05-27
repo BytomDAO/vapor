@@ -21,11 +21,12 @@ import (
 const logModule = "leveldb"
 
 var (
-	blockStoreKey     = []byte("blockStore")
-	blockPrefix       = []byte("B:")
-	blockHeaderPrefix = []byte("BH:")
-	txStatusPrefix    = []byte("BTS:")
-	voteResultPrefix  = []byte("VR:")
+	blockStoreKey      = []byte("blockStore")
+	blockPrefix        = []byte("B:")
+	blockHeaderPrefix  = []byte("BH:")
+	txStatusPrefix     = []byte("BTS:")
+	mainchainOutPrefix = []byte("MCO:")
+	voteResultPrefix   = []byte("VR:")
 )
 
 func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
@@ -61,6 +62,11 @@ func calcBlockHeaderKey(height uint64, hash *bc.Hash) []byte {
 
 func calcTxStatusKey(hash *bc.Hash) []byte {
 	return append(txStatusPrefix, hash.Bytes()...)
+}
+
+// TODO: maybe use pointer?
+func calcMainchainOutputKey(outputID bc.Hash) []byte {
+	return append(mainchainOutPrefix, outputID.Bytes()...)
 }
 
 func calcVoteResultKey(seq uint64) []byte {
@@ -269,16 +275,17 @@ func (s *Store) SaveChainNodeStatus(bestNode, irreversibleNode *state.BlockNode)
 	return nil
 }
 
-// saveVoteResult save mainchain output id in case of double spending
+// TODO: what if in 1 tx?!
+// saveMainchainOutputIDs save mainchain output id in case of double spending
 func saveMainchainOutputIDs(batch dbm.Batch, mainchainOutMap map[bc.Hash]bool) error {
-	// for _, vote := range voteMap {
-	// 	bytes, err := json.Marshal(vote)
-	// 	if err != nil {
-	// 		return err
-	// 	}
+	for outputID, output := range mainchainOutMap {
+		bytes, err := json.Marshal(output)
+		if err != nil {
+			return err
+		}
 
-	// 	batch.Set(calcVoteResultKey(vote.Seq), bytes)
-	// }
+		batch.Set(calcMainchainOutputKey(outputID), bytes)
+	}
 	return nil
 }
 
