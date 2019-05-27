@@ -36,5 +36,16 @@ func initFiles(cmd *cobra.Command, args []string) {
 		cfg.EnsureRoot(config.RootDir, "solonet")
 	}
 
+	fedFile := config.FederationFile()
+	if _, err := os.Stat(fedFile); !os.IsNotExist(err) {
+		log.WithFields(log.Fields{"module": logModule, "config": fedFile}).Info("Already exists federation file.")
+		return
+	}
+
+	if err := cfg.ExportFederationFile(fedFile, config); err != nil {
+		log.WithFields(log.Fields{"module": logModule, "config": fedFile, "error": err}).Info("exportFederationFile failed.")
+		return
+	}
+
 	log.WithFields(log.Fields{"module": logModule, "config": configFilePath}).Info("Initialized bytom")
 }
