@@ -224,9 +224,13 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 }
 
 // SaveChainStatus save the core's newest status && delete old status
-func (s *Store) SaveChainStatus(node, irreversibleNode *state.BlockNode, view *state.UtxoViewpoint, voteMap map[uint64]*state.VoteResult) error {
+func (s *Store) SaveChainStatus(node, irreversibleNode *state.BlockNode, view *state.UtxoViewpoint, mainchainOutMap map[bc.Hash]bool, voteMap map[uint64]*state.VoteResult) error {
 	batch := s.db.NewBatch()
 	if err := saveUtxoView(batch, view); err != nil {
+		return err
+	}
+
+	if err := saveMainchainOutputIDs(batch, mainchainOutMap); err != nil {
 		return err
 	}
 
@@ -262,6 +266,19 @@ func (s *Store) SaveChainNodeStatus(bestNode, irreversibleNode *state.BlockNode)
 	}
 
 	s.db.Set(blockStoreKey, bytes)
+	return nil
+}
+
+// saveVoteResult save mainchain output id in case of double spending
+func saveMainchainOutputIDs(batch dbm.Batch, mainchainOutMap map[bc.Hash]bool) error {
+	// for _, vote := range voteMap {
+	// 	bytes, err := json.Marshal(vote)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+
+	// 	batch.Set(calcVoteResultKey(vote.Seq), bytes)
+	// }
 	return nil
 }
 

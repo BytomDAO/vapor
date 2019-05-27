@@ -81,7 +81,8 @@ func (c *Chain) initChainStatus() error {
 	if err != nil {
 		return err
 	}
-	return c.store.SaveChainStatus(node, node, utxoView, map[uint64]*state.VoteResult{})
+	mainchainOutMap := make(map[bc.Hash]bool)
+	return c.store.SaveChainStatus(node, node, utxoView, mainchainOutMap, map[uint64]*state.VoteResult{})
 }
 
 // BestBlockHeight returns the current height of the blockchain.
@@ -110,8 +111,8 @@ func (c *Chain) InMainChain(hash bc.Hash) bool {
 }
 
 // This function must be called with mu lock in above level
-func (c *Chain) setState(node *state.BlockNode, irreversibleNode *state.BlockNode, view *state.UtxoViewpoint, voteMap map[uint64]*state.VoteResult) error {
-	if err := c.store.SaveChainStatus(node, irreversibleNode, view, voteMap); err != nil {
+func (c *Chain) setState(node *state.BlockNode, irreversibleNode *state.BlockNode, view *state.UtxoViewpoint, mainchainOutMap map[bc.Hash]bool, voteMap map[uint64]*state.VoteResult) error {
+	if err := c.store.SaveChainStatus(node, irreversibleNode, view, mainchainOutMap, voteMap); err != nil {
 		return err
 	}
 
