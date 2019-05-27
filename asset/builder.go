@@ -59,7 +59,7 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 	fed := federation.GetFederation()
 	tplIn.AddRawWitnessKeys(fed.XPubs, fed.Path(), fed.Quorum)
 
-	// TODO: ?
+	// TODO: if signer == nil ?
 	if a.Arguments != nil {
 		if err := txbuilder.AddContractArgs(tplIn, a.Arguments); err != nil {
 			return err
