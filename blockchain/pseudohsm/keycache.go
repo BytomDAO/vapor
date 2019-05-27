@@ -74,6 +74,7 @@ func (kc *keyCache) hasKey(xpub vcrypto.XPubKeyer) bool {
 	defer kc.mu.Unlock()
 	fmt.Println("hasKey xpub:", xpub)
 	fmt.Println("hasKey xpub type:", reflect.TypeOf(xpub))
+	fmt.Println("hasKey xpub:", reflect.ValueOf(xpub))
 	fmt.Println("hasKey len(kc.byPubs[xpub]):", len(kc.byPubs[xpub]))
 	fmt.Println("hasKey kc:", kc)
 	fmt.Println("hasKey done...")

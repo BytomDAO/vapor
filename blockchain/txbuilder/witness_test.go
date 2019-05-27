@@ -2,10 +2,12 @@ package txbuilder
 
 import (
 	"encoding/json"
+	"reflect"
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
 
+	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/testutil"
 )
@@ -43,6 +45,30 @@ func TestWitnessJSON(t *testing.T) {
 	err = json.Unmarshal(b, &got)
 	if err != nil {
 		t.Fatalf("error on input %s: %s", b, err)
+	}
+	for _, wc := range got.WitnessComponents {
+		switch w := wc.(type) {
+		case *SignatureWitness:
+			for i, key := range w.Keys {
+				if reflect.TypeOf(key.XPub).String() == "string" {
+					if xpub, err := edchainkd.NewXPub(reflect.ValueOf(key.XPub).String()); err != nil {
+						panic(err)
+					} else {
+						w.Keys[i].XPub = *xpub
+					}
+				}
+			}
+		case *RawTxSigWitness:
+			for i, key := range w.Keys {
+				if reflect.TypeOf(key.XPub).String() == "string" {
+					if xpub, err := edchainkd.NewXPub(reflect.ValueOf(key.XPub).String()); err != nil {
+						panic(err)
+					} else {
+						w.Keys[i].XPub = *xpub
+					}
+				}
+			}
+		}
 	}
 
 	if !testutil.DeepEqual(si, &got) {
