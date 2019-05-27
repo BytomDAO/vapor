@@ -22,9 +22,10 @@ func (r *Registry) DecodeCrossInAction(data []byte) (txbuilder.Action, error) {
 type crossInAction struct {
 	reg *Registry
 	bc.AssetAmount
-	SourceID        bc.Hash                `json:"source_id"`
-	SourcePos       uint64                 `json:"source_pos"`
-	AssetDefinition map[string]interface{} `json:"asset_definition"`
+	SourceID        bc.Hash                      `json:"source_id"`
+	SourcePos       uint64                       `json:"source_pos"`
+	AssetDefinition map[string]interface{}       `json:"asset_definition"`
+	Arguments       []txbuilder.ContractArgument `json:"arguments"`
 }
 
 // TODO: filter double spent utxo in txpool?
@@ -57,6 +58,14 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 	tplIn := &txbuilder.SigningInstruction{}
 	fed := federation.GetFederation()
 	tplIn.AddRawWitnessKeys(fed.XPubs, fed.Path(), fed.Quorum)
+
+	// TODO: ?
+	if a.Arguments != nil {
+		if err := txbuilder.AddContractArgs(tplIn, a.Arguments); err != nil {
+			return err
+		}
+	}
+
 	return builder.AddInput(txin, tplIn)
 }
 
