@@ -3,15 +3,16 @@ package netsync
 import (
 	"errors"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
-	cfg "github.com/vapor/config"
+	"github.com/vapor/config"
 	"github.com/vapor/consensus"
 	"github.com/vapor/event"
 	"github.com/vapor/netsync/chainmgr"
+	"github.com/vapor/netsync/consensusmgr"
 	"github.com/vapor/netsync/peers"
 	"github.com/vapor/p2p"
-	core "github.com/vapor/protocol"
+	"github.com/vapor/protocol"
 )
 
 const (
@@ -28,6 +29,11 @@ type ChainMgr interface {
 	Stop()
 }
 
+type ConsensusMgr interface {
+	Start() error
+	Stop()
+}
+
 type Switch interface {
 	Start() (bool, error)
 	Stop() bool
@@ -38,44 +44,51 @@ type Switch interface {
 
 //SyncManager Sync Manager is responsible for the business layer information synchronization
 type SyncManager struct {
-	config   *cfg.Config
-	sw       Switch
-	chainMgr ChainMgr
-	peers    *peers.PeerSet
+	config       *config.Config
+	sw           Switch
+	chainMgr     ChainMgr
+	consensusMgr ConsensusMgr
+	peers        *peers.PeerSet
 }
 
 // NewSyncManager create sync manager and set switch.
-func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, dispatcher *event.Dispatcher) (*SyncManager, error) {
+func NewSyncManager(config *config.Config, chain *protocol.Chain, txPool *protocol.TxPool, dispatcher *event.Dispatcher) (*SyncManager, error) {
 	sw, err := p2p.NewSwitch(config)
 	if err != nil {
 		return nil, err
 	}
 	peers := peers.NewPeerSet(sw)
 
-	chainManger, err := chainmgr.NewChainManager(config, sw, chain, txPool, dispatcher, peers)
+	chainManger, err := chainmgr.NewManager(config, sw, chain, txPool, dispatcher, peers)
 	if err != nil {
 		return nil, err
 	}
-
+	consensusMgr := consensusmgr.NewManager(sw, chain, dispatcher, peers)
 	return &SyncManager{
-		config:   config,
-		sw:       sw,
-		chainMgr: chainManger,
-		peers:    peers,
+		config:       config,
+		sw:           sw,
+		chainMgr:     chainManger,
+		consensusMgr: consensusMgr,
+		peers:        peers,
 	}, nil
 }
 
 func (sm *SyncManager) Start() error {
 	if _, err := sm.sw.Start(); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("failed start switch")
+		logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed start switch")
 		return err
 	}
 
-	return sm.chainMgr.Start()
+	if err := sm.chainMgr.Start(); err != nil {
+		return err
+	}
+
+	return sm.consensusMgr.Start()
 }
 
 func (sm *SyncManager) Stop() {
 	sm.chainMgr.Stop()
+	sm.consensusMgr.Stop()
 	if !sm.config.VaultMode {
 		sm.sw.Stop()
 	}
