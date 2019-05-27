@@ -1,4 +1,4 @@
-package netsync
+package messages
 
 import (
 	"reflect"
