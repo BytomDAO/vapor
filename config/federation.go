@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
+	"os"
 )
 
 func ExportFederationFile(fedFile string, config *Config) error {
@@ -16,4 +17,14 @@ func ExportFederationFile(fedFile string, config *Config) error {
 	}
 
 	return ioutil.WriteFile(fedFile, buf.Bytes(), 0644)
+}
+
+func LoadFederationFile(fedFile string, config *Config) error {
+	file, err := os.Open(fedFile)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	return json.NewDecoder(file).Decode(config.Federation)
 }
