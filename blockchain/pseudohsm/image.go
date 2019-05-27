@@ -4,12 +4,14 @@ package pseudohsm
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"reflect"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/crypto/ed25519/chainkd"
+	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 )
 
 const logModule = "pseudohsm"
@@ -49,9 +51,10 @@ func (h *HSM) Restore(image *KeyImage) error {
 		if err != nil {
 			return ErrXPubFormat
 		}
+		fmt.Println("Restore...")
 
 		// TODO: it will adapt sm2
-		var xPub chainkd.XPub
+		var xPub edchainkd.XPub
 		copy(xPub[:], data)
 		if h.cache.hasKey(xPub) {
 			log.WithFields(log.Fields{
@@ -71,6 +74,7 @@ func (h *HSM) Restore(image *KeyImage) error {
 		if err != nil {
 			return err
 		}
+		// fmt.Println("Restore rawKey:", rawKey)
 
 		_, fileName := filepath.Split(xKey.ID)
 		file := h.keyStore.JoinPath(keyFileName(fileName))
@@ -80,5 +84,9 @@ func (h *HSM) Restore(image *KeyImage) error {
 
 		h.cache.reload()
 	}
+	fmt.Println("Restore done...")
+	fmt.Println("Restore keystore:", h.keyStore)
+	fmt.Println("Restore cache:", h.cache)
+	fmt.Println("Restore hsm.cache.byPubs key type:", reflect.TypeOf(h.cache.byPubs).Key())
 	return nil
 }

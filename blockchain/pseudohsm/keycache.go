@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -71,10 +72,17 @@ func (kc *keyCache) hasKey(xpub vcrypto.XPubKeyer) bool {
 	kc.maybeReload()
 	kc.mu.Lock()
 	defer kc.mu.Unlock()
+	fmt.Println("hasKey xpub:", xpub)
+	fmt.Println("hasKey xpub type:", reflect.TypeOf(xpub))
+	fmt.Println("hasKey len(kc.byPubs[xpub]):", len(kc.byPubs[xpub]))
+	fmt.Println("hasKey kc:", kc)
+	fmt.Println("hasKey done...")
+	fmt.Println("hasKey return:", len(kc.byPubs[xpub]) > 0)
 	return len(kc.byPubs[xpub]) > 0
 }
 
 func (kc *keyCache) hasAlias(alias string) bool {
+	fmt.Println("hasAlias alias:", alias)
 	xpubs := kc.keys()
 	for _, xpub := range xpubs {
 		if xpub.Alias == alias {
