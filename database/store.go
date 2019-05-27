@@ -230,6 +230,8 @@ func (s *Store) SaveChainStatus(node, irreversibleNode *state.BlockNode, view *s
 		return err
 	}
 
+	// if err:= save
+
 	if err := saveVoteResult(batch, voteMap); err != nil {
 		return err
 	}

@@ -4,7 +4,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/consensus"
-	"github.com/vapor/consensus/federation"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/vm"
 	"github.com/vapor/protocol/vm/vmutil"
@@ -128,17 +127,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			spends = append(spends, spend)
 
 		case *CrossChainInput:
-			// hard code peg-in control program in consensus level, may need to
-			// deal with soft fork (federation members change) in the future
-			prog := &bc.Program{VmVersion: inp.VMVersion, Code: federation.GetFederation().ControlProgram}
-			src := &bc.ValueSource{
-				Ref:      &inp.SourceID,
-				Value:    &inp.AssetAmount,
-				Position: inp.SourcePosition,
-			}
-			prevout := bc.NewCrossChainOutput(src, prog, 0) // ordinal doesn't matter
-			outputID := bc.EntryID(prevout)
-			crossIn := bc.NewCrossChainInput(&outputID, &inp.AssetAmount, uint64(i))
+			crossIn := bc.NewCrossChainInput(&inp.MainchainOutputID, &inp.AssetAmount, uint64(i))
 			crossIn.WitnessArguments = inp.Arguments
 			crossInID := addEntry(crossIn)
 			muxSources[i] = &bc.ValueSource{
@@ -146,7 +135,6 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 				Value: &inp.AssetAmount,
 			}
 			crossIns = append(crossIns, crossIn)
-
 		}
 	}
 
