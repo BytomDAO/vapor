@@ -77,15 +77,5 @@ func TestRestore(t *testing.T) {
 				t.Errorf("error restore key: can't find key %v", key)
 			}
 		}
-		// TODO: sm2 test should be here
-		// for _, key := range test.wantKeys {
-		// 	var xPub edchainkd.XPub
-		// 	data, _ := hex.DecodeString(key)
-		// 	copy(xPub[:], data)
-
-		// 	if !hsm.cache.hasKey(xPub) {
-		// 		t.Errorf("error restore key: can't find key %v", key)
-		// 	}
-		// }
 	}
 }

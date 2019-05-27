@@ -1,7 +1,6 @@
 package account
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"reflect"
@@ -62,24 +61,19 @@ func TestCreateAccountWithSpaceTrimed(t *testing.T) {
 
 func TestCreateAccount(t *testing.T) {
 	m := mockAccountManager(t)
-	// xpubs := []vcrypto.XPubKeyer{testutil.TestXPub}
 	xpubers := make([]vcrypto.XPubKeyer, 1)
 	xpubers[0] = testutil.TestXPub
 	account, err := m.Create(xpubers, 1, "test-alias", signers.BIP0044)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
-	fmt.Println("TestCreateAccount account is:", account, "account xpub:", account.XPubs, "type of xpubs:", reflect.TypeOf(account.XPubs[0]))
 
 	found, err := m.FindByID(account.ID)
 	if err != nil {
 		t.Errorf("unexpected error %v", err)
 	}
-	fmt.Println("TestCreateAccount found is:", found, "found xpub:", found.XPubs, "type of xpubs:", reflect.TypeOf(found.XPubs[0]))
 	if !testutil.DeepEqual(account, found) {
 		t.Errorf("expected account %v to be recorded as %v", account, found)
-		//////////
-		t.Errorf("expected type of account %v to be recorded as %v", reflect.TypeOf(account.XPubs[0]), reflect.TypeOf(found.XPubs[0]))
 	}
 }
 
@@ -167,8 +161,6 @@ func TestFindByID(t *testing.T) {
 
 	if !testutil.DeepEqual(account, found) {
 		t.Errorf("expected found account to be %v, instead found %v", account, found)
-		t.Errorf("expected found account xpubs[0] to be %v, instead found xpubs[0] %v", account.XPubs[0], found.XPubs[0])
-		t.Errorf("expected found account xpubs[0] type to be %v, instead found xpubs[0] type %v", reflect.TypeOf(account.XPubs[0]), reflect.TypeOf(found.XPubs[0]))
 	}
 }
 
