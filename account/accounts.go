@@ -433,6 +433,17 @@ func (m *Manager) FindByID(id string) (*Account, error) {
 	if err := json.Unmarshal(rawAccount, account); err != nil {
 		return nil, err
 	}
+	for i, xpub := range account.XPubs {
+		if reflect.TypeOf(xpub).String() == "string" {
+			// fmt.Println("account xpubs type:", reflect.TypeOf(xpub).String())
+			if xpb, err := edchainkd.NewXPub(reflect.ValueOf(xpub).String()); err != nil {
+				panic(err)
+			} else {
+				account.XPubs[i] = *xpb
+			}
+			// fmt.Println("account xpubs type:", reflect.TypeOf(xpub).String())
+		}
+	}
 
 	m.cacheMu.Lock()
 	m.cache.Add(id, account)

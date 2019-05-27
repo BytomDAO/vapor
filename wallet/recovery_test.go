@@ -501,12 +501,15 @@ func TestLoadStatusInfo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	fmt.Println("TestLoadStatusInfo xpub:", xpub)
 
 	acctMgr := account.NewManager(testDB, nil)
 	recoveryMgr := newRecoveryManager(testDB, acctMgr)
 	// StatusInit init recovery status manager.
 	recoveryMgr.state = newRecoveryState()
-	recoveryMgr.state.XPubs = []vcrypto.XPubKeyer{xpub.XPub}
+	xpubers := make([]vcrypto.XPubKeyer, 1)
+	xpubers[0] = xpub.XPub
+	recoveryMgr.state.XPubs = xpubers
 	recoveryMgr.state.XPubsStatus = newBranchRecoveryState(acctRecoveryWindow)
 
 	recoveryMgr.state.StartTime = time.Now()
@@ -526,6 +529,8 @@ func TestLoadStatusInfo(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(recoveryMgrRestore.state.XPubs, recoveryMgr.state.XPubs) {
+		t.Fatalf("TestLoadStatusInfo XPubs recoveryMgrRestore.state.XPubs: %v", recoveryMgrRestore.state.XPubs)
+		t.Fatalf("TestLoadStatusInfo XPubs recoveryMgr.state.XPubs: %v", recoveryMgr.state.XPubs)
 		t.Fatalf("TestLoadStatusInfo XPubs reload err")
 	}
 

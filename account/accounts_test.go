@@ -167,6 +167,8 @@ func TestFindByID(t *testing.T) {
 
 	if !testutil.DeepEqual(account, found) {
 		t.Errorf("expected found account to be %v, instead found %v", account, found)
+		t.Errorf("expected found account xpubs[0] to be %v, instead found xpubs[0] %v", account.XPubs[0], found.XPubs[0])
+		t.Errorf("expected found account xpubs[0] type to be %v, instead found xpubs[0] type %v", reflect.TypeOf(account.XPubs[0]), reflect.TypeOf(found.XPubs[0]))
 	}
 }
 
