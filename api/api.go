@@ -24,7 +24,7 @@ import (
 	"github.com/vapor/net/http/httpjson"
 	"github.com/vapor/net/http/static"
 	"github.com/vapor/net/websocket"
-	"github.com/vapor/netsync"
+	"github.com/vapor/netsync/peers"
 	"github.com/vapor/p2p"
 	"github.com/vapor/protocol"
 	"github.com/vapor/wallet"
@@ -173,9 +173,9 @@ type NetSync interface {
 	IsCaughtUp() bool
 	PeerCount() int
 	GetNetwork() string
-	BestPeer() *netsync.PeerInfo
+	BestPeer() *peers.PeerInfo
 	DialPeerWithAddress(addr *p2p.NetAddress) error
-	GetPeerInfos() []*netsync.PeerInfo
+	GetPeerInfos() []*peers.PeerInfo
 	StopPeer(peerID string) error
 }
 
