@@ -97,6 +97,9 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
+	// TODO:
+	mainchainView := state.NewMainchainOutputViewpoint()
+
 	voteResultMap := make(map[uint64]*state.VoteResult)
 	if err := c.bbft.ApplyBlock(voteResultMap, block); err != nil {
 		return err
@@ -107,7 +110,7 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		irreversibleNode = node
 	}
 
-	if err := c.setState(node, irreversibleNode, utxoView, voteResultMap); err != nil {
+	if err := c.setState(node, irreversibleNode, utxoView, mainchainView, voteResultMap); err != nil {
 		return err
 	}
 
@@ -120,6 +123,8 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 	attachNodes, detachNodes := c.calcReorganizeNodes(node)
 	utxoView := state.NewUtxoViewpoint()
+	// TODO:
+	mainchainView := state.NewMainchainOutputViewpoint()
 	voteResultMap := make(map[uint64]*state.VoteResult)
 	irreversibleNode := c.bestIrreversibleNode
 
@@ -181,7 +186,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Debug("attach from mainchain")
 	}
 
-	return c.setState(node, irreversibleNode, utxoView, voteResultMap)
+	return c.setState(node, irreversibleNode, utxoView, mainchainView, voteResultMap)
 }
 
 // SaveBlock will validate and save block into storage
