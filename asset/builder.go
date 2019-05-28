@@ -28,8 +28,6 @@ type crossInAction struct {
 	Arguments       []txbuilder.ContractArgument `json:"arguments"`
 }
 
-// TODO: filter double spent utxo in txpool?
-// TODO: roll back unconfirmed or orphan?
 func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBuilder) error {
 	var missing []string
 	if a.SourceID.IsZero() {
@@ -50,9 +48,7 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 		return ErrSerializing
 	}
 
-	// 1. arguments will be set when materializeWitnesses
-	// 2. need to fill in issuance program & here, and will need to deal with
-	// customized arguments
+	// arguments will be set when materializeWitnesses
 	txin := types.NewCrossChainInput(nil, a.SourceID, *a.AssetId, a.Amount, a.SourcePos, nil, rawDefinitionByte)
 	log.Info("cross-chain input action built")
 	tplIn := &txbuilder.SigningInstruction{}
