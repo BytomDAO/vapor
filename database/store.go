@@ -224,13 +224,15 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 }
 
 // SaveChainStatus save the core's newest status && delete old status
-func (s *Store) SaveChainStatus(node, irreversibleNode *state.BlockNode, view *state.UtxoViewpoint, voteMap map[uint64]*state.VoteResult) error {
+func (s *Store) SaveChainStatus(node, irreversibleNode *state.BlockNode, utxoView *state.UtxoViewpoint, mainchainView *state.MainchainOutputViewpoint, voteMap map[uint64]*state.VoteResult) error {
 	batch := s.db.NewBatch()
-	if err := saveUtxoView(batch, view); err != nil {
+	if err := saveUtxoView(batch, utxoView); err != nil {
 		return err
 	}
 
-	// if err:= save
+	if err := saveMainchainOutputView(batch, mainchainView); err != nil {
+		return err
+	}
 
 	if err := saveVoteResult(batch, voteMap); err != nil {
 		return err
