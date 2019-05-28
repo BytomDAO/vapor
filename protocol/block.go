@@ -75,14 +75,6 @@ func (c *Chain) calcReorganizeNodes(node *state.BlockNode) ([]*state.BlockNode, 
 }
 
 func (c *Chain) connectBlock(block *types.Block) (err error) {
-	// for _, tx := range block.Transactions {
-	// 	for _, _ := range tx.Inputs {
-	// 		if condition {
-
-	// 		}
-	// 	}
-	// }
-
 	irreversibleNode := c.bestIrreversibleNode
 	bcBlock := types.MapBlock(block)
 	if bcBlock.TransactionStatus, err = c.store.GetTransactionStatus(&bcBlock.ID); err != nil {
