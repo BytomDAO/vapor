@@ -62,6 +62,9 @@ func NewNode(config *cfg.Config) *Node {
 	if err := lockDataDirectory(config); err != nil {
 		cmn.Exit("Error: " + err.Error())
 	}
+	if err := cfg.LoadFederationFile(config.FederationFile(), config); err != nil {
+		cmn.Exit(cmn.Fmt("Failed to load federated information:[%s]", err.Error()))
+	}
 	initLogFile(config)
 	initActiveNetParams(config)
 	initCommonConfig(config)

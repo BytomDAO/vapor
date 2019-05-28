@@ -120,17 +120,21 @@ type BaseConfig struct {
 
 	// Cipher Service Provider
 	// CipherServiceProvider string `mapstructure:"csp"`
+
+	// Federation file name
+	FederationFileName string `mapstructure:"federation_file"`
 }
 
 // Default configurable base parameters.
 func DefaultBaseConfig() BaseConfig {
 	return BaseConfig{
-		Moniker:           "anonymous",
-		ProfListenAddress: "",
-		Mining:            false,
-		DBBackend:         "leveldb",
-		DBPath:            "data",
-		KeysPath:          "keystore",
+		Moniker:            "anonymous",
+		ProfListenAddress:  "",
+		Mining:             false,
+		DBBackend:          "leveldb",
+		DBPath:             "data",
+		KeysPath:           "keystore",
+		FederationFileName: "federation.json",
 	}
 }
 
@@ -140,6 +144,10 @@ func (b BaseConfig) DBDir() string {
 
 func (b BaseConfig) KeysDir() string {
 	return rootify(b.KeysPath, b.RootDir)
+}
+
+func (b BaseConfig) FederationFile() string {
+	return rootify(b.FederationFileName, b.RootDir)
 }
 
 // P2PConfig
