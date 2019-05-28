@@ -173,9 +173,6 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 		case CrossChainInputType:
 			ci := new(CrossChainInput)
 			t.TypedInput = ci
-			if _, err := ci.MainchainOutputID.ReadFrom(r); err != nil {
-				return errors.Wrap(err, "reading mainchain output id")
-			}
 			if ci.SpendCommitmentSuffix, err = ci.SpendCommitment.readFrom(r, 1); err != nil {
 				return err
 			}
@@ -276,9 +273,6 @@ func (t *TxInput) writeInputCommitment(w io.Writer) (err error) {
 	case *CrossChainInput:
 		if _, err = w.Write([]byte{CrossChainInputType}); err != nil {
 			return err
-		}
-		if _, err = inp.MainchainOutputID.WriteTo(w); err != nil {
-			return errors.Wrap(err, "writing mainchain output id")
 		}
 		return inp.SpendCommitment.writeExtensibleString(w, inp.SpendCommitmentSuffix, t.AssetVersion)
 

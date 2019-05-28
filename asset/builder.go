@@ -22,11 +22,10 @@ func (r *Registry) DecodeCrossInAction(data []byte) (txbuilder.Action, error) {
 type crossInAction struct {
 	reg *Registry
 	bc.AssetAmount
-	MainchainOutputID bc.Hash                      `json:"mainchain_output_id"`
-	SourceID          bc.Hash                      `json:"source_id"`
-	SourcePos         uint64                       `json:"source_pos"`
-	AssetDefinition   map[string]interface{}       `json:"asset_definition"`
-	Arguments         []txbuilder.ContractArgument `json:"arguments"`
+	SourceID        bc.Hash                      `json:"source_id"`
+	SourcePos       uint64                       `json:"source_pos"`
+	AssetDefinition map[string]interface{}       `json:"asset_definition"`
+	Arguments       []txbuilder.ContractArgument `json:"arguments"`
 }
 
 // TODO: filter double spent utxo in txpool?
@@ -54,7 +53,7 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 	// 1. arguments will be set when materializeWitnesses
 	// 2. need to fill in issuance program & here, and will need to deal with
 	// customized arguments
-	txin := types.NewCrossChainInput(nil, a.MainchainOutputID, a.SourceID, *a.AssetId, a.Amount, a.SourcePos, nil, rawDefinitionByte)
+	txin := types.NewCrossChainInput(nil, a.SourceID, *a.AssetId, a.Amount, a.SourcePos, nil, rawDefinitionByte)
 	log.Info("cross-chain input action built")
 	tplIn := &txbuilder.SigningInstruction{}
 	fed := federation.GetFederation()
