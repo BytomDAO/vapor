@@ -4,8 +4,6 @@ import (
 	"context"
 	stdjson "encoding/json"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/consensus/federation"
 	"github.com/vapor/protocol/bc"
@@ -51,7 +49,7 @@ func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBu
 	txin := types.NewCrossChainInput(nil, a.SourceID, *a.AssetId, a.Amount, a.SourcePos, nil, rawDefinitionByte)
 	tplIn := &txbuilder.SigningInstruction{}
 	fed := federation.GetFederation()
-	tplIn.AddRawWitnessKeys(fed.XPubs, fed.Path(), fed.Quorum)
+	tplIn.AddRawWitnessKeys(fed.XPubs, nil, fed.Quorum)
 	return builder.AddInput(txin, tplIn)
 }
 
