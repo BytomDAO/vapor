@@ -1,5 +1,11 @@
 package storage
 
+const (
+	NormalUTXOType = iota
+	CoinbaseUTXOType
+	MainchainUTXOType
+)
+
 // NewUtxoEntry will create a new utxo entry
 func NewUtxoEntry(utxoType uint32, blockHeight uint64, spent bool) *UtxoEntry {
 	return &UtxoEntry{
