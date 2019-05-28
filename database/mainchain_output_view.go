@@ -22,10 +22,10 @@ func saveMainchainOutputView(batch dbm.Batch, view *state.MainchainOutputViewpoi
 	}
 
 	for key, entry := range view.Entries {
-		// if entry.Spent && !entry.IsCoinBase {
-		// 	batch.Delete(calcUtxoKey(&key))
-		// 	continue
-		// }
+		if !entry.Claimed {
+			batch.Delete(calcMainchainOutputKey(&key))
+			continue
+		}
 
 		b, err := json.Marshal(entry)
 		if err != nil {
