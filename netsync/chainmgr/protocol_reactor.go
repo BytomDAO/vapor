@@ -16,13 +16,13 @@ import (
 type ProtocolReactor struct {
 	p2p.BaseReactor
 
-	cm *ChainManager
+	manager *Manager
 }
 
 // NewProtocolReactor returns the reactor of whole blockchain.
-func NewProtocolReactor(cm *ChainManager) *ProtocolReactor {
+func NewProtocolReactor(manager *Manager) *ProtocolReactor {
 	pr := &ProtocolReactor{
-		cm: cm,
+		manager: manager,
 	}
 	pr.BaseReactor = *p2p.NewBaseReactor("ProtocolReactor", pr)
 	return pr
@@ -52,17 +52,17 @@ func (pr *ProtocolReactor) OnStop() {
 
 // AddPeer implements Reactor by sending our state to peer.
 func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
-	pr.cm.AddPeer(peer)
-	if err := pr.cm.SendStatus(peer); err != nil {
+	pr.manager.AddPeer(peer)
+	if err := pr.manager.SendStatus(peer); err != nil {
 		return err
 	}
-	pr.cm.syncTransactions(peer.Key)
+	pr.manager.syncTransactions(peer.Key)
 	return nil
 }
 
 // RemovePeer implements Reactor by removing peer from the pool.
 func (pr *ProtocolReactor) RemovePeer(peer *p2p.Peer, reason interface{}) {
-	pr.cm.RemovePeer(peer.Key)
+	pr.manager.RemovePeer(peer.Key)
 }
 
 //decodeMessage decode msg
@@ -85,5 +85,5 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		return
 	}
 
-	pr.cm.processMsg(src, msgType, msg)
+	pr.manager.processMsg(src, msgType, msg)
 }
