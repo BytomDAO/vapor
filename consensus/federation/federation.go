@@ -1,13 +1,11 @@
 package federation
 
 import (
-	"encoding/binary"
 	"encoding/json"
 	"errors"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/protocol/vm/vmutil"
@@ -77,13 +75,4 @@ func (f *federation) buildPegInControlProgram(pubkeys []ed25519.PublicKey) (prog
 	builder := vmutil.NewBuilder()
 	builder.AddRawBytes(controlProg)
 	return builder.Build()
-}
-
-func (f *federation) Path() [][]byte {
-	var path [][]byte
-	signerPath := [9]byte{byte(signers.AssetKeySpace)}
-	// federation AssetKeyIndex is 1
-	binary.LittleEndian.PutUint64(signerPath[1:], 1)
-	path = append(path, signerPath[:])
-	return path
 }
