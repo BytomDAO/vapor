@@ -27,7 +27,7 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFa
 		}
 
 		if !entry.FromMainchain {
-			return errors.New("utxo type mismatch")
+			return errors.New("look up mainchainOutputID but find utxo not from mainchain")
 		}
 
 		if entry.Spent {
@@ -120,6 +120,24 @@ func (view *UtxoViewpoint) CanSpend(hash *bc.Hash) bool {
 }
 
 func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
+	for _, prevout := range tx.MainchainOutputIDs {
+		// don't simply delete(view.Entries, prevout), because we need to delete from db in saveUtxoView()
+		entry, ok := view.Entries[prevout]
+		if ok && !entry.FromMainchain {
+			return errors.New("look up mainchainOutputID but find utxo not from mainchain")
+		}
+
+		if ok && !entry.Spent {
+			return errors.New("try to revert an unspent utxo")
+		}
+
+		if !ok {
+			view.Entries[prevout] = storage.NewUtxoEntry(false, 0, false, true)
+			continue
+		}
+		entry.UnspendOutput()
+	}
+
 	for _, prevout := range tx.SpentOutputIDs {
 		assetID := bc.AssetID{}
 		entryOutput, err := tx.Entry(prevout)
