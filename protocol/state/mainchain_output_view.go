@@ -21,3 +21,8 @@ func NewMainchainOutputViewpoint() *MainchainOutputViewpoint {
 		Entries: make(map[bc.Hash]*MainchainOutputEntry),
 	}
 }
+
+func (view *MainchainOutputViewpoint) HasEntry(hash *bc.Hash) bool {
+	_, ok := view.Entries[*hash]
+	return ok
+}

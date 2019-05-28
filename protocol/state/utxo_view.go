@@ -78,7 +78,7 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFa
 		if block != nil && len(block.Transactions) > 0 && block.Transactions[0].ID == tx.ID {
 			isCoinbase = true
 		}
-		view.Entries[*id] = storage.NewUtxoEntry(isCoinbase, block.Height, false, "")
+		view.Entries[*id] = storage.NewUtxoEntry(isCoinbase, block.Height, false)
 	}
 	return nil
 }

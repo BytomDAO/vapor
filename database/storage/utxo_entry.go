@@ -1,12 +1,11 @@
 package storage
 
 // NewUtxoEntry will create a new utxo entry
-func NewUtxoEntry(isCoinBase bool, blockHeight uint64, spent bool, mainchainOutID string) *UtxoEntry {
+func NewUtxoEntry(isCoinBase bool, blockHeight uint64, spent bool) *UtxoEntry {
 	return &UtxoEntry{
-		IsCoinBase:     isCoinBase,
-		BlockHeight:    blockHeight,
-		Spent:          spent,
-		MainchainOutID: mainchainOutID,
+		IsCoinBase:  isCoinBase,
+		BlockHeight: blockHeight,
+		Spent:       spent,
 	}
 }
 
