@@ -97,7 +97,7 @@ func (f *blockFetcher) insert(msg *blockMsg) {
 		return
 	}
 
-	if err := f.peers.BroadcastMsg(NewBroadcastMsg(proposeMsg, ConsensusChannel)); err != nil {
+	if err := f.peers.BroadcastMsg(NewBroadcastMsg(proposeMsg, consensusChannel)); err != nil {
 		logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on broadcast proposed block")
 		return
 	}

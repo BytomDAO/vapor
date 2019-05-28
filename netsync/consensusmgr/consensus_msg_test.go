@@ -13,8 +13,8 @@ import (
 
 var _ = wire.RegisterInterface(
 	struct{ ConsensusMessage }{},
-	wire.ConcreteType{&BlockSignatureMsg{}, BlockSignatureByte},
-	wire.ConcreteType{&BlockProposeMsg{}, BlockProposeByte},
+	wire.ConcreteType{O: &BlockSignatureMsg{}, Byte: blockSignatureByte},
+	wire.ConcreteType{O: &BlockProposeMsg{}, Byte: blockProposeByte},
 )
 
 func TestDecodeMessage(t *testing.T) {
@@ -28,13 +28,13 @@ func TestDecodeMessage(t *testing.T) {
 				Signature: []byte{0x00},
 				PubKey:    [32]byte{0x01},
 			},
-			msgType: BlockSignatureByte,
+			msgType: blockSignatureByte,
 		},
 		{
 			msg: &BlockProposeMsg{
 				RawBlock: []byte{0x01, 0x02},
 			},
-			msgType: BlockProposeByte,
+			msgType: blockProposeByte,
 		},
 	}
 	for i, c := range testCases {
@@ -59,15 +59,15 @@ func TestBlockSignBroadcastMsg(t *testing.T) {
 		Signature: []byte{0x00},
 		PubKey:    [32]byte{0x01},
 	}
-	signatureBroadcastMsg := NewBroadcastMsg(NewBlockSignatureMsg(bc.NewHash(blockSignMsg.BlockHash), blockSignMsg.Height, blockSignMsg.Signature, blockSignMsg.PubKey), ConsensusChannel)
+	signatureBroadcastMsg := NewBroadcastMsg(NewBlockSignatureMsg(bc.NewHash(blockSignMsg.BlockHash), blockSignMsg.Height, blockSignMsg.Signature, blockSignMsg.PubKey), consensusChannel)
 
 	binMsg := wire.BinaryBytes(signatureBroadcastMsg.GetMsg())
 	gotMsgType, gotMsg, err := decodeMessage(binMsg)
 	if err != nil {
 		t.Fatalf("decode Message err %s", err)
 	}
-	if gotMsgType != BlockSignatureByte {
-		t.Fatalf("decode Message type err. got:%d want:%d", gotMsgType, BlockSignatureByte)
+	if gotMsgType != blockSignatureByte {
+		t.Fatalf("decode Message type err. got:%d want:%d", gotMsgType, blockSignatureByte)
 	}
 	if !reflect.DeepEqual(gotMsg, blockSignMsg) {
 		t.Fatalf("decode Message err. got:%s\n want:%s", spew.Sdump(gotMsg), spew.Sdump(blockSignMsg))
@@ -77,15 +77,15 @@ func TestBlockSignBroadcastMsg(t *testing.T) {
 func TestBlockProposeBroadcastMsg(t *testing.T) {
 	blockProposeMsg, _ := NewBlockProposeMsg(testBlock)
 
-	proposeBroadcastMsg := NewBroadcastMsg(blockProposeMsg, ConsensusChannel)
+	proposeBroadcastMsg := NewBroadcastMsg(blockProposeMsg, consensusChannel)
 
 	binMsg := wire.BinaryBytes(proposeBroadcastMsg.GetMsg())
 	gotMsgType, gotMsg, err := decodeMessage(binMsg)
 	if err != nil {
 		t.Fatalf("decode Message err %s", err)
 	}
-	if gotMsgType != BlockProposeByte {
-		t.Fatalf("decode Message type err. got:%d want:%d", gotMsgType, BlockProposeByte)
+	if gotMsgType != blockProposeByte {
+		t.Fatalf("decode Message type err. got:%d want:%d", gotMsgType, blockProposeByte)
 	}
 	if !reflect.DeepEqual(gotMsg, blockProposeMsg) {
 		t.Fatalf("decode Message err. got:%s\n want:%s", spew.Sdump(gotMsg), spew.Sdump(blockProposeMsg))

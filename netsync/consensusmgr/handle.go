@@ -12,23 +12,14 @@ import (
 	"github.com/vapor/protocol/bc/types"
 )
 
-type Manager struct {
-	sw              Switch
-	chain           Chain
-	peers           *peers.PeerSet
-	blockFetcher    *blockFetcher
-	eventDispatcher *event.Dispatcher
-
-	quit chan struct{}
-}
-
+// Switch is the interface for p2p switch.
 type Switch interface {
 	AddReactor(name string, reactor p2p.Reactor) p2p.Reactor
 	AddBannedPeer(string) error
 	ID() [32]byte
 }
 
-// Chain is the interface for Bytom core
+// Chain is the interface for Bytom core.
 type Chain interface {
 	BestBlockHeight() uint64
 	GetHeaderByHash(*bc.Hash) (*types.BlockHeader, error)
@@ -41,6 +32,18 @@ type blockMsg struct {
 	peerID string
 }
 
+// Manager is the consensus message network synchronization manager.
+type Manager struct {
+	sw              Switch
+	chain           Chain
+	peers           *peers.PeerSet
+	blockFetcher    *blockFetcher
+	eventDispatcher *event.Dispatcher
+
+	quit chan struct{}
+}
+
+// NewManager create new manager.
 func NewManager(sw Switch, chain Chain, dispatcher *event.Dispatcher, peers *peers.PeerSet) *Manager {
 	manager := &Manager{
 		sw:              sw,
@@ -54,7 +57,7 @@ func NewManager(sw Switch, chain Chain, dispatcher *event.Dispatcher, peers *pee
 	return manager
 }
 
-func (m *Manager) AddPeer(peer peers.BasePeer) {
+func (m *Manager) addPeer(peer peers.BasePeer) {
 	m.peers.AddPeer(peer)
 }
 
@@ -92,8 +95,7 @@ func (m *Manager) handleBlockProposeMsg(peerID string, msg *BlockProposeMsg) {
 
 func (m *Manager) handleBlockSignatureMsg(peerID string, msg *BlockSignatureMsg) {
 	blockHash := bc.NewHash(msg.BlockHash)
-	err := m.chain.ProcessBlockSignature(msg.Signature, msg.PubKey[:], msg.Height, &blockHash)
-	if err != nil {
+	if err := m.chain.ProcessBlockSignature(msg.Signature, msg.PubKey[:], msg.Height, &blockHash); err != nil {
 		m.peers.AddBanScore(peerID, 20, 0, err.Error())
 		return
 	}
@@ -103,7 +105,6 @@ func (m *Manager) blockProposeMsgBroadcastLoop() {
 	blockProposeMsgSub, err := m.eventDispatcher.Subscribe(event.NewBlockProposeEvent{})
 	if err != nil {
 		logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on subscribe NewBlockProposeEvent")
-
 		return
 	}
 	defer blockProposeMsgSub.Unsubscribe()
@@ -127,7 +128,7 @@ func (m *Manager) blockProposeMsgBroadcastLoop() {
 				return
 			}
 
-			if err := m.peers.BroadcastMsg(NewBroadcastMsg(proposeMsg, ConsensusChannel)); err != nil {
+			if err := m.peers.BroadcastMsg(NewBroadcastMsg(proposeMsg, consensusChannel)); err != nil {
 				logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on broadcast BlockProposeBroadcastMsg")
 				continue
 			}
@@ -165,7 +166,7 @@ func (m *Manager) blockSignatureMsgBroadcastLoop() {
 				return
 			}
 
-			blockSignatureMsg := NewBroadcastMsg(NewBlockSignatureMsg(ev.BlockHash, blockHeader.Height, ev.Signature, m.sw.ID()), ConsensusChannel)
+			blockSignatureMsg := NewBroadcastMsg(NewBlockSignatureMsg(ev.BlockHash, blockHeader.Height, ev.Signature, m.sw.ID()), consensusChannel)
 			if err := m.peers.BroadcastMsg(blockSignatureMsg); err != nil {
 				logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on broadcast BlockSignBroadcastMsg.")
 				return
@@ -177,17 +178,18 @@ func (m *Manager) blockSignatureMsgBroadcastLoop() {
 	}
 }
 
-func (m *Manager) RemovePeer(peerID string) {
+func (m *Manager) removePeer(peerID string) {
 	m.peers.RemovePeer(peerID)
 }
 
+//Start consensus manager service.
 func (m *Manager) Start() error {
 	go m.blockProposeMsgBroadcastLoop()
 	go m.blockSignatureMsgBroadcastLoop()
 	return nil
 }
 
-//Stop consensus manager
+//Stop consensus manager service.
 func (m *Manager) Stop() {
 	close(m.quit)
 }

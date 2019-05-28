@@ -9,15 +9,17 @@ import (
 
 const (
 	logModule                 = "consensus"
-	ConsensusChannel          = byte(0x50)
+	consensusChannel          = byte(0x50)
 	maxBlockchainResponseSize = 22020096 + 2
 )
 
+// ConsensusReactor handles new coming consensus message.
 type ConsensusReactor struct {
 	p2p.BaseReactor
 	manager *Manager
 }
 
+// NewConsensusReactor create consensus reactor.
 func NewConsensusReactor(manager *Manager) *ConsensusReactor {
 	cr := &ConsensusReactor{
 		manager: manager,
@@ -30,7 +32,7 @@ func NewConsensusReactor(manager *Manager) *ConsensusReactor {
 func (cr *ConsensusReactor) GetChannels() []*connection.ChannelDescriptor {
 	return []*connection.ChannelDescriptor{
 		{
-			ID:                ConsensusChannel,
+			ID:                consensusChannel,
 			Priority:          10,
 			SendQueueCapacity: 100,
 		},
@@ -39,8 +41,7 @@ func (cr *ConsensusReactor) GetChannels() []*connection.ChannelDescriptor {
 
 // OnStart implements BaseService
 func (cr *ConsensusReactor) OnStart() error {
-	cr.BaseReactor.OnStart()
-	return nil
+	return cr.BaseReactor.OnStart()
 }
 
 // OnStop implements BaseService
@@ -50,13 +51,13 @@ func (cr *ConsensusReactor) OnStop() {
 
 // AddPeer implements Reactor by sending our state to peer.
 func (cr *ConsensusReactor) AddPeer(peer *p2p.Peer) error {
-	cr.manager.AddPeer(peer)
+	cr.manager.addPeer(peer)
 	return nil
 }
 
 // RemovePeer implements Reactor by removing peer from the pool.
 func (cr *ConsensusReactor) RemovePeer(peer *p2p.Peer, reason interface{}) {
-	cr.manager.RemovePeer(peer.Key)
+	cr.manager.removePeer(peer.Key)
 }
 
 // Receive implements Reactor by handling messages.
