@@ -414,7 +414,7 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 		for k, v := range c.before {
 			utxoViewpoint.Entries[k] = v
 		}
-		if err := store.SaveChainStatus(node, node, utxoViewpoint, map[uint64]*state.VoteResult{}); err != nil {
+		if err := store.SaveChainStatus(node, node, utxoViewpoint, nil, map[uint64]*state.VoteResult{}); err != nil {
 			t.Error(err)
 		}
 
@@ -436,7 +436,7 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 				t.Error(err)
 			}
 		}
-		if err := store.SaveChainStatus(node, node, utxoViewpoint, map[uint64]*state.VoteResult{}); err != nil {
+		if err := store.SaveChainStatus(node, node, utxoViewpoint, nil, map[uint64]*state.VoteResult{}); err != nil {
 			t.Error(err)
 		}
 

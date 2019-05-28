@@ -120,7 +120,9 @@ func (s *mockStore) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)               
 func (s *mockStore) GetVoteResult(uint64) (*state.VoteResult, error)              { return nil, nil }
 func (s *mockStore) LoadBlockIndex(uint64) (*state.BlockIndex, error)             { return nil, nil }
 func (s *mockStore) SaveBlock(*types.Block, *bc.TransactionStatus) error          { return nil }
-func (s *mockStore) SaveChainStatus(*state.BlockNode, *state.BlockNode, *state.UtxoViewpoint, map[uint64]*state.VoteResult) error { return nil }
+func (s *mockStore) SaveChainStatus(*state.BlockNode, *state.BlockNode, *state.UtxoViewpoint, *state.MainchainOutputViewpoint, map[uint64]*state.VoteResult) error {
+	return nil
+}
 func (s *mockStore) SaveChainNodeStatus(*state.BlockNode, *state.BlockNode) error { return nil }
 
 func TestAddOrphan(t *testing.T) {
@@ -662,11 +664,13 @@ func (s *mockStore1) GetTransactionsUtxo(utxoView *state.UtxoViewpoint, tx []*bc
 	}
 	return nil
 }
-func (s *mockStore1) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)                 { return nil, nil }
-func (s *mockStore1) GetVoteResult(uint64) (*state.VoteResult, error)              { return nil, nil }
-func (s *mockStore1) LoadBlockIndex(uint64) (*state.BlockIndex, error)             { return nil, nil }
-func (s *mockStore1) SaveBlock(*types.Block, *bc.TransactionStatus) error          { return nil }
-func (s *mockStore1) SaveChainStatus(*state.BlockNode, *state.BlockNode, *state.UtxoViewpoint, map[uint64]*state.VoteResult) error { return nil }
+func (s *mockStore1) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)        { return nil, nil }
+func (s *mockStore1) GetVoteResult(uint64) (*state.VoteResult, error)     { return nil, nil }
+func (s *mockStore1) LoadBlockIndex(uint64) (*state.BlockIndex, error)    { return nil, nil }
+func (s *mockStore1) SaveBlock(*types.Block, *bc.TransactionStatus) error { return nil }
+func (s *mockStore1) SaveChainStatus(*state.BlockNode, *state.BlockNode, *state.UtxoViewpoint, *state.MainchainOutputViewpoint, map[uint64]*state.VoteResult) error {
+	return nil
+}
 func (s *mockStore1) SaveChainNodeStatus(*state.BlockNode, *state.BlockNode) error { return nil }
 
 func TestProcessTransaction(t *testing.T) {

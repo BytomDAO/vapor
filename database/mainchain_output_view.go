@@ -17,6 +17,10 @@ func calcMainchainOutputKey(hash *bc.Hash) []byte {
 }
 
 func saveMainchainOutputView(batch dbm.Batch, view *state.MainchainOutputViewpoint) error {
+	if view == nil {
+		return nil
+	}
+
 	for key, entry := range view.Entries {
 		// if entry.Spent && !entry.IsCoinBase {
 		// 	batch.Delete(calcUtxoKey(&key))
