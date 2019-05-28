@@ -81,7 +81,9 @@ func (c *Chain) initChainStatus() error {
 	if err != nil {
 		return err
 	}
-	return c.store.SaveChainStatus(node, node, utxoView, nil, map[uint64]*state.VoteResult{})
+
+	mainchainView := state.NewMainchainOutputViewpoint()
+	return c.store.SaveChainStatus(node, node, utxoView, mainchainView, map[uint64]*state.VoteResult{})
 }
 
 // BestBlockHeight returns the current height of the blockchain.
