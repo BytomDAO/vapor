@@ -9,9 +9,15 @@ import (
 
 // MainchainOutputView represents a view into the set of manchain outputs
 type MainchainOutputViewpoint struct {
-	Entries map[bc.Hash]MainchainOutputEntry
+	Entries map[bc.Hash]*MainchainOutputEntry
 }
 
 type MainchainOutputEntry struct {
 	Claimed bool `json:"claimed,omitempty"`
+}
+
+func NewMainchainOutputViewpoint() *MainchainOutputViewpoint {
+	return &MainchainOutputViewpoint{
+		Entries: make(map[bc.Hash]*MainchainOutputEntry),
+	}
 }
