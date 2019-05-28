@@ -22,10 +22,9 @@ func (r *Registry) DecodeCrossInAction(data []byte) (txbuilder.Action, error) {
 type crossInAction struct {
 	reg *Registry
 	bc.AssetAmount
-	SourceID        bc.Hash                      `json:"source_id"`
-	SourcePos       uint64                       `json:"source_pos"`
-	AssetDefinition map[string]interface{}       `json:"asset_definition"`
-	Arguments       []txbuilder.ContractArgument `json:"arguments"`
+	SourceID        bc.Hash                `json:"source_id"`
+	SourcePos       uint64                 `json:"source_pos"`
+	AssetDefinition map[string]interface{} `json:"asset_definition"`
 }
 
 func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBuilder) error {
