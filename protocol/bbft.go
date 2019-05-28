@@ -3,7 +3,6 @@ package protocol
 import (
 	"encoding/hex"
 	"fmt"
-	"time"
 
 	"github.com/golang/groupcache/lru"
 	log "github.com/sirupsen/logrus"
@@ -63,8 +62,8 @@ func (b *bbft) isIrreversible(block *types.Block) bool {
 }
 
 // NextLeaderTime returns the start time of the specified public key as the next leader node
-func (b *bbft) NextLeaderTime(pubkey []byte, bestBlockTimestamp, bestBlockHeight uint64) (*time.Time, error) {
-	return b.consensusNodeManager.nextLeaderTime(pubkey, bestBlockTimestamp, bestBlockHeight)
+func (b *bbft) NextLeaderTimeRange(pubkey []byte, bestBlockTimestamp, bestBlockHeight uint64) (uint64, uint64, error) {
+	return b.consensusNodeManager.nextLeaderTimeRange(pubkey, bestBlockTimestamp, bestBlockHeight)
 }
 
 func (b *bbft) ApplyBlock(voteResultMap map[uint64]*state.VoteResult, block *types.Block) (err error) {
