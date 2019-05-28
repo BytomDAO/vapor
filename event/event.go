@@ -25,7 +25,7 @@ var (
 	ErrDuplicateSubscribe = errors.New("event: subscribe duplicate type")
 )
 
-type NewMinedBlockEvent struct{ Block types.Block }
+type NewProposedBlockEvent struct{ Block types.Block }
 
 type BlockSignatureEvent struct { 
 	BlockHash bc.Hash

@@ -1,4 +1,4 @@
-package mining
+package proposal
 
 import (
 	"sort"
@@ -152,6 +152,8 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	}
 
 	b.BlockHeader.BlockCommitment.TransactionStatusHash, err = types.TxStatusMerkleRoot(txStatus.VerifyStatus)
+
+	_, err = c.GetBBFT().SignBlock(b)
 	return b, err
 }
 
