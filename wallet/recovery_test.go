@@ -528,6 +528,9 @@ func TestLoadStatusInfo(t *testing.T) {
 		t.Fatalf("TestLoadStatusInfo XPubsStatus reload err")
 	}
 
+	fmt.Println("TestLoadStatusInfo recoveryMgrRestore.state.XPubs:", reflect.TypeOf(recoveryMgrRestore.state.XPubs[0]))
+	fmt.Println("TestLoadStatusInfo recoveryMgr.state.XPubs:", reflect.TypeOf(recoveryMgr.state.XPubs[0]))
+
 	if !reflect.DeepEqual(recoveryMgrRestore.state.XPubs, recoveryMgr.state.XPubs) {
 		t.Fatalf("TestLoadStatusInfo XPubs recoveryMgrRestore.state.XPubs: %v", recoveryMgrRestore.state.XPubs)
 		t.Fatalf("TestLoadStatusInfo XPubs recoveryMgr.state.XPubs: %v", recoveryMgr.state.XPubs)
