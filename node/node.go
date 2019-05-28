@@ -26,7 +26,7 @@ import (
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/env"
 	"github.com/vapor/event"
-	"github.com/vapor/mining/cpuminer"
+	"github.com/vapor/proposal/blockproposer"
 	"github.com/vapor/net/websocket"
 	"github.com/vapor/netsync"
 	"github.com/vapor/protocol"
@@ -52,7 +52,7 @@ type Node struct {
 	api             *api.API
 	chain           *protocol.Chain
 	txfeed          *txfeed.Tracker
-	cpuMiner        *cpuminer.CPUMiner
+	cpuMiner        *blockproposer.BlockProposer
 	miningEnable    bool
 }
 
@@ -151,7 +151,7 @@ func NewNode(config *cfg.Config) *Node {
 		notificationMgr: notificationMgr,
 	}
 
-	node.cpuMiner = cpuminer.NewCPUMiner(chain, accounts, txPool, dispatcher)
+	node.cpuMiner = blockproposer.NewBlockProposer(chain, accounts, txPool, dispatcher)
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 	return node
 }

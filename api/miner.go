@@ -54,7 +54,7 @@ func (a *API) submitBlock(ctx context.Context, req *SubmitBlockReq) Response {
 		return NewErrorResponse(errors.New("block submitted is orphan"))
 	}
 
-	if err = a.eventDispatcher.Post(event.NewMinedBlockEvent{Block: *req.Block}); err != nil {
+	if err = a.eventDispatcher.Post(event.NewProposedBlockEvent{Block: *req.Block}); err != nil {
 		return NewErrorResponse(err)
 	}
 
@@ -74,7 +74,7 @@ func (a *API) setMining(in struct {
 }
 
 func (a *API) startMining() Response {
-	a.cpuMiner.Start()
+	a.blockProposer.Start()
 	if !a.IsMining() {
 		return NewErrorResponse(errors.New("Failed to start mining"))
 	}
@@ -82,7 +82,7 @@ func (a *API) startMining() Response {
 }
 
 func (a *API) stopMining() Response {
-	a.cpuMiner.Stop()
+	a.blockProposer.Stop()
 	if a.IsMining() {
 		return NewErrorResponse(errors.New("Failed to stop mining"))
 	}
