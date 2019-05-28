@@ -27,9 +27,9 @@ import (
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/env"
 	"github.com/vapor/event"
-	"github.com/vapor/mining/cpuminer"
 	"github.com/vapor/net/websocket"
 	"github.com/vapor/netsync"
+	"github.com/vapor/proposal/blockproposer"
 	"github.com/vapor/protocol"
 	w "github.com/vapor/wallet"
 )
@@ -53,7 +53,7 @@ type Node struct {
 	api             *api.API
 	chain           *protocol.Chain
 	txfeed          *txfeed.Tracker
-	cpuMiner        *cpuminer.CPUMiner
+	cpuMiner        *blockproposer.BlockProposer
 	miningEnable    bool
 }
 
@@ -61,16 +61,20 @@ type Node struct {
 func NewNode(config *cfg.Config) *Node {
 	ctx := context.Background()
 
+	if err := lockDataDirectory(config); err != nil {
+		cmn.Exit("Error: " + err.Error())
+	}
+
+	if err := cfg.LoadFederationFile(config.FederationFile(), config); err != nil {
+		cmn.Exit(cmn.Fmt("Failed to load federated information:[%s]", err.Error()))
+	}
+
 	log.WithFields(log.Fields{
 		"module":             logModule,
 		"fed_xpubs":          config.Federation.Xpubs,
 		"fed_quorum":         config.Federation.Quorum,
 		"fed_controlprogram": hex.EncodeToString(cfg.GenesisArguments(config)),
 	}).Info()
-
-	if err := lockDataDirectory(config); err != nil {
-		cmn.Exit("Error: " + err.Error())
-	}
 
 	initLogFile(config)
 	initActiveNetParams(config)
@@ -158,7 +162,7 @@ func NewNode(config *cfg.Config) *Node {
 		notificationMgr: notificationMgr,
 	}
 
-	node.cpuMiner = cpuminer.NewCPUMiner(chain, accounts, txPool, dispatcher)
+	node.cpuMiner = blockproposer.NewBlockProposer(chain, accounts, txPool, dispatcher)
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 	return node
 }

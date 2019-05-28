@@ -1,4 +1,4 @@
-package mining
+package proposal
 
 import "testing"
 

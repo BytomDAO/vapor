@@ -6,7 +6,7 @@ import (
 
 	"github.com/vapor/account"
 	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/mining"
+	"github.com/vapor/proposal"
 	"github.com/vapor/test"
 )
 
@@ -23,6 +23,6 @@ func BenchmarkNewBlockTpl(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		mining.NewBlockTemplate(chain, txPool, accountManager)
+		proposal.NewBlockTemplate(chain, txPool, accountManager)
 	}
 }

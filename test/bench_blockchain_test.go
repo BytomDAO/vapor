@@ -18,7 +18,7 @@ import (
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/database/storage"
 	"github.com/vapor/event"
-	"github.com/vapor/mining"
+	"github.com/vapor/proposal"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -159,7 +159,7 @@ func InsertChain(chain *protocol.Chain, txPool *protocol.TxPool, txs []*types.Tx
 		}
 	}
 
-	block, err := mining.NewBlockTemplate(chain, txPool, nil)
+	block, err := proposal.NewBlockTemplate(chain, txPool, nil)
 	if err != nil {
 		return err
 	}

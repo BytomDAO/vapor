@@ -197,7 +197,7 @@ func (c *Chain) saveBlock(block *types.Block) error {
 	}
 
 	if len(signature) != 0 {
-		if err := c.txPool.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: block.Hash(), Signature: signature}); err != nil {
+		if err := c.bbft.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: block.Hash(), Signature: signature}); err != nil {
 			return err
 		}
 	}
