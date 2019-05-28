@@ -21,11 +21,13 @@ func MapTx(oldTx *TxData) *bc.Tx {
 	}
 
 	spentOutputIDs := make(map[bc.Hash]bool)
+	mainchainOutputIDs := make(map[bc.Hash]bool)
 	for id, e := range entries {
 		var ord uint64
 		switch e := e.(type) {
 		case *bc.CrossChainInput:
 			ord = e.Ordinal
+			mainchainOutputIDs[*e.MainchainOutputId] = true
 			if *e.WitnessDestination.Value.AssetId == *consensus.BTMAssetID {
 				tx.GasInputIDs = append(tx.GasInputIDs, id)
 			}
@@ -53,6 +55,9 @@ func MapTx(oldTx *TxData) *bc.Tx {
 
 	for id := range spentOutputIDs {
 		tx.SpentOutputIDs = append(tx.SpentOutputIDs, id)
+	}
+	for id := range mainchainOutputIDs {
+		tx.MainchainOutputIDs = append(tx.MainchainOutputIDs, id)
 	}
 	return tx
 }
