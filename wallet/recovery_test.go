@@ -501,8 +501,6 @@ func TestLoadStatusInfo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println("TestLoadStatusInfo xpub:", xpub)
-	fmt.Println("TestLoadStatusInfo xpub type:", reflect.TypeOf(xpub.XPub))
 
 	acctMgr := account.NewManager(testDB, nil)
 	recoveryMgr := newRecoveryManager(testDB, acctMgr)
@@ -524,20 +522,12 @@ func TestLoadStatusInfo(t *testing.T) {
 	if err := recoveryMgrRestore.LoadStatusInfo(); err != nil {
 		t.Fatal("TestLoadStatusInfo err:", err)
 	}
-	//////
-	xpubers[0] = xpub.XPub
-	recoveryMgrRestore.state.XPubs = xpubers
-	//////
+
 	if !reflect.DeepEqual(recoveryMgrRestore.state.XPubsStatus, recoveryMgr.state.XPubsStatus) {
 		t.Fatalf("TestLoadStatusInfo XPubsStatus reload err")
 	}
 
-	fmt.Println("TestLoadStatusInfo recoveryMgrRestore.state.XPubs:", reflect.TypeOf(recoveryMgrRestore.state.XPubs[0]))
-	fmt.Println("TestLoadStatusInfo recoveryMgr.state.XPubs:", reflect.TypeOf(recoveryMgr.state.XPubs[0]))
-
 	if !reflect.DeepEqual(recoveryMgrRestore.state.XPubs, recoveryMgr.state.XPubs) {
-		t.Fatalf("TestLoadStatusInfo XPubs recoveryMgrRestore.state.XPubs: %v", recoveryMgrRestore.state.XPubs)
-		t.Fatalf("TestLoadStatusInfo XPubs recoveryMgr.state.XPubs: %v", recoveryMgr.state.XPubs)
 		t.Fatalf("TestLoadStatusInfo XPubs reload err")
 	}
 

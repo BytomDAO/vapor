@@ -2,8 +2,10 @@ package integration
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/vapor/account"
@@ -41,11 +43,13 @@ func TestP2PKH(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	fmt.Println("TestP2PKH xpub type:", reflect.TypeOf(*xpub))
 
 	testAccount, err := accountManager.Create([]vcrypto.XPubKeyer{xpub.XPub}, 1, "testAccount", signers.BIP0044)
 	if err != nil {
 		t.Fatal(err)
 	}
+	fmt.Println("TestP2PKH testAccount xpub type:", reflect.TypeOf(testAccount.XPubs[0]))
 
 	controlProg, err := accountManager.CreateAddress(testAccount.ID, false)
 	if err != nil {
@@ -296,7 +300,13 @@ func TestMutilNodeSign(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	fmt.Println("TestMutilNodeSign xpub1 type:", reflect.TypeOf(*xpub1))
+	// xpubers := make([]vcrypto.XPubKeyer, 2)
+	// xpubers[0] = xpub1.XPub
+	// xpubers[1] = xpub2.XPub
+
 	testAccount, err := accountManager.Create([]vcrypto.XPubKeyer{xpub1.XPub, xpub2.XPub}, 2, "testAccount", signers.BIP0044)
+	// testAccount, err := accountManager.Create(xpubers, 2, "testAccount", signers.BIP0044)
 	if err != nil {
 		t.Fatal(err)
 	}

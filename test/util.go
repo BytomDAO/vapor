@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/vapor/account"
@@ -76,6 +77,7 @@ func MockSign(tpl *txbuilder.Template, hsm *pseudohsm.HSM, password string) (boo
 	if err != nil {
 		return false, err
 	}
+	fmt.Println("MockSign")
 	return txbuilder.SignProgress(tpl), nil
 }
 

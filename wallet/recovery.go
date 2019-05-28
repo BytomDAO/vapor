@@ -387,6 +387,15 @@ func (m *recoveryManager) LoadStatusInfo() error {
 	if err := json.Unmarshal(rawStatus, m.state); err != nil {
 		return err
 	}
+	for i, xpub := range m.state.XPubs {
+		if reflect.TypeOf(xpub).String() == "string" {
+			if xpb, err := edchainkd.NewXPub(reflect.ValueOf(xpub).String()); err != nil {
+				panic(err)
+			} else {
+				m.state.XPubs[i] = *xpb
+			}
+		}
+	}
 
 	if m.state.XPubs != nil && !m.tryStartXPubsRec() {
 		return ErrRecoveryBusy
