@@ -35,14 +35,6 @@ type BlockSignatureEvent struct {
 //NewBlockProposeEvent block propose event which needs to broadcast.
 type NewBlockProposeEvent struct{ Block types.Block }
 
-//ReceivedBlockSignatureEvent block signature event which received from net.
-type ReceivedBlockSignatureEvent struct {
-	Pubkey    [32]byte
-	BlockID   [32]byte
-	Height    uint64
-	Signature []byte
-}
-
 // TypeMuxEvent is a time-tagged notification pushed to subscribers.
 type TypeMuxEvent struct {
 	Time time.Time

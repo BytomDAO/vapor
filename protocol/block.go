@@ -302,7 +302,7 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	return false, nil
 }
 
-func (c *Chain) processBlockSignature(signature, pubkey []byte, blockHeight uint64, blockHash *bc.Hash) error {
+func (c *Chain) ProcessBlockSignature(signature, pubkey []byte, blockHeight uint64, blockHash *bc.Hash) error {
 	isBestIrreversible, err := c.bbft.ProcessBlockSignature(signature, pubkey, blockHeight, blockHash)
 	if err != nil {
 		return err

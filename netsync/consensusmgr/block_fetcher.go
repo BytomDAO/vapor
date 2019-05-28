@@ -91,14 +91,13 @@ func (f *blockFetcher) insert(msg *blockMsg) {
 
 	hash := msg.block.Hash()
 	f.peers.SetStatus(msg.peerID, msg.block.Height, &hash)
-
-	proposedMsg, err := NewBlockProposeBroadcastMsg(msg.block, ConsensusChannel)
+	proposeMsg, err := NewBlockProposeMsg(msg.block)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on create new propose block msg")
+		logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on create BlockProposeMsg")
 		return
 	}
 
-	if err := f.peers.BroadcastMsg(proposedMsg); err != nil {
+	if err := f.peers.BroadcastMsg(NewBroadcastMsg(proposeMsg, ConsensusChannel)); err != nil {
 		logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on broadcast proposed block")
 		return
 	}

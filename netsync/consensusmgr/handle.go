@@ -13,14 +13,11 @@ import (
 )
 
 type Manager struct {
-	sw           Switch
-	chain        Chain
-	peers        *peers.PeerSet
-	blockFetcher *blockFetcher
-
-	eventDispatcher      *event.Dispatcher
-	blockProposeMsgSub   *event.Subscription
-	BlockSignatureMsgSub *event.Subscription
+	sw              Switch
+	chain           Chain
+	peers           *peers.PeerSet
+	blockFetcher    *blockFetcher
+	eventDispatcher *event.Dispatcher
 
 	quit chan struct{}
 }
@@ -36,6 +33,7 @@ type Chain interface {
 	BestBlockHeight() uint64
 	GetHeaderByHash(*bc.Hash) (*types.BlockHeader, error)
 	ProcessBlock(*types.Block) (bool, error)
+	ProcessBlockSignature(signature, pubkey []byte, blockHeight uint64, blockHash *bc.Hash) error
 }
 
 type blockMsg struct {
@@ -93,17 +91,26 @@ func (m *Manager) handleBlockProposeMsg(peerID string, msg *BlockProposeMsg) {
 }
 
 func (m *Manager) handleBlockSignatureMsg(peerID string, msg *BlockSignatureMsg) {
-	var id [32]byte
-	copy(id[:], peerID)
-	if err := m.eventDispatcher.Post(event.ReceivedBlockSignatureEvent{BlockID: msg.BlockID, Height: msg.Height, Signature: msg.Signature, Pubkey: id}); err != nil {
-		logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on post block signature event")
+	blockHash := bc.NewHash(msg.BlockHash)
+	err := m.chain.ProcessBlockSignature(msg.Signature, msg.PubKey[:], msg.Height, &blockHash)
+	if err != nil {
+		m.peers.AddBanScore(peerID, 20, 0, err.Error())
+		return
 	}
 }
 
 func (m *Manager) blockProposeMsgBroadcastLoop() {
+	blockProposeMsgSub, err := m.eventDispatcher.Subscribe(event.NewBlockProposeEvent{})
+	if err != nil {
+		logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on subscribe NewBlockProposeEvent")
+
+		return
+	}
+	defer blockProposeMsgSub.Unsubscribe()
+
 	for {
 		select {
-		case obj, ok := <-m.blockProposeMsgSub.Chan():
+		case obj, ok := <-blockProposeMsgSub.Chan():
 			if !ok {
 				logrus.WithFields(logrus.Fields{"module": logModule}).Warning("blockProposeMsgSub channel closed")
 				return
@@ -114,13 +121,13 @@ func (m *Manager) blockProposeMsgBroadcastLoop() {
 				logrus.WithFields(logrus.Fields{"module": logModule}).Error("event type error")
 				continue
 			}
-
-			proposeMsg, err := NewBlockProposeBroadcastMsg(&ev.Block, ConsensusChannel)
+			proposeMsg, err := NewBlockProposeMsg(&ev.Block)
 			if err != nil {
-				logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on create BlockProposeBroadcastMsg")
+				logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on create BlockProposeMsg")
 				return
 			}
-			if err := m.peers.BroadcastMsg(proposeMsg); err != nil {
+
+			if err := m.peers.BroadcastMsg(NewBroadcastMsg(proposeMsg, ConsensusChannel)); err != nil {
 				logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on broadcast BlockProposeBroadcastMsg")
 				continue
 			}
@@ -132,9 +139,15 @@ func (m *Manager) blockProposeMsgBroadcastLoop() {
 }
 
 func (m *Manager) blockSignatureMsgBroadcastLoop() {
+	blockSignatureMsgSub, err := m.eventDispatcher.Subscribe(event.BlockSignatureEvent{})
+	if err != nil {
+		logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on subscribe BlockSignatureEvent")
+		return
+	}
+	defer blockSignatureMsgSub.Unsubscribe()
 	for {
 		select {
-		case obj, ok := <-m.blockProposeMsgSub.Chan():
+		case obj, ok := <-blockSignatureMsgSub.Chan():
 			if !ok {
 				logrus.WithFields(logrus.Fields{"module": logModule}).Warning("blockProposeMsgSub channel closed")
 				return
@@ -145,12 +158,14 @@ func (m *Manager) blockSignatureMsgBroadcastLoop() {
 				logrus.WithFields(logrus.Fields{"module": logModule}).Error("event type error")
 				continue
 			}
+
 			blockHeader, err := m.chain.GetHeaderByHash(&ev.BlockHash)
 			if err != nil {
 				logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on get header by hash from chain.")
 				return
 			}
-			blockSignatureMsg := NewSignatureBroadcastMsg(ev.BlockHash.Byte32(), blockHeader.Height, ev.Signature, m.sw.ID(), ConsensusChannel)
+
+			blockSignatureMsg := NewBroadcastMsg(NewBlockSignatureMsg(ev.BlockHash, blockHeader.Height, ev.Signature, m.sw.ID()), ConsensusChannel)
 			if err := m.peers.BroadcastMsg(blockSignatureMsg); err != nil {
 				logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on broadcast BlockSignBroadcastMsg.")
 				return
@@ -167,17 +182,6 @@ func (m *Manager) RemovePeer(peerID string) {
 }
 
 func (m *Manager) Start() error {
-	var err error
-	m.blockProposeMsgSub, err = m.eventDispatcher.Subscribe(event.NewBlockProposeEvent{})
-	if err != nil {
-		return err
-	}
-
-	m.BlockSignatureMsgSub, err = m.eventDispatcher.Subscribe(event.BlockSignatureEvent{})
-	if err != nil {
-		return err
-	}
-
 	go m.blockProposeMsgBroadcastLoop()
 	go m.blockSignatureMsgBroadcastLoop()
 	return nil
@@ -186,6 +190,4 @@ func (m *Manager) Start() error {
 //Stop consensus manager
 func (m *Manager) Stop() {
 	close(m.quit)
-	m.blockProposeMsgSub.Unsubscribe()
-	m.BlockSignatureMsgSub.Unsubscribe()
 }

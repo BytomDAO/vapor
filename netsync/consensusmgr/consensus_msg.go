@@ -8,6 +8,8 @@ import (
 
 	"github.com/tendermint/go-wire"
 
+	"github.com/vapor/netsync/peers"
+	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
 
@@ -20,6 +22,8 @@ const (
 //BlockchainMessage is a generic message for this reactor.
 type ConsensusMessage interface {
 	String() string
+	BroadcastMarkSendRecord(ps *peers.PeerSet, peers []string)
+	BroadcastFilterTargetPeers(ps *peers.PeerSet) []string
 }
 
 var _ = wire.RegisterInterface(
@@ -41,19 +45,30 @@ func decodeMessage(bz []byte) (msgType byte, msg ConsensusMessage, err error) {
 }
 
 type BlockSignatureMsg struct {
-	BlockID   [32]byte
+	BlockHash [32]byte
 	Height    uint64
 	Signature []byte
-	PeerID    [32]byte
+	PubKey    [32]byte
 }
 
-//NewBlockSignatureMessage construct new mined block msg
-func NewBlockSignatureMsg(blockID [32]byte, height uint64, signature []byte, peerId [32]byte) *BlockSignatureMsg {
-	return &BlockSignatureMsg{BlockID: blockID, Height: height, Signature: signature, PeerID: peerId}
+//NewBlockSignatureMessage construct new block signature msg
+func NewBlockSignatureMsg(blockHash bc.Hash, height uint64, signature []byte, pubKey [32]byte) ConsensusMessage {
+	hash := blockHash.Byte32()
+	return &BlockSignatureMsg{BlockHash: hash, Height: height, Signature: signature, PubKey: pubKey}
 }
 
 func (bs *BlockSignatureMsg) String() string {
-	return fmt.Sprintf("{block_hash: %s,block_height: %d,signature:%s,peerID:%s}", hex.EncodeToString(bs.BlockID[:]), bs.Height, hex.EncodeToString(bs.Signature), hex.EncodeToString(bs.PeerID[:]))
+	return fmt.Sprintf("{block_hash: %s,block_height:%d,signature:%s,pubkey:%s}", hex.EncodeToString(bs.BlockHash[:]), bs.Height, hex.EncodeToString(bs.Signature), hex.EncodeToString(bs.PubKey[:]))
+}
+
+func (bs *BlockSignatureMsg) BroadcastMarkSendRecord(ps *peers.PeerSet, peers []string) {
+	for _, peer := range peers {
+		ps.MarkBlockSignature(peer, bs.Signature)
+	}
+}
+
+func (bs *BlockSignatureMsg) BroadcastFilterTargetPeers(ps *peers.PeerSet) []string {
+	return ps.PeersWithoutSign(bs.Signature)
 }
 
 type BlockProposeMsg struct {
@@ -61,7 +76,7 @@ type BlockProposeMsg struct {
 }
 
 //NewBlockProposeMsg construct new block propose msg
-func NewBlockProposeMsg(block *types.Block) (*BlockProposeMsg, error) {
+func NewBlockProposeMsg(block *types.Block) (ConsensusMessage, error) {
 	rawBlock, err := block.MarshalText()
 	if err != nil {
 		return nil, err
@@ -70,9 +85,9 @@ func NewBlockProposeMsg(block *types.Block) (*BlockProposeMsg, error) {
 }
 
 //GetProposeBlock get propose block from msg
-func (m *BlockProposeMsg) GetProposeBlock() (*types.Block, error) {
+func (bp *BlockProposeMsg) GetProposeBlock() (*types.Block, error) {
 	block := &types.Block{}
-	if err := block.UnmarshalText(m.RawBlock); err != nil {
+	if err := block.UnmarshalText(bp.RawBlock); err != nil {
 		return nil, err
 	}
 	return block, nil
@@ -87,3 +102,25 @@ func (bp *BlockProposeMsg) String() string {
 	return fmt.Sprintf("{block_height: %d, block_hash: %s}", block.Height, blockHash.String())
 }
 
+func (bp *BlockProposeMsg) BroadcastMarkSendRecord(ps *peers.PeerSet, peers []string) {
+	block, err := bp.GetProposeBlock()
+	if err != nil {
+		return
+	}
+
+	hash := block.Hash()
+	height := block.Height
+	for _, peer := range peers {
+		ps.MarkBlock(peer, &hash)
+		ps.MarkStatus(peer, height)
+	}
+}
+
+func (bp *BlockProposeMsg) BroadcastFilterTargetPeers(ps *peers.PeerSet) []string {
+	block, err := bp.GetProposeBlock()
+	if err != nil {
+		return nil
+	}
+
+	return ps.PeersWithoutBlock(block.Hash())
+}
