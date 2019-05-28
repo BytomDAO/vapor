@@ -161,7 +161,7 @@ func TestSaveChainStatus(t *testing.T) {
 	store := NewStore(testDB)
 
 	node := &state.BlockNode{Height: 100, Hash: bc.Hash{V0: 0, V1: 1, V2: 2, V3: 3}}
-	view := &state.UtxoViewpoint{
+	utxoView := &state.UtxoViewpoint{
 		Entries: map[bc.Hash]*storage.UtxoEntry{
 			bc.Hash{V0: 1, V1: 2, V2: 3, V3: 4}: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 100, Spent: false},
 			bc.Hash{V0: 1, V1: 2, V2: 3, V3: 4}: &storage.UtxoEntry{IsCoinBase: true, BlockHeight: 100, Spent: true},
@@ -169,7 +169,7 @@ func TestSaveChainStatus(t *testing.T) {
 		},
 	}
 
-	if err := store.SaveChainStatus(node, node, view, map[uint64]*state.VoteResult{}); err != nil {
+	if err := store.SaveChainStatus(node, node, utxoView, nil, map[uint64]*state.VoteResult{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -178,7 +178,7 @@ func TestSaveChainStatus(t *testing.T) {
 		t.Errorf("got block status:%v, expect block status:%v", store.GetStoreStatus(), expectStatus)
 	}
 
-	for hash, utxo := range view.Entries {
+	for hash, utxo := range utxoView.Entries {
 		if utxo.Spent && !utxo.IsCoinBase {
 			continue
 		}
