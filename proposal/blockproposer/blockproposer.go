@@ -3,6 +3,7 @@ package blockproposer
 import (
 	"sync"
 	"time"
+	"encoding/hex"
 
 	log "github.com/sirupsen/logrus"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/vapor/event"
 	"github.com/vapor/proposal"
 	"github.com/vapor/protocol"
-	"encoding/hex"
 )
 
 const (
@@ -36,7 +36,7 @@ type BlockProposer struct {
 // generateBlocks is a worker that is controlled by the proposeWorkerController.
 // It is self contained in that it creates block templates and attempts to solve
 // them while detecting when it is performing stale work and reacting
-// accordingly by generating a new block template.  When a block is solved, it
+// accordingly by generating a new block template.  When a block is verified, it
 // is submitted.
 //
 // It must be run as a goroutine.
@@ -81,7 +81,7 @@ out:
 					}).Info("Proposer processed block")
 
 					// Broadcast the block and announce chain insertion event
-					if err = b.eventDispatcher.Post(event.NewMinedBlockEvent{Block: *block}); err != nil {
+					if err = b.eventDispatcher.Post(event.NewProposedBlockEvent{Block: *block}); err != nil {
 						log.WithFields(log.Fields{"module": logModule, "height": block.BlockHeader.Height, "error": err}).Errorf("Proposer fail on post block")
 					}
 					count++

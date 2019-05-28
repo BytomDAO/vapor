@@ -446,7 +446,7 @@ func (sm *SyncManager) Start() error {
 		return err
 	}
 
-	sm.minedBlockSub, err = sm.eventDispatcher.Subscribe(event.NewMinedBlockEvent{})
+	sm.minedBlockSub, err = sm.eventDispatcher.Subscribe(event.NewProposedBlockEvent{})
 	if err != nil {
 		return err
 	}
@@ -482,7 +482,7 @@ func (sm *SyncManager) minedBroadcastLoop() {
 				return
 			}
 
-			ev, ok := obj.Data.(event.NewMinedBlockEvent)
+			ev, ok := obj.Data.(event.NewProposedBlockEvent)
 			if !ok {
 				log.WithFields(log.Fields{"module": logModule}).Error("event type error")
 				continue

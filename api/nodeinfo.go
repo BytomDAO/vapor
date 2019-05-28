@@ -33,7 +33,7 @@ func (a *API) GetNodeInfo() *NetInfo {
 	info := &NetInfo{
 		Listening:    a.sync.IsListening(),
 		Syncing:      !a.sync.IsCaughtUp(),
-		Mining:       a.cpuMiner.IsProposing(),
+		Mining:       a.blockProposer.IsProposing(),
 		PeerCount:    a.sync.PeerCount(),
 		CurrentBlock: a.chain.BestBlockHeight(),
 		NetWorkID:    a.sync.GetNetwork(),
@@ -100,7 +100,7 @@ func (a *API) isMining() Response {
 
 // IsProposing return mining status
 func (a *API) IsMining() bool {
-	return a.cpuMiner.IsProposing()
+	return a.blockProposer.IsProposing()
 }
 
 // return the peers of current node

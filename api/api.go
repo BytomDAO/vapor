@@ -113,7 +113,7 @@ type API struct {
 	server          *http.Server
 	handler         http.Handler
 	txFeedTracker   *txfeed.Tracker
-	cpuMiner        *blockproposer.BlockProposer
+	blockProposer   *blockproposer.BlockProposer
 	notificationMgr *websocket.WSNotificationManager
 	eventDispatcher *event.Dispatcher
 }
@@ -180,14 +180,14 @@ type NetSync interface {
 }
 
 // NewAPI create and initialize the API
-func NewAPI(sync NetSync, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, cpuMiner *blockproposer.BlockProposer, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, dispatcher *event.Dispatcher, notificationMgr *websocket.WSNotificationManager) *API {
+func NewAPI(sync NetSync, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, blockProposer *blockproposer.BlockProposer, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, dispatcher *event.Dispatcher, notificationMgr *websocket.WSNotificationManager) *API {
 	api := &API{
 		sync:            sync,
 		wallet:          wallet,
 		chain:           chain,
 		accessTokens:    token,
 		txFeedTracker:   txfeeds,
-		cpuMiner:        cpuMiner,
+		blockProposer:   blockProposer,
 		eventDispatcher: dispatcher,
 		notificationMgr: notificationMgr,
 	}
