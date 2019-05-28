@@ -29,9 +29,9 @@ func NewCrossChainInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID
 	return &TxInput{
 		AssetVersion: 1,
 		TypedInput: &CrossChainInput{
+			AssetDefinition: assetDefinition,
 			SpendCommitment: sc,
 			Arguments:       arguments,
-			AssetDefinition: assetDefinition,
 		},
 	}
 }
