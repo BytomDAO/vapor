@@ -20,6 +20,19 @@ func NewUtxoViewpoint() *UtxoViewpoint {
 }
 
 func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFail bool) error {
+	for _, prevout := range tx.MainchainOutputIDs {
+		entry, ok := view.Entries[prevout]
+		if !ok {
+			return errors.New("fail to find mainchain output entry")
+		}
+
+		if entry.Spent {
+			return errors.New("mainchain output has been spent")
+		}
+
+		entry.SpendOutput()
+	}
+
 	for _, prevout := range tx.SpentOutputIDs {
 		assetID := bc.AssetID{}
 		entryOutput, err := tx.Entry(prevout)

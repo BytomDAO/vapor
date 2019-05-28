@@ -34,6 +34,25 @@ func getTransactionsUtxo(db dbm.DB, view *state.UtxoViewpoint, txs []*bc.Tx) err
 
 			view.Entries[prevout] = &utxo
 		}
+
+		for _, prevout := range tx.MainchainOutputIDs {
+			if view.HasUtxo(&prevout) {
+				continue
+			}
+
+			data := db.Get(calcUtxoKey(&prevout))
+			if data == nil {
+				view.Entries[prevout] = &storage.UtxoEntry{}
+				continue
+			}
+
+			var utxo storage.UtxoEntry
+			if err := proto.Unmarshal(data, &utxo); err != nil {
+				return errors.Wrap(err, "unmarshaling mainchain ouput entry")
+			}
+
+			view.Entries[prevout] = &utxo
+		}
 	}
 
 	return nil
