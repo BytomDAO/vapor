@@ -2,7 +2,10 @@ package account
 
 import (
 	"context"
+	"encoding/hex"
 	stdjson "encoding/json"
+	"fmt"
+	"reflect"
 
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/blockchain/txbuilder"
@@ -310,6 +313,7 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 
 // UtxoToInputs convert an utxo to the txinput
 func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.SigningInstruction, error) {
+	fmt.Println("UtxoToInputs...")
 	txInput := types.NewSpendInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram)
 	sigInst := &txbuilder.SigningInstruction{}
 	if signer == nil {
@@ -329,23 +333,32 @@ func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.S
 	if err != nil {
 		return nil, nil, err
 	}
+	fmt.Println("UtxoToInputs...will sigInst.AddRawWitnessKeys")
 	sigInst.AddRawWitnessKeys(signer.XPubs, path, signer.Quorum)
 	derivedXPubs := csp.DeriveXPubs(signer.XPubs, path)
+	fmt.Println("UtxoToInputs...finish derivedXPubs := csp.DeriveXPubs(signer.XPubs, path)")
+	fmt.Println("UtxoToInputs derivedXPubs:", derivedXPubs)
+	fmt.Println("UtxoToInputs derivedXPubs[0] type:", reflect.TypeOf(derivedXPubs[0]))
 
-	/////////
+	//
 	if len(derivedXPubs) == 0 {
 		panic("UtxoToInputs derivedXPubs is nil.")
 	}
 
 	switch address.(type) {
 	case *common.AddressWitnessPubKeyHash:
+		fmt.Println("UtxoToInputs  *common.AddressWitnessPubKeyHash...")
 		switch dxpub := derivedXPubs[0].(type) {
 		case edchainkd.XPub:
+			fmt.Println("UtxoToInputs dxpub", hex.EncodeToString(dxpub[:]))
 			derivedPK := dxpub.PublicKey()
+			fmt.Println("UtxoToInputs derivedPK", hex.EncodeToString(derivedPK))
 			sigInst.WitnessComponents = append(sigInst.WitnessComponents, txbuilder.DataWitness([]byte(derivedPK)))
+			fmt.Println("UtxoToInputs *common.AddressWitnessPubKeyHash done...")
 		}
 
 	case *common.AddressWitnessScriptHash:
+		fmt.Println("UtxoToInputs *common.AddressWitnessScriptHash...")
 		derivedPKs := csp.XPubKeys(derivedXPubs)
 		script, err := vmutil.P2SPMultiSigProgram(derivedPKs, signer.Quorum)
 		if err != nil {

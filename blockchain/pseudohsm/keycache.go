@@ -143,12 +143,26 @@ func (kc *keyCache) maybeReload() {
 // The exact matching rules are explained by the documentation of Account.
 // Callers must hold ac.mu.
 func (kc *keyCache) find(xpub XPub) (XPub, error) {
+	fmt.Println("find start...")
 	// Limit search to xpub candidates if possible.
 	matches := kc.all
+	fmt.Println("matches := kc.all", matches)
 	// if (xpub.XPub != vcrypto.XPubKeyer{}) {
 	// 	matches = kc.byPubs[xpub.XPub]
 	// }
-	matches = kc.byPubs[xpub.XPub]
+	fmt.Println("xpub.XPub:", xpub.XPub)
+	fmt.Println("xpub.XPub type:", reflect.TypeOf(xpub.XPub))
+	fmt.Println("keyCache:", kc)
+	fmt.Println("keyCache byPubs:", kc.byPubs)
+	// switch xpb := xpub.XPub.(type) {
+	// case edchainkd.XPub:
+	// 	fmt.Println("ed25519 xpb")
+	// 	matches = kc.byPubs[xpb]
+	// 	fmt.Println("ed25519 mathches:", matches)
+	// }
+	// matches = kc.byPubs[xpub.XPub]
+	fmt.Println("mathes:", matches)
+	fmt.Println("find xpub.File:", xpub.File)
 	if xpub.File != "" {
 		// If only the basename is specified, complete the path.
 		if !strings.ContainsRune(xpub.File, filepath.Separator) {

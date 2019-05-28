@@ -43,13 +43,11 @@ func TestP2PKH(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println("TestP2PKH xpub type:", reflect.TypeOf(*xpub))
 
 	testAccount, err := accountManager.Create([]vcrypto.XPubKeyer{xpub.XPub}, 1, "testAccount", signers.BIP0044)
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println("TestP2PKH testAccount xpub type:", reflect.TypeOf(testAccount.XPubs[0]))
 
 	controlProg, err := accountManager.CreateAddress(testAccount.ID, false)
 	if err != nil {
