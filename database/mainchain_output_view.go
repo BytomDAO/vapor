@@ -22,6 +22,7 @@ func saveMainchainOutputView(batch dbm.Batch, view *state.MainchainOutputViewpoi
 	}
 
 	for key, entry := range view.Entries {
+		// TODO:???
 		if !entry.Claimed {
 			batch.Delete(calcMainchainOutputKey(&key))
 			continue
