@@ -61,7 +61,7 @@ func TestApplyBlock(t *testing.T) {
 			},
 			inputView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, false),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, false, false),
 				},
 			},
 			fetchView: NewUtxoViewpoint(),
@@ -101,7 +101,7 @@ func TestApplyBlock(t *testing.T) {
 			},
 			inputView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, true),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, true, false),
 				},
 			},
 			err: true,
@@ -125,12 +125,12 @@ func TestApplyBlock(t *testing.T) {
 			},
 			inputView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, false),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, false, false),
 				},
 			},
 			fetchView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, true),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, true, false),
 				},
 			},
 			err: false,
@@ -155,12 +155,12 @@ func TestApplyBlock(t *testing.T) {
 			},
 			inputView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(true, 0, false),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(true, 0, false, false),
 				},
 			},
 			fetchView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(true, 0, true),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(true, 0, true, false),
 				},
 			},
 			err: false,
@@ -185,12 +185,12 @@ func TestApplyBlock(t *testing.T) {
 			},
 			inputView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(true, 0, false),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(true, 0, false, false),
 				},
 			},
 			fetchView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(true, 0, true),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(true, 0, true, false),
 				},
 			},
 			err: true,
@@ -216,7 +216,7 @@ func TestApplyBlock(t *testing.T) {
 			inputView: NewUtxoViewpoint(),
 			fetchView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(true, 0, false),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(true, 0, false, false),
 				},
 			},
 			err: false,
@@ -242,14 +242,14 @@ func TestApplyBlock(t *testing.T) {
 			},
 			inputView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V1: 0}: storage.NewUtxoEntry(false, 0, false),
-					bc.Hash{V1: 1}: storage.NewUtxoEntry(false, 0, false),
+					bc.Hash{V1: 0}: storage.NewUtxoEntry(false, 0, false, false),
+					bc.Hash{V1: 1}: storage.NewUtxoEntry(false, 0, false, false),
 				},
 			},
 			fetchView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V1: 0}: storage.NewUtxoEntry(false, 0, true),
-					bc.Hash{V1: 1}: storage.NewUtxoEntry(false, 0, false),
+					bc.Hash{V1: 0}: storage.NewUtxoEntry(false, 0, true, false),
+					bc.Hash{V1: 1}: storage.NewUtxoEntry(false, 0, false, false),
 				},
 			},
 			gasOnlyTx: true,
@@ -277,7 +277,7 @@ func TestApplyBlock(t *testing.T) {
 			inputView: NewUtxoViewpoint(),
 			fetchView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V1: 0}: storage.NewUtxoEntry(true, 0, false),
+					bc.Hash{V1: 0}: storage.NewUtxoEntry(true, 0, false, false),
 				},
 			},
 			gasOnlyTx: true,
@@ -327,7 +327,7 @@ func TestDetachBlock(t *testing.T) {
 			inputView: NewUtxoViewpoint(),
 			fetchView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, false),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, false, false),
 				},
 			},
 			err: false,
@@ -352,7 +352,7 @@ func TestDetachBlock(t *testing.T) {
 			inputView: NewUtxoViewpoint(),
 			fetchView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, true),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, true, false),
 				},
 			},
 			err: false,
@@ -376,7 +376,7 @@ func TestDetachBlock(t *testing.T) {
 			},
 			inputView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, false),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, false, false),
 				},
 			},
 			err: true,
@@ -400,12 +400,12 @@ func TestDetachBlock(t *testing.T) {
 			},
 			inputView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, true),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, true, false),
 				},
 			},
 			fetchView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, false),
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, false, false),
 				},
 			},
 			err: false,
@@ -430,14 +430,14 @@ func TestDetachBlock(t *testing.T) {
 			},
 			inputView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V1: 0}: storage.NewUtxoEntry(false, 0, true),
-					bc.Hash{V1: 1}: storage.NewUtxoEntry(false, 0, true),
+					bc.Hash{V1: 0}: storage.NewUtxoEntry(false, 0, true, false),
+					bc.Hash{V1: 1}: storage.NewUtxoEntry(false, 0, true, false),
 				},
 			},
 			fetchView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V1: 0}: storage.NewUtxoEntry(false, 0, false),
-					bc.Hash{V1: 1}: storage.NewUtxoEntry(false, 0, true),
+					bc.Hash{V1: 0}: storage.NewUtxoEntry(false, 0, false, false),
+					bc.Hash{V1: 1}: storage.NewUtxoEntry(false, 0, true, false),
 				},
 			},
 			gasOnlyTx: true,
@@ -464,7 +464,7 @@ func TestDetachBlock(t *testing.T) {
 			inputView: NewUtxoViewpoint(),
 			fetchView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V1: 0}: storage.NewUtxoEntry(false, 0, true),
+					bc.Hash{V1: 0}: storage.NewUtxoEntry(false, 0, true, false),
 				},
 			},
 			gasOnlyTx: true,

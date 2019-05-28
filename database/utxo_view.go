@@ -42,7 +42,7 @@ func getTransactionsUtxo(db dbm.DB, view *state.UtxoViewpoint, txs []*bc.Tx) err
 
 			data := db.Get(calcUtxoKey(&prevout))
 			if data == nil {
-				view.Entries[prevout] = &storage.UtxoEntry{}
+				view.Entries[prevout] = storage.NewUtxoEntry(false, 0, false, true)
 				continue
 			}
 

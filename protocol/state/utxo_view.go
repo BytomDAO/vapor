@@ -26,10 +26,15 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFa
 			return errors.New("fail to find mainchain output entry")
 		}
 
+		if !entry.FromMainchain {
+			return errors.New("utxo type mismatch")
+		}
+
 		if entry.Spent {
 			return errors.New("mainchain output has been spent")
 		}
 
+		entry.BlockHeight = block.Height
 		entry.SpendOutput()
 	}
 
@@ -91,7 +96,7 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFa
 		if block != nil && len(block.Transactions) > 0 && block.Transactions[0].ID == tx.ID {
 			isCoinbase = true
 		}
-		view.Entries[*id] = storage.NewUtxoEntry(isCoinbase, block.Height, false)
+		view.Entries[*id] = storage.NewUtxoEntry(isCoinbase, block.Height, false, false)
 	}
 	return nil
 }
@@ -140,7 +145,7 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 			return errors.New("try to revert an unspent utxo")
 		}
 		if !ok {
-			view.Entries[prevout] = storage.NewUtxoEntry(false, 0, false)
+			view.Entries[prevout] = storage.NewUtxoEntry(false, 0, false, false)
 			continue
 		}
 		entry.UnspendOutput()
@@ -167,7 +172,7 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 			continue
 		}
 
-		view.Entries[*id] = storage.NewUtxoEntry(false, 0, true)
+		view.Entries[*id] = storage.NewUtxoEntry(false, 0, true, false)
 	}
 	return nil
 }
