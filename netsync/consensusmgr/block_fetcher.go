@@ -1,9 +1,10 @@
-package netsync
+package consensusmgr
 
 import (
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 
+	"github.com/vapor/netsync/peers"
 	"github.com/vapor/protocol/bc"
 )
 
@@ -17,15 +18,15 @@ const (
 // and scheduling them for retrieval.
 type blockFetcher struct {
 	chain Chain
-	peers *peerSet
+	peers *peers.PeerSet
 
 	newBlockCh chan *blockMsg
 	queue      *prque.Prque
 	msgSet     map[bc.Hash]*blockMsg
 }
 
-//NewBlockFetcher creates a block fetcher to retrieve blocks of the new mined.
-func newBlockFetcher(chain Chain, peers *peerSet) *blockFetcher {
+//NewBlockFetcher creates a block fetcher to retrieve blocks of the new propose.
+func newBlockFetcher(chain Chain, peers *peers.PeerSet) *blockFetcher {
 	f := &blockFetcher{
 		chain:      chain,
 		peers:      peers,
@@ -39,10 +40,9 @@ func newBlockFetcher(chain Chain, peers *peerSet) *blockFetcher {
 
 func (f *blockFetcher) blockProcessor() {
 	for {
-		height := f.chain.BestBlockHeight()
 		for !f.queue.Empty() {
 			msg := f.queue.PopItem().(*blockMsg)
-			if msg.block.Height > height+1 {
+			if msg.block.Height > f.chain.BestBlockHeight()+1 {
 				f.queue.Push(msg, -float32(msg.block.Height))
 				break
 			}
@@ -64,23 +64,23 @@ func (f *blockFetcher) add(msg *blockMsg) {
 	if _, ok := f.msgSet[blockHash]; !ok {
 		f.msgSet[blockHash] = msg
 		f.queue.Push(msg, -float32(msg.block.Height))
-		log.WithFields(log.Fields{
+		logrus.WithFields(logrus.Fields{
 			"module":       logModule,
 			"block height": msg.block.Height,
 			"block hash":   blockHash.String(),
-		}).Debug("blockFetcher receive mine block")
+		}).Debug("blockFetcher receive propose block")
 	}
 }
 
 func (f *blockFetcher) insert(msg *blockMsg) {
 	isOrphan, err := f.chain.ProcessBlock(msg.block)
 	if err != nil {
-		peer := f.peers.getPeer(msg.peerID)
+		peer := f.peers.GetPeer(msg.peerID)
 		if peer == nil {
 			return
 		}
 
-		f.peers.addBanScore(msg.peerID, 20, 0, err.Error())
+		f.peers.AddBanScore(msg.peerID, 20, 0, err.Error())
 		return
 	}
 
@@ -88,13 +88,16 @@ func (f *blockFetcher) insert(msg *blockMsg) {
 		return
 	}
 
-	if err := f.peers.broadcastMinedBlock(msg.block); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("blockFetcher fail on broadcast new block")
+	hash := msg.block.Hash()
+	f.peers.SetStatus(msg.peerID, msg.block.Height, &hash)
+	proposeMsg, err := NewBlockProposeMsg(msg.block)
+	if err != nil {
+		logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on create BlockProposeMsg")
 		return
 	}
 
-	if err := f.peers.broadcastNewStatus(msg.block); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("blockFetcher fail on broadcast new status")
+	if err := f.peers.BroadcastMsg(NewBroadcastMsg(proposeMsg, consensusChannel)); err != nil {
+		logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on broadcast proposed block")
 		return
 	}
 }

@@ -62,13 +62,26 @@ func (ctx *chainTestContext) validateStatus(block *types.Block) error {
 
 func (ctx *chainTestContext) validateExecution(block *types.Block) error {
 	for _, tx := range block.Transactions {
+		for _, mainchainOutputID := range tx.MainchainOutputIDs {
+			utxoEntry, _ := ctx.Store.GetUtxo(&mainchainOutputID)
+			if utxoEntry == nil {
+				continue
+			}
+			if utxoEntry.Type != storage.CrosschainUTXOType {
+				return fmt.Errorf("found non-mainchain utxo entry")
+			}
+			if !utxoEntry.Spent {
+				return fmt.Errorf("utxo entry status should be spent")
+			}
+		}
+
 		for _, spentOutputID := range tx.SpentOutputIDs {
 			utxoEntry, _ := ctx.Store.GetUtxo(&spentOutputID)
 			if utxoEntry == nil {
 				continue
 			}
-			if !utxoEntry.IsCoinBase {
-				return fmt.Errorf("found non-coinbase spent utxo entry")
+			if utxoEntry.Type == storage.NormalUTXOType {
+				return fmt.Errorf("found normal utxo entry")
 			}
 			if !utxoEntry.Spent {
 				return fmt.Errorf("utxo entry status should be spent")

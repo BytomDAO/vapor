@@ -1,10 +1,8 @@
-package netsync
+package messages
 
 import (
-	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/tendermint/go-wire"
@@ -33,8 +31,8 @@ const (
 	MerkleRequestByte   = byte(0x60)
 	MerkleResponseByte  = byte(0x61)
 
-	maxBlockchainResponseSize = 22020096 + 2
-	txsMsgMaxTxNum            = 1024
+	MaxBlockchainResponseSize = 22020096 + 2
+	TxsMsgMaxTxNum            = 1024
 )
 
 //BlockchainMessage is a generic message for this reactor.
@@ -60,18 +58,6 @@ var _ = wire.RegisterInterface(
 	wire.ConcreteType{&GetMerkleBlockMessage{}, MerkleRequestByte},
 	wire.ConcreteType{&MerkleBlockMessage{}, MerkleResponseByte},
 )
-
-//DecodeMessage decode msg
-func DecodeMessage(bz []byte) (msgType byte, msg BlockchainMessage, err error) {
-	msgType = bz[0]
-	n := int(0)
-	r := bytes.NewReader(bz)
-	msg = wire.ReadBinary(struct{ BlockchainMessage }{}, r, maxBlockchainResponseSize, &n, &err).(struct{ BlockchainMessage }).BlockchainMessage
-	if err != nil && n != len(bz) {
-		err = errors.New("DecodeMessage() had bytes left over")
-	}
-	return
-}
 
 //GetBlockMessage request blocks from remote peers by height/hash
 type GetBlockMessage struct {
@@ -453,7 +439,7 @@ type MerkleBlockMessage struct {
 	Flags          []byte
 }
 
-func (m *MerkleBlockMessage) setRawBlockHeader(bh types.BlockHeader) error {
+func (m *MerkleBlockMessage) SetRawBlockHeader(bh types.BlockHeader) error {
 	rawHeader, err := bh.MarshalText()
 	if err != nil {
 		return err
@@ -463,7 +449,7 @@ func (m *MerkleBlockMessage) setRawBlockHeader(bh types.BlockHeader) error {
 	return nil
 }
 
-func (m *MerkleBlockMessage) setTxInfo(txHashes []*bc.Hash, txFlags []uint8, relatedTxs []*types.Tx) error {
+func (m *MerkleBlockMessage) SetTxInfo(txHashes []*bc.Hash, txFlags []uint8, relatedTxs []*types.Tx) error {
 	for _, txHash := range txHashes {
 		m.TxHashes = append(m.TxHashes, txHash.Byte32())
 	}
@@ -479,7 +465,7 @@ func (m *MerkleBlockMessage) setTxInfo(txHashes []*bc.Hash, txFlags []uint8, rel
 	return nil
 }
 
-func (m *MerkleBlockMessage) setStatusInfo(statusHashes []*bc.Hash, relatedStatuses []*bc.TxVerifyResult) error {
+func (m *MerkleBlockMessage) SetStatusInfo(statusHashes []*bc.Hash, relatedStatuses []*bc.TxVerifyResult) error {
 	for _, statusHash := range statusHashes {
 		m.StatusHashes = append(m.StatusHashes, statusHash.Byte32())
 	}

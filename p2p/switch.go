@@ -293,6 +293,10 @@ func (sw *Switch) DialPeerWithAddress(addr *NetAddress) error {
 	return nil
 }
 
+func (sw *Switch) ID() [32]byte {
+	return sw.nodeInfo.PubKey
+}
+
 //IsDialing prevent duplicate dialing
 func (sw *Switch) IsDialing(addr *NetAddress) bool {
 	return sw.dialing.Has(addr.IP.String())

@@ -5,7 +5,7 @@ import (
 	"net"
 
 	"github.com/vapor/errors"
-	"github.com/vapor/netsync"
+	"github.com/vapor/netsync/peers"
 	"github.com/vapor/p2p"
 	"github.com/vapor/version"
 )
@@ -33,7 +33,7 @@ func (a *API) GetNodeInfo() *NetInfo {
 	info := &NetInfo{
 		Listening:    a.sync.IsListening(),
 		Syncing:      !a.sync.IsCaughtUp(),
-		Mining:       a.cpuMiner.IsMining(),
+		Mining:       a.blockProposer.IsProposing(),
 		PeerCount:    a.sync.PeerCount(),
 		CurrentBlock: a.chain.BestBlockHeight(),
 		NetWorkID:    a.sync.GetNetwork(),
@@ -53,7 +53,7 @@ func (a *API) GetNodeInfo() *NetInfo {
 }
 
 // return the currently connected peers with net address
-func (a *API) getPeerInfoByAddr(addr string) *netsync.PeerInfo {
+func (a *API) getPeerInfoByAddr(addr string) *peers.PeerInfo {
 	peerInfos := a.sync.GetPeerInfos()
 	for _, peerInfo := range peerInfos {
 		if peerInfo.RemoteAddr == addr {
@@ -69,7 +69,7 @@ func (a *API) disconnectPeerById(peerID string) error {
 }
 
 // connect peer b y net address
-func (a *API) connectPeerByIpAndPort(ip string, port uint16) (*netsync.PeerInfo, error) {
+func (a *API) connectPeerByIpAndPort(ip string, port uint16) (*peers.PeerInfo, error) {
 	netIp := net.ParseIP(ip)
 	if netIp == nil {
 		return nil, errors.New("invalid ip address")
@@ -98,9 +98,9 @@ func (a *API) isMining() Response {
 	return NewSuccessResponse(IsMining)
 }
 
-// IsMining return mining status
+// IsProposing return mining status
 func (a *API) IsMining() bool {
-	return a.cpuMiner.IsMining()
+	return a.blockProposer.IsProposing()
 }
 
 // return the peers of current node

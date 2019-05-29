@@ -18,16 +18,16 @@ import (
 	"github.com/vapor/dashboard/equity"
 	"github.com/vapor/errors"
 	"github.com/vapor/event"
-	"github.com/vapor/mining/cpuminer"
 	"github.com/vapor/net/http/authn"
 	"github.com/vapor/net/http/gzip"
 	"github.com/vapor/net/http/httpjson"
 	"github.com/vapor/net/http/static"
 	"github.com/vapor/net/websocket"
-	"github.com/vapor/netsync"
+	"github.com/vapor/netsync/peers"
 	"github.com/vapor/p2p"
 	"github.com/vapor/protocol"
 	"github.com/vapor/wallet"
+	"github.com/vapor/proposal/blockproposer"
 )
 
 var (
@@ -113,7 +113,7 @@ type API struct {
 	server          *http.Server
 	handler         http.Handler
 	txFeedTracker   *txfeed.Tracker
-	cpuMiner        *cpuminer.CPUMiner
+	blockProposer   *blockproposer.BlockProposer
 	notificationMgr *websocket.WSNotificationManager
 	eventDispatcher *event.Dispatcher
 }
@@ -173,21 +173,21 @@ type NetSync interface {
 	IsCaughtUp() bool
 	PeerCount() int
 	GetNetwork() string
-	BestPeer() *netsync.PeerInfo
+	BestPeer() *peers.PeerInfo
 	DialPeerWithAddress(addr *p2p.NetAddress) error
-	GetPeerInfos() []*netsync.PeerInfo
+	GetPeerInfos() []*peers.PeerInfo
 	StopPeer(peerID string) error
 }
 
 // NewAPI create and initialize the API
-func NewAPI(sync NetSync, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, cpuMiner *cpuminer.CPUMiner, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, dispatcher *event.Dispatcher, notificationMgr *websocket.WSNotificationManager) *API {
+func NewAPI(sync NetSync, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, blockProposer *blockproposer.BlockProposer, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, dispatcher *event.Dispatcher, notificationMgr *websocket.WSNotificationManager) *API {
 	api := &API{
 		sync:            sync,
 		wallet:          wallet,
 		chain:           chain,
 		accessTokens:    token,
 		txFeedTracker:   txfeeds,
-		cpuMiner:        cpuMiner,
+		blockProposer:   blockProposer,
 		eventDispatcher: dispatcher,
 		notificationMgr: notificationMgr,
 	}

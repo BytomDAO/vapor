@@ -1,4 +1,4 @@
-package netsync
+package chainmgr
 
 import (
 	"errors"
@@ -9,6 +9,7 @@ import (
 	"github.com/tendermint/tmlibs/flowrate"
 
 	"github.com/vapor/consensus"
+	"github.com/vapor/netsync/peers"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/test/mock"
@@ -20,7 +21,7 @@ type P2PPeer struct {
 	flag consensus.ServiceFlag
 
 	srcPeer    *P2PPeer
-	remoteNode *SyncManager
+	remoteNode *Manager
 	msgCh      chan []byte
 	async      bool
 }
@@ -51,7 +52,7 @@ func (p *P2PPeer) ServiceFlag() consensus.ServiceFlag {
 	return p.flag
 }
 
-func (p *P2PPeer) SetConnection(srcPeer *P2PPeer, node *SyncManager) {
+func (p *P2PPeer) SetConnection(srcPeer *P2PPeer, node *Manager) {
 	p.srcPeer = srcPeer
 	p.remoteNode = node
 }
@@ -65,7 +66,7 @@ func (p *P2PPeer) TrySend(b byte, msg interface{}) bool {
 	if p.async {
 		p.msgCh <- msgBytes
 	} else {
-		msgType, msg, _ := DecodeMessage(msgBytes)
+		msgType, msg, _ := decodeMessage(msgBytes)
 		p.remoteNode.processMsg(p.srcPeer, msgType, msg)
 	}
 	return true
@@ -77,7 +78,7 @@ func (p *P2PPeer) setAsync(b bool) {
 
 func (p *P2PPeer) postMan() {
 	for msgBytes := range p.msgCh {
-		msgType, msg, _ := DecodeMessage(msgBytes)
+		msgType, msg, _ := decodeMessage(msgBytes)
 		p.remoteNode.processMsg(p.srcPeer, msgType, msg)
 	}
 }
@@ -92,19 +93,19 @@ func (ps *PeerSet) AddBannedPeer(string) error { return nil }
 func (ps *PeerSet) StopPeerGracefully(string)  {}
 
 type NetWork struct {
-	nodes map[*SyncManager]P2PPeer
+	nodes map[*Manager]P2PPeer
 }
 
 func NewNetWork() *NetWork {
-	return &NetWork{map[*SyncManager]P2PPeer{}}
+	return &NetWork{map[*Manager]P2PPeer{}}
 }
 
-func (nw *NetWork) Register(node *SyncManager, addr, id string, flag consensus.ServiceFlag) {
+func (nw *NetWork) Register(node *Manager, addr, id string, flag consensus.ServiceFlag) {
 	peer := NewP2PPeer(addr, id, flag)
 	nw.nodes[node] = *peer
 }
 
-func (nw *NetWork) HandsShake(nodeA, nodeB *SyncManager) (*P2PPeer, *P2PPeer, error) {
+func (nw *NetWork) HandsShake(nodeA, nodeB *Manager) (*P2PPeer, *P2PPeer, error) {
 	B2A, ok := nw.nodes[nodeA]
 	if !ok {
 		return nil, nil, errors.New("can't find nodeA's p2p peer on network")
@@ -149,17 +150,15 @@ func mockBlocks(startBlock *types.Block, height uint64) []*types.Block {
 	return blocks
 }
 
-func mockSync(blocks []*types.Block) *SyncManager {
+func mockSync(blocks []*types.Block) *Manager {
 	chain := mock.NewChain()
-	peers := newPeerSet(NewPeerSet())
+	peers := peers.NewPeerSet(NewPeerSet())
 	chain.SetBestBlockHeader(&blocks[len(blocks)-1].BlockHeader)
 	for _, block := range blocks {
 		chain.SetBlockByHeight(block.Height, block)
 	}
 
-	genesis, _ := chain.GetHeaderByHeight(0)
-	return &SyncManager{
-		genesisHash: genesis.Hash(),
+	return &Manager{
 		chain:       chain,
 		blockKeeper: newBlockKeeper(chain, peers),
 		peers:       peers,

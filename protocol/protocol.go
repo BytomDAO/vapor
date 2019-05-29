@@ -81,6 +81,7 @@ func (c *Chain) initChainStatus() error {
 	if err != nil {
 		return err
 	}
+
 	return c.store.SaveChainStatus(node, node, utxoView, map[uint64]*state.VoteResult{})
 }
 
@@ -118,10 +119,6 @@ func (c *Chain) setState(node *state.BlockNode, irreversibleNode *state.BlockNod
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
 
-	if err := c.bbft.UpdateConsensusNodes(node.Height); err != nil {
-		return err
-	}
-
 	c.index.SetMainChain(node)
 	c.bestNode = node
 	c.bestIrreversibleNode = irreversibleNode
@@ -149,4 +146,9 @@ func (c *Chain) BlockWaiter(height uint64) <-chan struct{} {
 // GetTxPool return chain txpool.
 func (c *Chain) GetTxPool() *TxPool {
 	return c.txPool
+}
+
+// GetBBFT return chain bbft
+func (c *Chain) GetBBFT() *bbft {
+	return c.bbft
 }

@@ -21,10 +21,11 @@ func (cci *CrossChainInput) SetDestination(id *Hash, val *AssetAmount, pos uint6
 }
 
 // NewCrossChainInput creates a new CrossChainInput.
-func NewCrossChainInput(mainchainOutputID *Hash, value *AssetAmount, ordinal uint64) *CrossChainInput {
+func NewCrossChainInput(mainchainOutputID *Hash, value *AssetAmount, prog *Program, ordinal uint64) *CrossChainInput {
 	return &CrossChainInput{
 		MainchainOutputId: mainchainOutputID,
 		Value:             value,
 		Ordinal:           ordinal,
+		ControlProgram:    prog,
 	}
 }

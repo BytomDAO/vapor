@@ -1,14 +1,14 @@
-package netsync
+package chainmgr
 
 import (
 	"container/list"
-	"encoding/hex"
 	"encoding/json"
 	"testing"
 	"time"
 
 	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
+	msgs "github.com/vapor/netsync/messages"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/test/mock"
@@ -190,7 +190,7 @@ func TestFastBlockSync(t *testing.T) {
 			go A2B.postMan()
 		}
 
-		a.blockKeeper.syncPeer = a.peers.getPeer("test node B")
+		a.blockKeeper.syncPeer = a.peers.GetPeer("test node B")
 		if err := a.blockKeeper.fastBlockSync(c.checkPoint); errors.Root(err) != c.err {
 			t.Errorf("case %d: got %v want %v", i, err, c.err)
 		}
@@ -345,34 +345,34 @@ func TestNextCheckpoint(t *testing.T) {
 		},
 		{
 			checkPoints: []consensus.Checkpoint{
-				{10000, bc.Hash{V0: 1}},
+				{Height: 10000, Hash: bc.Hash{V0: 1}},
 			},
 			bestHeight: 5000,
-			want:       &consensus.Checkpoint{10000, bc.Hash{V0: 1}},
+			want:       &consensus.Checkpoint{Height: 10000, Hash: bc.Hash{V0: 1}},
 		},
 		{
 			checkPoints: []consensus.Checkpoint{
-				{10000, bc.Hash{V0: 1}},
-				{20000, bc.Hash{V0: 2}},
-				{30000, bc.Hash{V0: 3}},
+				{Height: 10000, Hash: bc.Hash{V0: 1}},
+				{Height: 20000, Hash: bc.Hash{V0: 2}},
+				{Height: 30000, Hash: bc.Hash{V0: 3}},
 			},
 			bestHeight: 15000,
-			want:       &consensus.Checkpoint{20000, bc.Hash{V0: 2}},
+			want:       &consensus.Checkpoint{Height: 20000, Hash: bc.Hash{V0: 2}},
 		},
 		{
 			checkPoints: []consensus.Checkpoint{
-				{10000, bc.Hash{V0: 1}},
-				{20000, bc.Hash{V0: 2}},
-				{30000, bc.Hash{V0: 3}},
+				{Height: 10000, Hash: bc.Hash{V0: 1}},
+				{Height: 20000, Hash: bc.Hash{V0: 2}},
+				{Height: 30000, Hash: bc.Hash{V0: 3}},
 			},
 			bestHeight: 10000,
-			want:       &consensus.Checkpoint{20000, bc.Hash{V0: 2}},
+			want:       &consensus.Checkpoint{Height: 20000, Hash: bc.Hash{V0: 2}},
 		},
 		{
 			checkPoints: []consensus.Checkpoint{
-				{10000, bc.Hash{V0: 1}},
-				{20000, bc.Hash{V0: 2}},
-				{30000, bc.Hash{V0: 3}},
+				{Height: 10000, Hash: bc.Hash{V0: 1}},
+				{Height: 20000, Hash: bc.Hash{V0: 2}},
+				{Height: 30000, Hash: bc.Hash{V0: 3}},
 			},
 			bestHeight: 35000,
 			want:       nil,
@@ -451,7 +451,7 @@ func TestRegularBlockSync(t *testing.T) {
 			go A2B.postMan()
 		}
 
-		a.blockKeeper.syncPeer = a.peers.getPeer("test node B")
+		a.blockKeeper.syncPeer = a.peers.GetPeer("test node B")
 		if err := a.blockKeeper.regularBlockSync(c.syncHeight); errors.Root(err) != c.err {
 			t.Errorf("case %d: got %v want %v", i, err, c.err)
 		}
@@ -485,11 +485,11 @@ func TestRequireBlock(t *testing.T) {
 		go A2B.postMan()
 	}
 
-	a.blockKeeper.syncPeer = a.peers.getPeer("test node B")
-	b.blockKeeper.syncPeer = b.peers.getPeer("test node A")
+	a.blockKeeper.syncPeer = a.peers.GetPeer("test node B")
+	b.blockKeeper.syncPeer = b.peers.GetPeer("test node A")
 	cases := []struct {
 		syncTimeout   time.Duration
-		testNode      *SyncManager
+		testNode      *Manager
 		requireHeight uint64
 		want          *types.Block
 		err           error
@@ -584,9 +584,9 @@ func TestSendMerkleBlock(t *testing.T) {
 		completed := make(chan error)
 		go func() {
 			msgBytes := <-F2S.msgCh
-			_, msg, _ := DecodeMessage(msgBytes)
+			_, msg, _ := decodeMessage(msgBytes)
 			switch m := msg.(type) {
-			case *MerkleBlockMessage:
+			case *msgs.MerkleBlockMessage:
 				var relatedTxIDs []*bc.Hash
 				for _, rawTx := range m.RawTxDatas {
 					tx := &types.Tx{}
@@ -627,11 +627,11 @@ func TestSendMerkleBlock(t *testing.T) {
 			}
 		}()
 
-		spvPeer := fullNode.peers.getPeer("spv_node")
+		spvPeer := fullNode.peers.GetPeer("spv_node")
 		for i := 0; i < len(c.relatedTxIndex); i++ {
-			spvPeer.filterAdds.Add(hex.EncodeToString(txs[c.relatedTxIndex[i]].Outputs[0].ControlProgram()))
+			spvPeer.AddFilterAddress(txs[c.relatedTxIndex[i]].Outputs[0].ControlProgram())
 		}
-		msg := &GetMerkleBlockMessage{RawHash: targetBlock.Hash().Byte32()}
+		msg := &msgs.GetMerkleBlockMessage{RawHash: targetBlock.Hash().Byte32()}
 		fullNode.handleGetMerkleBlockMsg(spvPeer, msg)
 		if err := <-completed; err != nil {
 			t.Fatal(err)

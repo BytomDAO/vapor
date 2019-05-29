@@ -353,6 +353,11 @@ func buildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
 		in.Type = "spend"
 		in.ControlProgram = orig.ControlProgram()
 		in.SpentOutputID = e.SpentOutputId
+
+	case *bc.CrossChainInput:
+		in.Type = "cross_chain_in"
+		in.ControlProgram = orig.ControlProgram()
+		in.SpentOutputID = e.MainchainOutputId
 	}
 
 	return in

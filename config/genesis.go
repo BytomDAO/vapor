@@ -22,14 +22,14 @@ func GenesisArguments(c *Config) []byte {
 	}
 	fedpegScript, err := vmutil.P2SPMultiSigProgram(cryptoPub, c.Federation.Quorum)
 	if err != nil {
-		log.Panicf("fail on decode genesis arguments for federation")
+		log.Panicf("Failed generate federation scirpt  for federation")
 	}
 
 	scriptHash := vcrypto.Sha256(fedpegScript)
 
 	control, err := vmutil.P2WSHProgram(scriptHash)
 	if err != nil {
-		log.Panicf("Fail converts scriptHash to program on GenesisArguments: %v", err)
+		log.Panicf("Fail converts scriptHash to program on FederationProgrom: %v", err)
 	}
 
 	return control
@@ -41,7 +41,7 @@ func GenesisTx() *types.Tx {
 		log.Panicf("fail on decode genesis tx output control program")
 	}
 
-	coinbaseInput := GenesisArguments(CommonConfig)
+	coinbaseInput := FederationProgrom(CommonConfig)
 
 	txData := types.TxData{
 		Version: 1,
