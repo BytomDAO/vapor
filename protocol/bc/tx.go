@@ -12,8 +12,9 @@ type Tx struct {
 	Entries  map[Hash]Entry
 	InputIDs []Hash // 1:1 correspondence with TxData.Inputs
 
-	SpentOutputIDs []Hash
-	GasInputIDs    []Hash
+	SpentOutputIDs     []Hash
+	MainchainOutputIDs []Hash
+	GasInputIDs        []Hash
 }
 
 // SigHash ...

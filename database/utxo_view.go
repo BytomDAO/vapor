@@ -34,6 +34,25 @@ func getTransactionsUtxo(db dbm.DB, view *state.UtxoViewpoint, txs []*bc.Tx) err
 
 			view.Entries[prevout] = &utxo
 		}
+
+		for _, prevout := range tx.MainchainOutputIDs {
+			if view.HasUtxo(&prevout) {
+				continue
+			}
+
+			data := db.Get(calcUtxoKey(&prevout))
+			if data == nil {
+				view.Entries[prevout] = storage.NewUtxoEntry(storage.CrosschainUTXOType, 0, false)
+				continue
+			}
+
+			var utxo storage.UtxoEntry
+			if err := proto.Unmarshal(data, &utxo); err != nil {
+				return errors.Wrap(err, "unmarshaling mainchain ouput entry")
+			}
+
+			view.Entries[prevout] = &utxo
+		}
 	}
 
 	return nil
@@ -53,7 +72,12 @@ func getUtxo(db dbm.DB, hash *bc.Hash) (*storage.UtxoEntry, error) {
 
 func saveUtxoView(batch dbm.Batch, view *state.UtxoViewpoint) error {
 	for key, entry := range view.Entries {
-		if entry.Spent && !entry.IsCoinBase {
+		if (entry.Type == storage.CrosschainUTXOType) && (!entry.Spent) {
+			batch.Delete(calcUtxoKey(&key))
+			continue
+		}
+
+		if (entry.Type == storage.NormalUTXOType) && (entry.Spent) {
 			batch.Delete(calcUtxoKey(&key))
 			continue
 		}

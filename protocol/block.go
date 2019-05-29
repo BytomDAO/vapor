@@ -114,7 +114,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 	utxoView := state.NewUtxoViewpoint()
 	voteResultMap := make(map[uint64]*state.VoteResult)
 	irreversibleNode := c.bestIrreversibleNode
-	
+
 	for _, detachNode := range detachNodes {
 		b, err := c.store.GetBlock(&detachNode.Hash)
 		if err != nil {
@@ -129,14 +129,16 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 		if err := c.store.GetTransactionsUtxo(utxoView, detachBlock.Transactions); err != nil {
 			return err
 		}
+
 		txStatus, err := c.GetTransactionStatus(&detachBlock.ID)
 		if err != nil {
 			return err
 		}
+
 		if err := utxoView.DetachBlock(detachBlock, txStatus); err != nil {
 			return err
 		}
-		
+
 		if err := c.bbft.DetachBlock(voteResultMap, b); err != nil {
 			return err
 		}
@@ -154,10 +156,12 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 		if err := c.store.GetTransactionsUtxo(utxoView, attachBlock.Transactions); err != nil {
 			return err
 		}
+
 		txStatus, err := c.GetTransactionStatus(&attachBlock.ID)
 		if err != nil {
 			return err
 		}
+
 		if err := utxoView.ApplyBlock(attachBlock, txStatus); err != nil {
 			return err
 		}
@@ -269,7 +273,7 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	if block.Height <= c.bestIrreversibleNode.Height {
 		return false, errors.New("the height of block below the height of irreversible block")
 	}
-	
+
 	blockHash := block.Hash()
 	if c.BlockExist(&blockHash) {
 		log.WithFields(log.Fields{"module": logModule, "hash": blockHash.String(), "height": block.Height}).Info("block has been processed")

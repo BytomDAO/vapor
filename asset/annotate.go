@@ -4,13 +4,8 @@ import (
 	"encoding/json"
 
 	"github.com/vapor/blockchain/query"
+	chainjson "github.com/vapor/encoding/json"
 )
-
-func isValidJSON(b []byte) bool {
-	var v interface{}
-	err := json.Unmarshal(b, &v)
-	return err == nil
-}
 
 //Annotated annotate the asset
 func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
@@ -18,7 +13,7 @@ func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
 
 	// a.RawDefinitionByte is the asset definition as it appears on the
 	// blockchain, so it's untrusted and may not be valid json.
-	if isValidJSON(a.RawDefinitionByte) {
+	if chainjson.IsValidJSON(a.RawDefinitionByte) {
 		jsonDefinition = json.RawMessage(a.RawDefinitionByte)
 	}
 

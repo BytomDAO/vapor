@@ -24,7 +24,7 @@ func FederationProgrom(c *Config) []byte {
 
 	control, err := vmutil.P2WSHProgram(scriptHash)
 	if err != nil {
-		log.Panicf("Fail converts scriptHash to program on GenesisArguments: %v", err)
+		log.Panicf("Fail converts scriptHash to program on FederationProgrom: %v", err)
 	}
 
 	return control

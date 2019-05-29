@@ -34,6 +34,7 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 			destPos = &e.WitnessDestination.Position
 			s := e.SpentOutputId.Bytes()
 			spentOutputID = &s
+
 		case *bc.VoteOutput:
 			a1 := spentOutput.Source.Value.AssetId.Bytes()
 			assetID = &a1
