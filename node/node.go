@@ -2,6 +2,7 @@ package node
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"net"
 	"net/http"
@@ -26,9 +27,9 @@ import (
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/env"
 	"github.com/vapor/event"
-	"github.com/vapor/proposal/blockproposer"
 	"github.com/vapor/net/websocket"
 	"github.com/vapor/netsync"
+	"github.com/vapor/proposal/blockproposer"
 	"github.com/vapor/protocol"
 	w "github.com/vapor/wallet"
 )
@@ -59,12 +60,22 @@ type Node struct {
 // NewNode create bytom node
 func NewNode(config *cfg.Config) *Node {
 	ctx := context.Background()
+
 	if err := lockDataDirectory(config); err != nil {
 		cmn.Exit("Error: " + err.Error())
 	}
+
 	if err := cfg.LoadFederationFile(config.FederationFile(), config); err != nil {
 		cmn.Exit(cmn.Fmt("Failed to load federated information:[%s]", err.Error()))
 	}
+
+	log.WithFields(log.Fields{
+		"module":             logModule,
+		"fed_xpubs":          config.Federation.Xpubs,
+		"fed_quorum":         config.Federation.Quorum,
+		"fed_controlprogram": hex.EncodeToString(cfg.FederationProgrom(config)),
+	}).Info()
+
 	initLogFile(config)
 	initActiveNetParams(config)
 	initCommonConfig(config)

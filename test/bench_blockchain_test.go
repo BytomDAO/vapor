@@ -127,7 +127,7 @@ func GenerateChainData(dirPath string, testDB dbm.DB, txNumber, otherAssetNum in
 
 	// init UtxoViewpoint
 	utxoView := state.NewUtxoViewpoint()
-	utxoEntry := storage.NewUtxoEntry(false, 1, false)
+	utxoEntry := storage.NewUtxoEntry(storage.NormalUTXOType, 1, false)
 	for _, tx := range txs {
 		for _, id := range tx.SpentOutputIDs {
 			utxoView.Entries[id] = utxoEntry

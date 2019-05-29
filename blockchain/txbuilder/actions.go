@@ -5,6 +5,8 @@ import (
 	stdjson "encoding/json"
 	"errors"
 
+	"github.com/vapor/config"
+
 	"github.com/vapor/common"
 	"github.com/vapor/consensus"
 	"github.com/vapor/encoding/json"
@@ -248,4 +250,46 @@ func (a *voteOutputAction) Build(ctx context.Context, b *TemplateBuilder) error 
 
 func (a *voteOutputAction) ActionType() string {
 	return "vote_output"
+}
+
+// DecodeCrossInAction convert input data to action struct
+func DecodeCrossInAction(data []byte) (Action, error) {
+	a := new(crossInAction)
+	err := stdjson.Unmarshal(data, a)
+	return a, err
+}
+
+type crossInAction struct {
+	bc.AssetAmount
+	SourceID          bc.Hash       `json:"source_id"`
+	SourcePos         uint64        `json:"source_pos"`
+	RawDefinitionByte json.HexBytes `json:"raw_definition_byte"`
+}
+
+func (a *crossInAction) Build(ctx context.Context, builder *TemplateBuilder) error {
+	var missing []string
+	if a.SourceID.IsZero() {
+		missing = append(missing, "source_id")
+	}
+	if a.AssetId.IsZero() {
+		missing = append(missing, "asset_id")
+	}
+	if a.Amount == 0 {
+		missing = append(missing, "amount")
+	}
+	if len(missing) > 0 {
+		return MissingFieldsError(missing...)
+	}
+
+	// arguments will be set when materializeWitnesses
+	fedProg := config.FederationProgrom(config.CommonConfig)
+	txin := types.NewCrossChainInput(nil, a.SourceID, *a.AssetId, a.Amount, a.SourcePos, fedProg, a.RawDefinitionByte)
+	tplIn := &SigningInstruction{}
+	fed := config.CommonConfig.Federation
+	tplIn.AddRawWitnessKeys(fed.Xpubs, nil, fed.Quorum)
+	return builder.AddInput(txin, tplIn)
+}
+
+func (a *crossInAction) ActionType() string {
+	return "cross_chain_in"
 }

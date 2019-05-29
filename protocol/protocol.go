@@ -81,6 +81,7 @@ func (c *Chain) initChainStatus() error {
 	if err != nil {
 		return err
 	}
+
 	return c.store.SaveChainStatus(node, node, utxoView, map[uint64]*state.VoteResult{})
 }
 

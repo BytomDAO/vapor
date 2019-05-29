@@ -51,6 +51,8 @@ func (tx *Tx) SetInputArguments(n uint32, args [][]byte) {
 	switch e := e.(type) {
 	case *bc.Spend:
 		e.WitnessArguments = args
+	case *bc.CrossChainInput:
+		e.WitnessArguments = args
 	}
 }
 

@@ -5,6 +5,12 @@ import (
 	"encoding/json"
 )
 
+func IsValidJSON(b []byte) bool {
+	var v interface{}
+	err := json.Unmarshal(b, &v)
+	return err == nil
+}
+
 type HexBytes []byte
 
 func (h HexBytes) MarshalText() ([]byte, error) {

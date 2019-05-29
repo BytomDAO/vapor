@@ -151,6 +151,7 @@ func TestLoadBlockIndexEquals(t *testing.T) {
 		t.Errorf("got block index:%v, expect block index:%v", index, expectBlockIndex)
 	}
 }
+
 func TestSaveChainStatus(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer func() {
@@ -163,9 +164,11 @@ func TestSaveChainStatus(t *testing.T) {
 	node := &state.BlockNode{Height: 100, Hash: bc.Hash{V0: 0, V1: 1, V2: 2, V3: 3}}
 	view := &state.UtxoViewpoint{
 		Entries: map[bc.Hash]*storage.UtxoEntry{
-			bc.Hash{V0: 1, V1: 2, V2: 3, V3: 4}: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 100, Spent: false},
-			bc.Hash{V0: 1, V1: 2, V2: 3, V3: 4}: &storage.UtxoEntry{IsCoinBase: true, BlockHeight: 100, Spent: true},
-			bc.Hash{V0: 1, V1: 1, V2: 3, V3: 4}: &storage.UtxoEntry{IsCoinBase: false, BlockHeight: 100, Spent: true},
+			bc.Hash{V0: 1, V1: 2, V2: 3, V3: 4}: &storage.UtxoEntry{Type: storage.NormalUTXOType, BlockHeight: 100, Spent: false},
+			bc.Hash{V0: 1, V1: 2, V2: 3, V3: 4}: &storage.UtxoEntry{Type: storage.CoinbaseUTXOType, BlockHeight: 100, Spent: true},
+			bc.Hash{V0: 1, V1: 1, V2: 3, V3: 4}: &storage.UtxoEntry{Type: storage.NormalUTXOType, BlockHeight: 100, Spent: true},
+			bc.Hash{V0: 1, V1: 1, V2: 3, V3: 5}: &storage.UtxoEntry{Type: storage.CrosschainUTXOType, BlockHeight: 100, Spent: false},
+			bc.Hash{V0: 1, V1: 1, V2: 3, V3: 6}: &storage.UtxoEntry{Type: storage.CrosschainUTXOType, BlockHeight: 100, Spent: true},
 		},
 	}
 
@@ -179,7 +182,10 @@ func TestSaveChainStatus(t *testing.T) {
 	}
 
 	for hash, utxo := range view.Entries {
-		if utxo.Spent && !utxo.IsCoinBase {
+		if (utxo.Type == storage.NormalUTXOType) && utxo.Spent {
+			continue
+		}
+		if (utxo.Type == storage.CrosschainUTXOType) && (!utxo.Spent) {
 			continue
 		}
 

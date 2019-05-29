@@ -21,11 +21,13 @@ func MapTx(oldTx *TxData) *bc.Tx {
 	}
 
 	spentOutputIDs := make(map[bc.Hash]bool)
+	mainchainOutputIDs := make(map[bc.Hash]bool)
 	for id, e := range entries {
 		var ord uint64
 		switch e := e.(type) {
 		case *bc.CrossChainInput:
 			ord = e.Ordinal
+			mainchainOutputIDs[*e.MainchainOutputId] = true
 			if *e.WitnessDestination.Value.AssetId == *consensus.BTMAssetID {
 				tx.GasInputIDs = append(tx.GasInputIDs, id)
 			}
@@ -53,6 +55,9 @@ func MapTx(oldTx *TxData) *bc.Tx {
 
 	for id := range spentOutputIDs {
 		tx.SpentOutputIDs = append(tx.SpentOutputIDs, id)
+	}
+	for id := range mainchainOutputIDs {
+		tx.MainchainOutputIDs = append(tx.MainchainOutputIDs, id)
 	}
 	return tx
 }
@@ -127,13 +132,14 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			spends = append(spends, spend)
 
 		case *CrossChainInput:
+			// TODO: fed peg script
 			prog := &bc.Program{VmVersion: inp.VMVersion, Code: inp.ControlProgram}
 			src := &bc.ValueSource{
 				Ref:      &inp.SourceID,
 				Value:    &inp.AssetAmount,
 				Position: inp.SourcePosition,
 			}
-			prevout := bc.NewCrossChainOutput(src, prog, 0) // ordinal doesn't matter
+			prevout := bc.NewIntraChainOutput(src, prog, 0) // ordinal doesn't matter
 			outputID := bc.EntryID(prevout)
 			crossIn := bc.NewCrossChainInput(&outputID, &inp.AssetAmount, prog, uint64(i))
 			crossIn.WitnessArguments = inp.Arguments
@@ -143,7 +149,6 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 				Value: &inp.AssetAmount,
 			}
 			crossIns = append(crossIns, crossIn)
-
 		}
 	}
 
