@@ -6,7 +6,6 @@ import (
 	"math"
 
 	"github.com/vapor/config"
-
 	"github.com/vapor/consensus"
 	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/errors"
