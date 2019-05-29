@@ -111,6 +111,8 @@ func (h *HSM) createKeyFromMnemonic(alias string, auth string, mnemonic string) 
 	// Generate a Bip32 HD wallet for the mnemonic and a user supplied password
 	seed := mnem.NewSeed(mnemonic, "")
 	xprv, xpub, err := csp.NewXKeys(bytes.NewBuffer(seed))
+	fmt.Println("createKeyFromMnemonic xprv:", xprv, "xpub:", xpub)
+	fmt.Println("createKeyFromMnemonic xpub type:", reflect.TypeOf(xpub))
 	if err != nil {
 		return nil, err
 	}
@@ -126,6 +128,7 @@ func (h *HSM) createKeyFromMnemonic(alias string, auth string, mnemonic string) 
 	if err := h.keyStore.StoreKey(file, key, auth); err != nil {
 		return nil, errors.Wrap(err, "storing keys")
 	}
+	fmt.Println("createKeyFromMnemonic new XPub:", &XPub{XPub: xpub, Alias: alias, File: file})
 	return &XPub{XPub: xpub, Alias: alias, File: file}, nil
 }
 
@@ -205,8 +208,10 @@ func (h *HSM) XSign(xpub vcrypto.XPubKeyer, path [][]byte, msg []byte, auth stri
 	fmt.Println("XSign start...")
 	xprv, err := h.LoadChainKDKey(xpub, auth)
 	if err != nil {
+		fmt.Println("some err...")
 		return nil, err
 	}
+	fmt.Println("XSign xprv:", xprv)
 	if len(path) > 0 {
 		switch xprvkey := xprv.(type) {
 		case edchainkd.XPrv:
@@ -230,6 +235,7 @@ func (h *HSM) LoadChainKDKey(xpub vcrypto.XPubKeyer, auth string) (xprv vcrypto.
 	//	return xprv, nil
 	//}
 
+	fmt.Println("LoadChainKDKey h.cache:", h.cache)
 	_, xkey, err := h.loadDecryptedKey(xpub, auth)
 	if err != nil {
 		return xprv, ErrLoadKey
@@ -270,8 +276,10 @@ func (h *HSM) loadDecryptedKey(xpub vcrypto.XPubKeyer, auth string) (XPub, *XKey
 	fmt.Println("loadDecryptedKey start...")
 	fmt.Println("loadDecryptedKey xpub:", xpub)
 	fmt.Println("loadDecryptedKey xpub type:", reflect.TypeOf(xpub))
+	fmt.Println("loadDecryptedKey h.cache:", h.cache)
 	h.cache.maybeReload()
 	h.cache.mu.Lock()
+	fmt.Println("loadDecryptedKey h.cache:", h.cache)
 	xpb, err := h.cache.find(XPub{XPub: xpub})
 	fmt.Println("loadDecryptedKey xpb:", xpb)
 	fmt.Println("loadDecryptedKey find...")

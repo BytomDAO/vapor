@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"encoding/binary"
 
-	"github.com/vapor/crypto"
+	vcrypto "github.com/vapor/crypto"
 	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
 )
@@ -55,11 +55,11 @@ var (
 // which is composed of a set of keys as well as
 // the amount of signatures needed for quorum.
 type Signer struct {
-	Type       string             `json:"type"`
-	XPubs      []crypto.XPubKeyer `json:"xpubs"`
-	Quorum     int                `json:"quorum"`
-	KeyIndex   uint64             `json:"key_index"`
-	DeriveRule uint8              `json:"derive_rule"`
+	Type       string              `json:"type"`
+	XPubs      []vcrypto.XPubKeyer `json:"xpubs"`
+	Quorum     int                 `json:"quorum"`
+	KeyIndex   uint64              `json:"key_index"`
+	DeriveRule uint8               `json:"derive_rule"`
 }
 
 // GetBip0032Path returns the complete path for bip0032 derived keys
@@ -109,12 +109,12 @@ func Path(s *Signer, ks keySpace, change bool, addrIndex uint64) ([][]byte, erro
 }
 
 // Create creates and stores a Signer in the database
-func Create(signerType string, xpubs []crypto.XPubKeyer, quorum int, keyIndex uint64, deriveRule uint8) (*Signer, error) {
+func Create(signerType string, xpubs []vcrypto.XPubKeyer, quorum int, keyIndex uint64, deriveRule uint8) (*Signer, error) {
 	if len(xpubs) == 0 {
 		return nil, errors.Wrap(ErrNoXPubs)
 	}
 
-	xpubsMap := map[crypto.XPubKeyer]bool{}
+	xpubsMap := map[vcrypto.XPubKeyer]bool{}
 	for _, xpub := range xpubs {
 		if _, ok := xpubsMap[xpub]; ok {
 			return nil, errors.WithDetailf(ErrDupeXPub, "duplicated key=%x", xpub)

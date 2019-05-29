@@ -417,6 +417,7 @@ func (m *Manager) FindByAlias(alias string) (*Account, error) {
 
 // FindByID returns an account's Signer record by its ID.
 func (m *Manager) FindByID(id string) (*Account, error) {
+	fmt.Println("FindByID start...")
 	m.cacheMu.Lock()
 	cachedAccount, ok := m.cache.Get(id)
 	m.cacheMu.Unlock()
@@ -441,12 +442,13 @@ func (m *Manager) FindByID(id string) (*Account, error) {
 			} else {
 				account.XPubs[i] = *xpb
 			}
-			// fmt.Println("account xpubs type:", reflect.TypeOf(xpub).String())
+			fmt.Println("account xpubs type:", reflect.TypeOf(account.XPubs[i]).String())
 		}
 	}
 
 	m.cacheMu.Lock()
 	m.cache.Add(id, account)
+	fmt.Println("FindByID m.cache...", m.cache)
 	m.cacheMu.Unlock()
 	return account, nil
 }

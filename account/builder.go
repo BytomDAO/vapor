@@ -359,11 +359,13 @@ func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.S
 
 	case *common.AddressWitnessScriptHash:
 		fmt.Println("UtxoToInputs *common.AddressWitnessScriptHash...")
+		fmt.Println("UtxoToInputs derivedXPubs", derivedXPubs)
 		derivedPKs := csp.XPubKeys(derivedXPubs)
 		script, err := vmutil.P2SPMultiSigProgram(derivedPKs, signer.Quorum)
 		if err != nil {
 			return nil, nil, err
 		}
+		fmt.Println("UtxoToInputs derivedPKs:", derivedPKs)
 		sigInst.WitnessComponents = append(sigInst.WitnessComponents, txbuilder.DataWitness(script))
 
 	default:

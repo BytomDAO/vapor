@@ -148,12 +148,13 @@ func (kc *keyCache) find(xpub XPub) (XPub, error) {
 	matches := kc.all
 	fmt.Println("matches := kc.all", matches)
 	// if (xpub.XPub != vcrypto.XPubKeyer{}) {
-	// 	matches = kc.byPubs[xpub.XPub]
+	// matches = kc.byPubs[xpub.XPub]
 	// }
 	fmt.Println("xpub.XPub:", xpub.XPub)
 	fmt.Println("xpub.XPub type:", reflect.TypeOf(xpub.XPub))
 	fmt.Println("keyCache:", kc)
 	fmt.Println("keyCache byPubs:", kc.byPubs)
+	fmt.Println("keyCache byPubs xpub.XPub:", kc.byPubs[xpub.XPub])
 	// switch xpb := xpub.XPub.(type) {
 	// case edchainkd.XPub:
 	// 	fmt.Println("ed25519 xpb")
