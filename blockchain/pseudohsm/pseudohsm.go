@@ -62,6 +62,7 @@ func New(keypath string) (*HSM, error) {
 func (h *HSM) XCreate(alias string, auth string, language string) (*XPub, *string, error) {
 	h.cacheMu.Lock()
 	defer h.cacheMu.Unlock()
+	fmt.Println("XCreate start h.cache:", h.cache)
 
 	normalizedAlias := strings.ToLower(strings.TrimSpace(alias))
 	if ok := h.cache.hasAlias(normalizedAlias); ok {
@@ -73,6 +74,15 @@ func (h *HSM) XCreate(alias string, auth string, language string) (*XPub, *strin
 		return nil, nil, err
 	}
 	h.cache.add(*xpub)
+
+	fmt.Println("XCreate after add h.cache:", h.cache)
+	for i, v := range h.cache.byPubs {
+		fmt.Println("XCreate i:", i)
+		fmt.Println("XCreate i type:", reflect.TypeOf(i))
+		fmt.Println("XCreate v:", v)
+		fmt.Println("XCreate v type:", reflect.TypeOf(v))
+	}
+
 	return xpub, mnemonic, err
 }
 

@@ -94,6 +94,10 @@ func (kc *keyCache) hasAlias(alias string) bool {
 }
 
 func (kc *keyCache) add(newKey XPub) {
+	fmt.Println("add start...")
+	fmt.Println("add newKey:", newKey)
+	fmt.Println("add newKey type:", reflect.TypeOf(newKey))
+	fmt.Println("add newKey.XPub type:", reflect.TypeOf(newKey.XPub))
 	kc.mu.Lock()
 	defer kc.mu.Unlock()
 
@@ -101,12 +105,19 @@ func (kc *keyCache) add(newKey XPub) {
 	if i < len(kc.all) && kc.all[i] == newKey {
 		return
 	}
+	fmt.Println("add kc.all 1:", kc.all)
 	// newKey is not in the cache.
 	kc.all = append(kc.all, XPub{})
+	fmt.Println("add kc.all 2:", kc.all)
 	copy(kc.all[i+1:], kc.all[i:])
+	fmt.Println("add kc.all 3:", kc.all)
 	kc.all[i] = newKey
+	fmt.Println("add kc.all 4:", kc.all)
 	kc.byPubs[newKey.XPub] = append(kc.byPubs[newKey.XPub], newKey)
 	fmt.Println("add kc.byPubs:", kc.byPubs)
+	fmt.Println("add kc.byPubs:", kc.byPubs[newKey.XPub])
+	fmt.Println("add kc.byPubs type:", reflect.TypeOf(kc.byPubs))
+	fmt.Println("add kc:", kc)
 }
 
 func (kc *keyCache) keys() []XPub {
@@ -150,6 +161,21 @@ func (kc *keyCache) find(xpub XPub) (XPub, error) {
 	fmt.Println("matches := kc.all", matches)
 	// if (xpub.XPub != vcrypto.XPubKeyer{}) {
 	// matches = kc.byPubs[xpub.XPub]
+	// }
+
+	// for i, c := range kc.byPubs {
+	// 	if reflect.TypeOf(i).String() == "string" {
+	// 		if xpb, err := edchainkd.NewXPub(reflect.ValueOf(i).String()); err != nil {
+	// 			panic(err)
+	// 		} else {
+	// 			kc.byPubs[*xpb] = c
+	// 			delete(kc.byPubs, i)
+	// 		}
+	// 	}
+	// 	fmt.Println("LoadChainKDKey i:", i)
+	// 	fmt.Println("LoadChainKDKey i type:", reflect.TypeOf(i))
+	// 	fmt.Println("LoadChainKDKey c:", c)
+	// 	fmt.Println("LoadChainKDKey c type:", reflect.TypeOf(c[0]))
 	// }
 	fmt.Println("xpub.XPub:", xpub.XPub)
 	fmt.Println("xpub.XPub type:", reflect.TypeOf(xpub.XPub))

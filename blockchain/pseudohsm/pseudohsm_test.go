@@ -81,7 +81,6 @@ func TestUpdateKeyAlias(t *testing.T) {
 }
 
 func TestPseudoHSMChainKDKeys(t *testing.T) {
-
 	hsm, _ := New(dirPath)
 	xpub, _, err := hsm.XCreate("bbs", "password", "en")
 
