@@ -85,6 +85,20 @@ func (node *BlockNode) CalcPastMedianTime() uint64 {
 	return timestamps[len(timestamps)/2]
 }
 
+// GetParent return the node of specified height
+// And the node satisfies the same chain as current node
+// Height of current node must greater than height parameter
+func (node *BlockNode) GetParent(height uint64) *BlockNode {
+	prevBlockNode := node
+	for prevBlockNode != nil && prevBlockNode.Height != height {
+		if prevBlockNode.Height < height {
+			return nil
+		}
+		prevBlockNode = prevBlockNode.Parent
+	}
+	return prevBlockNode
+}
+
 // BlockIndex is the struct for help chain trace block chain as tree
 type BlockIndex struct {
 	sync.RWMutex
@@ -116,24 +130,6 @@ func (bi *BlockIndex) GetNode(hash *bc.Hash) *BlockNode {
 	bi.RLock()
 	defer bi.RUnlock()
 	return bi.index[*hash]
-}
-
-// NodeByHeightInSameChain return the node of specified height
-// And the node satisfies the same chain as the node that specifies the hash 
-// Height of the block of the specified node hash must greater than height parameter
-func (bi *BlockIndex) NodeByHeightInSameChain(nodeHash *bc.Hash, height uint64) *BlockNode {
-	bi.RLock()
-	defer bi.RUnlock()
-
-	blockNode := bi.index[*nodeHash]
-	prevBlockNode := blockNode
-	for prevBlockNode != nil && prevBlockNode.Height != height {
-		if prevBlockNode.Height < height {
-			return nil
-		}
-		prevBlockNode = bi.index[prevBlockNode.Parent.Hash]
-	}
-	return prevBlockNode
 }
 
 func (bi *BlockIndex) BestNode() *BlockNode {
