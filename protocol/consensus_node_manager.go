@@ -109,7 +109,7 @@ func (c *consensusNodeManager) nextLeaderTimeRange(pubkey []byte, bestBlockHash 
 	}
 
 	startTime := prevRoundLastBlock.Timestamp + BlockTimeInterval
-	endTime := bestBlockNode.Timestamp + (roundVoteBlockNums-bestBlockNode.Height%roundVoteBlockNums)*BlockTimeInterval
+	endTime := startTime + roundVoteBlockNums*BlockTimeInterval
 
 	nextLeaderTime, err := nextLeaderTimeHelper(startTime, endTime, uint64(time.Now().UnixNano()/1e6), consensusNode.order)
 	if err != nil {

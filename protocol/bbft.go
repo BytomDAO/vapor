@@ -203,6 +203,8 @@ func (b *bbft) checkDoubleSign(nodeOrder, blockHeight uint64, blockHash bc.Hash)
 			if err := b.updateBlockSignature(block, nodeOrder, nil); err != nil {
 				return false, err
 			}
+
+			return true, nil
 		}
 	}
 	return false, nil
