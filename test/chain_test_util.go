@@ -67,7 +67,7 @@ func (ctx *chainTestContext) validateExecution(block *types.Block) error {
 			if utxoEntry == nil {
 				continue
 			}
-			if utxoEntry.Type != storage.MainchainUTXOType {
+			if utxoEntry.Type != storage.CrosschainUTXOType {
 				return fmt.Errorf("found non-mainchain utxo entry")
 			}
 			if !utxoEntry.Spent {

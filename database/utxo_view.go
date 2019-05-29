@@ -42,7 +42,7 @@ func getTransactionsUtxo(db dbm.DB, view *state.UtxoViewpoint, txs []*bc.Tx) err
 
 			data := db.Get(calcUtxoKey(&prevout))
 			if data == nil {
-				view.Entries[prevout] = storage.NewUtxoEntry(storage.MainchainUTXOType, 0, false)
+				view.Entries[prevout] = storage.NewUtxoEntry(storage.CrosschainUTXOType, 0, false)
 				continue
 			}
 
@@ -72,7 +72,7 @@ func getUtxo(db dbm.DB, hash *bc.Hash) (*storage.UtxoEntry, error) {
 
 func saveUtxoView(batch dbm.Batch, view *state.UtxoViewpoint) error {
 	for key, entry := range view.Entries {
-		if (entry.Type == storage.MainchainUTXOType) && (!entry.Spent) {
+		if (entry.Type == storage.CrosschainUTXOType) && (!entry.Spent) {
 			batch.Delete(calcUtxoKey(&key))
 			continue
 		}

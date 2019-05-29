@@ -43,12 +43,12 @@ func TestSaveUtxoView(t *testing.T) {
 		},
 		{
 			hash:      bc.Hash{V0: 4},
-			utxoEntry: storage.NewUtxoEntry(storage.MainchainUTXOType, 0, true),
+			utxoEntry: storage.NewUtxoEntry(storage.CrosschainUTXOType, 0, true),
 			exist:     true,
 		},
 		{
 			hash:      bc.Hash{V0: 5},
-			utxoEntry: storage.NewUtxoEntry(storage.MainchainUTXOType, 0, false),
+			utxoEntry: storage.NewUtxoEntry(storage.CrosschainUTXOType, 0, false),
 			exist:     false,
 		},
 	}

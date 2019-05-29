@@ -26,7 +26,7 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFa
 			return errors.New("fail to find mainchain output entry")
 		}
 
-		if entry.Type != storage.MainchainUTXOType {
+		if entry.Type != storage.CrosschainUTXOType {
 			return errors.New("look up mainchainOutputID but find utxo not from mainchain")
 		}
 
@@ -62,7 +62,7 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFa
 		if !ok {
 			return errors.New("fail to find utxo entry")
 		}
-		if entry.Type == storage.MainchainUTXOType {
+		if entry.Type == storage.CrosschainUTXOType {
 			return errors.New("look up spentOutputID but find utxo from mainchain")
 		}
 		if entry.Spent {
@@ -126,7 +126,7 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 	for _, prevout := range tx.MainchainOutputIDs {
 		// don't simply delete(view.Entries, prevout), because we need to delete from db in saveUtxoView()
 		entry, ok := view.Entries[prevout]
-		if ok && (entry.Type != storage.MainchainUTXOType) {
+		if ok && (entry.Type != storage.CrosschainUTXOType) {
 			return errors.New("look up mainchainOutputID but find utxo not from mainchain")
 		}
 
@@ -135,7 +135,7 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 		}
 
 		if !ok {
-			view.Entries[prevout] = storage.NewUtxoEntry(storage.MainchainUTXOType, 0, false)
+			view.Entries[prevout] = storage.NewUtxoEntry(storage.CrosschainUTXOType, 0, false)
 			continue
 		}
 		entry.UnspendOutput()
@@ -162,7 +162,7 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 		}
 
 		entry, ok := view.Entries[prevout]
-		if ok && (entry.Type == storage.MainchainUTXOType) {
+		if ok && (entry.Type == storage.CrosschainUTXOType) {
 			return errors.New("look up SpentOutputIDs but find mainchain utxo")
 		}
 
