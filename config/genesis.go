@@ -13,11 +13,11 @@ import (
 	"github.com/vapor/protocol/vm/vmutil"
 )
 
-func GenesisArguments(c *Config) []byte {
+func FederationProgrom(c *Config) []byte {
 	pubKeys := chainkd.XPubKeys(c.Federation.Xpubs)
 	fedpegScript, err := vmutil.P2SPMultiSigProgram(pubKeys, c.Federation.Quorum)
 	if err != nil {
-		log.Panicf("fail on decode genesis arguments for federation")
+		log.Panicf("Failed generate federation scirpt  for federation")
 	}
 
 	scriptHash := crypto.Sha256(fedpegScript)
@@ -36,7 +36,7 @@ func GenesisTx() *types.Tx {
 		log.Panicf("fail on decode genesis tx output control program")
 	}
 
-	coinbaseInput := GenesisArguments(CommonConfig)
+	coinbaseInput := FederationProgrom(CommonConfig)
 
 	txData := types.TxData{
 		Version: 1,
