@@ -489,7 +489,7 @@ func TestRequireBlock(t *testing.T) {
 	b.blockKeeper.syncPeer = b.peers.GetPeer("test node A")
 	cases := []struct {
 		syncTimeout   time.Duration
-		testNode      *ChainManager
+		testNode      *Manager
 		requireHeight uint64
 		want          *types.Block
 		err           error

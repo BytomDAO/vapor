@@ -27,10 +27,13 @@ var (
 
 type NewProposedBlockEvent struct{ Block types.Block }
 
-type BlockSignatureEvent struct { 
+type BlockSignatureEvent struct {
 	BlockHash bc.Hash
-	Signature []byte 
+	Signature []byte
 }
+
+//NewBlockProposeEvent block propose event which needs to broadcast.
+type NewBlockProposeEvent struct{ Block types.Block }
 
 // TypeMuxEvent is a time-tagged notification pushed to subscribers.
 type TypeMuxEvent struct {
