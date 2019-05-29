@@ -11,7 +11,6 @@ import (
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
 	"github.com/vapor/event"
-	"github.com/vapor/math/checked"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
@@ -44,8 +43,8 @@ func newBbft(store Store, blockIndex *state.BlockIndex, orphanManage *OrphanMana
 }
 
 // IsConsensusPubkey determine whether a public key is a consensus node at a specified height
-func (b *bbft) IsConsensusPubkey(height uint64, pubkey []byte) (bool, error) {
-	node, err := b.consensusNodeManager.getConsensusNode(height, hex.EncodeToString(pubkey))
+func (b *bbft) IsConsensusPubkey(blockHash *bc.Hash, pubkey []byte) (bool, error) {
+	node, err := b.consensusNodeManager.getConsensusNode(blockHash, hex.EncodeToString(pubkey))
 	if err != nil && err != errNotFoundConsensusNode {
 		return false, err
 	}
@@ -62,122 +61,23 @@ func (b *bbft) isIrreversible(block *types.Block) bool {
 }
 
 // NextLeaderTime returns the start time of the specified public key as the next leader node
-func (b *bbft) NextLeaderTimeRange(pubkey []byte, bestBlockTimestamp, bestBlockHeight uint64) (uint64, uint64, error) {
-	return b.consensusNodeManager.nextLeaderTimeRange(pubkey, bestBlockTimestamp, bestBlockHeight)
+func (b *bbft) NextLeaderTimeRange(pubkey []byte, bestBlockHash *bc.Hash) (uint64, uint64, error) {
+	return b.consensusNodeManager.nextLeaderTimeRange(pubkey, bestBlockHash)
 }
 
 func (b *bbft) ApplyBlock(voteResultMap map[uint64]*state.VoteResult, block *types.Block) (err error) {
-	voteSeq := block.Height / roundVoteBlockNums
-	voteResult := voteResultMap[voteSeq]
-
-	if voteResult == nil {
-		store := b.consensusNodeManager.store
-		voteResult, err = store.GetVoteResult(voteSeq)
-		if err != nil && err != ErrNotFoundVoteResult {
-			return err
-		}
-	}
-
-	if voteResult == nil {
-		voteResult = &state.VoteResult{
-			Seq:             voteSeq,
-			NumOfVote:       make(map[string]uint64),
-			LastBlockHeight: block.Height,
-		}
-	}
-
-	voteResultMap[voteSeq] = voteResult
-
-	if voteResult.LastBlockHeight+1 != block.Height {
-		return errors.New("bbft append block error, the block height is not equals last block height plus 1 of vote result")
-	}
-
-	for _, tx := range block.Transactions {
-		for _, input := range tx.Inputs {
-			unVoteInput, ok := input.TypedInput.(*types.UnvoteInput)
-			if !ok {
-				continue
-			}
-
-			pubkey := hex.EncodeToString(unVoteInput.Vote)
-			voteResult.NumOfVote[pubkey], ok = checked.SubUint64(voteResult.NumOfVote[pubkey], unVoteInput.Amount)
-			if !ok {
-				return errVotingOperationOverFlow
-			}
-		}
-		for _, output := range tx.Outputs {
-			voteOutput, ok := output.TypedOutput.(*types.VoteTxOutput)
-			if !ok {
-				continue
-			}
-
-			pubkey := hex.EncodeToString(voteOutput.Vote)
-			voteResult.NumOfVote[pubkey], ok = checked.AddUint64(voteResult.NumOfVote[pubkey], voteOutput.Amount)
-			if !ok {
-				return errVotingOperationOverFlow
-			}
-		}
-	}
-
-	voteResult.LastBlockHeight++
-	voteResult.Finalized = (block.Height+1)%roundVoteBlockNums == 0
-	return nil
+	return b.consensusNodeManager.applyBlock(voteResultMap, block)
 }
 
 func (b *bbft) DetachBlock(voteResultMap map[uint64]*state.VoteResult, block *types.Block) error {
-	voteSeq := block.Height / roundVoteBlockNums
-	voteResult := voteResultMap[voteSeq]
-
-	if voteResult == nil {
-		store := b.consensusNodeManager.store
-		voteResult, err := store.GetVoteResult(voteSeq)
-		if err != nil {
-			return err
-		}
-		voteResultMap[voteSeq] = voteResult
-	}
-
-	if voteResult.LastBlockHeight != block.Height {
-		return errors.New("bbft detach block error, the block height is not equals last block height of vote result")
-	}
-
-	for _, tx := range block.Transactions {
-		for _, input := range tx.Inputs {
-			unVoteInput, ok := input.TypedInput.(*types.UnvoteInput)
-			if !ok {
-				continue
-			}
-
-			pubkey := hex.EncodeToString(unVoteInput.Vote)
-			voteResult.NumOfVote[pubkey], ok = checked.AddUint64(voteResult.NumOfVote[pubkey], unVoteInput.Amount)
-			if !ok {
-				return errVotingOperationOverFlow
-			}
-		}
-		for _, output := range tx.Outputs {
-			voteOutput, ok := output.TypedOutput.(*types.VoteTxOutput)
-			if !ok {
-				continue
-			}
-
-			pubkey := hex.EncodeToString(voteOutput.Vote)
-			voteResult.NumOfVote[pubkey], ok = checked.SubUint64(voteResult.NumOfVote[pubkey], voteOutput.Amount)
-			if !ok {
-				return errVotingOperationOverFlow
-			}
-		}
-	}
-
-	voteResult.LastBlockHeight--
-	voteResult.Finalized = false
-	return nil
+	return b.consensusNodeManager.detachBlock(voteResultMap, block)
 }
 
 // ProcessBlockSignature process the received block signature messages
 // return once a block become irreversible, whether it's height greater than best block height
 // if so, the chain module must update status
 func (b *bbft) ProcessBlockSignature(signature, pubkey []byte, blockHeight uint64, blockHash *bc.Hash) (bool, error) {
-	consensusNode, err := b.consensusNodeManager.getConsensusNode(blockHeight, hex.EncodeToString(pubkey))
+	consensusNode, err := b.consensusNodeManager.getConsensusNode(blockHash, hex.EncodeToString(pubkey))
 	if err != nil {
 		return false, err
 	}
@@ -235,7 +135,8 @@ func (b *bbft) ValidateBlock(block *types.Block) error {
 // if the block has not the signature of blocker, it will return error
 func (b *bbft) validateSign(block *types.Block) (uint64, error) {
 	var correctSignNum uint64
-	consensusNodeMap, err := b.consensusNodeManager.getConsensusNodesByVoteResult(block.Height)
+	blockHash := block.Hash()
+	consensusNodeMap, err := b.consensusNodeManager.getConsensusNodesByVoteResult(&blockHash)
 	if err != nil {
 		return 0, err
 	}
@@ -267,7 +168,7 @@ func (b *bbft) validateSign(block *types.Block) (uint64, error) {
 				block.Witness[node.order] = nil
 			} else {
 				correctSignNum++
-				isBlocker, err := b.consensusNodeManager.isBlocker(block.Height, block.Timestamp, pubkey)
+				isBlocker, err := b.consensusNodeManager.isBlocker(&blockHash, pubkey)
 				if err != nil {
 					return 0, err
 				}
@@ -302,6 +203,8 @@ func (b *bbft) checkDoubleSign(nodeOrder, blockHeight uint64, blockHash bc.Hash)
 			if err := b.updateBlockSignature(block, nodeOrder, nil); err != nil {
 				return false, err
 			}
+
+			return true, nil
 		}
 	}
 	return false, nil
@@ -311,7 +214,8 @@ func (b *bbft) checkDoubleSign(nodeOrder, blockHeight uint64, blockHash bc.Hash)
 func (b *bbft) SignBlock(block *types.Block) ([]byte, error) {
 	var xprv chainkd.XPrv
 	xpub := [64]byte(xprv.XPub())
-	node, err := b.consensusNodeManager.getConsensusNode(block.Height, hex.EncodeToString(xpub[:]))
+	blockHash := block.Hash()
+	node, err := b.consensusNodeManager.getConsensusNode(&blockHash, hex.EncodeToString(xpub[:]))
 	if err != nil && err != errNotFoundConsensusNode {
 		return nil, err
 	}
@@ -323,11 +227,6 @@ func (b *bbft) SignBlock(block *types.Block) ([]byte, error) {
 	signature := xprv.Sign(block.Hash().Bytes())
 	block.Witness[node.order] = signature
 	return signature, nil
-}
-
-// UpdateConsensusNodes used to update consensus node after each round of voting
-func (b *bbft) UpdateConsensusNodes(blockHeight uint64) error {
-	return b.consensusNodeManager.updateConsensusNodes(blockHeight)
 }
 
 func (b *bbft) updateBlockSignature(block *types.Block, nodeOrder uint64, signature []byte) error {

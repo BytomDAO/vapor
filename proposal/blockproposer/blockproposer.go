@@ -52,8 +52,9 @@ out:
 		}
 
 		bestBlockHeader := b.chain.BestBlockHeader()
+		bestBlockHash := bestBlockHeader.Hash()
 		var pubKey []byte
-		timeStart, timeEnd, err := b.chain.GetBBFT().NextLeaderTimeRange(pubKey, bestBlockHeader.Timestamp, bestBlockHeader.Height)
+		timeStart, timeEnd, err := b.chain.GetBBFT().NextLeaderTimeRange(pubKey, &bestBlockHash)
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "error": err, "pubKey": hex.EncodeToString(pubKey)}).Debug("fail on get next leader time range")
 			continue
