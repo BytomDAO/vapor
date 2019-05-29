@@ -659,8 +659,9 @@ func (s *mockStore1) GetBlock(*bc.Hash) (*types.Block, error)                   
 func (s *mockStore1) GetStoreStatus() *BlockStoreState                             { return nil }
 func (s *mockStore1) GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error) { return nil, nil }
 func (s *mockStore1) GetTransactionsUtxo(utxoView *state.UtxoViewpoint, tx []*bc.Tx) error {
+	// TODO:
 	for _, hash := range testTxs[2].SpentOutputIDs {
-		utxoView.Entries[hash] = &storage.UtxoEntry{IsCoinBase: false, Spent: false}
+		utxoView.Entries[hash] = &storage.UtxoEntry{Type: storage.NormalUTXOType, Spent: false}
 	}
 	return nil
 }

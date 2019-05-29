@@ -26,7 +26,7 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFa
 			return errors.New("fail to find mainchain output entry")
 		}
 
-		if !entry.FromMainchain {
+		if entry.Type != storage.MainchainUTXOType {
 			return errors.New("look up mainchainOutputID but find utxo not from mainchain")
 		}
 
@@ -62,10 +62,13 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFa
 		if !ok {
 			return errors.New("fail to find utxo entry")
 		}
+		if entry.Type == storage.MainchainUTXOType {
+			return errors.New("look up spentOutputID but find utxo from mainchain")
+		}
 		if entry.Spent {
 			return errors.New("utxo has been spent")
 		}
-		if entry.IsCoinBase && entry.BlockHeight+consensus.CoinbasePendingBlockNumber > block.Height {
+		if (entry.Type == storage.CoinbaseUTXOType) && ((entry.BlockHeight + consensus.CoinbasePendingBlockNumber) > block.Height) {
 			return errors.New("coinbase utxo is not ready for use")
 		}
 		entry.SpendOutput()
@@ -92,11 +95,11 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFa
 			continue
 		}
 
-		isCoinbase := false
+		utxoType := storage.NormalUTXOType
 		if block != nil && len(block.Transactions) > 0 && block.Transactions[0].ID == tx.ID {
-			isCoinbase = true
+			utxoType = storage.CoinbaseUTXOType
 		}
-		view.Entries[*id] = storage.NewUtxoEntry(isCoinbase, block.Height, false, false)
+		view.Entries[*id] = storage.NewUtxoEntry(utxoType, block.Height, false)
 	}
 	return nil
 }
@@ -123,7 +126,7 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 	for _, prevout := range tx.MainchainOutputIDs {
 		// don't simply delete(view.Entries, prevout), because we need to delete from db in saveUtxoView()
 		entry, ok := view.Entries[prevout]
-		if ok && !entry.FromMainchain {
+		if ok && (entry.Type != storage.MainchainUTXOType) {
 			return errors.New("look up mainchainOutputID but find utxo not from mainchain")
 		}
 
@@ -132,7 +135,7 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 		}
 
 		if !ok {
-			view.Entries[prevout] = storage.NewUtxoEntry(false, 0, false, true)
+			view.Entries[prevout] = storage.NewUtxoEntry(storage.MainchainUTXOType, 0, false)
 			continue
 		}
 		entry.UnspendOutput()
@@ -159,11 +162,16 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 		}
 
 		entry, ok := view.Entries[prevout]
+		if ok && (entry.Type == storage.MainchainUTXOType) {
+			return errors.New("look up SpentOutputIDs but find mainchain utxo")
+		}
+
 		if ok && !entry.Spent {
 			return errors.New("try to revert an unspent utxo")
 		}
+
 		if !ok {
-			view.Entries[prevout] = storage.NewUtxoEntry(false, 0, false, false)
+			view.Entries[prevout] = storage.NewUtxoEntry(storage.NormalUTXOType, 0, false)
 			continue
 		}
 		entry.UnspendOutput()
@@ -190,7 +198,7 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 			continue
 		}
 
-		view.Entries[*id] = storage.NewUtxoEntry(false, 0, true, false)
+		view.Entries[*id] = storage.NewUtxoEntry(storage.NormalUTXOType, 0, true)
 	}
 	return nil
 }

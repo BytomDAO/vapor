@@ -1,7 +1,7 @@
 package storage
 
 const (
-	NormalUTXOType = iota
+	NormalUTXOType uint32 = iota
 	CoinbaseUTXOType
 	MainchainUTXOType
 )
