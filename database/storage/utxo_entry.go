@@ -3,7 +3,7 @@ package storage
 const (
 	NormalUTXOType uint32 = iota
 	CoinbaseUTXOType
-	MainchainUTXOType
+	CrosschainUTXOType
 )
 
 // NewUtxoEntry will create a new utxo entry
