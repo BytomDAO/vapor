@@ -3,15 +3,16 @@ package netsync
 import (
 	"errors"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
-	cfg "github.com/vapor/config"
+	"github.com/vapor/config"
 	"github.com/vapor/consensus"
 	"github.com/vapor/event"
 	"github.com/vapor/netsync/chainmgr"
+	"github.com/vapor/netsync/consensusmgr"
 	"github.com/vapor/netsync/peers"
 	"github.com/vapor/p2p"
-	core "github.com/vapor/protocol"
+	"github.com/vapor/protocol"
 )
 
 const (
@@ -22,12 +23,20 @@ var (
 	errVaultModeDialPeer = errors.New("can't dial peer in vault mode")
 )
 
+// ChainMgr is the interface for p2p chain message sync manager.
 type ChainMgr interface {
 	Start() error
 	IsCaughtUp() bool
 	Stop()
 }
 
+// ConsensusMgr is the interface for consensus message sync manager.
+type ConsensusMgr interface {
+	Start() error
+	Stop()
+}
+
+// Switch is the interface for p2p switch.
 type Switch interface {
 	Start() (bool, error)
 	Stop() bool
@@ -38,50 +47,60 @@ type Switch interface {
 
 //SyncManager Sync Manager is responsible for the business layer information synchronization
 type SyncManager struct {
-	config   *cfg.Config
-	sw       Switch
-	chainMgr ChainMgr
-	peers    *peers.PeerSet
+	config       *config.Config
+	sw           Switch
+	chainMgr     ChainMgr
+	consensusMgr ConsensusMgr
+	peers        *peers.PeerSet
 }
 
 // NewSyncManager create sync manager and set switch.
-func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, dispatcher *event.Dispatcher) (*SyncManager, error) {
+func NewSyncManager(config *config.Config, chain *protocol.Chain, txPool *protocol.TxPool, dispatcher *event.Dispatcher) (*SyncManager, error) {
 	sw, err := p2p.NewSwitch(config)
 	if err != nil {
 		return nil, err
 	}
 	peers := peers.NewPeerSet(sw)
 
-	chainManger, err := chainmgr.NewChainManager(config, sw, chain, txPool, dispatcher, peers)
+	chainManger, err := chainmgr.NewManager(config, sw, chain, txPool, dispatcher, peers)
 	if err != nil {
 		return nil, err
 	}
-
+	consensusMgr := consensusmgr.NewManager(sw, chain, dispatcher, peers)
 	return &SyncManager{
-		config:   config,
-		sw:       sw,
-		chainMgr: chainManger,
-		peers:    peers,
+		config:       config,
+		sw:           sw,
+		chainMgr:     chainManger,
+		consensusMgr: consensusMgr,
+		peers:        peers,
 	}, nil
 }
 
+// Start message sync manager service.
 func (sm *SyncManager) Start() error {
 	if _, err := sm.sw.Start(); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("failed start switch")
+		logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed start switch")
 		return err
 	}
 
-	return sm.chainMgr.Start()
+	if err := sm.chainMgr.Start(); err != nil {
+		return err
+	}
+
+	return sm.consensusMgr.Start()
 }
 
+// Stop message sync manager service.
 func (sm *SyncManager) Stop() {
 	sm.chainMgr.Stop()
+	sm.consensusMgr.Stop()
 	if !sm.config.VaultMode {
 		sm.sw.Stop()
 	}
 
 }
 
+// IsListening check if the bytomd service port is open?
 func (sm *SyncManager) IsListening() bool {
 	if sm.config.VaultMode {
 		return false
@@ -95,6 +114,7 @@ func (sm *SyncManager) IsCaughtUp() bool {
 	return sm.chainMgr.IsCaughtUp()
 }
 
+// PeerCount count the number of connected peers.
 func (sm *SyncManager) PeerCount() int {
 	if sm.config.VaultMode {
 		return 0
@@ -102,10 +122,12 @@ func (sm *SyncManager) PeerCount() int {
 	return len(sm.sw.Peers().List())
 }
 
+// GetNetwork get the type of network.
 func (sm *SyncManager) GetNetwork() string {
 	return sm.config.ChainID
 }
 
+// BestPeer fine the peer with the highest height from the connected peers.
 func (sm *SyncManager) BestPeer() *peers.PeerInfo {
 	bestPeer := sm.peers.BestPeer(consensus.SFFullNode)
 	if bestPeer != nil {
@@ -114,6 +136,7 @@ func (sm *SyncManager) BestPeer() *peers.PeerInfo {
 	return nil
 }
 
+// DialPeerWithAddress dial the peer and establish a connection.
 func (sm *SyncManager) DialPeerWithAddress(addr *p2p.NetAddress) error {
 	if sm.config.VaultMode {
 		return errVaultModeDialPeer
@@ -122,7 +145,7 @@ func (sm *SyncManager) DialPeerWithAddress(addr *p2p.NetAddress) error {
 	return sm.sw.DialPeerWithAddress(addr)
 }
 
-//GetPeerInfos return peer info of all peers
+//GetPeerInfos return peer info of all connected peers.
 func (sm *SyncManager) GetPeerInfos() []*peers.PeerInfo {
 	return sm.peers.GetPeerInfos()
 }

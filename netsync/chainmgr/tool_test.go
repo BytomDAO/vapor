@@ -21,7 +21,7 @@ type P2PPeer struct {
 	flag consensus.ServiceFlag
 
 	srcPeer    *P2PPeer
-	remoteNode *ChainManager
+	remoteNode *Manager
 	msgCh      chan []byte
 	async      bool
 }
@@ -52,7 +52,7 @@ func (p *P2PPeer) ServiceFlag() consensus.ServiceFlag {
 	return p.flag
 }
 
-func (p *P2PPeer) SetConnection(srcPeer *P2PPeer, node *ChainManager) {
+func (p *P2PPeer) SetConnection(srcPeer *P2PPeer, node *Manager) {
 	p.srcPeer = srcPeer
 	p.remoteNode = node
 }
@@ -93,19 +93,19 @@ func (ps *PeerSet) AddBannedPeer(string) error { return nil }
 func (ps *PeerSet) StopPeerGracefully(string)  {}
 
 type NetWork struct {
-	nodes map[*ChainManager]P2PPeer
+	nodes map[*Manager]P2PPeer
 }
 
 func NewNetWork() *NetWork {
-	return &NetWork{map[*ChainManager]P2PPeer{}}
+	return &NetWork{map[*Manager]P2PPeer{}}
 }
 
-func (nw *NetWork) Register(node *ChainManager, addr, id string, flag consensus.ServiceFlag) {
+func (nw *NetWork) Register(node *Manager, addr, id string, flag consensus.ServiceFlag) {
 	peer := NewP2PPeer(addr, id, flag)
 	nw.nodes[node] = *peer
 }
 
-func (nw *NetWork) HandsShake(nodeA, nodeB *ChainManager) (*P2PPeer, *P2PPeer, error) {
+func (nw *NetWork) HandsShake(nodeA, nodeB *Manager) (*P2PPeer, *P2PPeer, error) {
 	B2A, ok := nw.nodes[nodeA]
 	if !ok {
 		return nil, nil, errors.New("can't find nodeA's p2p peer on network")
@@ -150,7 +150,7 @@ func mockBlocks(startBlock *types.Block, height uint64) []*types.Block {
 	return blocks
 }
 
-func mockSync(blocks []*types.Block) *ChainManager {
+func mockSync(blocks []*types.Block) *Manager {
 	chain := mock.NewChain()
 	peers := peers.NewPeerSet(NewPeerSet())
 	chain.SetBestBlockHeader(&blocks[len(blocks)-1].BlockHeader)
@@ -158,7 +158,7 @@ func mockSync(blocks []*types.Block) *ChainManager {
 		chain.SetBlockByHeight(block.Height, block)
 	}
 
-	return &ChainManager{
+	return &Manager{
 		chain:       chain,
 		blockKeeper: newBlockKeeper(chain, peers),
 		peers:       peers,
