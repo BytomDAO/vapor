@@ -144,7 +144,7 @@ func getLastBlockTimeInTimeRange(startTimestamp, endTimestamp, order uint64) uin
 
 func (c *consensusNodeManager) getPrevRoundVoteLastBlock(blockNode *state.BlockNode) (*state.BlockNode, error) {
 	prevVoteRoundLastBlockHeight := blockNode.Height/roundVoteBlockNums*roundVoteBlockNums - 1
-	lastBlockNode := blockNode.NodeByHeightInSameChain(prevVoteRoundLastBlockHeight)
+	lastBlockNode := blockNode.GetParent(prevVoteRoundLastBlockHeight)
 	if lastBlockNode == nil {
 		return nil, errNotFoundBlockNode
 	}
