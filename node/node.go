@@ -73,7 +73,7 @@ func NewNode(config *cfg.Config) *Node {
 		"module":             logModule,
 		"fed_xpubs":          config.Federation.Xpubs,
 		"fed_quorum":         config.Federation.Quorum,
-		"fed_controlprogram": hex.EncodeToString(cfg.GenesisArguments(config)),
+		"fed_controlprogram": hex.EncodeToString(cfg.FederationProgrom(config)),
 	}).Info()
 
 	initLogFile(config)
