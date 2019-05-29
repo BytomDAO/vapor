@@ -144,8 +144,8 @@ func getLastBlockTimeInTimeRange(startTimestamp, endTimestamp, order uint64) uin
 
 func (c *consensusNodeManager) getPrevRoundVoteLastBlock(blockNode *state.BlockNode) (*state.BlockNode, error) {
 	prevVoteRoundLastBlockHeight := blockNode.Height/roundVoteBlockNums*roundVoteBlockNums - 1
-	lastBlockNode := c.blockIndex.NodeByHeightInSameChain(&blockNode.Hash, prevVoteRoundLastBlockHeight)
-	if blockNode == nil {
+	lastBlockNode := blockNode.NodeByHeightInSameChain(prevVoteRoundLastBlockHeight)
+	if lastBlockNode == nil {
 		return nil, errNotFoundBlockNode
 	}
 	return lastBlockNode, nil
@@ -208,36 +208,36 @@ func (c *consensusNodeManager) reorganizeVoteResult(voteResult *state.VoteResult
 		}
 	}
 
-	var attachBlocks []*types.Block
-	var detachBlocks []*types.Block
+	var attachNodes []*state.BlockNode
+	var detachNodes []*state.BlockNode
 
 	for forkChainNode.Hash != mainChainNode.Hash && forkChainNode.Height >= (voteResult.Seq-1)*roundVoteBlockNums {
-		attachBlock, err := c.store.GetBlock(&forkChainNode.Hash)
-		if err != nil {
-			return err
-		}
-
-		attachBlocks = append([]*types.Block{attachBlock}, attachBlocks...)
+		attachNodes = append([]*state.BlockNode{forkChainNode}, attachNodes...)
 		forkChainNode = forkChainNode.Parent
 
 		if mainChainNode != nil && forkChainNode.Height == mainChainNode.Height {
-			detachBlock, err := c.store.GetBlock(&mainChainNode.Hash)
-			if err != nil {
-				return err
-			}
-
-			detachBlocks = append(detachBlocks, detachBlock)
+			detachNodes = append(detachNodes, mainChainNode)
 			mainChainNode = mainChainNode.Parent
 		}
 	}
 
-	for _, block := range detachBlocks {
+	for _, node := range detachNodes {
+		block, err := c.store.GetBlock(&node.Hash)
+		if err != nil {
+			return err
+		}
+
 		if err := c.detachBlock(map[uint64]*state.VoteResult{voteResult.Seq: voteResult}, block); err != nil {
 			return err
 		}
 	}
 
-	for _, block := range attachBlocks {
+	for _, node := range attachNodes {
+		block, err := c.store.GetBlock(&node.Hash)
+		if err != nil {
+			return err
+		}
+
 		if err := c.applyBlock(map[uint64]*state.VoteResult{voteResult.Seq: voteResult}, block); err != nil {
 			return err
 		}
