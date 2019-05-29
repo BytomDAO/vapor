@@ -166,14 +166,14 @@ func TestP2SH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	xpubers := make([]vcrypto.XPubKeyer, 2)
-	xpubers[0] = xpub1.XPub
-	xpubers[1] = xpub2.XPub
+	// xpubers := make([]vcrypto.XPubKeyer, 2)
+	// xpubers[0] = xpub1.XPub
+	// xpubers[1] = xpub2.XPub
 	fmt.Println("TestP2SH xpub1.XPub", xpub1.XPub)
-	// fmt.Println("TestP2SH xpub2.XPub", xpub2.XPub)
+	fmt.Println("TestP2SH xpub2.XPub", xpub2.XPub)
 
-	// testAccount, err := accountManager.Create([]vcrypto.XPubKeyer{xpub1.XPub, xpub2.XPub}, 2, "testAccount", signers.BIP0044)
-	testAccount, err := accountManager.Create(xpubers, 2, "testAccount", signers.BIP0044)
+	testAccount, err := accountManager.Create([]vcrypto.XPubKeyer{xpub1.XPub, xpub2.XPub}, 2, "testAccount", signers.BIP0044)
+	// testAccount, err := accountManager.Create(xpubers, 2, "testAccount", signers.BIP0044)
 	if err != nil {
 		t.Fatal(err)
 	}

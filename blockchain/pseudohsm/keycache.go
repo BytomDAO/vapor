@@ -96,15 +96,20 @@ func (kc *keyCache) hasAlias(alias string) bool {
 func (kc *keyCache) add(newKey XPub) {
 	fmt.Println("add start...")
 	fmt.Println("add newKey:", newKey)
-	fmt.Println("add newKey type:", reflect.TypeOf(newKey))
-	fmt.Println("add newKey.XPub type:", reflect.TypeOf(newKey.XPub))
+	fmt.Println("add newKey type:", reflect.TypeOf(newKey).String())
+	fmt.Println("add newKey.XPub type:", reflect.TypeOf(newKey.XPub).String())
 	kc.mu.Lock()
 	defer kc.mu.Unlock()
+
+	// switch xpub := newKey.XPub.(type){
+	// 	if reflect.TypeOf(xpub).
+	// }
 
 	i := sort.Search(len(kc.all), func(i int) bool { return kc.all[i].File >= newKey.File })
 	if i < len(kc.all) && kc.all[i] == newKey {
 		return
 	}
+	fmt.Println("add i:", i)
 	fmt.Println("add kc.all 1:", kc.all)
 	// newKey is not in the cache.
 	kc.all = append(kc.all, XPub{})
@@ -112,20 +117,39 @@ func (kc *keyCache) add(newKey XPub) {
 	copy(kc.all[i+1:], kc.all[i:])
 	fmt.Println("add kc.all 3:", kc.all)
 	kc.all[i] = newKey
+	fmt.Println("add newKey:", newKey.XPub)
+	fmt.Println("add newKey -4 type:", reflect.TypeOf(newKey.XPub).String())
 	fmt.Println("add kc.all 4:", kc.all)
 	kc.byPubs[newKey.XPub] = append(kc.byPubs[newKey.XPub], newKey)
 	fmt.Println("add kc.byPubs:", kc.byPubs)
 	fmt.Println("add kc.byPubs:", kc.byPubs[newKey.XPub])
-	fmt.Println("add kc.byPubs type:", reflect.TypeOf(kc.byPubs))
+	fmt.Println("add kc.byPubs type:", reflect.TypeOf(kc.byPubs).String())
 	fmt.Println("add kc:", kc)
 }
 
 func (kc *keyCache) keys() []XPub {
+	fmt.Println("keys start...")
+	fmt.Println("keys kc:", kc)
+	for i, v := range kc.byPubs {
+		fmt.Println("keys i:", i)
+		fmt.Println("keys i type:", reflect.TypeOf(i))
+		fmt.Println("keys v:", v)
+		fmt.Println("keys v type:", reflect.TypeOf(v))
+	}
 	kc.maybeReload()
 	kc.mu.Lock()
 	defer kc.mu.Unlock()
 	cpy := make([]XPub, len(kc.all))
 	copy(cpy, kc.all)
+	fmt.Println("keys end...")
+	fmt.Println("keys kc:", kc)
+	for i, v := range kc.byPubs {
+		fmt.Println("keys i:", i)
+		fmt.Println("keys i type:", reflect.TypeOf(i))
+		fmt.Println("keys v:", v)
+		fmt.Println("keys v type:", reflect.TypeOf(v))
+	}
+
 	return cpy
 }
 
@@ -162,6 +186,19 @@ func (kc *keyCache) find(xpub XPub) (XPub, error) {
 	// if (xpub.XPub != vcrypto.XPubKeyer{}) {
 	// matches = kc.byPubs[xpub.XPub]
 	// }
+	// if _, ok := xpub.XPub.(edchainkd.XPub); ok {
+	fmt.Println("find xpub.XPub:", xpub.XPub)
+	fmt.Println("find xpub.XPub type:", reflect.TypeOf(xpub.XPub))
+	matches = kc.byPubs[xpub.XPub]
+	fmt.Println("find matches:", matches)
+	// }
+
+	for i, v := range matches {
+		fmt.Println("find i:", i)
+		fmt.Println("find i type:", reflect.TypeOf(i))
+		fmt.Println("find v:", v)
+		fmt.Println("find v type:", reflect.TypeOf(v))
+	}
 
 	// for i, c := range kc.byPubs {
 	// 	if reflect.TypeOf(i).String() == "string" {
@@ -201,9 +238,11 @@ func (kc *keyCache) find(xpub XPub) (XPub, error) {
 				return matches[i], nil
 			}
 		}
-		// if (xpub.XPub == vcrypto.XPubKeyer{}) {
-		// 	return XPub{}, ErrLoadKey
-		// }
+		if _, ok := xpub.XPub.(edchainkd.XPub); ok {
+			return XPub{}, ErrLoadKey
+		}
+		// or other, e.g. sm2
+
 		return XPub{}, ErrLoadKey
 	}
 	switch len(matches) {
@@ -230,18 +269,59 @@ func xpubToString(xpub vcrypto.XPubKeyer) (str string) {
 // reload caches addresses of existing key.
 // Callers must hold ac.mu.
 func (kc *keyCache) reload() {
+	fmt.Println("reload before scan.......")
+	fmt.Println("reload kc:", kc)
+	for i, v := range kc.byPubs {
+		fmt.Println("reload i:", i)
+		fmt.Println("reload i type:", reflect.TypeOf(i))
+		fmt.Println("reload v:", v)
+		fmt.Println("reload v type:", reflect.TypeOf(v))
+	}
+
 	keys, err := kc.scan()
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "load keys error": err}).Error("can't load keys")
 	}
 	kc.all = keys
-	fmt.Println("reload.......")
+	fmt.Println("reload before sort.......")
+	fmt.Println("reload kc:", kc)
+	for i, v := range kc.byPubs {
+		fmt.Println("reload i:", i)
+		fmt.Println("reload i type:", reflect.TypeOf(i))
+		fmt.Println("reload v:", v)
+		fmt.Println("reload v type:", reflect.TypeOf(v))
+	}
 	sort.Sort(kc.all)
 	for k := range kc.byPubs {
 		delete(kc.byPubs, k)
 	}
+	fmt.Println("reload after sort.......")
+	fmt.Println("reload kc:", kc)
+	for i, v := range kc.byPubs {
+		fmt.Println("reload i:", i)
+		fmt.Println("reload i type:", reflect.TypeOf(i))
+		fmt.Println("reload v:", v)
+		fmt.Println("reload v type:", reflect.TypeOf(v))
+	}
 	for _, k := range keys {
+		// xpub := edchainkd.XPub{}
+		switch kt := k.XPub.(type) {
+		case string:
+			xpb, err := edchainkd.NewXPub(kt)
+			if err != nil {
+				panic(err)
+			}
+			k.XPub = *xpb
+		}
 		kc.byPubs[k.XPub] = append(kc.byPubs[k.XPub], k)
+	}
+	fmt.Println("reload end.......")
+	fmt.Println("reload kc:", kc)
+	for i, v := range kc.byPubs {
+		fmt.Println("reload i:", i)
+		fmt.Println("reload i type:", reflect.TypeOf(i))
+		fmt.Println("reload v:", v)
+		fmt.Println("reload v type:", reflect.TypeOf(v))
 	}
 	log.WithFields(log.Fields{"module": logModule, "cache has keys:": len(kc.all)}).Debug("reloaded keys")
 }

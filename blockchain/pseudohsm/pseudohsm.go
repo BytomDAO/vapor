@@ -73,6 +73,8 @@ func (h *HSM) XCreate(alias string, auth string, language string) (*XPub, *strin
 	if err != nil {
 		return nil, nil, err
 	}
+	fmt.Println("XCreate ...xpub:", xpub)
+	fmt.Println("XCreate ...xpub type:", reflect.TypeOf(xpub.XPub).String())
 	h.cache.add(*xpub)
 
 	fmt.Println("XCreate after add h.cache:", h.cache)
@@ -246,20 +248,20 @@ func (h *HSM) LoadChainKDKey(xpub vcrypto.XPubKeyer, auth string) (xprv vcrypto.
 	//}
 
 	fmt.Println("LoadChainKDKey h.cache:", h.cache)
-	for i, c := range h.cache.byPubs {
-		if reflect.TypeOf(i).String() == "string" {
-			if xpb, err := edchainkd.NewXPub(reflect.ValueOf(i).String()); err != nil {
-				panic(err)
-			} else {
-				h.cache.byPubs[*xpb] = c
-				delete(h.cache.byPubs, i)
-			}
-		}
-		fmt.Println("LoadChainKDKey i:", i)
-		fmt.Println("LoadChainKDKey i type:", reflect.TypeOf(i))
-		fmt.Println("LoadChainKDKey c:", c)
-		fmt.Println("LoadChainKDKey c type:", reflect.TypeOf(c[0]))
-	}
+	// for i, c := range h.cache.byPubs {
+	// 	if reflect.TypeOf(i).String() == "string" {
+	// 		if xpb, err := edchainkd.NewXPub(reflect.ValueOf(i).String()); err != nil {
+	// 			panic(err)
+	// 		} else {
+	// 			h.cache.byPubs[*xpb] = c
+	// 			delete(h.cache.byPubs, i)
+	// 		}
+	// 	}
+	// 	fmt.Println("LoadChainKDKey i:", i)
+	// 	fmt.Println("LoadChainKDKey i type:", reflect.TypeOf(i))
+	// 	fmt.Println("LoadChainKDKey c:", c)
+	// 	fmt.Println("LoadChainKDKey c type:", reflect.TypeOf(c[0]))
+	// }
 	_, xkey, err := h.loadDecryptedKey(xpub, auth)
 	if err != nil {
 		return xprv, ErrLoadKey
