@@ -106,6 +106,7 @@ func (kc *keyCache) add(newKey XPub) {
 	copy(kc.all[i+1:], kc.all[i:])
 	kc.all[i] = newKey
 	kc.byPubs[newKey.XPub] = append(kc.byPubs[newKey.XPub], newKey)
+	fmt.Println("add kc.byPubs:", kc.byPubs)
 }
 
 func (kc *keyCache) keys() []XPub {
@@ -208,6 +209,7 @@ func (kc *keyCache) reload() {
 		log.WithFields(log.Fields{"module": logModule, "load keys error": err}).Error("can't load keys")
 	}
 	kc.all = keys
+	fmt.Println("reload.......")
 	sort.Sort(kc.all)
 	for k := range kc.byPubs {
 		delete(kc.byPubs, k)

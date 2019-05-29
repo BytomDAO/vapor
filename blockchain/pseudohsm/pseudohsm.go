@@ -236,6 +236,20 @@ func (h *HSM) LoadChainKDKey(xpub vcrypto.XPubKeyer, auth string) (xprv vcrypto.
 	//}
 
 	fmt.Println("LoadChainKDKey h.cache:", h.cache)
+	for i, c := range h.cache.byPubs {
+		if reflect.TypeOf(i).String() == "string" {
+			if xpb, err := edchainkd.NewXPub(reflect.ValueOf(i).String()); err != nil {
+				panic(err)
+			} else {
+				h.cache.byPubs[*xpb] = c
+				delete(h.cache.byPubs, i)
+			}
+		}
+		fmt.Println("LoadChainKDKey i:", i)
+		fmt.Println("LoadChainKDKey i type:", reflect.TypeOf(i))
+		fmt.Println("LoadChainKDKey c:", c)
+		fmt.Println("LoadChainKDKey c type:", reflect.TypeOf(c[0]))
+	}
 	_, xkey, err := h.loadDecryptedKey(xpub, auth)
 	if err != nil {
 		return xprv, ErrLoadKey
@@ -280,12 +294,15 @@ func (h *HSM) loadDecryptedKey(xpub vcrypto.XPubKeyer, auth string) (XPub, *XKey
 	h.cache.maybeReload()
 	h.cache.mu.Lock()
 	fmt.Println("loadDecryptedKey h.cache:", h.cache)
+	fmt.Println("loadDecryptedKey xpub:", xpub)
+	fmt.Println("loadDecryptedKey xpub type:", reflect.TypeOf(xpub))
 	xpb, err := h.cache.find(XPub{XPub: xpub})
 	fmt.Println("loadDecryptedKey xpb:", xpb)
 	fmt.Println("loadDecryptedKey find...")
 
 	h.cache.mu.Unlock()
 	if err != nil {
+		fmt.Println("loadDecryptedKey:err", err)
 		return xpb, nil, err
 	}
 	xkey, err := h.keyStore.GetKey(xpb.Alias, xpb.File, auth)
