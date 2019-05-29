@@ -118,6 +118,24 @@ func (bi *BlockIndex) GetNode(hash *bc.Hash) *BlockNode {
 	return bi.index[*hash]
 }
 
+// NodeByHeightInSameChain return the node of specified height
+// And the node satisfies the same chain as the node that specifies the hash 
+// Height of the block of the specified node hash must greater than height parameter
+func (bi *BlockIndex) NodeByHeightInSameChain(nodeHash *bc.Hash, height uint64) *BlockNode {
+	bi.RLock()
+	defer bi.RUnlock()
+
+	blockNode := bi.index[*nodeHash]
+	prevBlockNode := blockNode
+	for prevBlockNode != nil && prevBlockNode.Height != height {
+		if prevBlockNode.Height < height {
+			return nil
+		}
+		prevBlockNode = bi.index[prevBlockNode.Parent.Hash]
+	}
+	return prevBlockNode
+}
+
 func (bi *BlockIndex) BestNode() *BlockNode {
 	bi.RLock()
 	defer bi.RUnlock()
