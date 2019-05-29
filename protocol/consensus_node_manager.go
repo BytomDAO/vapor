@@ -200,8 +200,8 @@ func (c *consensusNodeManager) getConsensusNodesByVoteResult(blockHash *bc.Hash)
 
 func (c *consensusNodeManager) reorganizeVoteResult(voteResult *state.VoteResult, forkChainNode *state.BlockNode) error {
 	var mainChainNode *state.BlockNode
-
-	if voteResult.LastBlockHash != bc.EmptyStringHash {
+	emptyHash := bc.Hash{}
+	if voteResult.LastBlockHash != emptyHash {
 		mainChainNode = c.blockIndex.GetNode(&voteResult.LastBlockHash)
 		if mainChainNode == nil {
 			return errNotFoundBlockNode
