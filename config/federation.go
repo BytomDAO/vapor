@@ -38,9 +38,9 @@ func LoadFederationFile(fedFile string, config *Config) error {
 }
 
 var lockWithKeysFmt = `
-contract LockWithKeys(%s) locks amount of asset {
-	clause unlockWith2Sigs(%s) {
-		verify checkTxMultiSig(%s)
+contract LockWithKeys(%s: PublicKey) locks amount of asset {
+	clause unlockWith2Sigs(%s: Signature) {
+		verify checkTxMultiSig([%s],[%s])
 		unlock amount of asset
 	}
 }
@@ -58,39 +58,34 @@ func generateFederationContract(pubkeys []ed25519.PublicKey, quorum int) (string
 
 	params := ""
 	unlockParams := ""
-	checkParams := "["
+	checkPubkeysParams := ""
+	checkSigsParams := ""
 
 	for index := 0; index < num; index++ {
 		param := fmt.Sprintf("pubkey%d", index+1)
 		params += param
-		checkParams += param
+		checkPubkeysParams += param
 		if (index + 1) < num {
 			params += ","
-			checkParams += ","
+			checkPubkeysParams += ","
 		}
 	}
-	params += ": PublicKey"
-	checkParams += "],["
 
 	for index := 0; index < quorum; index++ {
 		param := fmt.Sprintf("sig%d", index+1)
 		unlockParams += param
-		checkParams += param
+		checkSigsParams += param
 		if index+1 < quorum {
 			unlockParams += ","
-			checkParams += ","
+			checkSigsParams += ","
 		}
 	}
 
-	unlockParams += ": Signature"
-	checkParams += "]"
-
-	lockWithKeys := fmt.Sprintf(lockWithKeysFmt, params, unlockParams, checkParams)
+	lockWithKeys := fmt.Sprintf(lockWithKeysFmt, params, unlockParams, checkPubkeysParams, checkSigsParams)
 	return lockWithKeys, nil
 }
 
 func GetFederationContractPrograms(pubkeys []ed25519.PublicKey, quorum int) ([]byte, error) {
-
 	lockWithKeys, err := generateFederationContract(pubkeys, quorum)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed generate Federation Contract")
