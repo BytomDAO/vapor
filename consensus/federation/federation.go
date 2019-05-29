@@ -1,13 +1,16 @@
 package federation
 
 import (
+	"crypto"
 	"encoding/json"
 	"errors"
+	"reflect"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/crypto/ed25519"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	vcrypto "github.com/vapor/crypto"
+	"github.com/vapor/crypto/csp"
+	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/protocol/vm/vmutil"
 )
 
@@ -26,8 +29,8 @@ const fedCfgJson = `
 `
 
 type federation struct {
-	XPubs          []chainkd.XPub `json:"xpubs"`
-	Quorum         int            `json:"quorum"`
+	XPubs          []vcrypto.XPubKeyer `json:"xpubs"`
+	Quorum         int                 `json:"quorum"`
 	ControlProgram []byte
 }
 
@@ -35,6 +38,16 @@ func parseFedConfig() *federation {
 	fed := &federation{}
 	if err := json.Unmarshal([]byte(fedCfgJson), fed); err != nil {
 		log.Fatalln("invalid federation config json")
+	}
+
+	for i, xpub := range fed.XPubs {
+		if reflect.TypeOf(xpub).String() == "string" {
+			if xpb, err := edchainkd.NewXPub(reflect.ValueOf(xpub).String()); err != nil {
+				panic(err)
+			} else {
+				fed.XPubs[i] = *xpb
+			}
+		}
 	}
 
 	return fed
@@ -56,7 +69,7 @@ func CheckFedConfig() error {
 
 func GetFederation() *federation {
 	fed := parseFedConfig()
-	PublicKeys := chainkd.XPubKeys(fed.XPubs)
+	PublicKeys := csp.XPubKeys(fed.XPubs)
 	if controlProgram, err := fed.buildPegInControlProgram(PublicKeys); err == nil {
 		fed.ControlProgram = controlProgram
 	} else {
@@ -66,7 +79,7 @@ func GetFederation() *federation {
 	return fed
 }
 
-func (f *federation) buildPegInControlProgram(pubkeys []ed25519.PublicKey) (program []byte, err error) {
+func (f *federation) buildPegInControlProgram(pubkeys []crypto.PublicKey) (program []byte, err error) {
 	controlProg, err := vmutil.P2SPMultiSigProgram(pubkeys, f.Quorum)
 	if err != nil {
 		return nil, err

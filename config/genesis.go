@@ -14,7 +14,7 @@ import (
 	"github.com/vapor/protocol/vm/vmutil"
 )
 
-func GenesisArguments(c *Config) []byte {
+func FederationProgrom(c *Config) []byte {
 	pubKeys := edchainkd.XPubKeys(c.Federation.Xpubs)
 	cryptoPub := make([]crypto.PublicKey, 0)
 	for _, pub := range pubKeys {

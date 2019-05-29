@@ -9,6 +9,7 @@ import (
 
 	"github.com/vapor/common"
 	"github.com/vapor/consensus"
+	vcrypto "github.com/vapor/crypto"
 	"github.com/vapor/encoding/json"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -286,7 +287,11 @@ func (a *crossInAction) Build(ctx context.Context, builder *TemplateBuilder) err
 	txin := types.NewCrossChainInput(nil, a.SourceID, *a.AssetId, a.Amount, a.SourcePos, fedProg, a.RawDefinitionByte)
 	tplIn := &SigningInstruction{}
 	fed := config.CommonConfig.Federation
-	tplIn.AddRawWitnessKeys(fed.Xpubs, nil, fed.Quorum)
+	xpubers := make([]vcrypto.XPubKeyer, len(fed.Xpubs))
+	for i, xpub := range fed.Xpubs {
+		xpubers[i] = xpub
+	}
+	tplIn.AddRawWitnessKeys(xpubers, nil, fed.Quorum)
 	return builder.AddInput(txin, tplIn)
 }
 
