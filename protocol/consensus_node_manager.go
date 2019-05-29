@@ -259,6 +259,9 @@ func (c *consensusNodeManager) rollbackVoteResult(voteResult *state.VoteResult, 
 		
 		attachBlocks = append([]*types.Block{attachBlock}, attachBlocks...)
 		detachBlocks = append(detachBlocks, detachBlock)
+
+		forkChainNode = forkChainNode.Parent
+		mainChainNode = mainChainNode.Parent
 	}
 
 	for _, block := range detachBlocks {
