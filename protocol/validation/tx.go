@@ -1,8 +1,11 @@
 package validation
 
 import (
+	"bytes"
 	"fmt"
 	"math"
+
+	"github.com/vapor/config"
 
 	"github.com/vapor/consensus"
 	"github.com/vapor/consensus/segwit"
@@ -479,28 +482,36 @@ func checkStandardTx(tx *bc.Tx, blockHeight uint64) error {
 	}
 
 	for _, id := range tx.GasInputIDs {
-		spend, err := tx.Spend(id)
-		if err != nil {
+		switch inp := tx.Entries[id].(type) {
+		case *bc.Spend:
+			code := []byte{}
+			outputEntry, err := tx.Entry(*inp.SpentOutputId)
+			if err != nil {
+				return err
+			}
+			switch output := outputEntry.(type) {
+			case *bc.IntraChainOutput:
+				code = output.ControlProgram.Code
+			case *bc.VoteOutput:
+				code = output.ControlProgram.Code
+			default:
+				return errors.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", id.Bytes(), outputEntry)
+			}
+
+			if !segwit.IsP2WScript(code) {
+				return ErrNotStandardTx
+			}
+
+		case *bc.CrossChainInput:
+			fedProg := config.FederationProgrom(config.CommonConfig)
+			if !bytes.Equal(inp.ControlProgram.Code, fedProg) {
+				return errors.New("The federal controlProgram is incorrect")
+			}
+
+		default:
 			continue
 		}
 
-		code := []byte{}
-		outputEntry, err := tx.Entry(*spend.SpentOutputId)
-		if err != nil {
-			return err
-		}
-		switch output := outputEntry.(type) {
-		case *bc.IntraChainOutput:
-			code = output.ControlProgram.Code
-		case *bc.VoteOutput:
-			code = output.ControlProgram.Code
-		default:
-			return errors.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", id.Bytes(), outputEntry)
-		}
-
-		if !segwit.IsP2WScript(code) {
-			return ErrNotStandardTx
-		}
 	}
 	return nil
 }
