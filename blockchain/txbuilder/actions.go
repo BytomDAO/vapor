@@ -286,7 +286,7 @@ func (a *crossInAction) Build(ctx context.Context, builder *TemplateBuilder) err
 	txin := types.NewCrossChainInput(nil, a.SourceID, *a.AssetId, a.Amount, a.SourcePos, fedProg, a.RawDefinitionByte)
 	tplIn := &SigningInstruction{}
 	fed := config.CommonConfig.Federation
-	tplIn.AddRawWitnessKeys(fed.Xpubs, nil, fed.Quorum)
+	tplIn.AddRawWitnessKeys(fed.ChainkdXpubs(), nil, fed.Quorum)
 	return builder.AddInput(txin, tplIn)
 }
 

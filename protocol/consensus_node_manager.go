@@ -5,6 +5,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/vapor/config"
 	"github.com/vapor/errors"
 	"github.com/vapor/math/checked"
 	"github.com/vapor/protocol/bc"
@@ -158,6 +159,10 @@ func (c *consensusNodeManager) getConsensusNodesByVoteResult(blockHash *bc.Hash)
 	}
 
 	seq := blockNode.Height / roundVoteBlockNums
+	if seq == 0 {
+		return initVoteResult(), nil
+	}
+
 	voteResult, err := c.store.GetVoteResult(seq)
 	if err != nil {
 		// fail to find vote result, try to construct
@@ -346,4 +351,12 @@ func (c *consensusNodeManager) detachBlock(voteResultMap map[uint64]*state.VoteR
 
 	voteResult.Finalized = false
 	return nil
+}
+
+func initVoteResult() map[string]*consensusNode {
+	var voteResult map[string]*consensusNode
+	for i, pubkey := range config.CommonConfig.Federation.Xpubs {
+		voteResult[pubkey] = &consensusNode{pubkey: pubkey, voteNum: 0, order: uint64(i)}
+	}
+	return voteResult
 }
