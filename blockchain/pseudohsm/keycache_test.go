@@ -233,11 +233,11 @@ func TestCacheFind(t *testing.T) {
 		fmt.Printf("TestCacheFind #%v, a: %v\n", i, a)
 	}
 
-	// nomatchKey := XPub{
-	// 	Alias: "bm1pu2vmgps4d9e3mrsuzp58w777apky4rjgn5rn9e",
-	// 	File:  filepath.Join(dir, "something"),
-	// 	XPub:  tmpEdPubkeys(t, r),
-	// }
+	nomatchKey := XPub{
+		Alias: "bm1pu2vmgps4d9e3mrsuzp58w777apky4rjgn5rn9e",
+		File:  filepath.Join(dir, "something"),
+		XPub:  tmpEdPubkeys(t, r),
+	}
 	tests := []struct {
 		Query      XPub
 		WantResult XPub
@@ -249,23 +249,23 @@ func TestCacheFind(t *testing.T) {
 		{Query: XPub{File: keys[0].File}, WantResult: keys[0]},
 		// by basename
 		{Query: XPub{File: filepath.Base(keys[0].File)}, WantResult: keys[0]},
-		// // by file and xpub
-		// {Query: keys[0], WantResult: keys[0]},
-		// // ambiguous xpub, tie resolved by file
-		// {Query: keys[2], WantResult: keys[2]},
-		// // ambiguous xpub error
-		// {
-		// 	Query: XPub{XPub: keys[2].XPub},
-		// 	WantError: &AmbiguousKeyError{
-		// 		Pubkey:  xpubToString(keys[2].XPub),
-		// 		Matches: []XPub{keys[2], keys[3]},
-		// 	},
-		// },
-		// // no match error
-		// {Query: nomatchKey, WantError: ErrLoadKey},
-		// {Query: XPub{File: nomatchKey.File}, WantError: ErrLoadKey},
-		// {Query: XPub{File: filepath.Base(nomatchKey.File)}, WantError: ErrLoadKey},
-		// {Query: XPub{XPub: nomatchKey.XPub}, WantError: ErrLoadKey},
+		// by file and xpub
+		{Query: keys[0], WantResult: keys[0]},
+		// ambiguous xpub, tie resolved by file
+		{Query: keys[2], WantResult: keys[2]},
+		// ambiguous xpub error
+		{
+			Query: XPub{XPub: keys[2].XPub},
+			WantError: &AmbiguousKeyError{
+				Pubkey:  xpubToString(keys[2].XPub),
+				Matches: []XPub{keys[2], keys[3]},
+			},
+		},
+		// no match error
+		{Query: nomatchKey, WantError: ErrLoadKey},
+		{Query: XPub{File: nomatchKey.File}, WantError: ErrLoadKey},
+		{Query: XPub{File: filepath.Base(nomatchKey.File)}, WantError: ErrLoadKey},
+		{Query: XPub{XPub: nomatchKey.XPub}, WantError: ErrLoadKey},
 	}
 	for i, test := range tests {
 		fmt.Println("TestCacheFind testcase:", i)
