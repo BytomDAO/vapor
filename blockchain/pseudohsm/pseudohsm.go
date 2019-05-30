@@ -85,6 +85,7 @@ func (h *HSM) XCreate(alias string, auth string, language string) (*XPub, *strin
 		fmt.Println("XCreate v type:", reflect.TypeOf(v))
 	}
 
+	fmt.Println("----XCreate end------")
 	return xpub, mnemonic, err
 }
 
@@ -224,11 +225,16 @@ func (h *HSM) XSign(xpub vcrypto.XPubKeyer, path [][]byte, msg []byte, auth stri
 		return nil, err
 	}
 	fmt.Println("XSign xprv:", xprv)
+	fmt.Println("XSign xprv type:", reflect.TypeOf(xprv))
+	fmt.Println("XSign path:", path)
+	fmt.Println("XSign len(path):", len(path))
 	if len(path) > 0 {
 		switch xprvkey := xprv.(type) {
 		case edchainkd.XPrv:
 			xprvk := xprvkey.Derive(path)
-			return xprvk.Sign(msg), nil
+			sig := xprvk.Sign(msg)
+			fmt.Println("XSign sig:", sig)
+			return sig, nil
 		}
 	}
 	fmt.Println("XSign end...")

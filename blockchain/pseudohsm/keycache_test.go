@@ -299,18 +299,3 @@ func tmpEdPubkeys(t *testing.T, r *rand.Rand) edchainkd.XPub {
 	copy(xpub[:], result[:])
 	return xpub
 }
-
-// TODO: Sm2 test......
-// func tmpSmPubkeys(t *testing.T, r *rand.Rand) vcrypto.XPubKeyer {
-
-// 	var xpub edchaind.XPub
-// 	pick := "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-// 	bytes := []byte(pick)
-// 	result := []byte{}
-
-// 	for i := 0; i < 64; i++ {
-// 		result = append(result, bytes[r.Intn(len(bytes))])
-// 	}
-// 	copy(xpub[:], result[:])
-// 	return xpub
-// }
