@@ -189,7 +189,7 @@ func (kc *keyCache) find(xpub XPub) (XPub, error) {
 	// if _, ok := xpub.XPub.(edchainkd.XPub); ok {
 	fmt.Println("find xpub.XPub:", xpub.XPub)
 	fmt.Println("find xpub.XPub type:", reflect.TypeOf(xpub.XPub))
-	matches = kc.byPubs[xpub.XPub]
+	// matches = kc.byPubs[xpub.XPub]
 	fmt.Println("find matches:", matches)
 	// }
 
