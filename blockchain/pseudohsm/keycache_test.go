@@ -1,7 +1,6 @@
 package pseudohsm
 
 import (
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -228,9 +227,8 @@ func TestCacheFind(t *testing.T) {
 			XPub:  dup,
 		},
 	}
-	for i, a := range keys {
+	for _, a := range keys {
 		cache.add(a)
-		fmt.Printf("TestCacheFind #%v, a: %v\n", i, a)
 	}
 
 	nomatchKey := XPub{
@@ -268,8 +266,6 @@ func TestCacheFind(t *testing.T) {
 		{Query: XPub{XPub: nomatchKey.XPub}, WantError: ErrLoadKey},
 	}
 	for i, test := range tests {
-		fmt.Println("TestCacheFind testcase:", i)
-		fmt.Println("TestCacheFind test.Query:", test.Query)
 		a, err := cache.find(test.Query)
 		if !reflect.DeepEqual(err, test.WantError) {
 			t.Errorf("test %d: error mismatch for query %v\ngot %q\nwant %q", i, test.Query, err, test.WantError)
@@ -299,6 +295,5 @@ func tmpEdPubkeys(t *testing.T, r *rand.Rand) edchainkd.XPub {
 		result = append(result, bytes[r.Intn(len(bytes))])
 	}
 	copy(xpub[:], result[:])
-	fmt.Println("tmpEdPubkeys xpub:", hex.EncodeToString(xpub[:]))
 	return xpub
 }

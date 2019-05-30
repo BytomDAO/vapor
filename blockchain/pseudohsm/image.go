@@ -4,10 +4,8 @@ package pseudohsm
 import (
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"path/filepath"
-	"reflect"
 
 	log "github.com/sirupsen/logrus"
 
@@ -51,7 +49,6 @@ func (h *HSM) Restore(image *KeyImage) error {
 		if err != nil {
 			return ErrXPubFormat
 		}
-		fmt.Println("Restore...")
 
 		// TODO: it will adapt sm2
 		var xPub edchainkd.XPub
@@ -74,7 +71,6 @@ func (h *HSM) Restore(image *KeyImage) error {
 		if err != nil {
 			return err
 		}
-		// fmt.Println("Restore rawKey:", rawKey)
 
 		_, fileName := filepath.Split(xKey.ID)
 		file := h.keyStore.JoinPath(keyFileName(fileName))
@@ -84,10 +80,5 @@ func (h *HSM) Restore(image *KeyImage) error {
 
 		h.cache.reload()
 	}
-	fmt.Println("Restore done...")
-	fmt.Println("Restore keystore:", h.keyStore)
-	fmt.Println("Restore cache:", h.cache)
-	fmt.Println("Restore hsm.cache.byPubs key type:", reflect.TypeOf(h.cache.byPubs).Key())
-	fmt.Println("Restore hsm.cache.byPubs key:", reflect.ValueOf(h.cache.byPubs))
 	return nil
 }

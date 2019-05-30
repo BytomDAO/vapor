@@ -4,11 +4,9 @@ package pseudohsm
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"sync"
 
@@ -62,7 +60,6 @@ func New(keypath string) (*HSM, error) {
 func (h *HSM) XCreate(alias string, auth string, language string) (*XPub, *string, error) {
 	h.cacheMu.Lock()
 	defer h.cacheMu.Unlock()
-	fmt.Println("XCreate start h.cache:", h.cache)
 
 	normalizedAlias := strings.ToLower(strings.TrimSpace(alias))
 	if ok := h.cache.hasAlias(normalizedAlias); ok {
@@ -73,19 +70,8 @@ func (h *HSM) XCreate(alias string, auth string, language string) (*XPub, *strin
 	if err != nil {
 		return nil, nil, err
 	}
-	fmt.Println("XCreate ...xpub:", xpub)
-	fmt.Println("XCreate ...xpub type:", reflect.TypeOf(xpub.XPub).String())
 	h.cache.add(*xpub)
 
-	fmt.Println("XCreate after add h.cache:", h.cache)
-	for i, v := range h.cache.byPubs {
-		fmt.Println("XCreate i:", i)
-		fmt.Println("XCreate i type:", reflect.TypeOf(i))
-		fmt.Println("XCreate v:", v)
-		fmt.Println("XCreate v type:", reflect.TypeOf(v))
-	}
-
-	fmt.Println("----XCreate end------")
 	return xpub, mnemonic, err
 }
 
@@ -124,8 +110,6 @@ func (h *HSM) createKeyFromMnemonic(alias string, auth string, mnemonic string) 
 	// Generate a Bip32 HD wallet for the mnemonic and a user supplied password
 	seed := mnem.NewSeed(mnemonic, "")
 	xprv, xpub, err := csp.NewXKeys(bytes.NewBuffer(seed))
-	fmt.Println("createKeyFromMnemonic xprv:", xprv, "xpub:", xpub)
-	fmt.Println("createKeyFromMnemonic xpub type:", reflect.TypeOf(xpub))
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +125,6 @@ func (h *HSM) createKeyFromMnemonic(alias string, auth string, mnemonic string) 
 	if err := h.keyStore.StoreKey(file, key, auth); err != nil {
 		return nil, errors.Wrap(err, "storing keys")
 	}
-	fmt.Println("createKeyFromMnemonic new XPub:", &XPub{XPub: xpub, Alias: alias, File: file})
 	return &XPub{XPub: xpub, Alias: alias, File: file}, nil
 }
 
@@ -218,26 +201,10 @@ func (h *HSM) ListKeys() []XPub {
 // xprv with the given path (but does not store the new xprv), and
 // signs the given msg.
 func (h *HSM) XSign(xpub vcrypto.XPubKeyer, path [][]byte, msg []byte, auth string) ([]byte, error) {
-	fmt.Println("XSign start...")
 	xprv, err := h.LoadChainKDKey(xpub, auth)
 	if err != nil {
-		fmt.Println("some err...")
 		return nil, err
 	}
-	fmt.Println("XSign xprv:", xprv)
-	fmt.Println("XSign xprv type:", reflect.TypeOf(xprv))
-	fmt.Println("XSign path:", path)
-	fmt.Println("XSign len(path):", len(path))
-	// if len(path) > 0 {
-	// 	switch xprvkey := xprv.(type) {
-	// 	case edchainkd.XPrv:
-	// 		xprvk := xprvkey.Derive(path)
-	// 		sig := xprvk.Sign(msg)
-	// 		fmt.Println("XSign sig:", sig)
-	// 		return sig, nil
-	// 	}
-	// }
-	fmt.Println("XSign end...")
 	switch xprvkey := xprv.(type) {
 	case edchainkd.XPrv:
 		if len(path) > 0 {
@@ -251,37 +218,13 @@ func (h *HSM) XSign(xpub vcrypto.XPubKeyer, path [][]byte, msg []byte, auth stri
 
 //LoadChainKDKey get xprv from xpub
 func (h *HSM) LoadChainKDKey(xpub vcrypto.XPubKeyer, auth string) (xprv vcrypto.XPrvKeyer, err error) {
-	fmt.Println("LoadChainKDKey start...")
-	fmt.Println("LoadChainKDKey xpub:", xpub)
-	fmt.Println("LoadChainKDKey xpub type:", reflect.TypeOf(xpub))
 	h.cacheMu.Lock()
 	defer h.cacheMu.Unlock()
 
-	//if xprv, ok := h.kdCache[xpub]; ok {
-	//	return xprv, nil
-	//}
-
-	fmt.Println("LoadChainKDKey h.cache:", h.cache)
-	// for i, c := range h.cache.byPubs {
-	// 	if reflect.TypeOf(i).String() == "string" {
-	// 		if xpb, err := edchainkd.NewXPub(reflect.ValueOf(i).String()); err != nil {
-	// 			panic(err)
-	// 		} else {
-	// 			h.cache.byPubs[*xpb] = c
-	// 			delete(h.cache.byPubs, i)
-	// 		}
-	// 	}
-	// 	fmt.Println("LoadChainKDKey i:", i)
-	// 	fmt.Println("LoadChainKDKey i type:", reflect.TypeOf(i))
-	// 	fmt.Println("LoadChainKDKey c:", c)
-	// 	fmt.Println("LoadChainKDKey c type:", reflect.TypeOf(c[0]))
-	// }
 	_, xkey, err := h.loadDecryptedKey(xpub, auth)
 	if err != nil {
 		return xprv, ErrLoadKey
 	}
-	fmt.Println("LoadChainKDKey end...")
-	//h.kdCache[xpb.XPub] = xkey.XPrv
 	return xkey.XPrv, nil
 }
 
@@ -313,26 +256,15 @@ func (h *HSM) XDelete(xpub vcrypto.XPubKeyer, auth string) error {
 }
 
 func (h *HSM) loadDecryptedKey(xpub vcrypto.XPubKeyer, auth string) (XPub, *XKey, error) {
-	fmt.Println("loadDecryptedKey start...")
-	fmt.Println("loadDecryptedKey xpub:", xpub)
-	fmt.Println("loadDecryptedKey xpub type:", reflect.TypeOf(xpub))
-	fmt.Println("loadDecryptedKey h.cache:", h.cache)
 	h.cache.maybeReload()
 	h.cache.mu.Lock()
-	fmt.Println("loadDecryptedKey h.cache:", h.cache)
-	fmt.Println("loadDecryptedKey xpub:", xpub)
-	fmt.Println("loadDecryptedKey xpub type:", reflect.TypeOf(xpub))
 	xpb, err := h.cache.find(XPub{XPub: xpub})
-	fmt.Println("loadDecryptedKey xpb:", xpb)
-	fmt.Println("loadDecryptedKey find...")
 
 	h.cache.mu.Unlock()
 	if err != nil {
-		fmt.Println("loadDecryptedKey:err", err)
 		return xpb, nil, err
 	}
 	xkey, err := h.keyStore.GetKey(xpb.Alias, xpb.File, auth)
-	fmt.Println("loadDecryptedKey start...")
 	return xpb, xkey, err
 }
 

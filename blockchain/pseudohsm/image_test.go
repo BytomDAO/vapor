@@ -3,10 +3,8 @@ package pseudohsm
 import (
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
-	"reflect"
 	"testing"
 
 	edchainkd "github.com/vapor/crypto/ed25519/chainkd"
@@ -56,59 +54,27 @@ func TestRestore(t *testing.T) {
 		},
 	}
 
-	for i, test := range testCases {
+	for _, test := range testCases {
 		keyImage := &KeyImage{}
 		if err := json.Unmarshal([]byte(test.image), keyImage); err != nil {
 			t.Fatal("unmarshal json error:", err)
 		}
-		fmt.Println("TestRestore keyImage:", keyImage)
-		fmt.Println("TestRestore keyImage:", keyImage.XKeys[0])
-
-		fmt.Println("before hsm:", hsm)
-		fmt.Println("before hsm.keystore:", hsm.keyStore)
-		fmt.Println("before hsm.cache:", hsm.cache)
-		fmt.Println("before hsm.cache.byPubs key type:", reflect.TypeOf(hsm.cache.byPubs).Key())
 		if err := hsm.Restore(keyImage); err != test.wantErr {
-			fmt.Println("hsm.Restore...", i)
 			t.Errorf("error mismatch: have %v, want %v", err, test.wantErr)
 		}
-		fmt.Println("after hsm:", hsm)
-		fmt.Println("after hsm.keystore:", hsm.keyStore)
-		fmt.Println("after hsm.cache:", hsm.cache)
-		fmt.Println("after hsm.cache.byPubs key type:", reflect.TypeOf(hsm.cache.byPubs).Key())
 
 		if len(hsm.cache.keys()) != len(test.wantKeys) {
 			t.Errorf("error key num: have %v, want %v", len(hsm.cache.keys()), len(test.wantKeys))
 		}
 
-		// for _, key := range test.wantKeys {
-		// 	var xPub edchainkd.XPub
-		// 	data, _ := hex.DecodeString(key)
-		// 	copy(xPub[:], data)
-		// 	fmt.Println("TestRestore xPub:", xPub)
-		// 	fmt.Println("TestRestore xPub type:", reflect.TypeOf(xPub))
-		// 	fmt.Println("TestRestore data:", hex.EncodeToString(data))
-
-		// 	if !hsm.cache.hasKey(xPub) {
-		// 		fmt.Println("TestRestore hsm.cache:", hsm.cache)
-		// 		t.Errorf("error restore key: can't find key %v", key)
-		// 	}
-		// }
-
 		for _, key := range test.wantKeys {
 			var xPub edchainkd.XPub
 			data, _ := hex.DecodeString(key)
 			copy(xPub[:], data)
-			fmt.Println("TestRestore xPub:", xPub)
-			fmt.Println("TestRestore xPub type:", reflect.TypeOf(xPub))
-			fmt.Println("TestRestore data:", hex.EncodeToString(data))
 
 			if !hsm.cache.hasKey(xPub) {
-				fmt.Println("TestRestore hsm.cache:", hsm.cache)
 				t.Errorf("error restore key: can't find key %v", key)
 			}
 		}
-
-		fmt.Println("testcases done...", i)
 	}
 }
