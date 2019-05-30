@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"encoding/hex"
+	"io/ioutil"
 	"os"
 	"path"
 
@@ -8,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	cfg "github.com/vapor/config"
+	"github.com/vapor/crypto/ed25519/chainkd"
 )
 
 var initFilesCmd = &cobra.Command{
@@ -25,8 +28,7 @@ func init() {
 func initFiles(cmd *cobra.Command, args []string) {
 	configFilePath := path.Join(config.RootDir, "config.toml")
 	if _, err := os.Stat(configFilePath); !os.IsNotExist(err) {
-		log.WithFields(log.Fields{"module": logModule, "config": configFilePath}).Info("Already exists config file.")
-		return
+		log.WithFields(log.Fields{"module": logModule, "config": configFilePath}).Panic("Already exists config file.")
 	}
 
 	switch config.ChainID {
@@ -38,13 +40,24 @@ func initFiles(cmd *cobra.Command, args []string) {
 
 	fedFile := config.FederationFile()
 	if _, err := os.Stat(fedFile); !os.IsNotExist(err) {
-		log.WithFields(log.Fields{"module": logModule, "config": fedFile}).Info("Already exists federation file.")
-		return
+		log.WithFields(log.Fields{"module": logModule, "config": fedFile}).Panic("Already exists federation file.")
 	}
 
 	if err := cfg.ExportFederationFile(fedFile, config); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "config": fedFile, "error": err}).Info("exportFederationFile failed.")
-		return
+		log.WithFields(log.Fields{"module": logModule, "config": fedFile, "error": err}).Panic("exportFederationFile failed.")
+	}
+
+	keyFilePath := path.Join(config.RootDir, config.PrivateKeyFile)
+	if _, err := os.Stat(keyFilePath); os.IsNotExist(err) {
+		xprv, err := chainkd.NewXPrv(nil)
+		if err != nil {
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Panic("fail on generate private key")
+		}
+
+		xprvStr := hex.EncodeToString(xprv[:])
+		if err := ioutil.WriteFile(keyFilePath, []byte(xprvStr), 0600); err != nil {
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Panic("fail on save private key")
+		}
 	}
 
 	log.WithFields(log.Fields{"module": logModule, "config": configFilePath}).Info("Initialized bytom")

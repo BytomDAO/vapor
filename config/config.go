@@ -59,7 +59,7 @@ func (cfg *Config) PrivateKey() *chainkd.XPrv {
 
 	filePath := rootify(cfg.PrivateKeyFile, cfg.BaseConfig.RootDir)
 	fildReader, err := os.Open(filePath)
-	if err == nil {
+	if err != nil {
 		log.WithField("err", err).Panic("fail on open private key file")
 	}
 
@@ -69,10 +69,12 @@ func (cfg *Config) PrivateKey() *chainkd.XPrv {
 		log.WithField("err", err).Panic("fail on read private key file")
 	}
 
-	if _, err := hex.Decode(cfg.XPrv[:], buf); err != nil {
+	var xprv chainkd.XPrv
+	if _, err := hex.Decode(xprv[:], buf); err != nil {
 		log.WithField("err", err).Panic("fail on decode private key")
 	}
 
+	cfg.XPrv = &xprv
 	xpub := cfg.XPrv.XPub()
 	cfg.XPub = &xpub
 	return cfg.XPrv
@@ -132,6 +134,7 @@ func DefaultBaseConfig() BaseConfig {
 		DBBackend:          "leveldb",
 		DBPath:             "data",
 		KeysPath:           "keystore",
+		PrivateKeyFile:     "node_key.txt",
 		FederationFileName: "federation.json",
 	}
 }
