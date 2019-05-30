@@ -7,8 +7,8 @@ import (
 	"github.com/golang/groupcache/lru"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/vapor/config"
 	"github.com/vapor/crypto/ed25519"
-	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
 	"github.com/vapor/event"
 	"github.com/vapor/protocol/bc"
@@ -212,7 +212,7 @@ func (b *bbft) checkDoubleSign(nodeOrder, blockHeight uint64, blockHash bc.Hash)
 
 // SignBlock signing the block if current node is consensus node
 func (b *bbft) SignBlock(block *types.Block) ([]byte, error) {
-	var xprv chainkd.XPrv
+	xprv := config.CommonConfig.PrivateKey()
 	xpub := [64]byte(xprv.XPub())
 	blockHash := block.Hash()
 	node, err := b.consensusNodeManager.getConsensusNode(&blockHash, hex.EncodeToString(xpub[:]))

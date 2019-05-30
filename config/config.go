@@ -209,7 +209,7 @@ func (f *FederationConfig) ChainkdXpubs() []chainkd.XPub {
 	for _, pubkey := range f.Xpubs {
 		xpub := chainkd.XPub{}
 		if err := xpub.UnmarshalText([]byte(pubkey)); err != nil {
-			log.Panicf("Fail converts a string to xpub:" + err.Error())
+			log.WithField("err", err).Panic("fail converts a string to xpub")
 		}
 
 		xpubs = append(xpubs, xpub)
