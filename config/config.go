@@ -200,21 +200,8 @@ type WebsocketConfig struct {
 }
 
 type FederationConfig struct {
-	Xpubs  []string `json:"xpubs"`
-	Quorum int      `json:"quorum"`
-}
-
-func (f *FederationConfig) ChainkdXpubs() []chainkd.XPub {
-	var xpubs []chainkd.XPub
-	for _, pubkey := range f.Xpubs {
-		xpub := chainkd.XPub{}
-		if err := xpub.UnmarshalText([]byte(pubkey)); err != nil {
-			log.WithField("err", err).Panic("fail converts a string to xpub")
-		}
-
-		xpubs = append(xpubs, xpub)
-	}
-	return xpubs
+	Xpubs  []chainkd.XPub `json:"xpubs"`
+	Quorum int            `json:"quorum"`
 }
 
 // Default configurable rpc's auth parameters.
@@ -250,13 +237,20 @@ func DefaultWebsocketConfig() *WebsocketConfig {
 
 func DefaultFederationConfig() *FederationConfig {
 	return &FederationConfig{
-		Xpubs: []string{
-			"7f23aae65ee4307c38d342699e328f21834488e18191ebd66823d220b5a58303496c9d09731784372bade78d5e9a4a6249b2cfe2e3a85464e5a4017aa5611e47",
-			"585e20143db413e45fbc82f03cb61f177e9916ef1df0012daa8cbf6dbb1025ce8f98e51ae319327b63505b64fdbbf6d36ef916d79e6dd67d51b0bfe76fe544c5",
-			"b58170b51ca61604028ba1cb412377dfc2bc6567c0afc84c83aae1c0c297d0227ccf568561df70851f4144bbf069b525129f2434133c145e35949375b22a6c9d",
+		Xpubs: []chainkd.XPub{
+			xpub("7f23aae65ee4307c38d342699e328f21834488e18191ebd66823d220b5a58303496c9d09731784372bade78d5e9a4a6249b2cfe2e3a85464e5a4017aa5611e47"),
+			xpub("585e20143db413e45fbc82f03cb61f177e9916ef1df0012daa8cbf6dbb1025ce8f98e51ae319327b63505b64fdbbf6d36ef916d79e6dd67d51b0bfe76fe544c5"),
+			xpub("b58170b51ca61604028ba1cb412377dfc2bc6567c0afc84c83aae1c0c297d0227ccf568561df70851f4144bbf069b525129f2434133c145e35949375b22a6c9d"),
 		},
 		Quorum: 2,
 	}
+}
+
+func xpub(str string) (xpub chainkd.XPub) {
+	if err := xpub.UnmarshalText([]byte(str)); err != nil {
+		log.Panicf("Fail converts a string to xpub")
+	}
+	return xpub
 }
 
 //-----------------------------------------------------------------------------

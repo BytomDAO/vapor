@@ -14,7 +14,7 @@ import (
 )
 
 func FederationProgrom(c *Config) []byte {
-	xpubs := c.Federation.ChainkdXpubs()
+	xpubs := c.Federation.Xpubs
 	fedpegScript, err := vmutil.P2SPMultiSigProgram(chainkd.XPubKeys(xpubs), c.Federation.Quorum)
 	if err != nil {
 		log.Panicf("Failed generate federation scirpt  for federation: " + err.Error())
