@@ -354,7 +354,7 @@ func (c *consensusNodeManager) detachBlock(voteResultMap map[uint64]*state.VoteR
 }
 
 func initVoteResult() map[string]*consensusNode {
-	var voteResult map[string]*consensusNode
+	voteResult := map[string]*consensusNode{}
 	for i, pubkey := range config.CommonConfig.Federation.Xpubs {
 		pubkeyStr := pubkey.String()
 		voteResult[pubkeyStr] = &consensusNode{pubkey: pubkeyStr, voteNum: 0, order: uint64(i)}
