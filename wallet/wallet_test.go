@@ -291,14 +291,6 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// edXPub := edchainkd.XPub{}
-	// edXPubKey, _ := hex.DecodeString("e0072a38408cfe4b70d322f8ed2d8acecab41615d2f091ddcd0d0622a8003de915569bd3e316d7e3c44ebebd21bfcc84f6428e60dbf17bef34f2e04a62f6cd2b")
-	// copy(edXPub[:], edXPubKey[:])
-	// xpub2 := pseudohsm.XPub{
-	// 	Alias: "",
-	// 	XPub:  edXPub,
-	// 	File:  "",
-	// }
 	xpubers := make([]vcrypto.XPubKeyer, 1)
 	xpubers[0] = xpub1.XPub
 
