@@ -52,6 +52,7 @@ func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*
 	}
 
 	c.bestNode = c.index.GetNode(storeStatus.Hash)
+	c.bestIrreversibleNode = c.index.GetNode(storeStatus.IrreversibleHash)
 	c.index.SetMainChain(c.bestNode)
 	c.bbft = newBbft(store, c.index, c.orphanManage, eventDispatcher)
 	go c.blockProcesser()

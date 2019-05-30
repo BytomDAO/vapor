@@ -47,6 +47,7 @@ type Manager struct {
 func NewManager(sw Switch, chain Chain, dispatcher *event.Dispatcher, peers *peers.PeerSet) *Manager {
 	manager := &Manager{
 		sw:              sw,
+		chain:           chain,
 		peers:           peers,
 		blockFetcher:    newBlockFetcher(chain, peers),
 		eventDispatcher: dispatcher,

@@ -187,7 +187,8 @@ func (c *Chain) saveBlock(block *types.Block) error {
 	}
 
 	parent := c.index.GetNode(&block.PreviousBlockHash)
-	if err := validation.ValidateBlock(types.MapBlock(block), parent); err != nil {
+	bcBlock := types.MapBlock(block)
+	if err := validation.ValidateBlock(bcBlock, parent); err != nil {
 		return errors.Sub(ErrBadBlock, err)
 	}
 
@@ -196,13 +197,6 @@ func (c *Chain) saveBlock(block *types.Block) error {
 		return errors.Sub(ErrBadBlock, err)
 	}
 
-	if len(signature) != 0 {
-		if err := c.bbft.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: block.Hash(), Signature: signature}); err != nil {
-			return err
-		}
-	}
-
-	bcBlock := types.MapBlock(block)
 	if err := c.store.SaveBlock(block, bcBlock.TransactionStatus); err != nil {
 		return err
 	}
@@ -214,6 +208,12 @@ func (c *Chain) saveBlock(block *types.Block) error {
 	}
 
 	c.index.AddNode(node)
+
+	if len(signature) != 0 {
+		if err := c.bbft.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: block.Hash(), Signature: signature}); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
