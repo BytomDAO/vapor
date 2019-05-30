@@ -52,12 +52,18 @@ func (b *bbft) IsConsensusPubkey(blockHash *bc.Hash, pubkey []byte) (bool, error
 }
 
 func (b *bbft) isIrreversible(block *types.Block) bool {
+	blockHash := block.Hash()
+	consensusNodes, err := b.consensusNodeManager.getConsensusNodesByVoteResult(&blockHash)
+	if err != nil {
+		return false
+	}
+
 	signNum, err := b.validateSign(block)
 	if err != nil {
 		return false
 	}
 
-	return signNum > (numOfConsensusNode * 2 / 3)
+	return signNum > (uint64(len(consensusNodes)) * 2 / 3)
 }
 
 // NextLeaderTime returns the start time of the specified public key as the next leader node
