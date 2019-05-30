@@ -122,7 +122,7 @@ func (kc *keyCache) add(newKey XPub) {
 	fmt.Println("add kc.all 4:", kc.all)
 	kc.byPubs[newKey.XPub] = append(kc.byPubs[newKey.XPub], newKey)
 	fmt.Println("add kc.byPubs:", kc.byPubs)
-	fmt.Println("add kc.byPubs:", kc.byPubs[newKey.XPub])
+	fmt.Println("add kc.byPubs[newKey.XPub]:", kc.byPubs[newKey.XPub])
 	fmt.Println("add kc.byPubs type:", reflect.TypeOf(kc.byPubs).String())
 	fmt.Println("add kc:", kc)
 }
@@ -229,16 +229,19 @@ func (kc *keyCache) find(xpub XPub) (XPub, error) {
 	fmt.Println("mathes:", matches)
 	fmt.Println("find xpub.File:", xpub.File)
 	if xpub.File != "" {
+		fmt.Println("find xpub.File is not nil.")
 		// If only the basename is specified, complete the path.
 		if !strings.ContainsRune(xpub.File, filepath.Separator) {
 			xpub.File = filepath.Join(kc.keydir, xpub.File)
 		}
+		fmt.Println("find matches 2 :", matches)
 		for i := range matches {
 			if matches[i].File == xpub.File {
 				return matches[i], nil
 			}
 		}
 		if _, ok := xpub.XPub.(edchainkd.XPub); ok {
+			fmt.Println("find ErrLoadKey.")
 			return XPub{}, ErrLoadKey
 		}
 		// or other, e.g. sm2
@@ -260,6 +263,10 @@ func (kc *keyCache) find(xpub XPub) (XPub, error) {
 func xpubToString(xpub vcrypto.XPubKeyer) (str string) {
 	switch xpbk := xpub.(type) {
 	case edchainkd.XPub:
+		fmt.Println("xpubToString xpbk:", xpbk)
+		fmt.Println("xpubToString string.....", hex.EncodeToString(xpbk[:]))
+		// xpb := make([]byte, ed25519.PublicKeySize)
+		// copy(xpb[:], xpbk[:])
 		return hex.EncodeToString(xpbk[:])
 	}
 
