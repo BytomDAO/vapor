@@ -22,7 +22,7 @@ func FederationProgrom(c *Config) []byte {
 	}
 	fedpegScript, err := vmutil.P2SPMultiSigProgram(cryptoPub, c.Federation.Quorum)
 	if err != nil {
-		log.Panicf("Failed generate federation scirpt  for federation")
+		log.Panicf("Failed generate federation scirpt  for federation: " + err.Error())
 	}
 
 	scriptHash := vcrypto.Sha256(fedpegScript)

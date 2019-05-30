@@ -46,14 +46,6 @@ var BTMAssetID = &bc.AssetID{
 	V3: binary.BigEndian.Uint64([]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}),
 }
 
-// InitialSeed is SHA3-256 of Byte[0^32]
-var InitialSeed = &bc.Hash{
-	V0: uint64(11412844483649490393),
-	V1: uint64(4614157290180302959),
-	V2: uint64(1780246333311066183),
-	V3: uint64(9357197556716379726),
-}
-
 // BTMDefinitionMap is the ....
 var BTMDefinitionMap = map[string]interface{}{
 	"name":        BTMAlias,
