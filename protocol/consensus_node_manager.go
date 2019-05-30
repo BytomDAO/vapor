@@ -24,7 +24,6 @@ const (
 )
 
 var (
-	errHasNoChanceProductBlock = errors.New("the node has no chance to product a block in this round of voting")
 	errNotFoundConsensusNode   = errors.New("can not found consensus node")
 	errNotFoundBlockNode       = errors.New("can not find block node")
 )
@@ -106,13 +105,12 @@ func (c *consensusNodeManager) nextLeaderTimeRange(pubkey []byte, bestBlockHash 
 
 	prevRoundLastBlock, err := c.getPrevRoundVoteLastBlock(bestBlockNode)
 	if err != nil {
-		return 0, 0, nil
+		return 0, 0, err
 	}
 
 	startTime := prevRoundLastBlock.Timestamp + BlockTimeInterval
-	endTime := startTime + roundVoteBlockNums*BlockTimeInterval
 
-	nextLeaderTime, err := nextLeaderTimeHelper(startTime, endTime, uint64(time.Now().UnixNano()/1e6), consensusNode.order)
+	nextLeaderTime, err := nextLeaderTimeHelper(startTime, uint64(time.Now().UnixNano()/1e6), consensusNode.order)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -120,15 +118,12 @@ func (c *consensusNodeManager) nextLeaderTimeRange(pubkey []byte, bestBlockHash 
 	return nextLeaderTime, nextLeaderTime + BlockNumEachNode*BlockTimeInterval, nil
 }
 
-func nextLeaderTimeHelper(startTime, endTime, now, nodeOrder uint64) (uint64, error) {
+func nextLeaderTimeHelper(startTime, now, nodeOrder uint64) (uint64, error) {
 	nextLeaderTimestamp := getLastBlockTimeInTimeRange(startTime, now, nodeOrder)
 	roundBlockTime := uint64(BlockNumEachNode * numOfConsensusNode * BlockTimeInterval)
 
 	if int64(now-nextLeaderTimestamp) >= BlockNumEachNode*BlockTimeInterval {
 		nextLeaderTimestamp += roundBlockTime
-		if nextLeaderTimestamp >= endTime {
-			return 0, errHasNoChanceProductBlock
-		}
 	}
 
 	return nextLeaderTimestamp, nil
@@ -145,6 +140,9 @@ func getLastBlockTimeInTimeRange(startTimestamp, endTimestamp, order uint64) uin
 
 func (c *consensusNodeManager) getPrevRoundVoteLastBlock(blockNode *state.BlockNode) (*state.BlockNode, error) {
 	prevVoteRoundLastBlockHeight := blockNode.Height/roundVoteBlockNums*roundVoteBlockNums - 1
+	if blockNode.Height == 0 {
+		prevVoteRoundLastBlockHeight = 0
+	}
 	lastBlockNode := blockNode.GetParent(prevVoteRoundLastBlockHeight)
 	if lastBlockNode == nil {
 		return nil, errNotFoundBlockNode
