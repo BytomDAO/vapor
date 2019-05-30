@@ -14,10 +14,10 @@ import (
 )
 
 func FederationProgrom(c *Config) []byte {
-	pubKeys := chainkd.XPubKeys(c.Federation.Xpubs)
-	fedpegScript, err := vmutil.P2SPMultiSigProgram(pubKeys, c.Federation.Quorum)
+	xpubs := c.Federation.Xpubs
+	fedpegScript, err := vmutil.P2SPMultiSigProgram(chainkd.XPubKeys(xpubs), c.Federation.Quorum)
 	if err != nil {
-		log.Panicf("Failed generate federation scirpt  for federation")
+		log.Panicf("Failed generate federation scirpt  for federation: " + err.Error())
 	}
 
 	scriptHash := crypto.Sha256(fedpegScript)

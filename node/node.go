@@ -71,6 +71,7 @@ func NewNode(config *cfg.Config) *Node {
 
 	log.WithFields(log.Fields{
 		"module":             logModule,
+		"pubkey":             config.PrivateKey().XPub(),
 		"fed_xpubs":          config.Federation.Xpubs,
 		"fed_quorum":         config.Federation.Quorum,
 		"fed_controlprogram": hex.EncodeToString(cfg.FederationProgrom(config)),
