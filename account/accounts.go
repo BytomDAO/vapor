@@ -3,7 +3,6 @@ package account
 
 import (
 	"encoding/json"
-	"fmt"
 	"reflect"
 	"sort"
 	"strings"
@@ -417,7 +416,6 @@ func (m *Manager) FindByAlias(alias string) (*Account, error) {
 
 // FindByID returns an account's Signer record by its ID.
 func (m *Manager) FindByID(id string) (*Account, error) {
-	fmt.Println("FindByID start...")
 	m.cacheMu.Lock()
 	cachedAccount, ok := m.cache.Get(id)
 	m.cacheMu.Unlock()
@@ -436,19 +434,16 @@ func (m *Manager) FindByID(id string) (*Account, error) {
 	}
 	for i, xpub := range account.XPubs {
 		if reflect.TypeOf(xpub).String() == "string" {
-			// fmt.Println("account xpubs type:", reflect.TypeOf(xpub).String())
 			if xpb, err := edchainkd.NewXPub(reflect.ValueOf(xpub).String()); err != nil {
 				panic(err)
 			} else {
 				account.XPubs[i] = *xpb
 			}
-			fmt.Println("account xpubs type:", reflect.TypeOf(account.XPubs[i]).String())
 		}
 	}
 
 	m.cacheMu.Lock()
 	m.cache.Add(id, account)
-	fmt.Println("FindByID m.cache...", m.cache)
 	m.cacheMu.Unlock()
 	return account, nil
 }
@@ -691,11 +686,8 @@ func CreateCtrlProgram(account *Account, addrIdx uint64, change bool) (cp *CtrlP
 }
 
 func createP2PKH(account *Account, path [][]byte) (*CtrlProgram, error) {
-	fmt.Println("createP2PKH account.XPubs is:", account.XPubs)
 	derivedXPubs := csp.DeriveXPubs(account.XPubs, path)
-	fmt.Println("createP2PKH derivedXPubs is:", derivedXPubs)
 	pubHash := make([]byte, 0)
-	fmt.Println("createP2PKH len(derivedXPubs) is:", len(derivedXPubs))
 	if len(derivedXPubs) == 0 {
 		return nil, errors.New("no derived XPub.")
 	}
@@ -704,7 +696,6 @@ func createP2PKH(account *Account, path [][]byte) (*CtrlProgram, error) {
 		derivedPK := dxpub.PublicKey()
 		pubHash = crypto.Ripemd160(derivedPK)
 	}
-	fmt.Println("createP2PKH ...")
 
 	address, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.ActiveNetParams)
 	if err != nil {

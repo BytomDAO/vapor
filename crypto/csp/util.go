@@ -15,9 +15,7 @@ import (
 
 func NewXKeys(r io.Reader) (xprv vcrypto.XPrvKeyer, xpub vcrypto.XPubKeyer, err error) {
 	// TODO: if ... create sm2 xprv and xpub
-	// return .....
 
-	// if ... create ed25519 xprv and xpub
 	return edchainkd.NewXKeys(r)
 }
 
@@ -32,30 +30,13 @@ func XPubKeys(xpubs []vcrypto.XPubKeyer) []crypto.PublicKey {
 	return res
 }
 
-// func DeriveXPubs(xpubs []vcrypto.XPubKeyer, path [][]byte) []vcrypto.XPubKeyer {
-// 	res := make([]vcrypto.XPubKeyer, 0, len(xpubs))
-// 	for _, xpub := range xpubs {
-// 		switch xpb := xpub.(type) {
-// 		case edchainkd.XPub:
-// 			d := xpb.Derive(path)
-// 			res = append(res, d)
-// 			fmt.Println("DeriveXPubs d is:", d)
-// 		}
-// 	}
-// 	fmt.Println("DeriveXPubs len(res) is:", len(res))
-// 	return res
-// }
-
 func DeriveXPubs(xpubs []vcrypto.XPubKeyer, path [][]byte) []vcrypto.XPubKeyer {
 	res := make([]vcrypto.XPubKeyer, 0, len(xpubs))
 	for _, xpub := range xpubs {
-		fmt.Println("DeriveXPubs type xpubs:", reflect.TypeOf(xpubs), "type xpubs[0]:", reflect.TypeOf(xpubs[0]))
-		fmt.Println("xpubs[0] is:", xpubs[0])
 		switch xpb := xpub.(type) {
 		case edchainkd.XPub:
 			d := xpb.Derive(path)
 			res = append(res, d)
-			fmt.Println("DeriveXPubs d is:", d)
 		default:
 			newxpub, err := edchainkd.NewXPub(reflect.ValueOf(xpub).String())
 			if err != nil {
@@ -63,10 +44,8 @@ func DeriveXPubs(xpubs []vcrypto.XPubKeyer, path [][]byte) []vcrypto.XPubKeyer {
 			} else {
 				d := newxpub.Derive(path)
 				res = append(res, d)
-				fmt.Println("DeriveXPubs d is:", d)
 			}
 		}
 	}
-	fmt.Println("DeriveXPubs len(res) is:", len(res))
 	return res
 }

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -87,7 +86,6 @@ func TestPseudoHSMChainKDKeys(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println("TestPseudoHSMChainKDKeys xpub:", xpub)
 	xpub2, _, err := hsm.XCreate("bytom", "nopassword", "en")
 	if err != nil {
 		t.Fatal(err)
@@ -97,14 +95,8 @@ func TestPseudoHSMChainKDKeys(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println("TestPseudoHSMChainKDKeys xpub.XPub:", xpub.XPub)
-	fmt.Println("TestPseudoHSMChainKDKeys xpub.XPub type:", reflect.TypeOf(xpub.XPub))
-	fmt.Println("TestPseudoHSMChainKDKeys sig:", sig)
-	fmt.Println("TestPseudoHSMChainKDKeys sig type:", reflect.TypeOf(sig))
-
 	switch xpubkey := xpub.XPub.(type) {
 	case edchainkd.XPub:
-		fmt.Println("TestPseudoHSMChainKDKeys 1 sig:", sig)
 		if !xpubkey.Verify(msg, sig) {
 			t.Error("expected verify to succeed")
 		}

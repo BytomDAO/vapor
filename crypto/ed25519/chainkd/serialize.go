@@ -3,7 +3,6 @@ package chainkd
 import (
 	"encoding/hex"
 	"errors"
-	"fmt"
 )
 
 const (
@@ -63,15 +62,11 @@ func (xprv XPrv) String() string {
 func NewXPub(str string) (*XPub, error) {
 	xpub := new(XPub)
 	if len(str) != 2*64 {
-		fmt.Println("str length is:", len(str))
-		fmt.Println("str is:", str)
 		return nil, errors.New("string length is invalid.")
 	}
 	if xpubBytes, err := hex.DecodeString(str); err != nil {
 		return nil, err
 	} else {
-		fmt.Println("NewXPub xpub is:", xpub)
-		fmt.Println("NewXPub xpubBytes is:", xpubBytes)
 		copy(xpub[:], xpubBytes[:])
 	}
 	return xpub, nil

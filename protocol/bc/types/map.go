@@ -1,8 +1,6 @@
 package types
 
 import (
-	"fmt"
-
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/consensus"
@@ -14,7 +12,6 @@ import (
 // MapTx converts a types TxData object into its entries-based
 // representation.
 func MapTx(oldTx *TxData) *bc.Tx {
-	fmt.Println("MapTx start...")
 	txID, txHeader, entries := mapTx(oldTx)
 	tx := &bc.Tx{
 		TxHeader: txHeader,
