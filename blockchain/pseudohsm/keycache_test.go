@@ -287,12 +287,10 @@ func tmpManager(t *testing.T) (string, *keyCache) {
 }
 
 func tmpEdPubkeys(t *testing.T, r *rand.Rand) edchainkd.XPub {
-
 	var xpub edchainkd.XPub
 	pick := "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	bytes := []byte(pick)
 	result := []byte{}
-
 	for i := 0; i < 64; i++ {
 		result = append(result, bytes[r.Intn(len(bytes))])
 	}

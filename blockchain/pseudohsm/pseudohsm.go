@@ -228,16 +228,24 @@ func (h *HSM) XSign(xpub vcrypto.XPubKeyer, path [][]byte, msg []byte, auth stri
 	fmt.Println("XSign xprv type:", reflect.TypeOf(xprv))
 	fmt.Println("XSign path:", path)
 	fmt.Println("XSign len(path):", len(path))
-	if len(path) > 0 {
-		switch xprvkey := xprv.(type) {
-		case edchainkd.XPrv:
-			xprvk := xprvkey.Derive(path)
-			sig := xprvk.Sign(msg)
-			fmt.Println("XSign sig:", sig)
-			return sig, nil
-		}
-	}
+	// if len(path) > 0 {
+	// 	switch xprvkey := xprv.(type) {
+	// 	case edchainkd.XPrv:
+	// 		xprvk := xprvkey.Derive(path)
+	// 		sig := xprvk.Sign(msg)
+	// 		fmt.Println("XSign sig:", sig)
+	// 		return sig, nil
+	// 	}
+	// }
 	fmt.Println("XSign end...")
+	switch xprvkey := xprv.(type) {
+	case edchainkd.XPrv:
+		if len(path) > 0 {
+			xprvk := xprvkey.Derive(path)
+			return xprvk.Sign(msg), nil
+		}
+		return xprvkey.Sign(msg), nil
+	}
 	return nil, nil
 }
 
