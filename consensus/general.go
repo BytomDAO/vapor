@@ -22,6 +22,9 @@ const (
 	baseSubsidy                = uint64(41250000000)
 	InitialBlockSubsidy        = uint64(140700041250000000)
 
+	//config parameter for vote
+	VotePendingBlockNumber = uint64(10000)
+
 	// config for pow mining
 	BlocksPerRetarget     = uint64(2016)
 	TargetSecondsPerBlock = uint64(150)

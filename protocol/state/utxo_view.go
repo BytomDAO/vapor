@@ -62,15 +62,26 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFa
 		if !ok {
 			return errors.New("fail to find utxo entry")
 		}
-		if entry.Type == storage.CrosschainUTXOType {
-			return errors.New("look up spentOutputID but find utxo from mainchain")
-		}
+
 		if entry.Spent {
 			return errors.New("utxo has been spent")
 		}
-		if (entry.Type == storage.CoinbaseUTXOType) && ((entry.BlockHeight + consensus.CoinbasePendingBlockNumber) > block.Height) {
-			return errors.New("coinbase utxo is not ready for use")
+
+		switch entry.Type {
+		case storage.CrosschainUTXOType:
+			return errors.New("look up spentOutputID but find utxo from mainchain")
+
+		case storage.CoinbaseUTXOType:
+			if (entry.BlockHeight + consensus.CoinbasePendingBlockNumber) > block.Height {
+				return errors.New("coinbase utxo is not ready for use")
+			}
+
+		case storage.VoteUTXOType:
+			if (entry.BlockHeight + consensus.VotePendingBlockNumber) > block.Height {
+				return errors.New("Coin is  within the voting lock time")
+			}
 		}
+
 		entry.SpendOutput()
 	}
 
@@ -81,11 +92,14 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFa
 			continue
 		}
 
+		utxoType := storage.NormalUTXOType
+
 		switch output := entryOutput.(type) {
 		case *bc.IntraChainOutput:
 			assetID = *output.Source.Value.AssetId
 		case *bc.VoteOutput:
 			assetID = *output.Source.Value.AssetId
+			utxoType = storage.VoteUTXOType
 		default:
 			// due to it's a retirement, utxo doesn't care this output type so skip it
 			continue
@@ -95,7 +109,6 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFa
 			continue
 		}
 
-		utxoType := storage.NormalUTXOType
 		if block != nil && len(block.Transactions) > 0 && block.Transactions[0].ID == tx.ID {
 			utxoType = storage.CoinbaseUTXOType
 		}
@@ -148,11 +161,13 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 			return err
 		}
 
+		utxoType := storage.NormalUTXOType
 		switch output := entryOutput.(type) {
 		case *bc.IntraChainOutput:
 			assetID = *output.Source.Value.AssetId
 		case *bc.VoteOutput:
 			assetID = *output.Source.Value.AssetId
+			utxoType = storage.VoteUTXOType
 		default:
 			return errors.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", prevout.Bytes(), entryOutput)
 		}
@@ -171,7 +186,7 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 		}
 
 		if !ok {
-			view.Entries[prevout] = storage.NewUtxoEntry(storage.NormalUTXOType, 0, false)
+			view.Entries[prevout] = storage.NewUtxoEntry(utxoType, 0, false)
 			continue
 		}
 		entry.UnspendOutput()
@@ -184,11 +199,13 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 			continue
 		}
 
+		utxoType := storage.NormalUTXOType
 		switch output := entryOutput.(type) {
 		case *bc.IntraChainOutput:
 			assetID = *output.Source.Value.AssetId
 		case *bc.VoteOutput:
 			assetID = *output.Source.Value.AssetId
+			utxoType = storage.VoteUTXOType
 		default:
 			// due to it's a retirement, utxo doesn't care this output type so skip it
 			continue
@@ -198,7 +215,7 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 			continue
 		}
 
-		view.Entries[*id] = storage.NewUtxoEntry(storage.NormalUTXOType, 0, true)
+		view.Entries[*id] = storage.NewUtxoEntry(utxoType, 0, true)
 	}
 	return nil
 }

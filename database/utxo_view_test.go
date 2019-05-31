@@ -14,7 +14,10 @@ import (
 func TestSaveUtxoView(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	batch := testDB.NewBatch()
-	defer os.RemoveAll("temp")
+	defer func() {
+		testDB.Close()
+		os.RemoveAll("temp")
+	}()
 
 	cases := []struct {
 		hash      bc.Hash
@@ -50,6 +53,16 @@ func TestSaveUtxoView(t *testing.T) {
 			hash:      bc.Hash{V0: 5},
 			utxoEntry: storage.NewUtxoEntry(storage.CrosschainUTXOType, 0, false),
 			exist:     false,
+		},
+		{
+			hash:      bc.Hash{V0: 6},
+			utxoEntry: storage.NewUtxoEntry(storage.VoteUTXOType, 0, true),
+			exist:     false,
+		},
+		{
+			hash:      bc.Hash{V0: 7},
+			utxoEntry: storage.NewUtxoEntry(storage.VoteUTXOType, 0, false),
+			exist:     true,
 		},
 	}
 

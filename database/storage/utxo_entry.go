@@ -4,6 +4,7 @@ const (
 	NormalUTXOType uint32 = iota
 	CoinbaseUTXOType
 	CrosschainUTXOType
+	VoteUTXOType
 )
 
 // NewUtxoEntry will create a new utxo entry
