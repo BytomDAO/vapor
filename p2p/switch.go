@@ -2,7 +2,6 @@ package p2p
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -99,16 +98,8 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 	netID := binary.BigEndian.Uint64(h[:8])
 
 	blacklistDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
-	config.P2P.PrivateKey, err = config.NodeKey()
-	if err != nil {
-		return nil, err
-	}
 
-	bytes, err := hex.DecodeString(config.P2P.PrivateKey)
-	if err != nil {
-		return nil, err
-	}
-
+	bytes := config.PrivateKey()[:]
 	var newKey [64]byte
 	copy(newKey[:], bytes)
 	privKey := crypto.PrivKeyEd25519(newKey)

@@ -1,13 +1,14 @@
 package blockproposer
 
 import (
+	"encoding/hex"
 	"sync"
 	"time"
-	"encoding/hex"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/account"
+	"github.com/vapor/config"
 	"github.com/vapor/event"
 	"github.com/vapor/proposal"
 	"github.com/vapor/protocol"
@@ -53,10 +54,10 @@ out:
 
 		bestBlockHeader := b.chain.BestBlockHeader()
 		bestBlockHash := bestBlockHeader.Hash()
-		var pubKey []byte
-		timeStart, timeEnd, err := b.chain.GetBBFT().NextLeaderTimeRange(pubKey, &bestBlockHash)
+		pubKey := config.CommonConfig.PrivateKey().XPub()
+		timeStart, timeEnd, err := b.chain.GetBBFT().NextLeaderTimeRange(pubKey[:], &bestBlockHash)
 		if err != nil {
-			log.WithFields(log.Fields{"module": logModule, "error": err, "pubKey": hex.EncodeToString(pubKey)}).Debug("fail on get next leader time range")
+			log.WithFields(log.Fields{"module": logModule, "error": err, "pubKey": hex.EncodeToString(pubKey[:])}).Debug("fail on get next leader time range")
 			continue
 		}
 
@@ -65,11 +66,11 @@ out:
 			timeStart = now
 		}
 
-		time.Sleep(time.Millisecond * time.Duration(timeStart - now))
+		time.Sleep(time.Millisecond * time.Duration(timeStart-now))
 
 		count := 0
 		for now = timeStart; now < timeEnd && count < protocol.BlockNumEachNode; now = uint64(time.Now().UnixNano() / 1e6) {
-			block, err := proposal.NewBlockTemplate(b.chain, b.txPool, b.accountManager)
+			block, err := proposal.NewBlockTemplate(b.chain, b.txPool, b.accountManager, now)
 			if err != nil {
 				log.Errorf("failed on create NewBlockTemplate: %v", err)
 			} else {

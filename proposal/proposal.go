@@ -69,7 +69,7 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 }
 
 // NewBlockTemplate returns a new block template that is ready to be solved
-func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager) (b *types.Block, err error) {
+func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager, timestamp uint64) (b *types.Block, err error) {
 	view := state.NewUtxoViewpoint()
 	txStatus := bc.NewTransactionStatus()
 	if err := txStatus.SetStatus(0, false); err != nil {
@@ -89,8 +89,9 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			Version:           1,
 			Height:            nextBlockHeight,
 			PreviousBlockHash: preBlockHash,
-			Timestamp:         uint64(time.Now().UnixNano() / int64(time.Millisecond)),
+			Timestamp:         timestamp,
 			BlockCommitment:   types.BlockCommitment{},
+			BlockWitness:      types.BlockWitness{Witness: make([][]byte, protocol.NumOfConsensusNode)},
 		},
 	}
 	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: nextBlockHeight}}
