@@ -48,11 +48,11 @@ type BlockSignatureMsg struct {
 	BlockHash [32]byte
 	Height    uint64
 	Signature []byte
-	PubKey    [32]byte
+	PubKey    []byte
 }
 
 //NewBlockSignatureMsg create new block signature msg.
-func NewBlockSignatureMsg(blockHash bc.Hash, height uint64, signature []byte, pubKey [32]byte) ConsensusMessage {
+func NewBlockSignatureMsg(blockHash bc.Hash, height uint64, signature []byte, pubKey []byte) ConsensusMessage {
 	hash := blockHash.Byte32()
 	return &BlockSignatureMsg{BlockHash: hash, Height: height, Signature: signature, PubKey: pubKey}
 }

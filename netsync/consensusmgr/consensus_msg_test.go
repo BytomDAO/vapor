@@ -26,7 +26,7 @@ func TestDecodeMessage(t *testing.T) {
 			msg: &BlockSignatureMsg{
 				BlockHash: [32]byte{0x01},
 				Signature: []byte{0x00},
-				PubKey:    [32]byte{0x01},
+				PubKey:    []byte{0x01},
 			},
 			msgType: blockSignatureByte,
 		},
@@ -57,7 +57,7 @@ func TestBlockSignBroadcastMsg(t *testing.T) {
 		BlockHash: [32]byte{0x01},
 		Height:    100,
 		Signature: []byte{0x00},
-		PubKey:    [32]byte{0x01},
+		PubKey:    []byte{0x01},
 	}
 	signatureBroadcastMsg := NewBroadcastMsg(NewBlockSignatureMsg(bc.NewHash(blockSignMsg.BlockHash), blockSignMsg.Height, blockSignMsg.Signature, blockSignMsg.PubKey), consensusChannel)
 
@@ -141,14 +141,14 @@ func TestBlockSignatureMsg(t *testing.T) {
 		BlockHash: [32]byte{0x01},
 		Height:    100,
 		Signature: []byte{0x00},
-		PubKey:    [32]byte{0x01},
+		PubKey:    []byte{0x01},
 	}
 	gotMsg := NewBlockSignatureMsg(bc.NewHash(msg.BlockHash), msg.Height, msg.Signature, msg.PubKey)
 
 	if !reflect.DeepEqual(gotMsg, msg) {
 		t.Fatalf("test block signature message err. got:%s\n want:%s", spew.Sdump(gotMsg), spew.Sdump(msg))
 	}
-	wantString := "{block_hash: 0100000000000000000000000000000000000000000000000000000000000000,block_height:100,signature:00,pubkey:0100000000000000000000000000000000000000000000000000000000000000}"
+	wantString := "{block_hash: 0100000000000000000000000000000000000000000000000000000000000000,block_height:100,signature:00,pubkey:01}"
 	if gotMsg.String() != wantString {
 		t.Fatalf("test block signature message err. got string:%s\n want string:%s", gotMsg.String(), wantString)
 	}

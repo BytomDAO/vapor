@@ -47,6 +47,7 @@ type Manager struct {
 func NewManager(sw Switch, chain Chain, dispatcher *event.Dispatcher, peers *peers.PeerSet) *Manager {
 	manager := &Manager{
 		sw:              sw,
+		chain:           chain,
 		peers:           peers,
 		blockFetcher:    newBlockFetcher(chain, peers),
 		eventDispatcher: dispatcher,
@@ -95,7 +96,7 @@ func (m *Manager) handleBlockProposeMsg(peerID string, msg *BlockProposeMsg) {
 
 func (m *Manager) handleBlockSignatureMsg(peerID string, msg *BlockSignatureMsg) {
 	blockHash := bc.NewHash(msg.BlockHash)
-	if err := m.chain.ProcessBlockSignature(msg.Signature, msg.PubKey[:], msg.Height, &blockHash); err != nil {
+	if err := m.chain.ProcessBlockSignature(msg.Signature, msg.PubKey, msg.Height, &blockHash); err != nil {
 		m.peers.AddBanScore(peerID, 20, 0, err.Error())
 		return
 	}
@@ -166,7 +167,7 @@ func (m *Manager) blockSignatureMsgBroadcastLoop() {
 				return
 			}
 
-			blockSignatureMsg := NewBroadcastMsg(NewBlockSignatureMsg(ev.BlockHash, blockHeader.Height, ev.Signature, m.sw.ID()), consensusChannel)
+			blockSignatureMsg := NewBroadcastMsg(NewBlockSignatureMsg(ev.BlockHash, blockHeader.Height, ev.Signature, ev.XPub[:]), consensusChannel)
 			if err := m.peers.BroadcastMsg(blockSignatureMsg); err != nil {
 				logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on broadcast BlockSignBroadcastMsg.")
 				return
