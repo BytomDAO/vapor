@@ -254,23 +254,10 @@ func (c *consensusNodeManager) reorganizeVoteResult(voteResult *state.VoteResult
 
 func (c *consensusNodeManager) applyBlock(voteResultMap map[uint64]*state.VoteResult, block *types.Block) (err error) {
 	voteSeq := block.Height / roundVoteBlockNums
-	voteResult := voteResultMap[voteSeq]
-
-	if voteResult == nil {
-		voteResult, err = c.store.GetVoteResult(voteSeq)
-		if err != nil && err != ErrNotFoundVoteResult {
-			return err
-		}
+	voteResult, err := c.getVoteResult(voteResultMap, voteSeq)
+	if err != nil {
+		return err
 	}
-
-	if voteResult == nil {
-		voteResult = &state.VoteResult{
-			Seq:       voteSeq,
-			NumOfVote: make(map[string]uint64),
-		}
-	}
-
-	voteResultMap[voteSeq] = voteResult
 
 	emptyHash := bc.Hash{}
 	if voteResult.LastBlockHash != emptyHash && voteResult.LastBlockHash != block.PreviousBlockHash {
@@ -306,6 +293,42 @@ func (c *consensusNodeManager) applyBlock(voteResultMap map[uint64]*state.VoteRe
 
 	voteResult.Finalized = (block.Height+1)%roundVoteBlockNums == 0
 	return nil
+}
+
+func (c *consensusNodeManager) getVoteResult(voteResultMap map[uint64]*state.VoteResult, seq uint64) (*state.VoteResult, error) {
+	var err error
+	voteResult := voteResultMap[seq]
+	if voteResult == nil {
+		prevVoteResult := voteResultMap[seq - 1]
+		voteResult = &state.VoteResult {
+			Seq: seq,
+			NumOfVote: prevVoteResult.NumOfVote,
+			Finalized: false,
+		}
+	}
+
+	if voteResult == nil {
+		voteResult, err = c.store.GetVoteResult(seq)
+		if err != nil && err != ErrNotFoundVoteResult {
+			return nil, err
+		}
+	}
+
+	if voteResult == nil {
+		voteResult, err := c.store.GetVoteResult(seq - 1)
+		if err != nil && err != ErrNotFoundVoteResult {
+			return nil, err
+		}
+		// previous round voting must have finalized
+		if !voteResult.Finalized {
+			return nil, errors.New("previous round voting has not finalized")
+		}
+
+		voteResult.Finalized = false
+		voteResult.LastBlockHash = bc.Hash{}
+	}
+	voteResultMap[seq] = voteResult
+	return voteResult, nil
 }
 
 func (c *consensusNodeManager) detachBlock(voteResultMap map[uint64]*state.VoteResult, block *types.Block) error {

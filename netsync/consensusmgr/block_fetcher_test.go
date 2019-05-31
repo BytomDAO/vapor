@@ -45,7 +45,7 @@ func (c *chain) ProcessBlock(block *types.Block) (bool, error) {
 	return false, nil
 }
 
-func (c *chain) ProcessBlockSignature(signature, pubkey []byte, blockHeight uint64, blockHash *bc.Hash) error {
+func (c *chain) ProcessBlockSignature(signature []byte, pubkey [64]byte, blockHeight uint64, blockHash *bc.Hash) error {
 	return nil
 }
 
