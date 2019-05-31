@@ -9,6 +9,7 @@ import (
 
 	"github.com/vapor/config"
 	"github.com/vapor/crypto/ed25519"
+	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
 	"github.com/vapor/event"
 	"github.com/vapor/protocol/bc"
@@ -42,22 +43,18 @@ func newBbft(store Store, blockIndex *state.BlockIndex, orphanManage *OrphanMana
 	}
 }
 
-// IsConsensusPubkey determine whether a public key is a consensus node at a specified height
-func (b *bbft) IsConsensusPubkey(blockHash *bc.Hash, pubkey []byte) (bool, error) {
-	node, err := b.consensusNodeManager.getConsensusNode(blockHash, hex.EncodeToString(pubkey))
-	if err != nil && err != errNotFoundConsensusNode {
-		return false, err
-	}
-	return node != nil, nil
-}
-
 func (b *bbft) isIrreversible(block *types.Block) bool {
+	consensusNodes, err := b.consensusNodeManager.getConsensusNodesByVoteResult(&block.PreviousBlockHash)
+	if err != nil {
+		return false
+	}
+
 	signNum, err := b.validateSign(block)
 	if err != nil {
 		return false
 	}
 
-	return signNum > (numOfConsensusNode * 2 / 3)
+	return signNum > (uint64(len(consensusNodes)) * 2 / 3)
 }
 
 // NextLeaderTime returns the start time of the specified public key as the next leader node
@@ -74,15 +71,22 @@ func (b *bbft) DetachBlock(voteResultMap map[uint64]*state.VoteResult, block *ty
 }
 
 // ProcessBlockSignature process the received block signature messages
-// return once a block become irreversible, whether it's height greater than best block height
-// if so, the chain module must update status
-func (b *bbft) ProcessBlockSignature(signature, pubkey []byte, blockHeight uint64, blockHash *bc.Hash) (bool, error) {
-	consensusNode, err := b.consensusNodeManager.getConsensusNode(blockHash, hex.EncodeToString(pubkey))
+// return whether a block become irreversible, if so, the chain module must update status
+func (b *bbft) ProcessBlockSignature(signature []byte, xPub [64]byte, blockHeight uint64, blockHash *bc.Hash) (bool, error) {
+	block, err := b.consensusNodeManager.store.GetBlock(blockHash)
+	if err != nil {
+		// block is not exist, save the signature
+		key := fmt.Sprintf("%s:%s", blockHash.String(), hex.EncodeToString(xPub[:]))
+		b.signatureCache.Add(key, signature)
+		return false, err
+	}
+
+	consensusNode, err := b.consensusNodeManager.getConsensusNode(&block.PreviousBlockHash, hex.EncodeToString(xPub[:]))
 	if err != nil {
 		return false, err
 	}
 
-	if !ed25519.Verify(ed25519.PublicKey(pubkey), blockHash.Bytes(), signature) {
+	if chainkd.XPub(xPub).Verify(blockHash.Bytes(), signature) {
 		return false, errInvalidSignature
 	}
 
@@ -92,7 +96,7 @@ func (b *bbft) ProcessBlockSignature(signature, pubkey []byte, blockHeight uint6
 	}
 
 	if isDoubleSign {
-		log.WithFields(log.Fields{"module": logModule, "blockHash": blockHash.String(), "pubkey": pubkey}).Warn("the consensus node double sign the same height of different block")
+		log.WithFields(log.Fields{"module": logModule, "blockHash": blockHash.String(), "xPub": hex.EncodeToString(xPub[:])}).Warn("the consensus node double sign the same height of different block")
 		return false, errDoubleSignBlock
 	}
 
@@ -102,19 +106,11 @@ func (b *bbft) ProcessBlockSignature(signature, pubkey []byte, blockHeight uint6
 		return false, nil
 	}
 
-	block, err := b.consensusNodeManager.store.GetBlock(blockHash)
-	if err != nil {
-		// block is not exist, save the signature
-		key := fmt.Sprintf("%s:%s", blockHash.String(), hex.EncodeToString(pubkey))
-		b.signatureCache.Add(key, signature)
-		return false, err
-	}
-
 	if err := b.updateBlockSignature(block, consensusNode.order, signature); err != nil {
 		return false, err
 	}
 
-	return b.isIrreversible(block) && blockHeight > b.consensusNodeManager.blockIndex.BestNode().Height, nil
+	return b.isIrreversible(block), nil
 }
 
 // ValidateBlock verify whether the block is valid
@@ -135,40 +131,44 @@ func (b *bbft) ValidateBlock(block *types.Block) error {
 // if the block has not the signature of blocker, it will return error
 func (b *bbft) validateSign(block *types.Block) (uint64, error) {
 	var correctSignNum uint64
-	blockHash := block.Hash()
-	consensusNodeMap, err := b.consensusNodeManager.getConsensusNodesByVoteResult(&blockHash)
+	consensusNodeMap, err := b.consensusNodeManager.getConsensusNodesByVoteResult(&block.PreviousBlockHash)
 	if err != nil {
 		return 0, err
 	}
 
 	hasBlockerSign := false
-	for pubkey, node := range consensusNodeMap {
+	for pubKey, node := range consensusNodeMap {
 		if len(block.Witness) <= int(node.order) {
 			continue
 		}
 
 		blockHash := block.Hash()
 		if block.Witness[node.order] == nil {
-			key := fmt.Sprintf("%s:%s", blockHash.String(), pubkey)
+			key := fmt.Sprintf("%s:%s", blockHash.String(), pubKey)
 			signature, ok := b.signatureCache.Get(key)
 			if ok {
 				block.Witness[node.order] = signature.([]byte)
 			}
 		}
 
-		if ed25519.Verify(ed25519.PublicKey(pubkey), blockHash.Bytes(), block.Witness[node.order]) {
+		pubKeyBytes, err := hex.DecodeString(pubKey)
+		if err != nil {
+			return 0, err
+		}
+
+		if ed25519.Verify(ed25519.PublicKey(pubKeyBytes[:32]), blockHash.Bytes(), block.Witness[node.order]) {
 			isDoubleSign, err := b.checkDoubleSign(node.order, block.Height, block.Hash())
 			if err != nil {
 				return 0, err
 			}
 
 			if isDoubleSign {
-				log.WithFields(log.Fields{"module": logModule, "blockHash": blockHash.String(), "pubkey": pubkey}).Warn("the consensus node double sign the same height of different block")
+				log.WithFields(log.Fields{"module": logModule, "blockHash": blockHash.String(), "pubKey": pubKey}).Warn("the consensus node double sign the same height of different block")
 				// Consensus node is signed twice with the same block height, discard the signature
 				block.Witness[node.order] = nil
 			} else {
 				correctSignNum++
-				isBlocker, err := b.consensusNodeManager.isBlocker(&blockHash, pubkey)
+				isBlocker, err := b.consensusNodeManager.isBlocker(block, pubKey)
 				if err != nil {
 					return 0, err
 				}
@@ -214,8 +214,7 @@ func (b *bbft) checkDoubleSign(nodeOrder, blockHeight uint64, blockHash bc.Hash)
 func (b *bbft) SignBlock(block *types.Block) ([]byte, error) {
 	xprv := config.CommonConfig.PrivateKey()
 	xpub := [64]byte(xprv.XPub())
-	blockHash := block.Hash()
-	node, err := b.consensusNodeManager.getConsensusNode(&blockHash, hex.EncodeToString(xpub[:]))
+	node, err := b.consensusNodeManager.getConsensusNode(&block.PreviousBlockHash, hex.EncodeToString(xpub[:]))
 	if err != nil && err != errNotFoundConsensusNode {
 		return nil, err
 	}
@@ -224,8 +223,11 @@ func (b *bbft) SignBlock(block *types.Block) ([]byte, error) {
 		return nil, nil
 	}
 
-	signature := xprv.Sign(block.Hash().Bytes())
-	block.Witness[node.order] = signature
+	signature := block.Witness[node.order]
+	if len(signature) == 0 {
+		signature = xprv.Sign(block.Hash().Bytes())
+		block.Witness[node.order] = signature
+	}
 	return signature, nil
 }
 

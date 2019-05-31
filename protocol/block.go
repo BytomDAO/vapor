@@ -5,6 +5,7 @@ import (
 
 	"github.com/vapor/errors"
 	"github.com/vapor/event"
+	"github.com/vapor/config"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
@@ -187,7 +188,8 @@ func (c *Chain) saveBlock(block *types.Block) error {
 	}
 
 	parent := c.index.GetNode(&block.PreviousBlockHash)
-	if err := validation.ValidateBlock(types.MapBlock(block), parent); err != nil {
+	bcBlock := types.MapBlock(block)
+	if err := validation.ValidateBlock(bcBlock, parent); err != nil {
 		return errors.Sub(ErrBadBlock, err)
 	}
 
@@ -196,13 +198,6 @@ func (c *Chain) saveBlock(block *types.Block) error {
 		return errors.Sub(ErrBadBlock, err)
 	}
 
-	if len(signature) != 0 {
-		if err := c.bbft.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: block.Hash(), Signature: signature}); err != nil {
-			return err
-		}
-	}
-
-	bcBlock := types.MapBlock(block)
 	if err := c.store.SaveBlock(block, bcBlock.TransactionStatus); err != nil {
 		return err
 	}
@@ -214,6 +209,13 @@ func (c *Chain) saveBlock(block *types.Block) error {
 	}
 
 	c.index.AddNode(node)
+
+	if len(signature) != 0 {
+		xPub := config.CommonConfig.PrivateKey().XPub()
+		if err := c.bbft.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: block.Hash(), Signature: signature, XPub: xPub}); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -306,13 +308,18 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	return false, nil
 }
 
-func (c *Chain) ProcessBlockSignature(signature, pubkey []byte, blockHeight uint64, blockHash *bc.Hash) error {
-	isBestIrreversible, err := c.bbft.ProcessBlockSignature(signature, pubkey, blockHeight, blockHash)
+func (c *Chain) ProcessBlockSignature(signature, pubKey []byte, blockHeight uint64, blockHash *bc.Hash) error {
+	var xPub [64]byte
+	for i := 0; i < 64; i++ {
+		xPub[i] = pubKey[i]
+	}
+	
+	isIrreversible, err := c.bbft.ProcessBlockSignature(signature, xPub, blockHeight, blockHash)
 	if err != nil {
 		return err
 	}
 
-	if isBestIrreversible {
+	if isIrreversible && blockHeight > c.bestIrreversibleNode.Height {
 		bestIrreversibleNode := c.index.GetNode(blockHash)
 		if err := c.store.SaveChainNodeStatus(c.bestNode, bestIrreversibleNode); err != nil {
 			return err

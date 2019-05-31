@@ -70,7 +70,7 @@ out:
 
 		count := 0
 		for now = timeStart; now < timeEnd && count < protocol.BlockNumEachNode; now = uint64(time.Now().UnixNano() / 1e6) {
-			block, err := proposal.NewBlockTemplate(b.chain, b.txPool, b.accountManager)
+			block, err := proposal.NewBlockTemplate(b.chain, b.txPool, b.accountManager, now)
 			if err != nil {
 				log.Errorf("failed on create NewBlockTemplate: %v", err)
 			} else {

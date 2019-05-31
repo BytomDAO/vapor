@@ -8,7 +8,6 @@ func TestNextLeaderTime(t *testing.T) {
 	cases := []struct {
 		desc               string
 		startTime          uint64
-		endTime            uint64
 		now                uint64
 		nodeOrder          uint64
 		wantError          error
@@ -17,7 +16,6 @@ func TestNextLeaderTime(t *testing.T) {
 		{
 			desc:               "normal case",
 			startTime:          1557906284061,
-			endTime:            1557906784061,
 			now:                1557906534061,
 			nodeOrder:          1,
 			wantError:          nil,
@@ -26,7 +24,6 @@ func TestNextLeaderTime(t *testing.T) {
 		{
 			desc:               "best block height equals to start block height",
 			startTime:          1557906284061,
-			endTime:            1557906784061,
 			now:                1557906284061,
 			nodeOrder:          0,
 			wantError:          nil,
@@ -35,43 +32,30 @@ func TestNextLeaderTime(t *testing.T) {
 		{
 			desc:               "best block height equals to start block height",
 			startTime:          1557906284061,
-			endTime:            1557906784061,
 			now:                1557906284061,
 			nodeOrder:          1,
 			wantError:          nil,
 			wantNextLeaderTime: 1557906284061 + BlockNumEachNode*BlockTimeInterval,
 		},
 		{
-			desc:               "has no chance product block in this round of voting",
-			startTime:          1557906284061,
-			endTime:            1557906784061,
-			now:                1557906781561,
-			nodeOrder:          1,
-			wantError:          errHasNoChanceProductBlock,
-			wantNextLeaderTime: 0,
-		},
-		{
 			desc:               "the node is producting block",
 			startTime:          1557906284061,
-			endTime:            1557906784061,
 			now:                1557906284561,
 			nodeOrder:          0,
 			wantError:          nil,
-			wantNextLeaderTime: 1557906284061,
+			wantNextLeaderTime: 1557906315561,
 		},
 		{
 			desc:               "the node is producting block",
 			startTime:          1557906284061,
-			endTime:            1557906784061,
 			now:                1557906317561,
 			nodeOrder:          1,
 			wantError:          nil,
-			wantNextLeaderTime: 1557906284061 + 66*BlockTimeInterval,
+			wantNextLeaderTime: 1557906348561,
 		},
 		{
 			desc:               "first round, must exclude genesis block",
 			startTime:          1557906284061,
-			endTime:            1557906783561,
 			now:                1557906286561,
 			nodeOrder:          3,
 			wantError:          nil,
@@ -80,7 +64,7 @@ func TestNextLeaderTime(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		nextLeaderTimestamp, err := nextLeaderTimeHelper(c.startTime, c.endTime, c.now, c.nodeOrder)
+		nextLeaderTimestamp, err := nextLeaderTimeHelper(c.startTime, c.now, c.nodeOrder)
 		if err != c.wantError {
 			t.Fatalf("case #%d (%s) want error:%v, got error:%v", i, c.desc, c.wantError, err)
 		}
