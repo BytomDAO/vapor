@@ -78,12 +78,17 @@ func (c *Chain) initChainStatus() error {
 		return err
 	}
 
+	voteResultMap := make(map[uint64]*state.VoteResult)
+	if err := c.bbft.ApplyBlock(voteResultMap, genesisBlock); err != nil {
+		return err
+	}
+
 	node, err := state.NewBlockNode(&genesisBlock.BlockHeader, nil)
 	if err != nil {
 		return err
 	}
 
-	return c.store.SaveChainStatus(node, node, utxoView, map[uint64]*state.VoteResult{})
+	return c.store.SaveChainStatus(node, node, utxoView, voteResultMap)
 }
 
 // BestBlockHeight returns the current height of the blockchain.

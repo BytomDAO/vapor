@@ -93,12 +93,17 @@ func (c *consensusNodeManager) nextLeaderTimeRange(pubkey []byte, bestBlockHash 
 		return 0, 0, errNotFoundBlockNode
 	}
 
-	consensusNode, err := c.getConsensusNode(&bestBlockNode.Parent.Hash, hex.EncodeToString(pubkey))
+	parentHash := bestBlockNode.Hash
+	if bestBlockNode.Height > 0 {
+		parentHash = bestBlockNode.Parent.Hash
+	}
+
+	consensusNode, err := c.getConsensusNode(&parentHash, hex.EncodeToString(pubkey))
 	if err != nil {
 		return 0, 0, err
 	}
 
-	prevRoundLastBlock, err := c.getPrevRoundVoteLastBlock(&bestBlockNode.Parent.Hash)
+	prevRoundLastBlock, err := c.getPrevRoundVoteLastBlock(&parentHash)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -298,12 +303,22 @@ func (c *consensusNodeManager) applyBlock(voteResultMap map[uint64]*state.VoteRe
 func (c *consensusNodeManager) getVoteResult(voteResultMap map[uint64]*state.VoteResult, seq uint64) (*state.VoteResult, error) {
 	var err error
 	voteResult := voteResultMap[seq]
-	if voteResult == nil {
-		prevVoteResult := voteResultMap[seq - 1]
-		voteResult = &state.VoteResult {
-			Seq: seq,
-			NumOfVote: prevVoteResult.NumOfVote,
+	if seq == 0 {
+		voteResult = &state.VoteResult{
+			Seq:       seq,
+			NumOfVote: make(map[string]uint64),
 			Finalized: false,
+		}
+	}
+
+	if voteResult == nil {
+		prevVoteResult := voteResultMap[seq-1]
+		if prevVoteResult != nil {
+			voteResult = &state.VoteResult{
+				Seq:       seq,
+				NumOfVote: prevVoteResult.NumOfVote,
+				Finalized: false,
+			}
 		}
 	}
 
@@ -319,14 +334,22 @@ func (c *consensusNodeManager) getVoteResult(voteResultMap map[uint64]*state.Vot
 		if err != nil && err != ErrNotFoundVoteResult {
 			return nil, err
 		}
-		// previous round voting must have finalized
-		if !voteResult.Finalized {
-			return nil, errors.New("previous round voting has not finalized")
-		}
 
-		voteResult.Finalized = false
-		voteResult.LastBlockHash = bc.Hash{}
+		if voteResult != nil {
+			// previous round voting must have finalized
+			if !voteResult.Finalized {
+				return nil, errors.New("previous round voting has not finalized")
+			}
+
+			voteResult.Finalized = false
+			voteResult.LastBlockHash = bc.Hash{}
+		}
 	}
+
+	if voteResult == nil {
+		return nil, errors.New("fail to get vote result")
+	}
+
 	voteResultMap[seq] = voteResult
 	return voteResult, nil
 }
