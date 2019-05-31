@@ -3,6 +3,7 @@ package performance
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/vapor/account"
 	dbm "github.com/vapor/database/leveldb"
@@ -23,6 +24,6 @@ func BenchmarkNewBlockTpl(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		proposal.NewBlockTemplate(chain, txPool, accountManager)
+		proposal.NewBlockTemplate(chain, txPool, accountManager, uint64(time.Now().UnixNano() / 1e6))
 	}
 }
