@@ -24,8 +24,8 @@ const (
 )
 
 var (
-	errNotFoundConsensusNode   = errors.New("can not found consensus node")
-	errNotFoundBlockNode       = errors.New("can not find block node")
+	errNotFoundConsensusNode = errors.New("can not found consensus node")
+	errNotFoundBlockNode     = errors.New("can not find block node")
 )
 
 type consensusNode struct {
@@ -138,12 +138,12 @@ func (c *consensusNodeManager) getPrevRoundVoteLastBlock(prevBlockHash *bc.Hash)
 	if prevBlockNode == nil {
 		return nil, errNotFoundBlockNode
 	}
-	
+
 	blockHeight := prevBlockNode.Height + 1
 
 	prevVoteRoundLastBlockHeight := blockHeight/roundVoteBlockNums*roundVoteBlockNums - 1
 	// first round
-	if blockHeight / roundVoteBlockNums == 0 {
+	if blockHeight/roundVoteBlockNums == 0 {
 		prevVoteRoundLastBlockHeight = 0
 	}
 
@@ -197,7 +197,7 @@ func (c *consensusNodeManager) getConsensusNodesByVoteResult(prevBlockHash *bc.H
 	sort.Sort(consensusNodeSlice(nodes))
 
 	result := make(map[string]*consensusNode)
-	for i := 0; i < NumOfConsensusNode; i++ {
+	for i := 0; i < len(nodes) && i < NumOfConsensusNode; i++ {
 		node := nodes[i]
 		node.order = uint64(i)
 		result[node.pubkey] = node
@@ -265,8 +265,8 @@ func (c *consensusNodeManager) applyBlock(voteResultMap map[uint64]*state.VoteRe
 
 	if voteResult == nil {
 		voteResult = &state.VoteResult{
-			Seq:           voteSeq,
-			NumOfVote:     make(map[string]uint64),
+			Seq:       voteSeq,
+			NumOfVote: make(map[string]uint64),
 		}
 	}
 
