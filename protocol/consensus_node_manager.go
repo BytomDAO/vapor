@@ -258,8 +258,7 @@ func (c *consensusNodeManager) reorganizeVoteResult(voteResult *state.VoteResult
 }
 
 func (c *consensusNodeManager) applyBlock(voteResultMap map[uint64]*state.VoteResult, block *types.Block) (err error) {
-	voteSeq := block.Height / roundVoteBlockNums
-	voteResult, err := c.getVoteResult(voteResultMap, voteSeq)
+	voteResult, err := c.getVoteResult(voteResultMap, block.Height)
 	if err != nil {
 		return err
 	}
@@ -300,10 +299,11 @@ func (c *consensusNodeManager) applyBlock(voteResultMap map[uint64]*state.VoteRe
 	return nil
 }
 
-func (c *consensusNodeManager) getVoteResult(voteResultMap map[uint64]*state.VoteResult, seq uint64) (*state.VoteResult, error) {
+func (c *consensusNodeManager) getVoteResult(voteResultMap map[uint64]*state.VoteResult, blockHeight uint64) (*state.VoteResult, error) {
 	var err error
+	seq := blockHeight / roundVoteBlockNums
 	voteResult := voteResultMap[seq]
-	if seq == 0 {
+	if blockHeight == 0 {
 		voteResult = &state.VoteResult{
 			Seq:       seq,
 			NumOfVote: make(map[string]uint64),

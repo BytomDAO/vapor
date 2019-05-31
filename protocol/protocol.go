@@ -38,6 +38,7 @@ func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*
 	}
 	c.cond.L = new(sync.Mutex)
 
+	c.bbft = newBbft(store, nil, c.orphanManage, eventDispatcher)
 	storeStatus := store.GetStoreStatus()
 	if storeStatus == nil {
 		if err := c.initChainStatus(); err != nil {
@@ -54,7 +55,7 @@ func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*
 	c.bestNode = c.index.GetNode(storeStatus.Hash)
 	c.bestIrreversibleNode = c.index.GetNode(storeStatus.IrreversibleHash)
 	c.index.SetMainChain(c.bestNode)
-	c.bbft = newBbft(store, c.index, c.orphanManage, eventDispatcher)
+	c.bbft.SetBlockIndex(c.index)
 	go c.blockProcesser()
 	return c, nil
 }

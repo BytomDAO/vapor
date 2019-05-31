@@ -253,3 +253,8 @@ func (b *bbft) updateBlockSignature(block *types.Block, nodeOrder uint64, signat
 
 	return b.consensusNodeManager.store.SaveBlock(block, txStatus)
 }
+
+// SetBlockIndex set the block index field
+func (b *bbft) SetBlockIndex(blockIndex *state.BlockIndex) {
+	b.consensusNodeManager.blockIndex = blockIndex
+}
