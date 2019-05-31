@@ -43,7 +43,7 @@ func TestNextLeaderTime(t *testing.T) {
 			now:                1557906284561,
 			nodeOrder:          0,
 			wantError:          nil,
-			wantNextLeaderTime: 1557906284061,
+			wantNextLeaderTime: 1557906315561,
 		},
 		{
 			desc:               "the node is producting block",
@@ -51,7 +51,7 @@ func TestNextLeaderTime(t *testing.T) {
 			now:                1557906317561,
 			nodeOrder:          1,
 			wantError:          nil,
-			wantNextLeaderTime: 1557906284061 + 66*BlockTimeInterval,
+			wantNextLeaderTime: 1557906348561,
 		},
 		{
 			desc:               "first round, must exclude genesis block",
