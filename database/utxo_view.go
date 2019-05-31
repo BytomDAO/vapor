@@ -77,7 +77,7 @@ func saveUtxoView(batch dbm.Batch, view *state.UtxoViewpoint) error {
 			continue
 		}
 
-		if (entry.Type == storage.NormalUTXOType) && (entry.Spent) {
+		if (entry.Type == storage.NormalUTXOType || entry.Type == storage.VoteUTXOType) && (entry.Spent) {
 			batch.Delete(calcUtxoKey(&key))
 			continue
 		}
