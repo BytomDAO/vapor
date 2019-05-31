@@ -169,6 +169,8 @@ func TestSaveChainStatus(t *testing.T) {
 			bc.Hash{V0: 1, V1: 1, V2: 3, V3: 4}: &storage.UtxoEntry{Type: storage.NormalUTXOType, BlockHeight: 100, Spent: true},
 			bc.Hash{V0: 1, V1: 1, V2: 3, V3: 5}: &storage.UtxoEntry{Type: storage.CrosschainUTXOType, BlockHeight: 100, Spent: false},
 			bc.Hash{V0: 1, V1: 1, V2: 3, V3: 6}: &storage.UtxoEntry{Type: storage.CrosschainUTXOType, BlockHeight: 100, Spent: true},
+			bc.Hash{V0: 1, V1: 3, V2: 3, V3: 7}: &storage.UtxoEntry{Type: storage.VoteUTXOType, BlockHeight: 100, Spent: false},
+			bc.Hash{V0: 1, V1: 3, V2: 3, V3: 7}: &storage.UtxoEntry{Type: storage.VoteUTXOType, BlockHeight: 100, Spent: true},
 		},
 	}
 
@@ -186,6 +188,9 @@ func TestSaveChainStatus(t *testing.T) {
 			continue
 		}
 		if (utxo.Type == storage.CrosschainUTXOType) && (!utxo.Spent) {
+			continue
+		}
+		if (utxo.Type == storage.VoteUTXOType) && (utxo.Spent) {
 			continue
 		}
 

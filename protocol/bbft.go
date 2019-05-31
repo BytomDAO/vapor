@@ -9,12 +9,12 @@ import (
 
 	"github.com/vapor/config"
 	"github.com/vapor/crypto/ed25519"
+	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
 	"github.com/vapor/event"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
-	"github.com/vapor/crypto/ed25519/chainkd"
 )
 
 const (
@@ -44,12 +44,17 @@ func newBbft(store Store, blockIndex *state.BlockIndex, orphanManage *OrphanMana
 }
 
 func (b *bbft) isIrreversible(block *types.Block) bool {
+	consensusNodes, err := b.consensusNodeManager.getConsensusNodesByVoteResult(&block.PreviousBlockHash)
+	if err != nil {
+		return false
+	}
+
 	signNum, err := b.validateSign(block)
 	if err != nil {
 		return false
 	}
 
-	return signNum > (NumOfConsensusNode * 2 / 3)
+	return signNum > (uint64(len(consensusNodes)) * 2 / 3)
 }
 
 // NextLeaderTime returns the start time of the specified public key as the next leader node
@@ -80,7 +85,6 @@ func (b *bbft) ProcessBlockSignature(signature []byte, xPub [64]byte, blockHeigh
 	if err != nil {
 		return false, err
 	}
-
 
 	if chainkd.XPub(xPub).Verify(blockHash.Bytes(), signature) {
 		return false, errInvalidSignature
