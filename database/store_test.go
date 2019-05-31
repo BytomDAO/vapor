@@ -190,7 +190,7 @@ func TestSaveChainStatus(t *testing.T) {
 		if (utxo.Type == storage.CrosschainUTXOType) && (!utxo.Spent) {
 			continue
 		}
-		if (utxo.Type == storage.VoteUTXOType) && (!utxo.Spent) {
+		if (utxo.Type == storage.VoteUTXOType) && (utxo.Spent) {
 			continue
 		}
 
