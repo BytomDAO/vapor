@@ -197,7 +197,7 @@ func (c *consensusNodeManager) getConsensusNodesByVoteResult(prevBlockHash *bc.H
 	sort.Sort(consensusNodeSlice(nodes))
 
 	result := make(map[string]*consensusNode)
-	for i := 0; i < len(nodes) && i > NumOfConsensusNode; i++ {
+	for i := 0; i < len(nodes) && i < NumOfConsensusNode; i++ {
 		node := nodes[i]
 		node.order = uint64(i)
 		result[node.pubkey] = node
