@@ -44,8 +44,7 @@ func newBbft(store Store, blockIndex *state.BlockIndex, orphanManage *OrphanMana
 }
 
 func (b *bbft) isIrreversible(block *types.Block) bool {
-	blockHash := block.Hash()
-	consensusNodes, err := b.consensusNodeManager.getConsensusNodesByVoteResult(&blockHash)
+	consensusNodes, err := b.consensusNodeManager.getConsensusNodesByVoteResult(&block.PreviousBlockHash)
 	if err != nil {
 		return false
 	}
