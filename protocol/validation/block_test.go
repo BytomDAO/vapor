@@ -385,7 +385,7 @@ func TestSetTransactionStatus(t *testing.T) {
 			Height:                1,
 			Timestamp:             1523352601000,
 			PreviousBlockId:       &bc.Hash{V0: 0},
-			TransactionsRoot:      &bc.Hash{V0: 10011341401654852692, V1: 8144266100226420640, V2: 18332298251154128538, V3: 7663092454615786384},
+			TransactionsRoot:      &bc.Hash{V0: 12212572290317752069, V1: 8979003395977198825, V2: 3978010681554327084, V3: 12322462500143540195},
 			TransactionStatusHash: &bc.Hash{V0: 8682965660674182538, V1: 8424137560837623409, V2: 6979974817894224946, V3: 4673809519342015041},
 		},
 		Transactions: []*bc.Tx{
@@ -393,7 +393,7 @@ func TestSetTransactionStatus(t *testing.T) {
 				Version:        1,
 				SerializedSize: 1,
 				Inputs:         []*types.TxInput{types.NewCoinbaseInput(nil)},
-				Outputs:        []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 41449998224, cp)},
+				Outputs:        []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 199998224, cp)},
 			}),
 			types.MapTx(&types.TxData{
 				Version:        1,
