@@ -4,7 +4,7 @@ import "testing"
 
 func TestSubsidy(t *testing.T) {
 	ActiveNetParams = SoloNetParams
-	subsidyReductionInterval = uint64(840000)
+	subsidyReductionInterval := uint64(840000)
 	cases := []struct {
 		subsidy uint64
 		height  uint64
