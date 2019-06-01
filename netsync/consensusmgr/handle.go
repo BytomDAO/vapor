@@ -24,7 +24,7 @@ type Chain interface {
 	BestBlockHeight() uint64
 	GetHeaderByHash(*bc.Hash) (*types.BlockHeader, error)
 	ProcessBlock(*types.Block) (bool, error)
-	ProcessBlockSignature(signature, pubkey []byte, blockHeight uint64, blockHash *bc.Hash) error
+	ProcessBlockSignature(signature []byte, pubkey [64]byte, blockHeight uint64, blockHash *bc.Hash) error
 }
 
 type blockMsg struct {
@@ -167,7 +167,7 @@ func (m *Manager) blockSignatureMsgBroadcastLoop() {
 				return
 			}
 
-			blockSignatureMsg := NewBroadcastMsg(NewBlockSignatureMsg(ev.BlockHash, blockHeader.Height, ev.Signature, ev.XPub[:]), consensusChannel)
+			blockSignatureMsg := NewBroadcastMsg(NewBlockSignatureMsg(ev.BlockHash, blockHeader.Height, ev.Signature, ev.XPub), consensusChannel)
 			if err := m.peers.BroadcastMsg(blockSignatureMsg); err != nil {
 				logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on broadcast BlockSignBroadcastMsg.")
 				return

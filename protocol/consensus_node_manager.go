@@ -93,12 +93,17 @@ func (c *consensusNodeManager) nextLeaderTimeRange(pubkey []byte, bestBlockHash 
 		return 0, 0, errNotFoundBlockNode
 	}
 
-	consensusNode, err := c.getConsensusNode(&bestBlockNode.Parent.Hash, hex.EncodeToString(pubkey))
+	parentHash := bestBlockNode.Hash
+	if bestBlockNode.Height > 0 {
+		parentHash = bestBlockNode.Parent.Hash
+	}
+
+	consensusNode, err := c.getConsensusNode(&parentHash, hex.EncodeToString(pubkey))
 	if err != nil {
 		return 0, 0, err
 	}
 
-	prevRoundLastBlock, err := c.getPrevRoundVoteLastBlock(&bestBlockNode.Parent.Hash)
+	prevRoundLastBlock, err := c.getPrevRoundVoteLastBlock(&parentHash)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -253,24 +258,10 @@ func (c *consensusNodeManager) reorganizeVoteResult(voteResult *state.VoteResult
 }
 
 func (c *consensusNodeManager) applyBlock(voteResultMap map[uint64]*state.VoteResult, block *types.Block) (err error) {
-	voteSeq := block.Height / roundVoteBlockNums
-	voteResult := voteResultMap[voteSeq]
-
-	if voteResult == nil {
-		voteResult, err = c.store.GetVoteResult(voteSeq)
-		if err != nil && err != ErrNotFoundVoteResult {
-			return err
-		}
+	voteResult, err := c.getVoteResult(voteResultMap, block.Height)
+	if err != nil {
+		return err
 	}
-
-	if voteResult == nil {
-		voteResult = &state.VoteResult{
-			Seq:       voteSeq,
-			NumOfVote: make(map[string]uint64),
-		}
-	}
-
-	voteResultMap[voteSeq] = voteResult
 
 	emptyHash := bc.Hash{}
 	if voteResult.LastBlockHash != emptyHash && voteResult.LastBlockHash != block.PreviousBlockHash {
@@ -306,6 +297,61 @@ func (c *consensusNodeManager) applyBlock(voteResultMap map[uint64]*state.VoteRe
 
 	voteResult.Finalized = (block.Height+1)%roundVoteBlockNums == 0
 	return nil
+}
+
+func (c *consensusNodeManager) getVoteResult(voteResultMap map[uint64]*state.VoteResult, blockHeight uint64) (*state.VoteResult, error) {
+	var err error
+	seq := blockHeight / roundVoteBlockNums
+	voteResult := voteResultMap[seq]
+	if blockHeight == 0 {
+		voteResult = &state.VoteResult{
+			Seq:       seq,
+			NumOfVote: make(map[string]uint64),
+			Finalized: false,
+		}
+	}
+
+	if voteResult == nil {
+		prevVoteResult := voteResultMap[seq-1]
+		if prevVoteResult != nil {
+			voteResult = &state.VoteResult{
+				Seq:       seq,
+				NumOfVote: prevVoteResult.NumOfVote,
+				Finalized: false,
+			}
+		}
+	}
+
+	if voteResult == nil {
+		voteResult, err = c.store.GetVoteResult(seq)
+		if err != nil && err != ErrNotFoundVoteResult {
+			return nil, err
+		}
+	}
+
+	if voteResult == nil {
+		voteResult, err := c.store.GetVoteResult(seq - 1)
+		if err != nil && err != ErrNotFoundVoteResult {
+			return nil, err
+		}
+
+		if voteResult != nil {
+			// previous round voting must have finalized
+			if !voteResult.Finalized {
+				return nil, errors.New("previous round voting has not finalized")
+			}
+
+			voteResult.Finalized = false
+			voteResult.LastBlockHash = bc.Hash{}
+		}
+	}
+
+	if voteResult == nil {
+		return nil, errors.New("fail to get vote result")
+	}
+
+	voteResultMap[seq] = voteResult
+	return voteResult, nil
 }
 
 func (c *consensusNodeManager) detachBlock(voteResultMap map[uint64]*state.VoteResult, block *types.Block) error {
