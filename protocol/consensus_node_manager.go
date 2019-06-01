@@ -15,7 +15,7 @@ import (
 
 const (
 	NumOfConsensusNode = 21
-	roundVoteBlockNums = 1000
+	RoundVoteBlockNums = 1000
 
 	// BlockTimeInterval indicate product one block per 500 milliseconds
 	BlockTimeInterval = 500
@@ -87,23 +87,13 @@ func (c *consensusNodeManager) isBlocker(block *types.Block, pubKey string) (boo
 	return block.Timestamp >= begin && block.Timestamp < end, nil
 }
 
-func (c *consensusNodeManager) nextLeaderTimeRange(pubkey []byte, bestBlockHash *bc.Hash) (uint64, uint64, error) {
-	bestBlockNode := c.blockIndex.GetNode(bestBlockHash)
-	if bestBlockNode == nil {
-		return 0, 0, errNotFoundBlockNode
-	}
-
-	parentHash := bestBlockNode.Hash
-	if bestBlockNode.Height > 0 {
-		parentHash = bestBlockNode.Parent.Hash
-	}
-
-	consensusNode, err := c.getConsensusNode(&parentHash, hex.EncodeToString(pubkey))
+func (c *consensusNodeManager) nextLeaderTimeRange(pubkey []byte, prevBlockHash *bc.Hash) (uint64, uint64, error) {
+	consensusNode, err := c.getConsensusNode(prevBlockHash, hex.EncodeToString(pubkey))
 	if err != nil {
 		return 0, 0, err
 	}
 
-	prevRoundLastBlock, err := c.getPrevRoundVoteLastBlock(&parentHash)
+	prevRoundLastBlock, err := c.getPrevRoundVoteLastBlock(prevBlockHash)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -146,9 +136,9 @@ func (c *consensusNodeManager) getPrevRoundVoteLastBlock(prevBlockHash *bc.Hash)
 
 	blockHeight := prevBlockNode.Height + 1
 
-	prevVoteRoundLastBlockHeight := blockHeight/roundVoteBlockNums*roundVoteBlockNums - 1
+	prevVoteRoundLastBlockHeight := blockHeight/RoundVoteBlockNums*RoundVoteBlockNums - 1
 	// first round
-	if blockHeight/roundVoteBlockNums == 0 {
+	if blockHeight/RoundVoteBlockNums == 0 {
 		prevVoteRoundLastBlockHeight = 0
 	}
 
@@ -165,14 +155,10 @@ func (c *consensusNodeManager) getConsensusNodesByVoteResult(prevBlockHash *bc.H
 		return nil, errNotFoundBlockNode
 	}
 
-	seq := (prevBlockNode.Height + 1) / roundVoteBlockNums
-	if seq == 0 {
-		return initVoteResult(), nil
-	}
-
+	seq := (prevBlockNode.Height + 1) / RoundVoteBlockNums
 	voteResult, err := c.store.GetVoteResult(seq)
 	if err != nil {
-		// fail to find vote result, try to construct
+		// TODO find previous round vote
 		voteResult = &state.VoteResult{
 			Seq:       seq,
 			NumOfVote: make(map[string]uint64),
@@ -187,6 +173,10 @@ func (c *consensusNodeManager) getConsensusNodesByVoteResult(prevBlockHash *bc.H
 
 	if err := c.reorganizeVoteResult(voteResult, lastBlockNode); err != nil {
 		return nil, err
+	}
+
+	if len(voteResult.NumOfVote) == 0 {
+		return initConsensusNodes(), nil
 	}
 
 	var nodes []*consensusNode
@@ -211,7 +201,9 @@ func (c *consensusNodeManager) getConsensusNodesByVoteResult(prevBlockHash *bc.H
 }
 
 func (c *consensusNodeManager) reorganizeVoteResult(voteResult *state.VoteResult, forkChainNode *state.BlockNode) error {
-	var mainChainNode *state.BlockNode
+	genesisBlockHash := config.GenesisBlock().Hash()
+	mainChainNode := c.blockIndex.GetNode(&genesisBlockHash)
+
 	emptyHash := bc.Hash{}
 	if voteResult.LastBlockHash != emptyHash {
 		mainChainNode = c.blockIndex.GetNode(&voteResult.LastBlockHash)
@@ -223,14 +215,13 @@ func (c *consensusNodeManager) reorganizeVoteResult(voteResult *state.VoteResult
 	var attachNodes []*state.BlockNode
 	var detachNodes []*state.BlockNode
 
-	for forkChainNode.Hash != mainChainNode.Hash && forkChainNode.Height >= (voteResult.Seq-1)*roundVoteBlockNums {
-		attachNodes = append([]*state.BlockNode{forkChainNode}, attachNodes...)
-		forkChainNode = forkChainNode.Parent
-
-		if mainChainNode != nil && forkChainNode.Height == mainChainNode.Height {
+	for forkChainNode != nil && mainChainNode != nil && forkChainNode.Hash != mainChainNode.Hash {
+		if forkChainNode.Height == mainChainNode.Height {
 			detachNodes = append(detachNodes, mainChainNode)
 			mainChainNode = mainChainNode.Parent
 		}
+		attachNodes = append([]*state.BlockNode{forkChainNode}, attachNodes...)
+		forkChainNode = forkChainNode.Parent
 	}
 
 	for _, node := range detachNodes {
@@ -295,13 +286,14 @@ func (c *consensusNodeManager) applyBlock(voteResultMap map[uint64]*state.VoteRe
 		}
 	}
 
-	voteResult.Finalized = (block.Height+1)%roundVoteBlockNums == 0
+	voteResult.Finalized = (block.Height+1)%RoundVoteBlockNums == 0
 	return nil
 }
 
 func (c *consensusNodeManager) getVoteResult(voteResultMap map[uint64]*state.VoteResult, blockHeight uint64) (*state.VoteResult, error) {
 	var err error
-	seq := blockHeight / roundVoteBlockNums
+	// This round of voting prepares for the next round
+	seq := blockHeight /RoundVoteBlockNums + 1
 	voteResult := voteResultMap[seq]
 	if blockHeight == 0 {
 		voteResult = &state.VoteResult{
@@ -330,7 +322,7 @@ func (c *consensusNodeManager) getVoteResult(voteResultMap map[uint64]*state.Vot
 	}
 
 	if voteResult == nil {
-		voteResult, err := c.store.GetVoteResult(seq - 1)
+		voteResult, err = c.store.GetVoteResult(seq - 1)
 		if err != nil && err != ErrNotFoundVoteResult {
 			return nil, err
 		}
@@ -341,6 +333,7 @@ func (c *consensusNodeManager) getVoteResult(voteResultMap map[uint64]*state.Vot
 				return nil, errors.New("previous round voting has not finalized")
 			}
 
+			voteResult.Seq = seq
 			voteResult.Finalized = false
 			voteResult.LastBlockHash = bc.Hash{}
 		}
@@ -355,7 +348,7 @@ func (c *consensusNodeManager) getVoteResult(voteResultMap map[uint64]*state.Vot
 }
 
 func (c *consensusNodeManager) detachBlock(voteResultMap map[uint64]*state.VoteResult, block *types.Block) error {
-	voteSeq := block.Height / roundVoteBlockNums
+	voteSeq := block.Height / RoundVoteBlockNums
 	voteResult := voteResultMap[voteSeq]
 
 	if voteResult == nil {
@@ -401,7 +394,7 @@ func (c *consensusNodeManager) detachBlock(voteResultMap map[uint64]*state.VoteR
 	return nil
 }
 
-func initVoteResult() map[string]*consensusNode {
+func initConsensusNodes() map[string]*consensusNode {
 	voteResult := map[string]*consensusNode{}
 	for i, pubkey := range config.CommonConfig.Federation.Xpubs {
 		pubkeyStr := pubkey.String()
