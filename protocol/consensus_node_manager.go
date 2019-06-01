@@ -15,12 +15,12 @@ import (
 
 const (
 	NumOfConsensusNode = 21
-	roundVoteBlockNums = 3
+	RoundVoteBlockNums = 1000
 
 	// BlockTimeInterval indicate product one block per 500 milliseconds
 	BlockTimeInterval = 500
 	// BlockNumEachNode indicate product three blocks per node in succession
-	BlockNumEachNode = 1000
+	BlockNumEachNode = 3
 )
 
 var (
@@ -136,9 +136,9 @@ func (c *consensusNodeManager) getPrevRoundVoteLastBlock(prevBlockHash *bc.Hash)
 
 	blockHeight := prevBlockNode.Height + 1
 
-	prevVoteRoundLastBlockHeight := blockHeight/roundVoteBlockNums*roundVoteBlockNums - 1
+	prevVoteRoundLastBlockHeight := blockHeight/RoundVoteBlockNums*RoundVoteBlockNums - 1
 	// first round
-	if blockHeight/roundVoteBlockNums == 0 {
+	if blockHeight/RoundVoteBlockNums == 0 {
 		prevVoteRoundLastBlockHeight = 0
 	}
 
@@ -155,7 +155,7 @@ func (c *consensusNodeManager) getConsensusNodesByVoteResult(prevBlockHash *bc.H
 		return nil, errNotFoundBlockNode
 	}
 
-	seq := (prevBlockNode.Height + 1) / roundVoteBlockNums
+	seq := (prevBlockNode.Height + 1) / RoundVoteBlockNums
 	voteResult, err := c.store.GetVoteResult(seq)
 	if err != nil {
 		// TODO find previous round vote
@@ -286,14 +286,14 @@ func (c *consensusNodeManager) applyBlock(voteResultMap map[uint64]*state.VoteRe
 		}
 	}
 
-	voteResult.Finalized = (block.Height+1)%roundVoteBlockNums == 0
+	voteResult.Finalized = (block.Height+1)%RoundVoteBlockNums == 0
 	return nil
 }
 
 func (c *consensusNodeManager) getVoteResult(voteResultMap map[uint64]*state.VoteResult, blockHeight uint64) (*state.VoteResult, error) {
 	var err error
 	// This round of voting prepares for the next round
-	seq := blockHeight / roundVoteBlockNums + 1
+	seq := blockHeight /RoundVoteBlockNums + 1
 	voteResult := voteResultMap[seq]
 	if blockHeight == 0 {
 		voteResult = &state.VoteResult{
@@ -348,7 +348,7 @@ func (c *consensusNodeManager) getVoteResult(voteResultMap map[uint64]*state.Vot
 }
 
 func (c *consensusNodeManager) detachBlock(voteResultMap map[uint64]*state.VoteResult, block *types.Block) error {
-	voteSeq := block.Height / roundVoteBlockNums
+	voteSeq := block.Height / RoundVoteBlockNums
 	voteResult := voteResultMap[voteSeq]
 
 	if voteResult == nil {
