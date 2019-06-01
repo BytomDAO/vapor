@@ -44,7 +44,7 @@ func GenesisTx() *types.Tx {
 			types.NewCoinbaseInput(coinbaseInput[:]),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewIntraChainOutput(*consensus.BTMAssetID, consensus.InitialBlockSubsidy, contract),
+			types.NewIntraChainOutput(*consensus.BTMAssetID, consensus.BlockSubsidy(0), contract),
 		},
 	}
 	return types.NewTx(txData)
