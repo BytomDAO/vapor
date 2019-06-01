@@ -223,6 +223,14 @@ func (b *bbft) SignBlock(block *types.Block) ([]byte, error) {
 		return nil, nil
 	}
 
+	blockNodes := b.consensusNodeManager.blockIndex.NodesByHeight(block.Height)
+	for _, blockNode := range blockNodes {
+		// Has already signed the same height block
+		if ok, err := blockNode.BlockWitness.Test(uint32(node.order)); err != nil && ok {
+			return nil, nil
+		}
+	}
+
 	signature := block.Witness[node.order]
 	if len(signature) == 0 {
 		signature = xprv.Sign(block.Hash().Bytes())
