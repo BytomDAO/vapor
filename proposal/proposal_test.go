@@ -7,8 +7,8 @@ import (
 )
 
 func TestCreateCoinbaseTx(t *testing.T) {
-	consensus.ActiveNetParams = Params{
-		ProducerSubsidys: []ProducerSubsidy{
+	consensus.ActiveNetParams = consensus.Params{
+		ProducerSubsidys: []consensus.ProducerSubsidy{
 			{BeginBlock: 0, EndBlock: 0, Subsidy: 24},
 			{BeginBlock: 1, EndBlock: 840000, Subsidy: 24},
 			{BeginBlock: 840001, EndBlock: 1680000, Subsidy: 12},
