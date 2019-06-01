@@ -21,6 +21,7 @@ const (
 	subsidyReductionInterval   = uint64(840000)
 	baseSubsidy                = uint64(41250000000)
 	InitialBlockSubsidy        = uint64(140700041250000000)
+	InitialSupply              = uint64(100000000000000)
 
 	//config parameter for vote
 	VotePendingBlockNumber = uint64(10000)
@@ -60,9 +61,14 @@ var BTMDefinitionMap = map[string]interface{}{
 // BlockSubsidy calculate the coinbase rewards on given block height
 func BlockSubsidy(height uint64) uint64 {
 	if height == 0 {
-		return InitialBlockSubsidy
+		return InitialSupply
 	}
-	return baseSubsidy >> uint(height/subsidyReductionInterval)
+	for _, subsidy := range ActiveNetParams.ProducerSubsidys {
+		if height <= subsidy.EndBlock {
+			return subsidy.Subsidy
+		}
+	}
+	return 0
 }
 
 // IsBech32SegwitPrefix returns whether the prefix is a known prefix for segwit
@@ -81,6 +87,13 @@ type Checkpoint struct {
 	Hash   bc.Hash
 }
 
+// ProducerSubsidy is a subsidy to the producer of the generated block
+type ProducerSubsidy struct {
+	BeginBlock uint64
+	EndBlock   uint64
+	Subsidy    uint64
+}
+
 // Params store the config for different network
 type Params struct {
 	// Name defines a human-readable identifier for the network.
@@ -91,8 +104,9 @@ type Params struct {
 
 	// DNSSeeds defines a list of DNS seeds for the network that are used
 	// as one method to discover peers.
-	DNSSeeds    []string
-	Checkpoints []Checkpoint
+	DNSSeeds         []string
+	Checkpoints      []Checkpoint
+	ProducerSubsidys []ProducerSubsidy
 }
 
 // ActiveNetParams is ...
@@ -156,6 +170,11 @@ var SoloNetParams = Params{
 	Name:            "solo",
 	Bech32HRPSegwit: "sm",
 	Checkpoints:     []Checkpoint{},
+	ProducerSubsidys: []ProducerSubsidy{
+		{1, 840000, 24},
+		{840001, 1680000, 12},
+		{1680001, 3360000, 6},
+	},
 }
 
 // VaporNetParams is the config for vapor-net
@@ -163,4 +182,7 @@ var VaporNetParams = Params{
 	Name:            "vapor",
 	Bech32HRPSegwit: "vp",
 	Checkpoints:     []Checkpoint{},
+	ProducerSubsidys: []ProducerSubsidy{
+		{1, 63072000, 6},
+	},
 }

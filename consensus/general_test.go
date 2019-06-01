@@ -3,28 +3,29 @@ package consensus
 import "testing"
 
 func TestSubsidy(t *testing.T) {
+	ActiveNetParams = SoloNetParams
 	cases := []struct {
 		subsidy uint64
 		height  uint64
 	}{
 		{
-			subsidy: baseSubsidy,
+			subsidy: 24,
 			height:  1,
 		},
 		{
-			subsidy: baseSubsidy,
+			subsidy: 24,
 			height:  subsidyReductionInterval - 1,
 		},
 		{
-			subsidy: baseSubsidy / 2,
+			subsidy: 24,
 			height:  subsidyReductionInterval,
 		},
 		{
-			subsidy: baseSubsidy / 2,
+			subsidy: 12,
 			height:  subsidyReductionInterval + 1,
 		},
 		{
-			subsidy: baseSubsidy / 1024,
+			subsidy: 0,
 			height:  subsidyReductionInterval * 10,
 		},
 	}
