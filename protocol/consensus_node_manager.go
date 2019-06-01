@@ -16,6 +16,7 @@ import (
 const (
 	NumOfConsensusNode = 21
 	RoundVoteBlockNums = 1000
+	MinVoteNum         = 5000000
 
 	// BlockTimeInterval indicate product one block per 500 milliseconds
 	BlockTimeInterval = 500
@@ -181,10 +182,12 @@ func (c *consensusNodeManager) getConsensusNodesByVoteResult(prevBlockHash *bc.H
 
 	var nodes []*consensusNode
 	for pubkey, voteNum := range voteResult.NumOfVote {
-		nodes = append(nodes, &consensusNode{
-			pubkey:  pubkey,
-			voteNum: voteNum,
-		})
+		if voteNum >= MinVoteNum {
+			nodes = append(nodes, &consensusNode{
+				pubkey:  pubkey,
+				voteNum: voteNum,
+			})
+		}
 	}
 	// In principle, there is no need to sort all voting nodes.
 	// if there is a performance problem, consider the optimization later.
@@ -293,7 +296,7 @@ func (c *consensusNodeManager) applyBlock(voteResultMap map[uint64]*state.VoteRe
 func (c *consensusNodeManager) getVoteResult(voteResultMap map[uint64]*state.VoteResult, blockHeight uint64) (*state.VoteResult, error) {
 	var err error
 	// This round of voting prepares for the next round
-	seq := blockHeight /RoundVoteBlockNums + 1
+	seq := blockHeight/RoundVoteBlockNums + 1
 	voteResult := voteResultMap[seq]
 	if blockHeight == 0 {
 		voteResult = &state.VoteResult{
