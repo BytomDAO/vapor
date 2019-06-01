@@ -22,11 +22,6 @@ const (
 	//config parameter for vote
 	VotePendingBlockNumber = uint64(10000)
 
-	// config for pow mining
-	BlocksPerRetarget     = uint64(2016)
-	TargetSecondsPerBlock = uint64(150)
-	SeedPerRetarget       = uint64(256)
-
 	// MaxTimeOffsetMs is the maximum number of seconds a block time is allowed to be ahead of the current time
 	MaxTimeOffsetMs  = uint64(60 * 60 * 1000)
 	MedianTimeBlocks = 11
