@@ -18,10 +18,6 @@ const (
 
 	//config parameter for coinbase reward
 	CoinbasePendingBlockNumber = uint64(100)
-	subsidyReductionInterval   = uint64(840000)
-	baseSubsidy                = uint64(41250000000)
-	InitialBlockSubsidy        = uint64(140700041250000000)
-	InitialSupply              = uint64(100000000000000)
 
 	//config parameter for vote
 	VotePendingBlockNumber = uint64(10000)
@@ -60,9 +56,6 @@ var BTMDefinitionMap = map[string]interface{}{
 
 // BlockSubsidy calculate the coinbase rewards on given block height
 func BlockSubsidy(height uint64) uint64 {
-	if height == 0 {
-		return InitialSupply
-	}
 	for _, subsidy := range ActiveNetParams.ProducerSubsidys {
 		if height <= subsidy.EndBlock {
 			return subsidy.Subsidy
@@ -171,9 +164,10 @@ var SoloNetParams = Params{
 	Bech32HRPSegwit: "sm",
 	Checkpoints:     []Checkpoint{},
 	ProducerSubsidys: []ProducerSubsidy{
-		{1, 840000, 24},
-		{840001, 1680000, 12},
-		{1680001, 3360000, 6},
+		{BeginBlock: 0, EndBlock: 0, Subsidy: 24},
+		{BeginBlock: 1, EndBlock: 840000, Subsidy: 24},
+		{BeginBlock: 840001, EndBlock: 1680000, Subsidy: 12},
+		{BeginBlock: 1680001, EndBlock: 3360000, Subsidy: 6},
 	},
 }
 
@@ -183,6 +177,6 @@ var VaporNetParams = Params{
 	Bech32HRPSegwit: "vp",
 	Checkpoints:     []Checkpoint{},
 	ProducerSubsidys: []ProducerSubsidy{
-		{1, 63072000, 6},
+		{BeginBlock: 1, EndBlock: 63072000, Subsidy: 15000000},
 	},
 }

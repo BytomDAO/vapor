@@ -1,10 +1,14 @@
 package proposal
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/vapor/consensus"
+)
 
 func TestCreateCoinbaseTx(t *testing.T) {
+	consensus.ActiveNetParams = consensus.SoloNetParams
 	reductionInterval := uint64(840000)
-	baseSubsidy := uint64(41250000000)
 	cases := []struct {
 		height  uint64
 		txFee   uint64
@@ -13,26 +17,26 @@ func TestCreateCoinbaseTx(t *testing.T) {
 		{
 			height:  reductionInterval - 1,
 			txFee:   100000000,
-			subsidy: baseSubsidy + 100000000,
+			subsidy: 24 + 100000000,
 		},
 		{
 			height:  reductionInterval,
 			txFee:   2000000000,
-			subsidy: baseSubsidy/2 + 2000000000,
+			subsidy: 24 + 2000000000,
 		},
 		{
 			height:  reductionInterval + 1,
 			txFee:   0,
-			subsidy: baseSubsidy / 2,
+			subsidy: 12,
 		},
 		{
 			height:  reductionInterval * 2,
 			txFee:   100000000,
-			subsidy: baseSubsidy/4 + 100000000,
+			subsidy: 12 + 100000000,
 		},
 	}
 
-	for _, c := range cases {
+	for index, c := range cases {
 		coinbaseTx, err := createCoinbaseTx(nil, c.txFee, c.height)
 		if err != nil {
 			t.Fatal(err)
@@ -40,7 +44,7 @@ func TestCreateCoinbaseTx(t *testing.T) {
 
 		outputAmount := coinbaseTx.Outputs[0].OutputCommitment().Amount
 		if outputAmount != c.subsidy {
-			t.Fatalf("coinbase tx reward dismatch, expected: %d, have: %d", c.subsidy, outputAmount)
+			t.Fatalf("index:%d,coinbase tx reward dismatch, expected: %d, have: %d", index, c.subsidy, outputAmount)
 		}
 	}
 }
