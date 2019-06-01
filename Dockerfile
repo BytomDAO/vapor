@@ -13,4 +13,4 @@ RUN apk add --no-cache ca-certificates
 COPY --from=builder /go/src/github.com/vapor/cmd/bytomd/bytomd /usr/local/bin/
 COPY --from=builder /go/src/github.com/vapor/cmd/bytomcli/bytomcli /usr/local/bin/
 
-EXPOSE 1999 46656 46657 9888
+EXPOSE 1999 46656 46657 9889
