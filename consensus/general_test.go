@@ -3,7 +3,14 @@ package consensus
 import "testing"
 
 func TestSubsidy(t *testing.T) {
-	ActiveNetParams = SoloNetParams
+	ActiveNetParams = Params{
+		ProducerSubsidys: []ProducerSubsidy{
+			{BeginBlock: 0, EndBlock: 0, Subsidy: 24},
+			{BeginBlock: 1, EndBlock: 840000, Subsidy: 24},
+			{BeginBlock: 840001, EndBlock: 1680000, Subsidy: 12},
+			{BeginBlock: 1680001, EndBlock: 3360000, Subsidy: 6},
+		},
+	}
 	subsidyReductionInterval := uint64(840000)
 	cases := []struct {
 		subsidy uint64

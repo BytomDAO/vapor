@@ -7,7 +7,14 @@ import (
 )
 
 func TestCreateCoinbaseTx(t *testing.T) {
-	consensus.ActiveNetParams = consensus.SoloNetParams
+	consensus.ActiveNetParams = Params{
+		ProducerSubsidys: []ProducerSubsidy{
+			{BeginBlock: 0, EndBlock: 0, Subsidy: 24},
+			{BeginBlock: 1, EndBlock: 840000, Subsidy: 24},
+			{BeginBlock: 840001, EndBlock: 1680000, Subsidy: 12},
+			{BeginBlock: 1680001, EndBlock: 3360000, Subsidy: 6},
+		},
+	}
 	reductionInterval := uint64(840000)
 	cases := []struct {
 		height  uint64

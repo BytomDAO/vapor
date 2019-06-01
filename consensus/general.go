@@ -57,7 +57,7 @@ var BTMDefinitionMap = map[string]interface{}{
 // BlockSubsidy calculate the coinbase rewards on given block height
 func BlockSubsidy(height uint64) uint64 {
 	for _, subsidy := range ActiveNetParams.ProducerSubsidys {
-		if height <= subsidy.EndBlock {
+		if height >= subsidy.BeginBlock && height <= subsidy.EndBlock {
 			return subsidy.Subsidy
 		}
 	}
