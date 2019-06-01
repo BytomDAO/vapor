@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -9,7 +10,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tendermint/go-crypto"
+	crypto "github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
 
 	cfg "github.com/vapor/config"
@@ -99,7 +100,13 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 
 	blacklistDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
 
-	bytes := config.PrivateKey()[:]
+	_, yyy, _ := ed25519.GenerateKey(nil)
+	zzz := yyy.String()
+
+	bytes, err := hex.DecodeString(zzz)
+	if err != nil {
+		return nil, err
+	}
 	var newKey [64]byte
 	copy(newKey[:], bytes)
 	privKey := crypto.PrivKeyEd25519(newKey)

@@ -254,7 +254,7 @@ func (p *Peer) markSign(signature []byte) {
 	for p.knownSignatures.Size() >= maxKnownSignatures {
 		p.knownSignatures.Pop()
 	}
-	p.knownSignatures.Add(signature)
+	p.knownSignatures.Add(hex.EncodeToString(signature))
 }
 
 func (p *Peer) markTransaction(hash *bc.Hash) {
@@ -286,7 +286,7 @@ func (ps *PeerSet) PeersWithoutSign(signature []byte) []string {
 
 	var peers []string
 	for _, peer := range ps.peers {
-		if !peer.knownSignatures.Has(signature) {
+		if !peer.knownSignatures.Has(hex.EncodeToString(signature)) {
 			peers = append(peers, peer.ID())
 		}
 	}
