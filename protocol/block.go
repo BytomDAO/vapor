@@ -288,6 +288,14 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 		return true, nil
 	}
 
+	forkPointBlock := parent
+	for !c.index.InMainchain(forkPointBlock.Hash) {
+		forkPointBlock = forkPointBlock.Parent
+	}
+	if forkPointBlock.Height < c.bestIrreversibleNode.Height {
+		return false, errors.New("the block impossible to be block of main chain")
+	}
+
 	if err := c.saveBlock(block); err != nil {
 		return false, err
 	}
