@@ -52,8 +52,8 @@ func (b *BlockProposer) generateBlocks() {
 		bestBlockHeader := b.chain.BestBlockHeader()
 		bestBlockHash := bestBlockHeader.Hash()
 		nextBlockTime := uint64(time.Now().UnixNano() / 1e6)
-		if nextBlockTime < bestBlockHeader.Timestamp {
-			nextBlockTime = bestBlockHeader.Timestamp + uint64(500*time.Millisecond)
+		if minNextBlockTime := bestBlockHeader.Timestamp + uint64(500*time.Millisecond); nextBlockTime < minNextBlockTime {
+			nextBlockTime = minNextBlockTime
 		}
 
 		if isBlocker, err := b.chain.GetBBFT().IsBlocker(&bestBlockHash, xpubStr, nextBlockTime); !isBlocker {
