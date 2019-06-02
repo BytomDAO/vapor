@@ -3,7 +3,6 @@ package protocol
 import (
 	"encoding/hex"
 	"sort"
-	"time"
 
 	"github.com/vapor/config"
 	"github.com/vapor/errors"
@@ -66,8 +65,8 @@ func (c *consensusNodeManager) getConsensusNode(prevBlockHash *bc.Hash, pubkey s
 	return node, nil
 }
 
-func (c *consensusNodeManager) isBlocker(block *types.Block, pubKey string) (bool, error) {
-	consensusNode, err := c.getConsensusNode(&block.PreviousBlockHash, pubKey)
+func (c *consensusNodeManager) isBlocker(prevBlockHash *bc.Hash, pubKey string, timeStamp uint64) (bool, error) {
+	consensusNode, err := c.getConsensusNode(prevBlockHash, pubKey)
 	if err != nil && err != errNotFoundConsensusNode {
 		return false, err
 	}
@@ -76,48 +75,15 @@ func (c *consensusNodeManager) isBlocker(block *types.Block, pubKey string) (boo
 		return false, nil
 	}
 
-	prevVoteRoundLastBlock, err := c.getPrevRoundVoteLastBlock(&block.PreviousBlockHash)
+	prevVoteRoundLastBlock, err := c.getPrevRoundVoteLastBlock(prevBlockHash)
 	if err != nil {
 		return false, err
 	}
 
 	startTimestamp := prevVoteRoundLastBlock.Timestamp + BlockTimeInterval
-
-	begin := getLastBlockTimeInTimeRange(startTimestamp, block.Timestamp, consensusNode.order)
+	begin := getLastBlockTimeInTimeRange(startTimestamp, timeStamp, consensusNode.order)
 	end := begin + BlockNumEachNode*BlockTimeInterval
-	return block.Timestamp >= begin && block.Timestamp < end, nil
-}
-
-func (c *consensusNodeManager) nextLeaderTimeRange(pubkey []byte, prevBlockHash *bc.Hash) (uint64, uint64, error) {
-	consensusNode, err := c.getConsensusNode(prevBlockHash, hex.EncodeToString(pubkey))
-	if err != nil {
-		return 0, 0, err
-	}
-
-	prevRoundLastBlock, err := c.getPrevRoundVoteLastBlock(prevBlockHash)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	startTime := prevRoundLastBlock.Timestamp + BlockTimeInterval
-
-	nextLeaderTime, err := nextLeaderTimeHelper(startTime, uint64(time.Now().UnixNano()/1e6), consensusNode.order)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	return nextLeaderTime, nextLeaderTime + BlockNumEachNode*BlockTimeInterval, nil
-}
-
-func nextLeaderTimeHelper(startTime, now, nodeOrder uint64) (uint64, error) {
-	nextLeaderTimestamp := getLastBlockTimeInTimeRange(startTime, now, nodeOrder)
-	roundBlockTime := uint64(BlockNumEachNode * NumOfConsensusNode * BlockTimeInterval)
-
-	if now > nextLeaderTimestamp {
-		nextLeaderTimestamp += roundBlockTime
-	}
-
-	return nextLeaderTimestamp, nil
+	return timeStamp >= begin && timeStamp < end, nil
 }
 
 func getLastBlockTimeInTimeRange(startTimestamp, endTimestamp, order uint64) uint64 {

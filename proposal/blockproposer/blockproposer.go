@@ -38,54 +38,45 @@ type BlockProposer struct {
 // It must be run as a goroutine.
 func (b *BlockProposer) generateBlocks() {
 	xpub := config.CommonConfig.PrivateKey().XPub()
-	ticker := time.NewTicker(time.Millisecond * 100)
+	xpubStr := hex.EncodeToString(xpub[:])
+	ticker := time.NewTicker(time.Millisecond * 500)
 	defer ticker.Stop()
-out:
+
 	for {
 		select {
 		case <-b.quit:
-			break out
+			return
 		case <-ticker.C:
 		}
 
 		bestBlockHeader := b.chain.BestBlockHeader()
 		bestBlockHash := bestBlockHeader.Hash()
-		timeStart, timeEnd, err := b.chain.GetBBFT().NextLeaderTimeRange(xpub[:], &bestBlockHash)
-		if err != nil {
-			log.WithFields(log.Fields{"module": logModule, "error": err, "pubKey": hex.EncodeToString(xpub[:])}).Debug("fail on get next leader time range")
+		nextBlockTime := uint64(time.Now().UnixNano() / 1e6)
+		if nextBlockTime < bestBlockHeader.Timestamp {
+			nextBlockTime = bestBlockHeader.Timestamp + uint64(500*time.Millisecond)
+		}
+
+		if isBlocker, err := b.chain.GetBBFT().IsBlocker(&bestBlockHash, xpubStr, nextBlockTime); !isBlocker {
+			log.WithFields(log.Fields{"module": logModule, "error": err, "pubKey": xpubStr}).Debug("fail on check is next blocker")
 			continue
 		}
 
-		now := uint64(time.Now().UnixNano() / 1e6)
-		if timeStart < now {
-			timeStart = now
+		block, err := proposal.NewBlockTemplate(b.chain, b.txPool, b.accountManager, nextBlockTime)
+		if err != nil {
+			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("failed on create NewBlockTemplate")
+			continue
 		}
 
-		time.Sleep(time.Millisecond * time.Duration(timeStart-now))
+		isOrphan, err := b.chain.ProcessBlock(block)
+		if err != nil {
+			log.WithFields(log.Fields{"module": logModule, "height": block.BlockHeader.Height, "error": err}).Error("proposer fail on ProcessBlock")
+			continue
+		}
 
-		count := 0
-		for now = timeStart; now < timeEnd && count < protocol.BlockNumEachNode; now = uint64(time.Now().UnixNano() / 1e6) {
-			block, err := proposal.NewBlockTemplate(b.chain, b.txPool, b.accountManager, now)
-			if err != nil {
-				log.Errorf("failed on create NewBlockTemplate: %v", err)
-			} else {
-				if isOrphan, err := b.chain.ProcessBlock(block); err == nil {
-					log.WithFields(log.Fields{
-						"module":   logModule,
-						"height":   block.BlockHeader.Height,
-						"isOrphan": isOrphan,
-						"tx":       len(block.Transactions),
-					}).Info("Proposer processed block")
-
-					// Broadcast the block and announce chain insertion event
-					if err = b.eventDispatcher.Post(event.NewProposedBlockEvent{Block: *block}); err != nil {
-						log.WithFields(log.Fields{"module": logModule, "height": block.BlockHeader.Height, "error": err}).Errorf("Proposer fail on post block")
-					}
-					count++
-				} else {
-					log.WithFields(log.Fields{"module": logModule, "height": block.BlockHeader.Height, "error": err}).Errorf("Proposer fail on ProcessBlock")
-				}
-			}
+		log.WithFields(log.Fields{"module": logModule, "height": block.BlockHeader.Height, "isOrphan": isOrphan, "tx": len(block.Transactions)}).Info("proposer processed block")
+		// Broadcast the block and announce chain insertion event
+		if err = b.eventDispatcher.Post(event.NewProposedBlockEvent{Block: *block}); err != nil {
+			log.WithFields(log.Fields{"module": logModule, "height": block.BlockHeader.Height, "error": err}).Error("proposer fail on post block")
 		}
 	}
 }

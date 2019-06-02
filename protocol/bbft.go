@@ -58,8 +58,8 @@ func (b *bbft) isIrreversible(block *types.Block) bool {
 }
 
 // NextLeaderTime returns the start time of the specified public key as the next leader node
-func (b *bbft) NextLeaderTimeRange(pubkey []byte, prevBlockHash *bc.Hash) (uint64, uint64, error) {
-	return b.consensusNodeManager.nextLeaderTimeRange(pubkey, prevBlockHash)
+func (b *bbft) IsBlocker(prevBlockHash *bc.Hash, pubkey string, timeStamp uint64) (bool, error) {
+	return b.consensusNodeManager.isBlocker(prevBlockHash, pubkey, timeStamp)
 }
 
 func (b *bbft) ApplyBlock(voteResultMap map[uint64]*state.VoteResult, block *types.Block) (err error) {
@@ -168,7 +168,7 @@ func (b *bbft) validateSign(block *types.Block) (uint64, error) {
 				block.Witness[node.order] = nil
 			} else {
 				correctSignNum++
-				isBlocker, err := b.consensusNodeManager.isBlocker(block, pubKey)
+				isBlocker, err := b.consensusNodeManager.isBlocker(&block.PreviousBlockHash, pubKey, block.Timestamp)
 				if err != nil {
 					return 0, err
 				}
