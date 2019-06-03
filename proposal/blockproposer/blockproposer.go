@@ -9,6 +9,7 @@ import (
 
 	"github.com/vapor/account"
 	"github.com/vapor/config"
+	"github.com/vapor/consensus"
 	"github.com/vapor/event"
 	"github.com/vapor/proposal"
 	"github.com/vapor/protocol"
@@ -39,7 +40,7 @@ type BlockProposer struct {
 func (b *BlockProposer) generateBlocks() {
 	xpub := config.CommonConfig.PrivateKey().XPub()
 	xpubStr := hex.EncodeToString(xpub[:])
-	ticker := time.NewTicker(time.Millisecond * 500)
+	ticker := time.NewTicker(consensus.BlockTimeInterval * time.Millisecond)
 	defer ticker.Stop()
 
 	for {
@@ -52,7 +53,7 @@ func (b *BlockProposer) generateBlocks() {
 		bestBlockHeader := b.chain.BestBlockHeader()
 		bestBlockHash := bestBlockHeader.Hash()
 		nextBlockTime := uint64(time.Now().UnixNano() / 1e6)
-		if minNextBlockTime := bestBlockHeader.Timestamp + uint64(500); nextBlockTime < minNextBlockTime {
+		if minNextBlockTime := bestBlockHeader.Timestamp + consensus.BlockTimeInterval; nextBlockTime < minNextBlockTime {
 			nextBlockTime = minNextBlockTime
 		}
 
