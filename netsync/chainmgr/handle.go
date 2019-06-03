@@ -45,16 +45,21 @@ type Switch interface {
 	Peers() *p2p.PeerSet
 }
 
+// Mempool is the interface for Bytom mempool
+type Mempool interface {
+	GetTransactions() []*core.TxDesc
+}
+
 //Manager is responsible for the business layer information synchronization
 type Manager struct {
 	sw          Switch
 	chain       Chain
-	txPool      *core.TxPool
+	mempool     Mempool
 	blockKeeper *blockKeeper
 	peers       *peers.PeerSet
 
 	txSyncCh chan *txSyncMsg
-	quitSync chan struct{}
+	quit     chan struct{}
 	config   *cfg.Config
 
 	eventDispatcher *event.Dispatcher
@@ -62,15 +67,15 @@ type Manager struct {
 }
 
 //NewChainManager create a chain sync manager.
-func NewManager(config *cfg.Config, sw Switch, chain Chain, txPool *core.TxPool, dispatcher *event.Dispatcher, peers *peers.PeerSet) (*Manager, error) {
+func NewManager(config *cfg.Config, sw Switch, chain Chain, mempool Mempool, dispatcher *event.Dispatcher, peers *peers.PeerSet) (*Manager, error) {
 	manager := &Manager{
 		sw:              sw,
-		txPool:          txPool,
+		mempool:         mempool,
 		chain:           chain,
 		blockKeeper:     newBlockKeeper(chain, peers),
 		peers:           peers,
 		txSyncCh:        make(chan *txSyncMsg),
-		quitSync:        make(chan struct{}),
+		quit:            make(chan struct{}),
 		config:          config,
 		eventDispatcher: dispatcher,
 	}
@@ -359,14 +364,13 @@ func (m *Manager) Start() error {
 		return err
 	}
 
-	// broadcast transactions
-	go m.txBroadcastLoop()
-	go m.txSyncLoop()
+	go m.broadcastTxsLoop()
+	go m.syncMempoolLoop()
 
 	return nil
 }
 
 //Stop stop sync manager
 func (m *Manager) Stop() {
-	close(m.quitSync)
+	close(m.quit)
 }

@@ -21,8 +21,8 @@ type txSyncMsg struct {
 	txs    []*types.Tx
 }
 
-func (m *Manager) syncTransactions(peerID string) {
-	pending := m.txPool.GetTransactions()
+func (m *Manager) syncMempool(peerID string) {
+	pending := m.mempool.GetTransactions()
 	if len(pending) == 0 {
 		return
 	}
@@ -34,7 +34,7 @@ func (m *Manager) syncTransactions(peerID string) {
 	m.txSyncCh <- &txSyncMsg{peerID, txs}
 }
 
-func (m *Manager) txBroadcastLoop() {
+func (m *Manager) broadcastTxsLoop() {
 	for {
 		select {
 		case obj, ok := <-m.txMsgSub.Chan():
@@ -55,17 +55,17 @@ func (m *Manager) txBroadcastLoop() {
 					continue
 				}
 			}
-		case <-m.quitSync:
+		case <-m.quit:
 			return
 		}
 	}
 }
 
-// txSyncLoop takes care of the initial transaction sync for each new
+// syncMempoolLoop takes care of the initial transaction sync for each new
 // connection. When a new peer appears, we relay all currently pending
 // transactions. In order to minimise egress bandwidth usage, we send
 // the transactions in small packs to one peer at a time.
-func (m *Manager) txSyncLoop() {
+func (m *Manager) syncMempoolLoop() {
 	pending := make(map[string]*txSyncMsg)
 	sending := false            // whether a send is active
 	done := make(chan error, 1) // result of the send
@@ -130,7 +130,6 @@ func (m *Manager) txSyncLoop() {
 			if !sending {
 				send(msg)
 			}
-
 		case err := <-done:
 			sending = false
 			if err != nil {
@@ -140,6 +139,8 @@ func (m *Manager) txSyncLoop() {
 			if s := pick(); s != nil {
 				send(s)
 			}
+		case <-m.quit:
+			return
 		}
 	}
 }
