@@ -3,9 +3,9 @@ package protocol
 import (
 	log "github.com/sirupsen/logrus"
 
+	"github.com/vapor/config"
 	"github.com/vapor/errors"
 	"github.com/vapor/event"
-	"github.com/vapor/config"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
@@ -91,12 +91,12 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	}
 
 	voteResultMap := make(map[uint64]*state.VoteResult)
-	if err := c.bbft.ApplyBlock(voteResultMap, block); err != nil {
+	if err := c.ApplyBlock(voteResultMap, block); err != nil {
 		return err
 	}
 
 	node := c.index.GetNode(&bcBlock.ID)
-	if c.bbft.isIrreversible(block) && block.Height > irreversibleNode.Height {
+	if c.isIrreversible(block) && block.Height > irreversibleNode.Height {
 		irreversibleNode = node
 	}
 
@@ -140,7 +140,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			return err
 		}
 
-		if err := c.bbft.DetachBlock(voteResultMap, b); err != nil {
+		if err := c.DetachBlock(voteResultMap, b); err != nil {
 			return err
 		}
 
@@ -167,11 +167,11 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			return err
 		}
 
-		if err := c.bbft.ApplyBlock(voteResultMap, b); err != nil {
+		if err := c.ApplyBlock(voteResultMap, b); err != nil {
 			return err
 		}
 
-		if c.bbft.isIrreversible(b) && b.Height > irreversibleNode.Height {
+		if c.isIrreversible(b) && b.Height > irreversibleNode.Height {
 			irreversibleNode = attachNode
 		}
 
@@ -183,7 +183,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 
 // SaveBlock will validate and save block into storage
 func (c *Chain) saveBlock(block *types.Block) error {
-	if err := c.bbft.ValidateBlock(block); err != nil {
+	if err := c.ValidateBlock(block); err != nil {
 		return errors.Sub(ErrBadBlock, err)
 	}
 
@@ -193,7 +193,7 @@ func (c *Chain) saveBlock(block *types.Block) error {
 		return errors.Sub(ErrBadBlock, err)
 	}
 
-	signature, err := c.bbft.SignBlock(block)
+	signature, err := c.SignBlock(block)
 	if err != nil {
 		return errors.Sub(ErrBadBlock, err)
 	}
@@ -212,7 +212,7 @@ func (c *Chain) saveBlock(block *types.Block) error {
 
 	if len(signature) != 0 {
 		xPub := config.CommonConfig.PrivateKey().XPub()
-		if err := c.bbft.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: block.Hash(), Signature: signature, XPub: xPub}); err != nil {
+		if err := c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: block.Hash(), Signature: signature, XPub: xPub}); err != nil {
 			return err
 		}
 	}
@@ -314,21 +314,4 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 		return false, c.reorganizeChain(bestNode)
 	}
 	return false, nil
-}
-
-func (c *Chain) ProcessBlockSignature(signature []byte, xPub [64]byte, blockHeight uint64, blockHash *bc.Hash) error {	
-	isIrreversible, err := c.bbft.ProcessBlockSignature(signature, xPub, blockHeight, blockHash)
-	if err != nil {
-		return err
-	}
-
-	if isIrreversible && blockHeight > c.bestIrreversibleNode.Height {
-		bestIrreversibleNode := c.index.GetNode(blockHash)
-		if err := c.store.SaveChainNodeStatus(c.bestNode, bestIrreversibleNode); err != nil {
-			return err
-		}
-
-		c.bestIrreversibleNode = bestIrreversibleNode
-	}
-	return nil
 }
