@@ -31,16 +31,14 @@ func (c consensusNodeSlice) Less(i, j int) bool { return c[i].voteNum > c[j].vot
 func (c consensusNodeSlice) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
 
 type consensusNodeManager struct {
-	store                  Store
-	blockIndex             *state.BlockIndex
-	currNumOfConsensusNode int
+	store      Store
+	blockIndex *state.BlockIndex
 }
 
 func newConsensusNodeManager(store Store, blockIndex *state.BlockIndex) *consensusNodeManager {
 	return &consensusNodeManager{
-		store:                  store,
-		blockIndex:             blockIndex,
-		currNumOfConsensusNode: consensus.NumOfConsensusNode,
+		store:      store,
+		blockIndex: blockIndex,
 	}
 }
 
@@ -58,9 +56,14 @@ func (c *consensusNodeManager) getConsensusNode(prevBlockHash *bc.Hash, pubkey s
 }
 
 func (c *consensusNodeManager) isBlocker(prevBlockHash *bc.Hash, pubKey string, timeStamp uint64) (bool, error) {
-	consensusNode, err := c.getConsensusNode(prevBlockHash, pubKey)
-	if err != nil && err != errNotFoundConsensusNode {
+	consensusNodeMap, err := c.getConsensusNodesByVoteResult(prevBlockHash)
+	if err != nil {
 		return false, err
+	}
+
+	consensusNode, exist := consensusNodeMap[pubKey]
+	if !exist {
+		return false, errNotFoundConsensusNode
 	}
 
 	if consensusNode == nil {
@@ -73,7 +76,7 @@ func (c *consensusNodeManager) isBlocker(prevBlockHash *bc.Hash, pubKey string, 
 	}
 
 	startTimestamp := prevVoteRoundLastBlock.Timestamp + consensus.BlockTimeInterval
-	begin := getLastBlockTimeInTimeRange(startTimestamp, timeStamp, consensusNode.order, c.currNumOfConsensusNode)
+	begin := getLastBlockTimeInTimeRange(startTimestamp, timeStamp, consensusNode.order, len(consensusNodeMap))
 	end := begin + consensus.BlockNumEachNode*consensus.BlockTimeInterval
 	return timeStamp >= begin && timeStamp < end, nil
 }
@@ -158,7 +161,6 @@ func (c *consensusNodeManager) getConsensusNodesByVoteResult(prevBlockHash *bc.H
 		node.order = uint64(i)
 		result[node.pubkey] = node
 	}
-	c.currNumOfConsensusNode = len(result)
 	return result, nil
 }
 
