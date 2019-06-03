@@ -61,11 +61,7 @@ func (c *consensusNodeManager) isBlocker(prevBlockHash *bc.Hash, pubKey string, 
 		return false, err
 	}
 
-	consensusNode, exist := consensusNodeMap[pubKey]
-	if !exist {
-		return false, errNotFoundConsensusNode
-	}
-
+	consensusNode := consensusNodeMap[pubKey]
 	if consensusNode == nil {
 		return false, nil
 	}
