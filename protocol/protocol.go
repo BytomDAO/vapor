@@ -3,6 +3,7 @@ package protocol
 import (
 	"sync"
 
+	"github.com/golang/groupcache/lru"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/config"
@@ -20,8 +21,11 @@ type Chain struct {
 	orphanManage   *OrphanManage
 	txPool         *TxPool
 	store          Store
-	bbft           *bbft
 	processBlockCh chan *processBlockMsg
+
+	consensusNodeManager *consensusNodeManager
+	signatureCache       *lru.Cache
+	eventDispatcher      *event.Dispatcher
 
 	cond                 sync.Cond
 	bestNode             *state.BlockNode
@@ -31,14 +35,16 @@ type Chain struct {
 // NewChain returns a new Chain using store as the underlying storage.
 func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*Chain, error) {
 	c := &Chain{
-		orphanManage:   NewOrphanManage(),
-		txPool:         txPool,
-		store:          store,
-		processBlockCh: make(chan *processBlockMsg, maxProcessBlockChSize),
+		orphanManage:         NewOrphanManage(),
+		txPool:               txPool,
+		store:                store,
+		signatureCache:       lru.New(maxSignatureCacheSize),
+		consensusNodeManager: newConsensusNodeManager(store, nil),
+		eventDispatcher:      eventDispatcher,
+		processBlockCh:       make(chan *processBlockMsg, maxProcessBlockChSize),
 	}
 	c.cond.L = new(sync.Mutex)
 
-	c.bbft = newBbft(store, nil, c.orphanManage, eventDispatcher)
 	storeStatus := store.GetStoreStatus()
 	if storeStatus == nil {
 		if err := c.initChainStatus(); err != nil {
@@ -55,7 +61,7 @@ func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*
 	c.bestNode = c.index.GetNode(storeStatus.Hash)
 	c.bestIrreversibleNode = c.index.GetNode(storeStatus.IrreversibleHash)
 	c.index.SetMainChain(c.bestNode)
-	c.bbft.SetBlockIndex(c.index)
+	c.consensusNodeManager.blockIndex = c.index
 	go c.blockProcesser()
 	return c, nil
 }
@@ -80,7 +86,7 @@ func (c *Chain) initChainStatus() error {
 	}
 
 	voteResultMap := make(map[uint64]*state.VoteResult)
-	if err := c.bbft.ApplyBlock(voteResultMap, genesisBlock); err != nil {
+	if err := c.ApplyBlock(voteResultMap, genesisBlock); err != nil {
 		return err
 	}
 
@@ -153,9 +159,4 @@ func (c *Chain) BlockWaiter(height uint64) <-chan struct{} {
 // GetTxPool return chain txpool.
 func (c *Chain) GetTxPool() *TxPool {
 	return c.txPool
-}
-
-// GetBBFT return chain bbft
-func (c *Chain) GetBBFT() *bbft {
-	return c.bbft
 }

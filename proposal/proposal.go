@@ -154,7 +154,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 
 	b.BlockHeader.BlockCommitment.TransactionStatusHash, err = types.TxStatusMerkleRoot(txStatus.VerifyStatus)
 
-	_, err = c.GetBBFT().SignBlock(b)
+	_, err = c.SignBlock(b)
 	return b, err
 }
 
