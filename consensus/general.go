@@ -22,6 +22,15 @@ const (
 	//config parameter for vote
 	VotePendingBlockNumber = uint64(10000)
 
+	//DPOS parameter
+	NumOfConsensusNode = 7
+	BlockNumEachNode   = 3
+	RoundVoteBlockNums = NumOfConsensusNode * BlockNumEachNode * 100
+	MinVoteNum         = 5000000
+
+	// BlockTimeInterval indicate product one block per 500 milliseconds
+	BlockTimeInterval = 500
+
 	// MaxTimeOffsetMs is the maximum number of seconds a block time is allowed to be ahead of the current time
 	MaxTimeOffsetMs  = uint64(60 * 60 * 1000)
 	MedianTimeBlocks = 11

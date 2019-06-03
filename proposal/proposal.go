@@ -91,7 +91,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			PreviousBlockHash: preBlockHash,
 			Timestamp:         timestamp,
 			BlockCommitment:   types.BlockCommitment{},
-			BlockWitness:      types.BlockWitness{Witness: make([][]byte, protocol.NumOfConsensusNode)},
+			BlockWitness:      types.BlockWitness{Witness: make([][]byte, consensus.NumOfConsensusNode)},
 		},
 	}
 	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: nextBlockHeight}}

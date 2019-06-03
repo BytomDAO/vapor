@@ -109,7 +109,7 @@ func TestBlockLocator(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		mockChain := mock.NewChain()
+		mockChain := mock.NewChain(nil)
 		bk := &blockKeeper{chain: mockChain}
 		mockChain.SetBestBlockHeader(&blocks[c.bestHeight].BlockHeader)
 		for i := uint64(0); i <= c.bestHeight; i++ {
@@ -178,8 +178,8 @@ func TestFastBlockSync(t *testing.T) {
 
 	for i, c := range cases {
 		syncTimeout = c.syncTimeout
-		a := mockSync(c.aBlocks)
-		b := mockSync(c.bBlocks)
+		a := mockSync(c.aBlocks, nil)
+		b := mockSync(c.bBlocks, nil)
 		netWork := NewNetWork()
 		netWork.Register(a, "192.168.0.1", "test node A", consensus.SFFullNode)
 		netWork.Register(b, "192.168.0.2", "test node B", consensus.SFFullNode)
@@ -225,7 +225,7 @@ func TestLocateBlocks(t *testing.T) {
 		},
 	}
 
-	mockChain := mock.NewChain()
+	mockChain := mock.NewChain(nil)
 	bk := &blockKeeper{chain: mockChain}
 	for _, block := range blocks {
 		mockChain.SetBlockByHeight(block.Height, block)
@@ -305,7 +305,7 @@ func TestLocateHeaders(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		mockChain := mock.NewChain()
+		mockChain := mock.NewChain(nil)
 		bk := &blockKeeper{chain: mockChain}
 		for i := uint64(0); i <= c.chainHeight; i++ {
 			mockChain.SetBlockByHeight(i, blocks[i])
@@ -379,7 +379,7 @@ func TestNextCheckpoint(t *testing.T) {
 		},
 	}
 
-	mockChain := mock.NewChain()
+	mockChain := mock.NewChain(nil)
 	for i, c := range cases {
 		consensus.ActiveNetParams.Checkpoints = c.checkPoints
 		mockChain.SetBestBlockHeader(&types.BlockHeader{Height: c.bestHeight})
@@ -439,8 +439,8 @@ func TestRegularBlockSync(t *testing.T) {
 
 	for i, c := range cases {
 		syncTimeout = c.syncTimeout
-		a := mockSync(c.aBlocks)
-		b := mockSync(c.bBlocks)
+		a := mockSync(c.aBlocks, nil)
+		b := mockSync(c.bBlocks, nil)
 		netWork := NewNetWork()
 		netWork.Register(a, "192.168.0.1", "test node A", consensus.SFFullNode)
 		netWork.Register(b, "192.168.0.2", "test node B", consensus.SFFullNode)
@@ -473,8 +473,8 @@ func TestRegularBlockSync(t *testing.T) {
 
 func TestRequireBlock(t *testing.T) {
 	blocks := mockBlocks(nil, 5)
-	a := mockSync(blocks[:1])
-	b := mockSync(blocks[:5])
+	a := mockSync(blocks[:1], nil)
+	b := mockSync(blocks[:5], nil)
 	netWork := NewNetWork()
 	netWork.Register(a, "192.168.0.1", "test node A", consensus.SFFullNode)
 	netWork.Register(b, "192.168.0.2", "test node B", consensus.SFFullNode)
@@ -560,7 +560,7 @@ func TestSendMerkleBlock(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		spvNode := mockSync(blocks)
+		spvNode := mockSync(blocks, nil)
 		blockHash := targetBlock.Hash()
 		var statusResult *bc.TransactionStatus
 		if statusResult, err = spvNode.chain.GetTransactionStatus(&blockHash); err != nil {
@@ -571,7 +571,7 @@ func TestSendMerkleBlock(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		fullNode := mockSync(blocks)
+		fullNode := mockSync(blocks, nil)
 		netWork := NewNetWork()
 		netWork.Register(spvNode, "192.168.0.1", "spv_node", consensus.SFFastSync)
 		netWork.Register(fullNode, "192.168.0.2", "full_node", consensus.DefaultServices)

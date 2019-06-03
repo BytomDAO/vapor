@@ -56,7 +56,7 @@ func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 	if err := pr.manager.SendStatus(peer); err != nil {
 		return err
 	}
-	pr.manager.syncTransactions(peer.Key)
+	pr.manager.syncMempool(peer.Key)
 	return nil
 }
 

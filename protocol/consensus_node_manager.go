@@ -5,22 +5,12 @@ import (
 	"sort"
 
 	"github.com/vapor/config"
+	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
 	"github.com/vapor/math/checked"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
-)
-
-const (
-	NumOfConsensusNode = 21
-	RoundVoteBlockNums = 1000
-	MinVoteNum         = 5000000
-
-	// BlockTimeInterval indicate product one block per 500 milliseconds
-	BlockTimeInterval = 500
-	// BlockNumEachNode indicate product three blocks per node in succession
-	BlockNumEachNode = 3
 )
 
 var (
@@ -50,7 +40,7 @@ func newConsensusNodeManager(store Store, blockIndex *state.BlockIndex) *consens
 	return &consensusNodeManager{
 		store:                  store,
 		blockIndex:             blockIndex,
-		currNumOfConsensusNode: NumOfConsensusNode,
+		currNumOfConsensusNode: consensus.NumOfConsensusNode,
 	}
 }
 
@@ -82,19 +72,19 @@ func (c *consensusNodeManager) isBlocker(prevBlockHash *bc.Hash, pubKey string, 
 		return false, err
 	}
 
-	startTimestamp := prevVoteRoundLastBlock.Timestamp + BlockTimeInterval
+	startTimestamp := prevVoteRoundLastBlock.Timestamp + consensus.BlockTimeInterval
 	begin := getLastBlockTimeInTimeRange(startTimestamp, timeStamp, consensusNode.order, c.currNumOfConsensusNode)
-	end := begin + BlockNumEachNode*BlockTimeInterval
+	end := begin + consensus.BlockNumEachNode*consensus.BlockTimeInterval
 	return timeStamp >= begin && timeStamp < end, nil
 }
 
 func getLastBlockTimeInTimeRange(startTimestamp, endTimestamp, order uint64, numOfConsensusNode int) uint64 {
 	// One round of product block time for all consensus nodes
-	roundBlockTime := uint64(BlockNumEachNode * numOfConsensusNode * BlockTimeInterval)
+	roundBlockTime := uint64(consensus.BlockNumEachNode * numOfConsensusNode * consensus.BlockTimeInterval)
 	// The start time of the last round of product block
 	lastRoundStartTime := startTimestamp + (endTimestamp-startTimestamp)/roundBlockTime*roundBlockTime
 	// The time of product block of the consensus in last round
-	return lastRoundStartTime + order*(BlockNumEachNode*BlockTimeInterval)
+	return lastRoundStartTime + order*(consensus.BlockNumEachNode*consensus.BlockTimeInterval)
 }
 
 func (c *consensusNodeManager) getPrevRoundVoteLastBlock(prevBlockHash *bc.Hash) (*state.BlockNode, error) {
@@ -105,9 +95,9 @@ func (c *consensusNodeManager) getPrevRoundVoteLastBlock(prevBlockHash *bc.Hash)
 
 	blockHeight := prevBlockNode.Height + 1
 
-	prevVoteRoundLastBlockHeight := blockHeight/RoundVoteBlockNums*RoundVoteBlockNums - 1
+	prevVoteRoundLastBlockHeight := blockHeight/consensus.RoundVoteBlockNums*consensus.RoundVoteBlockNums - 1
 	// first round
-	if blockHeight/RoundVoteBlockNums == 0 {
+	if blockHeight/consensus.RoundVoteBlockNums == 0 {
 		prevVoteRoundLastBlockHeight = 0
 	}
 
@@ -124,7 +114,7 @@ func (c *consensusNodeManager) getConsensusNodesByVoteResult(prevBlockHash *bc.H
 		return nil, errNotFoundBlockNode
 	}
 
-	seq := (prevBlockNode.Height + 1) / RoundVoteBlockNums
+	seq := (prevBlockNode.Height + 1) / consensus.RoundVoteBlockNums
 	voteResult, err := c.store.GetVoteResult(seq)
 	if err != nil {
 		// TODO find previous round vote
@@ -150,7 +140,7 @@ func (c *consensusNodeManager) getConsensusNodesByVoteResult(prevBlockHash *bc.H
 
 	var nodes []*consensusNode
 	for pubkey, voteNum := range voteResult.NumOfVote {
-		if voteNum >= MinVoteNum {
+		if voteNum >= consensus.MinVoteNum {
 			nodes = append(nodes, &consensusNode{
 				pubkey:  pubkey,
 				voteNum: voteNum,
@@ -163,7 +153,7 @@ func (c *consensusNodeManager) getConsensusNodesByVoteResult(prevBlockHash *bc.H
 	sort.Sort(consensusNodeSlice(nodes))
 
 	result := make(map[string]*consensusNode)
-	for i := 0; i < len(nodes) && i < NumOfConsensusNode; i++ {
+	for i := 0; i < len(nodes) && i < consensus.NumOfConsensusNode; i++ {
 		node := nodes[i]
 		node.order = uint64(i)
 		result[node.pubkey] = node
@@ -258,14 +248,14 @@ func (c *consensusNodeManager) applyBlock(voteResultMap map[uint64]*state.VoteRe
 		}
 	}
 
-	voteResult.Finalized = (block.Height+1)%RoundVoteBlockNums == 0
+	voteResult.Finalized = (block.Height+1)%consensus.RoundVoteBlockNums == 0
 	return nil
 }
 
 func (c *consensusNodeManager) getVoteResult(voteResultMap map[uint64]*state.VoteResult, blockHeight uint64) (*state.VoteResult, error) {
 	var err error
 	// This round of voting prepares for the next round
-	seq := blockHeight/RoundVoteBlockNums + 1
+	seq := blockHeight/consensus.RoundVoteBlockNums + 1
 	voteResult := voteResultMap[seq]
 	if blockHeight == 0 {
 		voteResult = &state.VoteResult{
@@ -320,7 +310,7 @@ func (c *consensusNodeManager) getVoteResult(voteResultMap map[uint64]*state.Vot
 }
 
 func (c *consensusNodeManager) detachBlock(voteResultMap map[uint64]*state.VoteResult, block *types.Block) error {
-	voteSeq := block.Height / RoundVoteBlockNums
+	voteSeq := block.Height / consensus.RoundVoteBlockNums
 	voteResult := voteResultMap[voteSeq]
 
 	if voteResult == nil {
