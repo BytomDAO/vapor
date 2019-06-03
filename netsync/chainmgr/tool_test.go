@@ -150,8 +150,8 @@ func mockBlocks(startBlock *types.Block, height uint64) []*types.Block {
 	return blocks
 }
 
-func mockSync(blocks []*types.Block) *Manager {
-	chain := mock.NewChain()
+func mockSync(blocks []*types.Block, mempool *mock.Mempool) *Manager {
+	chain := mock.NewChain(mempool)
 	peers := peers.NewPeerSet(NewPeerSet())
 	chain.SetBestBlockHeader(&blocks[len(blocks)-1].BlockHeader)
 	for _, block := range blocks {
@@ -162,6 +162,8 @@ func mockSync(blocks []*types.Block) *Manager {
 		chain:       chain,
 		blockKeeper: newBlockKeeper(chain, peers),
 		peers:       peers,
+		mempool:     mempool,
+		txSyncCh:    make(chan *txSyncMsg),
 	}
 }
 
