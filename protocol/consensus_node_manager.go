@@ -56,11 +56,12 @@ func (c *consensusNodeManager) getConsensusNode(prevBlockHash *bc.Hash, pubkey s
 }
 
 func (c *consensusNodeManager) isBlocker(prevBlockHash *bc.Hash, pubKey string, timeStamp uint64) (bool, error) {
-	consensusNode, err := c.getConsensusNode(prevBlockHash, pubKey)
-	if err != nil && err != errNotFoundConsensusNode {
+	consensusNodeMap, err := c.getConsensusNodesByVoteResult(prevBlockHash)
+	if err != nil {
 		return false, err
 	}
 
+	consensusNode := consensusNodeMap[pubKey]
 	if consensusNode == nil {
 		return false, nil
 	}
@@ -71,14 +72,14 @@ func (c *consensusNodeManager) isBlocker(prevBlockHash *bc.Hash, pubKey string, 
 	}
 
 	startTimestamp := prevVoteRoundLastBlock.Timestamp + consensus.BlockTimeInterval
-	begin := getLastBlockTimeInTimeRange(startTimestamp, timeStamp, consensusNode.order)
+	begin := getLastBlockTimeInTimeRange(startTimestamp, timeStamp, consensusNode.order, len(consensusNodeMap))
 	end := begin + consensus.BlockNumEachNode*consensus.BlockTimeInterval
 	return timeStamp >= begin && timeStamp < end, nil
 }
 
-func getLastBlockTimeInTimeRange(startTimestamp, endTimestamp, order uint64) uint64 {
+func getLastBlockTimeInTimeRange(startTimestamp, endTimestamp, order uint64, numOfConsensusNode int) uint64 {
 	// One round of product block time for all consensus nodes
-	roundBlockTime := uint64(consensus.BlockNumEachNode * consensus.NumOfConsensusNode * consensus.BlockTimeInterval)
+	roundBlockTime := uint64(consensus.BlockNumEachNode * numOfConsensusNode * consensus.BlockTimeInterval)
 	// The start time of the last round of product block
 	lastRoundStartTime := startTimestamp + (endTimestamp-startTimestamp)/roundBlockTime*roundBlockTime
 	// The time of product block of the consensus in last round
