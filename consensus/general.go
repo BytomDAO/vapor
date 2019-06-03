@@ -32,7 +32,7 @@ const (
 	BlockTimeInterval = 500
 
 	// MaxTimeOffsetMs is the maximum number of seconds a block time is allowed to be ahead of the current time
-	MaxTimeOffsetMs  = uint64(60 * 60 * 1000)
+	MaxTimeOffsetMs  = uint64(7 * 1000)
 	MedianTimeBlocks = 11
 
 	PayToWitnessPubKeyHashDataSize = 20

@@ -52,10 +52,17 @@ func (b *BlockProposer) generateBlocks() {
 
 		bestBlockHeader := b.chain.BestBlockHeader()
 		bestBlockHash := bestBlockHeader.Hash()
-		nextBlockTime := uint64(time.Now().UnixNano() / 1e6)
-		if minNextBlockTime := bestBlockHeader.Timestamp + consensus.BlockTimeInterval; nextBlockTime < minNextBlockTime {
-			nextBlockTime = minNextBlockTime
+		now := uint64(time.Now().UnixNano() / 1e6)
+		base := max(now, bestBlockHeader.Timestamp)
+		minTimeToNextBlock := consensus.BlockTimeInterval - now%consensus.BlockTimeInterval
+		nextBlockTime := base + minTimeToNextBlock
+		if nextBlockTime-now < consensus.BlockTimeInterval/10 {
+			nextBlockTime += consensus.BlockTimeInterval
 		}
+		// nextBlockTime := uint64(time.Now().UnixNano() / 1e6)
+		// if minNextBlockTime := bestBlockHeader.Timestamp + consensus.BlockTimeInterval; nextBlockTime < minNextBlockTime {
+		// 	nextBlockTime = minNextBlockTime
+		// }
 
 		if isBlocker, err := b.chain.IsBlocker(&bestBlockHash, xpubStr, nextBlockTime); !isBlocker {
 			log.WithFields(log.Fields{"module": logModule, "error": err, "pubKey": xpubStr}).Debug("fail on check is next blocker")
@@ -80,6 +87,13 @@ func (b *BlockProposer) generateBlocks() {
 			log.WithFields(log.Fields{"module": logModule, "height": block.BlockHeader.Height, "error": err}).Error("proposer fail on post block")
 		}
 	}
+}
+
+func max(x, y uint64) uint64 {
+	if x > y {
+		return x
+	}
+	return y
 }
 
 // Start begins the block propose process as well as the speed monitor used to
