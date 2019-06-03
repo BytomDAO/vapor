@@ -3,9 +3,9 @@ package protocol
 import (
 	log "github.com/sirupsen/logrus"
 
+	"github.com/vapor/config"
 	"github.com/vapor/errors"
 	"github.com/vapor/event"
-	"github.com/vapor/config"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
@@ -272,28 +272,21 @@ func (c *Chain) blockProcesser() {
 
 // ProcessBlock is the entry for handle block insert
 func (c *Chain) processBlock(block *types.Block) (bool, error) {
-	if block.Height <= c.bestIrreversibleNode.Height {
-		return false, errors.New("the height of block below the height of irreversible block")
-	}
-
+	//skip if the block has been processed before
 	blockHash := block.Hash()
 	if c.BlockExist(&blockHash) {
 		log.WithFields(log.Fields{"module": logModule, "hash": blockHash.String(), "height": block.Height}).Info("block has been processed")
 		return c.orphanManage.BlockExist(&blockHash), nil
 	}
 
-	parent := c.index.GetNode(&block.PreviousBlockHash)
-	if parent == nil {
-		c.orphanManage.Add(block)
-		return true, nil
+	//return error if the block height is lower than the irreversible block hegith
+	if block.Height <= c.IrreversibleBlockHeight() {
+		return false, errors.New("the height of block below the height of irreversible block")
 	}
 
-	forkPointBlock := parent
-	for !c.index.InMainchain(forkPointBlock.Hash) {
-		forkPointBlock = forkPointBlock.Parent
-	}
-	if forkPointBlock.Height < c.bestIrreversibleNode.Height {
-		return false, errors.New("the block impossible to be block of main chain")
+	if parent := c.index.GetNode(&block.PreviousBlockHash); parent == nil {
+		c.orphanManage.Add(block)
+		return true, nil
 	}
 
 	if err := c.saveBlock(block); err != nil {
@@ -316,13 +309,13 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	return false, nil
 }
 
-func (c *Chain) ProcessBlockSignature(signature []byte, xPub [64]byte, blockHeight uint64, blockHash *bc.Hash) error {	
+func (c *Chain) ProcessBlockSignature(signature []byte, xPub [64]byte, blockHeight uint64, blockHash *bc.Hash) error {
 	isIrreversible, err := c.bbft.ProcessBlockSignature(signature, xPub, blockHeight, blockHash)
 	if err != nil {
 		return err
 	}
 
-	if isIrreversible && blockHeight > c.bestIrreversibleNode.Height {
+	if isIrreversible && blockHeight > c.IrreversibleBlockHeight() {
 		bestIrreversibleNode := c.index.GetNode(blockHash)
 		if err := c.store.SaveChainNodeStatus(c.bestNode, bestIrreversibleNode); err != nil {
 			return err

@@ -117,6 +117,12 @@ func (c *Chain) InMainChain(hash bc.Hash) bool {
 	return c.index.InMainchain(hash)
 }
 
+func (c *Chain) IrreversibleBlockHeight() uint64 {
+	c.cond.L.Lock()
+	defer c.cond.L.Unlock()
+	return c.bestIrreversibleNode.Height
+}
+
 // This function must be called with mu lock in above level
 func (c *Chain) setState(node *state.BlockNode, irreversibleNode *state.BlockNode, view *state.UtxoViewpoint, voteMap map[uint64]*state.VoteResult) error {
 	if err := c.store.SaveChainStatus(node, irreversibleNode, view, voteMap); err != nil {

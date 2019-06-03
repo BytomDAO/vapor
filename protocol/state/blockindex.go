@@ -111,9 +111,9 @@ type BlockIndex struct {
 // NewBlockIndex will create a empty BlockIndex
 func NewBlockIndex() *BlockIndex {
 	return &BlockIndex{
-		index:     make(map[bc.Hash]*BlockNode),
+		index:       make(map[bc.Hash]*BlockNode),
 		heightIndex: make(map[uint64][]*BlockNode),
-		mainChain: make([]*BlockNode, 0, approxNodesPerDay),
+		mainChain:   make([]*BlockNode, 0, approxNodesPerDay),
 	}
 }
 
