@@ -16,7 +16,6 @@ import (
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/vm/vmutil"
 )
 
 // annotateTxs adds asset data to transactions
@@ -248,10 +247,15 @@ func (w *Wallet) BuildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOut
 		Address:         w.getAddressFromControlProgram(orig.ControlProgram()),
 	}
 
-	if vmutil.IsUnspendable(out.ControlProgram) {
-		out.Type = "retire"
-	} else {
+	switch e := tx.Entries[*outid].(type) {
+	case *bc.IntraChainOutput:
 		out.Type = "control"
+	case *bc.CrossChainOutput:
+		out.Type = "cross_Output"
+	case *bc.VoteOutput:
+		out.Type = "vote"
+		out.Vote = e.Vote
 	}
+
 	return out
 }
