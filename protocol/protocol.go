@@ -86,7 +86,7 @@ func (c *Chain) initChainStatus() error {
 	}
 
 	voteResultMap := make(map[uint64]*state.VoteResult)
-	if err := c.ApplyBlock(voteResultMap, genesisBlock); err != nil {
+	if err := c.consensusNodeManager.applyBlock(voteResultMap, genesisBlock); err != nil {
 		return err
 	}
 
