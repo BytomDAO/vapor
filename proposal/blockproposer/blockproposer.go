@@ -54,10 +54,8 @@ func (b *BlockProposer) generateBlocks() {
 		bestBlockHash := bestBlockHeader.Hash()
 
 		now := uint64(time.Now().UnixNano() / 1e6)
-		var base uint64
-		if now > bestBlockHeader.Timestamp {
-			base = now
-		} else {
+		base := now
+		if now < bestBlockHeader.Timestamp {
 			base = bestBlockHeader.Timestamp
 		}
 		minTimeToNextBlock := consensus.BlockTimeInterval - now%consensus.BlockTimeInterval
