@@ -13,9 +13,9 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/vapor/common"
-	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/crypto/sha3pool"
 	"github.com/vapor/p2p/netutil"
+	"github.com/vapor/p2p/signlib"
 )
 
 var (
@@ -123,9 +123,9 @@ func hash(target []byte) common.Hash {
 	return common.BytesToHash(h[:])
 }
 
-func newNetwork(conn transport, ourPubkey ed25519.PublicKey, dbPath string, netrestrict *netutil.Netlist) (*Network, error) {
+func newNetwork(conn transport, ourPubkey signlib.PubKey, dbPath string, netrestrict *netutil.Netlist) (*Network, error) {
 	var ourID NodeID
-	copy(ourID[:], ourPubkey[:nodeIDBits])
+	copy(ourID[:], ourPubkey.Bytes()[:nodeIDBits])
 
 	var db *nodeDB
 	if dbPath != "<no database>" {

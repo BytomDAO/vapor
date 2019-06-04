@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/tendermint/go-crypto"
-
 	cfg "github.com/vapor/config"
 	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
+	"github.com/vapor/p2p/signlib"
 	"github.com/vapor/version"
 )
 
@@ -22,9 +21,9 @@ var (
 
 //NodeInfo peer node info
 type NodeInfo struct {
-	PubKey  crypto.PubKeyEd25519 `json:"pub_key"`
-	Moniker string               `json:"moniker"`
-	Network string               `json:"network"`
+	PubKey  string `json:"pub_key"`
+	Moniker string `json:"moniker"`
+	Network string `json:"network"`
 	//NetworkID used to isolate subnets with same network name
 	NetworkID   uint64                `json:"network_id"`
 	RemoteAddr  string                `json:"remote_addr"`
@@ -35,9 +34,9 @@ type NodeInfo struct {
 	Other []string `json:"other"`
 }
 
-func NewNodeInfo(config *cfg.Config, pubkey crypto.PubKeyEd25519, listenAddr string, netID uint64) *NodeInfo {
+func NewNodeInfo(config *cfg.Config, pubkey signlib.PubKey, listenAddr string, netID uint64) *NodeInfo {
 	return &NodeInfo{
-		PubKey:      pubkey,
+		PubKey:      pubkey.String(),
 		Moniker:     config.Moniker,
 		Network:     config.ChainID,
 		NetworkID:   netID,

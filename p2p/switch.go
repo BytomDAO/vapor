@@ -2,7 +2,6 @@ package p2p
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -10,12 +9,10 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	crypto "github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
 
 	cfg "github.com/vapor/config"
 	"github.com/vapor/consensus"
-	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/crypto/sha3pool"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
@@ -24,6 +21,7 @@ import (
 	"github.com/vapor/p2p/discover/dht"
 	"github.com/vapor/p2p/discover/mdns"
 	"github.com/vapor/p2p/netutil"
+	"github.com/vapor/p2p/signlib"
 	"github.com/vapor/p2p/trust"
 	"github.com/vapor/version"
 )
@@ -71,8 +69,8 @@ type Switch struct {
 	reactorsByCh map[byte]Reactor
 	peers        *PeerSet
 	dialing      *cmn.CMap
-	nodeInfo     *NodeInfo             // our node info
-	nodePrivKey  crypto.PrivKeyEd25519 // our node privkey
+	nodeInfo     *NodeInfo       // our node info
+	nodePrivKey  signlib.PrivKey // our node privkey
 	discv        discv
 	lanDiscv     lanDiscv
 	bannedPeer   map[string]time.Time
@@ -99,21 +97,11 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 	netID := binary.BigEndian.Uint64(h[:8])
 
 	blacklistDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
-
-	_, yyy, _ := ed25519.GenerateKey(nil)
-	zzz := yyy.String()
-
-	bytes, err := hex.DecodeString(zzz)
-	if err != nil {
-		return nil, err
-	}
-	var newKey [64]byte
-	copy(newKey[:], bytes)
-	privKey := crypto.PrivKeyEd25519(newKey)
+	privateKey := config.PrivateKey()
 	if !config.VaultMode {
 		// Create listener
 		l, listenAddr = GetListener(config.P2P)
-		discv, err = dht.NewDiscover(config, ed25519.PrivateKey(bytes), l.ExternalAddress().Port, netID)
+		discv, err = dht.NewDiscover(config, *privateKey, l.ExternalAddress().Port, netID)
 		if err != nil {
 			return nil, err
 		}
@@ -122,11 +110,11 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 		}
 	}
 
-	return newSwitch(config, discv, lanDiscv, blacklistDB, l, privKey, listenAddr, netID)
+	return newSwitch(config, discv, lanDiscv, blacklistDB, l, *privateKey, listenAddr, netID)
 }
 
 // newSwitch creates a new Switch with the given config.
-func newSwitch(config *cfg.Config, discv discv, lanDiscv lanDiscv, blacklistDB dbm.DB, l Listener, priv crypto.PrivKeyEd25519, listenAddr string, netID uint64) (*Switch, error) {
+func newSwitch(config *cfg.Config, discv discv, lanDiscv lanDiscv, blacklistDB dbm.DB, l Listener, privKey signlib.PrivKey, listenAddr string, netID uint64) (*Switch, error) {
 	sw := &Switch{
 		Config:       config,
 		peerConfig:   DefaultPeerConfig(config.P2P),
@@ -135,11 +123,11 @@ func newSwitch(config *cfg.Config, discv discv, lanDiscv lanDiscv, blacklistDB d
 		reactorsByCh: make(map[byte]Reactor),
 		peers:        NewPeerSet(),
 		dialing:      cmn.NewCMap(),
-		nodePrivKey:  priv,
+		nodePrivKey:  privKey,
 		discv:        discv,
 		lanDiscv:     lanDiscv,
 		db:           blacklistDB,
-		nodeInfo:     NewNodeInfo(config, priv.PubKey().Unwrap().(crypto.PubKeyEd25519), listenAddr, netID),
+		nodeInfo:     NewNodeInfo(config, privKey.XPub(), listenAddr, netID),
 		bannedPeer:   make(map[string]time.Time),
 	}
 	if err := sw.loadBannedPeers(); err != nil {
@@ -289,10 +277,6 @@ func (sw *Switch) DialPeerWithAddress(addr *NetAddress) error {
 	}
 	log.WithFields(log.Fields{"module": logModule, "address": addr, "peer num": sw.peers.Size()}).Debug("DialPeer added peer")
 	return nil
-}
-
-func (sw *Switch) ID() [32]byte {
-	return sw.nodeInfo.PubKey
 }
 
 //IsDialing prevent duplicate dialing
@@ -464,7 +448,7 @@ func (sw *Switch) filterConnByPeer(peer *Peer) error {
 		return err
 	}
 
-	if sw.nodeInfo.PubKey.Equals(peer.PubKey().Wrap()) {
+	if sw.nodeInfo.PubKey == peer.PubKey() {
 		return ErrConnectSelf
 	}
 

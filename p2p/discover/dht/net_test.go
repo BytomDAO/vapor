@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/vapor/common"
-	"github.com/vapor/crypto/ed25519"
+	"github.com/vapor/p2p/signlib"
 )
 
 func TestNetwork_Lookup(t *testing.T) {
@@ -19,8 +19,12 @@ func TestNetwork_Lookup(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	pubKey, _, err := ed25519.GenerateKey(nil)
-	network, err := newNetwork(lookupTestnet, pubKey, tmpDir, nil)
+	privKey, err := signlib.NewPrivKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	network, err := newNetwork(lookupTestnet, privKey.XPub(), tmpDir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -328,7 +332,8 @@ func mine(target NodeID) {
 	var dists [hashBits + 1][]NodeID
 	found := 0
 	for found < bucketSize*10 {
-		pubKey, _, _ := ed25519.GenerateKey(nil)
+		privKey, _ := signlib.NewPrivKey()
+		pubKey := privKey.XPub()
 		sha := hash(pubKey[:])
 		ld := logdist(targetSha, sha)
 		if len(dists[ld]) < bucketSize {
