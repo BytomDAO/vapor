@@ -6,6 +6,7 @@ import (
 
 	"github.com/vapor/config"
 	"github.com/vapor/consensus"
+	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
 	"github.com/vapor/math/checked"
 	"github.com/vapor/protocol/bc"
@@ -19,7 +20,7 @@ var (
 )
 
 type consensusNode struct {
-	pubkey  string
+	xpub    chainkd.XPub
 	voteNum uint64
 	order   uint64
 }
@@ -140,8 +141,13 @@ func (c *consensusNodeManager) getConsensusNodesByVoteResult(prevBlockHash *bc.H
 	var nodes []*consensusNode
 	for pubkey, voteNum := range voteResult.NumOfVote {
 		if voteNum >= consensus.MinVoteNum {
+			var xpub chainkd.XPub
+			if err := xpub.UnmarshalText([]byte(pubkey)); err != nil {
+				return nil, err
+			}
+
 			nodes = append(nodes, &consensusNode{
-				pubkey:  pubkey,
+				xpub:    xpub,
 				voteNum: voteNum,
 			})
 		}
@@ -155,7 +161,7 @@ func (c *consensusNodeManager) getConsensusNodesByVoteResult(prevBlockHash *bc.H
 	for i := 0; i < len(nodes) && i < consensus.NumOfConsensusNode; i++ {
 		node := nodes[i]
 		node.order = uint64(i)
-		result[node.pubkey] = node
+		result[node.xpub.String()] = node
 	}
 	return result, nil
 }
@@ -357,8 +363,7 @@ func (c *consensusNodeManager) detachBlock(voteResultMap map[uint64]*state.VoteR
 func initConsensusNodes() map[string]*consensusNode {
 	voteResult := map[string]*consensusNode{}
 	for i, pubkey := range config.CommonConfig.Federation.Xpubs {
-		pubkeyStr := pubkey.String()
-		voteResult[pubkeyStr] = &consensusNode{pubkey: pubkeyStr, voteNum: 0, order: uint64(i)}
+		voteResult[pubkey.String()] = &consensusNode{xpub: pubkey, voteNum: 0, order: uint64(i)}
 	}
 	return voteResult
 }

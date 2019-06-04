@@ -7,7 +7,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/config"
-	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -66,12 +65,7 @@ func (c *Chain) ProcessBlockSignature(signature []byte, xPub [64]byte, blockHash
 		return err
 	}
 
-	var xpub chainkd.XPub
-	if err := xpub.UnmarshalText([]byte(xpubStr)); err != nil {
-		return err
-	}
-
-	if xpub.Verify(blockHash.Bytes(), signature) {
+	if consensusNode.xpub.Verify(blockHash.Bytes(), signature) {
 		return errInvalidSignature
 	}
 
@@ -125,12 +119,7 @@ func (c *Chain) validateSign(block *types.Block) (uint64, error) {
 			}
 		}
 
-		var xpub chainkd.XPub
-		if err := xpub.UnmarshalText([]byte(pubKey)); err != nil {
-			return 0, err
-		}
-
-		if ok := xpub.Verify(blockHash.Bytes(), block.Witness[node.order]); !ok {
+		if ok := node.xpub.Verify(blockHash.Bytes(), block.Witness[node.order]); !ok {
 			block.Witness[node.order] = nil
 			continue
 		}
