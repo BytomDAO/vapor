@@ -26,13 +26,14 @@ var (
 )
 
 func checkBlockTime(b *bc.Block, parent *state.BlockNode) error {
-	if b.Timestamp > uint64(time.Now().UnixNano()/int64(time.Millisecond))+consensus.MaxTimeOffsetMs {
+	now := uint64(time.Now().UnixNano() / 1e6)
+	if (now - b.Timestamp) < consensus.BlockTimeInterval/10 {
+		return errBadTimestamp
+	}
+	if b.Timestamp > (now + consensus.MaxTimeOffsetMs) {
 		return errBadTimestamp
 	}
 
-	if b.Timestamp <= parent.CalcPastMedianTime() {
-		return errBadTimestamp
-	}
 	return nil
 }
 

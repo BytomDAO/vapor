@@ -52,6 +52,7 @@ func (b *BlockProposer) generateBlocks() {
 
 		bestBlockHeader := b.chain.BestBlockHeader()
 		bestBlockHash := bestBlockHeader.Hash()
+
 		now := uint64(time.Now().UnixNano() / 1e6)
 		var base uint64
 		if now > bestBlockHeader.Timestamp {
@@ -61,13 +62,9 @@ func (b *BlockProposer) generateBlocks() {
 		}
 		minTimeToNextBlock := consensus.BlockTimeInterval - now%consensus.BlockTimeInterval
 		nextBlockTime := base + minTimeToNextBlock
-		if nextBlockTime-now < consensus.BlockTimeInterval/10 {
+		if (nextBlockTime - now) < consensus.BlockTimeInterval/10 {
 			nextBlockTime += consensus.BlockTimeInterval
 		}
-		// nextBlockTime := uint64(time.Now().UnixNano() / 1e6)
-		// if minNextBlockTime := bestBlockHeader.Timestamp + consensus.BlockTimeInterval; nextBlockTime < minNextBlockTime {
-		// 	nextBlockTime = minNextBlockTime
-		// }
 
 		if isBlocker, err := b.chain.IsBlocker(&bestBlockHash, xpubStr, nextBlockTime); !isBlocker {
 			log.WithFields(log.Fields{"module": logModule, "error": err, "pubKey": xpubStr}).Debug("fail on check is next blocker")
