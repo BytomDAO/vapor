@@ -74,6 +74,7 @@ func (v *VoteResult) ApplyBlock(block *types.Block) error {
 		}
 	}
 
+	v.LastBlockHash = block.Hash()
 	return nil
 }
 
@@ -136,5 +137,6 @@ func (v *VoteResult) DetachBlock(block *types.Block) error {
 		}
 	}
 
+	v.LastBlockHash = block.PreviousBlockHash
 	return nil
 }

@@ -33,14 +33,14 @@ func (c *Chain) isIrreversible(blockNode *state.BlockNode) bool {
 		return false
 	}
 
-	signCount := uint64(0)
+	signCount := 0
 	for i := 0; i < len(consensusNodes); i++ {
 		if ok, _ := blockNode.BlockWitness.Test(uint32(i)); ok {
 			signCount++
 		}
 	}
 
-	return signCount > (uint64(len(consensusNodes)) * 2 / 3)
+	return signCount > len(consensusNodes)*2/3
 }
 
 // NextLeaderTime returns the start time of the specified public key as the next leader node
