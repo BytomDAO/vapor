@@ -38,6 +38,7 @@ var (
 	ErrUnbalanced                = errors.New("unbalanced asset amount between input and output")
 	ErrOverGasCredit             = errors.New("all gas credit has been spend")
 	ErrGasCalculate              = errors.New("gas usage calculate got a math error")
+	ErrVotePubKey                = errors.New("invalid public key of vote")
 )
 
 // GasState record the gas usage status
@@ -227,6 +228,9 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		}
 
 	case *bc.VoteOutput:
+		if len(e.Vote) != 64 {
+			return ErrVotePubKey
+		}
 		vs2 := *vs
 		vs2.sourcePos = 0
 		if err = checkValidSrc(&vs2, e.Source); err != nil {
@@ -270,6 +274,9 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			controlProgram = output.ControlProgram
 			value = output.Source.Value
 		case *bc.VoteOutput:
+			if len(output.Vote) != 64 {
+				return ErrVotePubKey
+			}
 			controlProgram = output.ControlProgram
 			value = output.Source.Value
 		default:
