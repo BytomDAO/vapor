@@ -88,7 +88,7 @@ func (c *consensusNodeManager) getConsensusNodes(prevBlockHash *bc.Hash) (map[st
 	}
 
 	seqHeight := prevBlockNode.Height + 1
-	if bestHeight := c.blockIndex.BestNode().Height; bestHeight < seqHeight {
+	if bestHeight := c.blockIndex.BestNode().Height; bestHeight < seqHeight && bestHeight != 0 {
 		seqHeight = bestHeight
 	}
 
@@ -115,6 +115,10 @@ func (c *consensusNodeManager) getConsensusNodes(prevBlockHash *bc.Hash) (map[st
 
 func (c *consensusNodeManager) getBestVoteResult() (*state.VoteResult, error) {
 	blockNode := c.blockIndex.BestNode()
+	if blockNode.Height == 0 {
+		return c.store.GetVoteResult(0)
+	}
+
 	seq := (blockNode.Height-1)/consensus.RoundVoteBlockNums + 1
 	voteResult, err := c.store.GetVoteResult(seq)
 	if err != nil {

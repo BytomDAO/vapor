@@ -57,8 +57,13 @@ func (b *BlockProposer) generateBlocks() {
 			nextBlockTime = minNextBlockTime
 		}
 
-		if isBlocker, err := b.chain.IsBlocker(&bestBlockHash, xpubStr, nextBlockTime); !isBlocker {
-			log.WithFields(log.Fields{"module": logModule, "error": err, "pubKey": xpubStr}).Debug("fail on check is next blocker")
+		isBlocker, err := b.chain.IsBlocker(&bestBlockHash, xpubStr, nextBlockTime)
+		if err != nil {
+			log.WithFields(log.Fields{"module": logModule, "error": err, "pubKey": xpubStr}).Error("fail on check is next blocker")
+			continue
+		}
+
+		if !isBlocker {
 			continue
 		}
 
