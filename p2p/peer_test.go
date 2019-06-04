@@ -6,18 +6,22 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tendermint/go-crypto"
-
 	cfg "github.com/vapor/config"
 	conn "github.com/vapor/p2p/connection"
+	"github.com/vapor/p2p/signlib"
 	"github.com/vapor/version"
 )
 
 const testCh = 0x01
 
 func TestPeerBasic(t *testing.T) {
+	privKey, err := signlib.NewPrivKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// simulate remote peer
-	rp := &remotePeer{PrivKey: crypto.GenPrivKeyEd25519(), Config: testCfg}
+	rp := &remotePeer{PrivKey: privKey, Config: testCfg}
 	rp.Start()
 	defer rp.Stop()
 
@@ -34,9 +38,12 @@ func TestPeerBasic(t *testing.T) {
 
 func TestPeerSend(t *testing.T) {
 	config := testCfg
-
+	privKey, err := signlib.NewPrivKey()
+	if err != nil {
+		t.Fatal(err)
+	}
 	// simulate remote peer
-	rp := &remotePeer{PrivKey: crypto.GenPrivKeyEd25519(), Config: config}
+	rp := &remotePeer{PrivKey: privKey, Config: config}
 	rp.Start()
 	defer rp.Stop()
 
@@ -68,9 +75,12 @@ func createOutboundPeerAndPerformHandshake(
 		{ID: testCh, Priority: 1},
 	}
 	reactorsByCh := map[byte]Reactor{testCh: NewTestReactor(chDescs, true)}
-	privkey := crypto.GenPrivKeyEd25519()
+	privKey, err := signlib.NewPrivKey()
+	if err != nil {
+		return nil, err
+	}
 	peerConfig := DefaultPeerConfig(config)
-	pc, err := newOutboundPeerConn(addr, privkey, peerConfig)
+	pc, err := newOutboundPeerConn(addr, privKey, peerConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +98,7 @@ func createOutboundPeerAndPerformHandshake(
 }
 
 type remotePeer struct {
-	PrivKey    crypto.PrivKeyEd25519
+	PrivKey    signlib.PrivKey
 	Config     *cfg.Config
 	addr       *NetAddress
 	quit       chan struct{}
@@ -132,7 +142,7 @@ func (rp *remotePeer) accept(l net.Listener) {
 		}
 
 		_, err = pc.HandshakeTimeout(&NodeInfo{
-			PubKey:     rp.PrivKey.PubKey().Unwrap().(crypto.PubKeyEd25519),
+			PubKey:     rp.PrivKey.XPub().String(),
 			Moniker:    "remote_peer",
 			Network:    rp.Config.ChainID,
 			Version:    version.Version,
@@ -156,7 +166,7 @@ func (rp *remotePeer) accept(l net.Listener) {
 }
 
 type inboundPeer struct {
-	PrivKey crypto.PrivKeyEd25519
+	PrivKey signlib.PrivKey
 	config  *cfg.Config
 }
 
@@ -168,7 +178,7 @@ func (ip *inboundPeer) dial(addr *NetAddress) {
 	}
 
 	_, err = pc.HandshakeTimeout(&NodeInfo{
-		PubKey:     ip.PrivKey.PubKey().Unwrap().(crypto.PubKeyEd25519),
+		PubKey:     ip.PrivKey.XPub().String(),
 		Moniker:    "remote_peer",
 		Network:    ip.config.ChainID,
 		Version:    version.Version,

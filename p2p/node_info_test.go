@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"
 
 	"github.com/vapor/errors"
+	"github.com/vapor/p2p/signlib"
 )
 
 func mockCompatibleWithFalse(remoteVerStr string) (bool, error) {
@@ -42,18 +42,23 @@ func TestCompatibleWith(t *testing.T) {
 }
 
 func TestNodeInfoWriteRead(t *testing.T) {
-	nodeInfo := &NodeInfo{PubKey: crypto.GenPrivKeyEd25519().PubKey().Unwrap().(crypto.PubKeyEd25519), Moniker: "bytomd", Network: "mainnet", NetworkID: 0x888, RemoteAddr: "127.0.0.2:0", ListenAddr: "127.0.0.1:0", Version: "1.1.0-test", ServiceFlag: 10, Other: []string{"abc", "bcd"}}
-	n, err, err1 := new(int), new(error), new(error)
+	key := [64]byte{0x01, 0x02}
+	pubKey, err := signlib.NewPubKey(key[:])
+	if err != nil {
+		t.Fatal("create pubkey err.", err)
+	}
+	nodeInfo := &NodeInfo{PubKey: pubKey.String(), Moniker: "bytomd", Network: "mainnet", NetworkID: 0x888, RemoteAddr: "127.0.0.2:0", ListenAddr: "127.0.0.1:0", Version: "1.1.0-test", ServiceFlag: 10, Other: []string{"abc", "bcd"}}
+	n, err1, err2 := new(int), new(error), new(error)
 	buf := new(bytes.Buffer)
 
-	wire.WriteBinary(nodeInfo, buf, n, err)
-	if *err != nil {
-		t.Fatal(*err)
+	wire.WriteBinary(nodeInfo, buf, n, err1)
+	if *err1 != nil {
+		t.Fatal(*err1)
 	}
 
 	peerNodeInfo := new(NodeInfo)
-	wire.ReadBinary(peerNodeInfo, buf, maxNodeInfoSize, new(int), err1)
-	if *err1 != nil {
+	wire.ReadBinary(peerNodeInfo, buf, maxNodeInfoSize, new(int), err2)
+	if *err2 != nil {
 		t.Fatal(*err1)
 	}
 
