@@ -85,17 +85,18 @@ func (c *Chain) initChainStatus() error {
 		return err
 	}
 
-	voteResultMap := make(map[uint64]*state.VoteResult)
-	if err := c.consensusNodeManager.applyBlock(voteResultMap, genesisBlock); err != nil {
-		return err
-	}
-
+	voteResults := []*state.VoteResult{&state.VoteResult{
+		Seq:         0,
+		NumOfVote:   map[string]uint64{},
+		BlockHash:   genesisBlock.Hash(),
+		BlockHeight: 0,
+	}}
 	node, err := state.NewBlockNode(&genesisBlock.BlockHeader, nil)
 	if err != nil {
 		return err
 	}
 
-	return c.store.SaveChainStatus(node, node, utxoView, voteResultMap)
+	return c.store.SaveChainStatus(node, node, utxoView, voteResults)
 }
 
 // BestBlockHeight returns the current height of the blockchain.
@@ -124,8 +125,8 @@ func (c *Chain) InMainChain(hash bc.Hash) bool {
 }
 
 // This function must be called with mu lock in above level
-func (c *Chain) setState(node *state.BlockNode, irreversibleNode *state.BlockNode, view *state.UtxoViewpoint, voteMap map[uint64]*state.VoteResult) error {
-	if err := c.store.SaveChainStatus(node, irreversibleNode, view, voteMap); err != nil {
+func (c *Chain) setState(node *state.BlockNode, irreversibleNode *state.BlockNode, view *state.UtxoViewpoint, voteResults []*state.VoteResult) error {
+	if err := c.store.SaveChainStatus(node, irreversibleNode, view, voteResults); err != nil {
 		return err
 	}
 
