@@ -65,11 +65,11 @@ func (c *Chain) ProcessBlockSignature(signature []byte, xPub [64]byte, blockHash
 		return err
 	}
 
-	if consensusNode.xpub.Verify(blockHash.Bytes(), signature) {
+	if consensusNode.XPub.Verify(blockHash.Bytes(), signature) {
 		return errInvalidSignature
 	}
 
-	isDoubleSign, err := c.checkDoubleSign(consensusNode.order, blockNode.Height, *blockHash)
+	isDoubleSign, err := c.checkDoubleSign(consensusNode.Order, blockNode.Height, *blockHash)
 	if err != nil {
 		return err
 	}
@@ -78,7 +78,7 @@ func (c *Chain) ProcessBlockSignature(signature []byte, xPub [64]byte, blockHash
 		return errDoubleSignBlock
 	}
 
-	if err := c.updateBlockSignature(&blockNode.Hash, consensusNode.order, signature); err != nil {
+	if err := c.updateBlockSignature(&blockNode.Hash, consensusNode.Order, signature); err != nil {
 		return err
 	}
 
@@ -106,25 +106,25 @@ func (c *Chain) validateSign(block *types.Block) (uint64, error) {
 	signCount := uint64(0)
 	blockHash := block.Hash()
 	for pubKey, node := range consensusNodeMap {
-		if len(block.Witness) <= int(node.order) {
+		if len(block.Witness) <= int(node.Order) {
 			continue
 		}
 
-		if block.Witness[node.order] == nil {
+		if block.Witness[node.Order] == nil {
 			cachekey := signCacheKey(blockHash.String(), pubKey)
 			if signature, ok := c.signatureCache.Get(cachekey); ok {
-				block.Witness[node.order] = signature.([]byte)
+				block.Witness[node.Order] = signature.([]byte)
 			} else {
 				continue
 			}
 		}
 
-		if ok := node.xpub.Verify(blockHash.Bytes(), block.Witness[node.order]); !ok {
-			block.Witness[node.order] = nil
+		if ok := node.XPub.Verify(blockHash.Bytes(), block.Witness[node.Order]); !ok {
+			block.Witness[node.Order] = nil
 			continue
 		}
 
-		isDoubleSign, err := c.checkDoubleSign(node.order, block.Height, block.Hash())
+		isDoubleSign, err := c.checkDoubleSign(node.Order, block.Height, block.Hash())
 		if err != nil {
 			return 0, err
 		}
@@ -132,7 +132,7 @@ func (c *Chain) validateSign(block *types.Block) (uint64, error) {
 		if isDoubleSign {
 			// Consensus node is signed twice with the same block height, discard the signature
 			log.WithFields(log.Fields{"module": logModule, "blockHash": blockHash.String(), "pubKey": pubKey}).Warn("the consensus node double sign the same height of different block")
-			block.Witness[node.order] = nil
+			block.Witness[node.Order] = nil
 			continue
 		}
 
@@ -187,15 +187,15 @@ func (c *Chain) SignBlock(block *types.Block) ([]byte, error) {
 	blockNodes := c.consensusNodeManager.blockIndex.NodesByHeight(block.Height)
 	for _, blockNode := range blockNodes {
 		// Has already signed the same height block
-		if ok, err := blockNode.BlockWitness.Test(uint32(node.order)); err != nil && ok {
+		if ok, err := blockNode.BlockWitness.Test(uint32(node.Order)); err != nil && ok {
 			return nil, nil
 		}
 	}
 
-	signature := block.Witness[node.order]
+	signature := block.Witness[node.Order]
 	if len(signature) == 0 {
 		signature = xprv.Sign(block.Hash().Bytes())
-		block.Witness[node.order] = signature
+		block.Witness[node.Order] = signature
 	}
 	return signature, nil
 }

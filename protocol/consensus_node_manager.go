@@ -1,11 +1,8 @@
 package protocol
 
 import (
-	"sort"
-
 	"github.com/vapor/config"
 	"github.com/vapor/consensus"
-	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -16,18 +13,6 @@ var (
 	errNotFoundConsensusNode = errors.New("can not found consensus node")
 	errNotFoundBlockNode     = errors.New("can not find block node")
 )
-
-type consensusNode struct {
-	xpub    chainkd.XPub
-	voteNum uint64
-	order   uint64
-}
-
-type consensusNodeSlice []*consensusNode
-
-func (c consensusNodeSlice) Len() int           { return len(c) }
-func (c consensusNodeSlice) Less(i, j int) bool { return c[i].voteNum > c[j].voteNum }
-func (c consensusNodeSlice) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
 
 type consensusNodeManager struct {
 	store      Store
@@ -41,7 +26,7 @@ func newConsensusNodeManager(store Store, blockIndex *state.BlockIndex) *consens
 	}
 }
 
-func (c *consensusNodeManager) getConsensusNode(prevBlockHash *bc.Hash, pubkey string) (*consensusNode, error) {
+func (c *consensusNodeManager) getConsensusNode(prevBlockHash *bc.Hash, pubkey string) (*state.ConsensusNode, error) {
 	consensusNodeMap, err := c.getConsensusNodesByVoteResult(prevBlockHash)
 	if err != nil {
 		return nil, err
@@ -71,7 +56,7 @@ func (c *consensusNodeManager) isBlocker(prevBlockHash *bc.Hash, pubKey string, 
 	}
 
 	startTimestamp := prevVoteRoundLastBlock.Timestamp + consensus.BlockTimeInterval
-	begin := getLastBlockTimeInTimeRange(startTimestamp, timeStamp, consensusNode.order, len(consensusNodeMap))
+	begin := getLastBlockTimeInTimeRange(startTimestamp, timeStamp, consensusNode.Order, len(consensusNodeMap))
 	end := begin + consensus.BlockNumEachNode*consensus.BlockTimeInterval
 	return timeStamp >= begin && timeStamp < end, nil
 }
@@ -106,7 +91,7 @@ func (c *consensusNodeManager) getPrevRoundVoteLastBlock(prevBlockHash *bc.Hash)
 	return lastBlockNode, nil
 }
 
-func (c *consensusNodeManager) getConsensusNodesByVoteResult(prevBlockHash *bc.Hash) (map[string]*consensusNode, error) {
+func (c *consensusNodeManager) getConsensusNodesByVoteResult(prevBlockHash *bc.Hash) (map[string]*state.ConsensusNode, error) {
 	prevBlockNode := c.blockIndex.GetNode(prevBlockHash)
 	if prevBlockNode == nil {
 		return nil, errNotFoundBlockNode
@@ -135,32 +120,7 @@ func (c *consensusNodeManager) getConsensusNodesByVoteResult(prevBlockHash *bc.H
 		return initConsensusNodes(), nil
 	}
 
-	var nodes []*consensusNode
-	for pubkey, voteNum := range voteResult.NumOfVote {
-		if voteNum >= consensus.MinVoteNum {
-			var xpub chainkd.XPub
-			if err := xpub.UnmarshalText([]byte(pubkey)); err != nil {
-				return nil, err
-			}
-
-			nodes = append(nodes, &consensusNode{
-				xpub:    xpub,
-				voteNum: voteNum,
-			})
-		}
-	}
-	// In principle, there is no need to sort all voting nodes.
-	// if there is a performance problem, consider the optimization later.
-	// TODO not consider the same number of votes
-	sort.Sort(consensusNodeSlice(nodes))
-
-	result := make(map[string]*consensusNode)
-	for i := 0; i < len(nodes) && i < consensus.NumOfConsensusNode; i++ {
-		node := nodes[i]
-		node.order = uint64(i)
-		result[node.xpub.String()] = node
-	}
-	return result, nil
+	return voteResult.ConsensusNodes()
 }
 
 func (c *consensusNodeManager) reorganizeVoteResult(voteResult *state.VoteResult, forkChainNode *state.BlockNode) error {
@@ -285,10 +245,10 @@ func (c *consensusNodeManager) detachBlock(voteResultMap map[uint64]*state.VoteR
 	return nil
 }
 
-func initConsensusNodes() map[string]*consensusNode {
-	voteResult := map[string]*consensusNode{}
+func initConsensusNodes() map[string]*state.ConsensusNode {
+	voteResult := map[string]*state.ConsensusNode{}
 	for i, xpub := range config.CommonConfig.Federation.Xpubs {
-		voteResult[xpub.String()] = &consensusNode{xpub: xpub, voteNum: 0, order: uint64(i)}
+		voteResult[xpub.String()] = &state.ConsensusNode{XPub: xpub, VoteNum: 0, Order: uint64(i)}
 	}
 	return voteResult
 }
