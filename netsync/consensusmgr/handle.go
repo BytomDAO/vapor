@@ -16,7 +16,6 @@ import (
 type Switch interface {
 	AddReactor(name string, reactor p2p.Reactor) p2p.Reactor
 	AddBannedPeer(string) error
-	ID() [32]byte
 }
 
 // Chain is the interface for Bytom core.
