@@ -5,8 +5,9 @@ import (
 	"io"
 	"testing"
 
-	"github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
+
+	"github.com/vapor/crypto/ed25519/chainkd"
 )
 
 type dummyConn struct {
@@ -32,10 +33,10 @@ func makeDummyConnPair() (fooConn, barConn dummyConn) {
 
 func makeSecretConnPair(tb testing.TB) (fooSecConn, barSecConn *SecretConnection) {
 	fooConn, barConn := makeDummyConnPair()
-	fooPrvKey := crypto.GenPrivKeyEd25519()
-	fooPubKey := fooPrvKey.PubKey().Unwrap().(crypto.PubKeyEd25519)
-	barPrvKey := crypto.GenPrivKeyEd25519()
-	barPubKey := barPrvKey.PubKey().Unwrap().(crypto.PubKeyEd25519)
+	fooPrvKey, _ := chainkd.NewXPrv(nil)
+	fooPubKey := fooPrvKey.XPub()
+	barPrvKey, _ := chainkd.NewXPrv(nil)
+	barPubKey := barPrvKey.XPub()
 
 	cmn.Parallel(
 		func() {
@@ -46,7 +47,7 @@ func makeSecretConnPair(tb testing.TB) (fooSecConn, barSecConn *SecretConnection
 				return
 			}
 			remotePubBytes := fooSecConn.RemotePubKey()
-			if !bytes.Equal(remotePubBytes[:], barPubKey[:]) {
+			if !bytes.Equal(remotePubBytes.Bytes()[:], barPubKey[:]) {
 				tb.Errorf("Unexpected fooSecConn.RemotePubKey.  Expected %v, got %v",
 					barPubKey, fooSecConn.RemotePubKey())
 			}
@@ -59,7 +60,7 @@ func makeSecretConnPair(tb testing.TB) (fooSecConn, barSecConn *SecretConnection
 				return
 			}
 			remotePubBytes := barSecConn.RemotePubKey()
-			if !bytes.Equal(remotePubBytes[:], fooPubKey[:]) {
+			if !bytes.Equal(remotePubBytes.Bytes()[:], fooPubKey[:]) {
 				tb.Errorf("Unexpected barSecConn.RemotePubKey.  Expected %v, got %v",
 					fooPubKey, barSecConn.RemotePubKey())
 			}
@@ -89,7 +90,7 @@ func TestSecretConnectionReadWrite(t *testing.T) {
 	genNodeRunner := func(nodeConn dummyConn, nodeWrites []string, nodeReads *[]string) func() {
 		return func() {
 			// Node handskae
-			nodePrvKey := crypto.GenPrivKeyEd25519()
+			nodePrvKey, _ := chainkd.NewXPrv(nil)
 			nodeSecretConn, err := MakeSecretConnection(nodeConn, nodePrvKey)
 			if err != nil {
 				t.Errorf("Failed to establish SecretConnection for node: %v", err)

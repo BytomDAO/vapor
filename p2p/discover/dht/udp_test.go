@@ -9,8 +9,8 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/vapor/common"
-	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/errors"
+	"github.com/vapor/p2p/signlib"
 )
 
 func TestPacketCodec(t *testing.T) {
@@ -175,7 +175,7 @@ func TestPacketCodec(t *testing.T) {
 		},
 	}
 
-	_, privateKey, _ := ed25519.GenerateKey(nil)
+	privateKey, _ := signlib.NewPrivKey()
 	netID := uint64(0x12345)
 	for i, test := range testPackets {
 		packet, h, err := encodePacket(privateKey, test.ptype, test.wantPacket, netID)
@@ -240,8 +240,8 @@ func TestPacketTransport(t *testing.T) {
 	inConn := &testConn{conn: c1}
 	realaddr := &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 40000}
 	toAddr := &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 40000}
-	_, inPrivKey, _ := ed25519.GenerateKey(nil)
-	_, outPrivKey, _ := ed25519.GenerateKey(nil)
+	inPrivKey, _ := signlib.NewPrivKey()
+	outPrivKey, _ := signlib.NewPrivKey()
 	netID := uint64(0x12345)
 
 	udpInput, err := listenUDP(inPrivKey, inConn, realaddr, netID)
@@ -368,8 +368,8 @@ func TestSendTopicNodes(t *testing.T) {
 	c1, c2 := net.Pipe()
 	inConn := &testConn{conn: c1}
 	realaddr := &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 40000}
-	_, inPrivKey, _ := ed25519.GenerateKey(nil)
-	_, outPrivKey, _ := ed25519.GenerateKey(nil)
+	inPrivKey, _ := signlib.NewPrivKey()
+	outPrivKey, _ := signlib.NewPrivKey()
 	netID := uint64(0x12345)
 
 	udpInput, err := listenUDP(inPrivKey, inConn, realaddr, netID)

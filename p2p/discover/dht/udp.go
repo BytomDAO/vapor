@@ -17,8 +17,8 @@ import (
 	"github.com/vapor/common"
 	cfg "github.com/vapor/config"
 	"github.com/vapor/crypto"
-	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/p2p/netutil"
+	"github.com/vapor/p2p/signlib"
 	"github.com/vapor/version"
 )
 
@@ -246,7 +246,7 @@ type netWork interface {
 // udp implements the RPC protocol.
 type udp struct {
 	conn conn
-	priv ed25519.PrivateKey
+	priv signlib.PrivKey
 	//netID used to isolate subnets
 	netID       uint64
 	ourEndpoint rpcEndpoint
@@ -254,7 +254,7 @@ type udp struct {
 }
 
 //NewDiscover create new dht discover
-func NewDiscover(config *cfg.Config, priv ed25519.PrivateKey, port uint16, netID uint64) (*Network, error) {
+func NewDiscover(config *cfg.Config, privKey signlib.PrivKey, port uint16, netID uint64) (*Network, error) {
 	addr, err := net.ResolveUDPAddr("udp", net.JoinHostPort("0.0.0.0", strconv.FormatUint(uint64(port), 10)))
 	if err != nil {
 		return nil, err
@@ -266,7 +266,7 @@ func NewDiscover(config *cfg.Config, priv ed25519.PrivateKey, port uint16, netID
 	}
 
 	realaddr := conn.LocalAddr().(*net.UDPAddr)
-	ntab, err := ListenUDP(priv, conn, realaddr, path.Join(config.DBDir(), "discover"), nil, netID)
+	ntab, err := ListenUDP(privKey, conn, realaddr, path.Join(config.DBDir(), "discover"), nil, netID)
 	if err != nil {
 		return nil, err
 	}
@@ -295,13 +295,13 @@ func NewDiscover(config *cfg.Config, priv ed25519.PrivateKey, port uint16, netID
 }
 
 // ListenUDP returns a new table that listens for UDP packets on laddr.
-func ListenUDP(priv ed25519.PrivateKey, conn conn, realaddr *net.UDPAddr, nodeDBPath string, netrestrict *netutil.Netlist, netID uint64) (*Network, error) {
-	transport, err := listenUDP(priv, conn, realaddr, netID)
+func ListenUDP(privKey signlib.PrivKey, conn conn, realaddr *net.UDPAddr, nodeDBPath string, netrestrict *netutil.Netlist, netID uint64) (*Network, error) {
+	transport, err := listenUDP(privKey, conn, realaddr, netID)
 	if err != nil {
 		return nil, err
 	}
 
-	net, err := newNetwork(transport, priv.Public(), nodeDBPath, netrestrict)
+	net, err := newNetwork(transport, privKey.XPub(), nodeDBPath, netrestrict)
 	if err != nil {
 		return nil, err
 	}
@@ -311,7 +311,7 @@ func ListenUDP(priv ed25519.PrivateKey, conn conn, realaddr *net.UDPAddr, nodeDB
 	return net, nil
 }
 
-func listenUDP(priv ed25519.PrivateKey, conn conn, realaddr *net.UDPAddr, netID uint64) (*udp, error) {
+func listenUDP(priv signlib.PrivKey, conn conn, realaddr *net.UDPAddr, netID uint64) (*udp, error) {
 	return &udp{conn: conn, priv: priv, netID: netID, ourEndpoint: makeEndpoint(realaddr, uint16(realaddr.Port))}, nil
 }
 
@@ -407,7 +407,7 @@ func (t *udp) sendPacket(toid NodeID, toaddr *net.UDPAddr, ptype byte, req inter
 // zeroed padding space for encodePacket.
 var headSpace = make([]byte, headSize)
 
-func encodePacket(priv ed25519.PrivateKey, ptype byte, req interface{}, netID uint64) (p, hash []byte, err error) {
+func encodePacket(privKey signlib.PrivKey, ptype byte, req interface{}, netID uint64) (p, hash []byte, err error) {
 	b := new(bytes.Buffer)
 	b.Write(headSpace)
 	b.WriteByte(ptype)
@@ -418,11 +418,11 @@ func encodePacket(priv ed25519.PrivateKey, ptype byte, req interface{}, netID ui
 		return nil, nil, err
 	}
 	packet := b.Bytes()
-	nodeID := priv.Public()
-	sig := ed25519.Sign(priv, common.BytesToHash(packet[headSize:]).Bytes())
+	nodeID := privKey.XPub()
+	sig := privKey.Sign(common.BytesToHash(packet[headSize:]).Bytes())
 	id := []byte(strconv.FormatUint(netID, 16))
 	copy(packet[:], id[:])
-	copy(packet[netIDSize:], nodeID[:])
+	copy(packet[netIDSize:], nodeID[:nodeIDSize])
 	copy(packet[netIDSize+nodeIDSize:], sig)
 
 	hash = common.BytesToHash(packet[:]).Bytes()
