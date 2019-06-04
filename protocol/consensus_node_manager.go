@@ -1,14 +1,12 @@
 package protocol
 
 import (
-	"encoding/hex"
 	"sort"
 
 	"github.com/vapor/config"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
-	"github.com/vapor/math/checked"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
@@ -121,7 +119,6 @@ func (c *consensusNodeManager) getConsensusNodesByVoteResult(prevBlockHash *bc.H
 		voteResult = &state.VoteResult{
 			Seq:       seq,
 			NumOfVote: make(map[string]uint64),
-			Finalized: false,
 		}
 	}
 
@@ -220,40 +217,7 @@ func (c *consensusNodeManager) applyBlock(voteResultMap map[uint64]*state.VoteRe
 		return err
 	}
 
-	emptyHash := bc.Hash{}
-	if voteResult.LastBlockHash != emptyHash && voteResult.LastBlockHash != block.PreviousBlockHash {
-		return errors.New("bbft append block error, the block parent hash is not equals last block hash of vote result")
-	}
-
-	for _, tx := range block.Transactions {
-		for _, input := range tx.Inputs {
-			unVoteInput, ok := input.TypedInput.(*types.UnvoteInput)
-			if !ok {
-				continue
-			}
-
-			pubkey := hex.EncodeToString(unVoteInput.Vote)
-			voteResult.NumOfVote[pubkey], ok = checked.SubUint64(voteResult.NumOfVote[pubkey], unVoteInput.Amount)
-			if !ok {
-				return errVotingOperationOverFlow
-			}
-		}
-		for _, output := range tx.Outputs {
-			voteOutput, ok := output.TypedOutput.(*types.VoteTxOutput)
-			if !ok {
-				continue
-			}
-
-			pubkey := hex.EncodeToString(voteOutput.Vote)
-			voteResult.NumOfVote[pubkey], ok = checked.AddUint64(voteResult.NumOfVote[pubkey], voteOutput.Amount)
-			if !ok {
-				return errVotingOperationOverFlow
-			}
-		}
-	}
-
-	voteResult.Finalized = (block.Height+1)%consensus.RoundVoteBlockNums == 0
-	return nil
+	return voteResult.ApplyBlock(block)
 }
 
 func (c *consensusNodeManager) getVoteResult(voteResultMap map[uint64]*state.VoteResult, blockHeight uint64) (*state.VoteResult, error) {
@@ -265,7 +229,6 @@ func (c *consensusNodeManager) getVoteResult(voteResultMap map[uint64]*state.Vot
 		voteResult = &state.VoteResult{
 			Seq:       seq,
 			NumOfVote: make(map[string]uint64),
-			Finalized: false,
 		}
 	}
 
@@ -275,7 +238,6 @@ func (c *consensusNodeManager) getVoteResult(voteResultMap map[uint64]*state.Vot
 			voteResult = &state.VoteResult{
 				Seq:       seq,
 				NumOfVote: prevVoteResult.NumOfVote,
-				Finalized: false,
 			}
 		}
 	}
@@ -294,13 +256,7 @@ func (c *consensusNodeManager) getVoteResult(voteResultMap map[uint64]*state.Vot
 		}
 
 		if voteResult != nil {
-			// previous round voting must have finalized
-			if !voteResult.Finalized {
-				return nil, errors.New("previous round voting has not finalized")
-			}
-
 			voteResult.Seq = seq
-			voteResult.Finalized = false
 			voteResult.LastBlockHash = bc.Hash{}
 		}
 	}
@@ -325,45 +281,14 @@ func (c *consensusNodeManager) detachBlock(voteResultMap map[uint64]*state.VoteR
 		voteResultMap[voteSeq] = voteResult
 	}
 
-	if voteResult.LastBlockHash != block.Hash() {
-		return errors.New("bbft detach block error, the block hash is not equals last block hash of vote result")
-	}
-
-	for _, tx := range block.Transactions {
-		for _, input := range tx.Inputs {
-			unVoteInput, ok := input.TypedInput.(*types.UnvoteInput)
-			if !ok {
-				continue
-			}
-
-			pubkey := hex.EncodeToString(unVoteInput.Vote)
-			voteResult.NumOfVote[pubkey], ok = checked.AddUint64(voteResult.NumOfVote[pubkey], unVoteInput.Amount)
-			if !ok {
-				return errVotingOperationOverFlow
-			}
-		}
-		for _, output := range tx.Outputs {
-			voteOutput, ok := output.TypedOutput.(*types.VoteTxOutput)
-			if !ok {
-				continue
-			}
-
-			pubkey := hex.EncodeToString(voteOutput.Vote)
-			voteResult.NumOfVote[pubkey], ok = checked.SubUint64(voteResult.NumOfVote[pubkey], voteOutput.Amount)
-			if !ok {
-				return errVotingOperationOverFlow
-			}
-		}
-	}
-
-	voteResult.Finalized = false
+	voteResult.DetachBlock(block)
 	return nil
 }
 
 func initConsensusNodes() map[string]*consensusNode {
 	voteResult := map[string]*consensusNode{}
-	for i, pubkey := range config.CommonConfig.Federation.Xpubs {
-		voteResult[pubkey.String()] = &consensusNode{xpub: pubkey, voteNum: 0, order: uint64(i)}
+	for i, xpub := range config.CommonConfig.Federation.Xpubs {
+		voteResult[xpub.String()] = &consensusNode{xpub: xpub, voteNum: 0, order: uint64(i)}
 	}
 	return voteResult
 }
