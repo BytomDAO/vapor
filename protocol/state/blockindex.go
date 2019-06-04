@@ -85,6 +85,20 @@ func (node *BlockNode) CalcPastMedianTime() uint64 {
 	return timestamps[len(timestamps)/2]
 }
 
+// GetParent return the node of specified height
+// And the node satisfies the same chain as current node
+// Height of current node must greater than height parameter
+func (node *BlockNode) GetParent(height uint64) *BlockNode {
+	prevBlockNode := node
+	for prevBlockNode != nil && prevBlockNode.Height != height {
+		if prevBlockNode.Height < height {
+			return nil
+		}
+		prevBlockNode = prevBlockNode.Parent
+	}
+	return prevBlockNode
+}
+
 // BlockIndex is the struct for help chain trace block chain as tree
 type BlockIndex struct {
 	sync.RWMutex
@@ -97,9 +111,9 @@ type BlockIndex struct {
 // NewBlockIndex will create a empty BlockIndex
 func NewBlockIndex() *BlockIndex {
 	return &BlockIndex{
-		index:       make(map[bc.Hash]*BlockNode),
+		index:     make(map[bc.Hash]*BlockNode),
 		heightIndex: make(map[uint64][]*BlockNode),
-		mainChain:   make([]*BlockNode, 0, approxNodesPerDay),
+		mainChain: make([]*BlockNode, 0, approxNodesPerDay),
 	}
 }
 
