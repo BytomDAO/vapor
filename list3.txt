@@ -1,0 +1,72 @@
+curl -X POST 127.0.0.1:9889/build-transaction  -d '{
+    "base_transaction":null,
+    "actions":[
+        {
+            "asset_id":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            "amount":20000000,
+            "source_id":"d5156f4477fcb694388e6aed7ca390e5bc81bb725ce7461caa241777c1f62236",
+            "source_pos":2,
+            "type":"cross_chain_in"
+        },
+        {
+            "amount":10000000,
+            "asset_id":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            "address":"vp1qfk5rudmkfny6x5enzxzj0qks3ce9dvgmyg4d2h",
+            "type":"control_address"
+        }
+    ]
+}'
+
+{"status":"success","data":{"raw_transaction":"07010001019001008d01d5156f4477fcb694388e6aed7ca390e5bc81bb725ce7461caa241777c1f62236ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80dac409020146ae2071dcacf8495651f205858a3a4b64c4d4bb24f382ff517b558c8e0acaac5819652039579ddd54e667057e175032683c1152578c9b05b5ecbc11b3f500b4263e41885152ad01000001013e003cffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ade204011600144da83e37764cc9a3533311852782d08e3256b11b00","signing_instructions":[{"position":0,"witness_components":[{"type":"raw_tx_signature","quorum":1,"keys":[{"xpub":"71dcacf8495651f205858a3a4b64c4d4bb24f382ff517b558c8e0acaac5819650abcd618c10058f867fce07b0455cdb34c273b2bf8fc7ee9e3c70706d5bba8f4","derivation_path":[]},{"xpub":"39579ddd54e667057e175032683c1152578c9b05b5ecbc11b3f500b4263e418868da2376963dbbfb18a0d8aac64ea0d97e7c82061c58e98e22d4d1c7f5f5809d","derivation_path":[]}],"signatures":null}]}],"fee":10000000,"allow_additional_actions":false}}
+
+
+
+
+
+
+curl -X POST 127.0.0.1:9889/sign-transaction  -d  '{"password":"11111","transaction":{"raw_transaction":"07010001019001008d01d5156f4477fcb694388e6aed7ca390e5bc81bb725ce7461caa241777c1f62236ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80dac409020146ae2071dcacf8495651f205858a3a4b64c4d4bb24f382ff517b558c8e0acaac5819652039579ddd54e667057e175032683c1152578c9b05b5ecbc11b3f500b4263e41885152ad01000001013e003cffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ade204011600144da83e37764cc9a3533311852782d08e3256b11b00","signing_instructions":[{"position":0,"witness_components":[{"type":"raw_tx_signature","quorum":1,"keys":[{"xpub":"71dcacf8495651f205858a3a4b64c4d4bb24f382ff517b558c8e0acaac5819650abcd618c10058f867fce07b0455cdb34c273b2bf8fc7ee9e3c70706d5bba8f4","derivation_path":[]},{"xpub":"39579ddd54e667057e175032683c1152578c9b05b5ecbc11b3f500b4263e418868da2376963dbbfb18a0d8aac64ea0d97e7c82061c58e98e22d4d1c7f5f5809d","derivation_path":[]}],"signatures":null}]}],"fee":10000000,"allow_additional_actions":false}}'
+
+
+{"status":"success","data":{"transaction":{"raw_transaction":"07010001019001008d01d5156f4477fcb694388e6aed7ca390e5bc81bb725ce7461caa241777c1f62236ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80dac409020146ae2071dcacf8495651f205858a3a4b64c4d4bb24f382ff517b558c8e0acaac5819652039579ddd54e667057e175032683c1152578c9b05b5ecbc11b3f500b4263e41885152ad420140ce93a1acc790feba4907951a9a4c2b10bc9dd362c990b71f782ab4b9f51cb0b7d86b0026a1bab960dd99753abd4cf1361377bb59e9ece71e15c99d97968dc20a0001013e003cffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ade204011600144da83e37764cc9a3533311852782d08e3256b11b00","signing_instructions":[{"position":0,"witness_components":[{"type":"raw_tx_signature","quorum":1,"keys":[{"xpub":"71dcacf8495651f205858a3a4b64c4d4bb24f382ff517b558c8e0acaac5819650abcd618c10058f867fce07b0455cdb34c273b2bf8fc7ee9e3c70706d5bba8f4","derivation_path":[]},{"xpub":"39579ddd54e667057e175032683c1152578c9b05b5ecbc11b3f500b4263e418868da2376963dbbfb18a0d8aac64ea0d97e7c82061c58e98e22d4d1c7f5f5809d","derivation_path":[]}],"signatures":["ce93a1acc790feba4907951a9a4c2b10bc9dd362c990b71f782ab4b9f51cb0b7d86b0026a1bab960dd99753abd4cf1361377bb59e9ece71e15c99d97968dc20a",""]}]}],"fee":10000000,"allow_additional_actions":false},"sign_complete":true}}
+
+
+curl -X POST 127.0.0.1:9889/submit-transaction -d '{"raw_transaction":"07010001019001008d01d5156f4477fcb694388e6aed7ca390e5bc81bb725ce7461caa241777c1f62236ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80dac409020146ae2071dcacf8495651f205858a3a4b64c4d4bb24f382ff517b558c8e0acaac5819652039579ddd54e667057e175032683c1152578c9b05b5ecbc11b3f500b4263e41885152ad420140ce93a1acc790feba4907951a9a4c2b10bc9dd362c990b71f782ab4b9f51cb0b7d86b0026a1bab960dd99753abd4cf1361377bb59e9ece71e15c99d97968dc20a0001013e003cffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ade204011600144da83e37764cc9a3533311852782d08e3256b11b00"}'
+
+
+curl -X POST 127.0.0.1:9889/list-transactions -d '{"account_id": "0TANKP8DG0A02", "unconfirmed": true}'
+
+
+
+
+curl -X POST 127.0.0.1:9889/build-transaction  -d '{
+    "base_transaction":null,
+    "actions":[
+        {
+            "amount":9000000,
+            "asset_id":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            "account_id":"0TAOSK9J00A02",
+            "type":"spend_account",
+            "use_unconfirmed":true
+        },
+        {
+            "amount":4000000,
+            "asset_id":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            "address":"bm1q3yt265592czgh96r0uz63ta8fq40uzu5a8c2h0",
+            "type":"cross_chain_out"
+        }
+    ]
+}'
+
+
+{"status":"success","data":{"raw_transaction":"07010001015f015d81131dd77fb2625a6ee093486383ffd25c9ba41cb827e8c831c3974e6cd49fc7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ade20400011600144da83e37764cc9a3533311852782d08e3256b11b010002013d003bffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc0843d011600145bec5f83ed26d897e7037badac0f70e59f79936a00013e013cffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8092f401011600148916ad528556048b97437f05a8afa7482afe0b9400","signing_instructions":[{"position":0,"witness_components":[{"type":"raw_tx_signature","quorum":1,"keys":[{"xpub":"71dcacf8495651f205858a3a4b64c4d4bb24f382ff517b558c8e0acaac5819650abcd618c10058f867fce07b0455cdb34c273b2bf8fc7ee9e3c70706d5bba8f4","derivation_path":["2c000000","99000000","01000000","00000000","01000000"]}],"signatures":null},{"type":"data","value":"5b4c19722110ea7c1b5ace5d63393d401ef0797a605568a88a8fc4cdfcf293b6"}]}],"fee":5000000,"allow_additional_actions":false}}
+
+
+curl -X POST 127.0.0.1:9889/sign-transaction  -d  '{"password":"11111","transaction":{"raw_transaction":"07010001015f015d81131dd77fb2625a6ee093486383ffd25c9ba41cb827e8c831c3974e6cd49fc7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ade20400011600144da83e37764cc9a3533311852782d08e3256b11b010002013d003bffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc0843d011600145bec5f83ed26d897e7037badac0f70e59f79936a00013e013cffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8092f401011600148916ad528556048b97437f05a8afa7482afe0b9400","signing_instructions":[{"position":0,"witness_components":[{"type":"raw_tx_signature","quorum":1,"keys":[{"xpub":"71dcacf8495651f205858a3a4b64c4d4bb24f382ff517b558c8e0acaac5819650abcd618c10058f867fce07b0455cdb34c273b2bf8fc7ee9e3c70706d5bba8f4","derivation_path":["2c000000","99000000","01000000","00000000","01000000"]}],"signatures":null},{"type":"data","value":"5b4c19722110ea7c1b5ace5d63393d401ef0797a605568a88a8fc4cdfcf293b6"}]}],"fee":5000000,"allow_additional_actions":false}}'
+
+
+{"status":"success","data":{"transaction":{"raw_transaction":"07010001015f015d81131dd77fb2625a6ee093486383ffd25c9ba41cb827e8c831c3974e6cd49fc7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ade20400011600144da83e37764cc9a3533311852782d08e3256b11b630240f3e012ba062577b7c25bbbb99f6beb180608f915181261da2cca9338666df2814cef52800b3406f065470384ffbf6a69878ac0f4893fb94c6eee16c1eec2990e205b4c19722110ea7c1b5ace5d63393d401ef0797a605568a88a8fc4cdfcf293b602013d003bffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc0843d011600145bec5f83ed26d897e7037badac0f70e59f79936a00013e013cffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8092f401011600148916ad528556048b97437f05a8afa7482afe0b9400","signing_instructions":[{"position":0,"witness_components":[{"type":"raw_tx_signature","quorum":1,"keys":[{"xpub":"71dcacf8495651f205858a3a4b64c4d4bb24f382ff517b558c8e0acaac5819650abcd618c10058f867fce07b0455cdb34c273b2bf8fc7ee9e3c70706d5bba8f4","derivation_path":["2c000000","99000000","01000000","00000000","01000000"]}],"signatures":["f3e012ba062577b7c25bbbb99f6beb180608f915181261da2cca9338666df2814cef52800b3406f065470384ffbf6a69878ac0f4893fb94c6eee16c1eec2990e"]},{"type":"data","value":"5b4c19722110ea7c1b5ace5d63393d401ef0797a605568a88a8fc4cdfcf293b6"}]}],"fee":5000000,"allow_additional_actions":false},"sign_complete":true}}
+
+
+curl -X POST 127.0.0.1:9889/submit-transaction -d '{"raw_transaction":"07010001015f015d81131dd77fb2625a6ee093486383ffd25c9ba41cb827e8c831c3974e6cd49fc7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ade20400011600144da83e37764cc9a3533311852782d08e3256b11b630240f3e012ba062577b7c25bbbb99f6beb180608f915181261da2cca9338666df2814cef52800b3406f065470384ffbf6a69878ac0f4893fb94c6eee16c1eec2990e205b4c19722110ea7c1b5ace5d63393d401ef0797a605568a88a8fc4cdfcf293b602013d003bffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc0843d011600145bec5f83ed26d897e7037badac0f70e59f79936a00013e013cffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8092f401011600148916ad528556048b97437f05a8afa7482afe0b9400"}'
+
+

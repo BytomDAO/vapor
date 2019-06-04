@@ -251,7 +251,7 @@ func (w *Wallet) BuildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOut
 	case *bc.IntraChainOutput:
 		out.Type = "control"
 	case *bc.CrossChainOutput:
-		out.Type = "cross_Output"
+		out.Type = "cross_chain_out"
 	case *bc.VoteOutput:
 		out.Type = "vote"
 		out.Vote = e.Vote
