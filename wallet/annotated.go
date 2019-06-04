@@ -177,7 +177,7 @@ func (w *Wallet) BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInp
 	case *bc.CrossChainInput:
 		in.Type = "cross_chain_in"
 		in.ControlProgram = orig.ControlProgram()
-		in.Address = w.getAddressFromControlProgram(in.ControlProgram)
+		in.Address = w.getAddressFromControlProgram(in.ControlProgram, true)
 		in.SpentOutputID = e.MainchainOutputId
 		arguments := orig.Arguments()
 		for _, arg := range arguments {
@@ -187,7 +187,7 @@ func (w *Wallet) BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInp
 	case *bc.Spend:
 		in.Type = "spend"
 		in.ControlProgram = orig.ControlProgram()
-		in.Address = w.getAddressFromControlProgram(in.ControlProgram)
+		in.Address = w.getAddressFromControlProgram(in.ControlProgram, false)
 		in.SpentOutputID = e.SpentOutputId
 		arguments := orig.Arguments()
 		for _, arg := range arguments {
@@ -201,22 +201,27 @@ func (w *Wallet) BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInp
 	return in
 }
 
-func (w *Wallet) getAddressFromControlProgram(prog []byte) string {
+func (w *Wallet) getAddressFromControlProgram(prog []byte, isMainchain bool) string {
+	netParams := &consensus.ActiveNetParams
+	if isMainchain {
+		netParams = &consensus.MainNetParams
+	}
+
 	if segwit.IsP2WPKHScript(prog) {
 		if pubHash, err := segwit.GetHashFromStandardProg(prog); err == nil {
-			return buildP2PKHAddress(pubHash)
+			return buildP2PKHAddress(pubHash, netParams)
 		}
 	} else if segwit.IsP2WSHScript(prog) {
 		if scriptHash, err := segwit.GetHashFromStandardProg(prog); err == nil {
-			return buildP2SHAddress(scriptHash)
+			return buildP2SHAddress(scriptHash, netParams)
 		}
 	}
 
 	return ""
 }
 
-func buildP2PKHAddress(pubHash []byte) string {
-	address, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.ActiveNetParams)
+func buildP2PKHAddress(pubHash []byte, netParams *consensus.Params) string {
+	address, err := common.NewAddressWitnessPubKeyHash(pubHash, netParams)
 	if err != nil {
 		return ""
 	}
@@ -224,8 +229,8 @@ func buildP2PKHAddress(pubHash []byte) string {
 	return address.EncodeAddress()
 }
 
-func buildP2SHAddress(scriptHash []byte) string {
-	address, err := common.NewAddressWitnessScriptHash(scriptHash, &consensus.ActiveNetParams)
+func buildP2SHAddress(scriptHash []byte, netParams *consensus.Params) string {
+	address, err := common.NewAddressWitnessScriptHash(scriptHash, netParams)
 	if err != nil {
 		return ""
 	}
@@ -244,18 +249,24 @@ func (w *Wallet) BuildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOut
 		AssetDefinition: &emptyJSONObject,
 		Amount:          orig.AssetAmount().Amount,
 		ControlProgram:  orig.ControlProgram(),
-		Address:         w.getAddressFromControlProgram(orig.ControlProgram()),
 	}
 
+	var isMainchainAddress bool
 	switch e := tx.Entries[*outid].(type) {
 	case *bc.IntraChainOutput:
 		out.Type = "control"
+		isMainchainAddress = false
+
 	case *bc.CrossChainOutput:
 		out.Type = "cross_chain_out"
+		isMainchainAddress = true
+
 	case *bc.VoteOutput:
 		out.Type = "vote"
 		out.Vote = e.Vote
+		isMainchainAddress = false
 	}
 
+	out.Address = w.getAddressFromControlProgram(orig.ControlProgram(), isMainchainAddress)
 	return out
 }
