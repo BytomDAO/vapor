@@ -29,7 +29,7 @@ func TestCheckBlockTime(t *testing.T) {
 			desc:       "timestamp less than past median time (blocktest#1005)",
 			blockTime:  1510000094,
 			parentTime: []uint64{1520000000, 1510000099, 1510000098, 1510000097, 1510000096, 1510000095, 1510000094, 1510000093, 1510000092, 1510000091, 1510000090},
-			err:        errBadTimestamp,
+			err:        nil,
 		},
 		{
 			desc:       "timestamp greater than max limit (blocktest#1006)",
