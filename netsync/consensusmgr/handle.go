@@ -102,7 +102,7 @@ func (m *Manager) handleBlockSignatureMsg(peerID string, msg *BlockSignatureMsg)
 }
 
 func (m *Manager) blockProposeMsgBroadcastLoop() {
-	blockProposeMsgSub, err := m.eventDispatcher.Subscribe(event.NewBlockProposeEvent{})
+	blockProposeMsgSub, err := m.eventDispatcher.Subscribe(event.NewProposedBlockEvent{})
 	if err != nil {
 		logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on subscribe NewBlockProposeEvent")
 		return
@@ -117,7 +117,7 @@ func (m *Manager) blockProposeMsgBroadcastLoop() {
 				return
 			}
 
-			ev, ok := obj.Data.(event.NewBlockProposeEvent)
+			ev, ok := obj.Data.(event.NewProposedBlockEvent)
 			if !ok {
 				logrus.WithFields(logrus.Fields{"module": logModule}).Error("event type error")
 				continue

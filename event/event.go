@@ -33,9 +33,6 @@ type BlockSignatureEvent struct {
 	XPub      [64]byte
 }
 
-//NewBlockProposeEvent block propose event which needs to broadcast.
-type NewBlockProposeEvent struct{ Block types.Block }
-
 // TypeMuxEvent is a time-tagged notification pushed to subscribers.
 type TypeMuxEvent struct {
 	Time time.Time
