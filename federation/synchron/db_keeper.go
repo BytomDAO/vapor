@@ -12,17 +12,18 @@ import (
 	"github.com/vapor/federation/config"
 	// "github.com/blockcenter/database"
 	// "github.com/blockcenter/database/orm"
-	// "github.com/vapor/federation/service"
+	"github.com/vapor/federation/service"
 )
 
 type DbKeeper struct {
-	db *gorm.DB
-	// node *service.Node
+	db   *gorm.DB
+	node *service.Node
 }
 
 func NewDbKeeper(db *gorm.DB, chainCfg *config.Chain) *DbKeeper {
 	return &DbKeeper{
-		db: db,
+		db:   db,
+		node: service.NewNode(chainCfg.Upstream.RPC),
 	}
 }
 
