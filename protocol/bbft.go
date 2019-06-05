@@ -28,7 +28,7 @@ func signCacheKey(blockHash, pubkey string) string {
 }
 
 func (c *Chain) isIrreversible(blockNode *state.BlockNode) bool {
-	consensusNodes, err := c.consensusNodeManager.getConsensusNodesByVoteResult(&blockNode.Parent.Hash)
+	consensusNodes, err := c.consensusNodeManager.getConsensusNodes(&blockNode.Parent.Hash)
 	if err != nil {
 		return false
 	}
@@ -97,7 +97,7 @@ func (c *Chain) ProcessBlockSignature(signature []byte, xPub [64]byte, blockHash
 // if some signature is invalid, they will be reset to nil
 // if the block has not the signature of blocker, it will return error
 func (c *Chain) validateSign(block *types.Block) (uint64, error) {
-	consensusNodeMap, err := c.consensusNodeManager.getConsensusNodesByVoteResult(&block.PreviousBlockHash)
+	consensusNodeMap, err := c.consensusNodeManager.getConsensusNodes(&block.PreviousBlockHash)
 	if err != nil {
 		return 0, err
 	}
