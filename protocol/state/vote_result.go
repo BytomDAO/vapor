@@ -32,6 +32,12 @@ func (c byVote) Swap(i, j int) { c[i], c[j] = c[j], c[i] }
 // seq 1 is the the block height 1, to block height RoundVoteBlockNums
 // seq 2 is the block height RoundVoteBlockNums + 1 to block height 2 * RoundVoteBlockNums
 // consensus node of the current round is the final result of previous round
+func CalcVoteSeq(blockHeight uint64) uint64 {
+	if blockHeight == 0 {
+		return 0
+	}
+	return (blockHeight-1)/consensus.RoundVoteBlockNums + 1
+}
 
 // VoteResult represents a snapshot of each round of DPOS voting
 // Seq indicates the sequence of current votes, which start from zero
@@ -82,7 +88,7 @@ func (v *VoteResult) ApplyBlock(block *types.Block) error {
 
 	v.BlockHash = block.Hash()
 	v.BlockHeight = block.Height
-	v.Seq = (block.Height-1)/consensus.RoundVoteBlockNums + 1
+	v.Seq = CalcVoteSeq(block.Height)
 	return nil
 }
 
@@ -147,7 +153,7 @@ func (v *VoteResult) DetachBlock(block *types.Block) error {
 
 	v.BlockHash = block.PreviousBlockHash
 	v.BlockHeight = block.Height - 1
-	v.Seq = (block.Height-2)/consensus.RoundVoteBlockNums + 1
+	v.Seq = CalcVoteSeq(block.Height - 1)
 	return nil
 }
 
