@@ -21,14 +21,14 @@ func TestCheckBlockTime(t *testing.T) {
 		err        error
 	}{
 		{
-			blockTime:  1520000001,
+			blockTime:  1520000500,
 			parentTime: []uint64{1520000000},
 			err:        nil,
 		},
 		{
 			desc:       "timestamp less than past median time (blocktest#1005)",
-			blockTime:  1510000094,
-			parentTime: []uint64{1520000000, 1510000099, 1510000098, 1510000097, 1510000096, 1510000095, 1510000094, 1510000093, 1510000092, 1510000091, 1510000090},
+			blockTime:  1520005500,
+			parentTime: []uint64{1520000000, 1520000500, 1520001000, 1520001500, 1520002000, 1520002500, 1520003000, 1520003500, 1520004000, 1520004500, 1520005000},
 			err:        nil,
 		},
 		{
