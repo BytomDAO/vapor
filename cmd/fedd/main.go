@@ -7,15 +7,18 @@ import (
 
 	"github.com/vapor/federation/config"
 	"github.com/vapor/federation/database"
-	// "github.com/blockcenter/synchron"
+	"github.com/vapor/federation/synchron"
 )
 
 func main() {
 	cfg := config.NewConfig()
-	_, err := database.NewMySQLDB(cfg.MySQLConfig)
+	db, err := database.NewMySQLDB(cfg.MySQLConfig)
 	if err != nil {
 		log.WithField("err", err).Panic("initialize mysql db error")
 	}
+
+	go synchron.NewDbKeeper(db, &cfg.Mainchain).Run()
+	go synchron.NewDbKeeper(db, &cfg.Sidechain).Run()
 
 	// keep the main func running in case of terminating goroutines
 	var wg sync.WaitGroup
