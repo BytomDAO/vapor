@@ -30,6 +30,9 @@ func checkBlockTime(b *bc.Block, parent *state.BlockNode) error {
 	if parent.Timestamp >= b.Timestamp {
 		return errBadTimestamp
 	}
+	if b.Timestamp < (parent.Timestamp + 500) {
+		return errBadTimestamp
+	}
 	if b.Timestamp > (now + consensus.MaxTimeOffsetMs) {
 		return errBadTimestamp
 	}
