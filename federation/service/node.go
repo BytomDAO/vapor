@@ -19,10 +19,12 @@ func NewNode(ip string) *Node {
 	return &Node{ip: ip}
 }
 
+// TODO: FK
 func (n *Node) GetBlockByHash(hash string) (*types.Block, *bc.TransactionStatus, error) {
 	return n.getRawBlock(&getRawBlockReq{BlockHash: hash})
 }
 
+// TODO: FK
 func (n *Node) GetBlockByHeight(height uint64) (*types.Block, *bc.TransactionStatus, error) {
 	return n.getRawBlock(&getRawBlockReq{BlockHeight: height})
 }
@@ -42,11 +44,13 @@ type getRawBlockReq struct {
 	BlockHash   string `json:"block_hash"`
 }
 
+// TODO: FK
 type getRawBlockResp struct {
 	RawBlock          *types.Block          `json:"raw_block"`
 	TransactionStatus *bc.TransactionStatus `json:"transaction_status"`
 }
 
+// TODO: FK
 func (n *Node) getRawBlock(req *getRawBlockReq) (*types.Block, *bc.TransactionStatus, error) {
 	url := "/get-raw-block"
 	payload, err := json.Marshal(req)
@@ -58,6 +62,7 @@ func (n *Node) getRawBlock(req *getRawBlockReq) (*types.Block, *bc.TransactionSt
 	return res.RawBlock, res.TransactionStatus, n.request(url, payload, res)
 }
 
+// TODO: FK
 type submitTxReq struct {
 	Tx *types.Tx `json:"raw_transaction"`
 }
