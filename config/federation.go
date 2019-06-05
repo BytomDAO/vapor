@@ -7,6 +7,8 @@ import (
 	"os"
 )
 
+type FederationDaemon struct{}
+
 func ExportFederationFile(fedFile string, config *Config) error {
 	buf := new(bytes.Buffer)
 

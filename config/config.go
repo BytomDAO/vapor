@@ -203,8 +203,9 @@ type WebsocketConfig struct {
 }
 
 type FederationConfig struct {
-	Xpubs  []chainkd.XPub `json:"xpubs"`
-	Quorum int            `json:"quorum"`
+	Xpubs            []chainkd.XPub   `json:"xpubs"`
+	Quorum           int              `json:"quorum"`
+	FederationDaemon FederationDaemon `json:"daemon"`
 }
 
 // Default configurable rpc's auth parameters.
