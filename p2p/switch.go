@@ -22,7 +22,7 @@ import (
 	"github.com/vapor/p2p/discover/mdns"
 	"github.com/vapor/p2p/netutil"
 	"github.com/vapor/p2p/signlib"
-	"github.com/vapor/p2p/trust"
+	"github.com/vapor/p2p/security/trust"
 	"github.com/vapor/version"
 )
 

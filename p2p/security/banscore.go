@@ -1,4 +1,4 @@
-package trust
+package security
 
 import (
 	"fmt"

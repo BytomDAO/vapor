@@ -13,7 +13,7 @@ import (
 	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
 	msgs "github.com/vapor/netsync/messages"
-	"github.com/vapor/p2p/trust"
+	"github.com/vapor/p2p/security/trust"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
