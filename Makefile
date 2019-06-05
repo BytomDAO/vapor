@@ -38,6 +38,10 @@ BYTOM_RELEASE64 := bytom-$(VERSION)-$(GOOS)_amd64
 
 all: test target release-all install
 
+fedd:
+	@echo "Building fedd to cmd/fedd/fedd"
+	@go build $(BUILD_FLAGS) -o cmd/fedd/fedd cmd/fedd/main.go
+
 bytomd:
 	@echo "Building bytomd to cmd/bytomd/bytomd"
 	@go build $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go

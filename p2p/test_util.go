@@ -4,13 +4,13 @@ import (
 	"net"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
 
 	cfg "github.com/vapor/config"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/p2p/connection"
 	"github.com/vapor/p2p/discover/dht"
+	"github.com/vapor/p2p/signlib"
 )
 
 //PanicOnAddPeerErr add peer error
@@ -88,7 +88,7 @@ func (m *mockDiscv) ReadRandomNodes(buf []*dht.Node) (n int) {
 	return 0
 }
 
-func MakeSwitch(cfg *cfg.Config, testdb dbm.DB, privKey crypto.PrivKeyEd25519, initSwitch func(*Switch) *Switch) *Switch {
+func MakeSwitch(cfg *cfg.Config, testdb dbm.DB, privKey signlib.PrivKey, initSwitch func(*Switch) *Switch) *Switch {
 	// new switch, add reactors
 	l, listenAddr := GetListener(cfg.P2P)
 	cfg.P2P.LANDiscover = false

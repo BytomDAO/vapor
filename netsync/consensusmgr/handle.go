@@ -16,7 +16,6 @@ import (
 type Switch interface {
 	AddReactor(name string, reactor p2p.Reactor) p2p.Reactor
 	AddBannedPeer(string) error
-	ID() [32]byte
 }
 
 // Chain is the interface for Bytom core.
@@ -24,7 +23,7 @@ type Chain interface {
 	BestBlockHeight() uint64
 	GetHeaderByHash(*bc.Hash) (*types.BlockHeader, error)
 	ProcessBlock(*types.Block) (bool, error)
-	ProcessBlockSignature(signature []byte, pubkey [64]byte, blockHeight uint64, blockHash *bc.Hash) error
+	ProcessBlockSignature(signature []byte, pubkey [64]byte, blockHash *bc.Hash) error
 }
 
 type blockMsg struct {
@@ -96,7 +95,7 @@ func (m *Manager) handleBlockProposeMsg(peerID string, msg *BlockProposeMsg) {
 
 func (m *Manager) handleBlockSignatureMsg(peerID string, msg *BlockSignatureMsg) {
 	blockHash := bc.NewHash(msg.BlockHash)
-	if err := m.chain.ProcessBlockSignature(msg.Signature, msg.PubKey, msg.Height, &blockHash); err != nil {
+	if err := m.chain.ProcessBlockSignature(msg.Signature, msg.PubKey, &blockHash); err != nil {
 		m.peers.AddBanScore(peerID, 20, 0, err.Error())
 		return
 	}

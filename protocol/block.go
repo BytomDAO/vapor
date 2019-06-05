@@ -91,12 +91,12 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	}
 
 	voteResultMap := make(map[uint64]*state.VoteResult)
-	if err := c.ApplyBlock(voteResultMap, block); err != nil {
+	if err := c.consensusNodeManager.applyBlock(voteResultMap, block); err != nil {
 		return err
 	}
 
 	node := c.index.GetNode(&bcBlock.ID)
-	if c.isIrreversible(block) && block.Height > irreversibleNode.Height {
+	if c.isIrreversible(node) && block.Height > irreversibleNode.Height {
 		irreversibleNode = node
 	}
 
@@ -140,7 +140,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			return err
 		}
 
-		if err := c.DetachBlock(voteResultMap, b); err != nil {
+		if err := c.consensusNodeManager.detachBlock(voteResultMap, b); err != nil {
 			return err
 		}
 
@@ -167,11 +167,11 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			return err
 		}
 
-		if err := c.ApplyBlock(voteResultMap, b); err != nil {
+		if err := c.consensusNodeManager.applyBlock(voteResultMap, b); err != nil {
 			return err
 		}
 
-		if c.isIrreversible(b) && b.Height > irreversibleNode.Height {
+		if c.isIrreversible(attachNode) && b.Height > irreversibleNode.Height {
 			irreversibleNode = attachNode
 		}
 
@@ -183,7 +183,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 
 // SaveBlock will validate and save block into storage
 func (c *Chain) saveBlock(block *types.Block) error {
-	if err := c.ValidateBlock(block); err != nil {
+	if _, err := c.validateSign(block); err != nil {
 		return errors.Sub(ErrBadBlock, err)
 	}
 
@@ -282,18 +282,9 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 		return c.orphanManage.BlockExist(&blockHash), nil
 	}
 
-	parent := c.index.GetNode(&block.PreviousBlockHash)
-	if parent == nil {
+	if parent := c.index.GetNode(&block.PreviousBlockHash); parent == nil {
 		c.orphanManage.Add(block)
 		return true, nil
-	}
-
-	forkPointBlock := parent
-	for !c.index.InMainchain(forkPointBlock.Hash) {
-		forkPointBlock = forkPointBlock.Parent
-	}
-	if forkPointBlock.Height < c.bestIrreversibleNode.Height {
-		return false, errors.New("the block impossible to be block of main chain")
 	}
 
 	if err := c.saveBlock(block); err != nil {

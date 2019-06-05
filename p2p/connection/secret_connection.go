@@ -11,13 +11,13 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/tendermint/go-wire"
+	cmn "github.com/tendermint/tmlibs/common"
 	"golang.org/x/crypto/nacl/box"
 	"golang.org/x/crypto/nacl/secretbox"
 	"golang.org/x/crypto/ripemd160"
 
-	"github.com/tendermint/go-crypto"
-	wire "github.com/tendermint/go-wire"
-	cmn "github.com/tendermint/tmlibs/common"
+	"github.com/vapor/p2p/signlib"
 )
 
 const (
@@ -25,12 +25,11 @@ const (
 	dataMaxSize     = 1024
 	totalFrameSize  = dataMaxSize + dataLenSize
 	sealedFrameSize = totalFrameSize + secretbox.Overhead
-	authSigMsgSize  = (32 + 1) + (64 + 1) // fixed size (length prefixed) byte arrays
 )
 
 type authSigMessage struct {
-	Key crypto.PubKey
-	Sig crypto.Signature
+	Key []byte
+	Sig []byte
 }
 
 // SecretConnection implements net.Conn
@@ -39,14 +38,12 @@ type SecretConnection struct {
 	recvBuffer []byte
 	recvNonce  *[24]byte
 	sendNonce  *[24]byte
-	remPubKey  crypto.PubKeyEd25519
+	remPubKey  signlib.PubKey
 	shrSecret  *[32]byte // shared secret
 }
 
 // MakeSecretConnection performs handshake and returns a new authenticated SecretConnection.
-func MakeSecretConnection(conn io.ReadWriteCloser, locPrivKey crypto.PrivKeyEd25519) (*SecretConnection, error) {
-	locPubKey := locPrivKey.PubKey().Unwrap().(crypto.PubKeyEd25519)
-
+func MakeSecretConnection(conn io.ReadWriteCloser, locPrivKey signlib.PrivKey) (*SecretConnection, error) {
 	// Generate ephemeral keys for perfect forward secrecy.
 	locEphPub, locEphPriv := genEphKeys()
 
@@ -81,18 +78,22 @@ func MakeSecretConnection(conn io.ReadWriteCloser, locPrivKey crypto.PrivKeyEd25
 
 	// Sign the challenge bytes for authentication.
 	locSignature := signChallenge(challenge, locPrivKey)
-
 	// Share (in secret) each other's pubkey & challenge signature
-	authSigMsg, err := shareAuthSignature(sc, locPubKey, locSignature)
+	authSigMsg, err := shareAuthSignature(sc, locPrivKey.XPub().Bytes(), locSignature)
 	if err != nil {
 		return nil, err
 	}
-	remPubKey, remSignature := authSigMsg.Key, authSigMsg.Sig
-	if !remPubKey.VerifyBytes(challenge[:], remSignature) {
+	pubKey, remSignature := authSigMsg.Key, authSigMsg.Sig
+	remPubKey, err := signlib.NewPubKey(pubKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if !remPubKey.Verify(challenge[:], remSignature[:]) {
 		return nil, errors.New("Challenge verification failed")
 	}
 
-	sc.remPubKey = remPubKey.Unwrap().(crypto.PubKeyEd25519)
+	sc.remPubKey = remPubKey
 	return sc, nil
 }
 
@@ -128,7 +129,7 @@ func (sc *SecretConnection) Read(data []byte) (n int, err error) {
 }
 
 // RemotePubKey returns authenticated remote pubkey
-func (sc *SecretConnection) RemotePubKey() crypto.PubKeyEd25519 {
+func (sc *SecretConnection) RemotePubKey() signlib.PubKey {
 	return sc.remPubKey
 }
 
@@ -230,31 +231,29 @@ func genNonces(loPubKey, hiPubKey *[32]byte, locIsLo bool) (*[24]byte, *[24]byte
 	return nonce2, nonce1
 }
 
-func signChallenge(challenge *[32]byte, locPrivKey crypto.PrivKeyEd25519) (signature crypto.SignatureEd25519) {
-	signature = locPrivKey.Sign(challenge[:]).Unwrap().(crypto.SignatureEd25519)
-	return
+func signChallenge(challenge *[32]byte, locPrivKey signlib.PrivKey) []byte {
+	return locPrivKey.Sign(challenge[:])
 }
 
-func shareAuthSignature(sc *SecretConnection, pubKey crypto.PubKeyEd25519, signature crypto.SignatureEd25519) (*authSigMessage, error) {
+func shareAuthSignature(sc *SecretConnection, pubKey []byte, signature []byte) (*authSigMessage, error) {
 	var recvMsg authSigMessage
 	var err1, err2 error
 
 	cmn.Parallel(
 		func() {
-			msgBytes := wire.BinaryBytes(authSigMessage{pubKey.Wrap(), signature.Wrap()})
+			msgBytes := wire.BinaryBytes(authSigMessage{pubKey, signature})
 			_, err1 = sc.Write(msgBytes)
 		},
 		func() {
-			readBuffer := make([]byte, authSigMsgSize)
+			readBuffer := make([]byte, signlib.AuthSigMsgSize)
 			_, err2 = io.ReadFull(sc, readBuffer)
 			if err2 != nil {
 				return
 			}
 			n := int(0) // not used.
-			recvMsg = wire.ReadBinary(authSigMessage{}, bytes.NewBuffer(readBuffer), authSigMsgSize, &n, &err2).(authSigMessage)
+			recvMsg = wire.ReadBinary(authSigMessage{}, bytes.NewBuffer(readBuffer), signlib.AuthSigMsgSize, &n, &err2).(authSigMessage)
 		},
 	)
-
 	if err1 != nil {
 		return nil, err1
 	}
