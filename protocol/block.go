@@ -90,8 +90,11 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
-	voteResultMap := make(map[uint64]*state.VoteResult)
-	if err := c.consensusNodeManager.applyBlock(voteResultMap, block); err != nil {
+	voteResult, err := c.consensusNodeManager.getBestVoteResult()
+	if err != nil {
+		return err
+	}
+	if err := voteResult.ApplyBlock(block); err != nil {
 		return err
 	}
 
@@ -100,7 +103,7 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		irreversibleNode = node
 	}
 
-	if err := c.setState(node, irreversibleNode, utxoView, voteResultMap); err != nil {
+	if err := c.setState(node, irreversibleNode, utxoView, []*state.VoteResult{voteResult}); err != nil {
 		return err
 	}
 
@@ -113,8 +116,12 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 	attachNodes, detachNodes := c.calcReorganizeNodes(node)
 	utxoView := state.NewUtxoViewpoint()
-	voteResultMap := make(map[uint64]*state.VoteResult)
+	voteResults := []*state.VoteResult{}
 	irreversibleNode := c.bestIrreversibleNode
+	voteResult, err := c.consensusNodeManager.getBestVoteResult()
+	if err != nil {
+		return err
+	}
 
 	for _, detachNode := range detachNodes {
 		b, err := c.store.GetBlock(&detachNode.Hash)
@@ -140,7 +147,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			return err
 		}
 
-		if err := c.consensusNodeManager.detachBlock(voteResultMap, b); err != nil {
+		if err := voteResult.DetachBlock(b); err != nil {
 			return err
 		}
 
@@ -167,8 +174,12 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			return err
 		}
 
-		if err := c.consensusNodeManager.applyBlock(voteResultMap, b); err != nil {
+		if err := voteResult.ApplyBlock(b); err != nil {
 			return err
+		}
+
+		if voteResult.IsFinalize() {
+			voteResults = append(voteResults, voteResult.Fork())
 		}
 
 		if c.isIrreversible(attachNode) && b.Height > irreversibleNode.Height {
@@ -178,7 +189,8 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Debug("attach from mainchain")
 	}
 
-	return c.setState(node, irreversibleNode, utxoView, voteResultMap)
+	voteResults = append(voteResults, voteResult.Fork())
+	return c.setState(node, irreversibleNode, utxoView, voteResults)
 }
 
 // SaveBlock will validate and save block into storage
