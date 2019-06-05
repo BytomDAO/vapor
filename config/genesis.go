@@ -6,7 +6,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/consensus"
-	"github.com/vapor/crypto"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -17,17 +16,10 @@ func FederationProgrom(c *Config) []byte {
 	xpubs := c.Federation.Xpubs
 	fedpegScript, err := vmutil.P2SPMultiSigProgram(chainkd.XPubKeys(xpubs), c.Federation.Quorum)
 	if err != nil {
-		log.Panicf("Failed generate federation scirpt  for federation: " + err.Error())
+		log.Panicf("fail to generate federation scirpt for federation: %v", err)
 	}
 
-	scriptHash := crypto.Sha256(fedpegScript)
-
-	control, err := vmutil.P2WSHProgram(scriptHash)
-	if err != nil {
-		log.Panicf("Fail converts scriptHash to program on FederationProgrom: %v", err)
-	}
-
-	return control
+	return fedpegScript
 }
 
 func GenesisTx() *types.Tx {
