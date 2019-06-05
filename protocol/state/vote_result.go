@@ -28,18 +28,30 @@ func (c byVote) Less(i, j int) bool {
 }
 func (c byVote) Swap(i, j int) { c[i], c[j] = c[j], c[i] }
 
+// seq 0 is the genesis block
+// seq 1 is the the block height 1, to block height RoundVoteBlockNums
+// seq 2 is the block height RoundVoteBlockNums + 1 to block height 2 * RoundVoteBlockNums
+// consensus node of the current round is the final result of previous round
+func CalcVoteSeq(blockHeight uint64) uint64 {
+	if blockHeight == 0 {
+		return 0
+	}
+	return (blockHeight-1)/consensus.RoundVoteBlockNums + 1
+}
+
 // VoteResult represents a snapshot of each round of DPOS voting
 // Seq indicates the sequence of current votes, which start from zero
 // NumOfVote indicates the number of votes each consensus node receives, the key of map represent public key
 // Finalized indicates whether this vote is finalized
 type VoteResult struct {
-	Seq           uint64
-	NumOfVote     map[string]uint64
-	LastBlockHash bc.Hash
+	Seq         uint64
+	NumOfVote   map[string]uint64
+	BlockHash   bc.Hash
+	BlockHeight uint64
 }
 
 func (v *VoteResult) ApplyBlock(block *types.Block) error {
-	if v.LastBlockHash != block.PreviousBlockHash {
+	if v.BlockHash != block.PreviousBlockHash {
 		return errors.New("block parent hash is not equals last block hash of vote result")
 	}
 
@@ -74,7 +86,9 @@ func (v *VoteResult) ApplyBlock(block *types.Block) error {
 		}
 	}
 
-	v.LastBlockHash = block.Hash()
+	v.BlockHash = block.Hash()
+	v.BlockHeight = block.Height
+	v.Seq = CalcVoteSeq(block.Height)
 	return nil
 }
 
@@ -102,7 +116,7 @@ func (v *VoteResult) ConsensusNodes() (map[string]*ConsensusNode, error) {
 }
 
 func (v *VoteResult) DetachBlock(block *types.Block) error {
-	if v.LastBlockHash != block.Hash() {
+	if v.BlockHash != block.Hash() {
 		return errors.New("block hash is not equals last block hash of vote result")
 	}
 
@@ -137,6 +151,26 @@ func (v *VoteResult) DetachBlock(block *types.Block) error {
 		}
 	}
 
-	v.LastBlockHash = block.PreviousBlockHash
+	v.BlockHash = block.PreviousBlockHash
+	v.BlockHeight = block.Height - 1
+	v.Seq = CalcVoteSeq(block.Height - 1)
 	return nil
+}
+
+func (v *VoteResult) Fork() *VoteResult {
+	f := &VoteResult{
+		Seq:         v.Seq,
+		NumOfVote:   map[string]uint64{},
+		BlockHash:   v.BlockHash,
+		BlockHeight: v.BlockHeight,
+	}
+
+	for key, value := range v.NumOfVote {
+		f.NumOfVote[key] = value
+	}
+	return f
+}
+
+func (v *VoteResult) IsFinalize() bool {
+	return v.BlockHeight%consensus.RoundVoteBlockNums == 0
 }
