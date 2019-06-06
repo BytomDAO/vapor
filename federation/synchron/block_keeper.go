@@ -9,17 +9,17 @@ import (
 	"github.com/jinzhu/gorm"
 	// log "github.com/sirupsen/logrus"
 
-	// "github.com/vapor/federation/config"
+	"github.com/vapor/federation/config"
 	// "github.com/blockcenter/database"
 	// "github.com/blockcenter/database/orm"
 	"github.com/vapor/federation/service"
 )
 
 type blockKeeper struct {
-	// cfg      *config.Config
-	db *gorm.DB
-	// cache    *database.RedisDB
+	cfg  *config.Chain
+	db   *gorm.DB
 	node *service.Node
+	// cache    *database.RedisDB
 	// coinName string
 }
 

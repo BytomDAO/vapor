@@ -9,7 +9,7 @@ import (
 	"github.com/jinzhu/gorm"
 	// log "github.com/sirupsen/logrus"
 
-	// "github.com/vapor/federation/config"
+	"github.com/vapor/federation/config"
 	// "github.com/blockcenter/database"
 	// "github.com/blockcenter/database/orm"
 	"github.com/vapor/federation/service"
@@ -18,10 +18,10 @@ import (
 const maxRawTxSize = 1 << 16
 
 type unconfirmedTxKeeper struct {
-	// cfg         *config.Config
-	db *gorm.DB
-	// coinName    string
+	cfg         *config.Chain
+	db          *gorm.DB
 	processTxCh chan *service.WSResponse
+	// coinName    string
 }
 
 func (u *unconfirmedTxKeeper) Run() {
