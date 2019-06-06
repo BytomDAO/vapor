@@ -130,18 +130,18 @@ CREATE TABLE `assets` (
   `asset_id` varchar(64) NOT NULL,
   `issuance_program` varchar(64) NOT NULL,
   `vm_version` int(11) NOT NULL DEFAULT '1',
-  `raw_definition_bytes` text,
+  `raw_definition_byte` text,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `asset_id` (`asset_id`),
-  UNIQUE KEY `asset_meta` (`issuance_program`,`vm_version`,`raw_definition_bytes`)
+  UNIQUE KEY `asset_meta` (`issuance_program`,`vm_version`,`raw_definition_byte`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 LOCK TABLES `assets` WRITE;
 /*!40000 ALTER TABLE `assets` DISABLE KEYS */;
 
-INSERT INTO `assets` (`id`, `asset_id`, `issuance_program`, `vm_version`, `raw_definition_bytes`, `created_at`, `updated_at`)
+INSERT INTO `assets` (`id`, `asset_id`, `issuance_program`, `vm_version`, `raw_definition_byte`, `created_at`, `updated_at`)
 VALUES
   (1,'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff','',1,'7b0a202022646563696d616c73223a20382c0a2020226465736372697074696f6e223a20224279746f6d204f6666696369616c204973737565222c0a2020226e616d65223a202242544d222c0a20202273796d626f6c223a202242544d220a7d','2018-09-13 05:10:43','2018-11-27 09:43:35');
 
