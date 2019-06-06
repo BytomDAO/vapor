@@ -37,6 +37,6 @@ func NewDbKeeper(db *gorm.DB, chainCfg *config.Chain) *DbKeeper {
 }
 
 func (d *DbKeeper) Run() {
-	d.blockKeeper.Run()
-	d.unconfirmedTxKeeper.Run()
+	go d.blockKeeper.Run()
+	go d.unconfirmedTxKeeper.Run()
 }
