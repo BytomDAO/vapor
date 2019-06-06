@@ -16,8 +16,7 @@ import (
 )
 
 type DbKeeper struct {
-	blockKeeper         *blockKeeper
-	unconfirmedTxKeeper *unconfirmedTxKeeper
+	blockKeeper *blockKeeper
 }
 
 func NewDbKeeper(db *gorm.DB, chainCfg *config.Chain) *DbKeeper {
@@ -27,16 +26,9 @@ func NewDbKeeper(db *gorm.DB, chainCfg *config.Chain) *DbKeeper {
 		node: service.NewNode(chainCfg.Upstream.RPC),
 	}
 
-	unconfirmedTxKeeper := &unconfirmedTxKeeper{
-		cfg:         chainCfg,
-		db:          db,
-		processTxCh: make(chan *service.WSResponse, maxRawTxSize),
-	}
-
-	return &DbKeeper{blockKeeper, unconfirmedTxKeeper}
+	return &DbKeeper{blockKeeper}
 }
 
 func (d *DbKeeper) Run() {
 	go d.blockKeeper.Run()
-	go d.unconfirmedTxKeeper.Run()
 }
