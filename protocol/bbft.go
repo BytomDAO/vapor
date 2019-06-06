@@ -11,6 +11,7 @@ import (
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
+	"github.com/vapor/event"
 )
 
 const (
@@ -65,7 +66,11 @@ func (c *Chain) ProcessBlockSignature(signature []byte, xPub [64]byte, blockHash
 		return err
 	}
 
-	if consensusNode.XPub.Verify(blockHash.Bytes(), signature) {
+	if exist, err := blockNode.BlockWitness.Test(uint32(consensusNode.Order)); err != nil && exist {
+		return nil
+	}
+
+	if !consensusNode.XPub.Verify(blockHash.Bytes(), signature) {
 		return errInvalidSignature
 	}
 
@@ -90,7 +95,8 @@ func (c *Chain) ProcessBlockSignature(signature []byte, xPub [64]byte, blockHash
 
 		c.bestIrreversibleNode = bestIrreversibleNode
 	}
-	return nil
+
+	return c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: *blockHash, Signature: signature, XPub: xPub})
 }
 
 // validateSign verify the signatures of block, and return the number of correct signature
