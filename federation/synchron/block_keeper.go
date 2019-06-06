@@ -3,15 +3,15 @@ package synchron
 import (
 	"time"
 
-	// "github.com/bytom/errors"
-	// "github.com/bytom/protocol/bc"
-	// "github.com/bytom/protocol/bc/types"
+	btmBc "github.com/bytom/protocol/bc"
+	btmTypes "github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/vapor/errors"
 	"github.com/vapor/federation/config"
 	// "github.com/blockcenter/database"
-	// "github.com/blockcenter/database/orm"
+	"github.com/vapor/federation/database/orm"
 	"github.com/vapor/federation/service"
 )
 
@@ -49,43 +49,41 @@ func (b *blockKeeper) Run() {
 }
 
 func (b *blockKeeper) syncBlock() (bool, error) {
-	/*
-		coin := &orm.Coin{Name: b.coinName}
-		if err := b.db.Where(coin).First(coin).Error; err != nil {
-			return false, errors.Wrap(err, "query coin")
-		}
+	chain := &orm.Chain{Name: "" /*b.coinName*/}
+	if err := b.db.Where(chain).First(chain).Error; err != nil {
+		return false, errors.Wrap(err, "query chain")
+	}
 
-		height, err := b.node.GetBlockCount()
-		if err != nil {
-			return false, err
-		}
+	height, err := b.node.GetBlockCount()
+	if err != nil {
+		return false, err
+	}
 
-		if height == coin.BlockHeight {
-			return false, nil
-		}
+	if height == chain.BlockHeight {
+		return false, nil
+	}
 
-		nextBlock, txStatus, err := b.node.GetBlockByHeight(coin.BlockHeight + 1)
-		if err != nil {
-			return false, err
-		}
+	nextBlock, txStatus, err := b.node.GetBlockByHeight(chain.BlockHeight + 1)
+	if err != nil {
+		return false, err
+	}
 
-		// Normal case, the previous hash of next block equals to the hash of current block,
-		// just sync to database directly.
-		if nextBlock.PreviousBlockHash.String() == coin.BlockHash {
-			return true, b.AttachBlock(coin, nextBlock, txStatus)
-		}
+	// Normal case, the previous hash of next block equals to the hash of current block,
+	// just sync to database directly.
+	if nextBlock.PreviousBlockHash.String() == chain.BlockHash {
+		return true, b.AttachBlock(chain, nextBlock, txStatus)
+	}
 
-		log.WithField("block height", coin.BlockHeight).Debug("the prev hash of remote is not equals the hash of current best block, must rollback")
-		currentBlock, txStatus, err := b.node.GetBlockByHash(coin.BlockHash)
-		if err != nil {
-			return false, err
-		}
-	*/
-	// return true, b.DetachBlock( /*coin, */ currentBlock, txStatus)
-	return true, nil
+	log.WithField("block height", chain.BlockHeight).Debug("the prev hash of remote is not equals the hash of current best block, must rollback")
+	currentBlock, txStatus, err := b.node.GetBlockByHash(chain.BlockHash)
+	if err != nil {
+		return false, err
+	}
+
+	return true, b.DetachBlock(chain, currentBlock, txStatus)
 }
 
-func (b *blockKeeper) AttachBlock(coin *orm.Coin, block *types.Block, txStatus *bc.TransactionStatus) error {
+func (b *blockKeeper) AttachBlock(chain *orm.Chain, block *btmTypes.Block, txStatus *btmBc.TransactionStatus) error {
 	// blockHash := block.Hash()
 	// log.WithFields(log.Fields{"block_height": block.Height, "block_hash": blockHash.String()}).Info("start to attachBlock")
 
@@ -105,7 +103,7 @@ func (b *blockKeeper) AttachBlock(coin *orm.Coin, block *types.Block, txStatus *
 	return nil
 }
 
-func (b *blockKeeper) DetachBlock(coin *orm.Coin, block *types.Block, txStatus *bc.TransactionStatus) error {
+func (b *blockKeeper) DetachBlock(chain *orm.Chain, block *btmTypes.Block, txStatus *btmBc.TransactionStatus) error {
 	// blockHash := block.Hash()
 	// log.WithFields(log.Fields{"block_height": block.Height, "block_hash": blockHash.String()}).Info("start to detachBlock")
 
