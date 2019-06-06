@@ -89,21 +89,21 @@ func (u *unconfirmedTxKeeper) AddUnconfirmedTx( /*coin *orm.Coin, */ txDesc *TxD
 	}
 
 	txs := []*btmTypes.Tx{txDesc.Tx}
-	if err := bp.processIssuing(dbTx, txs /* bp.getCoin().ID*/); err != nil {
+	if err := bp.processIssuing(dbTx, txs); err != nil {
 		dbTx.Rollback()
 		return err
 	}
 
-	mappings, err := GetAddressTxMappings(u.cfg, txs, txStatus, dbTx)
-	if err != nil {
-		dbTx.Rollback()
-		return err
-	}
+	// mappings, err := GetAddressTxMappings(u.cfg, txs, txStatus, dbTx)
+	// if err != nil {
+	// 	dbTx.Rollback()
+	// 	return err
+	// }
 
-	if err := bp.processAddressTransaction(mappings); err != nil {
-		dbTx.Rollback()
-		return err
-	}
+	// if err := bp.processAddressTransaction(mappings); err != nil {
+	// 	dbTx.Rollback()
+	// 	return err
+	// }
 
 	return dbTx.Commit().Error
 }
