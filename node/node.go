@@ -9,6 +9,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"path/filepath"
+	"reflect"
 
 	"github.com/prometheus/prometheus/util/flock"
 	log "github.com/sirupsen/logrus"
@@ -31,6 +32,7 @@ import (
 	"github.com/vapor/netsync"
 	"github.com/vapor/proposal/blockproposer"
 	"github.com/vapor/protocol"
+	"github.com/vapor/protocol/bc/types"
 	w "github.com/vapor/wallet"
 )
 
@@ -96,6 +98,10 @@ func NewNode(config *cfg.Config) *Node {
 	chain, err := protocol.NewChain(store, txPool, dispatcher)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
+	}
+
+	if err := checkConfig(chain, config); err != nil {
+		panic(err)
 	}
 
 	var accounts *account.Manager
@@ -166,6 +172,22 @@ func NewNode(config *cfg.Config) *Node {
 	node.cpuMiner = blockproposer.NewBlockProposer(chain, accounts, txPool, dispatcher)
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 	return node
+}
+
+// find whether config xpubs equal genesis block xpubs
+func checkConfig(chain *protocol.Chain, config *cfg.Config) error {
+	fedpegScript := cfg.FederationProgrom(config)
+	genesisBlock, err := chain.GetBlockByHeight(0)
+	if err != nil {
+		return err
+	}
+	typedInput := genesisBlock.Transactions[0].Inputs[0].TypedInput
+	if v, ok := typedInput.(*types.CoinbaseInput); ok {
+		if !reflect.DeepEqual(fedpegScript, v.Arbitrary) {
+			return errors.New("config xpubs don't equal genesis block xpubs.")
+		}
+	}
+	return nil
 }
 
 // Lock data directory after daemonization
