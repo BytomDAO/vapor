@@ -21,6 +21,19 @@ import (
 	"github.com/vapor/federation/database/orm"
 )
 
+type blockProcessor interface {
+	processIssuing(db *gorm.DB, txs []*btmTypes.Tx) error
+	// getBlock() *btmTypes.Block
+	// getCoin() *orm.Coin
+	// getTxStatus() *bc.TransactionStatus
+	// processCoinInfo() error
+	// processAddressTransaction(mappings []*addressTxMapping) error
+	// processSpendBalance(input *btmTypes.TxInput, deltaBalance *deltaBalance)
+	// processReceiveBalance(output *btmTypes.TxOutput, deltaBalance *deltaBalance)
+	// processSpendUTXO(utxoIDList []string) error
+	// processReceiveUTXO(m *addressTxMapping) error
+}
+
 func addIssueAssets(db *gorm.DB, txs []*btmTypes.Tx) error {
 	var assets []*orm.Asset
 	assetMap := make(map[string]bool)
