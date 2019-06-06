@@ -66,11 +66,7 @@ type Warder struct {
 }
 
 type Chain struct {
-	Name     string   `json:"name"`
-	Upstream Upstream `json:"upstream"`
-}
-
-type Upstream struct {
-	RPC       string `json:"rpc"`
-	WebSocket string `json:"web_socket"`
+	Name        string `json:"name"`
+	Upstream    string `json:"upstream"`
+	SyncSeconds uint64 `json:"sync_seconds"`
 }

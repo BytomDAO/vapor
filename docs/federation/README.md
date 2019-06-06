@@ -46,18 +46,14 @@ A `fed_cfg.json` would look like this:
         }
     ],
     "mainchain" : {
-        "name" : "bytom",
-        "upstream" : {
-            "rpc" : "http://127.0.0.1:9888",
-            "web_socket" : "127.0.0.1:9888"
-        }
+        "name" : "vapor",
+        "upstream" : "http://127.0.0.1:9888",
+        "sync_seconds" : 150
     },
     "sidechain" : {
         "name" : "vapor",
-        "upstream" : {
-            "rpc" : "http://127.0.0.1:9889",
-            "web_socket" : "127.0.0.1:9889"            
-        }
+        "upstream" : "http://127.0.0.1:9888",
+        "sync_seconds" : 5
     }
 }
 ```
