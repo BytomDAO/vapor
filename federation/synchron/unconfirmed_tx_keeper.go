@@ -7,7 +7,7 @@ import (
 	// "github.com/bytom/protocol/bc"
 	// "github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"
-	// log "github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/federation/config"
 	// "github.com/blockcenter/database"
@@ -25,5 +25,15 @@ type unconfirmedTxKeeper struct {
 }
 
 func (u *unconfirmedTxKeeper) Run() {
+	ws := service.NewWSClient(u.cfg.Upstream.WebSocket, u.processTxCh)
+	if err := ws.Connect(); err != nil {
+		log.WithField("err", err).Fatal("websocket dail fail")
+	}
 
+	defer ws.Close()
+	if err := ws.Subscribe(service.TopicNotifyNewTransactions); err != nil {
+		log.WithField("err", err).Fatal("subscribe new transaction fail")
+	}
+
+	// u.receiveTransactions()
 }
