@@ -13,7 +13,6 @@ import (
 	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
 	msgs "github.com/vapor/netsync/messages"
-	"github.com/vapor/p2p/security/trust"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
@@ -22,7 +21,6 @@ const (
 	maxKnownTxs           = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
 	maxKnownSignatures    = 1024  // Maximum block signatures to keep in the known list (prevent DOS)
 	maxKnownBlocks        = 1024  // Maximum block hashes to keep in the known list (prevent DOS)
-	defaultBanThreshold   = uint32(100)
 	maxFilterAddressSize  = 50
 	maxFilterAddressCount = 1000
 
@@ -46,8 +44,8 @@ type BasePeer interface {
 
 //BasePeerSet is the intergace for connection level peer manager
 type BasePeerSet interface {
-	AddBannedPeer(string) error
 	StopPeerGracefully(string)
+	IsBanned(peerID string, level byte, reason string) bool
 }
 
 type BroadcastMsg interface {
@@ -79,7 +77,6 @@ type Peer struct {
 	services        consensus.ServiceFlag
 	height          uint64
 	hash            *bc.Hash
-	banScore        trust.DynamicBanScore
 	knownTxs        *set.Set // Set of transaction hashes known to be known by this peer
 	knownBlocks     *set.Set // Set of block hashes known to be known by this peer
 	knownSignatures *set.Set // Set of block signatures known to be known by this peer
@@ -102,30 +99,6 @@ func (p *Peer) Height() uint64 {
 	p.mtx.RLock()
 	defer p.mtx.RUnlock()
 	return p.height
-}
-
-func (p *Peer) addBanScore(persistent, transient uint32, reason string) bool {
-	score := p.banScore.Increase(persistent, transient)
-	if score > defaultBanThreshold {
-		log.WithFields(log.Fields{
-			"module":  logModule,
-			"address": p.Addr(),
-			"score":   score,
-			"reason":  reason,
-		}).Errorf("banning and disconnecting")
-		return true
-	}
-
-	warnThreshold := defaultBanThreshold >> 1
-	if score > warnThreshold {
-		log.WithFields(log.Fields{
-			"module":  logModule,
-			"address": p.Addr(),
-			"score":   score,
-			"reason":  reason,
-		}).Warning("ban score increasing")
-	}
-	return false
 }
 
 func (p *Peer) AddFilterAddress(address []byte) {
@@ -417,7 +390,7 @@ func NewPeerSet(basePeerSet BasePeerSet) *PeerSet {
 	}
 }
 
-func (ps *PeerSet) AddBanScore(peerID string, persistent, transient uint32, reason string) {
+func (ps *PeerSet) ProcessIllegal(peerID string, level byte, reason string) {
 	ps.mtx.Lock()
 	peer := ps.peers[peerID]
 	ps.mtx.Unlock()
@@ -425,13 +398,10 @@ func (ps *PeerSet) AddBanScore(peerID string, persistent, transient uint32, reas
 	if peer == nil {
 		return
 	}
-	if ban := peer.addBanScore(persistent, transient, reason); !ban {
-		return
+	if banned := ps.IsBanned(peer.Addr().String(), level, reason); banned {
+		ps.RemovePeer(peerID)
 	}
-	if err := ps.AddBannedPeer(peer.Addr().String()); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on add ban peer")
-	}
-	ps.RemovePeer(peerID)
+	return
 }
 
 func (ps *PeerSet) AddPeer(peer BasePeer) {
@@ -536,9 +506,9 @@ func (ps *PeerSet) BroadcastTx(tx *types.Tx) error {
 	return nil
 }
 
-func (ps *PeerSet) ErrorHandler(peerID string, err error) {
+func (ps *PeerSet) ErrorHandler(peerID string, level byte, err error) {
 	if errors.Root(err) == ErrPeerMisbehave {
-		ps.AddBanScore(peerID, 20, 0, err.Error())
+		ps.ProcessIllegal(peerID, level, err.Error())
 	} else {
 		ps.RemovePeer(peerID)
 	}

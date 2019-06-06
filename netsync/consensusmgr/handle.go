@@ -8,6 +8,7 @@ import (
 	"github.com/vapor/event"
 	"github.com/vapor/netsync/peers"
 	"github.com/vapor/p2p"
+	"github.com/vapor/p2p/security"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
@@ -15,7 +16,6 @@ import (
 // Switch is the interface for p2p switch.
 type Switch interface {
 	AddReactor(name string, reactor p2p.Reactor) p2p.Reactor
-	AddBannedPeer(string) error
 }
 
 // Chain is the interface for Bytom core.
@@ -96,7 +96,7 @@ func (m *Manager) handleBlockProposeMsg(peerID string, msg *BlockProposeMsg) {
 func (m *Manager) handleBlockSignatureMsg(peerID string, msg *BlockSignatureMsg) {
 	blockHash := bc.NewHash(msg.BlockHash)
 	if err := m.chain.ProcessBlockSignature(msg.Signature, msg.PubKey, &blockHash); err != nil {
-		m.peers.AddBanScore(peerID, 20, 0, err.Error())
+		m.peers.ProcessIllegal(peerID, security.LevelMsgIllegal, err.Error())
 		return
 	}
 }

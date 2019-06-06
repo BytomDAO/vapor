@@ -12,6 +12,7 @@ import (
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 	conn "github.com/vapor/p2p/connection"
+	"github.com/vapor/p2p/security"
 	"github.com/vapor/p2p/signlib"
 )
 
@@ -125,7 +126,6 @@ func initSwitchFunc(sw *Switch) *Switch {
 
 //Test connect self.
 func TestFiltersOutItself(t *testing.T) {
-	t.Skip("skipping test")
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatal(err)
@@ -134,6 +134,7 @@ func TestFiltersOutItself(t *testing.T) {
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
 	cfg := *testCfg
+	cfg.DBPath = dirPath
 	cfg.P2P.ListenAddress = "127.0.1.1:0"
 	swPrivKey, err := signlib.NewPrivKey()
 	if err != nil {
@@ -144,8 +145,15 @@ func TestFiltersOutItself(t *testing.T) {
 	s1.Start()
 	defer s1.Stop()
 
+	rmdirPath, err := ioutil.TempDir(".", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(rmdirPath)
+
 	// simulate s1 having a public key and creating a remote peer with the same key
 	rpCfg := *testCfg
+	rpCfg.DBPath = rmdirPath
 	rp := &remotePeer{PrivKey: s1.nodePrivKey, Config: &rpCfg}
 	rp.Start()
 	defer rp.Stop()
@@ -162,7 +170,6 @@ func TestFiltersOutItself(t *testing.T) {
 }
 
 func TestDialBannedPeer(t *testing.T) {
-	t.Skip("skipping test")
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatal(err)
@@ -171,6 +178,7 @@ func TestDialBannedPeer(t *testing.T) {
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
 	cfg := *testCfg
+	cfg.DBPath = dirPath
 	cfg.P2P.ListenAddress = "127.0.1.1:0"
 	swPrivKey, err := signlib.NewPrivKey()
 	if err != nil {
@@ -180,7 +188,14 @@ func TestDialBannedPeer(t *testing.T) {
 	s1.Start()
 	defer s1.Stop()
 
+	rmdirPath, err := ioutil.TempDir(".", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(rmdirPath)
+
 	rpCfg := *testCfg
+	rpCfg.DBPath = rmdirPath
 	remotePrivKey, err := signlib.NewPrivKey()
 	if err != nil {
 		t.Fatal(err)
@@ -189,19 +204,17 @@ func TestDialBannedPeer(t *testing.T) {
 	rp := &remotePeer{PrivKey: remotePrivKey, Config: &rpCfg}
 	rp.Start()
 	defer rp.Stop()
-	s1.AddBannedPeer(rp.addr.IP.String())
-	if err := s1.DialPeerWithAddress(rp.addr); errors.Root(err) != ErrConnectBannedPeer {
-		t.Fatal(err)
+	for {
+		if ok := s1.security.IsBanned(rp.addr.IP.String(), security.LevelMsgIllegal, "test"); ok {
+			break
+		}
 	}
-
-	s1.delBannedPeer(rp.addr.IP.String())
-	if err := s1.DialPeerWithAddress(rp.addr); err != nil {
+	if err := s1.DialPeerWithAddress(rp.addr); errors.Root(err) != security.ErrConnectBannedPeer {
 		t.Fatal(err)
 	}
 }
 
 func TestDuplicateOutBoundPeer(t *testing.T) {
-	t.Skip("skipping test")
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatal(err)
@@ -210,6 +223,7 @@ func TestDuplicateOutBoundPeer(t *testing.T) {
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
 	cfg := *testCfg
+	cfg.DBPath = dirPath
 	cfg.P2P.ListenAddress = "127.0.1.1:0"
 	swPrivKey, err := signlib.NewPrivKey()
 	if err != nil {
@@ -220,7 +234,14 @@ func TestDuplicateOutBoundPeer(t *testing.T) {
 	s1.Start()
 	defer s1.Stop()
 
+	rmdirPath, err := ioutil.TempDir(".", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(rmdirPath)
+
 	rpCfg := *testCfg
+	rpCfg.DBPath = rmdirPath
 	remotePrivKey, err := signlib.NewPrivKey()
 	if err != nil {
 		t.Fatal(err)
@@ -240,7 +261,6 @@ func TestDuplicateOutBoundPeer(t *testing.T) {
 }
 
 func TestDuplicateInBoundPeer(t *testing.T) {
-	t.Skip("skipping test")
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatal(err)
@@ -249,6 +269,7 @@ func TestDuplicateInBoundPeer(t *testing.T) {
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
 	cfg := *testCfg
+	cfg.DBPath = dirPath
 	cfg.P2P.ListenAddress = "127.0.1.1:0"
 	swPrivKey, err := signlib.NewPrivKey()
 	if err != nil {
@@ -282,7 +303,6 @@ func TestDuplicateInBoundPeer(t *testing.T) {
 }
 
 func TestAddInboundPeer(t *testing.T) {
-	t.Skip("skipping test")
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatal(err)
@@ -291,6 +311,7 @@ func TestAddInboundPeer(t *testing.T) {
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
 	cfg := *testCfg
+	cfg.DBPath = dirPath
 	cfg.P2P.MaxNumPeers = 2
 	cfg.P2P.ListenAddress = "127.0.1.1:0"
 	swPrivKey, err := signlib.NewPrivKey()
@@ -344,7 +365,6 @@ func TestAddInboundPeer(t *testing.T) {
 }
 
 func TestStopPeer(t *testing.T) {
-	t.Skip("skipping test")
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatal(err)
@@ -353,6 +373,7 @@ func TestStopPeer(t *testing.T) {
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
 	cfg := *testCfg
+	cfg.DBPath = dirPath
 	cfg.P2P.MaxNumPeers = 2
 	cfg.P2P.ListenAddress = "127.0.1.1:0"
 	swPrivKey, err := signlib.NewPrivKey()

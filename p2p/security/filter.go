@@ -1,27 +1,36 @@
 package security
 
-type filter interface {
-	check(string, string) error
+import "sync"
+
+type Filter interface {
+	DoFilter(string, string) error
 }
 
-type Filter struct {
-	filters []filter
+type PeerFilter struct {
+	filterChain []Filter
+	mtx         sync.Mutex
 }
 
-func NewFilter() *Filter {
-	return &Filter{}
+func NewPeerFilter() *PeerFilter {
+	return &PeerFilter{
+		filterChain: make([]Filter, 0),
+	}
 }
 
-// 注册过滤器
-func (f *Filter) Register(filter filter) {
-	f.filters = append(f.filters, filter)
+func (pf *PeerFilter) register(filter Filter) {
+	pf.mtx.Lock()
+	defer pf.mtx.Unlock()
+
+	pf.filterChain = append(pf.filterChain, filter)
 }
 
-//
-func (f *Filter) Check(ip string, pubKey string) error {
-	for _, filter := range f.filters {
-		if err := filter.check(ip, pubKey)；; err != nil {
-			return nil
+func (pf *PeerFilter) doFilter(ip string, pubKey string) error {
+	pf.mtx.Lock()
+	defer pf.mtx.Unlock()
+
+	for _, filter := range pf.filterChain {
+		if err := filter.DoFilter(ip, pubKey); err != nil {
+			return err
 		}
 	}
 

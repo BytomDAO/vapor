@@ -12,6 +12,7 @@ import (
 	msgs "github.com/vapor/netsync/messages"
 	"github.com/vapor/netsync/peers"
 	"github.com/vapor/p2p"
+	"github.com/vapor/p2p/security"
 	core "github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -37,7 +38,6 @@ type Chain interface {
 
 type Switch interface {
 	AddReactor(name string, reactor p2p.Reactor) p2p.Reactor
-	AddBannedPeer(string) error
 	Start() (bool, error)
 	Stop() bool
 	IsListening() bool
@@ -247,12 +247,12 @@ func (m *Manager) handleStatusMsg(basePeer peers.BasePeer, msg *msgs.StatusMessa
 func (m *Manager) handleTransactionMsg(peer *peers.Peer, msg *msgs.TransactionMessage) {
 	tx, err := msg.GetTransaction()
 	if err != nil {
-		m.peers.AddBanScore(peer.ID(), 0, 10, "fail on get tx from message")
+		m.peers.ProcessIllegal(peer.ID(), security.LevelConnException, "fail on get tx from message")
 		return
 	}
 
 	if isOrphan, err := m.chain.ValidateTx(tx); err != nil && err != core.ErrDustTx && !isOrphan {
-		m.peers.AddBanScore(peer.ID(), 10, 0, "fail on validate tx transaction")
+		m.peers.ProcessIllegal(peer.ID(), security.LevelMsgIllegal, "fail on validate tx transaction")
 	}
 	m.peers.MarkTx(peer.ID(), tx.ID)
 }
@@ -260,18 +260,18 @@ func (m *Manager) handleTransactionMsg(peer *peers.Peer, msg *msgs.TransactionMe
 func (m *Manager) handleTransactionsMsg(peer *peers.Peer, msg *msgs.TransactionsMessage) {
 	txs, err := msg.GetTransactions()
 	if err != nil {
-		m.peers.AddBanScore(peer.ID(), 0, 20, "fail on get txs from message")
+		m.peers.ProcessIllegal(peer.ID(), security.LevelConnException, "fail on get txs from message")
 		return
 	}
 
 	if len(txs) > msgs.TxsMsgMaxTxNum {
-		m.peers.AddBanScore(peer.ID(), 20, 0, "exceeded the maximum tx number limit")
+		m.peers.ProcessIllegal(peer.ID(), security.LevelMsgIllegal, "exceeded the maximum tx number limit")
 		return
 	}
 
 	for _, tx := range txs {
 		if isOrphan, err := m.chain.ValidateTx(tx); err != nil && !isOrphan {
-			m.peers.AddBanScore(peer.ID(), 10, 0, "fail on validate tx transaction")
+			m.peers.ProcessIllegal(peer.ID(), security.LevelMsgIllegal, "fail on validate tx transaction")
 			return
 		}
 		m.peers.MarkTx(peer.ID(), tx.ID)

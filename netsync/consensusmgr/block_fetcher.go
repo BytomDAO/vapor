@@ -5,6 +5,7 @@ import (
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 
 	"github.com/vapor/netsync/peers"
+	"github.com/vapor/p2p/security"
 	"github.com/vapor/protocol/bc"
 )
 
@@ -80,7 +81,7 @@ func (f *blockFetcher) insert(msg *blockMsg) {
 			return
 		}
 
-		f.peers.AddBanScore(msg.peerID, 20, 0, err.Error())
+		f.peers.ProcessIllegal(msg.peerID, security.LevelMsgIllegal, err.Error())
 		return
 	}
 

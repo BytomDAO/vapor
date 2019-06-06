@@ -71,6 +71,14 @@ func (info *NodeInfo) compatibleWith(other *NodeInfo, versionCompatibleWith Vers
 	return nil
 }
 
+func (info NodeInfo) DoFilter(ip string, pubKey string) error {
+	if ip == info.listenHost() || info.PubKey == pubKey {
+		return ErrConnectSelf
+	}
+
+	return nil
+}
+
 //listenHost peer listener ip address
 func (info NodeInfo) listenHost() string {
 	host, _, _ := net.SplitHostPort(info.ListenAddr)
