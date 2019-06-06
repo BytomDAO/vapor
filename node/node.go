@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"path/filepath"
+	"reflect"
 
 	"github.com/prometheus/prometheus/util/flock"
 	log "github.com/sirupsen/logrus"
@@ -31,6 +33,7 @@ import (
 	"github.com/vapor/netsync"
 	"github.com/vapor/proposal/blockproposer"
 	"github.com/vapor/protocol"
+	"github.com/vapor/protocol/bc/types"
 	w "github.com/vapor/wallet"
 )
 
@@ -96,6 +99,18 @@ func NewNode(config *cfg.Config) *Node {
 	chain, err := protocol.NewChain(store, txPool, dispatcher)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
+	}
+
+	// find whether config xpubs equal genesis block xpubs
+	fedpegScript := cfg.FederationProgrom(config)
+	input := types.NewCoinbaseInput(fedpegScript[:])
+	genesisBlock, err := chain.GetBlockByHeight(0)
+	if err != nil {
+		fmt.Printf("Failed to get genesis block: %v", err)
+	}
+	genesisInput := genesisBlock.Transactions[0].Inputs[0]
+	if !reflect.DeepEqual(input, genesisInput) {
+		panic("config xpubs don't equal genesis block xpubs.")
 	}
 
 	var accounts *account.Manager
