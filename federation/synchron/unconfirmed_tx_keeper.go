@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 
 	// "github.com/bytom/errors"
-	// "github.com/bytom/protocol/bc"
-	// "github.com/bytom/protocol/bc/types"
+	// TODO:
+	btmBc "github.com/bytom/protocol/bc"
+	btmTypes "github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 
@@ -41,8 +42,9 @@ func (u *unconfirmedTxKeeper) Run() {
 
 // TODO: FK
 type TxDesc struct {
-	// Tx         *btmTypes.Tx `json:"transaction"`
-	StatusFail bool `json:"status_fail"`
+	// TODO:
+	Tx         *btmTypes.Tx `json:"transaction"`
+	StatusFail bool         `json:"status_fail"`
 }
 
 func (u *unconfirmedTxKeeper) receiveTransactions() {
@@ -64,12 +66,44 @@ func (u *unconfirmedTxKeeper) receiveTransactions() {
 		// 	continue
 		// }
 
+		// TODO: may still need it
 		// if err := addIssueAssets(u.db, []*btmTypes.Tx{txDesc.Tx}, coin.ID); err != nil {
 		// 	log.WithField("err", err).Error("fail on adding issue assets")
 		// }
 
-		// if err := u.AddUnconfirmedTx(coin, txDesc); err != nil {
-		// 	log.WithField("err", err).Error("fail on adding unconfirmed transaction")
-		// }
+		if err := u.AddUnconfirmedTx( /*coin,*/ txDesc); err != nil {
+			log.WithField("err", err).Error("fail on adding unconfirmed transaction")
+		}
 	}
+}
+
+func (u *unconfirmedTxKeeper) AddUnconfirmedTx( /*coin *orm.Coin, */ txDesc *TxDesc) error {
+	dbTx := u.db.Begin()
+	// TODO:
+	txStatus := &btmBc.TransactionStatus{VerifyStatus: []*btmBc.TxVerifyResult{&btmBc.TxVerifyResult{StatusFail: txDesc.StatusFail}}}
+	bp := &attachBlockProcessor{
+		db:       dbTx,
+		txStatus: txStatus,
+		// coin:     coin,
+		block: &btmTypes.Block{BlockHeader: btmTypes.BlockHeader{}},
+	}
+
+	txs := []*btmTypes.Tx{txDesc.Tx}
+	if err := bp.processIssuing(dbTx, txs /* bp.getCoin().ID*/); err != nil {
+		dbTx.Rollback()
+		return err
+	}
+
+	mappings, err := GetAddressTxMappings(u.cfg, txs, txStatus, dbTx)
+	if err != nil {
+		dbTx.Rollback()
+		return err
+	}
+
+	if err := bp.processAddressTransaction(mappings); err != nil {
+		dbTx.Rollback()
+		return err
+	}
+
+	return dbTx.Commit().Error
 }
