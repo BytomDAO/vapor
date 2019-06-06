@@ -16,16 +16,27 @@ import (
 )
 
 type DbKeeper struct {
-	db   *gorm.DB
-	node *service.Node
+	// db   *gorm.DB
+	// node *service.Node
+	blockKeeper         *blockKeeper
+	unconfirmedTxKeeper *unconfirmedTxKeeper
 }
 
 func NewDbKeeper(db *gorm.DB, chainCfg *config.Chain) *DbKeeper {
-	return &DbKeeper{
+	blockKeeper := &blockKeeper{
 		db:   db,
 		node: service.NewNode(chainCfg.Upstream.RPC),
 	}
+
+	unconfirmedTxKeeper := &unconfirmedTxKeeper{
+		db:          db,
+		processTxCh: make(chan *service.WSResponse, maxRawTxSize),
+	}
+
+	return &DbKeeper{blockKeeper, unconfirmedTxKeeper}
 }
 
 func (d *DbKeeper) Run() {
+	d.blockKeeper.Run()
+	d.unconfirmedTxKeeper.Run()
 }
