@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
@@ -101,16 +100,8 @@ func NewNode(config *cfg.Config) *Node {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 	}
 
-	// find whether config xpubs equal genesis block xpubs
-	fedpegScript := cfg.FederationProgrom(config)
-	input := types.NewCoinbaseInput(fedpegScript[:])
-	genesisBlock, err := chain.GetBlockByHeight(0)
-	if err != nil {
-		fmt.Printf("Failed to get genesis block: %v", err)
-	}
-	genesisInput := genesisBlock.Transactions[0].Inputs[0]
-	if !reflect.DeepEqual(input, genesisInput) {
-		panic("config xpubs don't equal genesis block xpubs.")
+	if err := checkConfig(chain, config); err != nil {
+		panic(err)
 	}
 
 	var accounts *account.Manager
@@ -181,6 +172,22 @@ func NewNode(config *cfg.Config) *Node {
 	node.cpuMiner = blockproposer.NewBlockProposer(chain, accounts, txPool, dispatcher)
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 	return node
+}
+
+// find whether config xpubs equal genesis block xpubs
+func checkConfig(chain *protocol.Chain, config *cfg.Config) error {
+	fedpegScript := cfg.FederationProgrom(config)
+	genesisBlock, err := chain.GetBlockByHeight(0)
+	if err != nil {
+		return err
+	}
+	typedInput := genesisBlock.Transactions[0].Inputs[0].TypedInput
+	if v, ok := typedInput.(*types.CoinbaseInput); ok {
+		if !reflect.DeepEqual(fedpegScript, v.Arbitrary) {
+			return errors.New("config xpubs don't equal genesis block xpubs.")
+		}
+	}
+	return nil
 }
 
 // Lock data directory after daemonization
