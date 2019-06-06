@@ -17,8 +17,8 @@ func main() {
 		log.WithField("err", err).Panic("initialize mysql db error")
 	}
 
-	go synchron.NewDbKeeper(db, &cfg.Mainchain).Run()
-	go synchron.NewDbKeeper(db, &cfg.Sidechain).Run()
+	go synchron.NewBlockKeeper(db, &cfg.Mainchain).Run()
+	go synchron.NewBlockKeeper(db, &cfg.Sidechain).Run()
 
 	// keep the main func running in case of terminating goroutines
 	var wg sync.WaitGroup

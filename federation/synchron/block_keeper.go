@@ -23,6 +23,14 @@ type blockKeeper struct {
 	// coinName string
 }
 
+func NewBlockKeeper(db *gorm.DB, chainCfg *config.Chain) *blockKeeper {
+	return &blockKeeper{
+		cfg:  chainCfg,
+		db:   db,
+		node: service.NewNode(chainCfg.Upstream.RPC),
+	}
+}
+
 func (b *blockKeeper) Run() {
 
 }
