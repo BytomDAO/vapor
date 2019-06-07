@@ -75,9 +75,9 @@ func addIssueAssets(db *gorm.DB, txs []*btmTypes.Tx) error {
 func updateBlock(db *gorm.DB, bp blockProcessor) error {
 	// txs := bp.getBlock().Transactions
 	if bp.getCfg().IsMainchain {
-		if err := bp.processIssuing(db, txs); err != nil {
-			return err
-		}
+		// if err := bp.processIssuing(db, txs); err != nil {
+		// 	return err
+		// }
 	}
 
 	// addressTxMappings, err := GetAddressTxMappings(cfg, txs, bp.getTxStatus(), db)

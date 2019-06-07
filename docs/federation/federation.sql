@@ -88,19 +88,43 @@ UNLOCK TABLES;
 # ------------------------------------------------------------
 CREATE TABLE `cross_transaction_inputs` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `tx_id` int(11) NOT NULL,
+  `mainchain_tx_id` int(11) NOT NULL,
+  `sidechain_tx_id` int(11) DEFAULT NULL,
   `source_pos` int(11) NOT NULL,
   `asset_id` int(11) NOT NULL,
   `asset_amount` bigint(20) DEFAULT '0',
+  `script` varchar(128) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `input_id` (`tx_id`,`source_pos`),
-  CONSTRAINT `cross_transaction_inputs_ibfk_1` FOREIGN KEY (`tx_id`) REFERENCES `cross_transactions` (`id`),
-  CONSTRAINT `cross_transaction_inputs_ibfk_2` FOREIGN KEY (`asset_id`) REFERENCES `assets` (`id`)
+  CONSTRAINT `cross_transaction_inputs_ibfk_1` FOREIGN KEY (`mainchain_tx_id`) REFERENCES `cross_transactions` (`id`),
+  CONSTRAINT `cross_transaction_inputs_ibfk_2` FOREIGN KEY (`sidechain_tx_id`) REFERENCES `cross_transactions` (`id`),
+  CONSTRAINT `cross_transaction_inputs_ibfk_3` FOREIGN KEY (`asset_id`) REFERENCES `assets` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 LOCK TABLES `cross_transaction_inputs` WRITE;
+UNLOCK TABLES;
+
+
+# Dump of table cross_transaction_outputs
+# ------------------------------------------------------------
+CREATE TABLE `cross_transaction_outputs` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `sidechain_tx_id` int(11) NOT NULL,
+  `mainchain_tx_id` int(11) DEFAULT NULL,
+  `asset_id` int(11) NOT NULL,
+  `asset_amount` bigint(20) DEFAULT '0',
+  `script` varchar(128) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `cross_transaction_outputs_ibfk_1` FOREIGN KEY (`sidechain_tx_id`) REFERENCES `cross_transactions` (`id`),
+  CONSTRAINT `cross_transaction_outputs_ibfk_2` FOREIGN KEY (`mainchain_tx_id`) REFERENCES `cross_transactions` (`id`),
+  CONSTRAINT `cross_transaction_outputs_ibfk_3` FOREIGN KEY (`asset_id`) REFERENCES `assets` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+LOCK TABLES `cross_transaction_outputs` WRITE;
 UNLOCK TABLES;
 
 
