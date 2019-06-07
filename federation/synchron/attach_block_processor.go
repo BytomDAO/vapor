@@ -33,24 +33,21 @@ func (p *attachBlockProcessor) processIssuing(db *gorm.DB, txs []*btmTypes.Tx) e
 }
 
 func (p *attachBlockProcessor) processChainInfo() error {
-	var blockHeight uint64
-	var blockHashStr, previousBlockHashStr string
+	var previousBlockHashStr string
 
 	switch {
 	case p.cfg.IsMainchain:
-		blockHeight = p.block.(*btmTypes.Block).Height
 		blockHash := p.block.(*btmTypes.Block).Hash()
-		blockHashStr = blockHash.String()
-		previousBlockHashStr = p.block.(*vaporTypes.Block).PreviousBlockHash.String()
+		p.chain.BlockHash = blockHash.String()
+		p.chain.BlockHeight = p.block.(*btmTypes.Block).Height
+		previousBlockHashStr = p.block.(*btmTypes.Block).PreviousBlockHash.String()
 	default:
-		blockHeight = p.block.(*vaporTypes.Block).Height
 		blockHash := p.block.(*vaporTypes.Block).Hash()
-		blockHashStr = blockHash.String()
+		p.chain.BlockHash = blockHash.String()
+		p.chain.BlockHeight = p.block.(*vaporTypes.Block).Height
 		previousBlockHashStr = p.block.(*vaporTypes.Block).PreviousBlockHash.String()
 	}
 
-	p.chain.BlockHeight = blockHeight
-	p.chain.BlockHash = blockHashStr
 	db := p.db.Model(p.chain).Where("block_hash = ?", previousBlockHashStr).Updates(p.chain)
 	if err := db.Error; err != nil {
 		return err

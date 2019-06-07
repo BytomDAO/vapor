@@ -8,6 +8,7 @@ import (
 
 	"github.com/vapor/federation/config"
 	"github.com/vapor/federation/database/orm"
+	vaporTypes "github.com/vapor/protocol/bc/types"
 )
 
 type detachBlockProcessor struct {
@@ -23,16 +24,28 @@ func (p *detachBlockProcessor) processIssuing(db *gorm.DB, txs []*btmTypes.Tx) e
 }
 
 func (p *detachBlockProcessor) processChainInfo() error {
-	// p.coin.BlockHeight = p.block.Height - 1
-	// p.coin.BlockHash = p.block.PreviousBlockHash.String()
-	// oldBlockHash := p.block.Hash()
-	// db := p.db.Model(p.coin).Where("block_hash = ?", oldBlockHash.String()).Updates(p.coin)
-	// if err := db.Error; err != nil {
-	// 	return err
-	// }
+	var oldBlockHashStr string
 
-	// if db.RowsAffected != 1 {
-	// 	return ErrInconsistentDB
-	// }
+	switch {
+	case p.cfg.IsMainchain:
+		p.chain.BlockHash = p.block.(*btmTypes.Block).PreviousBlockHash.String()
+		p.chain.BlockHeight = p.block.(*btmTypes.Block).Height - 1
+		oldBlockHash := p.block.(*btmTypes.Block).Hash()
+		oldBlockHashStr = oldBlockHash.String()
+	default:
+		p.chain.BlockHash = p.block.(*vaporTypes.Block).PreviousBlockHash.String()
+		p.chain.BlockHeight = p.block.(*vaporTypes.Block).Height - 1
+		oldBlockHash := p.block.(*vaporTypes.Block).Hash()
+		oldBlockHashStr = oldBlockHash.String()
+	}
+
+	db := p.db.Model(p.chain).Where("block_hash = ?", oldBlockHashStr).Updates(p.chain)
+	if err := db.Error; err != nil {
+		return err
+	}
+
+	if db.RowsAffected != 1 {
+		return ErrInconsistentDB
+	}
 	return nil
 }
