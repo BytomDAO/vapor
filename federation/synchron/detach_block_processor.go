@@ -19,6 +19,10 @@ type detachBlockProcessor struct {
 	// txStatus *bc.TransactionStatus
 }
 
+func (p *detachBlockProcessor) getCfg() *config.Chain {
+	return p.cfg
+}
+
 func (p *detachBlockProcessor) processIssuing(db *gorm.DB, txs []*btmTypes.Tx) error {
 	return nil
 }

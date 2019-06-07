@@ -89,11 +89,14 @@ CREATE TABLE `cross_transaction_inputs` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `tx_id` int(11) NOT NULL,
   `source_pos` int(11) NOT NULL,
+  `asset_id` int(11) NOT NULL,
+  `asset_amount` bigint(20) DEFAULT '0',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `input_id` (`tx_id`,`source_pos`),
-  CONSTRAINT `cross_transaction_inputs_ibfk_1` FOREIGN KEY (`tx_id`) REFERENCES `cross_transactions` (`id`)
+  CONSTRAINT `cross_transaction_inputs_ibfk_1` FOREIGN KEY (`tx_id`) REFERENCES `cross_transactions` (`id`),
+  CONSTRAINT `cross_transaction_inputs_ibfk_2` FOREIGN KEY (`asset_id`) REFERENCES `assets` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 LOCK TABLES `cross_transaction_inputs` WRITE;

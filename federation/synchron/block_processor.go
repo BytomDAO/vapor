@@ -18,12 +18,14 @@ import (
 	// "github.com/blockcenter/config"
 	// "github.com/blockcenter/types"
 	"github.com/vapor/errors"
+	"github.com/vapor/federation/config"
 	"github.com/vapor/federation/database/orm"
 )
 
 var ErrInconsistentDB = errors.New("inconsistent db status")
 
 type blockProcessor interface {
+	getCfg() *config.Chain
 	processIssuing(db *gorm.DB, txs []*btmTypes.Tx) error
 	processChainInfo() error
 	// getBlock() *btmTypes.Block
@@ -72,9 +74,11 @@ func addIssueAssets(db *gorm.DB, txs []*btmTypes.Tx) error {
 
 func updateBlock(db *gorm.DB, bp blockProcessor) error {
 	// txs := bp.getBlock().Transactions
-	// if err := bp.processIssuing(db, txs, bp.getCoin().ID); err != nil {
-	// 	return err
-	// }
+	if bp.getCfg().IsMainchain {
+		if err := bp.processIssuing(db, txs); err != nil {
+			return err
+		}
+	}
 
 	// addressTxMappings, err := GetAddressTxMappings(cfg, txs, bp.getTxStatus(), db)
 	// if err != nil {
@@ -89,9 +93,15 @@ func updateBlock(db *gorm.DB, bp blockProcessor) error {
 	// 	return err
 	// }
 
-	// if err := updateDeletedTransaction(db); err != nil {
-	// 	return err
-	// }
+	if err := updateDeletedTransaction(db); err != nil {
+		return err
+	}
 
 	return bp.processChainInfo()
+}
+
+// An expired unconfirmed transaction will be marked as deleted, but the latter transaction was packaged into block,
+// the deleted_at flag must be removed. In addition, the gorm can't support update deleted_at field directly, can only use raw sql.
+func updateDeletedTransaction(db *gorm.DB) error {
+	return db.Exec("UPDATE cross_transactions SET deleted_at = NULL WHERE block_height > 0 AND deleted_at IS NOT NULL").Error
 }

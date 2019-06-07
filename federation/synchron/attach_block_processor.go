@@ -28,6 +28,10 @@ type attachBlockProcessor struct {
 	// txStatus *btmBc.TransactionStatus
 }
 
+func (p *attachBlockProcessor) getCfg() *config.Chain {
+	return p.cfg
+}
+
 func (p *attachBlockProcessor) processIssuing(db *gorm.DB, txs []*btmTypes.Tx) error {
 	return addIssueAssets(db, txs)
 }
