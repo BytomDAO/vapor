@@ -16,18 +16,19 @@ import (
 )
 
 type blockKeeper struct {
-	cfg  *config.Chain
-	db   *gorm.DB
-	node *service.Node
 	// cache    *database.RedisDB
-	// coinName string
+	cfg       *config.Chain
+	db        *gorm.DB
+	node      *service.Node
+	chainName string
 }
 
 func NewBlockKeeper(db *gorm.DB, chainCfg *config.Chain) *blockKeeper {
 	return &blockKeeper{
-		cfg:  chainCfg,
-		db:   db,
-		node: service.NewNode(chainCfg.Upstream),
+		cfg:       chainCfg,
+		db:        db,
+		node:      service.NewNode(chainCfg.Upstream),
+		chainName: chainCfg.Name,
 	}
 }
 
@@ -49,7 +50,7 @@ func (b *blockKeeper) Run() {
 }
 
 func (b *blockKeeper) syncBlock() (bool, error) {
-	chain := &orm.Chain{Name: "" /*b.coinName*/}
+	chain := &orm.Chain{Name: b.chainName}
 	if err := b.db.Where(chain).First(chain).Error; err != nil {
 		return false, errors.Wrap(err, "query chain")
 	}

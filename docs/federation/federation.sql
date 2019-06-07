@@ -49,7 +49,7 @@ LOCK TABLES `chains` WRITE;
 INSERT INTO `chains`
 (`id`, `name`, `block_height`, `block_hash`, `created_at`, `updated_at`)
 VALUES
-(1,'btm',0,'a75483474799ea1aa6bb910a1a5025b4372bf20bef20f246a2c2dc5e12e8a053','2018-09-13 05:10:43','2018-11-27 09:42:06');
+(1,'bytom',0,'a75483474799ea1aa6bb910a1a5025b4372bf20bef20f246a2c2dc5e12e8a053','2018-09-13 05:10:43','2018-11-27 09:42:06');
 
 /*!40000 ALTER TABLE `chains` ENABLE KEYS */;
 UNLOCK TABLES;

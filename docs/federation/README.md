@@ -46,7 +46,7 @@ A `fed_cfg.json` would look like this:
         }
     ],
     "mainchain" : {
-        "name" : "vapor",
+        "name" : "bytom",
         "upstream" : "http://127.0.0.1:9888",
         "sync_seconds" : 150
     },
