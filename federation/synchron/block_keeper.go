@@ -10,13 +10,11 @@ import (
 
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/config"
-	// "github.com/blockcenter/database"
 	"github.com/vapor/federation/database/orm"
 	"github.com/vapor/federation/service"
 )
 
 type blockKeeper struct {
-	// cache    *database.RedisDB
 	cfg       *config.Chain
 	db        *gorm.DB
 	node      *service.Node
