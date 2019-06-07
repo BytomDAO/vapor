@@ -1,6 +1,11 @@
 package common
 
 const (
+	DepositDirection uint8 = iota
+	WithdrawalDirection
+)
+
+const (
 	CrossTxPendingStatus uint8 = iota
 	CrossTxCompletedStatus
 	CrossTxRejectedStatus

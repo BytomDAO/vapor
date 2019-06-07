@@ -61,6 +61,7 @@ UNLOCK TABLES;
 CREATE TABLE `cross_transactions` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `chain_id` int(11) NOT NULL,
+  `direction` tinyint(1) DEFAULT '0',
   `block_height` int(11) NOT NULL,
   `block_hash` char(64) NOT NULL,
   `tx_index` int(11) NOT NULL,
