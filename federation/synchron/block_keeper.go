@@ -112,16 +112,17 @@ func (b *blockKeeper) AttachBlock(chain *orm.Chain, block interface{}, txStatus 
 	log.WithFields(log.Fields{"block_height": blockHeight, "block_hash": blockHashStr}).Info("start to attachBlock")
 
 	tx := b.db.Begin()
-	// bp := &attachBlockProcessor{
-	// 	db:       tx,
-	// 	block:    block,
-	// 	coin:     coin,
-	// 	txStatus: txStatus,
-	// }
-	// if err := updateBlock(b.cfg, tx, bp); err != nil {
-	// 	tx.Rollback()
-	// 	return err
-	// }
+	bp := &attachBlockProcessor{
+		cfg:   b.cfg,
+		db:    tx,
+		chain: chain,
+		block: block,
+		// txStatus: txStatus,
+	}
+	if err := updateBlock(tx, bp); err != nil {
+		tx.Rollback()
+		return err
+	}
 
 	return tx.Commit().Error
 }
