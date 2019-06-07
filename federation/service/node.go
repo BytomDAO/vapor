@@ -5,7 +5,6 @@ import (
 
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/util"
-	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
 
@@ -20,12 +19,12 @@ func NewNode(ip string) *Node {
 }
 
 // TODO: FK
-func (n *Node) GetBlockByHash(hash string) (*types.Block, *bc.TransactionStatus, error) {
+func (n *Node) GetBlockByHash(hash string) (interface{}, interface{}, error) {
 	return n.getRawBlock(&getRawBlockReq{BlockHash: hash})
 }
 
 // TODO: FK
-func (n *Node) GetBlockByHeight(height uint64) (*types.Block, *bc.TransactionStatus, error) {
+func (n *Node) GetBlockByHeight(height uint64) (interface{}, interface{}, error) {
 	return n.getRawBlock(&getRawBlockReq{BlockHeight: height})
 }
 
@@ -46,12 +45,12 @@ type getRawBlockReq struct {
 
 // TODO: FK
 type getRawBlockResp struct {
-	RawBlock          *types.Block          `json:"raw_block"`
-	TransactionStatus *bc.TransactionStatus `json:"transaction_status"`
+	RawBlock          interface{} `json:"raw_block"`
+	TransactionStatus interface{} `json:"transaction_status"`
 }
 
 // TODO: FK
-func (n *Node) getRawBlock(req *getRawBlockReq) (*types.Block, *bc.TransactionStatus, error) {
+func (n *Node) getRawBlock(req *getRawBlockReq) (interface{}, interface{}, error) {
 	url := "/get-raw-block"
 	payload, err := json.Marshal(req)
 	if err != nil {
