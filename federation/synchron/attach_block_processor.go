@@ -11,23 +11,55 @@ import (
 	// "github.com/bytom/consensus"
 	// "github.com/bytom/errors"
 	// TODO:
-	btmBc "github.com/bytom/protocol/bc"
+	// btmBc "github.com/bytom/protocol/bc"
 	btmTypes "github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"
-	// TODO:
-	// "github.com/blockcenter/coin/btm"
-	// "github.com/blockcenter/database/orm"
+
+	"github.com/vapor/federation/config"
+	"github.com/vapor/federation/database/orm"
+	vaporTypes "github.com/vapor/protocol/bc/types"
 )
 
 type attachBlockProcessor struct {
-	db *gorm.DB
-	// coin     *orm.Coin
-	block    *btmTypes.Block
-	txStatus *btmBc.TransactionStatus
+	cfg   *config.Chain
+	db    *gorm.DB
+	chain *orm.Chain
+	block interface{}
+	// txStatus *btmBc.TransactionStatus
 }
 
 func (p *attachBlockProcessor) processIssuing(db *gorm.DB, txs []*btmTypes.Tx) error {
 	return addIssueAssets(db, txs)
+}
+
+func (p *attachBlockProcessor) processChainInfo() error {
+	var blockHeight uint64
+	var blockHashStr, previousBlockHashStr string
+
+	switch {
+	case p.cfg.IsMainchain:
+		blockHeight = p.block.(*btmTypes.Block).Height
+		blockHash := p.block.(*btmTypes.Block).Hash()
+		blockHashStr = blockHash.String()
+		previousBlockHashStr = p.block.(*vaporTypes.Block).PreviousBlockHash.String()
+	default:
+		blockHeight = p.block.(*vaporTypes.Block).Height
+		blockHash := p.block.(*vaporTypes.Block).Hash()
+		blockHashStr = blockHash.String()
+		previousBlockHashStr = p.block.(*vaporTypes.Block).PreviousBlockHash.String()
+	}
+
+	p.chain.BlockHeight = blockHeight
+	p.chain.BlockHash = blockHashStr
+	db := p.db.Model(p.chain).Where("block_hash = ?", previousBlockHashStr).Updates(p.chain)
+	if err := db.Error; err != nil {
+		return err
+	}
+
+	if db.RowsAffected != 1 {
+		return ErrInconsistentDB
+	}
+	return nil
 }
 
 /*
@@ -43,20 +75,6 @@ func (p *attachBlockProcessor) getCoin() *orm.Coin {
 	return p.coin
 }
 
-func (p *attachBlockProcessor) processCoinInfo() error {
-	blockHash := p.block.Hash()
-	p.coin.BlockHeight = p.block.Height
-	p.coin.BlockHash = blockHash.String()
-	db := p.db.Model(p.coin).Where("block_hash = ?", p.block.PreviousBlockHash.String()).Updates(p.coin)
-	if err := db.Error; err != nil {
-		return err
-	}
-
-	if db.RowsAffected != 1 {
-		return ErrInconsistentDB
-	}
-	return nil
-}
 
 type addressTxSorter []*orm.AddressTransaction
 

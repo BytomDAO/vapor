@@ -9,7 +9,6 @@ import (
 
 	// "github.com/bytom/consensus"
 	// "github.com/bytom/consensus/segwit"
-	// "github.com/bytom/errors"
 	// "github.com/bytom/protocol/bc"
 	btmTypes "github.com/bytom/protocol/bc/types"
 	// "github.com/bytom/protocol/vm/vmutil"
@@ -18,15 +17,18 @@ import (
 	// "github.com/blockcenter/coin/btm"
 	// "github.com/blockcenter/config"
 	// "github.com/blockcenter/types"
+	"github.com/vapor/errors"
 	"github.com/vapor/federation/database/orm"
 )
 
+var ErrInconsistentDB = errors.New("inconsistent db status")
+
 type blockProcessor interface {
 	processIssuing(db *gorm.DB, txs []*btmTypes.Tx) error
+	processChainInfo() error
 	// getBlock() *btmTypes.Block
 	// getCoin() *orm.Coin
 	// getTxStatus() *bc.TransactionStatus
-	// processCoinInfo() error
 	// processAddressTransaction(mappings []*addressTxMapping) error
 	// processSpendBalance(input *btmTypes.TxInput, deltaBalance *deltaBalance)
 	// processReceiveBalance(output *btmTypes.TxOutput, deltaBalance *deltaBalance)
@@ -66,4 +68,30 @@ func addIssueAssets(db *gorm.DB, txs []*btmTypes.Tx) error {
 	}
 
 	return nil
+}
+
+func updateBlock(db *gorm.DB, bp blockProcessor) error {
+	// txs := bp.getBlock().Transactions
+	// if err := bp.processIssuing(db, txs, bp.getCoin().ID); err != nil {
+	// 	return err
+	// }
+
+	// addressTxMappings, err := GetAddressTxMappings(cfg, txs, bp.getTxStatus(), db)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// if err := bp.processAddressTransaction(addressTxMappings); err != nil {
+	// 	return err
+	// }
+
+	// if err := updateBalanceAndUTXO(db, addressTxMappings, bp); err != nil {
+	// 	return err
+	// }
+
+	// if err := updateDeletedTransaction(db); err != nil {
+	// 	return err
+	// }
+
+	return bp.processChainInfo()
 }
