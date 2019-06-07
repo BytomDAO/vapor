@@ -66,6 +66,7 @@ type Warder struct {
 }
 
 type Chain struct {
+	IsMainchain bool   `json:"is_mainchain"`
 	Name        string `json:"name"`
 	Upstream    string `json:"upstream"`
 	SyncSeconds uint64 `json:"sync_seconds"`

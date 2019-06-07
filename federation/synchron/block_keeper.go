@@ -3,7 +3,7 @@ package synchron
 import (
 	"time"
 
-	btmBc "github.com/bytom/protocol/bc"
+	// btmBc "github.com/bytom/protocol/bc"
 	btmTypes "github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
@@ -12,6 +12,8 @@ import (
 	"github.com/vapor/federation/config"
 	"github.com/vapor/federation/database/orm"
 	"github.com/vapor/federation/service"
+	// vaporBc "github.com/vapor/protocol/bc"
+	vaporTypes "github.com/vapor/protocol/bc/types"
 )
 
 type blockKeeper struct {
@@ -62,15 +64,27 @@ func (b *blockKeeper) syncBlock() (bool, error) {
 		return false, nil
 	}
 
-	nextBlock, txStatus, err := b.node.GetBlockByHeight(chain.BlockHeight + 1)
+	nextBlockStr, txStatus, err := b.node.GetBlockByHeight(chain.BlockHeight + 1)
 	if err != nil {
 		return false, err
 	}
 
 	// Normal case, the previous hash of next block equals to the hash of current block,
 	// just sync to database directly.
-	if nextBlock.PreviousBlockHash.String() == chain.BlockHash {
-		return true, b.AttachBlock(chain, nextBlock, txStatus)
+	switch {
+	case b.cfg.IsMainchain:
+		nextBlock := &btmTypes.Block{}
+		nextBlock.UnmarshalText([]byte(nextBlockStr))
+		if nextBlock.PreviousBlockHash.String() == chain.BlockHash {
+			return true, b.AttachBlock(chain, nextBlock, txStatus)
+		}
+
+	default:
+		nextBlock := &vaporTypes.Block{}
+		nextBlock.UnmarshalText([]byte(nextBlockStr))
+		if nextBlock.PreviousBlockHash.String() == chain.BlockHash {
+			return true, b.AttachBlock(chain, nextBlock, txStatus)
+		}
 	}
 
 	log.WithField("block height", chain.BlockHeight).Debug("the prev hash of remote is not equals the hash of current best block, must rollback")
@@ -82,11 +96,22 @@ func (b *blockKeeper) syncBlock() (bool, error) {
 	return true, b.DetachBlock(chain, currentBlock, txStatus)
 }
 
-func (b *blockKeeper) AttachBlock(chain *orm.Chain, block *btmTypes.Block, txStatus *btmBc.TransactionStatus) error {
-	// blockHash := block.Hash()
-	// log.WithFields(log.Fields{"block_height": block.Height, "block_hash": blockHash.String()}).Info("start to attachBlock")
+func (b *blockKeeper) AttachBlock(chain *orm.Chain, block interface{}, txStatus interface{}) error {
+	var blockHeight uint64
+	var blockHashStr string
+	switch {
+	case b.cfg.IsMainchain:
+		blockHeight = block.(*btmTypes.Block).Height
+		blockHash := block.(*btmTypes.Block).Hash()
+		blockHashStr = blockHash.String()
+	default:
+		blockHeight = block.(*vaporTypes.Block).Height
+		blockHash := block.(*vaporTypes.Block).Hash()
+		blockHashStr = blockHash.String()
+	}
+	log.WithFields(log.Fields{"block_height": blockHeight, "block_hash": blockHashStr}).Info("start to attachBlock")
 
-	// tx := b.db.Begin()
+	tx := b.db.Begin()
 	// bp := &attachBlockProcessor{
 	// 	db:       tx,
 	// 	block:    block,
@@ -98,15 +123,25 @@ func (b *blockKeeper) AttachBlock(chain *orm.Chain, block *btmTypes.Block, txSta
 	// 	return err
 	// }
 
-	// return tx.Commit().Error
-	return nil
+	return tx.Commit().Error
 }
 
-func (b *blockKeeper) DetachBlock(chain *orm.Chain, block *btmTypes.Block, txStatus *btmBc.TransactionStatus) error {
-	// blockHash := block.Hash()
-	// log.WithFields(log.Fields{"block_height": block.Height, "block_hash": blockHash.String()}).Info("start to detachBlock")
+func (b *blockKeeper) DetachBlock(chain *orm.Chain, block interface{}, txStatus interface{}) error {
+	var blockHeight uint64
+	var blockHashStr string
+	switch {
+	case b.cfg.IsMainchain:
+		blockHeight = block.(*btmTypes.Block).Height
+		blockHash := block.(*btmTypes.Block).Hash()
+		blockHashStr = blockHash.String()
+	default:
+		blockHeight = block.(*vaporTypes.Block).Height
+		blockHash := block.(*vaporTypes.Block).Hash()
+		blockHashStr = blockHash.String()
+	}
+	log.WithFields(log.Fields{"block_height": blockHeight, "block_hash": blockHashStr}).Info("start to detachBlock")
 
-	// tx := b.db.Begin()
+	tx := b.db.Begin()
 	// bp := &detachBlockProcessor{
 	// 	db:       tx,
 	// 	block:    block,
@@ -118,6 +153,5 @@ func (b *blockKeeper) DetachBlock(chain *orm.Chain, block *btmTypes.Block, txSta
 	// 	return err
 	// }
 
-	// return tx.Commit().Error
-	return nil
+	return tx.Commit().Error
 }

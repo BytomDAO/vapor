@@ -18,11 +18,11 @@ func NewNode(ip string) *Node {
 	return &Node{ip: ip}
 }
 
-func (n *Node) GetBlockByHash(hash string) (interface{}, interface{}, error) {
+func (n *Node) GetBlockByHash(hash string) (string, interface{}, error) {
 	return n.getRawBlock(&getRawBlockReq{BlockHash: hash})
 }
 
-func (n *Node) GetBlockByHeight(height uint64) (interface{}, interface{}, error) {
+func (n *Node) GetBlockByHeight(height uint64) (string, interface{}, error) {
 	return n.getRawBlock(&getRawBlockReq{BlockHeight: height})
 }
 
@@ -42,15 +42,15 @@ type getRawBlockReq struct {
 }
 
 type getRawBlockResp struct {
-	RawBlock          interface{} `json:"raw_block"`
+	RawBlock          string      `json:"raw_block"`
 	TransactionStatus interface{} `json:"transaction_status"`
 }
 
-func (n *Node) getRawBlock(req *getRawBlockReq) (interface{}, interface{}, error) {
+func (n *Node) getRawBlock(req *getRawBlockReq) (string, interface{}, error) {
 	url := "/get-raw-block"
 	payload, err := json.Marshal(req)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "json marshal")
+		return "", nil, errors.Wrap(err, "json marshal")
 	}
 
 	res := &getRawBlockResp{}

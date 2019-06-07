@@ -46,11 +46,13 @@ A `fed_cfg.json` would look like this:
         }
     ],
     "mainchain" : {
+        "is_mainchain" : true,
         "name" : "bytom",
         "upstream" : "http://127.0.0.1:9888",
         "sync_seconds" : 150
     },
     "sidechain" : {
+        "is_mainchain" : false,
         "name" : "vapor",
         "upstream" : "http://127.0.0.1:9888",
         "sync_seconds" : 5
