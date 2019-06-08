@@ -33,6 +33,10 @@ func (p *attachBlockProcessor) getBlock() interface{} {
 	return p.block
 }
 
+func (p *attachBlockProcessor) processWithdrawalToMainchain(txIndex uint64, tx *btmTypes.Tx) error {
+	return nil
+}
+
 func (p *attachBlockProcessor) processDepositFromMainchain(txIndex uint64, tx *btmTypes.Tx) error {
 	blockHash := p.getBlock().(*btmTypes.Block).Hash()
 

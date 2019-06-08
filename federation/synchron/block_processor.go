@@ -31,6 +31,7 @@ var ErrInconsistentDB = errors.New("inconsistent db status")
 type blockProcessor interface {
 	getCfg() *config.Chain
 	getBlock() interface{}
+	processWithdrawalToMainchain(uint64, *btmTypes.Tx) error
 	processDepositFromMainchain(uint64, *btmTypes.Tx) error
 	processIssuing(*gorm.DB, []*btmTypes.Tx) error
 	processChainInfo() error
@@ -92,7 +93,7 @@ func updateBlock(db *gorm.DB, bp blockProcessor) error {
 				bp.processDepositFromMainchain(uint64(i), tx)
 			}
 			if isWithdrawalToMainchain(tx) {
-				// 	bp.processWithdrawalToMainchain(uint64(i), tx)
+				bp.processWithdrawalToMainchain(uint64(i), tx)
 			}
 		}
 

@@ -27,6 +27,10 @@ func (p *detachBlockProcessor) getBlock() interface{} {
 	return p.block
 }
 
+func (p *detachBlockProcessor) processWithdrawalToMainchain(txIndex uint64, tx *btmTypes.Tx) error {
+	return p.db.Delete(&orm.CrossTransaction{TxHash: tx.ID.String()}).Error
+}
+
 func (p *detachBlockProcessor) processDepositFromMainchain(txIndex uint64, tx *btmTypes.Tx) error {
 	ormTx := &orm.CrossTransaction{TxHash: tx.ID.String()}
 	if err := p.db.Where(tx).First(tx).Error; err != nil {
