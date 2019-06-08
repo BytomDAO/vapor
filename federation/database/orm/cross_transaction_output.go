@@ -10,6 +10,7 @@ type CrossTransactionOutput struct {
 	ID            uint64 `gorm:"primary_key"`
 	SidechainTxID uint64
 	MainchainTxID sql.NullInt64
+	SourcePos     uint64
 	AssetID       uint64
 	AssetAmount   uint64
 	Script        string

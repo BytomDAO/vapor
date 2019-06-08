@@ -86,9 +86,10 @@ func updateBlock(db *gorm.DB, bp blockProcessor) error {
 			return err
 		}
 
-		depositTxs := filterDepositFromMainchain(block)
-		crossChainInputs := getRawCrossChainInputs(depositTxs)
-		log.Info(crossChainInputs)
+		for _, depositTx := range filterDepositFromMainchain(block) {
+			crossChainInputs := getRawCrossChainInputs(depositTx)
+			log.Info(crossChainInputs)
+		}
 
 		filterWithdrawalToMainchain(block)
 
@@ -171,20 +172,67 @@ func filterWithdrawalFromSidechain(block *vaporTypes.Block) []*vaporTypes.Tx {
 	return withdrawalTxs
 }
 
-func getRawCrossChainInputs(txs []*btmTypes.Tx) []*orm.CrossTransactionInput {
-	return nil
+func getRawCrossChainInputs(tx *btmTypes.Tx) []*orm.CrossTransactionInput {
+	// break
+	script := hex.EncodeToString(tx.Inputs[0].ControlProgram())
+	inputs := []*orm.CrossTransactionInput{}
+	for i, rawOutput := range tx.Outputs {
+		input := &orm.CrossTransactionInput{
+			// MainchainTxID uint64
+			// SidechainTxID sql.NullInt64
+			SourcePos: uint64(i),
+			// AssetID: rawOutput.OutputCommitment.AssetAmount.assetID,
+			AssetAmount: rawOutput.OutputCommitment.AssetAmount.Amount,
+			Script:      script,
+		}
+		inputs = append(inputs, input)
+	}
+	return inputs
 }
 
-func getRefCrossChainInputs(txs []*vaporTypes.Tx) []*orm.CrossTransactionInput {
-	return nil
+func getRefCrossChainInputs(tx *vaporTypes.Tx) []*orm.CrossTransactionInput {
+	inputs := []*orm.CrossTransactionInput{}
+	for i, rawInput := range tx.Inputs {
+		if rawInput.InputType() != vaporTypes.CrossChainInputType {
+			continue
+		}
+
+		input := &orm.CrossTransactionInput{
+			// MainchainTxID uint64
+			// SidechainTxID sql.NullInt64
+			SourcePos: uint64(i),
+			// AssetID:  rawInput.AssetID(),
+			AssetAmount: rawInput.Amount(),
+			// Script:      "",
+		}
+		inputs = append(inputs, input)
+	}
+	return inputs
 }
 
-func getRawCrossChainOutputs(txs []*vaporTypes.Tx) []*orm.CrossTransactionOutput {
-	return nil
+func getRawCrossChainOutputs(tx *vaporTypes.Tx) []*orm.CrossTransactionOutput {
+	outputs := []*orm.CrossTransactionOutput{}
+	for i, rawOutput := range tx.Outputs {
+		if rawOutput.OutputType() != vaporTypes.CrossChainOutputType {
+			continue
+		}
+
+		output := &orm.CrossTransactionOutput{
+			// SidechainTxID uint64
+			// MainchainTxID sql.NullInt64
+			SourcePos: uint64(i),
+			// AssetID       uint64
+			AssetAmount: rawOutput.AssetAmount().Amount,
+			Script:      hex.EncodeToString(rawOutput.ControlProgram()),
+		}
+		outputs = append(outputs, output)
+	}
+	return outputs
 }
 
-func getRefCrossChainOutputs(txs []*btmTypes.Tx) []*orm.CrossTransactionOutput {
-	return nil
+func getRefCrossChainOutputs(tx *btmTypes.Tx) []*orm.CrossTransactionOutput {
+	outputs := []*orm.CrossTransactionOutput{}
+	return outputs
 }
 
 // An expired unconfirmed transaction will be marked as deleted, but the latter transaction was packaged into block,
