@@ -17,7 +17,7 @@ import (
 	// "github.com/blockcenter/types"
 	btmTypes "github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"
-	log "github.com/sirupsen/logrus"
+	// log "github.com/sirupsen/logrus"
 
 	vaporTypes "github.com/bytom/protocol/bc/types"
 	vaporCfg "github.com/vapor/config"
@@ -87,15 +87,12 @@ func updateBlock(db *gorm.DB, bp blockProcessor) error {
 		}
 
 		filterDepositFromMainchain(block)
-		withdrawalTxs := filterWithdrawalToMainchain(block)
-		log.Info(withdrawalTxs)
+		filterWithdrawalToMainchain(block)
 
 	default:
 		block := bp.getBlock().(*vaporTypes.Block)
-		depositTxs := filterDepositToSidechain(block)
-		log.Info(depositTxs)
-		withdrawalTxs := filterWithdrawalFromSidechain(block)
-		log.Info(withdrawalTxs)
+		filterDepositToSidechain(block)
+		filterWithdrawalFromSidechain(block)
 	}
 
 	// txs := bp.getBlock().Transactions
@@ -133,7 +130,12 @@ func filterDepositFromMainchain(block *btmTypes.Block) []*btmTypes.Tx {
 	return depositTxs
 }
 
-func filterWithdrawalToMainchain(block *btmTypes.Block) error     { return nil }
+func filterWithdrawalToMainchain(block *btmTypes.Block) []*btmTypes.Tx {
+	withdrawalTxs := []*btmTypes.Tx{}
+
+	return withdrawalTxs
+}
+
 func filterDepositToSidechain(block *vaporTypes.Block) error      { return nil }
 func filterWithdrawalFromSidechain(block *vaporTypes.Block) error { return nil }
 
