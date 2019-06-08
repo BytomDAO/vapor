@@ -1,7 +1,6 @@
 package synchron
 
 import (
-	// "math/big"
 	// "github.com/bytom/protocol/bc"
 	btmTypes "github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"

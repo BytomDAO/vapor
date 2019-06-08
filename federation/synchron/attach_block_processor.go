@@ -1,15 +1,11 @@
 package synchron
 
 import (
-	// "database/sql"
 	// "encoding/hex"
 	// "encoding/json"
 	"fmt"
-	// "math/big"
-	// "sort"
 
 	// "github.com/bytom/consensus"
-	// TODO:
 	btmBc "github.com/bytom/protocol/bc"
 	btmTypes "github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"
