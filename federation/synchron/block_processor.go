@@ -87,13 +87,14 @@ func updateBlock(db *gorm.DB, bp blockProcessor) error {
 			return err
 		}
 
-		for i, tx := range block.Transactions {
+		for i, tx := range txs {
 			if isDepositFromMainchain(tx) {
 				bp.processDepositFromMainchain(uint64(i), tx)
 			}
+			if isWithdrawalToMainchain(tx) {
+				// 	bp.processWithdrawalToMainchain(uint64(i), tx)
+			}
 		}
-
-		filterWithdrawalToMainchain(block)
 
 	default:
 		block := bp.getBlock().(*vaporTypes.Block)
@@ -114,18 +115,14 @@ func isDepositFromMainchain(tx *btmTypes.Tx) bool {
 	return false
 }
 
-func filterWithdrawalToMainchain(block *btmTypes.Block) []*btmTypes.Tx {
-	withdrawalTxs := []*btmTypes.Tx{}
-	for _, tx := range block.Transactions {
-		for _, input := range tx.Inputs {
-			fedProg := vaporCfg.FederationProgrom(vaporCfg.CommonConfig)
-			if bytes.Equal(input.ControlProgram(), fedProg) {
-				withdrawalTxs = append(withdrawalTxs, tx)
-				break
-			}
+func isWithdrawalToMainchain(tx *btmTypes.Tx) bool {
+	fedProg := vaporCfg.FederationProgrom(vaporCfg.CommonConfig)
+	for _, input := range tx.Inputs {
+		if bytes.Equal(input.ControlProgram(), fedProg) {
+			return true
 		}
 	}
-	return withdrawalTxs
+	return false
 }
 
 func filterDepositToSidechain(block *vaporTypes.Block) []*vaporTypes.Tx {
