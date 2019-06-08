@@ -17,7 +17,7 @@ import (
 	// "github.com/blockcenter/types"
 	btmTypes "github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"
-	// log "github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	vaporCfg "github.com/vapor/config"
 	"github.com/vapor/errors"
@@ -86,7 +86,10 @@ func updateBlock(db *gorm.DB, bp blockProcessor) error {
 			return err
 		}
 
-		filterDepositFromMainchain(block)
+		depositTxs := filterDepositFromMainchain(block)
+		crossChainInputs := getRawCrossChainInputs(depositTxs)
+		log.Info(crossChainInputs)
+
 		filterWithdrawalToMainchain(block)
 
 	default:
@@ -167,6 +170,11 @@ func filterWithdrawalFromSidechain(block *vaporTypes.Block) []*vaporTypes.Tx {
 	}
 	return withdrawalTxs
 }
+
+func getRawCrossChainInputs(txs []*btmTypes.Tx) []*orm.CrossTransactionInput     { return nil }
+func getRefCrossChainInputs(txs []*vaporTypes.Tx) []*orm.CrossTransactionInput   { return nil }
+func getRawCrossChainOutputs(txs []*vaporTypes.Tx) []*orm.CrossTransactionOutput { return nil }
+func getRefCrossChainOutputs(txs []*btmTypes.Tx) []*orm.CrossTransactionOutput   { return nil }
 
 // An expired unconfirmed transaction will be marked as deleted, but the latter transaction was packaged into block,
 // the deleted_at flag must be removed. In addition, the gorm can't support update deleted_at field directly, can only use raw sql.
