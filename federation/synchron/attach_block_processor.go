@@ -4,17 +4,18 @@ import (
 	// "database/sql"
 	// "encoding/hex"
 	// "encoding/json"
-	// "fmt"
+	"fmt"
 	// "math/big"
 	// "sort"
 
 	// "github.com/bytom/consensus"
-	// "github.com/bytom/errors"
 	// TODO:
 	// btmBc "github.com/bytom/protocol/bc"
 	btmTypes "github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"
 
+	"github.com/vapor/errors"
+	"github.com/vapor/federation/common"
 	"github.com/vapor/federation/config"
 	"github.com/vapor/federation/database/orm"
 	vaporTypes "github.com/vapor/protocol/bc/types"
@@ -34,6 +35,35 @@ func (p *attachBlockProcessor) getCfg() *config.Chain {
 
 func (p *attachBlockProcessor) getBlock() interface{} {
 	return p.block
+}
+
+func (p *attachBlockProcessor) processDepositFromMainchain(txIndex uint64, tx *btmTypes.Tx) error {
+	blockHash := p.getBlock().(*btmTypes.Block).Hash()
+	ormTx := &orm.CrossTransaction{
+		// ChainID        uint64
+		Direction:   common.DepositDirection,
+		BlockHeight: p.getBlock().(*btmTypes.Block).Height,
+		BlockHash:   blockHash.String(),
+		TxIndex:     txIndex,
+		// MuxID          string
+		// TxHash         string
+		// RawTransaction string
+		// Status         uint8
+	}
+	if err := p.db.Create(ormTx).Error; err != nil {
+		p.db.Rollback()
+		return errors.Wrap(err, fmt.Sprintf("create DepositFromMainchain tx %s", tx.ID.String()))
+	}
+
+	for i, input := range getCrossChainInputs(tx) {
+		input.MainchainTxID = ormTx.ID
+		if err := p.db.Create(input).Error; err != nil {
+			p.db.Rollback()
+			return errors.Wrap(err, fmt.Sprintf("create DepositFromMainchain input: txid(%s), pos(%d)", tx.ID.String(), i))
+		}
+	}
+
+	return nil
 }
 
 func (p *attachBlockProcessor) processIssuing(db *gorm.DB, txs []*btmTypes.Tx) error {

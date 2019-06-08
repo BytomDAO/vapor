@@ -27,6 +27,10 @@ func (p *detachBlockProcessor) getBlock() interface{} {
 	return p.block
 }
 
+func (p *detachBlockProcessor) processDepositFromMainchain(txIndex uint64, tx *btmTypes.Tx) error {
+	return nil
+}
+
 func (p *detachBlockProcessor) processIssuing(db *gorm.DB, txs []*btmTypes.Tx) error {
 	return nil
 }

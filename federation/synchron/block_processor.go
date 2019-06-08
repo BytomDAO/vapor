@@ -17,7 +17,7 @@ import (
 	// "github.com/blockcenter/types"
 	btmTypes "github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"
-	log "github.com/sirupsen/logrus"
+	// log "github.com/sirupsen/logrus"
 
 	vaporCfg "github.com/vapor/config"
 	"github.com/vapor/errors"
@@ -31,7 +31,8 @@ var ErrInconsistentDB = errors.New("inconsistent db status")
 type blockProcessor interface {
 	getCfg() *config.Chain
 	getBlock() interface{}
-	processIssuing(db *gorm.DB, txs []*btmTypes.Tx) error
+	processDepositFromMainchain(uint64, *btmTypes.Tx) error
+	processIssuing(*gorm.DB, []*btmTypes.Tx) error
 	processChainInfo() error
 	// getCoin() *orm.Coin
 	// getTxStatus() *bc.TransactionStatus
@@ -86,9 +87,8 @@ func updateBlock(db *gorm.DB, bp blockProcessor) error {
 			return err
 		}
 
-		for _, depositTx := range filterDepositFromMainchain(block) {
-			crossChainInputs := getRawCrossChainInputs(depositTx)
-			log.Info(crossChainInputs)
+		for i, depositTx := range filterDepositFromMainchain(block) {
+			bp.processDepositFromMainchain(uint64(i), depositTx)
 		}
 
 		filterWithdrawalToMainchain(block)
@@ -172,7 +172,7 @@ func filterWithdrawalFromSidechain(block *vaporTypes.Block) []*vaporTypes.Tx {
 	return withdrawalTxs
 }
 
-func getRawCrossChainInputs(tx *btmTypes.Tx) []*orm.CrossTransactionInput {
+func getCrossChainInputs(tx *btmTypes.Tx) []*orm.CrossTransactionInput {
 	// assume inputs are from an identical owner
 	script := hex.EncodeToString(tx.Inputs[0].ControlProgram())
 	inputs := []*orm.CrossTransactionInput{}
