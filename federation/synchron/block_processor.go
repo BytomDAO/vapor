@@ -1,6 +1,7 @@
 package synchron
 
 import (
+	"bytes"
 	"encoding/hex"
 	// "encoding/json"
 	// "fmt"
@@ -19,6 +20,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	vaporTypes "github.com/bytom/protocol/bc/types"
+	vaporCfg "github.com/vapor/config"
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/config"
 	"github.com/vapor/federation/database/orm"
@@ -84,8 +86,7 @@ func updateBlock(db *gorm.DB, bp blockProcessor) error {
 			return err
 		}
 
-		depositTxs := filterDepositFromMainchain(block)
-		log.Info(depositTxs)
+		filterDepositFromMainchain(block)
 		withdrawalTxs := filterWithdrawalToMainchain(block)
 		log.Info(withdrawalTxs)
 
@@ -118,7 +119,20 @@ func updateBlock(db *gorm.DB, bp blockProcessor) error {
 	return bp.processChainInfo()
 }
 
-func filterDepositFromMainchain(block *btmTypes.Block) error      { return nil }
+func filterDepositFromMainchain(block *btmTypes.Block) []*btmTypes.Tx {
+	depositTxs := []*btmTypes.Tx{}
+	for _, tx := range block.Transactions {
+		for _, output := range tx.Outputs {
+			fedProg := vaporCfg.FederationProgrom(vaporCfg.CommonConfig)
+			if bytes.Equal(output.OutputCommitment.ControlProgram, fedProg) {
+				depositTxs = append(depositTxs, tx)
+				break
+			}
+		}
+	}
+	return depositTxs
+}
+
 func filterWithdrawalToMainchain(block *btmTypes.Block) error     { return nil }
 func filterDepositToSidechain(block *vaporTypes.Block) error      { return nil }
 func filterWithdrawalFromSidechain(block *vaporTypes.Block) error { return nil }
