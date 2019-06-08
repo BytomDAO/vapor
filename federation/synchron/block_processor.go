@@ -101,20 +101,6 @@ func updateBlock(db *gorm.DB, bp blockProcessor) error {
 		filterWithdrawalFromSidechain(block)
 	}
 
-	// txs := bp.getBlock().Transactions
-	// addressTxMappings, err := GetAddressTxMappings(cfg, txs, bp.getTxStatus(), db)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// if err := bp.processAddressTransaction(addressTxMappings); err != nil {
-	// 	return err
-	// }
-
-	// if err := updateBalanceAndUTXO(db, addressTxMappings, bp); err != nil {
-	// 	return err
-	// }
-
 	return bp.processChainInfo()
 }
 
