@@ -34,6 +34,37 @@ func (p *attachBlockProcessor) getBlock() interface{} {
 }
 
 func (p *attachBlockProcessor) processWithdrawalToMainchain(txIndex uint64, tx *btmTypes.Tx) error {
+	blockHash := p.getBlock().(*btmTypes.Block).Hash()
+
+	var muxID btmBc.Hash
+	resOutID := tx.ResultIds[0]
+	resOut, ok := tx.Entries[*resOutID].(*btmBc.Output)
+	if ok {
+		muxID = *resOut.Source.Ref
+	} else {
+		return errors.New("fail to get mux id")
+	}
+
+	rawTx, err := tx.MarshalText()
+	if err != nil {
+		return err
+	}
+
+	ormTx := &orm.CrossTransaction{
+		ChainID:        p.chain.ID,
+		Direction:      common.WithdrawalDirection,
+		BlockHeight:    p.getBlock().(*btmTypes.Block).Height,
+		BlockHash:      blockHash.String(),
+		TxIndex:        txIndex,
+		MuxID:          muxID.String(),
+		TxHash:         tx.ID.String(),
+		RawTransaction: string(rawTx),
+		Status:         common.CrossTxCompletedStatus,
+	}
+	if err := p.db.Create(ormTx).Error; err != nil {
+		return errors.Wrap(err, fmt.Sprintf("create DepositFromMainchain tx %s", tx.ID.String()))
+	}
+
 	return nil
 }
 
@@ -66,13 +97,11 @@ func (p *attachBlockProcessor) processDepositFromMainchain(txIndex uint64, tx *b
 		Status:         common.CrossTxCompletedStatus,
 	}
 	if err := p.db.Create(ormTx).Error; err != nil {
-		p.db.Rollback()
 		return errors.Wrap(err, fmt.Sprintf("create DepositFromMainchain tx %s", tx.ID.String()))
 	}
 
 	for i, input := range getCrossChainInputs(ormTx.ID, tx) {
 		if err := p.db.Create(input).Error; err != nil {
-			p.db.Rollback()
 			return errors.Wrap(err, fmt.Sprintf("create DepositFromMainchain input: txid(%s), pos(%d)", tx.ID.String(), i))
 		}
 	}
