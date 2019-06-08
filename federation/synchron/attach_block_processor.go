@@ -55,7 +55,7 @@ func (p *attachBlockProcessor) processDepositFromMainchain(txIndex uint64, tx *b
 	}
 
 	ormTx := &orm.CrossTransaction{
-		// ChainID        uint64
+		ChainID:        p.chain.ID,
 		Direction:      common.DepositDirection,
 		BlockHeight:    p.getBlock().(*btmTypes.Block).Height,
 		BlockHash:      blockHash.String(),
@@ -112,16 +112,9 @@ func (p *attachBlockProcessor) processChainInfo() error {
 }
 
 /*
-func (p *attachBlockProcessor) getBlock() *btmTypes.Block {
-	return p.block
-}
 
 func (p *attachBlockProcessor) getTxStatus() *bc.TransactionStatus {
 	return p.txStatus
-}
-
-func (p *attachBlockProcessor) getCoin() *orm.Coin {
-	return p.coin
 }
 
 
