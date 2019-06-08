@@ -171,10 +171,21 @@ func filterWithdrawalFromSidechain(block *vaporTypes.Block) []*vaporTypes.Tx {
 	return withdrawalTxs
 }
 
-func getRawCrossChainInputs(txs []*btmTypes.Tx) []*orm.CrossTransactionInput     { return nil }
-func getRefCrossChainInputs(txs []*vaporTypes.Tx) []*orm.CrossTransactionInput   { return nil }
-func getRawCrossChainOutputs(txs []*vaporTypes.Tx) []*orm.CrossTransactionOutput { return nil }
-func getRefCrossChainOutputs(txs []*btmTypes.Tx) []*orm.CrossTransactionOutput   { return nil }
+func getRawCrossChainInputs(txs []*btmTypes.Tx) []*orm.CrossTransactionInput {
+	return nil
+}
+
+func getRefCrossChainInputs(txs []*vaporTypes.Tx) []*orm.CrossTransactionInput {
+	return nil
+}
+
+func getRawCrossChainOutputs(txs []*vaporTypes.Tx) []*orm.CrossTransactionOutput {
+	return nil
+}
+
+func getRefCrossChainOutputs(txs []*btmTypes.Tx) []*orm.CrossTransactionOutput {
+	return nil
+}
 
 // An expired unconfirmed transaction will be marked as deleted, but the latter transaction was packaged into block,
 // the deleted_at flag must be removed. In addition, the gorm can't support update deleted_at field directly, can only use raw sql.
