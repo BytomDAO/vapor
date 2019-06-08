@@ -181,6 +181,7 @@ func getCrossChainInputs(ormTxID uint64, tx *btmTypes.Tx) []*orm.CrossTransactio
 			continue
 		}
 
+		// default null SidechainTxID, which will be set after submitting cross_in tx on sidechain
 		input := &orm.CrossTransactionInput{
 			MainchainTxID: ormTxID,
 			SourcePos:     uint64(i),
