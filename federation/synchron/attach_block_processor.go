@@ -10,7 +10,7 @@ import (
 
 	// "github.com/bytom/consensus"
 	// TODO:
-	// btmBc "github.com/bytom/protocol/bc"
+	btmBc "github.com/bytom/protocol/bc"
 	btmTypes "github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"
 
@@ -40,24 +40,29 @@ func (p *attachBlockProcessor) getBlock() interface{} {
 func (p *attachBlockProcessor) processDepositFromMainchain(txIndex uint64, tx *btmTypes.Tx) error {
 	blockHash := p.getBlock().(*btmTypes.Block).Hash()
 
-	// resOutID := orig.ResultIds[0]
-	// resOut, ok := orig.Entries[*resOutID].(*bc.Output)
-	// if ok {
-	// 	tx.MuxID = *resOut.Source.Ref
-	// } else {
-	// 	resRetire, _ := orig.Entries[*resOutID].(*bc.Retirement)
-	// 	tx.MuxID = *resRetire.Source.Ref
-	// }
+	var muxID btmBc.Hash
+	resOutID := tx.ResultIds[0]
+	resOut, ok := tx.Entries[*resOutID].(*btmBc.Output)
+	if ok {
+		muxID = *resOut.Source.Ref
+	} else {
+		return errors.New("fail to get mux id")
+	}
+
+	rawTx, err := tx.MarshalText()
+	if err != nil {
+		return err
+	}
 
 	ormTx := &orm.CrossTransaction{
 		// ChainID        uint64
-		Direction:   common.DepositDirection,
-		BlockHeight: p.getBlock().(*btmTypes.Block).Height,
-		BlockHash:   blockHash.String(),
-		TxIndex:     txIndex,
-		// MuxID          string
-		// TxHash         string
-		// RawTransaction string
+		Direction:      common.DepositDirection,
+		BlockHeight:    p.getBlock().(*btmTypes.Block).Height,
+		BlockHash:      blockHash.String(),
+		TxIndex:        txIndex,
+		MuxID:          muxID.String(),
+		TxHash:         tx.ID.String(),
+		RawTransaction: string(rawTx),
 		// Status         uint8
 	}
 	if err := p.db.Create(ormTx).Error; err != nil {
