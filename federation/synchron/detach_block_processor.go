@@ -6,6 +6,7 @@ import (
 	btmTypes "github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"
 
+	"github.com/vapor/errors"
 	"github.com/vapor/federation/config"
 	"github.com/vapor/federation/database/orm"
 	vaporTypes "github.com/vapor/protocol/bc/types"
@@ -28,7 +29,16 @@ func (p *detachBlockProcessor) getBlock() interface{} {
 }
 
 func (p *detachBlockProcessor) processDepositFromMainchain(txIndex uint64, tx *btmTypes.Tx) error {
-	return nil
+	ormTx := &orm.CrossTransaction{TxHash: tx.ID.String()}
+	if err := p.db.Where(tx).First(tx).Error; err != nil {
+		return errors.Wrap(err, "db query transaction")
+	}
+
+	if err := p.db.Delete(&orm.CrossTransactionInput{}, "MainchainTxID = ?", ormTx.ID).Error; err != nil {
+		return errors.Wrap(err, "db delete CrossTransactionInput")
+	}
+
+	return p.db.Delete(ormTx).Error
 }
 
 func (p *detachBlockProcessor) processIssuing(db *gorm.DB, txs []*btmTypes.Tx) error {

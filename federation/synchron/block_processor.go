@@ -115,10 +115,6 @@ func updateBlock(db *gorm.DB, bp blockProcessor) error {
 	// 	return err
 	// }
 
-	if err := updateDeletedTransaction(db); err != nil {
-		return err
-	}
-
 	return bp.processChainInfo()
 }
 
@@ -212,10 +208,4 @@ func getRawCrossChainOutputs(tx *vaporTypes.Tx) []*orm.CrossTransactionOutput {
 		outputs = append(outputs, output)
 	}
 	return outputs
-}
-
-// An expired unconfirmed transaction will be marked as deleted, but the latter transaction was packaged into block,
-// the deleted_at flag must be removed. In addition, the gorm can't support update deleted_at field directly, can only use raw sql.
-func updateDeletedTransaction(db *gorm.DB) error {
-	return db.Exec("UPDATE cross_transactions SET deleted_at = NULL WHERE block_height > 0 AND deleted_at IS NOT NULL").Error
 }
