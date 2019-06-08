@@ -6,7 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/vapor/crypto/ed25519/chainkd"
 )
 
 func NewConfig() *Config {
