@@ -63,7 +63,7 @@ func (p *attachBlockProcessor) processDepositFromMainchain(txIndex uint64, tx *b
 		MuxID:          muxID.String(),
 		TxHash:         tx.ID.String(),
 		RawTransaction: string(rawTx),
-		// Status         uint8
+		Status:         common.CrossTxCompletedStatus,
 	}
 	if err := p.db.Create(ormTx).Error; err != nil {
 		p.db.Rollback()
