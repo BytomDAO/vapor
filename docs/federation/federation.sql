@@ -113,6 +113,7 @@ CREATE TABLE `cross_transaction_outputs` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `sidechain_tx_id` int(11) NOT NULL,
   `mainchain_tx_id` int(11) DEFAULT NULL,
+  `source_pos` int(11) NOT NULL,
   `asset_id` int(11) NOT NULL,
   `asset_amount` bigint(20) DEFAULT '0',
   `script` varchar(128) NOT NULL,

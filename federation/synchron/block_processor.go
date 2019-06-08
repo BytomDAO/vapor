@@ -173,10 +173,16 @@ func filterWithdrawalFromSidechain(block *vaporTypes.Block) []*vaporTypes.Tx {
 }
 
 func getRawCrossChainInputs(tx *btmTypes.Tx) []*orm.CrossTransactionInput {
-	// break
+	// assume inputs are from an identical owner
 	script := hex.EncodeToString(tx.Inputs[0].ControlProgram())
 	inputs := []*orm.CrossTransactionInput{}
 	for i, rawOutput := range tx.Outputs {
+		fedProg := vaporCfg.FederationProgrom(vaporCfg.CommonConfig)
+		// check valid deposit
+		if !bytes.Equal(rawOutput.OutputCommitment.ControlProgram, fedProg) {
+			continue
+		}
+
 		input := &orm.CrossTransactionInput{
 			// MainchainTxID uint64
 			// SidechainTxID sql.NullInt64
@@ -190,6 +196,7 @@ func getRawCrossChainInputs(tx *btmTypes.Tx) []*orm.CrossTransactionInput {
 	return inputs
 }
 
+/*
 func getRefCrossChainInputs(tx *vaporTypes.Tx) []*orm.CrossTransactionInput {
 	inputs := []*orm.CrossTransactionInput{}
 	for i, rawInput := range tx.Inputs {
@@ -209,6 +216,7 @@ func getRefCrossChainInputs(tx *vaporTypes.Tx) []*orm.CrossTransactionInput {
 	}
 	return inputs
 }
+*/
 
 func getRawCrossChainOutputs(tx *vaporTypes.Tx) []*orm.CrossTransactionOutput {
 	outputs := []*orm.CrossTransactionOutput{}
@@ -230,10 +238,23 @@ func getRawCrossChainOutputs(tx *vaporTypes.Tx) []*orm.CrossTransactionOutput {
 	return outputs
 }
 
+/*
 func getRefCrossChainOutputs(tx *btmTypes.Tx) []*orm.CrossTransactionOutput {
 	outputs := []*orm.CrossTransactionOutput{}
+	for i, rawInput := range tx.Inputs {
+		output := &orm.CrossTransactionOutput{
+			// SidechainTxID uint64
+			// MainchainTxID sql.NullInt64
+			SourcePos: uint64(i),
+			// AssetID       uint64
+			AssetAmount:   uint64
+			// Script        string
+		}
+		outputs = append(outputs, output)
+	}
 	return outputs
 }
+*/
 
 // An expired unconfirmed transaction will be marked as deleted, but the latter transaction was packaged into block,
 // the deleted_at flag must be removed. In addition, the gorm can't support update deleted_at field directly, can only use raw sql.
