@@ -19,11 +19,11 @@ import (
 	"github.com/jinzhu/gorm"
 	// log "github.com/sirupsen/logrus"
 
-	vaporTypes "github.com/bytom/protocol/bc/types"
 	vaporCfg "github.com/vapor/config"
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/config"
 	"github.com/vapor/federation/database/orm"
+	vaporTypes "github.com/vapor/protocol/bc/types"
 )
 
 var ErrInconsistentDB = errors.New("inconsistent db status")
@@ -132,12 +132,41 @@ func filterDepositFromMainchain(block *btmTypes.Block) []*btmTypes.Tx {
 
 func filterWithdrawalToMainchain(block *btmTypes.Block) []*btmTypes.Tx {
 	withdrawalTxs := []*btmTypes.Tx{}
-
+	for _, tx := range block.Transactions {
+		for _, input := range tx.Inputs {
+			fedProg := vaporCfg.FederationProgrom(vaporCfg.CommonConfig)
+			if bytes.Equal(input.ControlProgram(), fedProg) {
+				withdrawalTxs = append(withdrawalTxs, tx)
+				break
+			}
+		}
+	}
 	return withdrawalTxs
 }
 
-func filterDepositToSidechain(block *vaporTypes.Block) error      { return nil }
-func filterWithdrawalFromSidechain(block *vaporTypes.Block) error { return nil }
+func filterDepositToSidechain(block *vaporTypes.Block) []*vaporTypes.Tx {
+	depositTxs := []*vaporTypes.Tx{}
+	for _, tx := range block.Transactions {
+		for _, input := range tx.Inputs {
+			if input.InputType() == vaporTypes.CrossChainInputType {
+				break
+			}
+		}
+	}
+	return depositTxs
+}
+
+func filterWithdrawalFromSidechain(block *vaporTypes.Block) []*vaporTypes.Tx {
+	withdrawalTxs := []*vaporTypes.Tx{}
+	for _, tx := range block.Transactions {
+		for _, output := range tx.Outputs {
+			if output.OutputType() == vaporTypes.CrossChainOutputType {
+				break
+			}
+		}
+	}
+	return withdrawalTxs
+}
 
 // An expired unconfirmed transaction will be marked as deleted, but the latter transaction was packaged into block,
 // the deleted_at flag must be removed. In addition, the gorm can't support update deleted_at field directly, can only use raw sql.
