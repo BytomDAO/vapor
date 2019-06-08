@@ -55,8 +55,7 @@ func (p *attachBlockProcessor) processDepositFromMainchain(txIndex uint64, tx *b
 		return errors.Wrap(err, fmt.Sprintf("create DepositFromMainchain tx %s", tx.ID.String()))
 	}
 
-	for i, input := range getCrossChainInputs(tx) {
-		input.MainchainTxID = ormTx.ID
+	for i, input := range getCrossChainInputs(ormTx.ID, tx) {
 		if err := p.db.Create(input).Error; err != nil {
 			p.db.Rollback()
 			return errors.Wrap(err, fmt.Sprintf("create DepositFromMainchain input: txid(%s), pos(%d)", tx.ID.String(), i))

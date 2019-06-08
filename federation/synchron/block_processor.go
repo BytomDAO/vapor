@@ -172,7 +172,7 @@ func filterWithdrawalFromSidechain(block *vaporTypes.Block) []*vaporTypes.Tx {
 	return withdrawalTxs
 }
 
-func getCrossChainInputs(tx *btmTypes.Tx) []*orm.CrossTransactionInput {
+func getCrossChainInputs(ormTxID uint64, tx *btmTypes.Tx) []*orm.CrossTransactionInput {
 	// assume inputs are from an identical owner
 	script := hex.EncodeToString(tx.Inputs[0].ControlProgram())
 	inputs := []*orm.CrossTransactionInput{}
@@ -184,9 +184,8 @@ func getCrossChainInputs(tx *btmTypes.Tx) []*orm.CrossTransactionInput {
 		}
 
 		input := &orm.CrossTransactionInput{
-			// MainchainTxID uint64
-			// SidechainTxID sql.NullInt64
-			SourcePos: uint64(i),
+			MainchainTxID: ormTxID,
+			SourcePos:     uint64(i),
 			// AssetID: rawOutput.OutputCommitment.AssetAmount.assetID,
 			AssetAmount: rawOutput.OutputCommitment.AssetAmount.Amount,
 			Script:      script,
