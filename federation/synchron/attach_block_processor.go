@@ -39,6 +39,16 @@ func (p *attachBlockProcessor) getBlock() interface{} {
 
 func (p *attachBlockProcessor) processDepositFromMainchain(txIndex uint64, tx *btmTypes.Tx) error {
 	blockHash := p.getBlock().(*btmTypes.Block).Hash()
+
+	// resOutID := orig.ResultIds[0]
+	// resOut, ok := orig.Entries[*resOutID].(*bc.Output)
+	// if ok {
+	// 	tx.MuxID = *resOut.Source.Ref
+	// } else {
+	// 	resRetire, _ := orig.Entries[*resOutID].(*bc.Retirement)
+	// 	tx.MuxID = *resRetire.Source.Ref
+	// }
+
 	ormTx := &orm.CrossTransaction{
 		// ChainID        uint64
 		Direction:   common.DepositDirection,

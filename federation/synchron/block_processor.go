@@ -195,28 +195,6 @@ func getCrossChainInputs(ormTxID uint64, tx *btmTypes.Tx) []*orm.CrossTransactio
 	return inputs
 }
 
-/*
-func getRefCrossChainInputs(tx *vaporTypes.Tx) []*orm.CrossTransactionInput {
-	inputs := []*orm.CrossTransactionInput{}
-	for i, rawInput := range tx.Inputs {
-		if rawInput.InputType() != vaporTypes.CrossChainInputType {
-			continue
-		}
-
-		input := &orm.CrossTransactionInput{
-			// MainchainTxID uint64
-			// SidechainTxID sql.NullInt64
-			SourcePos: uint64(i),
-			// AssetID:  rawInput.AssetID(),
-			AssetAmount: rawInput.Amount(),
-			// Script:      "",
-		}
-		inputs = append(inputs, input)
-	}
-	return inputs
-}
-*/
-
 func getRawCrossChainOutputs(tx *vaporTypes.Tx) []*orm.CrossTransactionOutput {
 	outputs := []*orm.CrossTransactionOutput{}
 	for i, rawOutput := range tx.Outputs {
@@ -236,24 +214,6 @@ func getRawCrossChainOutputs(tx *vaporTypes.Tx) []*orm.CrossTransactionOutput {
 	}
 	return outputs
 }
-
-/*
-func getRefCrossChainOutputs(tx *btmTypes.Tx) []*orm.CrossTransactionOutput {
-	outputs := []*orm.CrossTransactionOutput{}
-	for i, rawInput := range tx.Inputs {
-		output := &orm.CrossTransactionOutput{
-			// SidechainTxID uint64
-			// MainchainTxID sql.NullInt64
-			SourcePos: uint64(i),
-			// AssetID       uint64
-			AssetAmount:   uint64
-			// Script        string
-		}
-		outputs = append(outputs, output)
-	}
-	return outputs
-}
-*/
 
 // An expired unconfirmed transaction will be marked as deleted, but the latter transaction was packaged into block,
 // the deleted_at flag must be removed. In addition, the gorm can't support update deleted_at field directly, can only use raw sql.
