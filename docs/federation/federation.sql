@@ -72,10 +72,10 @@ CREATE TABLE `cross_transactions` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `mux_id` (`mux_id`),
-  UNIQUE KEY `tx_hash` (`tx_hash`),
+  UNIQUE KEY `mux_id` (`chain_id`,`mux_id`),
+  UNIQUE KEY `tx_hash` (`chain_id`,`tx_hash`),
   UNIQUE KEY `raw_transaction` (`raw_transaction`),
-  UNIQUE KEY `blockhash_txidx` (`block_hash`,`tx_index`),
+  UNIQUE KEY `blockhash_txidx` (`chain_id`,`block_hash`,`tx_index`),
   UNIQUE KEY `blockheight_txidx` (`chain_id`,`block_height`,`tx_index`),
   CONSTRAINT `transactions_ibfk_1` FOREIGN KEY (`chain_id`) REFERENCES `chains` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
