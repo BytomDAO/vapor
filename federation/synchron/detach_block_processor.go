@@ -23,6 +23,10 @@ func (p *detachBlockProcessor) getCfg() *config.Chain {
 	return p.cfg
 }
 
+func (p *detachBlockProcessor) getBlock() interface{} {
+	return p.block
+}
+
 func (p *detachBlockProcessor) processIssuing(db *gorm.DB, txs []*btmTypes.Tx) error {
 	return nil
 }

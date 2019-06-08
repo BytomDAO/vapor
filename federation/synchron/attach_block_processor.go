@@ -32,6 +32,10 @@ func (p *attachBlockProcessor) getCfg() *config.Chain {
 	return p.cfg
 }
 
+func (p *attachBlockProcessor) getBlock() interface{} {
+	return p.block
+}
+
 func (p *attachBlockProcessor) processIssuing(db *gorm.DB, txs []*btmTypes.Tx) error {
 	return addIssueAssets(db, txs)
 }

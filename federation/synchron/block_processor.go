@@ -10,13 +10,15 @@ import (
 	// "github.com/bytom/consensus"
 	// "github.com/bytom/consensus/segwit"
 	// "github.com/bytom/protocol/bc"
-	btmTypes "github.com/bytom/protocol/bc/types"
 	// "github.com/bytom/protocol/vm/vmutil"
-	"github.com/jinzhu/gorm"
-	// log "github.com/sirupsen/logrus"
 	// "github.com/blockcenter/coin/btm"
 	// "github.com/blockcenter/config"
 	// "github.com/blockcenter/types"
+	btmTypes "github.com/bytom/protocol/bc/types"
+	"github.com/jinzhu/gorm"
+	log "github.com/sirupsen/logrus"
+
+	vaporTypes "github.com/bytom/protocol/bc/types"
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/config"
 	"github.com/vapor/federation/database/orm"
@@ -26,9 +28,9 @@ var ErrInconsistentDB = errors.New("inconsistent db status")
 
 type blockProcessor interface {
 	getCfg() *config.Chain
+	getBlock() interface{}
 	processIssuing(db *gorm.DB, txs []*btmTypes.Tx) error
 	processChainInfo() error
-	// getBlock() *btmTypes.Block
 	// getCoin() *orm.Coin
 	// getTxStatus() *bc.TransactionStatus
 	// processAddressTransaction(mappings []*addressTxMapping) error
@@ -73,13 +75,29 @@ func addIssueAssets(db *gorm.DB, txs []*btmTypes.Tx) error {
 }
 
 func updateBlock(db *gorm.DB, bp blockProcessor) error {
-	// txs := bp.getBlock().Transactions
-	if bp.getCfg().IsMainchain {
-		// if err := bp.processIssuing(db, txs); err != nil {
-		// 	return err
-		// }
+	switch {
+	case bp.getCfg().IsMainchain:
+		// Issuance can only happen on mainchain
+		block := bp.getBlock().(*btmTypes.Block)
+		txs := block.Transactions
+		if err := bp.processIssuing(db, txs); err != nil {
+			return err
+		}
+
+		depositTxs := filterDepositFromMainchain(block)
+		log.Info(depositTxs)
+		withdrawalTxs := filterWithdrawalToMainchain(block)
+		log.Info(withdrawalTxs)
+
+	default:
+		block := bp.getBlock().(*vaporTypes.Block)
+		depositTxs := filterDepositToSidechain(block)
+		log.Info(depositTxs)
+		withdrawalTxs := filterWithdrawalFromSidechain(block)
+		log.Info(withdrawalTxs)
 	}
 
+	// txs := bp.getBlock().Transactions
 	// addressTxMappings, err := GetAddressTxMappings(cfg, txs, bp.getTxStatus(), db)
 	// if err != nil {
 	// 	return err
@@ -99,6 +117,11 @@ func updateBlock(db *gorm.DB, bp blockProcessor) error {
 
 	return bp.processChainInfo()
 }
+
+func filterDepositFromMainchain(block *btmTypes.Block) error      { return nil }
+func filterWithdrawalToMainchain(block *btmTypes.Block) error     { return nil }
+func filterDepositToSidechain(block *vaporTypes.Block) error      { return nil }
+func filterWithdrawalFromSidechain(block *vaporTypes.Block) error { return nil }
 
 // An expired unconfirmed transaction will be marked as deleted, but the latter transaction was packaged into block,
 // the deleted_at flag must be removed. In addition, the gorm can't support update deleted_at field directly, can only use raw sql.
