@@ -1,6 +1,7 @@
 package synchron
 
 import (
+	"bytes"
 	"encoding/hex"
 	// "encoding/json"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	btmTypes "github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"
 
+	vaporCfg "github.com/vapor/config"
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/common"
 	"github.com/vapor/federation/config"
@@ -33,6 +35,21 @@ func (p *attachBlockProcessor) getCfg() *config.Chain {
 
 func (p *attachBlockProcessor) getBlock() interface{} {
 	return p.block
+}
+
+func (p *attachBlockProcessor) getAsset(assetID string) (*orm.Asset, error) {
+	asset, ok := p.assetMap[assetID]
+	if ok {
+		return asset, nil
+	}
+
+	asset = &orm.Asset{AssetID: assetID}
+	if err := p.db.Where(asset).First(asset).Error; err != nil {
+		return nil, errors.Wrap(err, "query last wallet")
+	}
+
+	p.assetMap[assetID] = asset
+	return asset, nil
 }
 
 func (p *attachBlockProcessor) processIssuing(txs []*btmTypes.Tx) error {
@@ -101,7 +118,7 @@ func (p *attachBlockProcessor) processDepositFromMainchain(txIndex uint64, tx *b
 		return errors.Wrap(err, fmt.Sprintf("create DepositFromMainchain tx %s", tx.ID.String()))
 	}
 
-	crossChainInputs, err := getCrossChainInputs(ormTx.ID, tx, p.assetMap)
+	crossChainInputs, err := p.getCrossChainInputs(ormTx.ID, tx)
 	if err != nil {
 		return err
 	}
@@ -113,6 +130,35 @@ func (p *attachBlockProcessor) processDepositFromMainchain(txIndex uint64, tx *b
 	}
 
 	return nil
+}
+
+func (p *attachBlockProcessor) getCrossChainInputs(mainchainTxID uint64, tx *btmTypes.Tx) ([]*orm.CrossTransactionInput, error) {
+	// assume inputs are from an identical owner
+	script := hex.EncodeToString(tx.Inputs[0].ControlProgram())
+	inputs := []*orm.CrossTransactionInput{}
+	for i, rawOutput := range tx.Outputs {
+		fedProg := vaporCfg.FederationProgrom(vaporCfg.CommonConfig)
+		// check valid deposit
+		if !bytes.Equal(rawOutput.OutputCommitment.ControlProgram, fedProg) {
+			continue
+		}
+
+		asset, err := p.getAsset(rawOutput.OutputCommitment.AssetAmount.AssetId.String())
+		if err != nil {
+			return nil, err
+		}
+
+		// default null SidechainTxID, which will be set after submitting deposit tx on sidechain
+		input := &orm.CrossTransactionInput{
+			MainchainTxID: mainchainTxID,
+			SourcePos:     uint64(i),
+			AssetID:       asset.ID,
+			AssetAmount:   rawOutput.OutputCommitment.AssetAmount.Amount,
+			Script:        script,
+		}
+		inputs = append(inputs, input)
+	}
+	return inputs, nil
 }
 
 func (p *attachBlockProcessor) processWithdrawalToMainchain(txIndex uint64, tx *btmTypes.Tx) error {
@@ -217,7 +263,7 @@ func (p *attachBlockProcessor) processWithdrawalFromSidechain(txIndex uint64, tx
 		return errors.Wrap(err, fmt.Sprintf("create WithdrawalFromSidechain tx %s", tx.ID.String()))
 	}
 
-	crossChainOutputs, err := getCrossChainOutputs(ormTx.ID, tx, p.assetMap)
+	crossChainOutputs, err := p.getCrossChainOutputs(ormTx.ID, tx)
 	if err != nil {
 		return err
 	}
@@ -229,6 +275,31 @@ func (p *attachBlockProcessor) processWithdrawalFromSidechain(txIndex uint64, tx
 	}
 
 	return nil
+}
+
+func (p *attachBlockProcessor) getCrossChainOutputs(sidechainTxID uint64, tx *vaporTypes.Tx) ([]*orm.CrossTransactionOutput, error) {
+	outputs := []*orm.CrossTransactionOutput{}
+	for i, rawOutput := range tx.Outputs {
+		if rawOutput.OutputType() != vaporTypes.CrossChainOutputType {
+			continue
+		}
+
+		asset, err := p.getAsset(rawOutput.AssetAmount().AssetId.String())
+		if err != nil {
+			return nil, err
+		}
+
+		// default null MainchainTxID, which will be set after submitting withdrawal tx on mainchain
+		output := &orm.CrossTransactionOutput{
+			SidechainTxID: sidechainTxID,
+			SourcePos:     uint64(i),
+			AssetID:       asset.ID,
+			AssetAmount:   rawOutput.AssetAmount().Amount,
+			Script:        hex.EncodeToString(rawOutput.ControlProgram()),
+		}
+		outputs = append(outputs, output)
+	}
+	return outputs, nil
 }
 
 func (p *attachBlockProcessor) processChainInfo() error {
