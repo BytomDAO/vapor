@@ -49,7 +49,7 @@ func (p *detachBlockProcessor) processWithdrawalToMainchain(txIndex uint64, tx *
 }
 
 func (p *detachBlockProcessor) processDepositToSidechain(txIndex uint64, tx *vaporTypes.Tx) error {
-	return nil
+	return p.db.Delete(&orm.CrossTransaction{ChainID: p.chain.ID, TxHash: tx.ID.String()}).Error
 }
 
 func (p *detachBlockProcessor) processWithdrawalFromSidechain(txIndex uint64, tx *vaporTypes.Tx) error {
