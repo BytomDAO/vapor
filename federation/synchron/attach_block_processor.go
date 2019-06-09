@@ -217,9 +217,14 @@ func (p *attachBlockProcessor) processWithdrawalFromSidechain(txIndex uint64, tx
 		return errors.Wrap(err, fmt.Sprintf("create WithdrawalFromSidechain tx %s", tx.ID.String()))
 	}
 
-	for i, output := range getCrossChainOutputs(ormTx.ID, tx) {
+	crossChainOutputs, err := getCrossChainOutputs(ormTx.ID, tx, p.assetMap)
+	if err != nil {
+		return err
+	}
+
+	for _, output := range crossChainOutputs {
 		if err := p.db.Create(output).Error; err != nil {
-			return errors.Wrap(err, fmt.Sprintf("create WithdrawalFromSidechain output: txid(%s), pos(%d)", tx.ID.String(), i))
+			return errors.Wrap(err, fmt.Sprintf("create WithdrawalFromSidechain output: txid(%s), pos(%d)", tx.ID.String(), output.SourcePos))
 		}
 	}
 

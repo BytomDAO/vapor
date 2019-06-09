@@ -137,22 +137,28 @@ func getCrossChainInputs(mainchainTxID uint64, tx *btmTypes.Tx, assetCache map[s
 	return inputs, nil
 }
 
-func getCrossChainOutputs(sidechainTxID uint64, tx *vaporTypes.Tx) []*orm.CrossTransactionOutput {
+func getCrossChainOutputs(sidechainTxID uint64, tx *vaporTypes.Tx, assetCache map[string]*orm.Asset) ([]*orm.CrossTransactionOutput, error) {
 	outputs := []*orm.CrossTransactionOutput{}
 	for i, rawOutput := range tx.Outputs {
 		if rawOutput.OutputType() != vaporTypes.CrossChainOutputType {
 			continue
 		}
 
+		assetIDStr := rawOutput.AssetAmount().AssetId.String()
+		asset, ok := assetCache[assetIDStr]
+		if !ok {
+			return nil, fmt.Errorf("fail to find asset %s", assetIDStr)
+		}
+
 		// default null MainchainTxID, which will be set after submitting withdrawal tx on mainchain
 		output := &orm.CrossTransactionOutput{
 			SidechainTxID: sidechainTxID,
 			SourcePos:     uint64(i),
-			// AssetID       uint64
-			AssetAmount: rawOutput.AssetAmount().Amount,
-			Script:      hex.EncodeToString(rawOutput.ControlProgram()),
+			AssetID:       asset.ID,
+			AssetAmount:   rawOutput.AssetAmount().Amount,
+			Script:        hex.EncodeToString(rawOutput.ControlProgram()),
 		}
 		outputs = append(outputs, output)
 	}
-	return outputs
+	return outputs, nil
 }
