@@ -44,7 +44,7 @@ func (p *attachBlockProcessor) getAsset(assetID string) (*orm.Asset, error) {
 
 	asset = &orm.Asset{AssetID: assetID}
 	if err := p.db.Where(asset).First(asset).Error; err != nil {
-		return nil, errors.Wrap(err, "query last wallet")
+		return nil, errors.Wrap(err, "asset not found in memory and mysql")
 	}
 
 	p.assetMap[assetID] = asset
@@ -59,7 +59,7 @@ func (p *attachBlockProcessor) processIssuing(txs []*btmTypes.Tx) error {
 			switch inp := input.TypedInput.(type) {
 			case *btmTypes.IssuanceInput:
 				assetID := inp.AssetID()
-				if _, ok := p.assetMap[assetID.String()]; ok {
+				if _, err := p.getAsset(assetID.String()); err == nil {
 					continue
 				}
 
