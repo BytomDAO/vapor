@@ -141,7 +141,7 @@ func isWithdrawalFromSidechain(tx *vaporTypes.Tx) bool {
 	return false
 }
 
-func getCrossChainInputs(ormTxID uint64, tx *btmTypes.Tx) []*orm.CrossTransactionInput {
+func getCrossChainInputs(mainchainTxID uint64, tx *btmTypes.Tx) []*orm.CrossTransactionInput {
 	// assume inputs are from an identical owner
 	script := hex.EncodeToString(tx.Inputs[0].ControlProgram())
 	inputs := []*orm.CrossTransactionInput{}
@@ -152,9 +152,9 @@ func getCrossChainInputs(ormTxID uint64, tx *btmTypes.Tx) []*orm.CrossTransactio
 			continue
 		}
 
-		// default null SidechainTxID, which will be set after submitting cross_in tx on sidechain
+		// default null SidechainTxID, which will be set after submitting deposit tx on sidechain
 		input := &orm.CrossTransactionInput{
-			MainchainTxID: ormTxID,
+			MainchainTxID: mainchainTxID,
 			SourcePos:     uint64(i),
 			// AssetID: rawOutput.OutputCommitment.AssetAmount.assetID,
 			AssetAmount: rawOutput.OutputCommitment.AssetAmount.Amount,
@@ -165,17 +165,17 @@ func getCrossChainInputs(ormTxID uint64, tx *btmTypes.Tx) []*orm.CrossTransactio
 	return inputs
 }
 
-func getRawCrossChainOutputs(tx *vaporTypes.Tx) []*orm.CrossTransactionOutput {
+func getCrossChainOutputs(sidechainTxID uint64, tx *vaporTypes.Tx) []*orm.CrossTransactionOutput {
 	outputs := []*orm.CrossTransactionOutput{}
 	for i, rawOutput := range tx.Outputs {
 		if rawOutput.OutputType() != vaporTypes.CrossChainOutputType {
 			continue
 		}
 
+		// default null MainchainTxID, which will be set after submitting withdrawal tx on mainchain
 		output := &orm.CrossTransactionOutput{
-			// SidechainTxID uint64
-			// MainchainTxID sql.NullInt64
-			SourcePos: uint64(i),
+			SidechainTxID: sidechainTxID,
+			SourcePos:     uint64(i),
 			// AssetID       uint64
 			AssetAmount: rawOutput.AssetAmount().Amount,
 			Script:      hex.EncodeToString(rawOutput.ControlProgram()),
