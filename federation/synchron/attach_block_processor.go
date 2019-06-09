@@ -5,11 +5,13 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	btmConsensus "github.com/bytom/consensus"
 	btmBc "github.com/bytom/protocol/bc"
 	btmTypes "github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"
 
 	vaporCfg "github.com/vapor/config"
+	vaporConsensus "github.com/vapor/consensus"
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/common"
 	"github.com/vapor/federation/config"
@@ -117,7 +119,8 @@ func (p *attachBlockProcessor) processDepositFromMainchain(txIndex uint64, tx *b
 		return errors.Wrap(err, fmt.Sprintf("create DepositFromMainchain tx %s", tx.ID.String()))
 	}
 
-	crossChainInputs, err := p.getCrossChainInputs(ormTx.ID, tx)
+	statusFail := p.txStatus.VerifyStatus[txIndex].StatusFail
+	crossChainInputs, err := p.getCrossChainInputs(ormTx.ID, tx, statusFail)
 	if err != nil {
 		return err
 	}
@@ -131,7 +134,7 @@ func (p *attachBlockProcessor) processDepositFromMainchain(txIndex uint64, tx *b
 	return nil
 }
 
-func (p *attachBlockProcessor) getCrossChainInputs(mainchainTxID uint64, tx *btmTypes.Tx) ([]*orm.CrossTransactionInput, error) {
+func (p *attachBlockProcessor) getCrossChainInputs(mainchainTxID uint64, tx *btmTypes.Tx, statusFail bool) ([]*orm.CrossTransactionInput, error) {
 	// assume inputs are from an identical owner
 	script := hex.EncodeToString(tx.Inputs[0].ControlProgram())
 	inputs := []*orm.CrossTransactionInput{}
@@ -139,6 +142,10 @@ func (p *attachBlockProcessor) getCrossChainInputs(mainchainTxID uint64, tx *btm
 		fedProg := vaporCfg.FederationProgrom(vaporCfg.CommonConfig)
 		// check valid deposit
 		if !bytes.Equal(rawOutput.OutputCommitment.ControlProgram, fedProg) {
+			continue
+		}
+
+		if statusFail && *rawOutput.OutputCommitment.AssetAmount.AssetId != *btmConsensus.BTMAssetID {
 			continue
 		}
 
@@ -262,7 +269,8 @@ func (p *attachBlockProcessor) processWithdrawalFromSidechain(txIndex uint64, tx
 		return errors.Wrap(err, fmt.Sprintf("create WithdrawalFromSidechain tx %s", tx.ID.String()))
 	}
 
-	crossChainOutputs, err := p.getCrossChainOutputs(ormTx.ID, tx)
+	statusFail := p.txStatus.VerifyStatus[txIndex].StatusFail
+	crossChainOutputs, err := p.getCrossChainOutputs(ormTx.ID, tx, statusFail)
 	if err != nil {
 		return err
 	}
@@ -276,10 +284,14 @@ func (p *attachBlockProcessor) processWithdrawalFromSidechain(txIndex uint64, tx
 	return nil
 }
 
-func (p *attachBlockProcessor) getCrossChainOutputs(sidechainTxID uint64, tx *vaporTypes.Tx) ([]*orm.CrossTransactionOutput, error) {
+func (p *attachBlockProcessor) getCrossChainOutputs(sidechainTxID uint64, tx *vaporTypes.Tx, statusFail bool) ([]*orm.CrossTransactionOutput, error) {
 	outputs := []*orm.CrossTransactionOutput{}
 	for i, rawOutput := range tx.Outputs {
 		if rawOutput.OutputType() != vaporTypes.CrossChainOutputType {
+			continue
+		}
+
+		if statusFail && *rawOutput.AssetAmount().AssetId != *vaporConsensus.BTMAssetID {
 			continue
 		}
 
@@ -328,3 +340,16 @@ func (p *attachBlockProcessor) processChainInfo() error {
 
 	return nil
 }
+
+// if txDesc.StatusFail && m.asset.Asset != btm.FeeAsset {
+// 	continue
+// }
+
+// case *btmTypes.TxInput:
+// 	if m.statusFail && source.AssetID() != *consensus.BTMAssetID {
+// 		continue
+// 	}
+
+// if m.statusFail && *source.AssetId != *consensus.BTMAssetID {
+// 	continue
+// }

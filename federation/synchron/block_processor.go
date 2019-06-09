@@ -2,16 +2,9 @@ package synchron
 
 import (
 	"bytes"
-	// "encoding/json"
-	// "fmt"
 
-	// "github.com/bytom/consensus"
-	// "github.com/bytom/consensus/segwit"
-	// "github.com/bytom/protocol/bc"
-	// "github.com/bytom/protocol/vm/vmutil"
 	btmTypes "github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"
-	// log "github.com/sirupsen/logrus"
 
 	vaporCfg "github.com/vapor/config"
 	"github.com/vapor/errors"
