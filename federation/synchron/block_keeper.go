@@ -3,7 +3,6 @@ package synchron
 import (
 	"time"
 
-	// btmBc "github.com/bytom/protocol/bc"
 	btmTypes "github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
@@ -12,7 +11,7 @@ import (
 	"github.com/vapor/federation/config"
 	"github.com/vapor/federation/database/orm"
 	"github.com/vapor/federation/service"
-	// vaporBc "github.com/vapor/protocol/bc"
+	"github.com/vapor/protocol/bc"
 	vaporTypes "github.com/vapor/protocol/bc/types"
 )
 
@@ -96,7 +95,7 @@ func (b *blockKeeper) syncBlock() (bool, error) {
 	return true, b.DetachBlock(chain, currentBlock, txStatus)
 }
 
-func (b *blockKeeper) AttachBlock(chain *orm.Chain, block interface{}, txStatus interface{}) error {
+func (b *blockKeeper) AttachBlock(chain *orm.Chain, block interface{}, txStatus *bc.TransactionStatus) error {
 	var blockHeight uint64
 	var blockHashStr string
 	switch {
@@ -118,7 +117,7 @@ func (b *blockKeeper) AttachBlock(chain *orm.Chain, block interface{}, txStatus 
 		chain:    chain,
 		block:    block,
 		assetMap: make(map[string]*orm.Asset),
-		// txStatus: txStatus,
+		txStatus: txStatus,
 	}
 	if err := updateBlock(tx, bp); err != nil {
 		tx.Rollback()
@@ -128,7 +127,7 @@ func (b *blockKeeper) AttachBlock(chain *orm.Chain, block interface{}, txStatus 
 	return tx.Commit().Error
 }
 
-func (b *blockKeeper) DetachBlock(chain *orm.Chain, block interface{}, txStatus interface{}) error {
+func (b *blockKeeper) DetachBlock(chain *orm.Chain, block interface{}, txStatus *bc.TransactionStatus) error {
 	var blockHeight uint64
 	var blockHashStr string
 	switch {
@@ -150,7 +149,7 @@ func (b *blockKeeper) DetachBlock(chain *orm.Chain, block interface{}, txStatus 
 		chain:    chain,
 		block:    block,
 		assetMap: make(map[string]*orm.Asset),
-		// txStatus: txStatus,
+		txStatus: txStatus,
 	}
 	if err := updateBlock(tx, bp); err != nil {
 		tx.Rollback()

@@ -5,6 +5,7 @@ import (
 
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/util"
+	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
 
@@ -18,11 +19,11 @@ func NewNode(ip string) *Node {
 	return &Node{ip: ip}
 }
 
-func (n *Node) GetBlockByHash(hash string) (string, interface{}, error) {
+func (n *Node) GetBlockByHash(hash string) (string, *bc.TransactionStatus, error) {
 	return n.getRawBlock(&getRawBlockReq{BlockHash: hash})
 }
 
-func (n *Node) GetBlockByHeight(height uint64) (string, interface{}, error) {
+func (n *Node) GetBlockByHeight(height uint64) (string, *bc.TransactionStatus, error) {
 	return n.getRawBlock(&getRawBlockReq{BlockHeight: height})
 }
 
@@ -42,11 +43,12 @@ type getRawBlockReq struct {
 }
 
 type getRawBlockResp struct {
-	RawBlock          string      `json:"raw_block"`
-	TransactionStatus interface{} `json:"transaction_status"`
+	RawBlock string `json:"raw_block"`
+	// TransactionStatus has same marshalling rule for both bytom and vapor
+	TransactionStatus *bc.TransactionStatus `json:"transaction_status"`
 }
 
-func (n *Node) getRawBlock(req *getRawBlockReq) (string, interface{}, error) {
+func (n *Node) getRawBlock(req *getRawBlockReq) (string, *bc.TransactionStatus, error) {
 	url := "/get-raw-block"
 	payload, err := json.Marshal(req)
 	if err != nil {
@@ -57,7 +59,6 @@ func (n *Node) getRawBlock(req *getRawBlockReq) (string, interface{}, error) {
 	return res.RawBlock, res.TransactionStatus, n.request(url, payload, res)
 }
 
-// TODO: FK
 type submitTxReq struct {
 	Tx *types.Tx `json:"raw_transaction"`
 }

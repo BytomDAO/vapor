@@ -3,13 +3,13 @@ package synchron
 import (
 	"fmt"
 
-	// "github.com/bytom/protocol/bc"
 	btmTypes "github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"
 
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/config"
 	"github.com/vapor/federation/database/orm"
+	"github.com/vapor/protocol/bc"
 	vaporTypes "github.com/vapor/protocol/bc/types"
 )
 
@@ -19,7 +19,8 @@ type detachBlockProcessor struct {
 	chain    *orm.Chain
 	block    interface{}
 	assetMap map[string]*orm.Asset
-	// txStatus *bc.TransactionStatus
+	// TransactionStatus has same marshalling rule for both bytom and vapor
+	txStatus *bc.TransactionStatus
 }
 
 func (p *detachBlockProcessor) getCfg() *config.Chain {

@@ -3,10 +3,8 @@ package synchron
 import (
 	"bytes"
 	"encoding/hex"
-	// "encoding/json"
 	"fmt"
 
-	// "github.com/bytom/consensus"
 	btmBc "github.com/bytom/protocol/bc"
 	btmTypes "github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"
@@ -26,7 +24,8 @@ type attachBlockProcessor struct {
 	chain    *orm.Chain
 	block    interface{}
 	assetMap map[string]*orm.Asset
-	// txStatus *btmBc.TransactionStatus
+	// TransactionStatus has same marshalling rule for both bytom and vapor
+	txStatus *vaporBc.TransactionStatus
 }
 
 func (p *attachBlockProcessor) getCfg() *config.Chain {
