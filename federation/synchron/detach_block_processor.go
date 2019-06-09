@@ -1,6 +1,8 @@
 package synchron
 
 import (
+	"fmt"
+
 	// "github.com/bytom/protocol/bc"
 	btmTypes "github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"
@@ -38,7 +40,7 @@ func (p *detachBlockProcessor) processDepositFromMainchain(txIndex uint64, tx *b
 	}
 
 	if err := p.db.Delete(&orm.CrossTransactionInput{}, "MainchainTxID = ?", ormTx.ID).Error; err != nil {
-		return errors.Wrap(err, "db delete CrossTransactionInput")
+		return errors.Wrap(err, fmt.Sprintf("db delete CrossTransactionInput for midechain tx %s", tx.ID.String()))
 	}
 
 	return p.db.Delete(ormTx).Error
@@ -53,7 +55,16 @@ func (p *detachBlockProcessor) processDepositToSidechain(txIndex uint64, tx *vap
 }
 
 func (p *detachBlockProcessor) processWithdrawalFromSidechain(txIndex uint64, tx *vaporTypes.Tx) error {
-	return nil
+	ormTx := &orm.CrossTransaction{ChainID: p.chain.ID, TxHash: tx.ID.String()}
+	if err := p.db.Where(tx).First(tx).Error; err != nil {
+		return errors.Wrap(err, "db query transaction")
+	}
+
+	if err := p.db.Delete(&orm.CrossTransactionOutput{}, "SidechainTxID = ?", ormTx.ID).Error; err != nil {
+		return errors.Wrap(err, fmt.Sprintf("db delete CrossTransactionOutput for sidechain tx %s", tx.ID.String()))
+	}
+
+	return p.db.Delete(ormTx).Error
 }
 
 func (p *detachBlockProcessor) processChainInfo() error {
