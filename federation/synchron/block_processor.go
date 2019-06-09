@@ -26,47 +26,13 @@ var ErrInconsistentDB = errors.New("inconsistent db status")
 type blockProcessor interface {
 	getCfg() *config.Chain
 	getBlock() interface{}
+	processIssuing([]*btmTypes.Tx) error
 	processWithdrawalToMainchain(uint64, *btmTypes.Tx) error
 	processDepositFromMainchain(uint64, *btmTypes.Tx) error
 	processDepositToSidechain(uint64, *vaporTypes.Tx) error
 	processWithdrawalFromSidechain(uint64, *vaporTypes.Tx) error
-	processIssuing(*gorm.DB, []*btmTypes.Tx) error
 	processChainInfo() error
 	// getTxStatus() *bc.TransactionStatus
-}
-
-func addIssueAssets(db *gorm.DB, txs []*btmTypes.Tx) error {
-	var assets []*orm.Asset
-	assetMap := make(map[string]bool)
-
-	for _, tx := range txs {
-		for _, input := range tx.Inputs {
-			switch inp := input.TypedInput.(type) {
-			case *btmTypes.IssuanceInput:
-				assetID := inp.AssetID()
-				if _, ok := assetMap[assetID.String()]; ok {
-					continue
-				}
-				assetMap[assetID.String()] = true
-
-				asset := &orm.Asset{
-					AssetID:           assetID.String(),
-					IssuanceProgram:   hex.EncodeToString(inp.IssuanceProgram),
-					VMVersion:         inp.VMVersion,
-					RawDefinitionByte: hex.EncodeToString(inp.AssetDefinition),
-				}
-				assets = append(assets, asset)
-			}
-		}
-	}
-
-	for _, asset := range assets {
-		if err := db.Where(&orm.Asset{AssetID: asset.AssetID}).FirstOrCreate(asset).Error; err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func updateBlock(db *gorm.DB, bp blockProcessor) error {
@@ -75,7 +41,7 @@ func updateBlock(db *gorm.DB, bp blockProcessor) error {
 		// Issuance can only happen on mainchain
 		block := bp.getBlock().(*btmTypes.Block)
 		txs := block.Transactions
-		if err := bp.processIssuing(db, txs); err != nil {
+		if err := bp.processIssuing(txs); err != nil {
 			return err
 		}
 

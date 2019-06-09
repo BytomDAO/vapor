@@ -14,10 +14,11 @@ import (
 )
 
 type detachBlockProcessor struct {
-	cfg   *config.Chain
-	db    *gorm.DB
-	chain *orm.Chain
-	block interface{}
+	cfg      *config.Chain
+	db       *gorm.DB
+	chain    *orm.Chain
+	block    interface{}
+	assetMap map[string]*orm.Asset
 	// txStatus *bc.TransactionStatus
 }
 
@@ -29,7 +30,7 @@ func (p *detachBlockProcessor) getBlock() interface{} {
 	return p.block
 }
 
-func (p *detachBlockProcessor) processIssuing(db *gorm.DB, txs []*btmTypes.Tx) error {
+func (p *detachBlockProcessor) processIssuing(txs []*btmTypes.Tx) error {
 	return nil
 }
 

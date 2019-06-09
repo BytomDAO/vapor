@@ -113,10 +113,11 @@ func (b *blockKeeper) AttachBlock(chain *orm.Chain, block interface{}, txStatus 
 
 	tx := b.db.Begin()
 	bp := &attachBlockProcessor{
-		cfg:   b.cfg,
-		db:    tx,
-		chain: chain,
-		block: block,
+		cfg:      b.cfg,
+		db:       tx,
+		chain:    chain,
+		block:    block,
+		assetMap: make(map[string]*orm.Asset),
 		// txStatus: txStatus,
 	}
 	if err := updateBlock(tx, bp); err != nil {
@@ -144,10 +145,11 @@ func (b *blockKeeper) DetachBlock(chain *orm.Chain, block interface{}, txStatus 
 
 	tx := b.db.Begin()
 	bp := &detachBlockProcessor{
-		cfg:   b.cfg,
-		db:    tx,
-		chain: chain,
-		block: block,
+		cfg:      b.cfg,
+		db:       tx,
+		chain:    chain,
+		block:    block,
+		assetMap: make(map[string]*orm.Asset),
 		// txStatus: txStatus,
 	}
 	if err := updateBlock(tx, bp); err != nil {

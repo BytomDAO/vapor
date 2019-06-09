@@ -1,7 +1,7 @@
 package synchron
 
 import (
-	// "encoding/hex"
+	"encoding/hex"
 	// "encoding/json"
 	"fmt"
 
@@ -19,10 +19,11 @@ import (
 )
 
 type attachBlockProcessor struct {
-	cfg   *config.Chain
-	db    *gorm.DB
-	chain *orm.Chain
-	block interface{}
+	cfg      *config.Chain
+	db       *gorm.DB
+	chain    *orm.Chain
+	block    interface{}
+	assetMap map[string]*orm.Asset
 	// txStatus *btmBc.TransactionStatus
 }
 
@@ -34,8 +35,38 @@ func (p *attachBlockProcessor) getBlock() interface{} {
 	return p.block
 }
 
-func (p *attachBlockProcessor) processIssuing(db *gorm.DB, txs []*btmTypes.Tx) error {
-	return addIssueAssets(db, txs)
+func (p *attachBlockProcessor) processIssuing(txs []*btmTypes.Tx) error {
+	var assets []*orm.Asset
+
+	for _, tx := range txs {
+		for _, input := range tx.Inputs {
+			switch inp := input.TypedInput.(type) {
+			case *btmTypes.IssuanceInput:
+				assetID := inp.AssetID()
+				if _, ok := p.assetMap[assetID.String()]; ok {
+					continue
+				}
+
+				asset := &orm.Asset{
+					AssetID:           assetID.String(),
+					IssuanceProgram:   hex.EncodeToString(inp.IssuanceProgram),
+					VMVersion:         inp.VMVersion,
+					RawDefinitionByte: hex.EncodeToString(inp.AssetDefinition),
+				}
+				assets = append(assets, asset)
+			}
+		}
+	}
+
+	for _, asset := range assets {
+		if err := p.db.Create(asset).Error; err != nil {
+			return err
+		}
+
+		p.assetMap[asset.AssetID] = asset
+	}
+
+	return nil
 }
 
 func (p *attachBlockProcessor) processDepositFromMainchain(txIndex uint64, tx *btmTypes.Tx) error {
