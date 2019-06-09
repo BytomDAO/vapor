@@ -27,8 +27,8 @@ func (p *detachBlockProcessor) getBlock() interface{} {
 	return p.block
 }
 
-func (p *detachBlockProcessor) processWithdrawalToMainchain(txIndex uint64, tx *btmTypes.Tx) error {
-	return p.db.Delete(&orm.CrossTransaction{ChainID: p.chain.ID, TxHash: tx.ID.String()}).Error
+func (p *detachBlockProcessor) processIssuing(db *gorm.DB, txs []*btmTypes.Tx) error {
+	return nil
 }
 
 func (p *detachBlockProcessor) processDepositFromMainchain(txIndex uint64, tx *btmTypes.Tx) error {
@@ -44,7 +44,15 @@ func (p *detachBlockProcessor) processDepositFromMainchain(txIndex uint64, tx *b
 	return p.db.Delete(ormTx).Error
 }
 
-func (p *detachBlockProcessor) processIssuing(db *gorm.DB, txs []*btmTypes.Tx) error {
+func (p *detachBlockProcessor) processWithdrawalToMainchain(txIndex uint64, tx *btmTypes.Tx) error {
+	return p.db.Delete(&orm.CrossTransaction{ChainID: p.chain.ID, TxHash: tx.ID.String()}).Error
+}
+
+func (p *detachBlockProcessor) processDepositToSidechain(txIndex uint64, tx *vaporTypes.Tx) error {
+	return nil
+}
+
+func (p *detachBlockProcessor) processWithdrawalFromSidechain(txIndex uint64, tx *vaporTypes.Tx) error {
 	return nil
 }
 
@@ -72,5 +80,6 @@ func (p *detachBlockProcessor) processChainInfo() error {
 	if db.RowsAffected != 1 {
 		return ErrInconsistentDB
 	}
+
 	return nil
 }

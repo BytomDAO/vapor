@@ -33,39 +33,8 @@ func (p *attachBlockProcessor) getBlock() interface{} {
 	return p.block
 }
 
-func (p *attachBlockProcessor) processWithdrawalToMainchain(txIndex uint64, tx *btmTypes.Tx) error {
-	blockHash := p.getBlock().(*btmTypes.Block).Hash()
-
-	var muxID btmBc.Hash
-	resOutID := tx.ResultIds[0]
-	resOut, ok := tx.Entries[*resOutID].(*btmBc.Output)
-	if ok {
-		muxID = *resOut.Source.Ref
-	} else {
-		return errors.New("fail to get mux id")
-	}
-
-	rawTx, err := tx.MarshalText()
-	if err != nil {
-		return err
-	}
-
-	ormTx := &orm.CrossTransaction{
-		ChainID:        p.chain.ID,
-		Direction:      common.WithdrawalDirection,
-		BlockHeight:    p.getBlock().(*btmTypes.Block).Height,
-		BlockHash:      blockHash.String(),
-		TxIndex:        txIndex,
-		MuxID:          muxID.String(),
-		TxHash:         tx.ID.String(),
-		RawTransaction: string(rawTx),
-		Status:         common.CrossTxCompletedStatus,
-	}
-	if err := p.db.Create(ormTx).Error; err != nil {
-		return errors.Wrap(err, fmt.Sprintf("create DepositFromMainchain tx %s", tx.ID.String()))
-	}
-
-	return nil
+func (p *attachBlockProcessor) processIssuing(db *gorm.DB, txs []*btmTypes.Tx) error {
+	return addIssueAssets(db, txs)
 }
 
 func (p *attachBlockProcessor) processDepositFromMainchain(txIndex uint64, tx *btmTypes.Tx) error {
@@ -109,8 +78,47 @@ func (p *attachBlockProcessor) processDepositFromMainchain(txIndex uint64, tx *b
 	return nil
 }
 
-func (p *attachBlockProcessor) processIssuing(db *gorm.DB, txs []*btmTypes.Tx) error {
-	return addIssueAssets(db, txs)
+func (p *attachBlockProcessor) processWithdrawalToMainchain(txIndex uint64, tx *btmTypes.Tx) error {
+	blockHash := p.getBlock().(*btmTypes.Block).Hash()
+
+	var muxID btmBc.Hash
+	resOutID := tx.ResultIds[0]
+	resOut, ok := tx.Entries[*resOutID].(*btmBc.Output)
+	if ok {
+		muxID = *resOut.Source.Ref
+	} else {
+		return errors.New("fail to get mux id")
+	}
+
+	rawTx, err := tx.MarshalText()
+	if err != nil {
+		return err
+	}
+
+	ormTx := &orm.CrossTransaction{
+		ChainID:        p.chain.ID,
+		Direction:      common.WithdrawalDirection,
+		BlockHeight:    p.getBlock().(*btmTypes.Block).Height,
+		BlockHash:      blockHash.String(),
+		TxIndex:        txIndex,
+		MuxID:          muxID.String(),
+		TxHash:         tx.ID.String(),
+		RawTransaction: string(rawTx),
+		Status:         common.CrossTxCompletedStatus,
+	}
+	if err := p.db.Create(ormTx).Error; err != nil {
+		return errors.Wrap(err, fmt.Sprintf("create DepositFromMainchain tx %s", tx.ID.String()))
+	}
+
+	return nil
+}
+
+func (p *attachBlockProcessor) processDepositToSidechain(txIndex uint64, tx *vaporTypes.Tx) error {
+	return nil
+}
+
+func (p *attachBlockProcessor) processWithdrawalFromSidechain(txIndex uint64, tx *vaporTypes.Tx) error {
+	return nil
 }
 
 func (p *attachBlockProcessor) processChainInfo() error {

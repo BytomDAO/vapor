@@ -33,6 +33,8 @@ type blockProcessor interface {
 	getBlock() interface{}
 	processWithdrawalToMainchain(uint64, *btmTypes.Tx) error
 	processDepositFromMainchain(uint64, *btmTypes.Tx) error
+	processDepositToSidechain(uint64, *vaporTypes.Tx) error
+	processWithdrawalFromSidechain(uint64, *vaporTypes.Tx) error
 	processIssuing(*gorm.DB, []*btmTypes.Tx) error
 	processChainInfo() error
 	// getCoin() *orm.Coin
@@ -101,10 +103,10 @@ func updateBlock(db *gorm.DB, bp blockProcessor) error {
 		block := bp.getBlock().(*vaporTypes.Block)
 		for i, tx := range block.Transactions {
 			if isDepositToSidechain(tx) {
-				// bp.processDepositToSidechain(uint64(i), tx)
+				bp.processDepositToSidechain(uint64(i), tx)
 			}
 			if isWithdrawalFromSidechain(tx) {
-				// bp.processWithdrawalFromSidechain(uint64(i), tx)
+				bp.processWithdrawalFromSidechain(uint64(i), tx)
 			}
 		}
 	}
