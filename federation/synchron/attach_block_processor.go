@@ -14,6 +14,7 @@ import (
 	"github.com/vapor/federation/common"
 	"github.com/vapor/federation/config"
 	"github.com/vapor/federation/database/orm"
+	vaporBc "github.com/vapor/protocol/bc"
 	vaporTypes "github.com/vapor/protocol/bc/types"
 )
 
@@ -114,6 +115,37 @@ func (p *attachBlockProcessor) processWithdrawalToMainchain(txIndex uint64, tx *
 }
 
 func (p *attachBlockProcessor) processDepositToSidechain(txIndex uint64, tx *vaporTypes.Tx) error {
+	blockHash := p.getBlock().(*vaporTypes.Block).Hash()
+
+	var muxID vaporBc.Hash
+	resOutID := tx.ResultIds[0]
+	resOut, ok := tx.Entries[*resOutID].(*vaporBc.IntraChainOutput)
+	if ok {
+		muxID = *resOut.Source.Ref
+	} else {
+		return errors.New("fail to get mux id")
+	}
+
+	rawTx, err := tx.MarshalText()
+	if err != nil {
+		return err
+	}
+
+	ormTx := &orm.CrossTransaction{
+		ChainID:        p.chain.ID,
+		Direction:      common.DepositDirection,
+		BlockHeight:    p.getBlock().(*vaporTypes.Block).Height,
+		BlockHash:      blockHash.String(),
+		TxIndex:        txIndex,
+		MuxID:          muxID.String(),
+		TxHash:         tx.ID.String(),
+		RawTransaction: string(rawTx),
+		Status:         common.CrossTxCompletedStatus,
+	}
+	if err := p.db.Create(ormTx).Error; err != nil {
+		return errors.Wrap(err, fmt.Sprintf("create DepositToSidechain tx %s", tx.ID.String()))
+	}
+
 	return nil
 }
 
