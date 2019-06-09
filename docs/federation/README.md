@@ -45,17 +45,19 @@ A `fed_cfg.json` would look like this:
             "is_local" : false
         }
     ],
-    "mainchain" : {
-        "is_mainchain" : true,
-        "name" : "bytom",
-        "upstream" : "http://127.0.0.1:9888",
-        "sync_seconds" : 150
-    },
-    "sidechain" : {
-        "is_mainchain" : false,
-        "name" : "vapor",
-        "upstream" : "http://127.0.0.1:9888",
-        "sync_seconds" : 5
-    }
+    "chains" : [
+        {
+            "name" : "bytom",
+            "is_mainchain" : true,
+            "upstream" : "http://127.0.0.1:9888",
+            "sync_seconds" : 150
+        },
+        {
+            "name" : "vapor",
+            "is_mainchain" : false,
+            "upstream" : "http://127.0.0.1:9888",
+            "sync_seconds" : 5
+        }
+    ]
 }
 ```
