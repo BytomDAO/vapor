@@ -99,8 +99,14 @@ func updateBlock(db *gorm.DB, bp blockProcessor) error {
 
 	default:
 		block := bp.getBlock().(*vaporTypes.Block)
-		filterDepositToSidechain(block)
-		filterWithdrawalFromSidechain(block)
+		for i, tx := range block.Transactions {
+			if isDepositToSidechain(tx) {
+				// bp.processDepositToSidechain(uint64(i), tx)
+			}
+			if isWithdrawalFromSidechain(tx) {
+				// bp.processWithdrawalFromSidechain(uint64(i), tx)
+			}
+		}
 	}
 
 	return bp.processChainInfo()
@@ -126,28 +132,22 @@ func isWithdrawalToMainchain(tx *btmTypes.Tx) bool {
 	return false
 }
 
-func filterDepositToSidechain(block *vaporTypes.Block) []*vaporTypes.Tx {
-	depositTxs := []*vaporTypes.Tx{}
-	for _, tx := range block.Transactions {
-		for _, input := range tx.Inputs {
-			if input.InputType() == vaporTypes.CrossChainInputType {
-				break
-			}
+func isDepositToSidechain(tx *vaporTypes.Tx) bool {
+	for _, input := range tx.Inputs {
+		if input.InputType() == vaporTypes.CrossChainInputType {
+			return true
 		}
 	}
-	return depositTxs
+	return false
 }
 
-func filterWithdrawalFromSidechain(block *vaporTypes.Block) []*vaporTypes.Tx {
-	withdrawalTxs := []*vaporTypes.Tx{}
-	for _, tx := range block.Transactions {
-		for _, output := range tx.Outputs {
-			if output.OutputType() == vaporTypes.CrossChainOutputType {
-				break
-			}
+func isWithdrawalFromSidechain(tx *vaporTypes.Tx) bool {
+	for _, output := range tx.Outputs {
+		if output.OutputType() == vaporTypes.CrossChainOutputType {
+			return true
 		}
 	}
-	return withdrawalTxs
+	return false
 }
 
 func getCrossChainInputs(ormTxID uint64, tx *btmTypes.Tx) []*orm.CrossTransactionInput {
