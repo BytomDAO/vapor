@@ -145,6 +145,7 @@ func (p *attachBlockProcessor) processChainInfo() error {
 	if db.RowsAffected != 1 {
 		return ErrInconsistentDB
 	}
+
 	return nil
 }
 
