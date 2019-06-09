@@ -37,13 +37,7 @@ type blockProcessor interface {
 	processWithdrawalFromSidechain(uint64, *vaporTypes.Tx) error
 	processIssuing(*gorm.DB, []*btmTypes.Tx) error
 	processChainInfo() error
-	// getCoin() *orm.Coin
 	// getTxStatus() *bc.TransactionStatus
-	// processAddressTransaction(mappings []*addressTxMapping) error
-	// processSpendBalance(input *btmTypes.TxInput, deltaBalance *deltaBalance)
-	// processReceiveBalance(output *btmTypes.TxOutput, deltaBalance *deltaBalance)
-	// processSpendUTXO(utxoIDList []string) error
-	// processReceiveUTXO(m *addressTxMapping) error
 }
 
 func addIssueAssets(db *gorm.DB, txs []*btmTypes.Tx) error {
