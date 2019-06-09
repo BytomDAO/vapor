@@ -101,9 +101,14 @@ func (p *attachBlockProcessor) processDepositFromMainchain(txIndex uint64, tx *b
 		return errors.Wrap(err, fmt.Sprintf("create DepositFromMainchain tx %s", tx.ID.String()))
 	}
 
-	for i, input := range getCrossChainInputs(ormTx.ID, tx) {
+	crossChainInputs, err := getCrossChainInputs(ormTx.ID, tx, p.assetMap)
+	if err != nil {
+		return err
+	}
+
+	for _, input := range crossChainInputs {
 		if err := p.db.Create(input).Error; err != nil {
-			return errors.Wrap(err, fmt.Sprintf("create DepositFromMainchain input: txid(%s), pos(%d)", tx.ID.String(), i))
+			return errors.Wrap(err, fmt.Sprintf("create DepositFromMainchain input: txid(%s), pos(%d)", tx.ID.String(), input.SourcePos))
 		}
 	}
 
