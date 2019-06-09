@@ -32,7 +32,6 @@ type blockProcessor interface {
 	processDepositToSidechain(uint64, *vaporTypes.Tx) error
 	processWithdrawalFromSidechain(uint64, *vaporTypes.Tx) error
 	processChainInfo() error
-	// getTxStatus() *bc.TransactionStatus
 }
 
 func updateBlock(db *gorm.DB, bp blockProcessor) error {

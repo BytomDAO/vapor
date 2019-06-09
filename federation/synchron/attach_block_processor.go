@@ -258,11 +258,3 @@ func (p *attachBlockProcessor) processChainInfo() error {
 
 	return nil
 }
-
-/*
-
-func (p *attachBlockProcessor) getTxStatus() *bc.TransactionStatus {
-	return p.txStatus
-}
-
-*/
