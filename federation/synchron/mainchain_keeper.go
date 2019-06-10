@@ -72,15 +72,19 @@ func (m *mainchainKeeper) syncBlock() (bool, error) {
 
 	nextBlock := &btmTypes.Block{}
 	nextBlock.UnmarshalText([]byte(nextBlockStr))
-	if nextBlock.PreviousBlockHash.String() == chain.BlockHash {
-		return true, m.tryAttachBlock(chain, nextBlock, txStatus)
-	} else {
+	if nextBlock.PreviousBlockHash.String() != chain.BlockHash {
 		log.WithFields(log.Fields{
 			"remote PreviousBlockHash": nextBlock.PreviousBlockHash.String(),
 			"db block_hash":            chain.BlockHash,
-		}).Fatalf("BlockHash mismatch")
-		return false, nil
+		}).Fatal("BlockHash mismatch")
+		return false, errors.New("BlockHash mismatch")
 	}
+
+	if err := m.tryAttachBlock(chain, nextBlock, txStatus); err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 func (m *mainchainKeeper) tryAttachBlock(chain *orm.Chain, block *btmTypes.Block, txStatus *bc.TransactionStatus) error {
