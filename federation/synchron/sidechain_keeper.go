@@ -23,4 +23,4 @@ func NewSidechainKeeper(db *gorm.DB, chainCfg *config.Chain) *sidechainKeeper {
 	}
 }
 
-func (m *sidechainKeeper) Run() {}
+func (s *sidechainKeeper) Run() {}
