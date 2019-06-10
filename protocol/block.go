@@ -129,10 +129,6 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			return err
 		}
 
-		if b.Height <= irreversibleNode.Height {
-			return errors.New("the height of rollback block below the height of irreversible block")
-		}
-
 		detachBlock := types.MapBlock(b)
 		if err := c.store.GetTransactionsUtxo(utxoView, detachBlock.Transactions); err != nil {
 			return err
@@ -189,13 +185,16 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Debug("attach from mainchain")
 	}
 
+	if detachNodes[len(detachNodes)-1].Height <= c.bestIrreversibleNode && irreversibleNode.Height <= c.bestIrreversibleNode {
+		return errors.New("rollback block below the height of irreversible block")
+	}
 	voteResults = append(voteResults, voteResult.Fork())
 	return c.setState(node, irreversibleNode, utxoView, voteResults)
 }
 
 // SaveBlock will validate and save block into storage
 func (c *Chain) saveBlock(block *types.Block) error {
-	if _, err := c.validateSign(block); err != nil {
+	if err := c.validateSign(block); err != nil {
 		return errors.Sub(ErrBadBlock, err)
 	}
 
@@ -224,7 +223,7 @@ func (c *Chain) saveBlock(block *types.Block) error {
 
 	if len(signature) != 0 {
 		xPub := config.CommonConfig.PrivateKey().XPub()
-		if err := c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: block.Hash(), Signature: signature, XPub: xPub}); err != nil {
+		if err := c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: block.Hash(), Signature: signature, XPub: xPub[:]}); err != nil {
 			return err
 		}
 	}
@@ -284,10 +283,6 @@ func (c *Chain) blockProcesser() {
 
 // ProcessBlock is the entry for handle block insert
 func (c *Chain) processBlock(block *types.Block) (bool, error) {
-	if block.Height <= c.bestIrreversibleNode.Height {
-		return false, errors.New("the height of block below the height of irreversible block")
-	}
-
 	blockHash := block.Hash()
 	if c.BlockExist(&blockHash) {
 		log.WithFields(log.Fields{"module": logModule, "hash": blockHash.String(), "height": block.Height}).Info("block has been processed")

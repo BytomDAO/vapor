@@ -23,7 +23,7 @@ type Chain interface {
 	BestBlockHeight() uint64
 	GetHeaderByHash(*bc.Hash) (*types.BlockHeader, error)
 	ProcessBlock(*types.Block) (bool, error)
-	ProcessBlockSignature(signature []byte, pubkey [64]byte, blockHash *bc.Hash) error
+	ProcessBlockSignature(signature, pubkey []byte, blockHash *bc.Hash) error
 }
 
 type blockMsg struct {
