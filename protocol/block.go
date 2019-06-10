@@ -17,7 +17,8 @@ var (
 	ErrBadBlock = errors.New("invalid block")
 	// ErrBadStateRoot is returned when the computed assets merkle root
 	// disagrees with the one declared in a block header.
-	ErrBadStateRoot = errors.New("invalid state merkle root")
+	ErrBadStateRoot           = errors.New("invalid state merkle root")
+	errBelowIrreversibleBlock = errors.New("the height of block below the height of irreversible block")
 )
 
 // BlockExist check is a block in chain or orphan
@@ -284,11 +285,12 @@ func (c *Chain) blockProcesser() {
 
 // ProcessBlock is the entry for handle block insert
 func (c *Chain) processBlock(block *types.Block) (bool, error) {
+	blockHash := block.Hash()
 	if block.Height <= c.bestIrreversibleNode.Height {
-		return false, errors.New("the height of block below the height of irreversible block")
+		log.WithFields(log.Fields{"module": logModule, "hash": blockHash.String(), "height": block.Height}).Info(errBelowIrreversibleBlock.Error())
+		return false, errBelowIrreversibleBlock
 	}
 
-	blockHash := block.Hash()
 	if c.BlockExist(&blockHash) {
 		log.WithFields(log.Fields{"module": logModule, "hash": blockHash.String(), "height": block.Height}).Info("block has been processed")
 		return c.orphanManage.BlockExist(&blockHash), nil

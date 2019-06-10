@@ -131,7 +131,7 @@ func (c *consensusNodeManager) reorganizeVoteResult(voteResult *state.VoteResult
 	mainChainNode := c.blockIndex.GetNode(&voteResult.BlockHash)
 	var attachNodes []*state.BlockNode
 	var detachNodes []*state.BlockNode
-	for forkChainNode := node; mainChainNode != forkChainNode; node = node.Parent {
+	for forkChainNode := node; mainChainNode != forkChainNode; forkChainNode = forkChainNode.Parent {
 		if forkChainNode.Height == mainChainNode.Height {
 			detachNodes = append(detachNodes, mainChainNode)
 			mainChainNode = mainChainNode.Parent
