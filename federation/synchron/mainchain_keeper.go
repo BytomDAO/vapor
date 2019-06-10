@@ -1,6 +1,7 @@
 package synchron
 
 import (
+	"encoding/hex"
 	"time"
 
 	btmTypes "github.com/bytom/protocol/bc/types"
@@ -19,6 +20,7 @@ type mainchainKeeper struct {
 	db        *gorm.DB
 	node      *service.Node
 	chainName string
+	assetMap  map[string]*orm.Asset
 }
 
 func NewMainchainKeeper(db *gorm.DB, chainCfg *config.Chain) *mainchainKeeper {
@@ -27,6 +29,7 @@ func NewMainchainKeeper(db *gorm.DB, chainCfg *config.Chain) *mainchainKeeper {
 		db:        db,
 		node:      service.NewNode(chainCfg.Upstream),
 		chainName: chainCfg.Name,
+		assetMap:  make(map[string]*orm.Asset),
 	}
 }
 
@@ -70,17 +73,17 @@ func (m *mainchainKeeper) syncBlock() (bool, error) {
 	nextBlock := &btmTypes.Block{}
 	nextBlock.UnmarshalText([]byte(nextBlockStr))
 	if nextBlock.PreviousBlockHash.String() == chain.BlockHash {
-		return true, m.attachBlock(chain, nextBlock, txStatus)
+		return true, m.tryAttachBlock(chain, nextBlock, txStatus)
 	} else {
 		log.WithFields(log.Fields{
 			"remote PreviousBlockHash": nextBlock.PreviousBlockHash.String(),
 			"db block_hash":            chain.BlockHash,
-		}).Fatalf("PreviousBlockHash mismatch")
+		}).Fatalf("BlockHash mismatch")
 		return false, nil
 	}
 }
 
-func (m *mainchainKeeper) attachBlock(chain *orm.Chain, block *btmTypes.Block, txStatus *bc.TransactionStatus) error {
+func (m *mainchainKeeper) tryAttachBlock(chain *orm.Chain, block *btmTypes.Block, txStatus *bc.TransactionStatus) error {
 	blockHash := block.Hash()
 	log.WithFields(log.Fields{"block_height": block.Height, "block_hash": blockHash.String()}).Info("start to attachBlock")
 	m.db.Begin()
@@ -101,8 +104,50 @@ func (m *mainchainKeeper) processBlock(block *btmTypes.Block) error {
 }
 
 func (m *mainchainKeeper) processIssuing(txs []*btmTypes.Tx) error {
+	var assets []*orm.Asset
+
+	for _, tx := range txs {
+		for _, input := range tx.Inputs {
+			switch inp := input.TypedInput.(type) {
+			case *btmTypes.IssuanceInput:
+				assetID := inp.AssetID()
+				if _, err := m.getAsset(assetID.String()); err == nil {
+					continue
+				}
+
+				asset := &orm.Asset{
+					AssetID:           assetID.String(),
+					IssuanceProgram:   hex.EncodeToString(inp.IssuanceProgram),
+					VMVersion:         inp.VMVersion,
+					RawDefinitionByte: hex.EncodeToString(inp.AssetDefinition),
+				}
+				assets = append(assets, asset)
+			}
+		}
+	}
+
+	for _, asset := range assets {
+		if err := m.db.Create(asset).Error; err != nil {
+			return err
+		}
+
+		m.assetMap[asset.AssetID] = asset
+	}
+
 	return nil
-	// if err := m.processIssuing(block.Transactions); err != nil {
-	// 	return err
-	// }
+}
+
+func (m *mainchainKeeper) getAsset(assetID string) (*orm.Asset, error) {
+	asset, ok := m.assetMap[assetID]
+	if ok {
+		return asset, nil
+	}
+
+	asset = &orm.Asset{AssetID: assetID}
+	if err := m.db.Where(asset).First(asset).Error; err != nil {
+		return nil, errors.Wrap(err, "asset not found in memory and mysql")
+	}
+
+	m.assetMap[assetID] = asset
+	return asset, nil
 }
