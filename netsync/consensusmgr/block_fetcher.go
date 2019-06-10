@@ -89,8 +89,6 @@ func (f *blockFetcher) insert(msg *blockMsg) {
 		return
 	}
 
-	hash := msg.block.Hash()
-	f.peers.SetStatus(msg.peerID, msg.block.Height, &hash)
 	proposeMsg, err := NewBlockProposeMsg(msg.block)
 	if err != nil {
 		logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on create BlockProposeMsg")
