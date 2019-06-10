@@ -309,7 +309,12 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 
 // UtxoToInputs convert an utxo to the txinput
 func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.SigningInstruction, error) {
-	txInput := types.NewSpendInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram)
+	txInput := &types.TxInput{}
+	if u.Vote == nil {
+		txInput = types.NewSpendInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram)
+	} else {
+		txInput = types.NewUnvoteInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram, u.Vote)
+	}
 	sigInst := &txbuilder.SigningInstruction{}
 	if signer == nil {
 		return txInput, sigInst, nil
