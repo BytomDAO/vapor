@@ -31,9 +31,11 @@ func (s *Security) IsBanned(ip string, level byte, reason string) bool {
 		return false
 	}
 
-	if err := s.blacklist.addPeer(ip); err != nil {
+	if err := s.blacklist.AddPeer(ip); err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on add ban peer")
 	}
+	//clear peer score
+	s.peersBanScore.DelPeer(ip)
 	return true
 }
 
@@ -42,7 +44,7 @@ func (s *Security) RegisterFilter(filter Filter) {
 }
 
 func (s *Security) Start() error {
-	if err := s.blacklist.loadBannedPeers(); err != nil {
+	if err := s.blacklist.LoadPeers(); err != nil {
 		return err
 	}
 

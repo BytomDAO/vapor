@@ -72,7 +72,7 @@ func (info *NodeInfo) compatibleWith(other *NodeInfo, versionCompatibleWith Vers
 }
 
 func (info NodeInfo) DoFilter(ip string, pubKey string) error {
-	if ip == info.listenHost() || info.PubKey == pubKey {
+	if info.PubKey == pubKey {
 		return ErrConnectSelf
 	}
 

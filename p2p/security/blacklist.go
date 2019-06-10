@@ -33,8 +33,8 @@ func NewBlacklist(config *cfg.Config) *Blacklist {
 	}
 }
 
-//addBannedPeer add peer to blacklist
-func (bl *Blacklist) addPeer(ip string) error {
+//AddPeer add peer to blacklist
+func (bl *Blacklist) AddPeer(ip string) error {
 	bl.mtx.Lock()
 	defer bl.mtx.Unlock()
 
@@ -48,7 +48,7 @@ func (bl *Blacklist) addPeer(ip string) error {
 	return nil
 }
 
-func (bl *Blacklist) delBannedPeer(ip string) error {
+func (bl *Blacklist) delPeer(ip string) error {
 	delete(bl.peers, ip)
 	dataJson, err := json.Marshal(bl.peers)
 	if err != nil {
@@ -62,12 +62,13 @@ func (bl *Blacklist) delBannedPeer(ip string) error {
 func (bl *Blacklist) DoFilter(ip string, pubKey string) error {
 	bl.mtx.Lock()
 	defer bl.mtx.Unlock()
+
 	if banEnd, ok := bl.peers[ip]; ok {
 		if time.Now().Before(banEnd) {
 			return ErrConnectBannedPeer
 		}
 
-		if err := bl.delBannedPeer(ip); err != nil {
+		if err := bl.delPeer(ip); err != nil {
 			return err
 		}
 	}
@@ -75,8 +76,8 @@ func (bl *Blacklist) DoFilter(ip string, pubKey string) error {
 	return nil
 }
 
-// loadBannedPeers load banned peers from db
-func (bl *Blacklist) loadBannedPeers() error {
+// LoadPeers load banned peers from db
+func (bl *Blacklist) LoadPeers() error {
 	bl.mtx.Lock()
 	defer bl.mtx.Unlock()
 

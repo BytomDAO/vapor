@@ -8,7 +8,7 @@ type Filter interface {
 
 type PeerFilter struct {
 	filterChain []Filter
-	mtx         sync.Mutex
+	mtx         sync.RWMutex
 }
 
 func NewPeerFilter() *PeerFilter {
@@ -25,8 +25,8 @@ func (pf *PeerFilter) register(filter Filter) {
 }
 
 func (pf *PeerFilter) doFilter(ip string, pubKey string) error {
-	pf.mtx.Lock()
-	defer pf.mtx.Unlock()
+	pf.mtx.RLock()
+	defer pf.mtx.RUnlock()
 
 	for _, filter := range pf.filterChain {
 		if err := filter.DoFilter(ip, pubKey); err != nil {

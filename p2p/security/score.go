@@ -7,7 +7,8 @@ import (
 )
 
 const (
-	defaultBanThreshold = uint32(100)
+	defaultBanThreshold  = uint32(100)
+	defaultWarnThreshold = uint32(50)
 
 	LevelMsgIllegal              = 0x01
 	levelMsgIllegalPersistent    = uint32(20)
@@ -26,6 +27,13 @@ func NewPeersScore() *PeersBanScore {
 	return &PeersBanScore{
 		peers: make(map[string]*DynamicBanScore),
 	}
+}
+
+func (ps *PeersBanScore) DelPeer(ip string) {
+	ps.mtx.Lock()
+	defer ps.mtx.Unlock()
+
+	delete(ps.peers, ip)
 }
 
 func (ps *PeersBanScore) Increase(ip string, level byte, reason string) bool {
@@ -54,8 +62,7 @@ func (ps *PeersBanScore) Increase(ip string, level byte, reason string) bool {
 		return true
 	}
 
-	warnThreshold := defaultBanThreshold >> 1
-	if score > warnThreshold {
+	if score > defaultWarnThreshold {
 		log.WithFields(log.Fields{"module": logModule, "address": ip, "score": score, "reason": reason}).Warning("ban score increasing")
 	}
 	return false
