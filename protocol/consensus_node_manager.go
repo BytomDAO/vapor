@@ -87,12 +87,11 @@ func (c *consensusNodeManager) getConsensusNodes(prevBlockHash *bc.Hash) (map[st
 		return nil, errNotFoundBlockNode
 	}
 
-	seqHeight := prevBlockNode.Height + 1
-	if bestHeight := c.blockIndex.BestNode().Height; bestHeight < seqHeight && bestHeight != 0 {
-		seqHeight = bestHeight
+	preSeq := state.CalcVoteSeq(prevBlockNode.Height + 1) - 1
+	if bestSeq := state.CalcVoteSeq(c.blockIndex.BestNode().Height); preSeq > bestSeq {
+		preSeq = bestSeq
 	}
 
-	preSeq := state.CalcVoteSeq(seqHeight) - 1
 	voteResult, err := c.store.GetVoteResult(preSeq)
 	if err != nil {
 		return nil, err
