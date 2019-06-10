@@ -48,8 +48,6 @@ func (m *mainchainKeeper) Run() {
 }
 
 func (m *mainchainKeeper) syncBlock() (bool, error) {
-	return true, nil
-
 	chain := &orm.Chain{Name: m.chainName}
 	if err := m.db.Where(chain).First(chain).Error; err != nil {
 		return false, errors.Wrap(err, "query chain")
