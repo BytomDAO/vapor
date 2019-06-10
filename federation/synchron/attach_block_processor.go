@@ -340,16 +340,3 @@ func (p *attachBlockProcessor) processChainInfo() error {
 
 	return nil
 }
-
-// if txDesc.StatusFail && m.asset.Asset != btm.FeeAsset {
-// 	continue
-// }
-
-// case *btmTypes.TxInput:
-// 	if m.statusFail && source.AssetID() != *consensus.BTMAssetID {
-// 		continue
-// 	}
-
-// if m.statusFail && *source.AssetId != *consensus.BTMAssetID {
-// 	continue
-// }
