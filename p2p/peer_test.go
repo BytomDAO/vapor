@@ -7,6 +7,7 @@ import (
 	"time"
 
 	cfg "github.com/vapor/config"
+	"github.com/vapor/consensus"
 	conn "github.com/vapor/p2p/connection"
 	"github.com/vapor/p2p/signlib"
 	"github.com/vapor/version"
@@ -142,11 +143,12 @@ func (rp *remotePeer) accept(l net.Listener) {
 		}
 
 		_, err = pc.HandshakeTimeout(&NodeInfo{
-			PubKey:     rp.PrivKey.XPub().String(),
-			Moniker:    "remote_peer",
-			Network:    rp.Config.ChainID,
-			Version:    version.Version,
-			ListenAddr: l.Addr().String(),
+			PubKey:      rp.PrivKey.XPub().String(),
+			Moniker:     "remote_peer",
+			Network:     rp.Config.ChainID,
+			Version:     version.Version,
+			ListenAddr:  l.Addr().String(),
+			ServiceFlag: consensus.DefaultServices,
 		}, 5*time.Second)
 		if err != nil {
 			fmt.Println("Failed to perform handshake:", err)

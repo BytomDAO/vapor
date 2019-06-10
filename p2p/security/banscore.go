@@ -1,4 +1,4 @@
-package trust
+package security
 
 import (
 	"fmt"
@@ -29,7 +29,7 @@ const (
 var precomputedFactor [precomputedLen]float64
 
 // init precomputes decay factors.
-func Init() {
+func init() {
 	for i := range precomputedFactor {
 		precomputedFactor[i] = math.Exp(-1.0 * float64(i) * lambda)
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
 	"github.com/vapor/netsync/peers"
+	"github.com/vapor/p2p/security"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
@@ -353,7 +354,7 @@ func (bk *blockKeeper) startSync() bool {
 		bk.syncPeer = peer
 		if err := bk.fastBlockSync(checkPoint); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on fastBlockSync")
-			bk.peers.ErrorHandler(peer.ID(), err)
+			bk.peers.ErrorHandler(peer.ID(), security.LevelMsgIllegal, err)
 			return false
 		}
 		return true
@@ -370,7 +371,7 @@ func (bk *blockKeeper) startSync() bool {
 
 		if err := bk.regularBlockSync(targetHeight); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on regularBlockSync")
-			bk.peers.ErrorHandler(peer.ID(), err)
+			bk.peers.ErrorHandler(peer.ID(),security.LevelMsgIllegal, err)
 			return false
 		}
 		return true

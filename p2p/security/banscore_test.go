@@ -1,4 +1,4 @@
-package trust
+package security
 
 import (
 	"math"
@@ -23,7 +23,6 @@ func TestInt(t *testing.T) {
 		{bs: DynamicBanScore{lastUnix: 0, transient: math.MaxUint32, persistent: math.MaxUint32}, timeLapse: 0, wantValue: math.MaxUint32 - 1},
 	}
 
-	Init()
 	for i, intTest := range banScoreIntTests {
 		rst := intTest.bs.int(time.Unix(intTest.timeLapse, 0))
 		if rst != intTest.wantValue {
@@ -53,7 +52,6 @@ func TestIncrease(t *testing.T) {
 		{bs: DynamicBanScore{lastUnix: 0, transient: 0, persistent: math.MaxUint32}, transientAdd: math.MaxUint32, persistentAdd: 0, timeLapse: Lifetime + 1, wantValue: math.MaxUint32 - 1},
 	}
 
-	Init()
 	for i, incTest := range banScoreIncreaseTests {
 		rst := incTest.bs.increase(incTest.persistentAdd, incTest.transientAdd, time.Unix(incTest.timeLapse, 0))
 		if rst != incTest.wantValue {

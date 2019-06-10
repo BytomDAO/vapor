@@ -12,8 +12,8 @@ import (
 type peerMgr struct {
 }
 
-func (pm *peerMgr) AddBannedPeer(string) error {
-	return nil
+func (pm *peerMgr) IsBanned(peerID string, level byte, reason string) bool{
+	return false
 }
 
 func (pm *peerMgr) StopPeerGracefully(string) {
