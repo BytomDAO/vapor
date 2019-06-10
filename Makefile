@@ -137,6 +137,9 @@ benchmark:
 functional-tests:
 	@go test -timeout=5m -tags="functional" ./test 
 
-ci: test
+ci-bytom:
+	git clone --branch master https://github.com/Bytom/bytom.git /go/src/github.com/bytom
+
+ci: ci-bytom test
 
 .PHONY: all target release-all clean test benchmark
