@@ -25,9 +25,9 @@ import (
 	"github.com/vapor/net/websocket"
 	"github.com/vapor/netsync/peers"
 	"github.com/vapor/p2p"
+	"github.com/vapor/proposal/blockproposer"
 	"github.com/vapor/protocol"
 	"github.com/vapor/wallet"
-	"github.com/vapor/proposal/blockproposer"
 )
 
 var (

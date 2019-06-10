@@ -319,11 +319,13 @@ type AccountBalance struct {
 	AssetAlias      string                 `json:"asset_alias"`
 	AssetID         string                 `json:"asset_id"`
 	Amount          uint64                 `json:"amount"`
+	VoteNum         uint64                 `json:"vote_num"`
 	AssetDefinition map[string]interface{} `json:"asset_definition"`
 }
 
 func (w *Wallet) indexBalances(accountUTXOs []*account.UTXO) ([]AccountBalance, error) {
 	accBalance := make(map[string]map[string]uint64)
+	accVote := make(map[string]map[string]uint64)
 	balances := []AccountBalance{}
 
 	for _, accountUTXO := range accountUTXOs {
@@ -336,6 +338,18 @@ func (w *Wallet) indexBalances(accountUTXOs []*account.UTXO) ([]AccountBalance, 
 			}
 		} else {
 			accBalance[accountUTXO.AccountID] = map[string]uint64{assetID: accountUTXO.Amount}
+		}
+
+		if _, ok := accVote[accountUTXO.AccountID]; ok {
+			if _, ok := accVote[accountUTXO.AccountID][assetID]; ok && accountUTXO.Vote != nil {
+				accVote[accountUTXO.AccountID][assetID] += accountUTXO.Amount
+
+			} else if accountUTXO.Vote != nil {
+				accVote[accountUTXO.AccountID][assetID] = accountUTXO.Amount
+			}
+		} else if accountUTXO.Vote != nil {
+			accVote[accountUTXO.AccountID] = map[string]uint64{assetID: accountUTXO.Amount}
+
 		}
 	}
 
@@ -366,6 +380,7 @@ func (w *Wallet) indexBalances(accountUTXOs []*account.UTXO) ([]AccountBalance, 
 				AssetID:         assetID,
 				AssetAlias:      assetAlias,
 				Amount:          accBalance[id][assetID],
+				VoteNum:         accVote[id][assetID],
 				AssetDefinition: targetAsset.DefinitionMap,
 			})
 		}
