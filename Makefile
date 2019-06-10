@@ -138,7 +138,7 @@ functional-tests:
 	@go test -timeout=5m -tags="functional" ./test 
 
 ci-bytom:
-	git clone --branch master https://github.com/Bytom/bytom.git $GOPATH/src/github.com/bytom
+	git clone --branch master https://github.com/Bytom/bytom.git /home/travis/gopath/src/github.com/bytom
 
 ci: ci-bytom test
 
