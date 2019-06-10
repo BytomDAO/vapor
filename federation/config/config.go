@@ -69,5 +69,5 @@ type Chain struct {
 	Name          string `json:"name"`
 	Upstream      string `json:"upstream"`
 	SyncSeconds   uint64 `json:"sync_seconds"`
-	Confirmations string `json:"confirmations"`
+	Confirmations uint64 `json:"confirmations"`
 }
