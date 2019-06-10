@@ -217,6 +217,10 @@ func (c *Chain) updateBlockSignature(blockNode *state.BlockNode, nodeOrder uint6
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
 	if c.isIrreversible(blockNode) && blockNode.Height > c.bestIrreversibleNode.Height {
+		if err := c.store.SaveChainStatus(c.bestNode, blockNode, state.NewUtxoViewpoint(), []*state.VoteResult{}); err != nil {
+			return err
+		}
+
 		c.bestIrreversibleNode = blockNode
 	}
 	return nil

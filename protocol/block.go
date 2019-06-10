@@ -179,7 +179,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			voteResults = append(voteResults, voteResult.Fork())
 		}
 
-		if c.isIrreversible(attachNode) && b.Height > irreversibleNode.Height {
+		if c.isIrreversible(attachNode) && attachNode.Height > irreversibleNode.Height {
 			irreversibleNode = attachNode
 		}
 
