@@ -17,7 +17,8 @@ var (
 	ErrBadBlock = errors.New("invalid block")
 	// ErrBadStateRoot is returned when the computed assets merkle root
 	// disagrees with the one declared in a block header.
-	ErrBadStateRoot = errors.New("invalid state merkle root")
+	ErrBadStateRoot           = errors.New("invalid state merkle root")
+	errBelowIrreversibleBlock = errors.New("the height of block below the height of irreversible block")
 )
 
 // BlockExist check is a block in chain or orphan
