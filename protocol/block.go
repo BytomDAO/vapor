@@ -186,7 +186,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Debug("attach from mainchain")
 	}
 
-	if detachNodes[len(detachNodes)-1].Height <= c.bestIrreversibleNode && irreversibleNode.Height <= c.bestIrreversibleNode {
+	if detachNodes[len(detachNodes)-1].Height <= c.bestIrreversibleNode.Height && irreversibleNode.Height <= c.bestIrreversibleNode.Height {
 		return errors.New("rollback block below the height of irreversible block")
 	}
 	voteResults = append(voteResults, voteResult.Fork())
@@ -303,6 +303,8 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	bestBlockHash := bestBlock.Hash()
 	bestNode := c.index.GetNode(&bestBlockHash)
 
+	c.cond.L.Lock()
+	defer c.cond.L.Unlock()
 	if bestNode.Parent == c.bestNode {
 		log.WithFields(log.Fields{"module": logModule}).Debug("append block to the end of mainchain")
 		return false, c.connectBlock(bestBlock)

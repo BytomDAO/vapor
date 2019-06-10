@@ -175,12 +175,12 @@ func (c *Chain) SignBlock(block *types.Block) ([]byte, error) {
 	blockNodes := c.consensusNodeManager.blockIndex.NodesByHeight(block.Height)
 	for _, blockNode := range blockNodes {
 		// Has already signed the same height block
-		if ok, err := blockNode.BlockWitness.Test(uint32(node.Order)); err != nil && ok {
+		if ok, err := blockNode.BlockWitness.Test(uint32(node.Order)); err == nil && ok {
 			return nil, nil
 		}
 	}
 
-	for blockNode := c.index.GetNode(&block.PreviousBlockHash); c.index.InMainchain(blockNode.Hash); blockNode = blockNode.Parent {
+	for blockNode := c.index.GetNode(&block.PreviousBlockHash); !c.index.InMainchain(blockNode.Hash); blockNode = blockNode.Parent {
 		if blockNode.Height <= c.bestIrreversibleNode.Height {
 			return nil, errSignForkChain
 		}
