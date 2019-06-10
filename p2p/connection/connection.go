@@ -31,10 +31,10 @@ const (
 	flushThrottle      = 100 * time.Millisecond
 
 	defaultSendQueueCapacity   = 1
-	defaultSendRate            = int64(512000) // 500KB/s
+	defaultSendRate            = int64(104857600) // 100MB/s
 	defaultRecvBufferCapacity  = 4096
 	defaultRecvMessageCapacity = 22020096      // 21MB
-	defaultRecvRate            = int64(512000) // 500KB/s
+	defaultRecvRate            = int64(104857600) // 100MB/s
 	defaultSendTimeout         = 10 * time.Second
 	logModule                  = "p2p/conn"
 )
