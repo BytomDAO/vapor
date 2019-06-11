@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -11,6 +12,7 @@ import (
 	"github.com/vapor/account"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/query"
+	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/sha3pool"
 	dbm "github.com/vapor/database/leveldb"
 	chainjson "github.com/vapor/encoding/json"
@@ -309,7 +311,7 @@ func (w *Wallet) GetTransactions(accountID string) ([]*query.AnnotatedTx, error)
 
 // GetAccountBalances return all account balances
 func (w *Wallet) GetAccountBalances(accountID string, id string) ([]AccountBalance, error) {
-	return w.indexBalances(w.GetAccountUtxos(accountID, "", false, false))
+	return w.indexBalances(w.GetAccountUtxos(accountID, "", false, false, false))
 }
 
 // AccountBalance account balance
@@ -372,4 +374,73 @@ func (w *Wallet) indexBalances(accountUTXOs []*account.UTXO) ([]AccountBalance, 
 	}
 
 	return balances, nil
+}
+
+// GetAccountVotes return all account votes
+func (w *Wallet) GetAccountVotes(accountID string, id string) ([]AccountVotes, error) {
+	return w.indexVotes(w.GetAccountUtxos(accountID, "", false, false, true))
+}
+
+type voteDetail struct {
+	Vote       string `json:"vote"`
+	VoteAmount uint64 `json:"vote_amount"`
+}
+
+// AccountVotes account vote
+type AccountVotes struct {
+	AccountID       string       `json:"account_id"`
+	Alias           string       `json:"account_alias"`
+	TotalVoteAmount uint64       `json:"total_vote_amount"`
+	VoteDetails     []voteDetail `json:"vote_details"`
+}
+
+func (w *Wallet) indexVotes(accountUTXOs []*account.UTXO) ([]AccountVotes, error) {
+	accVote := make(map[string]map[string]uint64)
+	votes := []AccountVotes{}
+
+	for _, accountUTXO := range accountUTXOs {
+		if accountUTXO.AssetID != *consensus.BTMAssetID || accountUTXO.Vote == nil {
+			continue
+		}
+		xpub := hex.EncodeToString(accountUTXO.Vote)
+		if _, ok := accVote[accountUTXO.AccountID]; ok {
+			accVote[accountUTXO.AccountID][xpub] += accountUTXO.Amount
+		} else {
+			accVote[accountUTXO.AccountID] = map[string]uint64{xpub: accountUTXO.Amount}
+
+		}
+	}
+
+	var sortedAccount []string
+	for k := range accVote {
+		sortedAccount = append(sortedAccount, k)
+	}
+	sort.Strings(sortedAccount)
+
+	for _, id := range sortedAccount {
+		var sortedXpub []string
+		for k := range accVote[id] {
+			sortedXpub = append(sortedXpub, k)
+		}
+		sort.Strings(sortedXpub)
+
+		voteDetails := []voteDetail{}
+		voteTotal := uint64(0)
+		for _, xpub := range sortedXpub {
+			voteDetails = append(voteDetails, voteDetail{
+				Vote:       xpub,
+				VoteAmount: accVote[id][xpub],
+			})
+			voteTotal += accVote[id][xpub]
+		}
+		alias := w.AccountMgr.GetAliasByID(id)
+		votes = append(votes, AccountVotes{
+			Alias:           alias,
+			AccountID:       id,
+			VoteDetails:     voteDetails,
+			TotalVoteAmount: voteTotal,
+		})
+	}
+
+	return votes, nil
 }
