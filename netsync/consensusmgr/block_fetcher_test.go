@@ -12,7 +12,7 @@ import (
 type peerMgr struct {
 }
 
-func (pm *peerMgr) IsBanned(peerID string, level byte, reason string) bool{
+func (pm *peerMgr) IsBanned(peerID string, level byte, reason string) bool {
 	return false
 }
 
@@ -45,7 +45,7 @@ func (c *chain) ProcessBlock(block *types.Block) (bool, error) {
 	return false, nil
 }
 
-func (c *chain) ProcessBlockSignature(signature []byte, pubkey [64]byte, blockHash *bc.Hash) error {
+func (c *chain) ProcessBlockSignature(signature, pubkey []byte, blockHash *bc.Hash) error {
 	return nil
 }
 
