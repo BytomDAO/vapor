@@ -11,5 +11,5 @@ type AssetCache struct {
 }
 
 func NewAssetCache() *AssetCache {
-	return &AssetCache{}
+	return &AssetCache{lruCache: lru.New(maxAssetCached)}
 }
