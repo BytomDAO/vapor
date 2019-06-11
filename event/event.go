@@ -30,7 +30,7 @@ type NewProposedBlockEvent struct{ Block types.Block }
 type BlockSignatureEvent struct {
 	BlockHash bc.Hash
 	Signature []byte
-	XPub      [64]byte
+	XPub      []byte
 }
 
 // TypeMuxEvent is a time-tagged notification pushed to subscribers.

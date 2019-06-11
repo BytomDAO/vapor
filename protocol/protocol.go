@@ -35,13 +35,12 @@ type Chain struct {
 // NewChain returns a new Chain using store as the underlying storage.
 func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*Chain, error) {
 	c := &Chain{
-		orphanManage:         NewOrphanManage(),
-		txPool:               txPool,
-		store:                store,
-		signatureCache:       lru.New(maxSignatureCacheSize),
-		consensusNodeManager: newConsensusNodeManager(store, nil),
-		eventDispatcher:      eventDispatcher,
-		processBlockCh:       make(chan *processBlockMsg, maxProcessBlockChSize),
+		orphanManage:    NewOrphanManage(),
+		txPool:          txPool,
+		store:           store,
+		signatureCache:  lru.New(maxSignatureCacheSize),
+		eventDispatcher: eventDispatcher,
+		processBlockCh:  make(chan *processBlockMsg, maxProcessBlockChSize),
 	}
 	c.cond.L = new(sync.Mutex)
 
@@ -60,8 +59,8 @@ func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*
 
 	c.bestNode = c.index.GetNode(storeStatus.Hash)
 	c.bestIrreversibleNode = c.index.GetNode(storeStatus.IrreversibleHash)
+	c.consensusNodeManager = newConsensusNodeManager(store, c.index)
 	c.index.SetMainChain(c.bestNode)
-	c.consensusNodeManager.blockIndex = c.index
 	go c.blockProcesser()
 	return c, nil
 }
@@ -125,13 +124,10 @@ func (c *Chain) InMainChain(hash bc.Hash) bool {
 }
 
 // This function must be called with mu lock in above level
-func (c *Chain) setState(node *state.BlockNode, irreversibleNode *state.BlockNode, view *state.UtxoViewpoint, voteResults []*state.VoteResult) error {
+func (c *Chain) setState(node, irreversibleNode *state.BlockNode, view *state.UtxoViewpoint, voteResults []*state.VoteResult) error {
 	if err := c.store.SaveChainStatus(node, irreversibleNode, view, voteResults); err != nil {
 		return err
 	}
-
-	c.cond.L.Lock()
-	defer c.cond.L.Unlock()
 
 	c.index.SetMainChain(node)
 	c.bestNode = node
