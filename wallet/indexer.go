@@ -388,13 +388,10 @@ type voteDetail struct {
 
 // AccountVotes account vote
 type AccountVotes struct {
-	AccountID       string                 `json:"account_id"`
-	Alias           string                 `json:"account_alias"`
-	AssetAlias      string                 `json:"asset_alias"`
-	AssetID         string                 `json:"asset_id"`
-	TotalVoteAmount uint64                 `json:"total_vote_amount"`
-	AssetDefinition map[string]interface{} `json:"asset_definition"`
-	VoteDetails     []voteDetail           `json:"vote_details"`
+	AccountID       string       `json:"account_id"`
+	Alias           string       `json:"account_alias"`
+	TotalVoteAmount uint64       `json:"total_vote_amount"`
+	VoteDetails     []voteDetail `json:"vote_details"`
 }
 
 func (w *Wallet) indexVotes(accountUTXOs []*account.UTXO) ([]AccountVotes, error) {
@@ -407,11 +404,7 @@ func (w *Wallet) indexVotes(accountUTXOs []*account.UTXO) ([]AccountVotes, error
 		}
 		xpub := hex.EncodeToString(accountUTXO.Vote)
 		if _, ok := accVote[accountUTXO.AccountID]; ok {
-			if _, ok := accVote[accountUTXO.AccountID][xpub]; ok {
-				accVote[accountUTXO.AccountID][xpub] += accountUTXO.Amount
-			} else {
-				accVote[accountUTXO.AccountID][xpub] = accountUTXO.Amount
-			}
+			accVote[accountUTXO.AccountID][xpub] += accountUTXO.Amount
 		} else {
 			accVote[accountUTXO.AccountID] = map[string]uint64{xpub: accountUTXO.Amount}
 
@@ -441,21 +434,11 @@ func (w *Wallet) indexVotes(accountUTXOs []*account.UTXO) ([]AccountVotes, error
 			voteTotal += accVote[id][xpub]
 		}
 		alias := w.AccountMgr.GetAliasByID(id)
-		assetID := consensus.BTMAssetID.String()
-		targetAsset, err := w.AssetReg.GetAsset(assetID)
-		if err != nil {
-			return nil, err
-		}
-
-		assetAlias := *targetAsset.Alias
 		votes = append(votes, AccountVotes{
 			Alias:           alias,
 			AccountID:       id,
-			AssetID:         assetID,
-			AssetAlias:      assetAlias,
 			VoteDetails:     voteDetails,
 			TotalVoteAmount: voteTotal,
-			AssetDefinition: targetAsset.DefinitionMap,
 		})
 	}
 
