@@ -11,6 +11,7 @@ import (
 	"github.com/vapor/account"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/query"
+	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/sha3pool"
 	dbm "github.com/vapor/database/leveldb"
 	chainjson "github.com/vapor/encoding/json"
@@ -309,7 +310,7 @@ func (w *Wallet) GetTransactions(accountID string) ([]*query.AnnotatedTx, error)
 
 // GetAccountBalances return all account balances
 func (w *Wallet) GetAccountBalances(accountID string, id string) ([]AccountBalance, error) {
-	return w.indexBalances(w.GetAccountUtxos(accountID, "", false, false))
+	return w.indexBalances(w.GetAccountUtxos(accountID, "", false, false, false))
 }
 
 // AccountBalance account balance
@@ -319,13 +320,11 @@ type AccountBalance struct {
 	AssetAlias      string                 `json:"asset_alias"`
 	AssetID         string                 `json:"asset_id"`
 	Amount          uint64                 `json:"amount"`
-	VoteNum         uint64                 `json:"vote_num"`
 	AssetDefinition map[string]interface{} `json:"asset_definition"`
 }
 
 func (w *Wallet) indexBalances(accountUTXOs []*account.UTXO) ([]AccountBalance, error) {
 	accBalance := make(map[string]map[string]uint64)
-	accVote := make(map[string]map[string]uint64)
 	balances := []AccountBalance{}
 
 	for _, accountUTXO := range accountUTXOs {
@@ -338,18 +337,6 @@ func (w *Wallet) indexBalances(accountUTXOs []*account.UTXO) ([]AccountBalance, 
 			}
 		} else {
 			accBalance[accountUTXO.AccountID] = map[string]uint64{assetID: accountUTXO.Amount}
-		}
-
-		if _, ok := accVote[accountUTXO.AccountID]; ok {
-			if _, ok := accVote[accountUTXO.AccountID][assetID]; ok && accountUTXO.Vote != nil {
-				accVote[accountUTXO.AccountID][assetID] += accountUTXO.Amount
-
-			} else if accountUTXO.Vote != nil {
-				accVote[accountUTXO.AccountID][assetID] = accountUTXO.Amount
-			}
-		} else if accountUTXO.Vote != nil {
-			accVote[accountUTXO.AccountID] = map[string]uint64{assetID: accountUTXO.Amount}
-
 		}
 	}
 
@@ -380,11 +367,101 @@ func (w *Wallet) indexBalances(accountUTXOs []*account.UTXO) ([]AccountBalance, 
 				AssetID:         assetID,
 				AssetAlias:      assetAlias,
 				Amount:          accBalance[id][assetID],
-				VoteNum:         accVote[id][assetID],
 				AssetDefinition: targetAsset.DefinitionMap,
 			})
 		}
 	}
 
 	return balances, nil
+}
+
+// GetAccountVotes return all account votes
+func (w *Wallet) GetAccountVotes(accountID string, id string) ([]AccountVotes, error) {
+	return w.indexVotes(w.GetAccountUtxos(accountID, "", false, false, true))
+}
+
+type voteDetail struct {
+	Vote    string `json:"vote"`
+	VoteNum uint64 `json:"vote_num"`
+}
+
+// AccountVotes account vote
+type AccountVotes struct {
+	AccountID       string                 `json:"account_id"`
+	Alias           string                 `json:"account_alias"`
+	AssetAlias      string                 `json:"asset_alias"`
+	AssetID         string                 `json:"asset_id"`
+	VoteTotal       uint64                 `json:"vote_total"`
+	AssetDefinition map[string]interface{} `json:"asset_definition"`
+	VoteDetail      []voteDetail           `json:"vote_detail"`
+}
+
+func (w *Wallet) indexVotes(accountUTXOs []*account.UTXO) ([]AccountVotes, error) {
+	accVote := make(map[string]map[string]uint64)
+	votes := []AccountVotes{}
+
+	for _, accountUTXO := range accountUTXOs {
+		if accountUTXO.AssetID != *consensus.BTMAssetID || accountUTXO.Vote == nil {
+			continue
+		}
+		xpub, err := chainjson.HexBytes(accountUTXO.Vote).MarshalText()
+		if err != nil {
+			return nil, err
+		}
+		s := string(xpub)
+		if _, ok := accVote[accountUTXO.AccountID]; ok {
+			if _, ok := accVote[accountUTXO.AccountID][s]; ok {
+				accVote[accountUTXO.AccountID][s] += accountUTXO.Amount
+
+			} else {
+				accVote[accountUTXO.AccountID][s] = accountUTXO.Amount
+			}
+		} else {
+			accVote[accountUTXO.AccountID] = map[string]uint64{s: accountUTXO.Amount}
+
+		}
+	}
+
+	var sortedAccount []string
+	for k := range accVote {
+		sortedAccount = append(sortedAccount, k)
+	}
+	sort.Strings(sortedAccount)
+
+	for _, id := range sortedAccount {
+		var sortedXpub []string
+		for k := range accVote[id] {
+			sortedXpub = append(sortedXpub, k)
+		}
+		sort.Strings(sortedXpub)
+
+		voteDetails := []voteDetail{}
+		voteTotal := uint64(0)
+		for _, xpub := range sortedXpub {
+			voteDetails = append(voteDetails, voteDetail{
+				Vote:    xpub,
+				VoteNum: accVote[id][xpub],
+			})
+			voteTotal += accVote[id][xpub]
+		}
+		alias := w.AccountMgr.GetAliasByID(id)
+		assetID := consensus.BTMAssetID.String()
+		targetAsset, err := w.AssetReg.GetAsset(assetID)
+		if err != nil {
+			return nil, err
+		}
+
+		assetAlias := *targetAsset.Alias
+		votes = append(votes, AccountVotes{
+			Alias:           alias,
+			AccountID:       id,
+			AssetID:         assetID,
+			AssetAlias:      assetAlias,
+			VoteDetail:      voteDetails,
+			VoteTotal:       voteTotal,
+			AssetDefinition: targetAsset.DefinitionMap,
+		})
+	}
+
+	return votes, nil
 }

@@ -91,6 +91,7 @@ func (m *Manager) handleBlockProposeMsg(peerID string, msg *BlockProposeMsg) {
 	hash := block.Hash()
 	m.peers.MarkBlock(peerID, &hash)
 	m.blockFetcher.processNewBlock(&blockMsg{peerID: peerID, block: block})
+	m.peers.SetStatus(peerID, block.Height, &hash)
 }
 
 func (m *Manager) handleBlockSignatureMsg(peerID string, msg *BlockSignatureMsg) {
@@ -99,6 +100,7 @@ func (m *Manager) handleBlockSignatureMsg(peerID string, msg *BlockSignatureMsg)
 		m.peers.ProcessIllegal(peerID, security.LevelMsgIllegal, err.Error())
 		return
 	}
+	m.peers.MarkBlockSignature(peerID, msg.Signature)
 }
 
 func (m *Manager) blockProposeMsgBroadcastLoop() {
