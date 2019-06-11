@@ -108,7 +108,7 @@ func (a *API) listBalances(ctx context.Context, filter struct {
 	return NewSuccessResponse(balances)
 }
 
-func (a *API) listVotes(ctx context.Context, filter struct {
+func (a *API) listAccountVotes(ctx context.Context, filter struct {
 	AccountID    string `json:"account_id"`
 	AccountAlias string `json:"account_alias"`
 }) Response {

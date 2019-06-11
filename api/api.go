@@ -245,7 +245,7 @@ func (a *API) buildHandler() {
 
 		m.Handle("/list-balances", jsonHandler(a.listBalances))
 		m.Handle("/list-unspent-outputs", jsonHandler(a.listUnspentOutputs))
-		m.Handle("/list-votes", jsonHandler(a.listVotes))
+		m.Handle("/list-account-votes", jsonHandler(a.listAccountVotes))
 
 		m.Handle("/decode-program", jsonHandler(a.decodeProgram))
 

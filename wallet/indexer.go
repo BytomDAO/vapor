@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -381,8 +382,8 @@ func (w *Wallet) GetAccountVotes(accountID string, id string) ([]AccountVotes, e
 }
 
 type voteDetail struct {
-	Vote    string `json:"vote"`
-	VoteNum uint64 `json:"vote_num"`
+	Vote       string `json:"vote"`
+	VoteAmount uint64 `json:"vote_amount"`
 }
 
 // AccountVotes account vote
@@ -391,9 +392,9 @@ type AccountVotes struct {
 	Alias           string                 `json:"account_alias"`
 	AssetAlias      string                 `json:"asset_alias"`
 	AssetID         string                 `json:"asset_id"`
-	VoteTotal       uint64                 `json:"vote_total"`
+	TotalVoteAmount uint64                 `json:"total_vote_amount"`
 	AssetDefinition map[string]interface{} `json:"asset_definition"`
-	VoteDetail      []voteDetail           `json:"vote_detail"`
+	VoteDetails     []voteDetail           `json:"vote_details"`
 }
 
 func (w *Wallet) indexVotes(accountUTXOs []*account.UTXO) ([]AccountVotes, error) {
@@ -404,20 +405,15 @@ func (w *Wallet) indexVotes(accountUTXOs []*account.UTXO) ([]AccountVotes, error
 		if accountUTXO.AssetID != *consensus.BTMAssetID || accountUTXO.Vote == nil {
 			continue
 		}
-		xpub, err := chainjson.HexBytes(accountUTXO.Vote).MarshalText()
-		if err != nil {
-			return nil, err
-		}
-		s := string(xpub)
+		xpub := hex.EncodeToString(accountUTXO.Vote)
 		if _, ok := accVote[accountUTXO.AccountID]; ok {
-			if _, ok := accVote[accountUTXO.AccountID][s]; ok {
-				accVote[accountUTXO.AccountID][s] += accountUTXO.Amount
-
+			if _, ok := accVote[accountUTXO.AccountID][xpub]; ok {
+				accVote[accountUTXO.AccountID][xpub] += accountUTXO.Amount
 			} else {
-				accVote[accountUTXO.AccountID][s] = accountUTXO.Amount
+				accVote[accountUTXO.AccountID][xpub] = accountUTXO.Amount
 			}
 		} else {
-			accVote[accountUTXO.AccountID] = map[string]uint64{s: accountUTXO.Amount}
+			accVote[accountUTXO.AccountID] = map[string]uint64{xpub: accountUTXO.Amount}
 
 		}
 	}
@@ -439,8 +435,8 @@ func (w *Wallet) indexVotes(accountUTXOs []*account.UTXO) ([]AccountVotes, error
 		voteTotal := uint64(0)
 		for _, xpub := range sortedXpub {
 			voteDetails = append(voteDetails, voteDetail{
-				Vote:    xpub,
-				VoteNum: accVote[id][xpub],
+				Vote:       xpub,
+				VoteAmount: accVote[id][xpub],
 			})
 			voteTotal += accVote[id][xpub]
 		}
@@ -457,8 +453,8 @@ func (w *Wallet) indexVotes(accountUTXOs []*account.UTXO) ([]AccountVotes, error
 			AccountID:       id,
 			AssetID:         assetID,
 			AssetAlias:      assetAlias,
-			VoteDetail:      voteDetails,
-			VoteTotal:       voteTotal,
+			VoteDetails:     voteDetails,
+			TotalVoteAmount: voteTotal,
 			AssetDefinition: targetAsset.DefinitionMap,
 		})
 	}
