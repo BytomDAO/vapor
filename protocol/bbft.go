@@ -71,6 +71,8 @@ func (c *Chain) ProcessBlockSignature(signature, xPub []byte, blockHash *bc.Hash
 		return nil
 	}
 
+	c.cond.L.Lock()
+	defer c.cond.L.Unlock()
 	if err := c.checkNodeSign(blockNode.BlockHeader(), consensusNode, signature); err != nil {
 		return err
 	}
@@ -214,8 +216,6 @@ func (c *Chain) updateBlockSignature(blockNode *state.BlockNode, nodeOrder uint6
 		return err
 	}
 
-	c.cond.L.Lock()
-	defer c.cond.L.Unlock()
 	if c.isIrreversible(blockNode) && blockNode.Height > c.bestIrreversibleNode.Height {
 		if err := c.store.SaveChainStatus(c.bestNode, blockNode, state.NewUtxoViewpoint(), []*state.VoteResult{}); err != nil {
 			return err
