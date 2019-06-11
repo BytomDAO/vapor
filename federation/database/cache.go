@@ -13,3 +13,12 @@ type AssetCache struct {
 func NewAssetCache() *AssetCache {
 	return &AssetCache{lruCache: lru.New(maxAssetCached)}
 }
+
+func (a *AssetCache) Add() {
+}
+
+func (a *AssetCache) Get() {
+}
+
+func (a *AssetCache) Remove() {
+}
