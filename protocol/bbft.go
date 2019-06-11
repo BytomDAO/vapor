@@ -8,10 +8,10 @@ import (
 
 	"github.com/vapor/config"
 	"github.com/vapor/errors"
+	"github.com/vapor/event"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
-	"github.com/vapor/event"
 )
 
 const (
@@ -22,6 +22,7 @@ var (
 	errVotingOperationOverFlow = errors.New("voting operation result overflow")
 	errDoubleSignBlock         = errors.New("the consensus is double sign in same height of different block")
 	errInvalidSignature        = errors.New("the signature of block is invalid")
+	errSignForkChain           = errors.New("can not sign fork before the irreversible block")
 )
 
 func signCacheKey(blockHash, pubkey string) string {
@@ -51,7 +52,7 @@ func (c *Chain) IsBlocker(prevBlockHash *bc.Hash, pubkey string, timeStamp uint6
 
 // ProcessBlockSignature process the received block signature messages
 // return whether a block become irreversible, if so, the chain module must update status
-func (c *Chain) ProcessBlockSignature(signature []byte, xPub [64]byte, blockHash *bc.Hash) error {
+func (c *Chain) ProcessBlockSignature(signature, xPub []byte, blockHash *bc.Hash) error {
 	xpubStr := hex.EncodeToString(xPub[:])
 	blockNode := c.index.GetNode(blockHash)
 	// save the signature if the block is not exist
@@ -66,50 +67,32 @@ func (c *Chain) ProcessBlockSignature(signature []byte, xPub [64]byte, blockHash
 		return err
 	}
 
-	if exist, err := blockNode.BlockWitness.Test(uint32(consensusNode.Order)); err != nil && exist {
+	if exist, _ := blockNode.BlockWitness.Test(uint32(consensusNode.Order)); exist {
 		return nil
 	}
 
-	if !consensusNode.XPub.Verify(blockHash.Bytes(), signature) {
-		return errInvalidSignature
-	}
-
-	isDoubleSign, err := c.checkDoubleSign(consensusNode.Order, blockNode.Height, *blockHash)
-	if err != nil {
+	c.cond.L.Lock()
+	defer c.cond.L.Unlock()
+	if err := c.checkNodeSign(blockNode.BlockHeader(), consensusNode, signature); err != nil {
 		return err
 	}
 
-	if isDoubleSign {
-		return errDoubleSignBlock
-	}
-
-	if err := c.updateBlockSignature(&blockNode.Hash, consensusNode.Order, signature); err != nil {
+	if err := c.updateBlockSignature(blockNode, consensusNode.Order, signature); err != nil {
 		return err
 	}
-
-	if c.isIrreversible(blockNode) && blockNode.Height > c.bestIrreversibleNode.Height {
-		bestIrreversibleNode := c.index.GetNode(blockHash)
-		if err := c.store.SaveChainNodeStatus(c.bestNode, bestIrreversibleNode); err != nil {
-			return err
-		}
-
-		c.bestIrreversibleNode = bestIrreversibleNode
-	}
-
 	return c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: *blockHash, Signature: signature, XPub: xPub})
 }
 
 // validateSign verify the signatures of block, and return the number of correct signature
 // if some signature is invalid, they will be reset to nil
 // if the block has not the signature of blocker, it will return error
-func (c *Chain) validateSign(block *types.Block) (uint64, error) {
+func (c *Chain) validateSign(block *types.Block) error {
 	consensusNodeMap, err := c.consensusNodeManager.getConsensusNodes(&block.PreviousBlockHash)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	hasBlockerSign := false
-	signCount := uint64(0)
 	blockHash := block.Hash()
 	for pubKey, node := range consensusNodeMap {
 		if len(block.Witness) <= int(node.Order) {
@@ -125,27 +108,17 @@ func (c *Chain) validateSign(block *types.Block) (uint64, error) {
 			}
 		}
 
-		if ok := node.XPub.Verify(blockHash.Bytes(), block.Witness[node.Order]); !ok {
-			block.Witness[node.Order] = nil
-			continue
-		}
-
-		isDoubleSign, err := c.checkDoubleSign(node.Order, block.Height, block.Hash())
-		if err != nil {
-			return 0, err
-		}
-
-		if isDoubleSign {
-			// Consensus node is signed twice with the same block height, discard the signature
+		if err := c.checkNodeSign(&block.BlockHeader, node, block.Witness[node.Order]); err == errDoubleSignBlock {
 			log.WithFields(log.Fields{"module": logModule, "blockHash": blockHash.String(), "pubKey": pubKey}).Warn("the consensus node double sign the same height of different block")
 			block.Witness[node.Order] = nil
 			continue
+		} else if err != nil {
+			return err
 		}
 
-		signCount++
 		isBlocker, err := c.consensusNodeManager.isBlocker(&block.PreviousBlockHash, pubKey, block.Timestamp)
 		if err != nil {
-			return 0, err
+			return err
 		}
 
 		if isBlocker {
@@ -155,46 +128,63 @@ func (c *Chain) validateSign(block *types.Block) (uint64, error) {
 	}
 
 	if !hasBlockerSign {
-		return 0, errors.New("the block has no signature of the blocker")
+		return errors.New("the block has no signature of the blocker")
 	}
-	return signCount, nil
+	return nil
 }
 
-func (c *Chain) checkDoubleSign(nodeOrder, blockHeight uint64, blockHash bc.Hash) (bool, error) {
-	blockNodes := c.consensusNodeManager.blockIndex.NodesByHeight(blockHeight)
+func (c *Chain) checkNodeSign(bh *types.BlockHeader, consensusNode *state.ConsensusNode, signature []byte) error {
+	if !consensusNode.XPub.Verify(bh.Hash().Bytes(), signature) {
+		return errInvalidSignature
+	}
+
+	blockNodes := c.consensusNodeManager.blockIndex.NodesByHeight(bh.Height)
 	for _, blockNode := range blockNodes {
-		if blockNode.Hash == blockHash {
+		if blockNode.Hash == bh.Hash() {
 			continue
 		}
-		if ok, err := blockNode.BlockWitness.Test(uint32(nodeOrder)); err != nil && ok {
-			if err := c.updateBlockSignature(&blockHash, nodeOrder, nil); err != nil {
-				return false, err
-			}
 
-			return true, nil
+		consensusNode, err := c.consensusNodeManager.getConsensusNode(&blockNode.Parent.Hash, consensusNode.XPub.String())
+		if err != nil && err != errNotFoundConsensusNode {
+			return err
+		}
+
+		if err == errNotFoundConsensusNode {
+			continue
+		}
+
+		if ok, err := blockNode.BlockWitness.Test(uint32(consensusNode.Order)); err == nil && ok {
+			return errDoubleSignBlock
 		}
 	}
-	return false, nil
+	return nil
 }
 
 // SignBlock signing the block if current node is consensus node
 func (c *Chain) SignBlock(block *types.Block) ([]byte, error) {
 	xprv := config.CommonConfig.PrivateKey()
-	xpub := [64]byte(xprv.XPub())
-	node, err := c.consensusNodeManager.getConsensusNode(&block.PreviousBlockHash, hex.EncodeToString(xpub[:]))
-	if err != nil && err != errNotFoundConsensusNode {
+	xpubStr := xprv.XPub().String()
+	node, err := c.consensusNodeManager.getConsensusNode(&block.PreviousBlockHash, xpubStr)
+	if err == errNotFoundConsensusNode {
+		return nil, nil
+	} else if err != nil {
 		return nil, err
 	}
 
-	if node == nil {
-		return nil, nil
-	}
-
+	c.cond.L.Lock()
+	defer c.cond.L.Unlock()
+	//check double sign in same block height
 	blockNodes := c.consensusNodeManager.blockIndex.NodesByHeight(block.Height)
 	for _, blockNode := range blockNodes {
 		// Has already signed the same height block
-		if ok, err := blockNode.BlockWitness.Test(uint32(node.Order)); err != nil && ok {
+		if ok, err := blockNode.BlockWitness.Test(uint32(node.Order)); err == nil && ok {
 			return nil, nil
+		}
+	}
+
+	for blockNode := c.index.GetNode(&block.PreviousBlockHash); !c.index.InMainchain(blockNode.Hash); blockNode = blockNode.Parent {
+		if blockNode.Height <= c.bestIrreversibleNode.Height {
+			return nil, errSignForkChain
 		}
 	}
 
@@ -206,28 +196,32 @@ func (c *Chain) SignBlock(block *types.Block) ([]byte, error) {
 	return signature, nil
 }
 
-func (c *Chain) updateBlockSignature(blockHash *bc.Hash, nodeOrder uint64, signature []byte) error {
-	blockNode := c.consensusNodeManager.blockIndex.GetNode(blockHash)
-	if len(signature) != 0 {
-		if err := blockNode.BlockWitness.Set(uint32(nodeOrder)); err != nil {
-			return err
-		}
-	} else {
-		if err := blockNode.BlockWitness.Clean(uint32(nodeOrder)); err != nil {
-			return err
-		}
+func (c *Chain) updateBlockSignature(blockNode *state.BlockNode, nodeOrder uint64, signature []byte) error {
+	if err := blockNode.BlockWitness.Set(uint32(nodeOrder)); err != nil {
+		return err
 	}
 
-	block, err := c.store.GetBlock(blockHash)
+	block, err := c.store.GetBlock(&blockNode.Hash)
 	if err != nil {
 		return err
 	}
 
 	block.Witness[nodeOrder] = signature
-	txStatus, err := c.consensusNodeManager.store.GetTransactionStatus(blockHash)
+	txStatus, err := c.store.GetTransactionStatus(&blockNode.Hash)
 	if err != nil {
 		return err
 	}
 
-	return c.consensusNodeManager.store.SaveBlock(block, txStatus)
+	if err := c.store.SaveBlock(block, txStatus); err != nil {
+		return err
+	}
+
+	if c.isIrreversible(blockNode) && blockNode.Height > c.bestIrreversibleNode.Height {
+		if err := c.store.SaveChainStatus(c.bestNode, blockNode, state.NewUtxoViewpoint(), []*state.VoteResult{}); err != nil {
+			return err
+		}
+
+		c.bestIrreversibleNode = blockNode
+	}
+	return nil
 }

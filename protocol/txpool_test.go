@@ -123,7 +123,6 @@ func (s *mockStore) SaveBlock(*types.Block, *bc.TransactionStatus) error        
 func (s *mockStore) SaveChainStatus(*state.BlockNode, *state.BlockNode, *state.UtxoViewpoint, []*state.VoteResult) error {
 	return nil
 }
-func (s *mockStore) SaveChainNodeStatus(*state.BlockNode, *state.BlockNode) error { return nil }
 
 func TestAddOrphan(t *testing.T) {
 	cases := []struct {
@@ -672,7 +671,6 @@ func (s *mockStore1) SaveBlock(*types.Block, *bc.TransactionStatus) error { retu
 func (s *mockStore1) SaveChainStatus(*state.BlockNode, *state.BlockNode, *state.UtxoViewpoint, []*state.VoteResult) error {
 	return nil
 }
-func (s *mockStore1) SaveChainNodeStatus(*state.BlockNode, *state.BlockNode) error { return nil }
 
 func TestProcessTransaction(t *testing.T) {
 	txPool := &TxPool{
