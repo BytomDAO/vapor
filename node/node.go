@@ -100,9 +100,9 @@ func NewNode(config *cfg.Config) *Node {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 	}
 
-	// if err := checkConfig(chain, config); err != nil {
-	// 	panic(err)
-	// }
+	if err := checkConfig(chain, config); err != nil {
+		panic(err)
+	}
 
 	var accounts *account.Manager
 	var assets *asset.Registry
