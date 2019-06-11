@@ -10,26 +10,27 @@ import (
 
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/config"
+	"github.com/vapor/federation/database"
 	"github.com/vapor/federation/database/orm"
 	"github.com/vapor/federation/service"
 	"github.com/vapor/protocol/bc"
 )
 
 type mainchainKeeper struct {
-	cfg       *config.Chain
-	db        *gorm.DB
-	node      *service.Node
-	chainName string
-	assetMap  map[string]*orm.Asset
+	cfg        *config.Chain
+	db         *gorm.DB
+	node       *service.Node
+	chainName  string
+	assetCache *database.AssetCache
 }
 
 func NewMainchainKeeper(db *gorm.DB, chainCfg *config.Chain) *mainchainKeeper {
 	return &mainchainKeeper{
-		cfg:       chainCfg,
-		db:        db,
-		node:      service.NewNode(chainCfg.Upstream),
-		chainName: chainCfg.Name,
-		assetMap:  make(map[string]*orm.Asset),
+		cfg:        chainCfg,
+		db:         db,
+		node:       service.NewNode(chainCfg.Upstream),
+		chainName:  chainCfg.Name,
+		assetCache: database.NewAssetCache(),
 	}
 }
 
@@ -135,23 +136,22 @@ func (m *mainchainKeeper) processIssuing(txs []*btmTypes.Tx) error {
 			return err
 		}
 
-		m.assetMap[asset.AssetID] = asset
+		m.assetCache.Add(asset.AssetID, asset)
 	}
 
 	return nil
 }
 
 func (m *mainchainKeeper) getAsset(assetID string) (*orm.Asset, error) {
-	asset, ok := m.assetMap[assetID]
-	if ok {
+	if asset := m.assetCache.Get(assetID); asset != nil {
 		return asset, nil
 	}
 
-	asset = &orm.Asset{AssetID: assetID}
+	asset := &orm.Asset{AssetID: assetID}
 	if err := m.db.Where(asset).First(asset).Error; err != nil {
 		return nil, errors.Wrap(err, "asset not found in memory and mysql")
 	}
 
-	m.assetMap[assetID] = asset
+	m.assetCache.Add(assetID, asset)
 	return asset, nil
 }
