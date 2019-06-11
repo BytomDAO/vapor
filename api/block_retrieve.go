@@ -1,7 +1,7 @@
 package api
 
 import (
-	"gopkg.in/fatih/set.v0"
+	set "gopkg.in/fatih/set.v0"
 
 	"github.com/vapor/blockchain/query"
 	chainjson "github.com/vapor/encoding/json"
@@ -41,15 +41,16 @@ type BlockReq struct {
 
 // GetBlockResp is the resp for getBlock api
 type GetBlockResp struct {
-	Hash                   *bc.Hash   `json:"hash"`
-	Size                   uint64     `json:"size"`
-	Version                uint64     `json:"version"`
-	Height                 uint64     `json:"height"`
-	PreviousBlockHash      *bc.Hash   `json:"previous_block_hash"`
-	Timestamp              uint64     `json:"timestamp"`
-	TransactionsMerkleRoot *bc.Hash   `json:"transaction_merkle_root"`
-	TransactionStatusHash  *bc.Hash   `json:"transaction_status_hash"`
-	Transactions           []*BlockTx `json:"transactions"`
+	Hash                   *bc.Hash             `json:"hash"`
+	Size                   uint64               `json:"size"`
+	Version                uint64               `json:"version"`
+	Height                 uint64               `json:"height"`
+	PreviousBlockHash      *bc.Hash             `json:"previous_block_hash"`
+	Timestamp              uint64               `json:"timestamp"`
+	Witness                []chainjson.HexBytes `json:"witness"`
+	TransactionsMerkleRoot *bc.Hash             `json:"transaction_merkle_root"`
+	TransactionStatusHash  *bc.Hash             `json:"transaction_status_hash"`
+	Transactions           []*BlockTx           `json:"transactions"`
 }
 
 // return block by hash/height
@@ -66,6 +67,11 @@ func (a *API) getBlock(ins BlockReq) Response {
 		return NewErrorResponse(err)
 	}
 
+	witness := make([]chainjson.HexBytes, len(block.Witness))
+	for i, w := range block.Witness {
+		witness[i] = w
+	}
+
 	resp := &GetBlockResp{
 		Hash:                   &blockHash,
 		Size:                   uint64(len(rawBlock)),
@@ -73,6 +79,7 @@ func (a *API) getBlock(ins BlockReq) Response {
 		Height:                 block.Height,
 		PreviousBlockHash:      &block.PreviousBlockHash,
 		Timestamp:              block.Timestamp,
+		Witness:                witness,
 		TransactionsMerkleRoot: &block.TransactionsMerkleRoot,
 		TransactionStatusHash:  &block.TransactionStatusHash,
 		Transactions:           []*BlockTx{},
