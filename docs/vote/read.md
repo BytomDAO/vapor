@@ -18,7 +18,7 @@ curl -X POST http://ip:port/build-transaction -d '{"base_transaction":null,"acti
     地址自己的：投票
     地址别人的：转账+投票
 3、vote
-    投票给公钥
+    被投票的公钥
 
 
 
