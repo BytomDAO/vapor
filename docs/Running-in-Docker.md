@@ -18,9 +18,9 @@ vapor data directory has three config files:
 - `federation.json`
 - `node_key.txt`
 
-Then you can use bytomd and bytomcli following [Readme](https://github.com/Bytom/bytom/blob/master/README.md)
+Then you can use bytomd and bytomcli following [Bytom Wiki](https://github.com/Bytom/bytom/wiki/Command-Line-Options).
 
-Use `exit` to exit Docker's iterative mode
+Use `exit` to exit Docker's iterative mode.
 
 ### Daemon mode
 
