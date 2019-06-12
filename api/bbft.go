@@ -7,7 +7,6 @@ import (
 type voteInfo struct {
 	PubKey      string `json:"pub_key"`
 	VoteNum     uint64 `json:"vote_num"`
-	IsConsensus bool   `json:"is_consensus"`
 }
 
 func (a *API) getVoteResult(req struct {
