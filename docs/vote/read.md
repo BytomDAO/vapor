@@ -11,14 +11,22 @@ curl -X POST http://ip:port/build-transaction -d '{"base_transaction":null,"acti
 以上实例中：
 
 第一个action的type:spend_account 是手续费
+
 第二个action的type:spend_account 是要投多少票
+
 第三个action的type:vote_output是投票的输出
+
 1、vote_output的amout 与 第二个spend_account的amount相同
+
 2、address指的是锁定到哪个地址
-    地址自己的：投票
-    地址别人的：转账+投票
+
+​    地址自己的：投票
+
+​    地址别人的：转账+投票
+
 3、vote
-    被投票的公钥
+
+   被投票的公钥
 
 
 
@@ -33,5 +41,7 @@ curl -X POST http://ip:port/build-transaction -d '{"base_transaction":null,"acti
 以上实例中：
 
 第一个action的type:spend_account 是手续费
+
 第二个action的type:unvote  取消投票，vote 被取消投票的公钥
+
 第三个action的type:control_address 还是以前的输出
