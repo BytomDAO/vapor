@@ -120,7 +120,8 @@ func (v *VoteResult) DetachBlock(block *types.Block) error {
 		return errors.New("block hash is not equals last block hash of vote result")
 	}
 
-	for _, tx := range block.Transactions {
+	for i := len(block.Transactions) - 1; i >= 0; i-- {
+		tx := block.Transactions[i]
 		for _, input := range tx.Inputs {
 			unVoteInput, ok := input.TypedInput.(*types.UnvoteInput)
 			if !ok {
