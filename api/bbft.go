@@ -7,8 +7,8 @@ import (
 )
 
 type voteInfo struct {
-	PubKey      string `json:"pub_key"`
-	VoteNum     uint64 `json:"vote_num"`
+	Vote    string `json:"vote"`
+	VoteNum uint64 `json:"vote_number"`
 }
 
 type voteInfoSlice []*voteInfo
@@ -38,8 +38,8 @@ func (a *API) getVoteResult(req struct {
 	voteInfos := []*voteInfo{}
 	for pubKey, voteNum := range voteResult.NumOfVote {
 		voteInfos = append(voteInfos, &voteInfo{
-			PubKey:      pubKey,
-			VoteNum:     voteNum,
+			Vote:    pubKey,
+			VoteNum: voteNum,
 		})
 	}
 	sort.Sort(voteInfoSlice(voteInfos))
