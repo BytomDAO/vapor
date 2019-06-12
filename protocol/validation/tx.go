@@ -226,7 +226,6 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		if err = checkValidSrc(&vs2, e.Source); err != nil {
 			return errors.Wrap(err, "checking output source")
 		}
-		vs.gasStatus.StorageGas = 0
 
 	case *bc.VoteOutput:
 		if len(e.Vote) != 64 {
