@@ -383,14 +383,14 @@ func (w *Wallet) GetAccountVotes(accountID string, id string) ([]AccountVotes, e
 
 type voteDetail struct {
 	Vote       string `json:"vote"`
-	VoteAmount uint64 `json:"vote_amount"`
+	VoteNumber uint64 `json:"vote_number"`
 }
 
 // AccountVotes account vote
 type AccountVotes struct {
 	AccountID       string       `json:"account_id"`
 	Alias           string       `json:"account_alias"`
-	TotalVoteAmount uint64       `json:"total_vote_amount"`
+	TotalVoteNumber uint64       `json:"total_vote_number"`
 	VoteDetails     []voteDetail `json:"vote_details"`
 }
 
@@ -429,7 +429,7 @@ func (w *Wallet) indexVotes(accountUTXOs []*account.UTXO) ([]AccountVotes, error
 		for _, xpub := range sortedXpub {
 			voteDetails = append(voteDetails, voteDetail{
 				Vote:       xpub,
-				VoteAmount: accVote[id][xpub],
+				VoteNumber: accVote[id][xpub],
 			})
 			voteTotal += accVote[id][xpub]
 		}
@@ -438,7 +438,7 @@ func (w *Wallet) indexVotes(accountUTXOs []*account.UTXO) ([]AccountVotes, error
 			Alias:           alias,
 			AccountID:       id,
 			VoteDetails:     voteDetails,
-			TotalVoteAmount: voteTotal,
+			TotalVoteNumber: voteTotal,
 		})
 	}
 

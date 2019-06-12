@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/vapor/consensus"
+	"github.com/vapor/config"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
 	"github.com/vapor/math/checked"
@@ -112,7 +113,19 @@ func (v *VoteResult) ConsensusNodes() (map[string]*ConsensusNode, error) {
 		nodes[i].Order = uint64(i)
 		result[nodes[i].XPub.String()] = nodes[i]
 	}
-	return result, nil
+	
+	if len(result) != 0 {
+		return result, nil
+	}
+	return federationNodes(), nil
+}
+
+func federationNodes() map[string]*ConsensusNode {
+	voteResult := map[string]*ConsensusNode{}
+	for i, xpub := range config.CommonConfig.Federation.Xpubs {
+		voteResult[xpub.String()] = &ConsensusNode{XPub: xpub, VoteNum: 0, Order: uint64(i)}
+	}
+	return voteResult
 }
 
 func (v *VoteResult) DetachBlock(block *types.Block) error {

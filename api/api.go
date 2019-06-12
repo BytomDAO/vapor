@@ -301,6 +301,8 @@ func (a *API) buildHandler() {
 
 	m.Handle("/get-merkle-proof", jsonHandler(a.getMerkleProof))
 
+	m.Handle("/get-vote-result", jsonHandler(a.getVoteResult))
+
 	m.HandleFunc("/websocket-subscribe", a.websocketHandler)
 
 	handler := walletHandler(m, walletEnable)
