@@ -255,6 +255,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		if err = checkValidDest(&vs2, e.WitnessDestination); err != nil {
 			return errors.Wrap(err, "checking cross-chain input destination")
 		}
+		vs.gasStatus.StorageGas = 0
 
 	case *bc.Spend:
 		if e.SpentOutputId == nil {
