@@ -106,7 +106,12 @@ func (c *consensusNodeManager) getConsensusNodes(prevBlockHash *bc.Hash) (map[st
 		return nil, err
 	}
 
-	if result := voteResult.ConsensusNodes(); len(result) != 0 {
+	result, err := voteResult.ConsensusNodes()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(result) != 0 {
 		return result, nil
 	}
 	return federationNodes(), nil
