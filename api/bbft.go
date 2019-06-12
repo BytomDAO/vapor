@@ -29,18 +29,11 @@ func (a *API) getVoteResult(req struct {
 		return NewErrorResponse(err)
 	}
 
-	consensusNodes, err := voteResult.ConsensusNodes()
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
 	voteInfos := []*voteInfo{}
 	for pubKey, voteNum := range voteResult.NumOfVote {
-		_, isConsensus := consensusNodes[pubKey]
 		voteInfos = append(voteInfos, &voteInfo{
 			PubKey:      pubKey,
 			VoteNum:     voteNum,
-			IsConsensus: isConsensus,
 		})
 	}
 	return NewSuccessResponse(voteInfos)
