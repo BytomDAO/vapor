@@ -61,42 +61,53 @@ UNLOCK TABLES;
 CREATE TABLE `cross_transactions` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `chain_id` int(11) NOT NULL,
-  `block_height` int(11) NOT NULL,
-  `block_hash` char(64) NOT NULL,
-  `tx_index` int(11) NOT NULL,
-  `mux_id` char(64) NOT NULL,
-  `tx_hash` char(64) NOT NULL,
-  `raw_transaction` mediumtext NOT NULL,
+  `source_block_height` int(11) NOT NULL,
+  `source_block_hash` char(64) NOT NULL,
+  `source_tx_index` int(11) NOT NULL,
+  `source_mux_id` char(64) NOT NULL,
+  `source_tx_hash` char(64) NOT NULL,
+  `source_raw_transaction` mediumtext NOT NULL,
+  `dest_block_height` int(11) DEFAULT NULL,
+  `dest_block_hash` char(64) DEFAULT NULL,
+  `dest_tx_index` int(11) DEFAULT NULL,
+  `dest_tx_hash` char(64) DEFAULT NULL,
   `status` tinyint(1) DEFAULT '0',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `mux_id` (`mux_id`),
-  UNIQUE KEY `tx_hash` (`tx_hash`),
-  UNIQUE KEY `raw_transaction` (`raw_transaction`),
-  UNIQUE KEY `blockhash_txidx` (`block_hash`,`tx_index`),
-  UNIQUE KEY `blockheight_txidx` (`chain_id`,`block_height`,`tx_index`),
-  CONSTRAINT `transactions_ibfk_1` FOREIGN KEY (`chain_id`) REFERENCES `chains` (`id`)
+  UNIQUE KEY `source_mux_id` (`chain_id`,`source_mux_id`),
+  UNIQUE KEY `source_tx_hash` (`chain_id`,`source_tx_hash`),
+  UNIQUE KEY `source_raw_transaction` (`source_raw_transaction`),
+  UNIQUE KEY `source_blockhash_txidx` (`chain_id`,`source_block_hash`,`tx_index`),
+  UNIQUE KEY `source_blockheight_txidx` (`chain_id`,`source_block_height`,`tx_index`),
+  UNIQUE KEY `dest_tx_hash` (`chain_id`,`dest_tx_hash`),
+  UNIQUE KEY `dest_blockhash_txidx` (`chain_id`,`dest_block_hash`,`tx_index`),
+  UNIQUE KEY `dest_blockheight_txidx` (`chain_id`,`dest_block_height`,`tx_index`),
+  CONSTRAINT `cross_transactions_ibfk_1` FOREIGN KEY (`chain_id`) REFERENCES `chains` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 LOCK TABLES `cross_transactions` WRITE;
 UNLOCK TABLES;
 
 
-# Dump of table cross_transaction_inputs
+# Dump of table cross_transaction_reqs
 # ------------------------------------------------------------
-CREATE TABLE `cross_transaction_inputs` (
+CREATE TABLE `cross_transaction_reqs` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `tx_id` int(11) NOT NULL,
+  `cross_transaction_id` int(11) NOT NULL,
   `source_pos` int(11) NOT NULL,
+  `asset_id` int(11) NOT NULL,
+  `asset_amount` bigint(20) DEFAULT '0',
+  `script` varchar(128) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `input_id` (`tx_id`,`source_pos`),
-  CONSTRAINT `cross_transaction_inputs_ibfk_1` FOREIGN KEY (`tx_id`) REFERENCES `cross_transactions` (`id`)
+  UNIQUE KEY `io_id` (`cross_transaction_id`,`source_pos`),
+  CONSTRAINT `cross_transaction_reqs_ibfk_1` FOREIGN KEY (`cross_transaction_id`) REFERENCES `cross_transactions` (`id`),
+  CONSTRAINT `cross_transaction_reqs_ibfk_2` FOREIGN KEY (`asset_id`) REFERENCES `assets` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-LOCK TABLES `cross_transaction_inputs` WRITE;
+LOCK TABLES `cross_transaction_reqs` WRITE;
 UNLOCK TABLES;
 
 
@@ -113,7 +124,7 @@ CREATE TABLE `cross_transaction_signs` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `sign_id` (`cross_transaction_id`,`warder_id`),
   CONSTRAINT `cross_transaction_signs_ibfk_1` FOREIGN KEY (`warder_id`) REFERENCES `warders` (`id`),
-  CONSTRAINT `cross_transaction_signs_ibfk_1` FOREIGN KEY (`cross_transaction_id`) REFERENCES `cross_transactions` (`id`)
+  CONSTRAINT `cross_transaction_signs_ibfk_2` FOREIGN KEY (`cross_transaction_id`) REFERENCES `cross_transactions` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 LOCK TABLES `cross_transaction_signs` WRITE;
