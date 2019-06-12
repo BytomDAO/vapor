@@ -108,8 +108,19 @@ func (m *mainchainKeeper) processBlock(block *btmTypes.Block) error {
 		return err
 	}
 
-	return nil
+	// for i, tx := range txs {
+	// 	if isDepositFromMainchain(tx) {
+	// 		bp.processDepositFromMainchain(uint64(i), tx)
+	// 	}
+	// 	if isWithdrawalToMainchain(tx) {
+	// 		bp.processWithdrawalToMainchain(uint64(i), tx)
+	// 	}
+	// }
+
+	return m.processChainInfo()
 }
+
+func (m *mainchainKeeper) processChainInfo() error {}
 
 func (m *mainchainKeeper) processIssuing(txs []*btmTypes.Tx) error {
 	for _, tx := range txs {
