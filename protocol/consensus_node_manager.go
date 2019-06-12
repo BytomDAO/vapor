@@ -1,7 +1,6 @@
 package protocol
 
 import (
-	"github.com/vapor/config"
 	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
@@ -92,29 +91,30 @@ func (c *consensusNodeManager) getConsensusNodes(prevBlockHash *bc.Hash) (map[st
 		preSeq = bestSeq
 	}
 
-	voteResult, err := c.store.GetVoteResult(preSeq)
-	if err != nil {
-		return nil, err
-	}
-
 	lastBlockNode, err := c.getPrevRoundLastBlock(prevBlockHash)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := c.reorganizeVoteResult(voteResult, lastBlockNode); err != nil {
+	voteResult, err := c.getVoteResult(preSeq, lastBlockNode)
+	if err != nil {
 		return nil, err
 	}
 
-	if len(voteResult.NumOfVote) == 0 {
-		return federationNodes(), nil
-	}
 	return voteResult.ConsensusNodes()
 }
 
 func (c *consensusNodeManager) getBestVoteResult() (*state.VoteResult, error) {
 	blockNode := c.blockIndex.BestNode()
 	seq := state.CalcVoteSeq(blockNode.Height)
+	return c.getVoteResult(seq, blockNode)
+}
+
+// getVoteResult return the vote result
+// seq represent the sequence of vote
+// blockNode represent the chain in which the result of the vote is located
+// Voting results need to be adjusted according to the chain 
+func (c *consensusNodeManager) getVoteResult(seq uint64, blockNode *state.BlockNode) (*state.VoteResult, error) {
 	voteResult, err := c.store.GetVoteResult(seq)
 	if err != nil {
 		return nil, err
@@ -131,12 +131,14 @@ func (c *consensusNodeManager) reorganizeVoteResult(voteResult *state.VoteResult
 	mainChainNode := c.blockIndex.GetNode(&voteResult.BlockHash)
 	var attachNodes []*state.BlockNode
 	var detachNodes []*state.BlockNode
-	for forkChainNode := node; mainChainNode != forkChainNode; forkChainNode = forkChainNode.Parent {
-		if forkChainNode.Height == mainChainNode.Height {
+	for forkChainNode := node; mainChainNode != forkChainNode; {
+		if forkChainNode.Height >= mainChainNode.Height {
+			attachNodes = append([]*state.BlockNode{forkChainNode}, attachNodes...)
+			forkChainNode = forkChainNode.Parent
+		} else if forkChainNode.Height <= mainChainNode.Height {
 			detachNodes = append(detachNodes, mainChainNode)
 			mainChainNode = mainChainNode.Parent
 		}
-		attachNodes = append([]*state.BlockNode{forkChainNode}, attachNodes...)
 	}
 
 	for _, node := range detachNodes {
@@ -161,12 +163,4 @@ func (c *consensusNodeManager) reorganizeVoteResult(voteResult *state.VoteResult
 		}
 	}
 	return nil
-}
-
-func federationNodes() map[string]*state.ConsensusNode {
-	voteResult := map[string]*state.ConsensusNode{}
-	for i, xpub := range config.CommonConfig.Federation.Xpubs {
-		voteResult[xpub.String()] = &state.ConsensusNode{XPub: xpub, VoteNum: 0, Order: uint64(i)}
-	}
-	return voteResult
 }

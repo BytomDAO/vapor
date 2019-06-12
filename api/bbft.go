@@ -4,13 +4,44 @@ import (
 	chainjson "github.com/vapor/encoding/json"
 )
 
-func (a *API) getConsensusNodes(req struct {
-	BlockHash chainjson.HexBytes `json:"block_hash"`
+type voteInfo struct {
+	PubKey      string `json:"pub_key"`
+	VoteNum     uint64 `json:"vote_num"`
+	IsConsensus bool   `json:"is_consensus"`
+}
+
+func (a *API) getVoteResult(req struct {
+	BlockHash   chainjson.HexBytes `json:"block_hash"`
+	BlockHeight uint64             `json:"block_height"`
 }) Response {
-	hash := hexBytesToHash(req.BlockHash)
-	consensusNodes, err := a.chain.GetConsensusNodes(&hash)
+	blockHash := hexBytesToHash(req.BlockHash)
+	if len(req.BlockHash) != 32 {
+		blockNode, err := a.chain.GetHeaderByHeight(req.BlockHeight)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+
+		blockHash = blockNode.Hash()
+	}
+
+	voteResult, err := a.chain.GetVoteResultByHash(&blockHash)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
-	return NewSuccessResponse(consensusNodes)
+
+	consensusNodes, err := voteResult.ConsensusNodes()
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	voteInfos := []*voteInfo{}
+	for pubKey, voteNum := range voteResult.NumOfVote {
+		_, isConsensus := consensusNodes[pubKey]
+		voteInfos = append(voteInfos, &voteInfo{
+			PubKey:      pubKey,
+			VoteNum:     voteNum,
+			IsConsensus: isConsensus,
+		})
+	}
+	return NewSuccessResponse(voteInfos)
 }

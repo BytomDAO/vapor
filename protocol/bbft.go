@@ -45,18 +45,10 @@ func (c *Chain) isIrreversible(blockNode *state.BlockNode) bool {
 	return signCount > len(consensusNodes)*2/3
 }
 
-// GetConsensusNodes return consensus nodes for external access
-func (c *Chain) GetConsensusNodes(blockHash *bc.Hash) ([]*state.ConsensusNode, error) {
-	consensusNodeMap, err := c.consensusNodeManager.getConsensusNodes(blockHash)
-	if err != nil {
-		return nil, err
-	}
-
-	consensusNodes := make([]*state.ConsensusNode, len(consensusNodeMap))
-	for _, n := range consensusNodeMap {
-		consensusNodes[n.Order] = n
-	}
-	return consensusNodes, nil
+// GetVoteResultByHash return vote result by block hash
+func (c *Chain) GetVoteResultByHash(blockHash *bc.Hash) (*state.VoteResult, error) {
+	blockNode := c.index.GetNode(blockHash)
+	return c.consensusNodeManager.getVoteResult(state.CalcVoteSeq(blockNode.Height), blockNode)
 }
 
 // IsBlocker returns whether the consensus node is a blocker at the specified time
