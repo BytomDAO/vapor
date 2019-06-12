@@ -14,9 +14,9 @@ $ docker run -it --net=host -v <vapor/data/directory/on/host/machine>:/root/.vap
 
 vapor data directory has three config files:
 
-- config.toml
-- federation.json
-- node_key.txt
+- `config.toml`
+- `federation.json`
+- `node_key.txt`
 
 Then you can use bytomd and bytomcli following [Readme](https://github.com/Bytom/bytom/blob/master/README.md)
 
