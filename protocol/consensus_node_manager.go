@@ -106,10 +106,10 @@ func (c *consensusNodeManager) getConsensusNodes(prevBlockHash *bc.Hash) (map[st
 		return nil, err
 	}
 
-	if len(voteResult.NumOfVote) == 0 {
-		return federationNodes(), nil
+	if result := voteResult.ConsensusNodes(); len(result) != 0 {
+		return result, nil
 	}
-	return voteResult.ConsensusNodes()
+	return federationNodes(), nil
 }
 
 func (c *consensusNodeManager) getBestVoteResult() (*state.VoteResult, error) {
