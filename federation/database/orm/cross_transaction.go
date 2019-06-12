@@ -5,17 +5,21 @@ import (
 )
 
 type CrossTransaction struct {
-	ID             uint64 `gorm:"primary_key"`
-	ChainID        uint64
-	BlockHeight    uint64
-	BlockHash      string
-	TxIndex        uint64
-	MuxID          string
-	TxHash         string
-	RawTransaction string
-	Status         uint8
-	CreatedAt      types.Timestamp
-	UpdatedAt      types.Timestamp
+	ID                   uint64 `gorm:"primary_key"`
+	ChainID              uint64
+	SourceBlockHeight    uint64
+	SourceBlockHash      string
+	SourceTxIndex        uint64
+	SourceMuxID          string
+	SourceTxHash         string
+	SourceRawTransaction string
+	DestBlockHeight      uint64
+	DestBlockHash        string
+	DestTxIndex          uint64
+	DestTxHash           string
+	Status               uint8
+	CreatedAt            types.Timestamp
+	UpdatedAt            types.Timestamp
 
 	Chain *Chain `gorm:"foreignkey:ChainID"`
 }
