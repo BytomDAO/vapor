@@ -6,23 +6,17 @@
 $ docker build -t vapor .
 ```
 
-### Init vapor
-
-```bash
-$ docker run -v <vapor/data/directory/on/host/machine>:/root/.vapor vapor:latest bytomd init --chain_id=vapor
-```
-
-The default Vapor data directory (on the host) is:
-
-+ Mac: `~/Library/Vapor`
-+ Linux: `~/.vapor`
-+ Windows: `%APPDATA%\Vapor`
-
 ### Enter the iterative mode
 
 ```bash
 $ docker run -it --net=host -v <vapor/data/directory/on/host/machine>:/root/.vapor vapor:latest
 ```
+
+vapor data directory has three config files:
+
+- config.toml
+- federation.json
+- node_key.txt
 
 Then you can use bytomd and bytomcli following [Readme](https://github.com/Bytom/bytom/blob/master/README.md)
 
