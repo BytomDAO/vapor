@@ -94,10 +94,6 @@ func (v *VoteResult) ApplyBlock(block *types.Block) error {
 }
 
 func (v *VoteResult) ConsensusNodes() (map[string]*ConsensusNode, error) {
-	if len(v.NumOfVote) == 0 {
-		return federationNodes(), nil
-	}
-
 	var nodes []*ConsensusNode
 	for pubkey, voteNum := range v.NumOfVote {
 		if voteNum >= consensus.MinVoteNum {
@@ -117,7 +113,11 @@ func (v *VoteResult) ConsensusNodes() (map[string]*ConsensusNode, error) {
 		nodes[i].Order = uint64(i)
 		result[nodes[i].XPub.String()] = nodes[i]
 	}
-	return result, nil
+	
+	if len(result) != 0 {
+		return result, nil
+	}
+	return federationNodes(), nil
 }
 
 func federationNodes() map[string]*ConsensusNode {
