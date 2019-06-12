@@ -102,7 +102,7 @@ CREATE TABLE `cross_transaction_reqs` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `io_id` (`cross_transaction_id`,`source_pos`),
+  UNIQUE KEY `req_id` (`cross_transaction_id`,`source_pos`),
   CONSTRAINT `cross_transaction_reqs_ibfk_1` FOREIGN KEY (`cross_transaction_id`) REFERENCES `cross_transactions` (`id`),
   CONSTRAINT `cross_transaction_reqs_ibfk_2` FOREIGN KEY (`asset_id`) REFERENCES `assets` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
