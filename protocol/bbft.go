@@ -45,7 +45,21 @@ func (c *Chain) isIrreversible(blockNode *state.BlockNode) bool {
 	return signCount > len(consensusNodes)*2/3
 }
 
-// NextLeaderTime returns the start time of the specified public key as the next leader node
+// GetConsensusNodes return consensus nodes for external access
+func (c *Chain) GetConsensusNodes(blockHash *bc.Hash) ([]*state.ConsensusNode, error) {
+	consensusNodeMap, err := c.consensusNodeManager.getConsensusNodes(blockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	consensusNodes := make([]*state.ConsensusNode, len(consensusNodeMap))
+	for _, n := range consensusNodeMap {
+		consensusNodes[n.Order] = n
+	}
+	return consensusNodes, nil
+}
+
+// IsBlocker returns whether the consensus node is a blocker at the specified time
 func (c *Chain) IsBlocker(prevBlockHash *bc.Hash, pubkey string, timeStamp uint64) (bool, error) {
 	return c.consensusNodeManager.isBlocker(prevBlockHash, pubkey, timeStamp)
 }
