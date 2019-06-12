@@ -72,7 +72,10 @@ func (m *mainchainKeeper) syncBlock() (bool, error) {
 	}
 
 	nextBlock := &btmTypes.Block{}
-	nextBlock.UnmarshalText([]byte(nextBlockStr))
+	if err := nextBlock.UnmarshalText([]byte(nextBlockStr)); err != nil {
+		return false, errors.New("Unmarshal nextBlock")
+	}
+
 	if nextBlock.PreviousBlockHash.String() != chain.BlockHash {
 		log.WithFields(log.Fields{
 			"remote PreviousBlockHash": nextBlock.PreviousBlockHash.String(),
