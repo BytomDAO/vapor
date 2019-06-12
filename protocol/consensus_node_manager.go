@@ -132,12 +132,17 @@ func (c *consensusNodeManager) reorganizeVoteResult(voteResult *state.VoteResult
 	var attachNodes []*state.BlockNode
 	var detachNodes []*state.BlockNode
 	for forkChainNode := node; mainChainNode != forkChainNode; {
-		if forkChainNode.Height >= mainChainNode.Height {
+		var forChainRollback, mainChainRollBack bool
+		if forChainRollback = forkChainNode.Height >= mainChainNode.Height; forChainRollback {
 			attachNodes = append([]*state.BlockNode{forkChainNode}, attachNodes...)
-			forkChainNode = forkChainNode.Parent
 		} 
-		if forkChainNode.Height <= mainChainNode.Height {
+		if mainChainRollBack = forkChainNode.Height <= mainChainNode.Height; mainChainRollBack {
 			detachNodes = append(detachNodes, mainChainNode)
+		}
+		if forChainRollback {
+			forkChainNode = forkChainNode.Parent
+		}
+		if mainChainRollBack {
 			mainChainNode = mainChainNode.Parent
 		}
 	}
