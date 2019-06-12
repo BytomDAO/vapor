@@ -112,8 +112,6 @@ func (m *mainchainKeeper) processBlock(block *btmTypes.Block) error {
 }
 
 func (m *mainchainKeeper) processIssuing(txs []*btmTypes.Tx) error {
-	var assets []*orm.Asset
-
 	for _, tx := range txs {
 		for _, input := range tx.Inputs {
 			switch inp := input.TypedInput.(type) {
@@ -129,17 +127,13 @@ func (m *mainchainKeeper) processIssuing(txs []*btmTypes.Tx) error {
 					VMVersion:         inp.VMVersion,
 					RawDefinitionByte: hex.EncodeToString(inp.AssetDefinition),
 				}
-				assets = append(assets, asset)
+				if err := m.db.Create(asset).Error; err != nil {
+					return err
+				}
+
+				m.assetCache.Add(asset.AssetID, asset)
 			}
 		}
-	}
-
-	for _, asset := range assets {
-		if err := m.db.Create(asset).Error; err != nil {
-			return err
-		}
-
-		m.assetCache.Add(asset.AssetID, asset)
 	}
 
 	return nil
