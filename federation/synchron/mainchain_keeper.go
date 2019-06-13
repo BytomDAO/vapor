@@ -16,6 +16,8 @@ import (
 	"github.com/vapor/protocol/bc"
 )
 
+var ErrInconsistentDB = errors.New("inconsistent db status")
+
 type mainchainKeeper struct {
 	cfg        *config.Chain
 	db         *gorm.DB
@@ -81,7 +83,7 @@ func (m *mainchainKeeper) syncBlock() (bool, error) {
 			"remote PreviousBlockHash": nextBlock.PreviousBlockHash.String(),
 			"db block_hash":            chain.BlockHash,
 		}).Fatal("BlockHash mismatch")
-		return false, errors.New("BlockHash mismatch")
+		return false, ErrInconsistentDB
 	}
 
 	if err := m.tryAttachBlock(chain, nextBlock, txStatus); err != nil {
@@ -120,7 +122,34 @@ func (m *mainchainKeeper) processBlock(block *btmTypes.Block) error {
 	return m.processChainInfo()
 }
 
-func (m *mainchainKeeper) processChainInfo() error {}
+func (m *mainchainKeeper) processChainInfo() error {
+	// var previousBlockHashStr string
+
+	// switch {
+	// case p.cfg.IsMainchain:
+	// 	blockHash := p.block.(*btmTypes.Block).Hash()
+	// 	p.chain.BlockHash = blockHash.String()
+	// 	p.chain.BlockHeight = p.block.(*btmTypes.Block).Height
+	// 	previousBlockHashStr = p.block.(*btmTypes.Block).PreviousBlockHash.String()
+	// default:
+	// 	blockHash := p.block.(*vaporTypes.Block).Hash()
+	// 	p.chain.BlockHash = blockHash.String()
+	// 	p.chain.BlockHeight = p.block.(*vaporTypes.Block).Height
+	// 	previousBlockHashStr = p.block.(*vaporTypes.Block).PreviousBlockHash.String()
+	// }
+
+	res := m.db. /*.Model(m.chain)*/ Where("block_hash = ?", "previousBlockHashStr") /*.Updates(p.chain)*/
+	if err := res.Error; err != nil {
+		return err
+	}
+
+	if res.RowsAffected != 1 {
+		return ErrInconsistentDB
+	}
+
+	return nil
+
+}
 
 func (m *mainchainKeeper) processIssuing(txs []*btmTypes.Tx) error {
 	for _, tx := range txs {
