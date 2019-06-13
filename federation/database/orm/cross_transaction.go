@@ -1,6 +1,8 @@
 package orm
 
 import (
+	"database/sql"
+
 	"github.com/vapor/federation/types"
 )
 
@@ -13,10 +15,10 @@ type CrossTransaction struct {
 	SourceMuxID          string
 	SourceTxHash         string
 	SourceRawTransaction string
-	DestBlockHeight      uint64
-	DestBlockHash        string
-	DestTxIndex          uint64
-	DestTxHash           string
+	DestBlockHeight      sql.NullInt64
+	DestBlockHash        sql.NullString
+	DestTxIndex          sql.NullInt64
+	DestTxHash           sql.NullString
 	Status               uint8
 	CreatedAt            types.Timestamp
 	UpdatedAt            types.Timestamp

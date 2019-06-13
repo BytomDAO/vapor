@@ -2,10 +2,12 @@ package synchron
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/hex"
 	"fmt"
 	"time"
 
+	btmConsensus "github.com/bytom/consensus"
 	btmBc "github.com/bytom/protocol/bc"
 	btmTypes "github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"
@@ -169,13 +171,17 @@ func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *btmTypes.Blo
 	}
 
 	ormTx := &orm.CrossTransaction{
-		ChainID:        chain.ID,
-		BlockHeight:    block.Height,
-		BlockHash:      blockHash.String(),
-		TxIndex:        txIndex,
-		MuxID:          muxID.String(),
-		TxHash:         tx.ID.String(),
-		RawTransaction: string(rawTx),
+		ChainID:              chain.ID,
+		SourceBlockHeight:    block.Height,
+		SourceBlockHash:      blockHash.String(),
+		SourceTxIndex:        txIndex,
+		SourceMuxID:          muxID.String(),
+		SourceTxHash:         tx.ID.String(),
+		SourceRawTransaction: string(rawTx),
+		DestBlockHeight:      sql.NullInt64{Valid: false},
+		DestBlockHash:        sql.NullString{Valid: false},
+		DestTxIndex:          sql.NullInt64{Valid: false},
+		DestTxHash:           sql.NullString{Valid: false},
 		// Status         uint8
 	}
 	if err := m.db.Create(ormTx).Error; err != nil {
@@ -197,10 +203,10 @@ func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *btmTypes.Blo
 	return nil
 }
 
-func (m *mainchainKeeper) getCrossChainInputs(mainchainTxID uint64, tx *btmTypes.Tx, statusFail bool) ([]*orm.CrossTransactionInput, error) {
+func (m *mainchainKeeper) getCrossChainInputs(mainchainTxID uint64, tx *btmTypes.Tx, statusFail bool) ([]*orm.CrossTransactionReq, error) {
 	// assume inputs are from an identical owner
 	script := hex.EncodeToString(tx.Inputs[0].ControlProgram())
-	inputs := []*orm.CrossTransactionInput{}
+	inputs := []*orm.CrossTransactionReq{}
 	for i, rawOutput := range tx.Outputs {
 		// check valid deposit
 		if !bytes.Equal(rawOutput.OutputCommitment.ControlProgram, fedProg) {
@@ -216,13 +222,12 @@ func (m *mainchainKeeper) getCrossChainInputs(mainchainTxID uint64, tx *btmTypes
 			return nil, err
 		}
 
-		// default null SidechainTxID, which will be set after submitting deposit tx on sidechain
-		input := &orm.CrossTransactionInput{
-			MainchainTxID: mainchainTxID,
-			SourcePos:     uint64(i),
-			AssetID:       asset.ID,
-			AssetAmount:   rawOutput.OutputCommitment.AssetAmount.Amount,
-			Script:        script,
+		input := &orm.CrossTransactionReq{
+			// CrossTransactionID uint64
+			// SourcePos          uint64
+			// AssetID            uint64
+			// AssetAmount        uint64
+			// Script             string
 		}
 		inputs = append(inputs, input)
 	}
