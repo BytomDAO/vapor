@@ -16,7 +16,7 @@ USE `federation`;
 # ------------------------------------------------------------
 
 CREATE TABLE `warders` (
-  `id` tinyint(1) unsigned NOT NULL AUTO_INCREMENT,
+  `id` tinyint(1) NOT NULL AUTO_INCREMENT,
   `pubkey` varchar(64) NOT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -60,7 +60,7 @@ UNLOCK TABLES;
 
 CREATE TABLE `cross_transactions` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `chain_id` int(11) NOT NULL,
+  `chain_id` tinyint(1) NOT NULL,
   `source_block_height` int(11) NOT NULL,
   `source_block_hash` char(64) NOT NULL,
   `source_tx_index` int(11) NOT NULL,
@@ -115,7 +115,7 @@ UNLOCK TABLES;
 CREATE TABLE `cross_transaction_signs` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `cross_transaction_id` int(11) NOT NULL,
-  `warder_id` int(11) NOT NULL,
+  `warder_id` tinyint(1) NOT NULL,
   `signatures` text NOT NULL,
   `status` tinyint(1) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -142,8 +142,7 @@ CREATE TABLE `assets` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `asset_id` (`asset_id`),
-  UNIQUE KEY `asset_meta` (`issuance_program`,`vm_version`,`raw_definition_byte`)
+  UNIQUE KEY `asset_id` (`asset_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 LOCK TABLES `assets` WRITE;
