@@ -101,12 +101,11 @@ message VoteOutput {
   bytes       vote            = 4;
 }
 
-message CancelVote {
+message VetoInput {
   Hash             spent_output_id     = 1;
   ValueDestination witness_destination = 2;
   repeated bytes   witness_arguments   = 3;
   uint64           ordinal             = 4;
-  bytes            vote                = 5;
 }
 
 message Retirement {

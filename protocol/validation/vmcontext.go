@@ -40,11 +40,11 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 		s := e.SpentOutputId.Bytes()
 		spentOutputID = &s
 
-	case *bc.CancelVote:
-		cancelVoteOutput := tx.Entries[*e.SpentOutputId].(*bc.VoteOutput)
-		a1 := cancelVoteOutput.Source.Value.AssetId.Bytes()
+	case *bc.VetoInput:
+		voteOutput := tx.Entries[*e.SpentOutputId].(*bc.VoteOutput)
+		a1 := voteOutput.Source.Value.AssetId.Bytes()
 		assetID = &a1
-		amount = &cancelVoteOutput.Source.Value.Amount
+		amount = &voteOutput.Source.Value.Amount
 		destPos = &e.WitnessDestination.Position
 		s := e.SpentOutputId.Bytes()
 		spentOutputID = &s
@@ -174,10 +174,10 @@ func (ec *entryContext) checkOutput(index uint64, amount uint64, assetID []byte,
 		}
 		return checkEntry(d)
 
-	case *bc.CancelVote:
+	case *bc.VetoInput:
 		d, ok := ec.entries[*e.WitnessDestination.Ref]
 		if !ok {
-			return false, errors.Wrapf(bc.ErrMissingEntry, "entry for cancel-vote destination %x not found", e.WitnessDestination.Ref.Bytes())
+			return false, errors.Wrapf(bc.ErrMissingEntry, "entry for vetoInput destination %x not found", e.WitnessDestination.Ref.Bytes())
 		}
 		if m, ok := d.(*bc.Mux); ok {
 			return checkMux(m)

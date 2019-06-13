@@ -359,11 +359,10 @@ func buildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
 		in.ControlProgram = orig.ControlProgram()
 		in.SpentOutputID = e.MainchainOutputId
 
-	case *bc.CancelVote:
-		in.Type = "cancel_vote"
+	case *bc.VetoInput:
+		in.Type = "veto"
 		in.ControlProgram = orig.ControlProgram()
 		in.SpentOutputID = e.SpentOutputId
-		in.Vote = e.Vote
 	}
 
 	return in

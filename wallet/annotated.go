@@ -174,13 +174,12 @@ func (w *Wallet) BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInp
 	in.InputID = id
 	e := tx.Entries[id]
 	switch e := e.(type) {
-	case *bc.CancelVote:
-		in.Type = "cancel_vote"
+	case *bc.VetoInput:
+		in.Type = "veto"
 		in.ControlProgram = orig.ControlProgram()
 		in.Address = w.getAddressFromControlProgram(in.ControlProgram, false)
 		in.SpentOutputID = e.SpentOutputId
 		arguments := orig.Arguments()
-		in.Vote = e.Vote
 		for _, arg := range arguments {
 			in.WitnessArguments = append(in.WitnessArguments, arg)
 		}

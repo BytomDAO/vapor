@@ -299,14 +299,14 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errors.Wrap(err, "checking spend destination")
 		}
 
-	case *bc.CancelVote:
+	case *bc.VetoInput:
 		if e.SpentOutputId == nil {
-			return errors.Wrap(ErrMissingField, "cancelvote without cancelvote output ID")
+			return errors.Wrap(ErrMissingField, "vetoInput without vetoInput output ID")
 		}
 
 		voteOutput, err := vs.tx.VoteOutput(*e.SpentOutputId)
 		if err != nil {
-			return errors.Wrap(err, "getting cancelvote prevout")
+			return errors.Wrap(err, "getting vetoInput prevout")
 		}
 		if len(voteOutput.Vote) != 64 {
 			return ErrVotePubKey
@@ -327,7 +327,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		if !eq {
 			return errors.WithDetailf(
 				ErrMismatchedValue,
-				"previous output is for %d unit(s) of %x, cancelvote wants %d unit(s) of %x",
+				"previous output is for %d unit(s) of %x, vetoInput wants %d unit(s) of %x",
 				voteOutput.Source.Value.Amount,
 				voteOutput.Source.Value.AssetId.Bytes(),
 				e.WitnessDestination.Value.Amount,
@@ -337,7 +337,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		vs2 := *vs
 		vs2.destPos = 0
 		if err = checkValidDest(&vs2, e.WitnessDestination); err != nil {
-			return errors.Wrap(err, "checking cancelvote destination")
+			return errors.Wrap(err, "checking vetoInput destination")
 		}
 
 	case *bc.Coinbase:
@@ -391,9 +391,9 @@ func checkValidSrc(vstate *validationState, vs *bc.ValueSource) error {
 
 	var dest *bc.ValueDestination
 	switch ref := e.(type) {
-	case *bc.CancelVote:
+	case *bc.VetoInput:
 		if vs.Position != 0 {
-			return errors.Wrapf(ErrPosition, "invalid position %d for cancel-vote source", vs.Position)
+			return errors.Wrapf(ErrPosition, "invalid position %d for veto-input source", vs.Position)
 		}
 		dest = ref.WitnessDestination
 

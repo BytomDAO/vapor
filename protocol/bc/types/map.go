@@ -39,7 +39,7 @@ func MapTx(oldTx *TxData) *bc.Tx {
 				tx.GasInputIDs = append(tx.GasInputIDs, id)
 			}
 
-		case *bc.CancelVote:
+		case *bc.VetoInput:
 			ord = e.Ordinal
 			spentOutputIDs[*e.SpentOutputId] = true
 			if *e.WitnessDestination.Value.AssetId == *consensus.BTMAssetID {
@@ -78,10 +78,10 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 	}
 
 	var (
-		spends      []*bc.Spend
-		cancelVotes []*bc.CancelVote
-		crossIns    []*bc.CrossChainInput
-		coinbase    *bc.Coinbase
+		spends     []*bc.Spend
+		vetoInputs []*bc.VetoInput
+		crossIns   []*bc.CrossChainInput
+		coinbase   *bc.Coinbase
 	)
 
 	muxSources := make([]*bc.ValueSource, len(tx.Inputs))
@@ -128,16 +128,16 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			}
 			prevout := bc.NewVoteOutput(src, prog, 0, inp.Vote) // ordinal doesn't matter for prevouts, only for result outputs
 			prevoutID := addEntry(prevout)
-			// create entry for cancelVote
-			cancelVote := bc.NewCancelVote(&prevoutID, uint64(i), inp.Vote)
-			cancelVote.WitnessArguments = inp.Arguments
-			cancelVoteID := addEntry(cancelVote)
+			// create entry for VetoInput
+			vetoInput := bc.NewVetoInput(&prevoutID, uint64(i))
+			vetoInput.WitnessArguments = inp.Arguments
+			vetoVoteID := addEntry(vetoInput)
 			// setup mux
 			muxSources[i] = &bc.ValueSource{
-				Ref:   &cancelVoteID,
+				Ref:   &vetoVoteID,
 				Value: &inp.AssetAmount,
 			}
-			cancelVotes = append(cancelVotes, cancelVote)
+			vetoInputs = append(vetoInputs, vetoInput)
 
 		case *CrossChainInput:
 			// TODO: fed peg script
@@ -169,9 +169,9 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 		spend.SetDestination(&muxID, spentOutput.Source.Value, spend.Ordinal)
 	}
 
-	for _, cancelVote := range cancelVotes {
-		voteOutput := entryMap[*cancelVote.SpentOutputId].(*bc.VoteOutput)
-		cancelVote.SetDestination(&muxID, voteOutput.Source.Value, cancelVote.Ordinal)
+	for _, vetoInput := range vetoInputs {
+		voteOutput := entryMap[*vetoInput.SpentOutputId].(*bc.VoteOutput)
+		vetoInput.SetDestination(&muxID, voteOutput.Source.Value, vetoInput.Ordinal)
 	}
 
 	for _, crossIn := range crossIns {
