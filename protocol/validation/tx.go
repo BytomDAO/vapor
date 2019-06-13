@@ -237,8 +237,8 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		if err = checkValidSrc(&vs2, e.Source); err != nil {
 			return errors.Wrap(err, "checking vote output source")
 		}
-		if err = checkVoteOutputAmount(e.Source); err != nil {
-			return errors.Wrap(err, "checking vote output amount")
+		if e.Source.Value.Amount < consensus.MinVoteOutputAmount {
+			return ErrVoteOutputAmount
 		}
 
 	case *bc.Retirement:
@@ -574,11 +574,4 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
 		cache:     make(map[bc.Hash]error),
 	}
 	return vs.gasStatus, checkValid(vs, tx.TxHeader)
-}
-
-func checkVoteOutputAmount(vs *bc.ValueSource) error {
-	if vs.Value.Amount < consensus.MinVoteOutputAmount {
-		return ErrVoteOutputAmount
-	}
-	return nil
 }
