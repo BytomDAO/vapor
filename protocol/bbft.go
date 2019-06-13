@@ -108,13 +108,13 @@ func (c *Chain) validateSign(block *types.Block) error {
 		if block.Get(node.Order) == nil {
 			cachekey := signCacheKey(blockHash.String(), pubKey)
 			if signature, ok := c.signatureCache.Get(cachekey); ok {
-				block.Witness[node.Order] = signature.([]byte)
+				block.Set(node.Order, signature.([]byte))
 			} else {
 				continue
 			}
 		}
 
-		if err := c.checkNodeSign(&block.BlockHeader, node, block.Witness[node.Order]); err == errDoubleSignBlock {
+		if err := c.checkNodeSign(&block.BlockHeader, node, block.Get(node.Order)); err == errDoubleSignBlock {
 			log.WithFields(log.Fields{"module": logModule, "blockHash": blockHash.String(), "pubKey": pubKey}).Warn("the consensus node double sign the same height of different block")
 			block.Delete(node.Order)
 			continue
@@ -194,7 +194,7 @@ func (c *Chain) SignBlock(block *types.Block) ([]byte, error) {
 		}
 	}
 
-	signature := block.Witness[node.Order]
+	signature := block.Get(node.Order)
 	if len(signature) == 0 {
 		signature = xprv.Sign(block.Hash().Bytes())
 		block.Set(node.Order, signature)
