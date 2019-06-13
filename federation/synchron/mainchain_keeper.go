@@ -125,18 +125,10 @@ func (m *mainchainKeeper) processBlock(block *btmTypes.Block) error {
 func (m *mainchainKeeper) processChainInfo() error {
 	// var previousBlockHashStr string
 
-	// switch {
-	// case p.cfg.IsMainchain:
 	// 	blockHash := p.block.(*btmTypes.Block).Hash()
 	// 	p.chain.BlockHash = blockHash.String()
 	// 	p.chain.BlockHeight = p.block.(*btmTypes.Block).Height
 	// 	previousBlockHashStr = p.block.(*btmTypes.Block).PreviousBlockHash.String()
-	// default:
-	// 	blockHash := p.block.(*vaporTypes.Block).Hash()
-	// 	p.chain.BlockHash = blockHash.String()
-	// 	p.chain.BlockHeight = p.block.(*vaporTypes.Block).Height
-	// 	previousBlockHashStr = p.block.(*vaporTypes.Block).PreviousBlockHash.String()
-	// }
 
 	res := m.db. /*.Model(m.chain)*/ Where("block_hash = ?", "previousBlockHashStr") /*.Updates(p.chain)*/
 	if err := res.Error; err != nil {
