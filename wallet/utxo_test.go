@@ -524,7 +524,7 @@ func TestTxOutToUtxos(t *testing.T) {
 	cases := []struct {
 		tx          *types.Tx
 		statusFail  bool
-		vaildHeight uint64
+		blockHeight uint64
 		wantUtxos   []*account.UTXO
 	}{
 		{
@@ -537,7 +537,7 @@ func TestTxOutToUtxos(t *testing.T) {
 				},
 			}),
 			statusFail:  false,
-			vaildHeight: 98,
+			blockHeight: 98,
 			wantUtxos: []*account.UTXO{
 				&account.UTXO{
 					OutputID:       bc.Hash{V0: 1728735075694344097, V1: 884766857607786922, V2: 12293210594955921685, V3: 11109045974561998790},
@@ -546,7 +546,7 @@ func TestTxOutToUtxos(t *testing.T) {
 					ControlProgram: []byte{0x51},
 					SourceID:       bc.NewHash([32]byte{0xb4, 0x7e, 0x94, 0x31, 0x88, 0xfe, 0xd3, 0xe9, 0xac, 0x99, 0x7c, 0xfc, 0x99, 0x6d, 0xd7, 0x4d, 0x04, 0x10, 0x77, 0xcb, 0x1c, 0xf8, 0x95, 0x14, 0x00, 0xe3, 0x42, 0x00, 0x8d, 0x05, 0xec, 0xdc}),
 					SourcePos:      0,
-					ValidHeight:    98,
+					ValidHeight:    198,
 				},
 			},
 		},
@@ -564,7 +564,7 @@ func TestTxOutToUtxos(t *testing.T) {
 				},
 			}),
 			statusFail:  false,
-			vaildHeight: 0,
+			blockHeight: 0,
 			wantUtxos: []*account.UTXO{
 				&account.UTXO{
 					OutputID:       bc.Hash{V0: 8675398163687045889, V1: 7549510466747714094, V2: 13693077838209211470, V3: 6878568403630757599},
@@ -614,7 +614,7 @@ func TestTxOutToUtxos(t *testing.T) {
 				},
 			}),
 			statusFail:  true,
-			vaildHeight: 0,
+			blockHeight: 0,
 			wantUtxos: []*account.UTXO{
 				&account.UTXO{
 					OutputID:       bc.Hash{V0: 7067560744282869147, V1: 8991714784298240423, V2: 2595857933262917893, V3: 11490631006811252506},
@@ -648,7 +648,7 @@ func TestTxOutToUtxos(t *testing.T) {
 				},
 			}),
 			statusFail:  false,
-			vaildHeight: 0,
+			blockHeight: 0,
 			wantUtxos: []*account.UTXO{
 				&account.UTXO{
 					OutputID:       bc.Hash{V0: 8675398163687045889, V1: 7549510466747714094, V2: 13693077838209211470, V3: 6878568403630757599},
@@ -681,7 +681,7 @@ func TestTxOutToUtxos(t *testing.T) {
 				},
 			}),
 			statusFail:  false,
-			vaildHeight: 0,
+			blockHeight: 0,
 			wantUtxos: []*account.UTXO{
 				&account.UTXO{
 					OutputID:       bc.Hash{V0: 396952592194652166, V1: 9806684391645699244, V2: 484243382648745315, V3: 16988093808435014689},
@@ -720,7 +720,7 @@ func TestTxOutToUtxos(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		if gotUtxos := txOutToUtxos(c.tx, c.statusFail, c.vaildHeight, 0); !testutil.DeepEqual(gotUtxos, c.wantUtxos) {
+		if gotUtxos := txOutToUtxos(c.tx, c.statusFail, c.blockHeight); !testutil.DeepEqual(gotUtxos, c.wantUtxos) {
 			t.Errorf("case %d: got %v want %v", i, gotUtxos, c.wantUtxos)
 
 			for j, u := range gotUtxos {
