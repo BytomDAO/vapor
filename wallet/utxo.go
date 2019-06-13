@@ -174,38 +174,41 @@ func batchSaveUtxos(utxos []*account.UTXO, batch dbm.Batch) error {
 func txInToUtxos(tx *types.Tx, statusFail bool) []*account.UTXO {
 	utxos := []*account.UTXO{}
 	for _, inpID := range tx.Tx.InputIDs {
-		sp, err := tx.Spend(inpID)
+
+		e, err := tx.Entry(inpID)
 		if err != nil {
 			continue
 		}
-
-		entryOutput, err := tx.Entry(*sp.SpentOutputId)
-		if err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("txInToUtxos fail on get entryOutput")
-			continue
-		}
-
 		utxo := &account.UTXO{}
-		switch resOut := entryOutput.(type) {
-		case *bc.IntraChainOutput:
+		switch inp := e.(type) {
+		case *bc.Spend:
+			resOut, err := tx.IntraChainOutput(*inp.SpentOutputId)
+			if err != nil {
+				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("txInToUtxos fail on get resOut for spedn")
+				continue
+			}
 			if statusFail && *resOut.Source.Value.AssetId != *consensus.BTMAssetID {
 				continue
 			}
 			utxo = &account.UTXO{
-				OutputID:       *sp.SpentOutputId,
+				OutputID:       *inp.SpentOutputId,
 				AssetID:        *resOut.Source.Value.AssetId,
 				Amount:         resOut.Source.Value.Amount,
 				ControlProgram: resOut.ControlProgram.Code,
 				SourceID:       *resOut.Source.Ref,
 				SourcePos:      resOut.Source.Position,
 			}
-
-		case *bc.VoteOutput:
+		case *bc.VetoInput:
+			resOut, err := tx.VoteOutput(*inp.SpentOutputId)
+			if err != nil {
+				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("txInToUtxos fail on get resOut for vetoInput")
+				continue
+			}
 			if statusFail && *resOut.Source.Value.AssetId != *consensus.BTMAssetID {
 				continue
 			}
 			utxo = &account.UTXO{
-				OutputID:       *sp.SpentOutputId,
+				OutputID:       *inp.SpentOutputId,
 				AssetID:        *resOut.Source.Value.AssetId,
 				Amount:         resOut.Source.Value.Amount,
 				ControlProgram: resOut.ControlProgram.Code,
@@ -213,12 +216,10 @@ func txInToUtxos(tx *types.Tx, statusFail bool) []*account.UTXO {
 				SourcePos:      resOut.Source.Position,
 				Vote:           resOut.Vote,
 			}
-
 		default:
-			log.WithFields(log.Fields{"module": logModule}).Error("txInToUtxos fail on get resOut")
+			log.WithFields(log.Fields{"module": logModule, "err": errors.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", inpID.Bytes(), e)}).Error("txInToUtxos fail on get resOut")
 			continue
 		}
-
 		utxos = append(utxos, utxo)
 	}
 	return utxos

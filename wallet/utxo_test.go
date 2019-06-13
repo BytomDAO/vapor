@@ -484,7 +484,7 @@ func TestTxInToUtxos(t *testing.T) {
 		{
 			tx: types.NewTx(types.TxData{
 				Inputs: []*types.TxInput{
-					types.NewUnvoteInput([][]byte{}, bc.Hash{V0: 1}, bc.AssetID{V0: 1}, 1, 1, []byte{0x51}, []byte("af594006a40837d9f028daabb6d589df0b9138daefad5683e5233c2646279217294a8d532e60863bcf196625a35fb8ceeffa3c09610eb92dcfb655a947f13269")),
+					types.NewVetoInput([][]byte{}, bc.Hash{V0: 1}, bc.AssetID{V0: 1}, 1, 1, []byte{0x51}, []byte("af594006a40837d9f028daabb6d589df0b9138daefad5683e5233c2646279217294a8d532e60863bcf196625a35fb8ceeffa3c09610eb92dcfb655a947f13269")),
 				},
 				Outputs: []*types.TxOutput{
 					types.NewIntraChainOutput(bc.AssetID{V0: 1}, 1, []byte{0x51}),
@@ -493,7 +493,7 @@ func TestTxInToUtxos(t *testing.T) {
 			statusFail: false,
 			wantUtxos: []*account.UTXO{
 				&account.UTXO{
-					OutputID:       bc.NewHash([32]byte{0x95, 0x23, 0x06, 0xa5, 0x2f, 0xc4, 0xe2, 0x36, 0x03, 0x0f, 0xe3, 0xe6, 0xb8, 0x0b, 0xcc, 0x3c, 0x1e, 0x17, 0x3e, 0x25, 0x95, 0xd0, 0xbf, 0x08, 0x11, 0x73, 0x06, 0xd4, 0x64, 0x9c, 0xfb, 0x3b}),
+					OutputID:       bc.NewHash([32]byte{0x7c, 0x75, 0x7f, 0x03, 0x67, 0x9b, 0xc2, 0x8f, 0x8f, 0xbd, 0x04, 0x25, 0x72, 0x42, 0x4b, 0x0b, 0x2a, 0xa4, 0x0e, 0x10, 0x0a, 0x6e, 0x99, 0x0e, 0x6d, 0x58, 0x92, 0x1d, 0xdd, 0xbe, 0xeb, 0x1a}),
 					AssetID:        bc.AssetID{V0: 1},
 					Amount:         1,
 					ControlProgram: []byte{0x51},
