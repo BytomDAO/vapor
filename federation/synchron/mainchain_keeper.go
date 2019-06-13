@@ -16,8 +16,6 @@ import (
 	"github.com/vapor/protocol/bc"
 )
 
-var ErrInconsistentDB = errors.New("inconsistent db status")
-
 type mainchainKeeper struct {
 	cfg        *config.Chain
 	db         *gorm.DB
@@ -110,18 +108,19 @@ func (m *mainchainKeeper) processBlock(chain *orm.Chain, block *btmTypes.Block) 
 		return err
 	}
 
-	// for i, tx := range txs {
-	// 	if isDepositFromMainchain(tx) {
-	// 		bp.processDepositFromMainchain(uint64(i), tx)
-	// 	}
-	// 	if isWithdrawalToMainchain(tx) {
-	// 		m.processWithdrawalToMainchain(uint64(i), tx)
-	// 	}
-	// }
+	for i, tx := range block.Transactions {
+		// 	if isDepositFromMainchain(tx) {
+		// 		bp.processDepositFromMainchain(uint64(i), tx)
+		// 	}
+		if isWithdrawalToMainchain(tx) {
+			// m.processWithdrawalToMainchain(uint64(i), tx)
+		}
+	}
 
 	return m.processChainInfo(chain, block)
 }
 
+// TODO: maybe common
 func (m *mainchainKeeper) processChainInfo(chain *orm.Chain, block *btmTypes.Block) error {
 	blockHash := block.Hash()
 	chain.BlockHash = blockHash.String()
@@ -166,6 +165,7 @@ func (m *mainchainKeeper) processIssuing(txs []*btmTypes.Tx) error {
 	return nil
 }
 
+// TODO: maybe common
 func (m *mainchainKeeper) getAsset(assetID string) (*orm.Asset, error) {
 	if asset := m.assetCache.Get(assetID); asset != nil {
 		return asset, nil
