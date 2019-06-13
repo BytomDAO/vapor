@@ -37,35 +37,36 @@ func (c *consensusNodeManager) getConsensusNode(prevBlockHash *bc.Hash, pubkey s
 	return node, nil
 }
 
-func (c *consensusNodeManager) isBlocker(prevBlockHash *bc.Hash, pubKey string, timeStamp uint64) (bool, error) {
+func (c *consensusNodeManager) getBlocker(prevBlockHash *bc.Hash, timeStamp uint64) (string, error) {
 	consensusNodeMap, err := c.getConsensusNodes(prevBlockHash)
 	if err != nil {
-		return false, err
-	}
-
-	consensusNode := consensusNodeMap[pubKey]
-	if consensusNode == nil {
-		return false, nil
+		return "", err
 	}
 
 	prevVoteRoundLastBlock, err := c.getPrevRoundLastBlock(prevBlockHash)
 	if err != nil {
-		return false, err
+		return "", err
 	}
 
 	startTimestamp := prevVoteRoundLastBlock.Timestamp + consensus.BlockTimeInterval
-	begin := getLastBlockTimeInTimeRange(startTimestamp, timeStamp, consensusNode.Order, uint64(len(consensusNodeMap)))
-	end := begin + consensus.BlockNumEachNode*consensus.BlockTimeInterval
-	return timeStamp >= begin && timeStamp < end, nil
+	order := getBlockerOrder(startTimestamp, timeStamp, uint64(len(consensusNodeMap)))
+	for xPub, consensusNode := range consensusNodeMap {
+		if consensusNode.Order == order {
+			return xPub, nil
+		}
+	}
+
+	// impossible occur
+	return "", errors.New("can not find blocker by given timestamp")
 }
 
-func getLastBlockTimeInTimeRange(startTimestamp, endTimestamp, order, numOfConsensusNode uint64) uint64 {
+func getBlockerOrder(startTimestamp, blockTimestamp, numOfConsensusNode uint64) uint64 {
 	// One round of product block time for all consensus nodes
 	roundBlockTime := consensus.BlockNumEachNode * numOfConsensusNode * consensus.BlockTimeInterval
 	// The start time of the last round of product block
-	lastRoundStartTime := startTimestamp + (endTimestamp-startTimestamp)/roundBlockTime*roundBlockTime
-	// The time of product block of the consensus in last round
-	return lastRoundStartTime + order*(consensus.BlockNumEachNode*consensus.BlockTimeInterval)
+	lastRoundStartTime := startTimestamp + (blockTimestamp-startTimestamp)/roundBlockTime*roundBlockTime
+	// Order of blocker
+	return (blockTimestamp - lastRoundStartTime)/(consensus.BlockNumEachNode*consensus.BlockTimeInterval)
 }
 
 func (c *consensusNodeManager) getPrevRoundLastBlock(prevBlockHash *bc.Hash) (*state.BlockNode, error) {

@@ -48,6 +48,7 @@ type GetBlockResp struct {
 	PreviousBlockHash      *bc.Hash             `json:"previous_block_hash"`
 	Timestamp              uint64               `json:"timestamp"`
 	Witness                []chainjson.HexBytes `json:"witness"`
+	Blocker                string               `json:"blocker"`
 	TransactionsMerkleRoot *bc.Hash             `json:"transaction_merkle_root"`
 	TransactionStatusHash  *bc.Hash             `json:"transaction_status_hash"`
 	Transactions           []*BlockTx           `json:"transactions"`
@@ -72,6 +73,11 @@ func (a *API) getBlock(ins BlockReq) Response {
 		witness[i] = w
 	}
 
+	blocker, err := a.chain.GetBlocker(&block.PreviousBlockHash, block.Timestamp)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
 	resp := &GetBlockResp{
 		Hash:                   &blockHash,
 		Size:                   uint64(len(rawBlock)),
@@ -80,6 +86,7 @@ func (a *API) getBlock(ins BlockReq) Response {
 		PreviousBlockHash:      &block.PreviousBlockHash,
 		Timestamp:              block.Timestamp,
 		Witness:                witness,
+		Blocker:                blocker,
 		TransactionsMerkleRoot: &block.TransactionsMerkleRoot,
 		TransactionStatusHash:  &block.TransactionStatusHash,
 		Transactions:           []*BlockTx{},
