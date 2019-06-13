@@ -720,7 +720,7 @@ func TestTxOutToUtxos(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		if gotUtxos := txOutToUtxos(c.tx, c.statusFail, c.vaildHeight); !testutil.DeepEqual(gotUtxos, c.wantUtxos) {
+		if gotUtxos := txOutToUtxos(c.tx, c.statusFail, c.vaildHeight, 0); !testutil.DeepEqual(gotUtxos, c.wantUtxos) {
 			t.Errorf("case %d: got %v want %v", i, gotUtxos, c.wantUtxos)
 
 			for j, u := range gotUtxos {
