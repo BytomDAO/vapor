@@ -14,7 +14,7 @@ const (
 	CrossChainInputType uint8 = iota
 	SpendInputType
 	CoinbaseInputType
-	UnvoteInputType
+	VetoInputType
 )
 
 type (
@@ -43,7 +43,7 @@ func (t *TxInput) AssetAmount() bc.AssetAmount {
 	case *CrossChainInput:
 		return inp.AssetAmount
 
-	case *UnvoteInput:
+	case *VetoInput:
 		return inp.AssetAmount
 	}
 
@@ -59,7 +59,7 @@ func (t *TxInput) AssetID() bc.AssetID {
 	case *CrossChainInput:
 		return *inp.AssetAmount.AssetId
 
-	case *UnvoteInput:
+	case *VetoInput:
 		return *inp.AssetId
 
 	}
@@ -75,7 +75,7 @@ func (t *TxInput) Amount() uint64 {
 	case *CrossChainInput:
 		return inp.AssetAmount.Amount
 
-	case *UnvoteInput:
+	case *VetoInput:
 		return inp.Amount
 
 	}
@@ -91,7 +91,7 @@ func (t *TxInput) ControlProgram() []byte {
 	case *CrossChainInput:
 		return inp.ControlProgram
 
-	case *UnvoteInput:
+	case *VetoInput:
 		return inp.ControlProgram
 
 	}
@@ -108,7 +108,7 @@ func (t *TxInput) Arguments() [][]byte {
 	case *CrossChainInput:
 		return inp.Arguments
 
-	case *UnvoteInput:
+	case *VetoInput:
 		return inp.Arguments
 	}
 	return nil
@@ -123,7 +123,7 @@ func (t *TxInput) SetArguments(args [][]byte) {
 	case *CrossChainInput:
 		inp.Arguments = args
 
-	case *UnvoteInput:
+	case *VetoInput:
 		inp.Arguments = args
 	}
 }
@@ -134,8 +134,8 @@ func (t *TxInput) SpentOutputID() (o bc.Hash, err error) {
 	case *SpendInput:
 		o, err = ComputeOutputID(&inp.SpendCommitment, SpendInputType, nil)
 
-	case *UnvoteInput:
-		o, err = ComputeOutputID(&inp.SpendCommitment, UnvoteInputType, inp.Vote)
+	case *VetoInput:
+		o, err = ComputeOutputID(&inp.SpendCommitment, VetoInputType, inp.Vote)
 	}
 
 	return o, err
@@ -177,8 +177,8 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 				return err
 			}
 
-		case UnvoteInputType:
-			ui := new(UnvoteInput)
+		case VetoInputType:
+			ui := new(VetoInput)
 			t.TypedInput = ui
 			if ui.UnvoteCommitmentSuffix, err = ui.SpendCommitment.readFrom(r, 1); err != nil {
 
@@ -210,7 +210,7 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 				return err
 			}
 
-		case *UnvoteInput:
+		case *VetoInput:
 			if inp.Arguments, err = blockchain.ReadVarstrList(r); err != nil {
 				return err
 			}
@@ -284,8 +284,8 @@ func (t *TxInput) writeInputCommitment(w io.Writer) (err error) {
 			return errors.Wrap(err, "writing coinbase arbitrary")
 		}
 
-	case *UnvoteInput:
-		if _, err = w.Write([]byte{UnvoteInputType}); err != nil {
+	case *VetoInput:
+		if _, err = w.Write([]byte{VetoInputType}); err != nil {
 			return err
 		}
 		return inp.SpendCommitment.writeExtensibleString(w, inp.UnvoteCommitmentSuffix, t.AssetVersion)
@@ -306,7 +306,7 @@ func (t *TxInput) writeInputWitness(w io.Writer) error {
 	case *CrossChainInput:
 		_, err := blockchain.WriteVarstrList(w, inp.Arguments)
 		return err
-	case *UnvoteInput:
+	case *VetoInput:
 		if _, err := blockchain.WriteVarstrList(w, inp.Arguments); err != nil {
 			return err
 		}

@@ -32,23 +32,23 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 		destPos = &e.WitnessDestination.Position
 
 	case *bc.Spend:
-		switch spentOutput := tx.Entries[*e.SpentOutputId].(type) {
-		case *bc.IntraChainOutput:
-			a1 := spentOutput.Source.Value.AssetId.Bytes()
-			assetID = &a1
-			amount = &spentOutput.Source.Value.Amount
-			destPos = &e.WitnessDestination.Position
-			s := e.SpentOutputId.Bytes()
-			spentOutputID = &s
+		spentOutput := tx.Entries[*e.SpentOutputId].(*bc.IntraChainOutput)
+		a1 := spentOutput.Source.Value.AssetId.Bytes()
+		assetID = &a1
+		amount = &spentOutput.Source.Value.Amount
+		destPos = &e.WitnessDestination.Position
+		s := e.SpentOutputId.Bytes()
+		spentOutputID = &s
 
-		case *bc.VoteOutput:
-			a1 := spentOutput.Source.Value.AssetId.Bytes()
-			assetID = &a1
-			amount = &spentOutput.Source.Value.Amount
-			destPos = &e.WitnessDestination.Position
-			s := e.SpentOutputId.Bytes()
-			spentOutputID = &s
-		}
+	case *bc.VetoInput:
+		voteOutput := tx.Entries[*e.SpentOutputId].(*bc.VoteOutput)
+		a1 := voteOutput.Source.Value.AssetId.Bytes()
+		assetID = &a1
+		amount = &voteOutput.Source.Value.Amount
+		destPos = &e.WitnessDestination.Position
+		s := e.SpentOutputId.Bytes()
+		spentOutputID = &s
+
 	}
 
 	var txSigHash *[]byte
@@ -165,6 +165,19 @@ func (ec *entryContext) checkOutput(index uint64, amount uint64, assetID []byte,
 		d, ok := ec.entries[*e.WitnessDestination.Ref]
 		if !ok {
 			return false, errors.Wrapf(bc.ErrMissingEntry, "entry for spend destination %x not found", e.WitnessDestination.Ref.Bytes())
+		}
+		if m, ok := d.(*bc.Mux); ok {
+			return checkMux(m)
+		}
+		if index != 0 {
+			return false, errors.Wrapf(vm.ErrBadValue, "index %d >= 1", index)
+		}
+		return checkEntry(d)
+
+	case *bc.VetoInput:
+		d, ok := ec.entries[*e.WitnessDestination.Ref]
+		if !ok {
+			return false, errors.Wrapf(bc.ErrMissingEntry, "entry for vetoInput destination %x not found", e.WitnessDestination.Ref.Bytes())
 		}
 		if m, ok := d.(*bc.Mux); ok {
 			return checkMux(m)

@@ -221,7 +221,7 @@ func ComputeOutputID(sc *SpendCommitment, inputType uint8, vote []byte) (h bc.Ha
 	switch inputType {
 	case SpendInputType:
 		o = bc.NewIntraChainOutput(src, &bc.Program{VmVersion: sc.VMVersion, Code: sc.ControlProgram}, 0)
-	case UnvoteInputType:
+	case VetoInputType:
 		o = bc.NewVoteOutput(src, &bc.Program{VmVersion: sc.VMVersion, Code: sc.ControlProgram}, 0, vote)
 	default:
 		return h, fmt.Errorf("Input type error:[%v]", inputType)

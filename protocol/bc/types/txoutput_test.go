@@ -185,9 +185,9 @@ func TestComputeOutputID(t *testing.T) {
 				VMVersion:      1,
 				ControlProgram: testutil.MustDecodeHexString("00145c47f3a0dd3e1e9956fe5b0f897072ed33f9efb9"),
 			},
-			inputType:    UnvoteInputType,
+			inputType:    VetoInputType,
 			vote:         []byte("af594006a40837d9f028daabb6d589df0b9138daefad5683e5233c2646279217294a8d532e60863bcf196625a35fb8ceeffa3c09610eb92dcfb655a947f13269"),
-			wantOutputID: "c95701822db14f5c647158762e4d4b9bff270bfd3040f0ca32cb87c18e377429",
+			wantOutputID: "a4de5a81babc7949d6b38d1cd4bcbc83da340387e747b5f521af3e427c6b0132",
 		},
 		{
 			sc: &SpendCommitment{
@@ -197,9 +197,9 @@ func TestComputeOutputID(t *testing.T) {
 				VMVersion:      1,
 				ControlProgram: testutil.MustDecodeHexString("00145c47f3a0dd3e1e9956fe5b0f897072ed33f9efb9"),
 			},
-			inputType:    UnvoteInputType,
+			inputType:    VetoInputType,
 			vote:         []byte(""),
-			wantOutputID: "8f17b871f3fd07bfe778e92c272e26d4bb19258c90af08310ef32feb526eaf9c",
+			wantOutputID: "e42a48ef401b993c5e523b6a7b5456ad4b297c7aeda163405f265d8d00af983e",
 		},
 	}
 
