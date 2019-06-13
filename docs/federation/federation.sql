@@ -6,14 +6,14 @@
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
+DROP DATABASE `federation`;
+
 CREATE SCHEMA IF NOT EXISTS `federation`;
 
 USE `federation`;
 
 # Dump of table warders
 # ------------------------------------------------------------
-
-DROP TABLE IF EXISTS `warders`;
 
 CREATE TABLE `warders` (
   `id` tinyint(1) unsigned NOT NULL AUTO_INCREMENT,
@@ -77,12 +77,11 @@ CREATE TABLE `cross_transactions` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `source_mux_id` (`chain_id`,`source_mux_id`),
   UNIQUE KEY `source_tx_hash` (`chain_id`,`source_tx_hash`),
-  UNIQUE KEY `source_raw_transaction` (`source_raw_transaction`),
-  UNIQUE KEY `source_blockhash_txidx` (`chain_id`,`source_block_hash`,`tx_index`),
-  UNIQUE KEY `source_blockheight_txidx` (`chain_id`,`source_block_height`,`tx_index`),
+  UNIQUE KEY `source_blockhash_txidx` (`chain_id`,`source_block_hash`,`source_tx_index`),
+  UNIQUE KEY `source_blockheight_txidx` (`chain_id`,`source_block_height`,`source_tx_index`),
   UNIQUE KEY `dest_tx_hash` (`chain_id`,`dest_tx_hash`),
-  UNIQUE KEY `dest_blockhash_txidx` (`chain_id`,`dest_block_hash`,`tx_index`),
-  UNIQUE KEY `dest_blockheight_txidx` (`chain_id`,`dest_block_height`,`tx_index`),
+  UNIQUE KEY `dest_blockhash_txidx` (`chain_id`,`dest_block_hash`,`dest_tx_index`),
+  UNIQUE KEY `dest_blockheight_txidx` (`chain_id`,`dest_block_height`,`dest_tx_index`),
   CONSTRAINT `cross_transactions_ibfk_1` FOREIGN KEY (`chain_id`) REFERENCES `chains` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -133,8 +132,6 @@ UNLOCK TABLES;
 
 # Dump of table assets
 # ------------------------------------------------------------
-
-DROP TABLE IF EXISTS `assets`;
 
 CREATE TABLE `assets` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
