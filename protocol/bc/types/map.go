@@ -39,6 +39,13 @@ func MapTx(oldTx *TxData) *bc.Tx {
 				tx.GasInputIDs = append(tx.GasInputIDs, id)
 			}
 
+		case *bc.CancelVote:
+			ord = e.Ordinal
+			spentOutputIDs[*e.SpentOutputId] = true
+			if *e.WitnessDestination.Value.AssetId == *consensus.BTMAssetID {
+				tx.GasInputIDs = append(tx.GasInputIDs, id)
+			}
+
 		case *bc.Coinbase:
 			ord = 0
 			tx.GasInputIDs = append(tx.GasInputIDs, id)
@@ -71,9 +78,10 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 	}
 
 	var (
-		spends   []*bc.Spend
-		crossIns []*bc.CrossChainInput
-		coinbase *bc.Coinbase
+		spends      []*bc.Spend
+		cancelVotes []*bc.CancelVote
+		crossIns    []*bc.CrossChainInput
+		coinbase    *bc.Coinbase
 	)
 
 	muxSources := make([]*bc.ValueSource, len(tx.Inputs))
@@ -120,16 +128,16 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			}
 			prevout := bc.NewVoteOutput(src, prog, 0, inp.Vote) // ordinal doesn't matter for prevouts, only for result outputs
 			prevoutID := addEntry(prevout)
-			// create entry for spend
-			spend := bc.NewSpend(&prevoutID, uint64(i))
-			spend.WitnessArguments = inp.Arguments
-			spendID := addEntry(spend)
+			// create entry for cancelVote
+			cancelVote := bc.NewCancelVote(&prevoutID, uint64(i), inp.Vote)
+			cancelVote.WitnessArguments = inp.Arguments
+			cancelVoteID := addEntry(cancelVote)
 			// setup mux
 			muxSources[i] = &bc.ValueSource{
-				Ref:   &spendID,
+				Ref:   &cancelVoteID,
 				Value: &inp.AssetAmount,
 			}
-			spends = append(spends, spend)
+			cancelVotes = append(cancelVotes, cancelVote)
 
 		case *CrossChainInput:
 			// TODO: fed peg script
@@ -157,13 +165,13 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 
 	// connect the inputs to the mux
 	for _, spend := range spends {
-		switch spentOutput := entryMap[*spend.SpentOutputId].(type) {
-		case *bc.IntraChainOutput:
-			spend.SetDestination(&muxID, spentOutput.Source.Value, spend.Ordinal)
+		spentOutput := entryMap[*spend.SpentOutputId].(*bc.IntraChainOutput)
+		spend.SetDestination(&muxID, spentOutput.Source.Value, spend.Ordinal)
+	}
 
-		case *bc.VoteOutput:
-			spend.SetDestination(&muxID, spentOutput.Source.Value, spend.Ordinal)
-		}
+	for _, cancelVote := range cancelVotes {
+		voteOutput := entryMap[*cancelVote.SpentOutputId].(*bc.VoteOutput)
+		cancelVote.SetDestination(&muxID, voteOutput.Source.Value, cancelVote.Ordinal)
 	}
 
 	for _, crossIn := range crossIns {

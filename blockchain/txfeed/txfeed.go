@@ -358,6 +358,12 @@ func buildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
 		in.Type = "cross_chain_in"
 		in.ControlProgram = orig.ControlProgram()
 		in.SpentOutputID = e.MainchainOutputId
+
+	case *bc.CancelVote:
+		in.Type = "cancel_vote"
+		in.ControlProgram = orig.ControlProgram()
+		in.SpentOutputID = e.SpentOutputId
+		in.Vote = e.Vote
 	}
 
 	return in
@@ -379,6 +385,13 @@ func buildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOutput {
 		out.Type = "retire"
 	} else {
 		out.Type = "control"
+	}
+	e := tx.Entries[*outid]
+	switch e.(type) {
+	case *bc.VoteOutput:
+		out.Type = "vote_control"
+	case *bc.CrossChainOutput:
+		out.Type = "crosschain_output"
 	}
 	return out
 }

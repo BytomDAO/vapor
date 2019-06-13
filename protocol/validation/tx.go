@@ -261,30 +261,13 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		if e.SpentOutputId == nil {
 			return errors.Wrap(ErrMissingField, "spend without spent output ID")
 		}
-		var (
-			controlProgram *bc.Program
-			value          *bc.AssetAmount
-		)
-		entryOutput, err := vs.tx.Entry(*e.SpentOutputId)
+
+		spentOutput, err := vs.tx.IntraChainOutput(*e.SpentOutputId)
 		if err != nil {
 			return errors.Wrap(err, "getting spend prevout")
 		}
 
-		switch output := entryOutput.(type) {
-		case *bc.IntraChainOutput:
-			controlProgram = output.ControlProgram
-			value = output.Source.Value
-		case *bc.VoteOutput:
-			if len(output.Vote) != 64 {
-				return ErrVotePubKey
-			}
-			controlProgram = output.ControlProgram
-			value = output.Source.Value
-		default:
-			return errors.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", e.SpentOutputId.Bytes(), entryOutput)
-		}
-
-		gasLeft, err := vm.Verify(NewTxVMContext(vs, e, controlProgram, e.WitnessArguments), vs.gasStatus.GasLeft)
+		gasLeft, err := vm.Verify(NewTxVMContext(vs, e, spentOutput.ControlProgram, e.WitnessArguments), vs.gasStatus.GasLeft)
 		if err != nil {
 			return errors.Wrap(err, "checking control program")
 		}
@@ -292,7 +275,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return err
 		}
 
-		eq, err := value.Equal(e.WitnessDestination.Value)
+		eq, err := spentOutput.Source.Value.Equal(e.WitnessDestination.Value)
 		if err != nil {
 			return err
 		}
@@ -300,8 +283,8 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errors.WithDetailf(
 				ErrMismatchedValue,
 				"previous output is for %d unit(s) of %x, spend wants %d unit(s) of %x",
-				value.Amount,
-				value.AssetId.Bytes(),
+				spentOutput.Source.Value.Amount,
+				spentOutput.Source.Value.AssetId.Bytes(),
 				e.WitnessDestination.Value.Amount,
 				e.WitnessDestination.Value.AssetId.Bytes(),
 			)
@@ -310,6 +293,47 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		vs2.destPos = 0
 		if err = checkValidDest(&vs2, e.WitnessDestination); err != nil {
 			return errors.Wrap(err, "checking spend destination")
+		}
+
+	case *bc.CancelVote:
+		if e.SpentOutputId == nil {
+			return errors.Wrap(ErrMissingField, "spend without cancelvote output ID")
+		}
+
+		voteOutput, err := vs.tx.VoteOutput(*e.SpentOutputId)
+		if err != nil {
+			return errors.Wrap(err, "getting cancelvote prevout")
+		}
+		if len(voteOutput.Vote) != 64 {
+			return ErrVotePubKey
+		}
+
+		gasLeft, err := vm.Verify(NewTxVMContext(vs, e, voteOutput.ControlProgram, e.WitnessArguments), vs.gasStatus.GasLeft)
+		if err != nil {
+			return errors.Wrap(err, "checking control program")
+		}
+		if err = vs.gasStatus.updateUsage(gasLeft); err != nil {
+			return err
+		}
+
+		eq, err := voteOutput.Source.Value.Equal(e.WitnessDestination.Value)
+		if err != nil {
+			return err
+		}
+		if !eq {
+			return errors.WithDetailf(
+				ErrMismatchedValue,
+				"previous output is for %d unit(s) of %x, cancelvote wants %d unit(s) of %x",
+				voteOutput.Source.Value.Amount,
+				voteOutput.Source.Value.AssetId.Bytes(),
+				e.WitnessDestination.Value.Amount,
+				e.WitnessDestination.Value.AssetId.Bytes(),
+			)
+		}
+		vs2 := *vs
+		vs2.destPos = 0
+		if err = checkValidDest(&vs2, e.WitnessDestination); err != nil {
+			return errors.Wrap(err, "checking cancelvote destination")
 		}
 
 	case *bc.Coinbase:
@@ -363,6 +387,12 @@ func checkValidSrc(vstate *validationState, vs *bc.ValueSource) error {
 
 	var dest *bc.ValueDestination
 	switch ref := e.(type) {
+	case *bc.CancelVote:
+		if vs.Position != 0 {
+			return errors.Wrapf(ErrPosition, "invalid position %d for cancel-vote source", vs.Position)
+		}
+		dest = ref.WitnessDestination
+
 	case *bc.Coinbase:
 		if vs.Position != 0 {
 			return errors.Wrapf(ErrPosition, "invalid position %d for coinbase source", vs.Position)
