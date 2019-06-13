@@ -203,7 +203,7 @@ func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *btmTypes.Blo
 	return nil
 }
 
-func (m *mainchainKeeper) getCrossChainInputs(mainchainTxID uint64, tx *btmTypes.Tx, statusFail bool) ([]*orm.CrossTransactionReq, error) {
+func (m *mainchainKeeper) getCrossChainInputs(crossTransactionID uint64, tx *btmTypes.Tx, statusFail bool) ([]*orm.CrossTransactionReq, error) {
 	// assume inputs are from an identical owner
 	script := hex.EncodeToString(tx.Inputs[0].ControlProgram())
 	inputs := []*orm.CrossTransactionReq{}
@@ -223,11 +223,11 @@ func (m *mainchainKeeper) getCrossChainInputs(mainchainTxID uint64, tx *btmTypes
 		}
 
 		input := &orm.CrossTransactionReq{
-			// CrossTransactionID uint64
-			// SourcePos          uint64
-			// AssetID            uint64
-			// AssetAmount        uint64
-			// Script             string
+			CrossTransactionID: crossTransactionID,
+			SourcePos:          uint64(i),
+			AssetID:            asset.ID,
+			AssetAmount:        rawOutput.OutputCommitment.AssetAmount.Amount,
+			Script:             script,
 		}
 		inputs = append(inputs, input)
 	}
