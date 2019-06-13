@@ -10,12 +10,11 @@ import (
 )
 
 var (
-	fedProg = vaporCfg.FederationProgrom(vaporCfg.CommonConfig)
-
 	ErrInconsistentDB = errors.New("inconsistent db status")
 )
 
 func isDepositFromMainchain(tx *btmTypes.Tx) bool {
+	fedProg := vaporCfg.FederationProgrom(vaporCfg.CommonConfig)
 	for _, output := range tx.Outputs {
 		if bytes.Equal(output.OutputCommitment.ControlProgram, fedProg) {
 			return true
