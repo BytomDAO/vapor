@@ -12,9 +12,10 @@ type voteInfo struct {
 }
 
 type voteInfoSlice []*voteInfo
-func (v voteInfoSlice) Len() int { return len(v) }
+
+func (v voteInfoSlice) Len() int           { return len(v) }
 func (v voteInfoSlice) Less(i, j int) bool { return v[i].VoteNum > v[j].VoteNum }
-func (v voteInfoSlice) Swap(i, j int) { v[i], v[j] = v[j], v[i] }
+func (v voteInfoSlice) Swap(i, j int)      { v[i], v[j] = v[j], v[i] }
 
 func (a *API) getVoteResult(req struct {
 	BlockHash   chainjson.HexBytes `json:"block_hash"`
