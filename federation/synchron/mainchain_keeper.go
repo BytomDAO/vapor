@@ -182,6 +182,7 @@ func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *btmTypes.Blo
 		DestBlockHash:        sql.NullString{Valid: false},
 		DestTxIndex:          sql.NullInt64{Valid: false},
 		DestTxHash:           sql.NullString{Valid: false},
+		// TODO:
 		// Status         uint8
 	}
 	if err := m.db.Create(ormTx).Error; err != nil {
