@@ -109,20 +109,19 @@ func (m *mainchainKeeper) processBlock(chain *orm.Chain, block *btmTypes.Block) 
 	}
 
 	for i, tx := range block.Transactions {
-		// 	if isDepositFromMainchain(tx) {
-		// 		bp.processDepositFromMainchain(uint64(i), tx)
-		// 	}
-		if isWithdrawalToMainchain(tx) {
-			if err := m.processWithdrawalToMainchain(uint64(i), tx); err != nil {
+		if isDepositFromMainchain(tx) {
+			if err := m.processDepositFromMainchain(uint64(i), tx); err != nil {
 				return err
 			}
 		}
+		// if isWithdrawalToMainchain(tx) {
+		// }
 	}
 
 	return m.processChainInfo(chain, block)
 }
 
-func (m *mainchainKeeper) processWithdrawalToMainchain(txIndex uint64, tx *btmTypes.Tx) error {
+func (m *mainchainKeeper) processDepositFromMainchain(txIndex uint64, tx *btmTypes.Tx) error {
 	return nil
 }
 
