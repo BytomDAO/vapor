@@ -3,8 +3,10 @@ package synchron
 import (
 	"bytes"
 	"encoding/hex"
+	"fmt"
 	"time"
 
+	btmBc "github.com/bytom/protocol/bc"
 	btmTypes "github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
@@ -111,7 +113,7 @@ func (m *mainchainKeeper) processBlock(chain *orm.Chain, block *btmTypes.Block) 
 
 	for i, tx := range block.Transactions {
 		if m.isDepositTx(tx) {
-			if err := m.processDepositTx(uint64(i), tx); err != nil {
+			if err := m.processDepositTx(chain, block, uint64(i), tx); err != nil {
 				return err
 			}
 		}
@@ -144,7 +146,50 @@ func (m *mainchainKeeper) isWithdrawalTx(tx *btmTypes.Tx) bool {
 	return false
 }
 
-func (m *mainchainKeeper) processDepositTx(txIndex uint64, tx *btmTypes.Tx) error {
+func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *btmTypes.Block, txIndex uint64, tx *btmTypes.Tx) error {
+	blockHash := block.Hash()
+
+	var muxID btmBc.Hash
+	// TODO: fix here
+	resOutID := tx.ResultIds[0]
+	resOut, ok := tx.Entries[*resOutID].(*btmBc.Output)
+	if ok {
+		muxID = *resOut.Source.Ref
+	} else {
+		return errors.New("fail to get mux id")
+	}
+
+	rawTx, err := tx.MarshalText()
+	if err != nil {
+		return err
+	}
+
+	ormTx := &orm.CrossTransaction{
+		ChainID:        chain.ID,
+		BlockHeight:    block.Height,
+		BlockHash:      blockHash.String(),
+		TxIndex:        txIndex,
+		MuxID:          muxID.String(),
+		TxHash:         tx.ID.String(),
+		RawTransaction: string(rawTx),
+		// Status         uint8
+	}
+	if err := m.db.Create(ormTx).Error; err != nil {
+		return errors.Wrap(err, fmt.Sprintf("create mainchain DepositTx %s", tx.ID.String()))
+	}
+
+	// statusFail := p.txStatus.VerifyStatus[txIndex].StatusFail
+	// crossChainInputs, err := p.getCrossChainInputs(ormTx.ID, tx, statusFail)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// for _, input := range crossChainInputs {
+	// 	if err := p.db.Create(input).Error; err != nil {
+	// 		return errors.Wrap(err, fmt.Sprintf("create DepositFromMainchain input: txid(%s), pos(%d)", tx.ID.String(), input.SourcePos))
+	// 	}
+	// }
+
 	return nil
 }
 
