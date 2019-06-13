@@ -71,7 +71,7 @@ func (w *Wallet) attachUtxos(batch dbm.Batch, b *types.Block, txStatus *bc.Trans
 		if txIndex == 0 {
 			validHeight = b.Height + consensus.CoinbasePendingBlockNumber
 		}
-		outputUtxos := txOutToUtxos(tx, statusFail, validHeight)
+		outputUtxos := txOutToUtxos(tx, statusFail, validHeight, b.Height)
 		utxos := w.filterAccountUtxo(outputUtxos)
 		if err := batchSaveUtxos(utxos, batch); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("attachUtxos fail on batchSaveUtxos")
@@ -224,7 +224,7 @@ func txInToUtxos(tx *types.Tx, statusFail bool) []*account.UTXO {
 	return utxos
 }
 
-func txOutToUtxos(tx *types.Tx, statusFail bool, vaildHeight uint64) []*account.UTXO {
+func txOutToUtxos(tx *types.Tx, statusFail bool, vaildHeight, blockHeight uint64) []*account.UTXO {
 	utxos := []*account.UTXO{}
 	for i, out := range tx.Outputs {
 		entryOutput, err := tx.Entry(*tx.ResultIds[i])
@@ -253,6 +253,12 @@ func txOutToUtxos(tx *types.Tx, statusFail bool, vaildHeight uint64) []*account.
 			if statusFail && *out.AssetAmount().AssetId != *consensus.BTMAssetID {
 				continue
 			}
+
+			voteValidHeight := blockHeight + consensus.VotePendingBlockNumber
+			if vaildHeight < voteValidHeight {
+				vaildHeight = voteValidHeight
+			}
+
 			utxo = &account.UTXO{
 				OutputID:       *tx.OutputID(i),
 				AssetID:        *out.AssetAmount().AssetId,
