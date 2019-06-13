@@ -236,6 +236,17 @@ func (m *mainchainKeeper) getCrossChainInputs(crossTransactionID uint64, tx *btm
 }
 
 func (m *mainchainKeeper) processWithdrawalTx(chain *orm.Chain, block *btmTypes.Block, txIndex uint64, tx *btmTypes.Tx) error {
+	/*
+		ormTx := &orm.CrossTransaction{
+			ChainID:         chain.ID,
+			DestBlockHeight: sql.NullInt64{Valid: false},
+			DestBlockHash:   sql.NullString{Valid: false},
+			DestTxIndex:     sql.NullInt64{Valid: false},
+			DestTxHash:      sql.NullString{Valid: false},
+			// Status         uint8
+		}
+	*/
+
 	return nil
 }
 
