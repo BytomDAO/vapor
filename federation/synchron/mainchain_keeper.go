@@ -115,7 +115,7 @@ func (m *mainchainKeeper) processBlock(chain *orm.Chain, block *btmTypes.Block) 
 	// 		bp.processDepositFromMainchain(uint64(i), tx)
 	// 	}
 	// 	if isWithdrawalToMainchain(tx) {
-	// 		bp.processWithdrawalToMainchain(uint64(i), tx)
+	// 		m.processWithdrawalToMainchain(uint64(i), tx)
 	// 	}
 	// }
 
