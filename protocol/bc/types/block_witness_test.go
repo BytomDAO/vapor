@@ -59,7 +59,7 @@ func TestReadWriteBlockWitness(t *testing.T) {
 	}
 }
 
-func TestBlockWitnessUpdate(t *testing.T) {
+func TestBlockWitnessSet(t *testing.T) {
 	cases := []struct {
 		bw    BlockWitness
 		index uint64
@@ -88,7 +88,7 @@ func TestBlockWitnessUpdate(t *testing.T) {
 
 	for i, c := range cases {
 		newbw := c.bw
-		newbw.Update(c.index, c.data)
+		newbw.Set(c.index, c.data)
 		if !testutil.DeepEqual(c.want, newbw) {
 			t.Errorf("update result mismatch: %v, got:%v, want:%v", i, newbw, c.want)
 		}

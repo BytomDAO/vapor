@@ -21,7 +21,7 @@ func (bw *BlockWitness) readFrom(r *blockchain.Reader) (err error) {
 	return err
 }
 
-func (bw *BlockWitness) Update(index uint64, data []byte) {
+func (bw *BlockWitness) Set(index uint64, data []byte) {
 	if uint64(len(bw.Witness)) <= index {
 		newWitness := make([][]byte, index+1, index+1)
 		copy(newWitness, bw.Witness)
@@ -34,4 +34,11 @@ func (bw *BlockWitness) Delete(index uint64) {
 	if uint64(len(bw.Witness)) > index {
 		bw.Witness[index] = []byte{}
 	}
+}
+
+func (bw *BlockWitness) Get(index uint64) []byte {
+	if uint64(len(bw.Witness)) > index {
+		return bw.Witness[index]
+	}
+	return []byte{}
 }

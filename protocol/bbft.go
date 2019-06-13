@@ -105,7 +105,7 @@ func (c *Chain) validateSign(block *types.Block) error {
 			continue
 		}
 
-		if block.Witness[node.Order] == nil {
+		if len(block.Get(node.Order)) == 0 {
 			cachekey := signCacheKey(blockHash.String(), pubKey)
 			if signature, ok := c.signatureCache.Get(cachekey); ok {
 				block.Witness[node.Order] = signature.([]byte)
@@ -197,7 +197,7 @@ func (c *Chain) SignBlock(block *types.Block) ([]byte, error) {
 	signature := block.Witness[node.Order]
 	if len(signature) == 0 {
 		signature = xprv.Sign(block.Hash().Bytes())
-		block.Update(node.Order, signature)
+		block.Set(node.Order, signature)
 	}
 	return signature, nil
 }
@@ -212,7 +212,7 @@ func (c *Chain) updateBlockSignature(blockNode *state.BlockNode, nodeOrder uint6
 		return err
 	}
 
-	block.Update(nodeOrder, signature)
+	block.Set(nodeOrder, signature)
 
 	txStatus, err := c.store.GetTransactionStatus(&blockNode.Hash)
 	if err != nil {
