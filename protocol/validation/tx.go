@@ -39,6 +39,7 @@ var (
 	ErrOverGasCredit             = errors.New("all gas credit has been spend")
 	ErrGasCalculate              = errors.New("gas usage calculate got a math error")
 	ErrVotePubKey                = errors.New("invalid public key of vote")
+	ErrVoteOutputAmount          = errors.New("invalid vote amount")
 )
 
 // GasState record the gas usage status
@@ -235,6 +236,9 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		vs2.sourcePos = 0
 		if err = checkValidSrc(&vs2, e.Source); err != nil {
 			return errors.Wrap(err, "checking vote output source")
+		}
+		if err = checkVoteOutputAmount(e.Source); err != nil {
+			return errors.Wrap(err, "checking vote output amount")
 		}
 
 	case *bc.Retirement:
@@ -570,4 +574,11 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
 		cache:     make(map[bc.Hash]error),
 	}
 	return vs.gasStatus, checkValid(vs, tx.TxHeader)
+}
+
+func checkVoteOutputAmount(vs *bc.ValueSource) error {
+	if vs.Value.Amount < consensus.MinVoteOutputAmount {
+		return ErrVoteOutputAmount
+	}
+	return nil
 }
