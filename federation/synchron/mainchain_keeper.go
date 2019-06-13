@@ -98,7 +98,7 @@ func (m *mainchainKeeper) tryAttachBlock(chain *orm.Chain, block *btmTypes.Block
 	blockHash := block.Hash()
 	log.WithFields(log.Fields{"block_height": block.Height, "block_hash": blockHash.String()}).Info("start to attachBlock")
 	m.db.Begin()
-	if err := m.processBlock(chain, block); err != nil {
+	if err := m.processBlock(chain, block, txStatus); err != nil {
 		m.db.Rollback()
 		return err
 	}
@@ -106,14 +106,14 @@ func (m *mainchainKeeper) tryAttachBlock(chain *orm.Chain, block *btmTypes.Block
 	return m.db.Commit().Error
 }
 
-func (m *mainchainKeeper) processBlock(chain *orm.Chain, block *btmTypes.Block) error {
+func (m *mainchainKeeper) processBlock(chain *orm.Chain, block *btmTypes.Block, txStatus *bc.TransactionStatus) error {
 	if err := m.processIssuing(block.Transactions); err != nil {
 		return err
 	}
 
 	for i, tx := range block.Transactions {
 		if m.isDepositTx(tx) {
-			if err := m.processDepositTx(chain, block, uint64(i), tx); err != nil {
+			if err := m.processDepositTx(chain, block, txStatus, uint64(i), tx); err != nil {
 				return err
 			}
 		}
@@ -146,16 +146,20 @@ func (m *mainchainKeeper) isWithdrawalTx(tx *btmTypes.Tx) bool {
 	return false
 }
 
-func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *btmTypes.Block, txIndex uint64, tx *btmTypes.Tx) error {
+func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *btmTypes.Block, txStatus *bc.TransactionStatus, txIndex uint64, tx *btmTypes.Tx) error {
 	blockHash := block.Hash()
 
 	var muxID btmBc.Hash
-	// TODO: fix here
-	resOutID := tx.ResultIds[0]
-	resOut, ok := tx.Entries[*resOutID].(*btmBc.Output)
-	if ok {
-		muxID = *resOut.Source.Ref
-	} else {
+	isMuxIDFound := false
+	for _, resOutID := range tx.ResultIds {
+		resOut, ok := tx.Entries[*resOutID].(*btmBc.Output)
+		if ok {
+			muxID = *resOut.Source.Ref
+			isMuxIDFound = true
+			break
+		}
+	}
+	if !isMuxIDFound {
 		return errors.New("fail to get mux id")
 	}
 
@@ -178,19 +182,51 @@ func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *btmTypes.Blo
 		return errors.Wrap(err, fmt.Sprintf("create mainchain DepositTx %s", tx.ID.String()))
 	}
 
-	// statusFail := p.txStatus.VerifyStatus[txIndex].StatusFail
-	// crossChainInputs, err := p.getCrossChainInputs(ormTx.ID, tx, statusFail)
-	// if err != nil {
-	// 	return err
-	// }
+	statusFail := txStatus.VerifyStatus[txIndex].StatusFail
+	crossChainInputs, err := m.getCrossChainInputs(ormTx.ID, tx, statusFail)
+	if err != nil {
+		return err
+	}
 
-	// for _, input := range crossChainInputs {
-	// 	if err := p.db.Create(input).Error; err != nil {
-	// 		return errors.Wrap(err, fmt.Sprintf("create DepositFromMainchain input: txid(%s), pos(%d)", tx.ID.String(), input.SourcePos))
-	// 	}
-	// }
+	for _, input := range crossChainInputs {
+		if err := m.db.Create(input).Error; err != nil {
+			return errors.Wrap(err, fmt.Sprintf("create DepositFromMainchain input: txid(%s), pos(%d)", tx.ID.String(), input.SourcePos))
+		}
+	}
 
 	return nil
+}
+
+func (m *mainchainKeeper) getCrossChainInputs(mainchainTxID uint64, tx *btmTypes.Tx, statusFail bool) ([]*orm.CrossTransactionInput, error) {
+	// assume inputs are from an identical owner
+	script := hex.EncodeToString(tx.Inputs[0].ControlProgram())
+	inputs := []*orm.CrossTransactionInput{}
+	for i, rawOutput := range tx.Outputs {
+		// check valid deposit
+		if !bytes.Equal(rawOutput.OutputCommitment.ControlProgram, fedProg) {
+			continue
+		}
+
+		if statusFail && *rawOutput.OutputCommitment.AssetAmount.AssetId != *btmConsensus.BTMAssetID {
+			continue
+		}
+
+		asset, err := m.getAsset(rawOutput.OutputCommitment.AssetAmount.AssetId.String())
+		if err != nil {
+			return nil, err
+		}
+
+		// default null SidechainTxID, which will be set after submitting deposit tx on sidechain
+		input := &orm.CrossTransactionInput{
+			MainchainTxID: mainchainTxID,
+			SourcePos:     uint64(i),
+			AssetID:       asset.ID,
+			AssetAmount:   rawOutput.OutputCommitment.AssetAmount.Amount,
+			Script:        script,
+		}
+		inputs = append(inputs, input)
+	}
+	return inputs, nil
 }
 
 func (m *mainchainKeeper) processWithdrawalTx(txIndex uint64, tx *btmTypes.Tx) error {
