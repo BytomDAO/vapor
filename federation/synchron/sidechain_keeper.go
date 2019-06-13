@@ -20,6 +20,7 @@ import (
 	"github.com/vapor/federation/database/orm"
 	"github.com/vapor/federation/service"
 	"github.com/vapor/protocol/bc"
+	vaporTypes "github.com/vapor/protocol/bc/types"
 )
 
 type sidechainKeeper struct {
@@ -77,7 +78,7 @@ func (s *sidechainKeeper) syncBlock() (bool, error) {
 		return false, err
 	}
 
-	nextBlock := &btmTypes.Block{}
+	nextBlock := &vaporTypes.Block{}
 	if err := nextBlock.UnmarshalText([]byte(nextBlockStr)); err != nil {
 		return false, errors.New("Unmarshal nextBlock")
 	}
@@ -97,7 +98,7 @@ func (s *sidechainKeeper) syncBlock() (bool, error) {
 	return true, nil
 }
 
-func (s *sidechainKeeper) tryAttachBlock(chain *orm.Chain, block *btmTypes.Block, txStatus *bc.TransactionStatus) error {
+func (s *sidechainKeeper) tryAttachBlock(chain *orm.Chain, block *vaporTypes.Block, txStatus *bc.TransactionStatus) error {
 	blockHash := block.Hash()
 	log.WithFields(log.Fields{"block_height": block.Height, "block_hash": blockHash.String()}).Info("start to attachBlock")
 	s.db.Begin()
@@ -109,11 +110,7 @@ func (s *sidechainKeeper) tryAttachBlock(chain *orm.Chain, block *btmTypes.Block
 	return s.db.Commit().Error
 }
 
-func (s *sidechainKeeper) processBlock(chain *orm.Chain, block *btmTypes.Block, txStatus *bc.TransactionStatus) error {
-	if err := s.processIssuing(block.Transactions); err != nil {
-		return err
-	}
-
+func (s *sidechainKeeper) processBlock(chain *orm.Chain, block *vaporTypes.Block, txStatus *bc.TransactionStatus) error {
 	for i, tx := range block.Transactions {
 		if s.isDepositTx(tx) {
 			if err := s.processDepositTx(chain, block, txStatus, uint64(i), tx); err != nil {
@@ -131,7 +128,7 @@ func (s *sidechainKeeper) processBlock(chain *orm.Chain, block *btmTypes.Block, 
 	return s.processChainInfo(chain, block)
 }
 
-func (s *sidechainKeeper) isDepositTx(tx *btmTypes.Tx) bool {
+func (s *sidechainKeeper) isDepositTx(tx *vaporTypes.Tx) bool {
 	for _, output := range tx.Outputs {
 		if bytes.Equal(output.OutputCommitment.ControlProgram, fedProg) {
 			return true
@@ -140,7 +137,7 @@ func (s *sidechainKeeper) isDepositTx(tx *btmTypes.Tx) bool {
 	return false
 }
 
-func (s *sidechainKeeper) isWithdrawalTx(tx *btmTypes.Tx) bool {
+func (s *sidechainKeeper) isWithdrawalTx(tx *vaporTypes.Tx) bool {
 	for _, input := range tx.Inputs {
 		if bytes.Equal(input.ControlProgram(), fedProg) {
 			return true
@@ -149,7 +146,7 @@ func (s *sidechainKeeper) isWithdrawalTx(tx *btmTypes.Tx) bool {
 	return false
 }
 
-func (s *sidechainKeeper) processDepositTx(chain *orm.Chain, block *btmTypes.Block, txStatus *bc.TransactionStatus, txIndex uint64, tx *btmTypes.Tx) error {
+func (s *sidechainKeeper) processDepositTx(chain *orm.Chain, block *vaporTypes.Block, txStatus *bc.TransactionStatus, txIndex uint64, tx *vaporTypes.Tx) error {
 	blockHash := block.Hash()
 
 	var muxID btmBc.Hash
@@ -204,7 +201,7 @@ func (s *sidechainKeeper) processDepositTx(chain *orm.Chain, block *btmTypes.Blo
 	return nil
 }
 
-func (s *sidechainKeeper) getCrossChainInputs(crossTransactionID uint64, tx *btmTypes.Tx, statusFail bool) ([]*orm.CrossTransactionReq, error) {
+func (s *sidechainKeeper) getCrossChainInputs(crossTransactionID uint64, tx *vaporTypes.Tx, statusFail bool) ([]*orm.CrossTransactionReq, error) {
 	// assume inputs are from an identical owner
 	script := hex.EncodeToString(tx.Inputs[0].ControlProgram())
 	inputs := []*orm.CrossTransactionReq{}
@@ -235,7 +232,7 @@ func (s *sidechainKeeper) getCrossChainInputs(crossTransactionID uint64, tx *btm
 	return inputs, nil
 }
 
-func (s *sidechainKeeper) processWithdrawalTx(chain *orm.Chain, block *btmTypes.Block, txIndex uint64, tx *btmTypes.Tx) error {
+func (s *sidechainKeeper) processWithdrawalTx(chain *orm.Chain, block *vaporTypes.Block, txIndex uint64, tx *vaporTypes.Tx) error {
 	blockHash := block.Hash()
 
 	if err := s.db.Where(&orm.CrossTransaction{
@@ -255,7 +252,7 @@ func (s *sidechainKeeper) processWithdrawalTx(chain *orm.Chain, block *btmTypes.
 }
 
 // TODO: maybe common
-func (s *sidechainKeeper) processChainInfo(chain *orm.Chain, block *btmTypes.Block) error {
+func (s *sidechainKeeper) processChainInfo(chain *orm.Chain, block *vaporTypes.Block) error {
 	blockHash := block.Hash()
 	chain.BlockHash = blockHash.String()
 	chain.BlockHeight = block.Height
@@ -266,34 +263,6 @@ func (s *sidechainKeeper) processChainInfo(chain *orm.Chain, block *btmTypes.Blo
 
 	if res.RowsAffected != 1 {
 		return ErrInconsistentDB
-	}
-
-	return nil
-}
-
-func (s *sidechainKeeper) processIssuing(txs []*btmTypes.Tx) error {
-	for _, tx := range txs {
-		for _, input := range tx.Inputs {
-			switch inp := input.TypedInput.(type) {
-			case *btmTypes.IssuanceInput:
-				assetID := inp.AssetID()
-				if _, err := s.getAsset(assetID.String()); err == nil {
-					continue
-				}
-
-				asset := &orm.Asset{
-					AssetID:           assetID.String(),
-					IssuanceProgram:   hex.EncodeToString(inp.IssuanceProgram),
-					VMVersion:         inp.VMVersion,
-					RawDefinitionByte: hex.EncodeToString(inp.AssetDefinition),
-				}
-				if err := s.db.Create(asset).Error; err != nil {
-					return err
-				}
-
-				s.assetCache.Add(asset.AssetID, asset)
-			}
-		}
 	}
 
 	return nil
