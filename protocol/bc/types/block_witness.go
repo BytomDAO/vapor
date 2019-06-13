@@ -25,11 +25,9 @@ func (bw *BlockWitness) Update(index uint64, data []byte) {
 	if uint64(len(bw.Witness)) <= index {
 		newWitness := make([][]byte, index+1, index+1)
 		copy(newWitness, bw.Witness)
-		newWitness[index] = data
 		bw.Witness = newWitness
-	} else {
-		bw.Witness[index] = data
 	}
+	bw.Witness[index] = data
 }
 
 func (bw *BlockWitness) Delete(index uint64) {
