@@ -52,8 +52,17 @@ func (c *Chain) GetVoteResultByHash(blockHash *bc.Hash) (*state.VoteResult, erro
 }
 
 // IsBlocker returns whether the consensus node is a blocker at the specified time
-func (c *Chain) IsBlocker(prevBlockHash *bc.Hash, pubkey string, timeStamp uint64) (bool, error) {
-	return c.consensusNodeManager.isBlocker(prevBlockHash, pubkey, timeStamp)
+func (c *Chain) IsBlocker(prevBlockHash *bc.Hash, pubKey string, timeStamp uint64) (bool, error) {
+	xPub, err := c.consensusNodeManager.getBlocker(prevBlockHash, timeStamp)
+	if err != nil {
+		return false, err
+	}
+	return xPub == pubKey, nil
+}
+
+// GetBlock return blocker by specified timestamp
+func (c *Chain) GetBlocker(prevBlockHash *bc.Hash, timestamp uint64) (string, error) {
+	return c.consensusNodeManager.getBlocker(prevBlockHash, timestamp)
 }
 
 // ProcessBlockSignature process the received block signature messages
@@ -122,7 +131,7 @@ func (c *Chain) validateSign(block *types.Block) error {
 			return err
 		}
 
-		isBlocker, err := c.consensusNodeManager.isBlocker(&block.PreviousBlockHash, pubKey, block.Timestamp)
+		isBlocker, err := c.IsBlocker(&block.PreviousBlockHash, pubKey, block.Timestamp)
 		if err != nil {
 			return err
 		}

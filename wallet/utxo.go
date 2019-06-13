@@ -67,11 +67,7 @@ func (w *Wallet) attachUtxos(batch dbm.Batch, b *types.Block, txStatus *bc.Trans
 		}
 
 		//hand update the transaction output utxos
-		validHeight := uint64(0)
-		if txIndex == 0 {
-			validHeight = b.Height + consensus.CoinbasePendingBlockNumber
-		}
-		outputUtxos := txOutToUtxos(tx, statusFail, validHeight)
+		outputUtxos := txOutToUtxos(tx, statusFail, b.Height)
 		utxos := w.filterAccountUtxo(outputUtxos)
 		if err := batchSaveUtxos(utxos, batch); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("attachUtxos fail on batchSaveUtxos")
@@ -174,38 +170,41 @@ func batchSaveUtxos(utxos []*account.UTXO, batch dbm.Batch) error {
 func txInToUtxos(tx *types.Tx, statusFail bool) []*account.UTXO {
 	utxos := []*account.UTXO{}
 	for _, inpID := range tx.Tx.InputIDs {
-		sp, err := tx.Spend(inpID)
+
+		e, err := tx.Entry(inpID)
 		if err != nil {
 			continue
 		}
-
-		entryOutput, err := tx.Entry(*sp.SpentOutputId)
-		if err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("txInToUtxos fail on get entryOutput")
-			continue
-		}
-
 		utxo := &account.UTXO{}
-		switch resOut := entryOutput.(type) {
-		case *bc.IntraChainOutput:
+		switch inp := e.(type) {
+		case *bc.Spend:
+			resOut, err := tx.IntraChainOutput(*inp.SpentOutputId)
+			if err != nil {
+				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("txInToUtxos fail on get resOut for spedn")
+				continue
+			}
 			if statusFail && *resOut.Source.Value.AssetId != *consensus.BTMAssetID {
 				continue
 			}
 			utxo = &account.UTXO{
-				OutputID:       *sp.SpentOutputId,
+				OutputID:       *inp.SpentOutputId,
 				AssetID:        *resOut.Source.Value.AssetId,
 				Amount:         resOut.Source.Value.Amount,
 				ControlProgram: resOut.ControlProgram.Code,
 				SourceID:       *resOut.Source.Ref,
 				SourcePos:      resOut.Source.Position,
 			}
-
-		case *bc.VoteOutput:
+		case *bc.VetoInput:
+			resOut, err := tx.VoteOutput(*inp.SpentOutputId)
+			if err != nil {
+				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("txInToUtxos fail on get resOut for vetoInput")
+				continue
+			}
 			if statusFail && *resOut.Source.Value.AssetId != *consensus.BTMAssetID {
 				continue
 			}
 			utxo = &account.UTXO{
-				OutputID:       *sp.SpentOutputId,
+				OutputID:       *inp.SpentOutputId,
 				AssetID:        *resOut.Source.Value.AssetId,
 				Amount:         resOut.Source.Value.Amount,
 				ControlProgram: resOut.ControlProgram.Code,
@@ -213,18 +212,21 @@ func txInToUtxos(tx *types.Tx, statusFail bool) []*account.UTXO {
 				SourcePos:      resOut.Source.Position,
 				Vote:           resOut.Vote,
 			}
-
 		default:
-			log.WithFields(log.Fields{"module": logModule}).Error("txInToUtxos fail on get resOut")
+			log.WithFields(log.Fields{"module": logModule, "err": errors.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", inpID.Bytes(), e)}).Error("txInToUtxos fail on get resOut")
 			continue
 		}
-
 		utxos = append(utxos, utxo)
 	}
 	return utxos
 }
 
-func txOutToUtxos(tx *types.Tx, statusFail bool, vaildHeight uint64) []*account.UTXO {
+func txOutToUtxos(tx *types.Tx, statusFail bool, blockHeight uint64) []*account.UTXO {
+	validHeight := uint64(0)
+	if tx.Inputs[0].InputType() == types.CoinbaseInputType {
+		validHeight = blockHeight + consensus.CoinbasePendingBlockNumber
+	}
+
 	utxos := []*account.UTXO{}
 	for i, out := range tx.Outputs {
 		entryOutput, err := tx.Entry(*tx.ResultIds[i])
@@ -246,13 +248,19 @@ func txOutToUtxos(tx *types.Tx, statusFail bool, vaildHeight uint64) []*account.
 				ControlProgram: out.ControlProgram(),
 				SourceID:       *bcOut.Source.Ref,
 				SourcePos:      bcOut.Source.Position,
-				ValidHeight:    vaildHeight,
+				ValidHeight:    validHeight,
 			}
 
 		case *bc.VoteOutput:
 			if statusFail && *out.AssetAmount().AssetId != *consensus.BTMAssetID {
 				continue
 			}
+
+			voteValidHeight := blockHeight + consensus.VotePendingBlockNumber
+			if validHeight < voteValidHeight {
+				validHeight = voteValidHeight
+			}
+
 			utxo = &account.UTXO{
 				OutputID:       *tx.OutputID(i),
 				AssetID:        *out.AssetAmount().AssetId,
@@ -260,7 +268,7 @@ func txOutToUtxos(tx *types.Tx, statusFail bool, vaildHeight uint64) []*account.
 				ControlProgram: out.ControlProgram(),
 				SourceID:       *bcOut.Source.Ref,
 				SourcePos:      bcOut.Source.Position,
-				ValidHeight:    vaildHeight,
+				ValidHeight:    validHeight,
 				Vote:           bcOut.Vote,
 			}
 

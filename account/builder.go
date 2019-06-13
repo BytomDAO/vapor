@@ -313,7 +313,7 @@ func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.S
 	if u.Vote == nil {
 		txInput = types.NewSpendInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram)
 	} else {
-		txInput = types.NewUnvoteInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram, u.Vote)
+		txInput = types.NewVetoInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram, u.Vote)
 	}
 	sigInst := &txbuilder.SigningInstruction{}
 	if signer == nil {
