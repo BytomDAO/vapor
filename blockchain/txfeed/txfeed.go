@@ -384,14 +384,16 @@ func buildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOutput {
 	if vmutil.IsUnspendable(out.ControlProgram) {
 		out.Type = "retire"
 	} else {
-		out.Type = "control"
+		e := tx.Entries[*outid]
+		switch e.(type) {
+		case *bc.CrossChainOutput:
+			out.Type = "crosschain_output"
+		case *bc.IntraChainOutput:
+			out.Type = "control"
+		case *bc.VoteOutput:
+			out.Type = "vote_control"
+		}
 	}
-	e := tx.Entries[*outid]
-	switch e.(type) {
-	case *bc.VoteOutput:
-		out.Type = "vote_control"
-	case *bc.CrossChainOutput:
-		out.Type = "crosschain_output"
-	}
+
 	return out
 }

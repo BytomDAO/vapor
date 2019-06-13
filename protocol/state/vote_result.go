@@ -4,8 +4,8 @@ import (
 	"encoding/hex"
 	"sort"
 
-	"github.com/vapor/consensus"
 	"github.com/vapor/config"
+	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
 	"github.com/vapor/math/checked"
@@ -96,7 +96,7 @@ func (v *VoteResult) ApplyBlock(block *types.Block) error {
 func (v *VoteResult) ConsensusNodes() (map[string]*ConsensusNode, error) {
 	var nodes []*ConsensusNode
 	for pubkey, voteNum := range v.NumOfVote {
-		if voteNum >= consensus.MinVoteNum {
+		if voteNum >= consensus.MinConsensusNodeVoteNum {
 			var xpub chainkd.XPub
 			if err := xpub.UnmarshalText([]byte(pubkey)); err != nil {
 				return nil, err
@@ -113,7 +113,7 @@ func (v *VoteResult) ConsensusNodes() (map[string]*ConsensusNode, error) {
 		nodes[i].Order = uint64(i)
 		result[nodes[i].XPub.String()] = nodes[i]
 	}
-	
+
 	if len(result) != 0 {
 		return result, nil
 	}

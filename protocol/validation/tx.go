@@ -39,6 +39,7 @@ var (
 	ErrOverGasCredit             = errors.New("all gas credit has been spend")
 	ErrGasCalculate              = errors.New("gas usage calculate got a math error")
 	ErrVotePubKey                = errors.New("invalid public key of vote")
+	ErrVoteOutputAmount          = errors.New("invalid vote amount")
 )
 
 // GasState record the gas usage status
@@ -236,6 +237,9 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		if err = checkValidSrc(&vs2, e.Source); err != nil {
 			return errors.Wrap(err, "checking vote output source")
 		}
+		if e.Source.Value.Amount < consensus.MinVoteOutputAmount {
+			return ErrVoteOutputAmount
+		}
 
 	case *bc.Retirement:
 		vs2 := *vs
@@ -297,7 +301,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 
 	case *bc.CancelVote:
 		if e.SpentOutputId == nil {
-			return errors.Wrap(ErrMissingField, "spend without cancelvote output ID")
+			return errors.Wrap(ErrMissingField, "cancelvote without cancelvote output ID")
 		}
 
 		voteOutput, err := vs.tx.VoteOutput(*e.SpentOutputId)
