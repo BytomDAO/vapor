@@ -37,7 +37,6 @@ type AnnotatedInput struct {
 	Arbitrary        chainjson.HexBytes   `json:"arbitrary,omitempty"`
 	InputID          bc.Hash              `json:"input_id"`
 	WitnessArguments []chainjson.HexBytes `json:"witness_arguments"`
-	Vote             chainjson.HexBytes   `json:"vote,omitempty"`
 }
 
 //AnnotatedOutput means an annotated transaction output.
