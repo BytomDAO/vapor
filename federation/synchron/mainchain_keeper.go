@@ -14,6 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/errors"
+	"github.com/vapor/federation/common"
 	"github.com/vapor/federation/config"
 	"github.com/vapor/federation/database"
 	"github.com/vapor/federation/database/orm"
@@ -182,8 +183,7 @@ func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *btmTypes.Blo
 		DestBlockHash:        sql.NullString{Valid: false},
 		DestTxIndex:          sql.NullInt64{Valid: false},
 		DestTxHash:           sql.NullString{Valid: false},
-		// TODO:
-		// Status         uint8
+		Status:               common.CrossTxPendingStatus,
 	}
 	if err := m.db.Create(ormTx).Error; err != nil {
 		return errors.Wrap(err, fmt.Sprintf("create mainchain DepositTx %s", tx.ID.String()))
