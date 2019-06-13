@@ -105,7 +105,7 @@ func (c *Chain) validateSign(block *types.Block) error {
 			continue
 		}
 
-		if len(block.Get(node.Order)) == 0 {
+		if block.Get(node.Order) == nil {
 			cachekey := signCacheKey(blockHash.String(), pubKey)
 			if signature, ok := c.signatureCache.Get(cachekey); ok {
 				block.Witness[node.Order] = signature.([]byte)

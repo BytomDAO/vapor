@@ -32,7 +32,7 @@ func (bw *BlockWitness) Set(index uint64, data []byte) {
 
 func (bw *BlockWitness) Delete(index uint64) {
 	if uint64(len(bw.Witness)) > index {
-		bw.Witness[index] = []byte{}
+		bw.Witness[index] = nil
 	}
 }
 
@@ -40,5 +40,5 @@ func (bw *BlockWitness) Get(index uint64) []byte {
 	if uint64(len(bw.Witness)) > index {
 		return bw.Witness[index]
 	}
-	return []byte{}
+	return nil
 }
