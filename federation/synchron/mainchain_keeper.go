@@ -237,21 +237,16 @@ func (m *mainchainKeeper) getCrossChainInputs(crossTransactionID uint64, tx *btm
 
 func (m *mainchainKeeper) processWithdrawalTx(chain *orm.Chain, block *btmTypes.Block, txIndex uint64, tx *btmTypes.Tx) error {
 	blockHash := block.Hash()
-
-	if err := m.db.Where(&orm.CrossTransaction{
-		ChainID:    chain.ID,
-		DestTxHash: sql.NullString{tx.ID.String(), true},
-		Status:     common.CrossTxSubmittedStatus,
-	}).UpdateColumn(&orm.CrossTransaction{
+	return m.db.Model(&orm.CrossTransaction{}).Where("chain_id != ?", chain.ID).
+		Where(&orm.CrossTransaction{
+			DestTxHash: sql.NullString{tx.ID.String(), true},
+			Status:     common.CrossTxSubmittedStatus,
+		}).UpdateColumn(&orm.CrossTransaction{
 		DestBlockHeight: sql.NullInt64{int64(block.Height), true},
 		DestBlockHash:   sql.NullString{blockHash.String(), true},
 		DestTxIndex:     sql.NullInt64{int64(txIndex), true},
 		Status:          common.CrossTxCompletedStatus,
-	}).Error; err != nil {
-		return err
-	}
-
-	return nil
+	}).Error
 }
 
 // TODO: maybe common

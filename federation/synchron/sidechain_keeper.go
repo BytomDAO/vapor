@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/hex"
-	"fmt"
+	// "fmt"
 	"time"
 
 	btmConsensus "github.com/bytom/consensus"
@@ -20,7 +20,7 @@ import (
 	"github.com/vapor/federation/database/orm"
 	"github.com/vapor/federation/service"
 	"github.com/vapor/protocol/bc"
-	vaporBc "github.com/vapor/protocol/bc"
+	// vaporBc "github.com/vapor/protocol/bc"
 	vaporTypes "github.com/vapor/protocol/bc/types"
 )
 
@@ -130,8 +130,8 @@ func (s *sidechainKeeper) processBlock(chain *orm.Chain, block *vaporTypes.Block
 }
 
 func (s *sidechainKeeper) isDepositTx(tx *vaporTypes.Tx) bool {
-	for _, output := range tx.Outputs {
-		if bytes.Equal(output.OutputCommitment.ControlProgram, fedProg) {
+	for _, input := range tx.Inputs {
+		if input.InputType() == vaporTypes.CrossChainInputType {
 			return true
 		}
 	}
@@ -139,8 +139,8 @@ func (s *sidechainKeeper) isDepositTx(tx *vaporTypes.Tx) bool {
 }
 
 func (s *sidechainKeeper) isWithdrawalTx(tx *vaporTypes.Tx) bool {
-	for _, input := range tx.Inputs {
-		if bytes.Equal(input.ControlProgram(), fedProg) {
+	for _, output := range tx.Outputs {
+		if output.OutputType() == vaporTypes.CrossChainOutputType {
 			return true
 		}
 	}
@@ -149,57 +149,16 @@ func (s *sidechainKeeper) isWithdrawalTx(tx *vaporTypes.Tx) bool {
 
 func (s *sidechainKeeper) processDepositTx(chain *orm.Chain, block *vaporTypes.Block, txStatus *bc.TransactionStatus, txIndex uint64, tx *vaporTypes.Tx) error {
 	blockHash := block.Hash()
-
-	var muxID vaporBc.Hash
-	isMuxIDFound := false
-	for _, resOutID := range tx.ResultIds {
-		resOut, ok := tx.Entries[*resOutID].(*vaporBc.CrossChainOutput)
-		if ok {
-			muxID = *resOut.Source.Ref
-			isMuxIDFound = true
-			break
-		}
-	}
-	if !isMuxIDFound {
-		return errors.New("fail to get mux id")
-	}
-
-	rawTx, err := tx.MarshalText()
-	if err != nil {
-		return err
-	}
-
-	ormTx := &orm.CrossTransaction{
-		ChainID:              chain.ID,
-		SourceBlockHeight:    block.Height,
-		SourceBlockHash:      blockHash.String(),
-		SourceTxIndex:        txIndex,
-		SourceMuxID:          muxID.String(),
-		SourceTxHash:         tx.ID.String(),
-		SourceRawTransaction: string(rawTx),
-		DestBlockHeight:      sql.NullInt64{Valid: false},
-		DestBlockHash:        sql.NullString{Valid: false},
-		DestTxIndex:          sql.NullInt64{Valid: false},
-		DestTxHash:           sql.NullString{Valid: false},
-		Status:               common.CrossTxPendingStatus,
-	}
-	if err := s.db.Create(ormTx).Error; err != nil {
-		return errors.Wrap(err, fmt.Sprintf("create mainchain DepositTx %s", tx.ID.String()))
-	}
-
-	statusFail := txStatus.VerifyStatus[txIndex].StatusFail
-	crossChainInputs, err := s.getCrossChainInputs(ormTx.ID, tx, statusFail)
-	if err != nil {
-		return err
-	}
-
-	for _, input := range crossChainInputs {
-		if err := s.db.Create(input).Error; err != nil {
-			return errors.Wrap(err, fmt.Sprintf("create DepositFromMainchain input: txid(%s), pos(%d)", tx.ID.String(), input.SourcePos))
-		}
-	}
-
-	return nil
+	return s.db.Model(&orm.CrossTransaction{}).Where("chain_id != ?", chain.ID).
+		Where(&orm.CrossTransaction{
+			DestTxHash: sql.NullString{tx.ID.String(), true},
+			Status:     common.CrossTxSubmittedStatus,
+		}).UpdateColumn(&orm.CrossTransaction{
+		DestBlockHeight: sql.NullInt64{int64(block.Height), true},
+		DestBlockHash:   sql.NullString{blockHash.String(), true},
+		DestTxIndex:     sql.NullInt64{int64(txIndex), true},
+		Status:          common.CrossTxCompletedStatus,
+	}).Error
 }
 
 func (s *sidechainKeeper) getCrossChainInputs(crossTransactionID uint64, tx *vaporTypes.Tx, statusFail bool) ([]*orm.CrossTransactionReq, error) {
