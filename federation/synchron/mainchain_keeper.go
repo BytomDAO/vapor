@@ -121,7 +121,7 @@ func (m *mainchainKeeper) processBlock(chain *orm.Chain, block *btmTypes.Block, 
 		}
 
 		if m.isWithdrawalTx(tx) {
-			if err := m.processWithdrawalTx(uint64(i), tx); err != nil {
+			if err := m.processWithdrawalTx(chain, block, uint64(i), tx); err != nil {
 				return err
 			}
 		}
@@ -235,7 +235,7 @@ func (m *mainchainKeeper) getCrossChainInputs(crossTransactionID uint64, tx *btm
 	return inputs, nil
 }
 
-func (m *mainchainKeeper) processWithdrawalTx(txIndex uint64, tx *btmTypes.Tx) error {
+func (m *mainchainKeeper) processWithdrawalTx(chain *orm.Chain, block *btmTypes.Block, txIndex uint64, tx *btmTypes.Tx) error {
 	return nil
 }
 
