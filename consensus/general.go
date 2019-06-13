@@ -23,10 +23,11 @@ const (
 	VotePendingBlockNumber = uint64(10000)
 
 	//DPOS parameter
-	NumOfConsensusNode = 10
-	BlockNumEachNode   = 12
-	RoundVoteBlockNums = NumOfConsensusNode * BlockNumEachNode * 10
-	MinVoteNum         = 10000000
+	NumOfConsensusNode      = 10
+	BlockNumEachNode        = 12
+	RoundVoteBlockNums      = NumOfConsensusNode * BlockNumEachNode * 10
+	MinConsensusNodeVoteNum = uint64(100000000000000) // min is 1 million BTM
+	MinVoteOutputAmount     = uint64(100000000)       // min is 1 BTM
 
 	// BlockTimeInterval indicate product one block per 500 milliseconds
 	BlockTimeInterval = 500
