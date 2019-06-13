@@ -358,6 +358,11 @@ func buildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
 		in.Type = "cross_chain_in"
 		in.ControlProgram = orig.ControlProgram()
 		in.SpentOutputID = e.MainchainOutputId
+
+	case *bc.VetoInput:
+		in.Type = "veto"
+		in.ControlProgram = orig.ControlProgram()
+		in.SpentOutputID = e.SpentOutputId
 	}
 
 	return in
@@ -378,7 +383,16 @@ func buildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOutput {
 	if vmutil.IsUnspendable(out.ControlProgram) {
 		out.Type = "retire"
 	} else {
-		out.Type = "control"
+		e := tx.Entries[*outid]
+		switch e.(type) {
+		case *bc.CrossChainOutput:
+			out.Type = "crosschain_output"
+		case *bc.IntraChainOutput:
+			out.Type = "control"
+		case *bc.VoteOutput:
+			out.Type = "vote_control"
+		}
 	}
+
 	return out
 }
