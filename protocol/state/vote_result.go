@@ -58,7 +58,7 @@ func (v *VoteResult) ApplyBlock(block *types.Block) error {
 
 	for _, tx := range block.Transactions {
 		for _, input := range tx.Inputs {
-			unVoteInput, ok := input.TypedInput.(*types.UnvoteInput)
+			unVoteInput, ok := input.TypedInput.(*types.VetoInput)
 			if !ok {
 				continue
 			}
@@ -136,7 +136,7 @@ func (v *VoteResult) DetachBlock(block *types.Block) error {
 	for i := len(block.Transactions) - 1; i >= 0; i-- {
 		tx := block.Transactions[i]
 		for _, input := range tx.Inputs {
-			unVoteInput, ok := input.TypedInput.(*types.UnvoteInput)
+			unVoteInput, ok := input.TypedInput.(*types.VetoInput)
 			if !ok {
 				continue
 			}

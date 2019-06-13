@@ -4,16 +4,16 @@ import (
 	"github.com/vapor/protocol/bc"
 )
 
-// UnvoteInput satisfies the TypedInput interface and represents a unvote transaction.
-type UnvoteInput struct {
+// VetoInput satisfies the TypedInput interface and represents a unvote transaction.
+type VetoInput struct {
 	UnvoteCommitmentSuffix []byte   // The unconsumed suffix of the output commitment
 	Arguments              [][]byte // Witness
 	Vote                   []byte   // voter xpub
 	SpendCommitment
 }
 
-// NewUnvoteInput create a new UnvoteInput struct.
-func NewUnvoteInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amount, sourcePos uint64, controlProgram []byte, vote []byte) *TxInput {
+// NewVetoInput create a new VetoInput struct.
+func NewVetoInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amount, sourcePos uint64, controlProgram []byte, vote []byte) *TxInput {
 	sc := SpendCommitment{
 		AssetAmount: bc.AssetAmount{
 			AssetId: &assetID,
@@ -26,7 +26,7 @@ func NewUnvoteInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, am
 	}
 	return &TxInput{
 		AssetVersion: 1,
-		TypedInput: &UnvoteInput{
+		TypedInput: &VetoInput{
 			SpendCommitment: sc,
 			Arguments:       arguments,
 			Vote:            vote,
@@ -35,4 +35,4 @@ func NewUnvoteInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, am
 }
 
 // InputType is the interface function for return the input type.
-func (ui *UnvoteInput) InputType() uint8 { return SpendInputType }
+func (ui *VetoInput) InputType() uint8 { return VetoInputType }

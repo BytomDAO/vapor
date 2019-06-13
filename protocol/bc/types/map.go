@@ -119,7 +119,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 				Value: &value,
 			}
 
-		case *UnvoteInput:
+		case *VetoInput:
 			prog := &bc.Program{VmVersion: inp.VMVersion, Code: inp.ControlProgram}
 			src := &bc.ValueSource{
 				Ref:      &inp.SourceID,
