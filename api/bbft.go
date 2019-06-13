@@ -4,7 +4,6 @@ import (
 	"sort"
 
 	chainjson "github.com/vapor/encoding/json"
-	"github.com/vapor/protocol/bc/types"
 )
 
 type voteInfo struct {
@@ -46,32 +45,4 @@ func (a *API) getVoteResult(req struct {
 	}
 	sort.Sort(voteInfoSlice(voteInfos))
 	return NewSuccessResponse(voteInfos)
-}
-
-type getBlockerResp struct {
-	PubKey string `json:"pub_key"`
-}
-
-func (a *API) getBlocker(req struct {
-	BlockHash   chainjson.HexBytes `json:"block_hash"`
-	BlockHeight uint64             `json:"block_height"`
-}) Response {
-	var blockHeader *types.BlockHeader
-	var err error
-	if len(req.BlockHash) == 32 {
-		blockHash := hexBytesToHash(req.BlockHash)
-		blockHeader, err = a.chain.GetHeaderByHash(&blockHash)
-	} else {
-		blockHeader, err = a.chain.GetHeaderByHeight(req.BlockHeight)
-	}
-
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	pubKey, err := a.chain.GetBlocker(&blockHeader.PreviousBlockHash, blockHeader.Timestamp)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-	return NewSuccessResponse(&getBlockerResp{PubKey: pubKey})
 }

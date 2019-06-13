@@ -49,25 +49,24 @@ func (c *consensusNodeManager) getBlocker(prevBlockHash *bc.Hash, timeStamp uint
 	}
 
 	startTimestamp := prevVoteRoundLastBlock.Timestamp + consensus.BlockTimeInterval
-
+	order := getBlockerOrder(startTimestamp, timeStamp, uint64(len(consensusNodeMap)))
 	for xPub, consensusNode := range consensusNodeMap {
-		begin := getLastBlockTimeInTimeRange(startTimestamp, timeStamp, consensusNode.Order, uint64(len(consensusNodeMap)))
-		end := begin + consensus.BlockNumEachNode*consensus.BlockTimeInterval
-		if timeStamp >= begin && timeStamp < end {
+		if consensusNode.Order == order {
 			return xPub, nil
 		}
 	}
+
 	// impossible occur
 	return "", errors.New("can not find blocker by given timestamp")
 }
 
-func getLastBlockTimeInTimeRange(startTimestamp, endTimestamp, order, numOfConsensusNode uint64) uint64 {
+func getBlockerOrder(startTimestamp, blockTimestamp, numOfConsensusNode uint64) uint64 {
 	// One round of product block time for all consensus nodes
 	roundBlockTime := consensus.BlockNumEachNode * numOfConsensusNode * consensus.BlockTimeInterval
 	// The start time of the last round of product block
-	lastRoundStartTime := startTimestamp + (endTimestamp-startTimestamp)/roundBlockTime*roundBlockTime
-	// The time of product block of the consensus in last round
-	return lastRoundStartTime + order*(consensus.BlockNumEachNode*consensus.BlockTimeInterval)
+	lastRoundStartTime := startTimestamp + (blockTimestamp-startTimestamp)/roundBlockTime*roundBlockTime
+	// Order of blocker
+	return (blockTimestamp - lastRoundStartTime)/(consensus.BlockNumEachNode*consensus.BlockTimeInterval)
 }
 
 func (c *consensusNodeManager) getPrevRoundLastBlock(prevBlockHash *bc.Hash) (*state.BlockNode, error) {
