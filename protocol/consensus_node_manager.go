@@ -37,26 +37,28 @@ func (c *consensusNodeManager) getConsensusNode(prevBlockHash *bc.Hash, pubkey s
 	return node, nil
 }
 
-func (c *consensusNodeManager) isBlocker(prevBlockHash *bc.Hash, pubKey string, timeStamp uint64) (bool, error) {
+func (c *consensusNodeManager) getBlocker(prevBlockHash *bc.Hash, timeStamp uint64) (string, error) {
 	consensusNodeMap, err := c.getConsensusNodes(prevBlockHash)
 	if err != nil {
-		return false, err
-	}
-
-	consensusNode := consensusNodeMap[pubKey]
-	if consensusNode == nil {
-		return false, nil
+		return "", err
 	}
 
 	prevVoteRoundLastBlock, err := c.getPrevRoundLastBlock(prevBlockHash)
 	if err != nil {
-		return false, err
+		return "", err
 	}
 
 	startTimestamp := prevVoteRoundLastBlock.Timestamp + consensus.BlockTimeInterval
-	begin := getLastBlockTimeInTimeRange(startTimestamp, timeStamp, consensusNode.Order, uint64(len(consensusNodeMap)))
-	end := begin + consensus.BlockNumEachNode*consensus.BlockTimeInterval
-	return timeStamp >= begin && timeStamp < end, nil
+
+	for xPub, consensusNode := range consensusNodeMap {
+		begin := getLastBlockTimeInTimeRange(startTimestamp, timeStamp, consensusNode.Order, uint64(len(consensusNodeMap)))
+		end := begin + consensus.BlockNumEachNode*consensus.BlockTimeInterval
+		if timeStamp >= begin && timeStamp < end {
+			return xPub, nil
+		}
+	}
+	// impossible occur
+	return "", errors.New("can not find blocker by given timestamp")
 }
 
 func getLastBlockTimeInTimeRange(startTimestamp, endTimestamp, order, numOfConsensusNode uint64) uint64 {
