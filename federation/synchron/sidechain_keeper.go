@@ -8,8 +8,8 @@ import (
 	"time"
 
 	btmConsensus "github.com/bytom/consensus"
-	btmBc "github.com/bytom/protocol/bc"
-	btmTypes "github.com/bytom/protocol/bc/types"
+	// btmBc "github.com/bytom/protocol/bc"
+	// btmTypes "github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 
@@ -20,6 +20,7 @@ import (
 	"github.com/vapor/federation/database/orm"
 	"github.com/vapor/federation/service"
 	"github.com/vapor/protocol/bc"
+	vaporBc "github.com/vapor/protocol/bc"
 	vaporTypes "github.com/vapor/protocol/bc/types"
 )
 
@@ -149,10 +150,10 @@ func (s *sidechainKeeper) isWithdrawalTx(tx *vaporTypes.Tx) bool {
 func (s *sidechainKeeper) processDepositTx(chain *orm.Chain, block *vaporTypes.Block, txStatus *bc.TransactionStatus, txIndex uint64, tx *vaporTypes.Tx) error {
 	blockHash := block.Hash()
 
-	var muxID btmBc.Hash
+	var muxID vaporBc.Hash
 	isMuxIDFound := false
 	for _, resOutID := range tx.ResultIds {
-		resOut, ok := tx.Entries[*resOutID].(*btmBc.Output)
+		resOut, ok := tx.Entries[*resOutID].(*vaporBc.CrossChainOutput)
 		if ok {
 			muxID = *resOut.Source.Ref
 			isMuxIDFound = true
