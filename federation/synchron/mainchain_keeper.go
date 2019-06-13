@@ -97,7 +97,7 @@ func (m *mainchainKeeper) tryAttachBlock(chain *orm.Chain, block *btmTypes.Block
 	blockHash := block.Hash()
 	log.WithFields(log.Fields{"block_height": block.Height, "block_hash": blockHash.String()}).Info("start to attachBlock")
 	m.db.Begin()
-	if err := m.processBlock(block); err != nil {
+	if err := m.processBlock(chain, block); err != nil {
 		m.db.Rollback()
 		return err
 	}
@@ -105,7 +105,7 @@ func (m *mainchainKeeper) tryAttachBlock(chain *orm.Chain, block *btmTypes.Block
 	return m.db.Commit().Error
 }
 
-func (m *mainchainKeeper) processBlock(block *btmTypes.Block) error {
+func (m *mainchainKeeper) processBlock(chain *orm.Chain, block *btmTypes.Block) error {
 	if err := m.processIssuing(block.Transactions); err != nil {
 		return err
 	}
@@ -119,18 +119,14 @@ func (m *mainchainKeeper) processBlock(block *btmTypes.Block) error {
 	// 	}
 	// }
 
-	return m.processChainInfo()
+	return m.processChainInfo(chain, block)
 }
 
-func (m *mainchainKeeper) processChainInfo() error {
-	// var previousBlockHashStr string
-
-	// 	blockHash := p.block.(*btmTypes.Block).Hash()
-	// 	p.chain.BlockHash = blockHash.String()
-	// 	p.chain.BlockHeight = p.block.(*btmTypes.Block).Height
-	// 	previousBlockHashStr = p.block.(*btmTypes.Block).PreviousBlockHash.String()
-
-	res := m.db. /*.Model(m.chain)*/ Where("block_hash = ?", "previousBlockHashStr") /*.Updates(p.chain)*/
+func (m *mainchainKeeper) processChainInfo(chain *orm.Chain, block *btmTypes.Block) error {
+	blockHash := block.Hash()
+	chain.BlockHash = blockHash.String()
+	chain.BlockHeight = block.Height
+	res := m.db.Model(chain).Where("block_hash = ?", block.PreviousBlockHash.String()).Updates(chain)
 	if err := res.Error; err != nil {
 		return err
 	}
@@ -140,7 +136,6 @@ func (m *mainchainKeeper) processChainInfo() error {
 	}
 
 	return nil
-
 }
 
 func (m *mainchainKeeper) processIssuing(txs []*btmTypes.Tx) error {
