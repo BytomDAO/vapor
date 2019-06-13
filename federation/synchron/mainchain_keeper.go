@@ -1,6 +1,7 @@
 package synchron
 
 import (
+	"bytes"
 	"encoding/hex"
 	"time"
 
@@ -109,19 +110,45 @@ func (m *mainchainKeeper) processBlock(chain *orm.Chain, block *btmTypes.Block) 
 	}
 
 	for i, tx := range block.Transactions {
-		if isDepositFromMainchain(tx) {
-			if err := m.processDepositFromMainchain(uint64(i), tx); err != nil {
+		if m.isDepositTx(tx) {
+			if err := m.processDepositTx(uint64(i), tx); err != nil {
 				return err
 			}
 		}
-		// if isWithdrawalToMainchain(tx) {
-		// }
+
+		if m.isWithdrawalTx(tx) {
+			if err := m.processWithdrawalTx(uint64(i), tx); err != nil {
+				return err
+			}
+		}
 	}
 
 	return m.processChainInfo(chain, block)
 }
 
-func (m *mainchainKeeper) processDepositFromMainchain(txIndex uint64, tx *btmTypes.Tx) error {
+func (m *mainchainKeeper) isDepositTx(tx *btmTypes.Tx) bool {
+	for _, output := range tx.Outputs {
+		if bytes.Equal(output.OutputCommitment.ControlProgram, fedProg) {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *mainchainKeeper) isWithdrawalTx(tx *btmTypes.Tx) bool {
+	for _, input := range tx.Inputs {
+		if bytes.Equal(input.ControlProgram(), fedProg) {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *mainchainKeeper) processDepositTx(txIndex uint64, tx *btmTypes.Tx) error {
+	return nil
+}
+
+func (m *mainchainKeeper) processWithdrawalTx(txIndex uint64, tx *btmTypes.Tx) error {
 	return nil
 }
 
