@@ -113,15 +113,18 @@ func (m *mainchainKeeper) processBlock(chain *orm.Chain, block *btmTypes.Block) 
 		// 		bp.processDepositFromMainchain(uint64(i), tx)
 		// 	}
 		if isWithdrawalToMainchain(tx) {
-			m.processWithdrawalToMainchain(uint64(i), tx)
+			if err := m.processWithdrawalToMainchain(uint64(i), tx); err != nil {
+				return err
+			}
 		}
 	}
 
 	return m.processChainInfo(chain, block)
 }
 
-// TODO: error handling?
-func (m *mainchainKeeper) processWithdrawalToMainchain(txIndex uint64, tx *btmTypes.Tx) {}
+func (m *mainchainKeeper) processWithdrawalToMainchain(txIndex uint64, tx *btmTypes.Tx) error {
+	return nil
+}
 
 // TODO: maybe common
 func (m *mainchainKeeper) processChainInfo(chain *orm.Chain, block *btmTypes.Block) error {
