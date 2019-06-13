@@ -197,9 +197,8 @@ func (c *Chain) SignBlock(block *types.Block) ([]byte, error) {
 	signature := block.Witness[node.Order]
 	if len(signature) == 0 {
 		signature = xprv.Sign(block.Hash().Bytes())
-		if err := block.Update(node.Order, signature); err != nil {
-			return nil, err
-		}
+		block.Update(node.Order, signature)
+
 	}
 	return signature, nil
 }
@@ -214,9 +213,8 @@ func (c *Chain) updateBlockSignature(blockNode *state.BlockNode, nodeOrder uint6
 		return err
 	}
 
-	if err := block.Update(nodeOrder, signature); err != nil {
-		return err
-	}
+	block.Update(nodeOrder, signature)
+
 	txStatus, err := c.store.GetTransactionStatus(&blockNode.Hash)
 	if err != nil {
 		return err

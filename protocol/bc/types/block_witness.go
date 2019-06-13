@@ -4,11 +4,6 @@ import (
 	"io"
 
 	"github.com/vapor/encoding/blockchain"
-	"github.com/vapor/errors"
-)
-
-var (
-	errInvalidBlockWitnessIndex = errors.New("block witness index exceed length.")
 )
 
 type BlockWitness struct {
@@ -26,10 +21,19 @@ func (bw *BlockWitness) readFrom(r *blockchain.Reader) (err error) {
 	return err
 }
 
-func (bw *BlockWitness) Update(index uint64, data []byte) error {
-	if index >= uint64(len(bw.Witness)) {
-		return errInvalidBlockWitnessIndex
+func (bw *BlockWitness) Update(index uint64, data []byte) {
+	if uint64(len(bw.Witness)) <= index {
+		newWitness := make([][]byte, index+1, index+1)
+		copy(newWitness, bw.Witness)
+		newWitness[index] = data
+		bw.Witness = newWitness
+	} else {
+		bw.Witness[index] = data
 	}
-	bw.Witness[index] = data
-	return nil
+}
+
+func (bw *BlockWitness) Delete(index uint64) {
+	if uint64(len(bw.Witness)) > index {
+		bw.Witness[index] = []byte{}
+	}
 }

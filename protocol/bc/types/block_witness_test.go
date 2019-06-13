@@ -58,3 +58,76 @@ func TestReadWriteBlockWitness(t *testing.T) {
 		}
 	}
 }
+
+func TestBlockWitnessUpdate(t *testing.T) {
+	cases := []struct {
+		bw    BlockWitness
+		index uint64
+		data  []byte
+		want  BlockWitness
+	}{
+		{
+			bw:    BlockWitness{Witness: [][]byte{}},
+			index: uint64(0),
+			data:  []byte{0x01, 0x02, 0x03, 0x04},
+			want:  BlockWitness{Witness: [][]byte{[]byte{0x01, 0x02, 0x03, 0x04}}},
+		},
+		{
+			bw:    BlockWitness{Witness: [][]byte{[]byte{0x01, 0x02, 0x03, 0x04}}},
+			index: uint64(1),
+			data:  []byte{0x01, 0x01, 0x01, 0x01},
+			want:  BlockWitness{Witness: [][]byte{[]byte{0x01, 0x02, 0x03, 0x04}, []byte{0x01, 0x01, 0x01, 0x01}}},
+		},
+		{
+			bw:    BlockWitness{Witness: [][]byte{[]byte{0x01, 0x02, 0x03, 0x04}, []byte{0x01, 0x02, 0x03, 0x04}}},
+			index: uint64(4),
+			data:  []byte{0x04, 0x04, 0x04, 0x04},
+			want:  BlockWitness{Witness: [][]byte{[]byte{0x01, 0x02, 0x03, 0x04}, []byte{0x01, 0x02, 0x03, 0x04}, []byte{}, []byte{}, []byte{0x04, 0x04, 0x04, 0x04}}},
+		},
+	}
+
+	for i, c := range cases {
+		newbw := c.bw
+		newbw.Update(c.index, c.data)
+		if !testutil.DeepEqual(c.want, newbw) {
+			t.Errorf("update result mismatch: %v, got:%v, want:%v", i, newbw, c.want)
+		}
+	}
+}
+
+func TestBlockWitnessDelete(t *testing.T) {
+	cases := []struct {
+		bw    BlockWitness
+		index uint64
+		want  BlockWitness
+	}{
+		{
+			bw:    BlockWitness{Witness: [][]byte{}},
+			index: uint64(0),
+			want:  BlockWitness{Witness: [][]byte{}},
+		},
+		{
+			bw:    BlockWitness{Witness: [][]byte{[]byte{0x01, 0x02, 0x03, 0x04}}},
+			index: uint64(0),
+			want:  BlockWitness{Witness: [][]byte{[]byte{}}},
+		},
+		{
+			bw:    BlockWitness{Witness: [][]byte{[]byte{0x01, 0x02, 0x03, 0x04}, []byte{0x01, 0x02, 0x03, 0x04}}},
+			index: uint64(1),
+			want:  BlockWitness{Witness: [][]byte{[]byte{0x01, 0x02, 0x03, 0x04}, []byte{}}},
+		},
+		{
+			bw:    BlockWitness{Witness: [][]byte{[]byte{0x01, 0x02, 0x03, 0x04}, []byte{0x01, 0x02, 0x03, 0x04}}},
+			index: uint64(100),
+			want:  BlockWitness{Witness: [][]byte{[]byte{0x01, 0x02, 0x03, 0x04}, []byte{0x01, 0x02, 0x03, 0x04}}},
+		},
+	}
+
+	for i, c := range cases {
+		newbw := c.bw
+		newbw.Delete(c.index)
+		if !testutil.DeepEqual(c.want, newbw) {
+			t.Errorf("update result mismatch: %v, got:%v, want:%v", i, newbw, c.want)
+		}
+	}
+}
