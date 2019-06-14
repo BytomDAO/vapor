@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"time"
 
-	btmConsensus "github.com/bytom/consensus"
+	"github.com/bytom/consensus"
 	btmBc "github.com/bytom/protocol/bc"
-	btmTypes "github.com/bytom/protocol/bc/types"
+	"github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 
@@ -77,7 +77,7 @@ func (m *mainchainKeeper) syncBlock() (bool, error) {
 		return false, err
 	}
 
-	nextBlock := &btmTypes.Block{}
+	nextBlock := &types.Block{}
 	if err := nextBlock.UnmarshalText([]byte(nextBlockStr)); err != nil {
 		return false, errors.New("Unmarshal nextBlock")
 	}
@@ -97,7 +97,7 @@ func (m *mainchainKeeper) syncBlock() (bool, error) {
 	return true, nil
 }
 
-func (m *mainchainKeeper) tryAttachBlock(chain *orm.Chain, block *btmTypes.Block, txStatus *bc.TransactionStatus) error {
+func (m *mainchainKeeper) tryAttachBlock(chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus) error {
 	blockHash := block.Hash()
 	log.WithFields(log.Fields{"block_height": block.Height, "block_hash": blockHash.String()}).Info("start to attachBlock")
 	m.db.Begin()
@@ -109,7 +109,7 @@ func (m *mainchainKeeper) tryAttachBlock(chain *orm.Chain, block *btmTypes.Block
 	return m.db.Commit().Error
 }
 
-func (m *mainchainKeeper) processBlock(chain *orm.Chain, block *btmTypes.Block, txStatus *bc.TransactionStatus) error {
+func (m *mainchainKeeper) processBlock(chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus) error {
 	if err := m.processIssuing(block.Transactions); err != nil {
 		return err
 	}
@@ -131,7 +131,7 @@ func (m *mainchainKeeper) processBlock(chain *orm.Chain, block *btmTypes.Block, 
 	return m.processChainInfo(chain, block)
 }
 
-func (m *mainchainKeeper) isDepositTx(tx *btmTypes.Tx) bool {
+func (m *mainchainKeeper) isDepositTx(tx *types.Tx) bool {
 	for _, output := range tx.Outputs {
 		if bytes.Equal(output.OutputCommitment.ControlProgram, fedProg) {
 			return true
@@ -140,7 +140,7 @@ func (m *mainchainKeeper) isDepositTx(tx *btmTypes.Tx) bool {
 	return false
 }
 
-func (m *mainchainKeeper) isWithdrawalTx(tx *btmTypes.Tx) bool {
+func (m *mainchainKeeper) isWithdrawalTx(tx *types.Tx) bool {
 	for _, input := range tx.Inputs {
 		if bytes.Equal(input.ControlProgram(), fedProg) {
 			return true
@@ -149,7 +149,7 @@ func (m *mainchainKeeper) isWithdrawalTx(tx *btmTypes.Tx) bool {
 	return false
 }
 
-func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *btmTypes.Block, txStatus *bc.TransactionStatus, txIndex uint64, tx *btmTypes.Tx) error {
+func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus, txIndex uint64, tx *types.Tx) error {
 	blockHash := block.Hash()
 
 	var muxID btmBc.Hash
@@ -204,7 +204,7 @@ func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *btmTypes.Blo
 	return nil
 }
 
-func (m *mainchainKeeper) getCrossChainInputs(crossTransactionID uint64, tx *btmTypes.Tx, statusFail bool) ([]*orm.CrossTransactionReq, error) {
+func (m *mainchainKeeper) getCrossChainInputs(crossTransactionID uint64, tx *types.Tx, statusFail bool) ([]*orm.CrossTransactionReq, error) {
 	// assume inputs are from an identical owner
 	script := hex.EncodeToString(tx.Inputs[0].ControlProgram())
 	inputs := []*orm.CrossTransactionReq{}
@@ -214,7 +214,7 @@ func (m *mainchainKeeper) getCrossChainInputs(crossTransactionID uint64, tx *btm
 			continue
 		}
 
-		if statusFail && *rawOutput.OutputCommitment.AssetAmount.AssetId != *btmConsensus.BTMAssetID {
+		if statusFail && *rawOutput.OutputCommitment.AssetAmount.AssetId != *consensus.BTMAssetID {
 			continue
 		}
 
@@ -235,7 +235,7 @@ func (m *mainchainKeeper) getCrossChainInputs(crossTransactionID uint64, tx *btm
 	return inputs, nil
 }
 
-func (m *mainchainKeeper) processWithdrawalTx(chain *orm.Chain, block *btmTypes.Block, txIndex uint64, tx *btmTypes.Tx) error {
+func (m *mainchainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Block, txIndex uint64, tx *types.Tx) error {
 	blockHash := block.Hash()
 	return m.db.Model(&orm.CrossTransaction{}).Where("chain_id != ?", chain.ID).
 		Where(&orm.CrossTransaction{
@@ -250,7 +250,7 @@ func (m *mainchainKeeper) processWithdrawalTx(chain *orm.Chain, block *btmTypes.
 }
 
 // TODO: maybe common
-func (m *mainchainKeeper) processChainInfo(chain *orm.Chain, block *btmTypes.Block) error {
+func (m *mainchainKeeper) processChainInfo(chain *orm.Chain, block *types.Block) error {
 	blockHash := block.Hash()
 	chain.BlockHash = blockHash.String()
 	chain.BlockHeight = block.Height
@@ -266,11 +266,11 @@ func (m *mainchainKeeper) processChainInfo(chain *orm.Chain, block *btmTypes.Blo
 	return nil
 }
 
-func (m *mainchainKeeper) processIssuing(txs []*btmTypes.Tx) error {
+func (m *mainchainKeeper) processIssuing(txs []*types.Tx) error {
 	for _, tx := range txs {
 		for _, input := range tx.Inputs {
 			switch inp := input.TypedInput.(type) {
-			case *btmTypes.IssuanceInput:
+			case *types.IssuanceInput:
 				assetID := inp.AssetID()
 				if _, err := m.getAsset(assetID.String()); err == nil {
 					continue

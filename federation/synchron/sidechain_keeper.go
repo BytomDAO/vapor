@@ -1,18 +1,15 @@
 package synchron
 
 import (
-	"bytes"
 	"database/sql"
 	"encoding/hex"
-	// "fmt"
+	"fmt"
 	"time"
 
-	btmConsensus "github.com/bytom/consensus"
-	// btmBc "github.com/bytom/protocol/bc"
-	// btmTypes "github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/common"
 	"github.com/vapor/federation/config"
@@ -20,8 +17,7 @@ import (
 	"github.com/vapor/federation/database/orm"
 	"github.com/vapor/federation/service"
 	"github.com/vapor/protocol/bc"
-	// vaporBc "github.com/vapor/protocol/bc"
-	vaporTypes "github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/bc/types"
 )
 
 type sidechainKeeper struct {
@@ -79,7 +75,7 @@ func (s *sidechainKeeper) syncBlock() (bool, error) {
 		return false, err
 	}
 
-	nextBlock := &vaporTypes.Block{}
+	nextBlock := &types.Block{}
 	if err := nextBlock.UnmarshalText([]byte(nextBlockStr)); err != nil {
 		return false, errors.New("Unmarshal nextBlock")
 	}
@@ -99,7 +95,7 @@ func (s *sidechainKeeper) syncBlock() (bool, error) {
 	return true, nil
 }
 
-func (s *sidechainKeeper) tryAttachBlock(chain *orm.Chain, block *vaporTypes.Block, txStatus *bc.TransactionStatus) error {
+func (s *sidechainKeeper) tryAttachBlock(chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus) error {
 	blockHash := block.Hash()
 	log.WithFields(log.Fields{"block_height": block.Height, "block_hash": blockHash.String()}).Info("start to attachBlock")
 	s.db.Begin()
@@ -111,16 +107,16 @@ func (s *sidechainKeeper) tryAttachBlock(chain *orm.Chain, block *vaporTypes.Blo
 	return s.db.Commit().Error
 }
 
-func (s *sidechainKeeper) processBlock(chain *orm.Chain, block *vaporTypes.Block, txStatus *bc.TransactionStatus) error {
+func (s *sidechainKeeper) processBlock(chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus) error {
 	for i, tx := range block.Transactions {
 		if s.isDepositTx(tx) {
-			if err := s.processDepositTx(chain, block, txStatus, uint64(i), tx); err != nil {
+			if err := s.processDepositTx(chain, block, uint64(i), tx); err != nil {
 				return err
 			}
 		}
 
 		if s.isWithdrawalTx(tx) {
-			if err := s.processWithdrawalTx(chain, block, uint64(i), tx); err != nil {
+			if err := s.processWithdrawalTx(chain, block, txStatus, uint64(i), tx); err != nil {
 				return err
 			}
 		}
@@ -129,25 +125,25 @@ func (s *sidechainKeeper) processBlock(chain *orm.Chain, block *vaporTypes.Block
 	return s.processChainInfo(chain, block)
 }
 
-func (s *sidechainKeeper) isDepositTx(tx *vaporTypes.Tx) bool {
+func (s *sidechainKeeper) isDepositTx(tx *types.Tx) bool {
 	for _, input := range tx.Inputs {
-		if input.InputType() == vaporTypes.CrossChainInputType {
+		if input.InputType() == types.CrossChainInputType {
 			return true
 		}
 	}
 	return false
 }
 
-func (s *sidechainKeeper) isWithdrawalTx(tx *vaporTypes.Tx) bool {
+func (s *sidechainKeeper) isWithdrawalTx(tx *types.Tx) bool {
 	for _, output := range tx.Outputs {
-		if output.OutputType() == vaporTypes.CrossChainOutputType {
+		if output.OutputType() == types.CrossChainOutputType {
 			return true
 		}
 	}
 	return false
 }
 
-func (s *sidechainKeeper) processDepositTx(chain *orm.Chain, block *vaporTypes.Block, txStatus *bc.TransactionStatus, txIndex uint64, tx *vaporTypes.Tx) error {
+func (s *sidechainKeeper) processDepositTx(chain *orm.Chain, block *types.Block, txIndex uint64, tx *types.Tx) error {
 	blockHash := block.Hash()
 	return s.db.Model(&orm.CrossTransaction{}).Where("chain_id != ?", chain.ID).
 		Where(&orm.CrossTransaction{
@@ -161,21 +157,76 @@ func (s *sidechainKeeper) processDepositTx(chain *orm.Chain, block *vaporTypes.B
 	}).Error
 }
 
-func (s *sidechainKeeper) getCrossChainInputs(crossTransactionID uint64, tx *vaporTypes.Tx, statusFail bool) ([]*orm.CrossTransactionReq, error) {
+func (s *sidechainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus, txIndex uint64, tx *types.Tx) error {
+	blockHash := block.Hash()
+
+	var muxID bc.Hash
+	isMuxIDFound := false
+	for _, resOutID := range tx.ResultIds {
+		resOut, ok := tx.Entries[*resOutID].(*bc.CrossChainOutput)
+		if ok {
+			muxID = *resOut.Source.Ref
+			isMuxIDFound = true
+			break
+		}
+	}
+	if !isMuxIDFound {
+		return errors.New("fail to get mux id")
+	}
+
+	rawTx, err := tx.MarshalText()
+	if err != nil {
+		return err
+	}
+
+	ormTx := &orm.CrossTransaction{
+		ChainID:              chain.ID,
+		SourceBlockHeight:    block.Height,
+		SourceBlockHash:      blockHash.String(),
+		SourceTxIndex:        txIndex,
+		SourceMuxID:          muxID.String(),
+		SourceTxHash:         tx.ID.String(),
+		SourceRawTransaction: string(rawTx),
+		DestBlockHeight:      sql.NullInt64{Valid: false},
+		DestBlockHash:        sql.NullString{Valid: false},
+		DestTxIndex:          sql.NullInt64{Valid: false},
+		DestTxHash:           sql.NullString{Valid: false},
+		Status:               common.CrossTxPendingStatus,
+	}
+	if err := s.db.Create(ormTx).Error; err != nil {
+		return errors.Wrap(err, fmt.Sprintf("create sidechain WithdrawalTx %s", tx.ID.String()))
+	}
+
+	statusFail := txStatus.VerifyStatus[txIndex].StatusFail
+	crossChainOutputs, err := s.getCrossChainOutputs(ormTx.ID, tx, statusFail)
+	if err != nil {
+		return err
+	}
+
+	for _, output := range crossChainOutputs {
+		if err := s.db.Create(output).Error; err != nil {
+			return errors.Wrap(err, fmt.Sprintf("create WithdrawalFromSidechain output: txid(%s), pos(%d)", tx.ID.String(), output.SourcePos))
+		}
+	}
+
+	return nil
+}
+
+func (s *sidechainKeeper) getCrossChainOutputs(crossTransactionID uint64, tx *types.Tx, statusFail bool) ([]*orm.CrossTransactionReq, error) {
 	// assume inputs are from an identical owner
 	script := hex.EncodeToString(tx.Inputs[0].ControlProgram())
 	inputs := []*orm.CrossTransactionReq{}
 	for i, rawOutput := range tx.Outputs {
-		// check valid deposit
-		if !bytes.Equal(rawOutput.OutputCommitment.ControlProgram, fedProg) {
+		// check valid withdrawal
+		if rawOutput.OutputType() != types.CrossChainOutputType {
 			continue
 		}
 
-		if statusFail && *rawOutput.OutputCommitment.AssetAmount.AssetId != *btmConsensus.BTMAssetID {
+		if statusFail && *rawOutput.OutputCommitment().AssetAmount.AssetId != *consensus.BTMAssetID {
 			continue
 		}
 
-		asset, err := s.getAsset(rawOutput.OutputCommitment.AssetAmount.AssetId.String())
+		asset, err := s.getAsset(rawOutput.OutputCommitment().AssetAmount.AssetId.String())
 		if err != nil {
 			return nil, err
 		}
@@ -184,7 +235,7 @@ func (s *sidechainKeeper) getCrossChainInputs(crossTransactionID uint64, tx *vap
 			CrossTransactionID: crossTransactionID,
 			SourcePos:          uint64(i),
 			AssetID:            asset.ID,
-			AssetAmount:        rawOutput.OutputCommitment.AssetAmount.Amount,
+			AssetAmount:        rawOutput.OutputCommitment().AssetAmount.Amount,
 			Script:             script,
 		}
 		inputs = append(inputs, input)
@@ -192,27 +243,8 @@ func (s *sidechainKeeper) getCrossChainInputs(crossTransactionID uint64, tx *vap
 	return inputs, nil
 }
 
-func (s *sidechainKeeper) processWithdrawalTx(chain *orm.Chain, block *vaporTypes.Block, txIndex uint64, tx *vaporTypes.Tx) error {
-	blockHash := block.Hash()
-
-	if err := s.db.Where(&orm.CrossTransaction{
-		ChainID:    chain.ID,
-		DestTxHash: sql.NullString{tx.ID.String(), true},
-		Status:     common.CrossTxSubmittedStatus,
-	}).UpdateColumn(&orm.CrossTransaction{
-		DestBlockHeight: sql.NullInt64{int64(block.Height), true},
-		DestBlockHash:   sql.NullString{blockHash.String(), true},
-		DestTxIndex:     sql.NullInt64{int64(txIndex), true},
-		Status:          common.CrossTxCompletedStatus,
-	}).Error; err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // TODO: maybe common
-func (s *sidechainKeeper) processChainInfo(chain *orm.Chain, block *vaporTypes.Block) error {
+func (s *sidechainKeeper) processChainInfo(chain *orm.Chain, block *types.Block) error {
 	blockHash := block.Hash()
 	chain.BlockHash = blockHash.String()
 	chain.BlockHeight = block.Height
