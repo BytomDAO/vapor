@@ -2,8 +2,9 @@ package common
 
 const (
 	CrossTxPendingStatus uint8 = iota
-	CrossTxCompletedStatus
 	CrossTxRejectedStatus
+	CrossTxSubmittedStatus
+	CrossTxCompletedStatus
 )
 
 const (
