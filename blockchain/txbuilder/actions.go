@@ -9,6 +9,7 @@ import (
 
 	"github.com/vapor/common"
 	"github.com/vapor/consensus"
+	"github.com/vapor/crypto/sha3pool"
 	"github.com/vapor/encoding/json"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -282,6 +283,10 @@ func (a *crossInAction) Build(ctx context.Context, builder *TemplateBuilder) err
 		return MissingFieldsError(missing...)
 	}
 
+	if err := a.CheckAssetID(); err != nil {
+		return err
+	}
+
 	// arguments will be set when materializeWitnesses
 	fedProg := config.FederationProgrom(config.CommonConfig)
 	txin := types.NewCrossChainInput(nil, a.SourceID, *a.AssetId, a.Amount, a.SourcePos, fedProg, a.RawDefinitionByte)
@@ -293,4 +298,26 @@ func (a *crossInAction) Build(ctx context.Context, builder *TemplateBuilder) err
 
 func (a *crossInAction) ActionType() string {
 	return "cross_chain_in"
+}
+
+func (c *crossInAction) CheckAssetID() error {
+	if *c.AssetId == *consensus.BTMAssetID {
+		return nil
+	}
+
+	return errors.New("incorrect asset_id")
+}
+
+func (c *crossInAction) AssetID() bc.AssetID {
+	vmVersion := 1
+	defhash := c.AssetDefinitionHash()
+	return bc.ComputeAssetID(c.IssuanceProgram, vmVersion, &defhash)
+}
+
+func (c *crossInAction) AssetDefinitionHash() (defhash bc.Hash) {
+	sha := sha3pool.Get256()
+	defer sha3pool.Put256(sha)
+	sha.Write(c.RawDefinitionByte)
+	defhash.ReadFrom(sha)
+	return defhash
 }

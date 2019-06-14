@@ -31,6 +31,11 @@ message AssetAmount {
   uint64  amount   = 2;
 }
 
+message AssetDefinition {
+  Program issuance_program = 1;
+  Hash    data             = 2;
+}
+
 message ValueSource {
   Hash        ref      = 1;
   AssetAmount value    = 2;
