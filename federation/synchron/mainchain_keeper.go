@@ -193,7 +193,7 @@ func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *types.Block,
 	}
 
 	statusFail := txStatus.VerifyStatus[txIndex].StatusFail
-	crossChainInputs, err := m.getCrossChainInputs(ormTx.ID, tx, statusFail)
+	crossChainInputs, err := m.getCrossChainReqs(ormTx.ID, tx, statusFail)
 	if err != nil {
 		return err
 	}
@@ -207,7 +207,7 @@ func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *types.Block,
 	return nil
 }
 
-func (m *mainchainKeeper) getCrossChainInputs(crossTransactionID uint64, tx *types.Tx, statusFail bool) ([]*orm.CrossTransactionReq, error) {
+func (m *mainchainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types.Tx, statusFail bool) ([]*orm.CrossTransactionReq, error) {
 	// assume inputs are from an identical owner
 	script := hex.EncodeToString(tx.Inputs[0].ControlProgram())
 	inputs := []*orm.CrossTransactionReq{}
