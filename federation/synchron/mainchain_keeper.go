@@ -237,7 +237,8 @@ func (m *mainchainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types
 
 func (m *mainchainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Block, txIndex uint64, tx *types.Tx) error {
 	blockHash := block.Hash()
-	return m.db.Model(&orm.CrossTransaction{}).Where("chain_id != ?", chain.ID).
+
+	stmt := m.db.Model(&orm.CrossTransaction{}).Where("chain_id != ?", chain.ID).
 		Where(&orm.CrossTransaction{
 			DestTxHash: sql.NullString{tx.ID.String(), true},
 			Status:     common.CrossTxSubmittedStatus,
@@ -246,7 +247,11 @@ func (m *mainchainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Blo
 		DestBlockHash:   sql.NullString{blockHash.String(), true},
 		DestTxIndex:     sql.NullInt64{int64(txIndex), true},
 		Status:          common.CrossTxCompletedStatus,
-	}).Error
+	})
+	if stmt.RowsAffected != 1 {
+		log.Warn("row affected != 1, stmt:", stmt)
+	}
+	return stmt.Error
 }
 
 func (m *mainchainKeeper) processChainInfo(chain *orm.Chain, block *types.Block) error {
