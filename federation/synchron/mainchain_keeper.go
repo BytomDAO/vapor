@@ -156,17 +156,14 @@ func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *types.Block,
 	blockHash := block.Hash()
 
 	var muxID btmBc.Hash
-	isMuxIDFound := false
-	for _, resOutID := range tx.ResultIds {
-		resOut, ok := tx.Entries[*resOutID].(*btmBc.Output)
-		if ok {
-			muxID = *resOut.Source.Ref
-			isMuxIDFound = true
-			break
-		}
-	}
-	if !isMuxIDFound {
-		return errors.New("fail to get mux id")
+	res0ID := tx.ResultIds[0]
+	switch res := tx.Entries[*res0ID].(type) {
+	case *btmBc.Output:
+		muxID = *res.Source.Ref
+	case *btmBc.Retirement:
+		muxID = *res.Source.Ref
+	default:
+		return ErrOutputType
 	}
 
 	rawTx, err := tx.MarshalText()

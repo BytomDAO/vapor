@@ -170,7 +170,7 @@ func (s *sidechainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Blo
 	case *bc.VoteOutput:
 		muxID = *res.Source.Ref
 	default:
-		return errors.New("error result type")
+		return ErrOutputType
 	}
 
 	rawTx, err := tx.MarshalText()
