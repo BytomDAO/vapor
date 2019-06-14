@@ -249,7 +249,6 @@ func (m *mainchainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Blo
 	}).Error
 }
 
-// TODO: maybe common
 func (m *mainchainKeeper) processChainInfo(chain *orm.Chain, block *types.Block) error {
 	blockHash := block.Hash()
 	chain.BlockHash = blockHash.String()
@@ -294,7 +293,6 @@ func (m *mainchainKeeper) processIssuing(txs []*types.Tx) error {
 	return nil
 }
 
-// TODO: maybe common
 func (m *mainchainKeeper) getAsset(assetID string) (*orm.Asset, error) {
 	if asset := m.assetCache.Get(assetID); asset != nil {
 		return asset, nil

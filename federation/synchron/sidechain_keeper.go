@@ -243,7 +243,6 @@ func (s *sidechainKeeper) getCrossChainOutputs(crossTransactionID uint64, tx *ty
 	return inputs, nil
 }
 
-// TODO: maybe common
 func (s *sidechainKeeper) processChainInfo(chain *orm.Chain, block *types.Block) error {
 	blockHash := block.Hash()
 	chain.BlockHash = blockHash.String()
@@ -260,7 +259,6 @@ func (s *sidechainKeeper) processChainInfo(chain *orm.Chain, block *types.Block)
 	return nil
 }
 
-// TODO: maybe common
 func (s *sidechainKeeper) getAsset(assetID string) (*orm.Asset, error) {
 	if asset := s.assetCache.Get(assetID); asset != nil {
 		return asset, nil
