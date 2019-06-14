@@ -161,18 +161,16 @@ func (s *sidechainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Blo
 	blockHash := block.Hash()
 
 	var muxID bc.Hash
-	isMuxIDFound := false
-	for _, resOutID := range tx.ResultIds {
-		resOut, ok := tx.Entries[*resOutID].(*bc.CrossChainOutput)
-		if ok {
-			muxID = *resOut.Source.Ref
-			isMuxIDFound = true
-			break
-		}
-	}
-	if !isMuxIDFound {
-		return errors.New("fail to get mux id")
-	}
+	resOutID := tx.ResultIds[0]
+	tx.Entries[*resOutID].(*bc.CrossChainOutput)
+	muxID = *resOut.Source.Ref
+	// for _, resOutID := range  {
+	// resOut, ok :=
+	// if ok {
+	// isMuxIDFound = true
+	// break
+	// }
+	// }
 
 	rawTx, err := tx.MarshalText()
 	if err != nil {
@@ -198,7 +196,7 @@ func (s *sidechainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Blo
 	}
 
 	statusFail := txStatus.VerifyStatus[txIndex].StatusFail
-	crossChainOutputs, err := s.getCrossChainOutputs(ormTx.ID, tx, statusFail)
+	crossChainOutputs, err := s.getCrossChainReqs(ormTx.ID, tx, statusFail)
 	if err != nil {
 		return err
 	}
@@ -212,7 +210,7 @@ func (s *sidechainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Blo
 	return nil
 }
 
-func (s *sidechainKeeper) getCrossChainOutputs(crossTransactionID uint64, tx *types.Tx, statusFail bool) ([]*orm.CrossTransactionReq, error) {
+func (s *sidechainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types.Tx, statusFail bool) ([]*orm.CrossTransactionReq, error) {
 	// assume inputs are from an identical owner
 	script := hex.EncodeToString(tx.Inputs[0].ControlProgram())
 	inputs := []*orm.CrossTransactionReq{}
