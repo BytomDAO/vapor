@@ -67,11 +67,7 @@ func (w *Wallet) attachUtxos(batch dbm.Batch, b *types.Block, txStatus *bc.Trans
 		}
 
 		//hand update the transaction output utxos
-		validHeight := uint64(0)
-		if txIndex == 0 {
-			validHeight = b.Height + consensus.CoinbasePendingBlockNumber
-		}
-		outputUtxos := txOutToUtxos(tx, statusFail, validHeight)
+		outputUtxos := txOutToUtxos(tx, statusFail, b.Height)
 		utxos := w.filterAccountUtxo(outputUtxos)
 		if err := batchSaveUtxos(utxos, batch); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("attachUtxos fail on batchSaveUtxos")
@@ -225,7 +221,12 @@ func txInToUtxos(tx *types.Tx, statusFail bool) []*account.UTXO {
 	return utxos
 }
 
-func txOutToUtxos(tx *types.Tx, statusFail bool, vaildHeight uint64) []*account.UTXO {
+func txOutToUtxos(tx *types.Tx, statusFail bool, blockHeight uint64) []*account.UTXO {
+	validHeight := uint64(0)
+	if tx.Inputs[0].InputType() == types.CoinbaseInputType {
+		validHeight = blockHeight + consensus.CoinbasePendingBlockNumber
+	}
+
 	utxos := []*account.UTXO{}
 	for i, out := range tx.Outputs {
 		entryOutput, err := tx.Entry(*tx.ResultIds[i])
@@ -247,13 +248,19 @@ func txOutToUtxos(tx *types.Tx, statusFail bool, vaildHeight uint64) []*account.
 				ControlProgram: out.ControlProgram(),
 				SourceID:       *bcOut.Source.Ref,
 				SourcePos:      bcOut.Source.Position,
-				ValidHeight:    vaildHeight,
+				ValidHeight:    validHeight,
 			}
 
 		case *bc.VoteOutput:
 			if statusFail && *out.AssetAmount().AssetId != *consensus.BTMAssetID {
 				continue
 			}
+
+			voteValidHeight := blockHeight + consensus.VotePendingBlockNumber
+			if validHeight < voteValidHeight {
+				validHeight = voteValidHeight
+			}
+
 			utxo = &account.UTXO{
 				OutputID:       *tx.OutputID(i),
 				AssetID:        *out.AssetAmount().AssetId,
@@ -261,7 +268,7 @@ func txOutToUtxos(tx *types.Tx, statusFail bool, vaildHeight uint64) []*account.
 				ControlProgram: out.ControlProgram(),
 				SourceID:       *bcOut.Source.Ref,
 				SourcePos:      bcOut.Source.Position,
-				ValidHeight:    vaildHeight,
+				ValidHeight:    validHeight,
 				Vote:           bcOut.Vote,
 			}
 
