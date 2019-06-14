@@ -160,7 +160,7 @@ func (s *sidechainKeeper) processDepositTx(chain *orm.Chain, block *types.Block,
 	}
 
 	if stmt.RowsAffected != 1 {
-		log.Warn("row affected != 1, stmt:", stmt)
+		log.Warnf("sidechainKeeper.processDepositTx(%v): rows affected != 1", tx.ID.String())
 	}
 	return nil
 }

@@ -252,7 +252,7 @@ func (m *mainchainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Blo
 	}
 
 	if stmt.RowsAffected != 1 {
-		log.Warn("row affected != 1, stmt:", stmt)
+		log.Warnf("mainchainKeeper.processWithdrawalTx(%v): rows affected != 1", tx.ID.String())
 	}
 	return nil
 }
