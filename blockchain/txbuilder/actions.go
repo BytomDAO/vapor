@@ -305,11 +305,15 @@ func (c *crossInAction) CheckAssetID() error {
 		return nil
 	}
 
-	return errors.New("incorrect asset_id")
+	if c.AssetID() != *c.AssetAmount.AssetId {
+		return errors.New("incorrect asset_id")
+	}
+
+	return nil
 }
 
 func (c *crossInAction) AssetID() bc.AssetID {
-	vmVersion := 1
+	vmVersion := uint64(1)
 	defhash := c.AssetDefinitionHash()
 	return bc.ComputeAssetID(c.IssuanceProgram, vmVersion, &defhash)
 }

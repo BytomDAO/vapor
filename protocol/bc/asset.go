@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 
+	"github.com/vapor/crypto/sha3pool"
 	"github.com/vapor/encoding/blockchain"
 )
 
