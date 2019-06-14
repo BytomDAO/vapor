@@ -3,7 +3,6 @@ package protocol
 import (
 	"sync"
 
-	"github.com/golang/groupcache/lru"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/config"
@@ -11,6 +10,7 @@ import (
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
+	"github.com/vapor/common"
 )
 
 const maxProcessBlockChSize = 1024
@@ -24,7 +24,7 @@ type Chain struct {
 	processBlockCh chan *processBlockMsg
 
 	consensusNodeManager *consensusNodeManager
-	signatureCache       *lru.Cache
+	signatureCache       *common.Cache
 	eventDispatcher      *event.Dispatcher
 
 	cond                 sync.Cond
@@ -38,7 +38,7 @@ func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*
 		orphanManage:    NewOrphanManage(),
 		txPool:          txPool,
 		store:           store,
-		signatureCache:  lru.New(maxSignatureCacheSize),
+		signatureCache:  common.NewCache(maxSignatureCacheSize),
 		eventDispatcher: eventDispatcher,
 		processBlockCh:  make(chan *processBlockMsg, maxProcessBlockChSize),
 	}
