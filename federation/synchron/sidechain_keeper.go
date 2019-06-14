@@ -155,11 +155,14 @@ func (s *sidechainKeeper) processDepositTx(chain *orm.Chain, block *types.Block,
 		DestTxIndex:     sql.NullInt64{int64(txIndex), true},
 		Status:          common.CrossTxCompletedStatus,
 	})
+	if stmt.Error != nil {
+		return stmt.Error
+	}
+
 	if stmt.RowsAffected != 1 {
 		log.Warn("row affected != 1, stmt:", stmt)
-		return ErrInconsistentDB
 	}
-	return stmt.Error
+	return nil
 }
 
 func (s *sidechainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus, txIndex uint64, tx *types.Tx) error {

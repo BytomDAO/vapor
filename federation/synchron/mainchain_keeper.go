@@ -247,11 +247,14 @@ func (m *mainchainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Blo
 		DestTxIndex:     sql.NullInt64{int64(txIndex), true},
 		Status:          common.CrossTxCompletedStatus,
 	})
+	if stmt.Error != nil {
+		return stmt.Error
+	}
+
 	if stmt.RowsAffected != 1 {
 		log.Warn("row affected != 1, stmt:", stmt)
-		return ErrInconsistentDB
 	}
-	return stmt.Error
+	return nil
 }
 
 func (m *mainchainKeeper) processChainInfo(chain *orm.Chain, block *types.Block) error {
