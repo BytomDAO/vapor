@@ -145,7 +145,7 @@ func (s *sidechainKeeper) isWithdrawalTx(tx *types.Tx) bool {
 
 func (s *sidechainKeeper) processDepositTx(chain *orm.Chain, block *types.Block, txIndex uint64, tx *types.Tx) error {
 	blockHash := block.Hash()
-	return s.db.Model(&orm.CrossTransaction{}).Where("chain_id != ?", chain.ID).
+	stmt := s.db.Model(&orm.CrossTransaction{}).Where("chain_id != ?", chain.ID).
 		Where(&orm.CrossTransaction{
 			DestTxHash: sql.NullString{tx.ID.String(), true},
 			Status:     common.CrossTxSubmittedStatus,
@@ -154,7 +154,12 @@ func (s *sidechainKeeper) processDepositTx(chain *orm.Chain, block *types.Block,
 		DestBlockHash:   sql.NullString{blockHash.String(), true},
 		DestTxIndex:     sql.NullInt64{int64(txIndex), true},
 		Status:          common.CrossTxCompletedStatus,
-	}).Error
+	})
+	if stmt.RowsAffected != 1 {
+		log.Warn("row affected != 1, stmt:", stmt)
+		return ErrInconsistentDB
+	}
+	return stmt.Error
 }
 
 func (s *sidechainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus, txIndex uint64, tx *types.Tx) error {

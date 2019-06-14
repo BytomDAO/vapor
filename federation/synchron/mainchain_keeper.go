@@ -237,7 +237,6 @@ func (m *mainchainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types
 
 func (m *mainchainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Block, txIndex uint64, tx *types.Tx) error {
 	blockHash := block.Hash()
-
 	stmt := m.db.Model(&orm.CrossTransaction{}).Where("chain_id != ?", chain.ID).
 		Where(&orm.CrossTransaction{
 			DestTxHash: sql.NullString{tx.ID.String(), true},
@@ -250,6 +249,7 @@ func (m *mainchainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Blo
 	})
 	if stmt.RowsAffected != 1 {
 		log.Warn("row affected != 1, stmt:", stmt)
+		return ErrInconsistentDB
 	}
 	return stmt.Error
 }
