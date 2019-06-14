@@ -111,8 +111,8 @@ var testTxs = []*types.Tx{
 
 type mockStore struct{}
 
-func (s *mockStore) BlockExist(hash *bc.Hash) bool                                { return false }
-func (s *mockStore) GetBlock(*bc.Hash) (*types.Block, error)                      { return nil, nil }
+func (s *mockStore) BlockExist(hash *bc.Hash, height uint64) bool                 { return false }
+func (s *mockStore) GetBlock(*bc.Hash, uint64) (*types.Block, error)              { return nil, nil }
 func (s *mockStore) GetStoreStatus() *BlockStoreState                             { return nil }
 func (s *mockStore) GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error) { return nil, nil }
 func (s *mockStore) GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error     { return nil }
@@ -653,8 +653,8 @@ func TestRemoveOrphan(t *testing.T) {
 
 type mockStore1 struct{}
 
-func (s *mockStore1) BlockExist(hash *bc.Hash) bool                                { return false }
-func (s *mockStore1) GetBlock(*bc.Hash) (*types.Block, error)                      { return nil, nil }
+func (s *mockStore1) BlockExist(hash *bc.Hash, height uint64) bool                 { return false }
+func (s *mockStore1) GetBlock(*bc.Hash, uint64) (*types.Block, error)              { return nil, nil }
 func (s *mockStore1) GetStoreStatus() *BlockStoreState                             { return nil }
 func (s *mockStore1) GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error) { return nil, nil }
 func (s *mockStore1) GetTransactionsUtxo(utxoView *state.UtxoViewpoint, tx []*bc.Tx) error {

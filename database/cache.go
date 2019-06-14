@@ -13,7 +13,7 @@ import (
 
 const maxCachedBlocks = 30
 
-func newBlockCache(fillFn func(hash *bc.Hash) (*types.Block, error)) blockCache {
+func newBlockCache(fillFn func(hash *bc.Hash, height uint64) (*types.Block, error)) blockCache {
 	return blockCache{
 		lru:    lru.New(maxCachedBlocks),
 		fillFn: fillFn,
@@ -23,17 +23,17 @@ func newBlockCache(fillFn func(hash *bc.Hash) (*types.Block, error)) blockCache 
 type blockCache struct {
 	mu     sync.Mutex
 	lru    *lru.Cache
-	fillFn func(hash *bc.Hash) (*types.Block, error)
+	fillFn func(hash *bc.Hash, height uint64) (*types.Block, error)
 	single singleflight.Group
 }
 
-func (c *blockCache) lookup(hash *bc.Hash) (*types.Block, error) {
+func (c *blockCache) lookup(hash *bc.Hash, height uint64) (*types.Block, error) {
 	if b, ok := c.get(hash); ok {
 		return b, nil
 	}
 
 	block, err := c.single.Do(hash.String(), func() (interface{}, error) {
-		b, err := c.fillFn(hash)
+		b, err := c.fillFn(hash, height)
 		if err != nil {
 			return nil, err
 		}

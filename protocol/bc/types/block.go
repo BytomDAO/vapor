@@ -58,6 +58,67 @@ func (b *Block) UnmarshalText(text []byte) error {
 	return nil
 }
 
+// MarshalTextForTransactions fulfills the json.Marshaler interface.
+func (b *Block) MarshalTextForTransactions() ([]byte, error) {
+	buf := bufpool.Get()
+	defer bufpool.Put(buf)
+
+	ew := errors.NewWriter(buf)
+	ew.Write([]byte{SerBlockTransactions})
+
+	if _, err := blockchain.WriteVarint31(ew, uint64(len(b.Transactions))); err != nil {
+		return nil, err
+	}
+
+	for _, tx := range b.Transactions {
+		if _, err := tx.WriteTo(ew); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := ew.Err(); err != nil {
+		return nil, err
+	}
+
+	enc := make([]byte, hex.EncodedLen(buf.Len()))
+	hex.Encode(enc, buf.Bytes())
+	return enc, nil
+}
+
+// UnmarshalTextForTransactions fulfills the encoding.TextUnmarshaler interface.
+func (b *Block) UnmarshalTextForTransactions(text []byte) error {
+	decoded := make([]byte, hex.DecodedLen(len(text)))
+	if _, err := hex.Decode(decoded, text); err != nil {
+		return err
+	}
+
+	r := blockchain.NewReader(decoded)
+	var serflags [1]byte
+	io.ReadFull(r, serflags[:])
+	if serflags[0] != SerBlockTransactions {
+		return fmt.Errorf("unsupported serialization flags 0x%x", serflags)
+	}
+
+	n, err := blockchain.ReadVarint31(r)
+	if err != nil {
+		return errors.Wrap(err, "reading number of transactions")
+	}
+
+	for ; n > 0; n-- {
+		data := TxData{}
+		if err = data.readFrom(r); err != nil {
+			return errors.Wrapf(err, "reading transaction %d", len(b.Transactions))
+		}
+
+		b.Transactions = append(b.Transactions, NewTx(data))
+	}
+
+	if trailing := r.Len(); trailing > 0 {
+		return fmt.Errorf("trailing garbage (%d bytes)", trailing)
+	}
+	return nil
+}
+
 func (b *Block) readFrom(r *blockchain.Reader) error {
 	serflags, err := b.BlockHeader.readFrom(r)
 	if err != nil {
