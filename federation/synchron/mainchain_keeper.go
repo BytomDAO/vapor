@@ -13,6 +13,7 @@ import (
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 
+	vaporCfg "github.com/vapor/config"
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/common"
 	"github.com/vapor/federation/config"
@@ -21,6 +22,8 @@ import (
 	"github.com/vapor/federation/service"
 	"github.com/vapor/protocol/bc"
 )
+
+var fedProg = vaporCfg.FederationProgrom(vaporCfg.CommonConfig)
 
 type mainchainKeeper struct {
 	cfg        *config.Chain
@@ -87,7 +90,7 @@ func (m *mainchainKeeper) syncBlock() (bool, error) {
 			"remote PreviousBlockHash": nextBlock.PreviousBlockHash.String(),
 			"db block_hash":            chain.BlockHash,
 		}).Fatal("BlockHash mismatch")
-		return false, ErrInconsistentDB
+		return false, common.ErrInconsistentDB
 	}
 
 	if err := m.tryAttachBlock(chain, nextBlock, txStatus); err != nil {
@@ -259,7 +262,7 @@ func (m *mainchainKeeper) processChainInfo(chain *orm.Chain, block *types.Block)
 	}
 
 	if res.RowsAffected != 1 {
-		return ErrInconsistentDB
+		return common.ErrInconsistentDB
 	}
 
 	return nil

@@ -85,7 +85,7 @@ func (s *sidechainKeeper) syncBlock() (bool, error) {
 			"remote PreviousBlockHash": nextBlock.PreviousBlockHash.String(),
 			"db block_hash":            chain.BlockHash,
 		}).Fatal("BlockHash mismatch")
-		return false, ErrInconsistentDB
+		return false, common.ErrInconsistentDB
 	}
 
 	if err := s.tryAttachBlock(chain, nextBlock, txStatus); err != nil {
@@ -253,7 +253,7 @@ func (s *sidechainKeeper) processChainInfo(chain *orm.Chain, block *types.Block)
 	}
 
 	if res.RowsAffected != 1 {
-		return ErrInconsistentDB
+		return common.ErrInconsistentDB
 	}
 
 	return nil
