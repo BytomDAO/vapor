@@ -161,16 +161,17 @@ func (s *sidechainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Blo
 	blockHash := block.Hash()
 
 	var muxID bc.Hash
-	resOutID := tx.ResultIds[0]
-	tx.Entries[*resOutID].(*bc.CrossChainOutput)
-	muxID = *resOut.Source.Ref
-	// for _, resOutID := range  {
-	// resOut, ok :=
-	// if ok {
-	// isMuxIDFound = true
-	// break
-	// }
-	// }
+	res0ID := tx.ResultIds[0]
+	switch res := tx.Entries[*res0ID].(type) {
+	case *bc.CrossChainOutput:
+		muxID = *res.Source.Ref
+	case *bc.IntraChainOutput:
+		muxID = *res.Source.Ref
+	case *bc.VoteOutput:
+		muxID = *res.Source.Ref
+	default:
+		return errors.New("error result type")
+	}
 
 	rawTx, err := tx.MarshalText()
 	if err != nil {
