@@ -1,9 +1,5 @@
 package common
 
-import (
-	"github.com/vapor/errors"
-)
-
 const (
 	CrossTxPendingStatus uint8 = iota
 	CrossTxRejectedStatus
@@ -16,5 +12,3 @@ const (
 	CrossTxSignCompletedStatus
 	CrossTxSignRejectedStatus
 )
-
-var ErrInconsistentDB = errors.New("inconsistent db status")

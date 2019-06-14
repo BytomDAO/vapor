@@ -90,7 +90,7 @@ func (m *mainchainKeeper) syncBlock() (bool, error) {
 			"remote PreviousBlockHash": nextBlock.PreviousBlockHash.String(),
 			"db block_hash":            chain.BlockHash,
 		}).Fatal("BlockHash mismatch")
-		return false, common.ErrInconsistentDB
+		return false, ErrInconsistentDB
 	}
 
 	if err := m.tryAttachBlock(chain, nextBlock, txStatus); err != nil {
@@ -262,7 +262,7 @@ func (m *mainchainKeeper) processChainInfo(chain *orm.Chain, block *types.Block)
 	}
 
 	if res.RowsAffected != 1 {
-		return common.ErrInconsistentDB
+		return ErrInconsistentDB
 	}
 
 	return nil
