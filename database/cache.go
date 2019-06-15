@@ -3,10 +3,9 @@ package database
 import (
 	"fmt"
 
-	"github.com/vapor/common"
-
 	"github.com/golang/groupcache/singleflight"
 
+	"github.com/vapor/common"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
