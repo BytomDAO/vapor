@@ -58,13 +58,49 @@ func (b *Block) UnmarshalText(text []byte) error {
 	return nil
 }
 
+// MarshalTextForBlockHeader fulfills the json.Marshaler interface.
+func (b *Block) MarshalTextForBlockHeader() ([]byte, error) {
+	buf := bufpool.Get()
+	defer bufpool.Put(buf)
+
+	ew := errors.NewWriter(buf)
+	if err := b.writeTo(ew, SerBlockHeader); err != nil {
+		return nil, err
+	}
+	if err := ew.Err(); err != nil {
+		return nil, err
+	}
+
+	enc := make([]byte, hex.EncodedLen(buf.Len()))
+	hex.Encode(enc, buf.Bytes())
+	return enc, nil
+}
+
+// MarshalTextForTransactions fulfills the json.Marshaler interface.
+func (b *Block) MarshalTextForTransactions() ([]byte, error) {
+	buf := bufpool.Get()
+	defer bufpool.Put(buf)
+
+	ew := errors.NewWriter(buf)
+	if err := b.writeTo(ew, SerBlockTransactions); err != nil {
+		return nil, err
+	}
+	if err := ew.Err(); err != nil {
+		return nil, err
+	}
+
+	enc := make([]byte, hex.EncodedLen(buf.Len()))
+	hex.Encode(enc, buf.Bytes())
+	return enc, nil
+}
+
 func (b *Block) readFrom(r *blockchain.Reader) error {
-	serflags, err := b.BlockHeader.readFrom(r)
+	serflag, err := b.BlockHeader.readFrom(r)
 	if err != nil {
 		return err
 	}
 
-	if serflags == SerBlockHeader {
+	if serflag == SerBlockHeader {
 		return nil
 	}
 
@@ -94,12 +130,18 @@ func (b *Block) WriteTo(w io.Writer) (int64, error) {
 }
 
 func (b *Block) writeTo(w io.Writer, serflags uint8) error {
-	if err := b.BlockHeader.writeTo(w, serflags); err != nil {
-		return err
+	if serflags == SerBlockHeader || serflags == SerBlockFull {
+		if err := b.BlockHeader.writeTo(w, serflags); err != nil {
+			return err
+		}
 	}
 
 	if serflags == SerBlockHeader {
 		return nil
+	}
+
+	if serflags != SerBlockFull {
+		w.Write([]byte{serflags})
 	}
 
 	if _, err := blockchain.WriteVarint31(w, uint64(len(b.Transactions))); err != nil {
