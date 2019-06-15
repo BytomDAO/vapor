@@ -1,12 +1,16 @@
 package federation
 
 import (
+	"database/sql"
+
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
+	btmTypes "github.com/vapor/protocol/bc/types"
 
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/common"
 	"github.com/vapor/federation/database/orm"
+	vaporTypes "github.com/vapor/protocol/bc/types"
 )
 
 type warder struct {
@@ -29,9 +33,17 @@ func (w *warder) Run() {
 
 		if err := w.proposeDestTx(tx); err != nil {
 			log.WithFields(log.Fields{
-				"err":       err,
-				"source tx": tx,
+				"err":            err,
+				"cross-chain tx": tx,
 			}).Warnln("proposeDestTx")
+			continue
+		}
+
+		if err := w.signDestTx(tx); err != nil {
+			log.WithFields(log.Fields{
+				"err":            err,
+				"cross-chain tx": tx,
+			}).Warnln("signDestTx")
 			continue
 		}
 	}
@@ -65,5 +77,30 @@ func (w *warder) proposeDestTx(tx *orm.CrossTransaction) error {
 	}
 }
 
-func (w *warder) buildSidechainTx(tx *orm.CrossTransaction) error {}
-func (w *warder) buildMainchainTx(tx *orm.CrossTransaction) error {}
+func (w *warder) buildSidechainTx(tx *orm.CrossTransaction) error {
+	sidechainTx := &vaporTypes.Tx{}
+
+	if err := w.db.Where(tx).UpdateColumn(&orm.CrossTransaction{
+		DestTxHash: sql.NullString{sidechainTx.ID.String(), true},
+	}).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (w *warder) buildMainchainTx(tx *orm.CrossTransaction) error {
+	mainchainTx := &btmTypes.Tx{}
+
+	if err := w.db.Where(tx).UpdateColumn(&orm.CrossTransaction{
+		DestTxHash: sql.NullString{mainchainTx.ID.String(), true},
+	}).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (w *warder) signDestTx(tx *orm.CrossTransaction) error {
+	return nil
+}
