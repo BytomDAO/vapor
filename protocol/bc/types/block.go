@@ -58,24 +58,15 @@ func (b *Block) UnmarshalText(text []byte) error {
 	return nil
 }
 
-// MarshalTextForTransactions fulfills the json.Marshaler interface.
-func (b *Block) MarshalTextForTransactions() ([]byte, error) {
+// MarshalTextForBlockHeadr fulfills the json.Marshaler interface.
+func (b *Block) MarshalTextForBlockHeadr() ([]byte, error) {
 	buf := bufpool.Get()
 	defer bufpool.Put(buf)
 
 	ew := errors.NewWriter(buf)
-	ew.Write([]byte{SerBlockTransactions})
-
-	if _, err := blockchain.WriteVarint31(ew, uint64(len(b.Transactions))); err != nil {
+	if err := b.writeTo(ew, SerBlockHeader); err != nil {
 		return nil, err
 	}
-
-	for _, tx := range b.Transactions {
-		if _, err := tx.WriteTo(ew); err != nil {
-			return nil, err
-		}
-	}
-
 	if err := ew.Err(); err != nil {
 		return nil, err
 	}
@@ -85,48 +76,41 @@ func (b *Block) MarshalTextForTransactions() ([]byte, error) {
 	return enc, nil
 }
 
-// UnmarshalTextForTransactions fulfills the encoding.TextUnmarshaler interface.
-func (b *Block) UnmarshalTextForTransactions(text []byte) error {
-	decoded := make([]byte, hex.DecodedLen(len(text)))
-	if _, err := hex.Decode(decoded, text); err != nil {
-		return err
+// MarshalTextForTransactions fulfills the json.Marshaler interface.
+func (b *Block) MarshalTextForTransactions() ([]byte, error) {
+	buf := bufpool.Get()
+	defer bufpool.Put(buf)
+
+	ew := errors.NewWriter(buf)
+	if err := b.writeTo(ew, SerBlockTransactions); err != nil {
+		return nil, err
+	}
+	if err := ew.Err(); err != nil {
+		return nil, err
 	}
 
-	r := blockchain.NewReader(decoded)
-	var serflags [1]byte
-	io.ReadFull(r, serflags[:])
-	if serflags[0] != SerBlockTransactions {
-		return fmt.Errorf("unsupported serialization flags 0x%x", serflags)
-	}
-
-	n, err := blockchain.ReadVarint31(r)
-	if err != nil {
-		return errors.Wrap(err, "reading number of transactions")
-	}
-
-	for ; n > 0; n-- {
-		data := TxData{}
-		if err = data.readFrom(r); err != nil {
-			return errors.Wrapf(err, "reading transaction %d", len(b.Transactions))
-		}
-
-		b.Transactions = append(b.Transactions, NewTx(data))
-	}
-
-	if trailing := r.Len(); trailing > 0 {
-		return fmt.Errorf("trailing garbage (%d bytes)", trailing)
-	}
-	return nil
+	enc := make([]byte, hex.EncodedLen(buf.Len()))
+	hex.Encode(enc, buf.Bytes())
+	return enc, nil
 }
 
 func (b *Block) readFrom(r *blockchain.Reader) error {
-	serflags, err := b.BlockHeader.readFrom(r)
+	serflag, err := b.BlockHeader.readFrom(r)
 	if err != nil {
 		return err
 	}
 
-	if serflags == SerBlockHeader {
+	if serflag == SerBlockHeader {
 		return nil
+	}
+
+	if serflag != SerBlockTransactions {
+		var serflags [1]byte
+		io.ReadFull(r, serflags[:])
+		serflag = serflags[0]
+		if serflag != SerBlockTransactions {
+			return fmt.Errorf("unsupported serialization flags 0x%x", serflags)
+		}
 	}
 
 	n, err := blockchain.ReadVarint31(r)
@@ -155,13 +139,17 @@ func (b *Block) WriteTo(w io.Writer) (int64, error) {
 }
 
 func (b *Block) writeTo(w io.Writer, serflags uint8) error {
-	if err := b.BlockHeader.writeTo(w, serflags); err != nil {
-		return err
+	if serflags == SerBlockHeader || serflags == SerBlockFull {
+		if err := b.BlockHeader.writeTo(w, serflags); err != nil {
+			return err
+		}
 	}
 
 	if serflags == SerBlockHeader {
 		return nil
 	}
+
+	w.Write([]byte{SerBlockTransactions})
 
 	if _, err := blockchain.WriteVarint31(w, uint64(len(b.Transactions))); err != nil {
 		return err

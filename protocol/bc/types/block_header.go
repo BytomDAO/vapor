@@ -66,6 +66,8 @@ func (bh *BlockHeader) readFrom(r *blockchain.Reader) (serflag uint8, err error)
 	serflag = serflags[0]
 	switch serflag {
 	case SerBlockHeader, SerBlockFull:
+	case SerBlockTransactions:
+		return
 	default:
 		return 0, fmt.Errorf("unsupported serialization flags 0x%x", serflags)
 	}
