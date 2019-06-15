@@ -140,6 +140,10 @@ func (b *Block) writeTo(w io.Writer, serflags uint8) error {
 		return nil
 	}
 
+	if serflags != SerBlockFull {
+		w.Write([]byte{serflags})
+	}
+
 	if _, err := blockchain.WriteVarint31(w, uint64(len(b.Transactions))); err != nil {
 		return err
 	}
