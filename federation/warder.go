@@ -102,5 +102,9 @@ func (w *warder) buildMainchainTx(tx *orm.CrossTransaction) error {
 }
 
 func (w *warder) signDestTx(tx *orm.CrossTransaction) error {
+	if tx.Status != common.CrossTxPendingStatus || !tx.DestTxHash.Valid {
+		return errors.New("cross-chain tx status error")
+	}
+
 	return nil
 }
