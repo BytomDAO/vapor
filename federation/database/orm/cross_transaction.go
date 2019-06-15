@@ -24,4 +24,5 @@ type CrossTransaction struct {
 	UpdatedAt            types.Timestamp
 
 	Chain *Chain `gorm:"foreignkey:ChainID"`
+	Reqs  []*CrossTransactionReq
 }

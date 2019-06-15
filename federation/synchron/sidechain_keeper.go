@@ -219,6 +219,8 @@ func (s *sidechainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Blo
 		if err := s.db.Create(output).Error; err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("create WithdrawalFromSidechain output: txid(%s), pos(%d)", tx.ID.String(), output.SourcePos))
 		}
+
+		ormTx.Reqs = append(ormTx.Reqs, output)
 	}
 
 	return ormTx, nil

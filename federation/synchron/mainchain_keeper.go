@@ -204,6 +204,8 @@ func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *types.Block,
 		if err := m.db.Create(input).Error; err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("create DepositFromMainchain input: txid(%s), pos(%d)", tx.ID.String(), input.SourcePos))
 		}
+
+		ormTx.Reqs = append(ormTx.Reqs, input)
 	}
 
 	return ormTx, nil
