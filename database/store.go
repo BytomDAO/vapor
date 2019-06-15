@@ -21,11 +21,11 @@ import (
 const logModule = "leveldb"
 
 var (
-	blockStoreKey     = []byte("blockStore")
-	blockPrefix       = []byte("B:")
-	blockHeaderPrefix = []byte("BH:")
-	txStatusPrefix    = []byte("BTS:")
-	voteResultPrefix  = []byte("VR:")
+	blockStoreKey          = []byte("blockStore")
+	blockHeaderPrefix      = []byte("BH:")
+	blockTransactonsPrefix = []byte("BTXS:")
+	txStatusPrefix         = []byte("BTS:")
+	voteResultPrefix       = []byte("VR:")
 )
 
 func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
@@ -49,15 +49,15 @@ type Store struct {
 	vrc voteResultCache
 }
 
-func calcBlockKey(hash *bc.Hash) []byte {
-	return append(blockPrefix, hash.Bytes()...)
-}
-
 func calcBlockHeaderKey(height uint64, hash *bc.Hash) []byte {
 	buf := [8]byte{}
 	binary.BigEndian.PutUint64(buf[:], height)
 	key := append(blockHeaderPrefix, buf[:]...)
 	return append(key, hash.Bytes()...)
+}
+
+func calcBlockTransactionsKey(hash *bc.Hash) []byte {
+	return append(blockTransactonsPrefix, hash.Bytes()...)
 }
 
 func calcTxStatusKey(hash *bc.Hash) []byte {
@@ -70,16 +70,32 @@ func calcVoteResultKey(seq uint64) []byte {
 	return append(voteResultPrefix, buf[:]...)
 }
 
-// GetBlock return the block by given hash
-func GetBlock(db dbm.DB, hash *bc.Hash) (*types.Block, error) {
-	bytez := db.Get(calcBlockKey(hash))
-	if bytez == nil {
-		return nil, nil // why return err nil???
+// GetBlockHeader return the block header by given hash and height
+func GetBlockHeader(db dbm.DB, hash *bc.Hash, height uint64) (*types.BlockHeader, error) {
+	block := &types.Block{}
+	binaryBlockHeader := db.Get(calcBlockHeaderKey(height, hash))
+	if binaryBlockHeader == nil {
+		return nil, nil
+	}
+	if err := block.UnmarshalText(binaryBlockHeader); err != nil {
+		return nil, err
 	}
 
+	return &block.BlockHeader, nil
+}
+
+// GetBlockTransactions return the block transactions by given hash
+func GetBlockTransactions(db dbm.DB, hash *bc.Hash) ([]*types.Tx, error) {
 	block := &types.Block{}
-	err := block.UnmarshalText(bytez)
-	return block, err
+	binaryBlockTxs := db.Get(calcBlockTransactionsKey(hash))
+	if binaryBlockTxs == nil {
+		return nil, errors.New("The transactions in the block is empty")
+	}
+
+	if err := block.UnmarshalText(binaryBlockTxs); err != nil {
+		return nil, err
+	}
+	return block.Transactions, nil
 }
 
 // GetVoteResult return the vote result by given sequence
@@ -98,9 +114,13 @@ func GetVoteResult(db dbm.DB, seq uint64) (*state.VoteResult, error) {
 
 // NewStore creates and returns a new Store object.
 func NewStore(db dbm.DB) *Store {
-	bc := newBlockCache(func(hash *bc.Hash) (*types.Block, error) {
-		return GetBlock(db, hash)
-	})
+	fillBlockHeaderFn := func(hash *bc.Hash, height uint64) (*types.BlockHeader, error) {
+		return GetBlockHeader(db, hash, height)
+	}
+	fillBlockTxsFn := func(hash *bc.Hash) ([]*types.Tx, error) {
+		return GetBlockTransactions(db, hash)
+	}
+	bc := newBlockCache(fillBlockHeaderFn, fillBlockTxsFn)
 	vrc := newVoteResultCache(func(seq uint64) (*state.VoteResult, error) {
 		return GetVoteResult(db, seq)
 	})
@@ -117,14 +137,45 @@ func (s *Store) GetUtxo(hash *bc.Hash) (*storage.UtxoEntry, error) {
 }
 
 // BlockExist check if the block is stored in disk
-func (s *Store) BlockExist(hash *bc.Hash) bool {
-	block, err := s.bc.lookup(hash)
-	return err == nil && block != nil
+func (s *Store) BlockExist(hash *bc.Hash, height uint64) bool {
+	blockHeader, err := s.bc.lookupBlockHeader(hash, height)
+	return err == nil && blockHeader != nil
 }
 
 // GetBlock return the block by given hash
-func (s *Store) GetBlock(hash *bc.Hash) (*types.Block, error) {
-	return s.bc.lookup(hash)
+func (s *Store) GetBlock(hash *bc.Hash, height uint64) (*types.Block, error) {
+	blockHeader, err := s.GetBlockHeader(hash, height)
+	if err != nil {
+		return nil, err
+	}
+
+	txs, err := s.GetBlockTransactions(hash)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.Block{
+		BlockHeader:  *blockHeader,
+		Transactions: txs,
+	}, nil
+}
+
+// GetBlockHeader return the BlockHeader by given hash
+func (s *Store) GetBlockHeader(hash *bc.Hash, height uint64) (*types.BlockHeader, error) {
+	blockHeader, err := s.bc.lookupBlockHeader(hash, height)
+	if err != nil {
+		return nil, err
+	}
+	return blockHeader, nil
+}
+
+// GetBlockTransactions return the Block transactions by given hash
+func (s *Store) GetBlockTransactions(hash *bc.Hash) ([]*types.Tx, error) {
+	txs, err := s.bc.lookupBlockTxs(hash)
+	if err != nil {
+		return nil, err
+	}
+	return txs, nil
 }
 
 // GetTransactionsUtxo will return all the utxo that related to the input txs
@@ -202,14 +253,15 @@ func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error
 // SaveBlock persists a new block in the protocol.
 func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 	startTime := time.Now()
-	binaryBlock, err := block.MarshalText()
-	if err != nil {
-		return errors.Wrap(err, "Marshal block meta")
-	}
 
-	binaryBlockHeader, err := block.BlockHeader.MarshalText()
+	binaryBlockHeader, err := block.MarshalTextForBlockHeader()
 	if err != nil {
 		return errors.Wrap(err, "Marshal block header")
+	}
+
+	binaryBlockTxs, err := block.MarshalTextForTransactions()
+	if err != nil {
+		return errors.Wrap(err, "Marshal block transactions")
 	}
 
 	binaryTxStatus, err := proto.Marshal(ts)
@@ -219,8 +271,8 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 
 	blockHash := block.Hash()
 	batch := s.db.NewBatch()
-	batch.Set(calcBlockKey(&blockHash), binaryBlock)
 	batch.Set(calcBlockHeaderKey(block.Height, &blockHash), binaryBlockHeader)
+	batch.Set(calcBlockTransactionsKey(&blockHash), binaryBlockTxs)
 	batch.Set(calcTxStatusKey(&blockHash), binaryTxStatus)
 	batch.Write()
 
@@ -230,6 +282,29 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 		"hash":     blockHash.String(),
 		"duration": time.Since(startTime),
 	}).Info("block saved on disk")
+	return nil
+}
+
+// SaveBlockHeader persists a new block header in the protocol.
+func (s *Store) SaveBlockHeader(blockHeader *types.BlockHeader) error {
+	startTime := time.Now()
+
+	binaryBlockHeader, err := blockHeader.MarshalText()
+	if err != nil {
+		return errors.Wrap(err, "Marshal block header")
+	}
+
+	blockHash := blockHeader.Hash()
+	batch := s.db.NewBatch()
+	batch.Set(calcBlockHeaderKey(blockHeader.Height, &blockHash), binaryBlockHeader)
+	batch.Write()
+
+	log.WithFields(log.Fields{
+		"module":   logModule,
+		"height":   blockHeader.Height,
+		"hash":     blockHash.String(),
+		"duration": time.Since(startTime),
+	}).Info("blockHeader saved on disk")
 	return nil
 }
 

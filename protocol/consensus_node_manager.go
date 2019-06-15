@@ -66,7 +66,7 @@ func getBlockerOrder(startTimestamp, blockTimestamp, numOfConsensusNode uint64) 
 	// The start time of the last round of product block
 	lastRoundStartTime := startTimestamp + (blockTimestamp-startTimestamp)/roundBlockTime*roundBlockTime
 	// Order of blocker
-	return (blockTimestamp - lastRoundStartTime)/(consensus.BlockNumEachNode*consensus.BlockTimeInterval)
+	return (blockTimestamp - lastRoundStartTime) / (consensus.BlockNumEachNode * consensus.BlockTimeInterval)
 }
 
 func (c *consensusNodeManager) getPrevRoundLastBlock(prevBlockHash *bc.Hash) (*state.BlockNode, error) {
@@ -114,7 +114,7 @@ func (c *consensusNodeManager) getBestVoteResult() (*state.VoteResult, error) {
 // getVoteResult return the vote result
 // seq represent the sequence of vote
 // blockNode represent the chain in which the result of the vote is located
-// Voting results need to be adjusted according to the chain 
+// Voting results need to be adjusted according to the chain
 func (c *consensusNodeManager) getVoteResult(seq uint64, blockNode *state.BlockNode) (*state.VoteResult, error) {
 	voteResult, err := c.store.GetVoteResult(seq)
 	if err != nil {
@@ -136,7 +136,7 @@ func (c *consensusNodeManager) reorganizeVoteResult(voteResult *state.VoteResult
 		var forChainRollback, mainChainRollBack bool
 		if forChainRollback = forkChainNode.Height >= mainChainNode.Height; forChainRollback {
 			attachNodes = append([]*state.BlockNode{forkChainNode}, attachNodes...)
-		} 
+		}
 		if mainChainRollBack = forkChainNode.Height <= mainChainNode.Height; mainChainRollBack {
 			detachNodes = append(detachNodes, mainChainNode)
 		}
@@ -149,7 +149,7 @@ func (c *consensusNodeManager) reorganizeVoteResult(voteResult *state.VoteResult
 	}
 
 	for _, node := range detachNodes {
-		block, err := c.store.GetBlock(&node.Hash)
+		block, err := c.store.GetBlock(&node.Hash, node.Height)
 		if err != nil {
 			return err
 		}
@@ -160,7 +160,7 @@ func (c *consensusNodeManager) reorganizeVoteResult(voteResult *state.VoteResult
 	}
 
 	for _, node := range attachNodes {
-		block, err := c.store.GetBlock(&node.Hash)
+		block, err := c.store.GetBlock(&node.Hash, node.Height)
 		if err != nil {
 			return err
 		}
