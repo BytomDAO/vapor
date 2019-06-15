@@ -19,8 +19,17 @@ func NewWarder(db *gorm.DB, txCh chan *orm.CrossTransaction) *warder {
 
 func (w *warder) Run() {
 	for tx := range w.txCh {
+		if err := validateTx(tx); err != nil {
+			log.Warn("invalid cross-chain tx")
+			continue
+		}
+
 		w.proposeDestTx(tx)
 	}
 }
 
 func (w *warder) proposeDestTx(tx *orm.CrossTransaction) {}
+
+func validateTx(tx *orm.CrossTransaction) error {
+	return nil
+}
