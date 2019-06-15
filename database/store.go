@@ -69,30 +69,6 @@ func calcVoteResultKey(seq uint64) []byte {
 	return append(voteResultPrefix, buf[:]...)
 }
 
-// GetBlock return the block by given hash and height
-func GetBlock(db dbm.DB, hash *bc.Hash, height uint64) (*types.Block, error) {
-	block := &types.Block{}
-	binaryBlockHeader := db.Get(calcBlockHeaderKey(height, hash))
-	if binaryBlockHeader == nil {
-		return nil, nil
-	}
-
-	binaryBlockTxs := db.Get(calcBlockTransactionsKey(hash))
-	if binaryBlockTxs == nil {
-		return nil, errors.New("The transactions in the block is empty")
-	}
-
-	if err := block.UnmarshalText(binaryBlockHeader); err != nil {
-		return nil, err
-	}
-
-	if err := block.UnmarshalText(binaryBlockTxs); err != nil {
-		return nil, err
-	}
-
-	return block, nil
-}
-
 // GetBlockHeader return the block header by given hash and height
 func GetBlockHeader(db dbm.DB, hash *bc.Hash, height uint64) (*types.BlockHeader, error) {
 	block := &types.Block{}
@@ -123,10 +99,6 @@ func GetBlockTransactions(db dbm.DB, hash *bc.Hash) ([]*types.Tx, error) {
 
 // NewStore creates and returns a new Store object.
 func NewStore(db dbm.DB) *Store {
-	fillBlockFn := func(hash *bc.Hash, height uint64) (*types.Block, error) {
-		return GetBlock(db, hash, height)
-	}
-
 	fillBlockHeaderFn := func(hash *bc.Hash, height uint64) (*types.BlockHeader, error) {
 		return GetBlockHeader(db, hash, height)
 	}
@@ -135,7 +107,7 @@ func NewStore(db dbm.DB) *Store {
 		return GetBlockTransactions(db, hash)
 	}
 
-	cache := newBlockCache(fillBlockFn, fillBlockHeaderFn, fillBlockTxsFn)
+	cache := newBlockCache(fillBlockHeaderFn, fillBlockTxsFn)
 	return &Store{
 		db:    db,
 		cache: cache,
@@ -159,6 +131,7 @@ func (s *Store) GetBlock(hash *bc.Hash, height uint64) (*types.Block, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	txs, err := s.GetBlockTransactions(hash)
 	if err != nil {
 		return nil, err

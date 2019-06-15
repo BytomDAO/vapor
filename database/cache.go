@@ -12,63 +12,35 @@ import (
 )
 
 const (
-	maxCachedBlocks           = 30
 	maxCachedBlockHeaders     = 1000
 	maxCachedBlockTransactons = 1000
 )
 
-type fillBlockFn func(hash *bc.Hash, height uint64) (*types.Block, error)
 type fillBlockHeaderFn func(hash *bc.Hash, height uint64) (*types.BlockHeader, error)
 type fillBlockTransactionsFn func(hash *bc.Hash) ([]*types.Tx, error)
 
-func newBlockCache(fillBlock fillBlockFn, fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransactionsFn) blockCache {
+func newBlockCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransactionsFn) blockCache {
 	return blockCache{
-		lru:                    lru.New(maxCachedBlocks),
-		lruBlockHeaders:        lru.New(maxCachedBlockHeaders),
-		lruTxs:                 lru.New(maxCachedBlockTransactons),
-		fillFn:                 fillBlock,
+		lruBlockHeaders: lru.New(maxCachedBlockHeaders),
+		lruTxs:          lru.New(maxCachedBlockTransactons),
+
 		fillBlockHeaderFn:      fillBlockHeader,
 		fillBlockTransactionFn: fillBlockTxs,
 	}
 }
 
 type blockCache struct {
-	mu                     sync.Mutex
-	muHeaders              sync.Mutex
-	muTxs                  sync.Mutex
-	lru                    *lru.Cache
-	lruBlockHeaders        *lru.Cache
-	lruTxs                 *lru.Cache
-	fillFn                 func(hash *bc.Hash, height uint64) (*types.Block, error)
+	muHeaders sync.Mutex
+	muTxs     sync.Mutex
+
+	lruBlockHeaders *lru.Cache
+	lruTxs          *lru.Cache
+
 	fillBlockHeaderFn      func(hash *bc.Hash, height uint64) (*types.BlockHeader, error)
 	fillBlockTransactionFn func(hash *bc.Hash) ([]*types.Tx, error)
-	single                 singleflight.Group
-	singleBlockHeader      singleflight.Group
-	singleBlockTxs         singleflight.Group
-}
 
-func (c *blockCache) lookup(hash *bc.Hash, height uint64) (*types.Block, error) {
-	if b, ok := c.get(hash); ok {
-		return b, nil
-	}
-
-	block, err := c.single.Do(hash.String(), func() (interface{}, error) {
-		b, err := c.fillFn(hash, height)
-		if err != nil {
-			return nil, err
-		}
-
-		if b == nil {
-			return nil, fmt.Errorf("There are no block with given hash %s", hash.String())
-		}
-
-		c.add(b)
-		return b, nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return block.(*types.Block), nil
+	singleBlockHeader singleflight.Group
+	singleBlockTxs    singleflight.Group
 }
 
 func (c *blockCache) lookupBlockHeader(hash *bc.Hash, height uint64) (*types.BlockHeader, error) {
@@ -119,16 +91,6 @@ func (c *blockCache) lookupBlockTxs(hash *bc.Hash) ([]*types.Tx, error) {
 	return blockTransactions.([]*types.Tx), nil
 }
 
-func (c *blockCache) get(hash *bc.Hash) (*types.Block, bool) {
-	c.mu.Lock()
-	block, ok := c.lru.Get(*hash)
-	c.mu.Unlock()
-	if block == nil {
-		return nil, ok
-	}
-	return block.(*types.Block), ok
-}
-
 func (c *blockCache) getBlockHeader(hash *bc.Hash) (*types.BlockHeader, bool) {
 	c.muHeaders.Lock()
 	blockHeader, ok := c.lruBlockHeaders.Get(*hash)
@@ -147,12 +109,6 @@ func (c *blockCache) getBlockTransactions(hash *bc.Hash) ([]*types.Tx, bool) {
 		return nil, ok
 	}
 	return txs.([]*types.Tx), ok
-}
-
-func (c *blockCache) add(block *types.Block) {
-	c.mu.Lock()
-	c.lru.Add(block.Hash(), block)
-	c.mu.Unlock()
 }
 
 func (c *blockCache) addHeader(blockHeader *types.BlockHeader) {
