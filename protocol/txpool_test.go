@@ -120,6 +120,7 @@ func (s *mockStore) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)               
 func (s *mockStore) GetVoteResult(uint64) (*state.VoteResult, error)              { return nil, nil }
 func (s *mockStore) LoadBlockIndex(uint64) (*state.BlockIndex, error)             { return nil, nil }
 func (s *mockStore) SaveBlock(*types.Block, *bc.TransactionStatus) error          { return nil }
+func (s *mockStore) SaveBlockHeader(*types.BlockHeader) error                     { return nil }
 func (s *mockStore) SaveChainStatus(*state.BlockNode, *state.BlockNode, *state.UtxoViewpoint, []*state.VoteResult) error {
 	return nil
 }
@@ -668,6 +669,7 @@ func (s *mockStore1) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)        { retu
 func (s *mockStore1) GetVoteResult(uint64) (*state.VoteResult, error)     { return nil, nil }
 func (s *mockStore1) LoadBlockIndex(uint64) (*state.BlockIndex, error)    { return nil, nil }
 func (s *mockStore1) SaveBlock(*types.Block, *bc.TransactionStatus) error { return nil }
+func (s *mockStore1) SaveBlockHeader(*types.BlockHeader) error            { return nil }
 func (s *mockStore1) SaveChainStatus(*state.BlockNode, *state.BlockNode, *state.UtxoViewpoint, []*state.VoteResult) error {
 	return nil
 }
