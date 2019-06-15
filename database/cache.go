@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"strconv"
 	"sync"
 
 	"github.com/golang/groupcache/lru"
@@ -9,9 +10,13 @@ import (
 
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/state"
 )
 
-const maxCachedBlocks = 30
+const (
+	maxCachedBlocks      = 30
+	maxCachedVoteResults = 30
+)
 
 func newBlockCache(fillFn func(hash *bc.Hash) (*types.Block, error)) blockCache {
 	return blockCache{
@@ -65,4 +70,59 @@ func (c *blockCache) add(block *types.Block) {
 	c.mu.Lock()
 	c.lru.Add(block.Hash(), block)
 	c.mu.Unlock()
+}
+
+func newVoteResultCache(fillFn func(seq uint64) (*state.VoteResult, error)) voteResultCache {
+	return voteResultCache{
+		lru:    lru.New(maxCachedVoteResults),
+		fillFn: fillFn,
+	}
+}
+
+type voteResultCache struct {
+	mu     sync.Mutex
+	lru    *lru.Cache
+	fillFn func(seq uint64) (*state.VoteResult, error)
+	single singleflight.Group
+}
+
+func (vrc *voteResultCache) lookup(seq uint64) (*state.VoteResult, error) {
+	if voteResult, ok := vrc.get(seq); ok {
+		return voteResult, nil
+	}
+
+	seqStr := strconv.FormatUint(seq, 10)
+	voteResult, err := vrc.single.Do(seqStr, func() (interface{}, error) {
+		v, err := vrc.fillFn(seq)
+		if err != nil {
+			return nil, err
+		}
+
+		if v == nil {
+			return nil, fmt.Errorf("There are no vote result with given seq %s", seqStr)
+		}
+
+		vrc.add(v)
+		return v, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return voteResult.(*state.VoteResult), nil
+}
+
+func (vrc *voteResultCache) get(seq uint64) (*state.VoteResult, bool) {
+	vrc.mu.Lock()
+	voteResult, ok := vrc.lru.Get(seq)
+	vrc.mu.Unlock()
+	if voteResult == nil {
+		return nil, ok
+	}
+	return voteResult.(*state.VoteResult), ok
+}
+
+func (vrc *voteResultCache) add(voteResult *state.VoteResult) {
+	vrc.mu.Lock()
+	vrc.lru.Add(voteResult.Seq, voteResult)
+	vrc.mu.Unlock()
 }
