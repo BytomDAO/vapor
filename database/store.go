@@ -76,14 +76,35 @@ func calcVoteResultKey(seq uint64) []byte {
 
 // GetBlock return the block by given hash and height
 func GetBlock(db dbm.DB, hash *bc.Hash, height uint64) (*types.Block, error) {
-	bytez := db.Get(calcBlockKey(hash))
-	if bytez == nil {
+	/*
+		bytez := db.Get(calcBlockKey(hash))
+		if bytez == nil {
+			return nil, nil
+		}
+	*/
+
+	block := &types.Block{}
+	//err := block.UnmarshalText(bytez)
+
+	binaryBlockHeader := db.Get(calcBlockHeaderKey(height, hash))
+	if binaryBlockHeader == nil {
 		return nil, nil
 	}
 
-	block := &types.Block{}
-	err := block.UnmarshalText(bytez)
-	return block, err
+	binaryBlockTxs := db.Get(calcBlockTransactionsKey(hash))
+	if binaryBlockTxs == nil {
+		return nil, nil
+	}
+
+	if err := block.BlockHeader.UnmarshalText(binaryBlockHeader); err != nil {
+		return nil, err
+	}
+
+	if err := block.UnmarshalTextForTransactions(binaryBlockTxs); err != nil {
+		return nil, err
+	}
+
+	return block, nil
 }
 
 // NewStore creates and returns a new Store object.
