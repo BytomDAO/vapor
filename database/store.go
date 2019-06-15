@@ -246,7 +246,7 @@ func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error
 func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 	startTime := time.Now()
 
-	binaryBlockHeader, err := block.MarshalTextForBlockHeadr()
+	binaryBlockHeader, err := block.MarshalTextForBlockHeader()
 	if err != nil {
 		return errors.Wrap(err, "Marshal block header")
 	}

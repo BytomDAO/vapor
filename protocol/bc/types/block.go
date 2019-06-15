@@ -58,8 +58,8 @@ func (b *Block) UnmarshalText(text []byte) error {
 	return nil
 }
 
-// MarshalTextForBlockHeadr fulfills the json.Marshaler interface.
-func (b *Block) MarshalTextForBlockHeadr() ([]byte, error) {
+// MarshalTextForBlockHeader fulfills the json.Marshaler interface.
+func (b *Block) MarshalTextForBlockHeader() ([]byte, error) {
 	buf := bufpool.Get()
 	defer bufpool.Put(buf)
 
