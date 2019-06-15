@@ -1,14 +1,17 @@
 package federation
 
 import (
+	"github.com/jinzhu/gorm"
+
 	"github.com/vapor/federation/database/orm"
 )
 
 type warder struct {
+	db   *gorm.DB
 	txCh chan *orm.CrossTransaction
 }
 
-func NewWarder(txCh chan *orm.CrossTransaction) *warder {
+func NewWarder(db *gorm.DB, txCh chan *orm.CrossTransaction) *warder {
 	return &warder{
 		txCh: txCh,
 	}
