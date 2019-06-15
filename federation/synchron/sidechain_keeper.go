@@ -26,15 +26,17 @@ type sidechainKeeper struct {
 	node       *service.Node
 	chainName  string
 	assetCache *database.AssetCache
+	txCh       chan *orm.CrossTransaction
 }
 
-func NewSidechainKeeper(db *gorm.DB, chainCfg *config.Chain) *sidechainKeeper {
+func NewSidechainKeeper(db *gorm.DB, chainCfg *config.Chain, txCh chan *orm.CrossTransaction) *sidechainKeeper {
 	return &sidechainKeeper{
 		cfg:        chainCfg,
 		db:         db,
 		node:       service.NewNode(chainCfg.Upstream),
 		chainName:  chainCfg.Name,
 		assetCache: database.NewAssetCache(),
+		txCh:       txCh,
 	}
 }
 
