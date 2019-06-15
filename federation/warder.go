@@ -25,31 +25,32 @@ func NewWarder(db *gorm.DB, txCh chan *orm.CrossTransaction) *warder {
 }
 
 func (w *warder) Run() {
-	for tx := range w.txCh {
-		if err := w.validateTx(tx); err != nil {
-			log.Warnln("invalid cross-chain tx", tx)
+	for ormTx := range w.txCh {
+		if err := w.validateCrossTx(ormTx); err != nil {
+			log.Warnln("invalid cross-chain tx", ormTx)
 			continue
 		}
 
-		if err := w.proposeDestTx(tx); err != nil {
+		destTx, err := w.proposeDestTx(ormTx)
+		if err != nil {
 			log.WithFields(log.Fields{
 				"err":            err,
-				"cross-chain tx": tx,
+				"cross-chain tx": ormTx,
 			}).Warnln("proposeDestTx")
 			continue
 		}
 
-		if err := w.signDestTx(tx); err != nil {
+		if err := w.signDestTx(destTx, ormTx); err != nil {
 			log.WithFields(log.Fields{
 				"err":            err,
-				"cross-chain tx": tx,
+				"cross-chain tx": ormTx,
 			}).Warnln("signDestTx")
 			continue
 		}
 	}
 }
 
-func (w *warder) validateTx(tx *orm.CrossTransaction) error {
+func (w *warder) validateCrossTx(tx *orm.CrossTransaction) error {
 	if tx.Status != common.CrossTxPendingStatus {
 		return errors.New("cross-chain tx already proposed")
 	}
@@ -66,42 +67,45 @@ func (w *warder) validateTx(tx *orm.CrossTransaction) error {
 	return nil
 }
 
-func (w *warder) proposeDestTx(tx *orm.CrossTransaction) error {
+func (w *warder) proposeDestTx(tx *orm.CrossTransaction) (interface{}, error) {
 	switch tx.Chain.Name {
 	case "bytom":
 		return w.buildSidechainTx(tx)
 	case "vapor":
 		return w.buildMainchainTx(tx)
 	default:
-		return errors.New("unknown source chain")
+		return nil, errors.New("unknown source chain")
 	}
 }
 
-func (w *warder) buildSidechainTx(tx *orm.CrossTransaction) error {
+// TODO: build it
+func (w *warder) buildSidechainTx(tx *orm.CrossTransaction) (interface{}, error) {
 	sidechainTx := &vaporTypes.Tx{}
 
 	if err := w.db.Where(tx).UpdateColumn(&orm.CrossTransaction{
 		DestTxHash: sql.NullString{sidechainTx.ID.String(), true},
 	}).Error; err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return sidechainTx, nil
 }
 
-func (w *warder) buildMainchainTx(tx *orm.CrossTransaction) error {
+// TODO: build it
+func (w *warder) buildMainchainTx(tx *orm.CrossTransaction) (interface{}, error) {
 	mainchainTx := &btmTypes.Tx{}
 
 	if err := w.db.Where(tx).UpdateColumn(&orm.CrossTransaction{
 		DestTxHash: sql.NullString{mainchainTx.ID.String(), true},
 	}).Error; err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return mainchainTx, nil
 }
 
-func (w *warder) signDestTx(tx *orm.CrossTransaction) error {
+// TODO: sign it
+func (w *warder) signDestTx(destTx interface{}, tx *orm.CrossTransaction) error {
 	if tx.Status != common.CrossTxPendingStatus || !tx.DestTxHash.Valid {
 		return errors.New("cross-chain tx status error")
 	}
