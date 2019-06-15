@@ -2,7 +2,10 @@ package federation
 
 import (
 	"github.com/jinzhu/gorm"
+	log "github.com/sirupsen/logrus"
 
+	"github.com/vapor/errors"
+	"github.com/vapor/federation/common"
 	"github.com/vapor/federation/database/orm"
 )
 
@@ -19,17 +22,38 @@ func NewWarder(db *gorm.DB, txCh chan *orm.CrossTransaction) *warder {
 
 func (w *warder) Run() {
 	for tx := range w.txCh {
-		if err := validateTx(tx); err != nil {
-			log.Warn("invalid cross-chain tx")
+		if err := w.validateTx(tx); err != nil {
+			log.Warnln("invalid cross-chain tx", tx)
 			continue
 		}
 
-		w.proposeDestTx(tx)
+		if err := w.proposeDestTx(tx); err != nil {
+			log.WithFields(log.Fields{
+				"err":       err,
+				"source tx": tx,
+			}).Warnln("proposeDestTx")
+			continue
+		}
 	}
 }
 
-func (w *warder) proposeDestTx(tx *orm.CrossTransaction) {}
+func (w *warder) proposeDestTx(tx *orm.CrossTransaction) error {
+	return nil
+}
 
-func validateTx(tx *orm.CrossTransaction) error {
+func (w *warder) validateTx(tx *orm.CrossTransaction) error {
+	if tx.Status != common.CrossTxPendingStatus {
+		return errors.New("cross-chain tx already proposed")
+	}
+
+	crossTxReqs := []*orm.CrossTransactionReq{}
+	if err := w.db.Where(&orm.CrossTransactionReq{CrossTransactionID: tx.ID}).Find(&crossTxReqs).Error; err != nil {
+		return err
+	}
+
+	if len(crossTxReqs) != len(tx.Reqs) {
+		return errors.New("cross-chain requests mismatch")
+	}
+
 	return nil
 }

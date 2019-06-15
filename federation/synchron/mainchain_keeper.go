@@ -208,6 +208,7 @@ func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *types.Block,
 		ormTx.Reqs = append(ormTx.Reqs, input)
 	}
 
+	ormTx.Chain = chain
 	return ormTx, nil
 }
 

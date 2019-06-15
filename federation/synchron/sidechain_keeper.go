@@ -223,6 +223,7 @@ func (s *sidechainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Blo
 		ormTx.Reqs = append(ormTx.Reqs, output)
 	}
 
+	ormTx.Chain = chain
 	return ormTx, nil
 }
 
