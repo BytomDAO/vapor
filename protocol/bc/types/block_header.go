@@ -56,7 +56,10 @@ func (bh *BlockHeader) UnmarshalText(text []byte) error {
 		return err
 	}
 
-	_, err := bh.readFrom(blockchain.NewReader(decoded))
+	serflag, err := bh.readFrom(blockchain.NewReader(decoded))
+	if serflag == SerBlockTransactions {
+		err = fmt.Errorf("unsupported serialization flags 0x%02x", serflag)
+	}
 	return err
 }
 
