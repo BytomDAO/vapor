@@ -8,6 +8,7 @@ import (
 	"github.com/vapor/federation"
 	"github.com/vapor/federation/config"
 	"github.com/vapor/federation/database"
+	"github.com/vapor/federation/database/orm"
 	"github.com/vapor/federation/synchron"
 )
 
@@ -18,9 +19,10 @@ func main() {
 		log.WithField("err", err).Panic("initialize mysql db error")
 	}
 
+	txCh := make(chan *orm.CrossTransaction)
 	go synchron.NewMainchainKeeper(db, &cfg.Mainchain).Run()
 	go synchron.NewSidechainKeeper(db, &cfg.Sidechain).Run()
-	go federation.NewWarder().Run()
+	go federation.NewWarder(txCh).Run()
 
 	// keep the main func running in case of terminating goroutines
 	var wg sync.WaitGroup
