@@ -50,6 +50,7 @@ func (w *warder) Run() {
 
 		// TODO: elect signer & request sign
 
+		// TODO: what if submit fail
 		if w.isTxSignsReachQuorum(destTx) && w.isLeader() {
 			if err := w.submitTx(destTx); err != nil {
 				log.WithFields(log.Fields{
@@ -64,8 +65,12 @@ func (w *warder) Run() {
 }
 
 func (w *warder) validateCrossTx(tx *orm.CrossTransaction) error {
-	if tx.Status != common.CrossTxPendingStatus {
-		return errors.New("cross-chain tx already proposed")
+	if tx.Status == common.CrossTxRejectedStatus {
+		return errors.New("cross-chain tx rejeted")
+	}
+
+	if tx.Status == common.CrossTxRejectedStatus {
+		return errors.New("cross-chain tx submitted")
 	}
 
 	crossTxReqs := []*orm.CrossTransactionReq{}
@@ -74,7 +79,7 @@ func (w *warder) validateCrossTx(tx *orm.CrossTransaction) error {
 	}
 
 	if len(crossTxReqs) != len(tx.Reqs) {
-		return errors.New("cross-chain requests mismatch")
+		return errors.New("cross-chain requests count mismatch")
 	}
 
 	return nil
@@ -131,12 +136,12 @@ func (w *warder) isTxSignsReachQuorum(destTx interface{}) bool {
 	return false
 }
 
-// TODO: submit it
-func (w *warder) submitTx(destTx interface{}) error {
-	return nil
-}
-
 // TODO:
 func (w *warder) isLeader() bool {
 	return false
+}
+
+// TODO: submit it
+func (w *warder) submitTx(destTx interface{}) error {
+	return nil
 }
