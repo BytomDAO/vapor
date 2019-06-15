@@ -47,6 +47,19 @@ func (w *warder) Run() {
 			}).Warnln("signDestTx")
 			continue
 		}
+
+		// TODO: elect signer & request sign
+
+		if w.isTxSignsReachQuorum(destTx) && w.isLeader() {
+			if err := w.submitTx(destTx); err != nil {
+				log.WithFields(log.Fields{
+					"err":            err,
+					"cross-chain tx": ormTx,
+					"dest tx":        destTx,
+				}).Warnln("submitTx")
+				continue
+			}
+		}
 	}
 }
 
@@ -111,4 +124,16 @@ func (w *warder) signDestTx(destTx interface{}, tx *orm.CrossTransaction) error 
 	}
 
 	return nil
+}
+
+func (w *warder) isTxSignsReachQuorum(destTx interface{}) bool {
+	return false
+}
+
+func (w *warder) submitTx(destTx interface{}) error {
+	return nil
+}
+
+func (w *warder) isLeader() bool {
+	return false
 }
