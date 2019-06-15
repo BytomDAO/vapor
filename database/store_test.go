@@ -221,7 +221,7 @@ func TestSaveBlock(t *testing.T) {
 	}
 
 	blockHash := block.Hash()
-	gotBlock, err := store.GetBlock(&blockHash)
+	gotBlock, err := store.GetBlock(&blockHash, block.Height)
 	if err != nil {
 		t.Fatal(err)
 	}
