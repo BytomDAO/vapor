@@ -223,12 +223,6 @@ func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error
 // SaveBlock persists a new block in the protocol.
 func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 	startTime := time.Now()
-	/*
-		binaryBlock, err := block.MarshalText()
-		if err != nil {
-			return errors.Wrap(err, "Marshal block meta")
-		}
-	*/
 
 	binaryBlockHeader, err := block.BlockHeader.MarshalText()
 	if err != nil {
@@ -247,7 +241,6 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 
 	blockHash := block.Hash()
 	batch := s.db.NewBatch()
-	//batch.Set(calcBlockKey(&blockHash), binaryBlock)
 	batch.Set(calcBlockHeaderKey(block.Height, &blockHash), binaryBlockHeader)
 	batch.Set(calcBlockTransactionsKey(&blockHash), binaryBlockTxs)
 	batch.Set(calcTxStatusKey(&blockHash), binaryTxStatus)
