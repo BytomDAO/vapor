@@ -2,9 +2,9 @@ package database
 
 import (
 	"fmt"
-	"sync"
 
-	"github.com/golang/groupcache/lru"
+	"github.com/vapor/common"
+
 	"github.com/golang/groupcache/singleflight"
 
 	"github.com/vapor/protocol/bc"
@@ -21,8 +21,8 @@ type fillBlockTransactionsFn func(hash *bc.Hash) ([]*types.Tx, error)
 
 func newBlockCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransactionsFn) blockCache {
 	return blockCache{
-		lruBlockHeaders: lru.New(maxCachedBlockHeaders),
-		lruTxs:          lru.New(maxCachedBlockTransactons),
+		lruBlockHeaders: common.NewCache(maxCachedBlockHeaders),
+		lruTxs:          common.NewCache(maxCachedBlockTransactons),
 
 		fillBlockHeaderFn:      fillBlockHeader,
 		fillBlockTransactionFn: fillBlockTxs,
@@ -30,11 +30,8 @@ func newBlockCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTran
 }
 
 type blockCache struct {
-	muHeaders sync.Mutex
-	muTxs     sync.Mutex
-
-	lruBlockHeaders *lru.Cache
-	lruTxs          *lru.Cache
+	lruBlockHeaders *common.Cache
+	lruTxs          *common.Cache
 
 	fillBlockHeaderFn      func(hash *bc.Hash, height uint64) (*types.BlockHeader, error)
 	fillBlockTransactionFn func(hash *bc.Hash) ([]*types.Tx, error)
@@ -92,9 +89,7 @@ func (c *blockCache) lookupBlockTxs(hash *bc.Hash) ([]*types.Tx, error) {
 }
 
 func (c *blockCache) getBlockHeader(hash *bc.Hash) (*types.BlockHeader, bool) {
-	c.muHeaders.Lock()
 	blockHeader, ok := c.lruBlockHeaders.Get(*hash)
-	c.muHeaders.Unlock()
 	if blockHeader == nil {
 		return nil, ok
 	}
@@ -102,9 +97,7 @@ func (c *blockCache) getBlockHeader(hash *bc.Hash) (*types.BlockHeader, bool) {
 }
 
 func (c *blockCache) getBlockTransactions(hash *bc.Hash) ([]*types.Tx, bool) {
-	c.muTxs.Lock()
 	txs, ok := c.lruTxs.Get(*hash)
-	c.muTxs.Unlock()
 	if txs == nil {
 		return nil, ok
 	}
@@ -112,13 +105,9 @@ func (c *blockCache) getBlockTransactions(hash *bc.Hash) ([]*types.Tx, bool) {
 }
 
 func (c *blockCache) addHeader(blockHeader *types.BlockHeader) {
-	c.muHeaders.Lock()
 	c.lruBlockHeaders.Add(blockHeader.Hash(), blockHeader)
-	c.muHeaders.Unlock()
 }
 
 func (c *blockCache) addTxs(hash bc.Hash, txs []*types.Tx) {
-	c.muTxs.Lock()
 	c.lruTxs.Add(hash, txs)
-	c.muTxs.Unlock()
 }
