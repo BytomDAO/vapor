@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	maxCachedBlockHeaders     = 1000
-	maxCachedBlockTransactons = 1000
+	maxCachedBlockHeaders      = 1000
+	maxCachedBlockTransactions = 1000
 )
 
 type fillBlockHeaderFn func(hash *bc.Hash, height uint64) (*types.BlockHeader, error)
@@ -21,7 +21,7 @@ type fillBlockTransactionsFn func(hash *bc.Hash) ([]*types.Tx, error)
 func newBlockCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransactionsFn) blockCache {
 	return blockCache{
 		lruBlockHeaders: common.NewCache(maxCachedBlockHeaders),
-		lruTxs:          common.NewCache(maxCachedBlockTransactons),
+		lruBlockTxs:     common.NewCache(maxCachedBlockTransactions),
 
 		fillBlockHeaderFn:      fillBlockHeader,
 		fillBlockTransactionFn: fillBlockTxs,
@@ -30,7 +30,7 @@ func newBlockCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTran
 
 type blockCache struct {
 	lruBlockHeaders *common.Cache
-	lruTxs          *common.Cache
+	lruBlockTxs     *common.Cache
 
 	fillBlockHeaderFn      func(hash *bc.Hash, height uint64) (*types.BlockHeader, error)
 	fillBlockTransactionFn func(hash *bc.Hash) ([]*types.Tx, error)
@@ -54,7 +54,7 @@ func (c *blockCache) lookupBlockHeader(hash *bc.Hash, height uint64) (*types.Blo
 			return nil, fmt.Errorf("There are no blockHeader with given hash %s", hash.String())
 		}
 
-		c.addHeader(bH)
+		c.addBlockHeader(bH)
 		return bH, nil
 	})
 	if err != nil {
@@ -78,7 +78,7 @@ func (c *blockCache) lookupBlockTxs(hash *bc.Hash) ([]*types.Tx, error) {
 			return nil, fmt.Errorf("There are no block transactions with given hash %s", hash.String())
 		}
 
-		c.addTxs(*hash, bTxs)
+		c.addBlockTxs(*hash, bTxs)
 		return bTxs, nil
 	})
 	if err != nil {
@@ -96,17 +96,17 @@ func (c *blockCache) getBlockHeader(hash *bc.Hash) (*types.BlockHeader, bool) {
 }
 
 func (c *blockCache) getBlockTransactions(hash *bc.Hash) ([]*types.Tx, bool) {
-	txs, ok := c.lruTxs.Get(*hash)
+	txs, ok := c.lruBlockTxs.Get(*hash)
 	if txs == nil {
 		return nil, ok
 	}
 	return txs.([]*types.Tx), ok
 }
 
-func (c *blockCache) addHeader(blockHeader *types.BlockHeader) {
+func (c *blockCache) addBlockHeader(blockHeader *types.BlockHeader) {
 	c.lruBlockHeaders.Add(blockHeader.Hash(), blockHeader)
 }
 
-func (c *blockCache) addTxs(hash bc.Hash, txs []*types.Tx) {
-	c.lruTxs.Add(hash, txs)
+func (c *blockCache) addBlockTxs(hash bc.Hash, txs []*types.Tx) {
+	c.lruBlockTxs.Add(hash, txs)
 }

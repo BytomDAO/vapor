@@ -104,15 +104,6 @@ func (b *Block) readFrom(r *blockchain.Reader) error {
 		return nil
 	}
 
-	if serflag != SerBlockTransactions {
-		var serflags [1]byte
-		io.ReadFull(r, serflags[:])
-		serflag = serflags[0]
-		if serflag != SerBlockTransactions {
-			return fmt.Errorf("unsupported serialization flags 0x%x", serflags)
-		}
-	}
-
 	n, err := blockchain.ReadVarint31(r)
 	if err != nil {
 		return errors.Wrap(err, "reading number of transactions")
@@ -148,8 +139,6 @@ func (b *Block) writeTo(w io.Writer, serflags uint8) error {
 	if serflags == SerBlockHeader {
 		return nil
 	}
-
-	w.Write([]byte{SerBlockTransactions})
 
 	if _, err := blockchain.WriteVarint31(w, uint64(len(b.Transactions))); err != nil {
 		return err

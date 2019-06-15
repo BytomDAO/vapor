@@ -253,7 +253,7 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 
 	binaryBlockTxs, err := block.MarshalTextForTransactions()
 	if err != nil {
-		return errors.Wrap(err, "Marshal block header")
+		return errors.Wrap(err, "Marshal block transactions")
 	}
 
 	binaryTxStatus, err := proto.Marshal(ts)
