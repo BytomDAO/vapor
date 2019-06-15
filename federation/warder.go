@@ -37,10 +37,6 @@ func (w *warder) Run() {
 	}
 }
 
-func (w *warder) proposeDestTx(tx *orm.CrossTransaction) error {
-	return nil
-}
-
 func (w *warder) validateTx(tx *orm.CrossTransaction) error {
 	if tx.Status != common.CrossTxPendingStatus {
 		return errors.New("cross-chain tx already proposed")
@@ -57,3 +53,17 @@ func (w *warder) validateTx(tx *orm.CrossTransaction) error {
 
 	return nil
 }
+
+func (w *warder) proposeDestTx(tx *orm.CrossTransaction) error {
+	switch tx.Chain.Name {
+	case "bytom":
+		return w.buildSidechainTx(tx)
+	case "vapor":
+		return w.buildMainchainTx(tx)
+	default:
+		return errors.New("unknown source chain")
+	}
+}
+
+func (w *warder) buildSidechainTx(tx *orm.CrossTransaction) error {}
+func (w *warder) buildMainchainTx(tx *orm.CrossTransaction) error {}
