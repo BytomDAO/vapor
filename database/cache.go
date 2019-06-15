@@ -15,7 +15,7 @@ import (
 
 const (
 	maxCachedBlocks      = 30
-	maxCachedVoteResults = 30
+	maxCachedVoteResults = 144 // int(60 * 60 * 24 * 1000 / consensus.BlockTimeInterval / consensus.RoundVoteBlockNums)
 )
 
 func newBlockCache(fillFn func(hash *bc.Hash) (*types.Block, error)) blockCache {

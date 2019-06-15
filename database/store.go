@@ -44,8 +44,9 @@ func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
 // It satisfies the interface protocol.Store, and provides additional
 // methods for querying current data.
 type Store struct {
-	db    dbm.DB
-	cache blockCache
+	db  dbm.DB
+	bc  blockCache
+	vrc voteResultCache
 }
 
 func calcBlockKey(hash *bc.Hash) []byte {
@@ -73,7 +74,7 @@ func calcVoteResultKey(seq uint64) []byte {
 func GetBlock(db dbm.DB, hash *bc.Hash) (*types.Block, error) {
 	bytez := db.Get(calcBlockKey(hash))
 	if bytez == nil {
-		return nil, nil
+		return nil, nil // why return err nil???
 	}
 
 	block := &types.Block{}
@@ -81,14 +82,32 @@ func GetBlock(db dbm.DB, hash *bc.Hash) (*types.Block, error) {
 	return block, err
 }
 
+// GetVoteResult return the vote result by given sequence
+func GetVoteResult(db dbm.DB, seq uint64) (*state.VoteResult, error) {
+	data := db.Get(calcVoteResultKey(seq))
+	if data == nil {
+		return nil, protocol.ErrNotFoundVoteResult
+	}
+
+	voteResult := new(state.VoteResult)
+	if err := json.Unmarshal(data, voteResult); err != nil {
+		return nil, errors.Wrap(err, "unmarshaling vote result")
+	}
+	return voteResult, nil
+}
+
 // NewStore creates and returns a new Store object.
 func NewStore(db dbm.DB) *Store {
-	cache := newBlockCache(func(hash *bc.Hash) (*types.Block, error) {
+	bc := newBlockCache(func(hash *bc.Hash) (*types.Block, error) {
 		return GetBlock(db, hash)
 	})
+	vrc := newVoteResultCache(func(seq uint64) (*state.VoteResult, error) {
+		return GetVoteResult(db, seq)
+	})
 	return &Store{
-		db:    db,
-		cache: cache,
+		db:  db,
+		bc:  bc,
+		vrc: vrc,
 	}
 }
 
@@ -99,13 +118,13 @@ func (s *Store) GetUtxo(hash *bc.Hash) (*storage.UtxoEntry, error) {
 
 // BlockExist check if the block is stored in disk
 func (s *Store) BlockExist(hash *bc.Hash) bool {
-	block, err := s.cache.lookup(hash)
+	block, err := s.bc.lookup(hash)
 	return err == nil && block != nil
 }
 
 // GetBlock return the block by given hash
 func (s *Store) GetBlock(hash *bc.Hash) (*types.Block, error) {
-	return s.cache.lookup(hash)
+	return s.bc.lookup(hash)
 }
 
 // GetTransactionsUtxo will return all the utxo that related to the input txs
@@ -134,16 +153,7 @@ func (s *Store) GetStoreStatus() *protocol.BlockStoreState {
 
 // GetVoteResult retrive the voting result in specified vote sequence
 func (s *Store) GetVoteResult(seq uint64) (*state.VoteResult, error) {
-	data := s.db.Get(calcVoteResultKey(seq))
-	if data == nil {
-		return nil, protocol.ErrNotFoundVoteResult
-	}
-
-	vr := &state.VoteResult{}
-	if err := json.Unmarshal(data, vr); err != nil {
-		return nil, errors.Wrap(err, "unmarshaling vote result")
-	}
-	return vr, nil
+	return s.vrc.lookup(seq)
 }
 
 func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error) {
