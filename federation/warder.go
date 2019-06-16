@@ -27,9 +27,9 @@ type warder struct {
 
 func NewWarder(cfg *config.Config, db *gorm.DB, txCh chan *orm.CrossTransaction) *warder {
 	var others []*service.Warder
-	for _, w := range cfg.Warders {
-		if !w.IsLocal {
-			anotherWarder := service.NewWarder(w.HostPort)
+	for _, warderCfg := range cfg.Warders {
+		if !warderCfg.IsLocal {
+			anotherWarder := service.NewWarder(&warderCfg)
 			others = append(others, anotherWarder)
 		}
 	}
