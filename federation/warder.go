@@ -184,12 +184,10 @@ func (w *warder) signDestTx(destTx interface{}, tx *orm.CrossTransaction) error 
 	return nil
 }
 
-// TODO:
 func (w *warder) isTxSignsReachQuorum(destTx interface{}) bool {
 	return false
 }
 
-// TODO:
 func (w *warder) isLeader() bool {
 	return false
 }
