@@ -2,6 +2,7 @@ package federation
 
 import (
 	"database/sql"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
@@ -9,22 +10,28 @@ import (
 
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/common"
+	"github.com/vapor/federation/config"
 	"github.com/vapor/federation/database/orm"
 	vaporTypes "github.com/vapor/protocol/bc/types"
 )
 
 type warder struct {
-	db   *gorm.DB
-	txCh chan *orm.CrossTransaction
+	colletInterval time.Duration
+	db             *gorm.DB
+	txCh           chan *orm.CrossTransaction
 }
 
-func NewWarder(db *gorm.DB, txCh chan *orm.CrossTransaction) *warder {
+func NewWarder(cfg *config.Config, db *gorm.DB, txCh chan *orm.CrossTransaction) *warder {
 	return &warder{
-		txCh: txCh,
+		colletInterval: time.Duration(cfg.CollectMinutes) * time.Minute,
+		db:             db,
+		txCh:           txCh,
 	}
 }
 
 func (w *warder) Run() {
+	go w.collectUnsubmittedTx()
+
 	for ormTx := range w.txCh {
 		if err := w.validateCrossTx(ormTx); err != nil {
 			log.Warnln("invalid cross-chain tx", ormTx)
@@ -62,6 +69,10 @@ func (w *warder) Run() {
 			}
 		}
 	}
+}
+
+func (w *warder) collectUnsubmittedTx() {
+
 }
 
 func (w *warder) validateCrossTx(tx *orm.CrossTransaction) error {

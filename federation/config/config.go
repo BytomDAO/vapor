@@ -33,11 +33,12 @@ func NewConfigWithPath(path string) *Config {
 }
 
 type Config struct {
-	GinGonic    GinGonic    `json:"gin-gonic"`
-	MySQLConfig MySQLConfig `json:"mysql"`
-	Warders     []Warder    `json:"warders"`
-	Mainchain   Chain       `json:"mainchain"`
-	Sidechain   Chain       `json:"sidechain"`
+	GinGonic       GinGonic    `json:"gin-gonic"`
+	MySQLConfig    MySQLConfig `json:"mysql"`
+	CollectMinutes uint64      `json:"collect_unsubimmited_minutes"`
+	Warders        []Warder    `json:"warders"`
+	Mainchain      Chain       `json:"mainchain"`
+	Sidechain      Chain       `json:"sidechain"`
 }
 
 type GinGonic struct {

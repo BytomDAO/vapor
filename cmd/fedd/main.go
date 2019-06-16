@@ -22,7 +22,7 @@ func main() {
 	txCh := make(chan *orm.CrossTransaction)
 	go synchron.NewMainchainKeeper(db, &cfg.Mainchain, txCh).Run()
 	go synchron.NewSidechainKeeper(db, &cfg.Sidechain, txCh).Run()
-	go federation.NewWarder(db, txCh).Run()
+	go federation.NewWarder(cfg, db, txCh).Run()
 
 	// keep the main func running in case of terminating goroutines
 	var wg sync.WaitGroup
