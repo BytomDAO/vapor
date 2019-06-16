@@ -36,7 +36,30 @@ func NewWarder(cfg *config.Config, db *gorm.DB, txCh chan *orm.CrossTransaction)
 
 func (w *warder) Run() {
 	go w.collectPendingTx()
+	go w.processCrossTxRoutine()
+}
 
+func (w *warder) collectPendingTx() {
+	ticker := time.NewTicker(w.colletInterval)
+	for ; true; <-ticker.C {
+		txs := []*orm.CrossTransaction{}
+		if err := w.db.Preload("Chain").Preload("Reqs").
+			// do not use "Where(&orm.CrossTransaction{Status: common.CrossTxPendingStatus})" directly
+			// otherwise the field "status" is ignored
+			Model(&orm.CrossTransaction{}).Where("status = ?", common.CrossTxPendingStatus).
+			Find(&txs).Error; err == gorm.ErrRecordNotFound {
+			continue
+		} else if err != nil {
+			log.Warnln("collectPendingTx", err)
+		}
+
+		for _, tx := range txs {
+			w.txCh <- tx
+		}
+	}
+}
+
+func (w *warder) processCrossTxRoutine() {
 	for ormTx := range w.txCh {
 		if err := w.validateCrossTx(ormTx); err != nil {
 			log.Warnln("invalid cross-chain tx", ormTx)
@@ -74,26 +97,6 @@ func (w *warder) Run() {
 				log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx}).Warnln("updateSubmission")
 				continue
 			}
-		}
-	}
-}
-
-func (w *warder) collectPendingTx() {
-	ticker := time.NewTicker(w.colletInterval)
-	for ; true; <-ticker.C {
-		txs := []*orm.CrossTransaction{}
-		if err := w.db.Preload("Chain").Preload("Reqs").
-			// do not use "Where(&orm.CrossTransaction{Status: common.CrossTxPendingStatus})" directly
-			// otherwise the field "status" is ignored
-			Model(&orm.CrossTransaction{}).Where("status = ?", common.CrossTxPendingStatus).
-			Find(&txs).Error; err == gorm.ErrRecordNotFound {
-			continue
-		} else if err != nil {
-			log.Warnln("collectPendingTx", err)
-		}
-
-		for _, tx := range txs {
-			w.txCh <- tx
 		}
 	}
 }
