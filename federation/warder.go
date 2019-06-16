@@ -45,18 +45,12 @@ func (w *warder) Run() {
 
 		destTx, destTxID, err := w.proposeDestTx(ormTx)
 		if err != nil {
-			log.WithFields(log.Fields{
-				"err":            err,
-				"cross-chain tx": ormTx,
-			}).Warnln("proposeDestTx")
+			log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx}).Warnln("proposeDestTx")
 			continue
 		}
 
 		if err := w.signDestTx(destTx, ormTx); err != nil {
-			log.WithFields(log.Fields{
-				"err":            err,
-				"cross-chain tx": ormTx,
-			}).Warnln("signDestTx")
+			log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx}).Warnln("signDestTx")
 			continue
 		}
 
@@ -66,31 +60,19 @@ func (w *warder) Run() {
 		if w.isTxSignsReachQuorum(destTx) && w.isLeader() {
 			submittedTxID, err := w.submitTx(destTx)
 			if err != nil {
-				log.WithFields(log.Fields{
-					"err":            err,
-					"cross-chain tx": ormTx,
-					"dest tx":        destTx,
-				}).Warnln("submitTx")
+				log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx, "dest tx": destTx}).Warnln("submitTx")
 				continue
 			}
 
 			if submittedTxID != destTxID {
-				log.WithFields(log.Fields{
-					"err":            err,
-					"cross-chain tx": ormTx,
-					"built tx ID":    destTxID,
-					"submittedTx ID": submittedTxID,
-				}).Warnln("submitTx ID mismatch")
+				log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx, "built tx ID": destTxID, "submittedTx ID": submittedTxID}).Warnln("submitTx ID mismatch")
 				continue
 
 			}
 
 			// TODO: what to update? what about others?
 			if err := w.updateSubmission(ormTx); err != nil {
-				log.WithFields(log.Fields{
-					"err":            err,
-					"cross-chain tx": ormTx,
-				}).Warnln("updateSubmission")
+				log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx}).Warnln("updateSubmission")
 				continue
 			}
 		}
