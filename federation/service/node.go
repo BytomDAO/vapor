@@ -73,22 +73,26 @@ type submitTxResp struct {
 	TxID string `json:"tx_id"`
 }
 
-func (n *Node) SubmitMainchainTx(tx *btmTypes.Tx) (string, error) {
+func (n *Node) SubmitTx(tx interface{} /*, isMainchain bool*/) (string, error) {
 	url := "/submit-transaction"
-	payload, err := json.Marshal(submitMainchainTxReq{Tx: tx})
-	if err != nil {
-		return "", errors.Wrap(err, "json marshal")
-	}
+	var payload []byte
+	var err error
 
-	res := &submitTxResp{}
-	return res.TxID, n.request(url, payload, res)
-}
+	switch tx := tx.(type) {
+	case *btmTypes.Tx:
+		payload, err = json.Marshal(submitMainchainTxReq{Tx: tx})
+		if err != nil {
+			return "", errors.Wrap(err, "json marshal")
+		}
 
-func (n *Node) SubmitSidechainTx(tx *vaporTypes.Tx) (string, error) {
-	url := "/submit-transaction"
-	payload, err := json.Marshal(submitSidechainTxReq{Tx: tx})
-	if err != nil {
-		return "", errors.Wrap(err, "json marshal")
+	case *vaporTypes.Tx:
+		payload, err = json.Marshal(submitSidechainTxReq{Tx: tx})
+		if err != nil {
+			return "", errors.Wrap(err, "json marshal")
+		}
+
+	default:
+		return "", errors.New("unknown tx type")
 	}
 
 	res := &submitTxResp{}

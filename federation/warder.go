@@ -198,10 +198,10 @@ func (w *warder) isLeader() bool {
 func (w *warder) submitTx(destTx interface{}) (string, error) {
 	switch tx := destTx.(type) {
 	case *btmTypes.Tx:
-		return w.mainchainNode.SubmitMainchainTx(tx)
+		return w.mainchainNode.SubmitTx(tx /*, true*/)
 
 	case *vaporTypes.Tx:
-		return w.sidechainNode.SubmitSidechainTx(tx)
+		return w.sidechainNode.SubmitTx(tx /*, false*/)
 
 	default:
 		return "", errors.New("unknown destTx type")
