@@ -56,7 +56,6 @@ func (w *warder) Run() {
 
 		// TODO: elect signer & request sign
 
-		// TODO: what if submit fail
 		if w.isTxSignsReachQuorum(destTx) && w.isLeader() {
 			submittedTxID, err := w.submitTx(destTx)
 			if err != nil {
