@@ -28,7 +28,7 @@ func (w *Warder) RequestSign(destTx interface{}, ormTx *orm.CrossTransaction) (s
 
 // NotifySubmission() will notify a remote warder the submission of a destTx,
 // the remote warder will check the tx signs count and set the tx submitted if
-// signs count reach quorum
+// the signs count reach quorum
 func (w *Warder) NotifySubmission(ormTx *orm.CrossTransaction) error {
 	return nil
 }

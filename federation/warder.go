@@ -8,6 +8,7 @@ import (
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/common"
 	"github.com/vapor/federation/config"
@@ -17,6 +18,8 @@ import (
 )
 
 type warder struct {
+	position       uint8
+	xpub           chainkd.XPub
 	colletInterval time.Duration
 	db             *gorm.DB
 	txCh           chan *orm.CrossTransaction
@@ -26,25 +29,31 @@ type warder struct {
 }
 
 func NewWarder(cfg *config.Config, db *gorm.DB, txCh chan *orm.CrossTransaction) *warder {
+	local, remotes := parseWarders(cfg)
 	return &warder{
+		position:       local.Position,
+		xpub:           local.XPub,
 		colletInterval: time.Duration(cfg.CollectMinutes) * time.Minute,
 		db:             db,
 		txCh:           txCh,
 		mainchainNode:  service.NewNode(cfg.Mainchain.Upstream),
 		sidechainNode:  service.NewNode(cfg.Sidechain.Upstream),
-		remotes:        parseRemoteWarders(cfg),
+		remotes:        remotes,
 	}
 }
 
-func parseRemoteWarders(cfg *config.Config) []*service.Warder {
+func parseWarders(cfg *config.Config) (*service.Warder, []*service.Warder) {
+	var local *service.Warder
 	var remotes []*service.Warder
 	for _, warderCfg := range cfg.Warders {
-		if !warderCfg.IsLocal {
+		if warderCfg.IsLocal {
+			local = service.NewWarder(&warderCfg)
+		} else {
 			remoteWarder := service.NewWarder(&warderCfg)
 			remotes = append(remotes, remoteWarder)
 		}
 	}
-	return remotes
+	return local, remotes
 }
 
 func (w *warder) Run() {
@@ -113,7 +122,6 @@ func (w *warder) processCrossTxRoutine() {
 
 			}
 
-			// TODO: what to update? what about others?
 			if err := w.updateSubmission(ormTx); err != nil {
 				log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx}).Warnln("updateSubmission")
 				continue
@@ -212,7 +220,6 @@ func (w *warder) submitTx(destTx interface{}) (string, error) {
 	}
 }
 
-// TODO:
 func (w *warder) updateSubmission(tx *orm.CrossTransaction) error {
 	if err := w.db.Where(tx).UpdateColumn(&orm.CrossTransaction{
 		Status: common.CrossTxSubmittedStatus,
