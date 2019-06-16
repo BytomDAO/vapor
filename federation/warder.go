@@ -26,6 +26,17 @@ type warder struct {
 }
 
 func NewWarder(cfg *config.Config, db *gorm.DB, txCh chan *orm.CrossTransaction) *warder {
+	return &warder{
+		colletInterval: time.Duration(cfg.CollectMinutes) * time.Minute,
+		db:             db,
+		txCh:           txCh,
+		mainchainNode:  service.NewNode(cfg.Mainchain.Upstream),
+		sidechainNode:  service.NewNode(cfg.Sidechain.Upstream),
+		others:         parseOtherWarders(cfg),
+	}
+}
+
+func parseOtherWarders(cfg *config.Config) []*service.Warder {
 	var others []*service.Warder
 	for _, warderCfg := range cfg.Warders {
 		if !warderCfg.IsLocal {
@@ -33,15 +44,7 @@ func NewWarder(cfg *config.Config, db *gorm.DB, txCh chan *orm.CrossTransaction)
 			others = append(others, anotherWarder)
 		}
 	}
-
-	return &warder{
-		colletInterval: time.Duration(cfg.CollectMinutes) * time.Minute,
-		db:             db,
-		txCh:           txCh,
-		mainchainNode:  service.NewNode(cfg.Mainchain.Upstream),
-		sidechainNode:  service.NewNode(cfg.Sidechain.Upstream),
-		others:         others,
-	}
+	return others
 }
 
 func (w *warder) Run() {
