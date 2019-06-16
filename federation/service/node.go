@@ -74,7 +74,7 @@ type submitTxResp struct {
 }
 
 func (n *Node) SubmitTx(tx interface{}) (string, error) {
-	url := "/submit-transaction"
+	path := "/submit-transaction"
 	var payload []byte
 	var err error
 
@@ -96,7 +96,7 @@ func (n *Node) SubmitTx(tx interface{}) (string, error) {
 	}
 
 	res := &submitTxResp{}
-	return res.TxID, n.request(url, payload, res)
+	return res.TxID, n.request(path, payload, res)
 }
 
 type response struct {
@@ -105,9 +105,9 @@ type response struct {
 	ErrDetail string          `json:"error_detail"`
 }
 
-func (n *Node) request(url string, payload []byte, respData interface{}) error {
+func (n *Node) request(path string, payload []byte, respData interface{}) error {
 	resp := &response{}
-	if err := util.Post(n.hostPort+url, payload, resp); err != nil {
+	if err := util.Post(n.hostPort+path, payload, resp); err != nil {
 		return err
 	}
 
