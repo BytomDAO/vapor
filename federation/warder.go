@@ -101,7 +101,11 @@ func (w *warder) collectUnsubmittedTx() {
 	ticker := time.NewTicker(w.colletInterval)
 	for ; true; <-ticker.C {
 		txs := []*orm.CrossTransaction{}
-		if err := w.db.Preload("Chain").Preload("Reqs").Where(&orm.CrossTransaction{Status: common.CrossTxPendingStatus}).Find(&txs).Error; err == gorm.ErrRecordNotFound {
+		if err := w.db.Preload("Chain").Preload("Reqs").
+			// do not use "Where(&orm.CrossTransaction{Status: common.CrossTxPendingStatus})" directly
+			// otherwise the field "status" is ignored
+			Model(&orm.CrossTransaction{}).Where("status = ?", common.CrossTxPendingStatus).
+			Find(&txs).Error; err == gorm.ErrRecordNotFound {
 			continue
 		} else if err != nil {
 			log.Warnln("collectUnsubmittedTx", err)
