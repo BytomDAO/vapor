@@ -108,7 +108,7 @@ func (w *warder) processCrossTxRoutine() {
 			}
 
 			if submittedTxID != destTxID {
-				log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx, "built tx ID": destTxID, "submittedTx ID": submittedTxID}).Warnln("submitTx ID mismatch")
+				log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx, "builtTx ID": destTxID, "submittedTx ID": submittedTxID}).Warnln("submitTx ID mismatch")
 				continue
 
 			}
@@ -214,5 +214,14 @@ func (w *warder) submitTx(destTx interface{}) (string, error) {
 
 // TODO:
 func (w *warder) updateSubmission(tx *orm.CrossTransaction) error {
+	if err := w.db.Where(tx).UpdateColumn(&orm.CrossTransaction{
+		Status: common.CrossTxSubmittedStatus,
+	}).Error; err != nil {
+		return err
+	}
+
+	for _, remote := range w.remotes {
+		remote.NotifySubmission(tx)
+	}
 	return nil
 }
