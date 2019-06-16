@@ -20,6 +20,8 @@ func NewWarder(cfg *config.Warder) *Warder {
 	}
 }
 
-func (w *Warder) RequestSign(ormTx *orm.CrossTransaction) (string, error) {
+// RequestSign() will request a remote warder to sign a tx, the remote warder
+// will sign the tx, update its tx data & signs data, and response with the signs
+func (w *Warder) RequestSign(destTx interface{}, ormTx *orm.CrossTransaction) (string, error) {
 	return "", nil
 }

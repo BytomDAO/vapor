@@ -22,7 +22,7 @@ type warder struct {
 	txCh           chan *orm.CrossTransaction
 	mainchainNode  *service.Node
 	sidechainNode  *service.Node
-	others         []*service.Warder
+	remotes        []*service.Warder
 }
 
 func NewWarder(cfg *config.Config, db *gorm.DB, txCh chan *orm.CrossTransaction) *warder {
@@ -32,19 +32,19 @@ func NewWarder(cfg *config.Config, db *gorm.DB, txCh chan *orm.CrossTransaction)
 		txCh:           txCh,
 		mainchainNode:  service.NewNode(cfg.Mainchain.Upstream),
 		sidechainNode:  service.NewNode(cfg.Sidechain.Upstream),
-		others:         parseOtherWarders(cfg),
+		remotes:        parseRemoteWarders(cfg),
 	}
 }
 
-func parseOtherWarders(cfg *config.Config) []*service.Warder {
-	var others []*service.Warder
+func parseRemoteWarders(cfg *config.Config) []*service.Warder {
+	var remotes []*service.Warder
 	for _, warderCfg := range cfg.Warders {
 		if !warderCfg.IsLocal {
-			anotherWarder := service.NewWarder(&warderCfg)
-			others = append(others, anotherWarder)
+			remoteWarder := service.NewWarder(&warderCfg)
+			remotes = append(remotes, remoteWarder)
 		}
 	}
-	return others
+	return remotes
 }
 
 func (w *warder) Run() {
@@ -90,15 +90,14 @@ func (w *warder) processCrossTxRoutine() {
 			continue
 		}
 
-		// TODO: elect signer & request sign
-		for _, anotherWarder := range w.others {
-			signs, err := anotherWarder.RequestSign(ormTx)
+		for _, remote := range w.remotes {
+			signs, err := remote.RequestSign(destTx, ormTx)
 			if err != nil {
-				log.WithFields(log.Fields{"err": err, "anotherWarder": anotherWarder, "cross-chain tx": ormTx}).Warnln("RequestSign")
+				log.WithFields(log.Fields{"err": err, "remote": remote, "cross-chain tx": ormTx}).Warnln("RequestSign")
 				continue
 			}
 
-			w.attachSignsForTx(ormTx, anotherWarder.Position, signs)
+			w.attachSignsForTx(destTx, ormTx, remote.Position, signs)
 		}
 
 		if w.isTxSignsReachQuorum(destTx) && w.isLeader() {
@@ -191,7 +190,7 @@ func (w *warder) signDestTx(destTx interface{}, tx *orm.CrossTransaction) error 
 	return nil
 }
 
-func (w *warder) attachSignsForTx(ormTx *orm.CrossTransaction, position uint8, signs string) {
+func (w *warder) attachSignsForTx(destTx interface{}, ormTx *orm.CrossTransaction, position uint8, signs string) {
 }
 
 func (w *warder) isTxSignsReachQuorum(destTx interface{}) bool {
