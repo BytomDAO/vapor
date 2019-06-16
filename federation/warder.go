@@ -22,6 +22,7 @@ type warder struct {
 	txCh           chan *orm.CrossTransaction
 	mainchainNode  *service.Node
 	sidechainNode  *service.Node
+	otherWarders   []*service.Warder
 }
 
 func NewWarder(cfg *config.Config, db *gorm.DB, txCh chan *orm.CrossTransaction) *warder {
