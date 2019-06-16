@@ -12,6 +12,7 @@ import (
 	"github.com/vapor/federation/common"
 	"github.com/vapor/federation/config"
 	"github.com/vapor/federation/database/orm"
+	"github.com/vapor/federation/service"
 	vaporTypes "github.com/vapor/protocol/bc/types"
 )
 
@@ -19,6 +20,8 @@ type warder struct {
 	colletInterval time.Duration
 	db             *gorm.DB
 	txCh           chan *orm.CrossTransaction
+	mainchainNode  *service.Node
+	sidechainNode  *service.Node
 }
 
 func NewWarder(cfg *config.Config, db *gorm.DB, txCh chan *orm.CrossTransaction) *warder {
@@ -26,6 +29,8 @@ func NewWarder(cfg *config.Config, db *gorm.DB, txCh chan *orm.CrossTransaction)
 		colletInterval: time.Duration(cfg.CollectMinutes) * time.Minute,
 		db:             db,
 		txCh:           txCh,
+		mainchainNode:  service.NewNode(cfg.Mainchain.Upstream),
+		sidechainNode:  service.NewNode(cfg.Sidechain.Upstream),
 	}
 }
 
