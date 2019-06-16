@@ -125,7 +125,6 @@ func (w *warder) processCrossTxRoutine() {
 			if submittedTxID != destTxID {
 				log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx, "builtTx ID": destTxID, "submittedTx ID": submittedTxID}).Warnln("submitTx ID mismatch")
 				continue
-
 			}
 
 			if err := w.updateSubmission(ormTx); err != nil {
