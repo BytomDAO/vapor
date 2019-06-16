@@ -57,8 +57,8 @@ func (w *warder) collectPendingTx() {
 	for ; true; <-ticker.C {
 		txs := []*orm.CrossTransaction{}
 		if err := w.db.Preload("Chain").Preload("Reqs").
-			// do not use "Where(&orm.CrossTransaction{Status: common.CrossTxPendingStatus})" directly
-			// otherwise the field "status" is ignored
+			// do not use "Where(&orm.CrossTransaction{Status: common.CrossTxPendingStatus})" directly,
+			// otherwise the field "status" will be ignored
 			Model(&orm.CrossTransaction{}).Where("status = ?", common.CrossTxPendingStatus).
 			Find(&txs).Error; err == gorm.ErrRecordNotFound {
 			continue
