@@ -194,7 +194,7 @@ func (w *warder) buildMainchainTx(tx *orm.CrossTransaction) (*btmTypes.Tx, strin
 	return mainchainTx, mainchainTx.ID.String(), nil
 }
 
-// TODO: sign it
+// TODO:
 func (w *warder) signDestTx(destTx interface{}, tx *orm.CrossTransaction) error {
 	if tx.Status != common.CrossTxPendingStatus || !tx.DestTxHash.Valid {
 		return errors.New("cross-chain tx status error")

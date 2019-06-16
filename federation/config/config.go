@@ -35,7 +35,7 @@ func NewConfigWithPath(path string) *Config {
 type Config struct {
 	GinGonic       GinGonic    `json:"gin-gonic"`
 	MySQLConfig    MySQLConfig `json:"mysql"`
-	CollectMinutes uint64      `json:"collect_unsubimmited_minutes"`
+	CollectMinutes uint64      `json:"collect_pending_tx_minutes"`
 	Warders        []Warder    `json:"warders"`
 	Mainchain      Chain       `json:"mainchain"`
 	Sidechain      Chain       `json:"sidechain"`
