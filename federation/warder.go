@@ -17,6 +17,8 @@ import (
 	vaporTypes "github.com/vapor/protocol/bc/types"
 )
 
+var collectInterval = 5 * time.Second
+
 type warder struct {
 	position       uint8
 	xpub           chainkd.XPub
@@ -31,14 +33,13 @@ type warder struct {
 func NewWarder(cfg *config.Config, db *gorm.DB) *warder {
 	local, remotes := parseWarders(cfg)
 	return &warder{
-		position:       local.Position,
-		xpub:           local.XPub,
-		colletInterval: time.Duration(cfg.CollectMinutes) * time.Minute,
-		db:             db,
-		txCh:           make(chan *orm.CrossTransaction),
-		mainchainNode:  service.NewNode(cfg.Mainchain.Upstream),
-		sidechainNode:  service.NewNode(cfg.Sidechain.Upstream),
-		remotes:        remotes,
+		position:      local.Position,
+		xpub:          local.XPub,
+		db:            db,
+		txCh:          make(chan *orm.CrossTransaction),
+		mainchainNode: service.NewNode(cfg.Mainchain.Upstream),
+		sidechainNode: service.NewNode(cfg.Sidechain.Upstream),
+		remotes:       remotes,
 	}
 }
 
@@ -67,7 +68,7 @@ func (w *warder) Run() {
 }
 
 func (w *warder) collectPendingTx() {
-	ticker := time.NewTicker(w.colletInterval)
+	ticker := time.NewTicker(collectInterval)
 	for ; true; <-ticker.C {
 		txs := []*orm.CrossTransaction{}
 		if err := w.db.Preload("Chain").Preload("Reqs").
