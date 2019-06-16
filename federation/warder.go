@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"time"
 
+	btmTypes "github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
-	btmTypes "github.com/vapor/protocol/bc/types"
 
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/common"
@@ -43,7 +43,7 @@ func (w *warder) Run() {
 			continue
 		}
 
-		destTx, err := w.proposeDestTx(ormTx)
+		destTx, destTxID, err := w.proposeDestTx(ormTx)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"err":            err,
@@ -64,12 +64,33 @@ func (w *warder) Run() {
 
 		// TODO: what if submit fail
 		if w.isTxSignsReachQuorum(destTx) && w.isLeader() {
-			if err := w.submitTx(destTx); err != nil {
+			submittedTxID, err := w.submitTx(destTx)
+			if err != nil {
 				log.WithFields(log.Fields{
 					"err":            err,
 					"cross-chain tx": ormTx,
 					"dest tx":        destTx,
 				}).Warnln("submitTx")
+				continue
+			}
+
+			if submittedTxID != destTxID {
+				log.WithFields(log.Fields{
+					"err":            err,
+					"cross-chain tx": ormTx,
+					"built tx ID":    destTxID,
+					"submittedTx ID": submittedTxID,
+				}).Warnln("submitTx ID mismatch")
+				continue
+
+			}
+
+			// TODO: what to update? what about others?
+			if err := w.updateSubmission(ormTx); err != nil {
+				log.WithFields(log.Fields{
+					"err":            err,
+					"cross-chain tx": ormTx,
+				}).Warnln("updateSubmission")
 				continue
 			}
 		}
@@ -103,41 +124,41 @@ func (w *warder) validateCrossTx(tx *orm.CrossTransaction) error {
 	return nil
 }
 
-func (w *warder) proposeDestTx(tx *orm.CrossTransaction) (interface{}, error) {
+func (w *warder) proposeDestTx(tx *orm.CrossTransaction) (interface{}, string, error) {
 	switch tx.Chain.Name {
 	case "bytom":
 		return w.buildSidechainTx(tx)
 	case "vapor":
 		return w.buildMainchainTx(tx)
 	default:
-		return nil, errors.New("unknown source chain")
+		return nil, "", errors.New("unknown source chain")
 	}
 }
 
 // TODO: build it
-func (w *warder) buildSidechainTx(tx *orm.CrossTransaction) (interface{}, error) {
+func (w *warder) buildSidechainTx(tx *orm.CrossTransaction) (interface{}, string, error) {
 	sidechainTx := &vaporTypes.Tx{}
 
 	if err := w.db.Where(tx).UpdateColumn(&orm.CrossTransaction{
 		DestTxHash: sql.NullString{sidechainTx.ID.String(), true},
 	}).Error; err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	return sidechainTx, nil
+	return sidechainTx, sidechainTx.ID.String(), nil
 }
 
 // TODO: build it
-func (w *warder) buildMainchainTx(tx *orm.CrossTransaction) (interface{}, error) {
+func (w *warder) buildMainchainTx(tx *orm.CrossTransaction) (interface{}, string, error) {
 	mainchainTx := &btmTypes.Tx{}
 
 	if err := w.db.Where(tx).UpdateColumn(&orm.CrossTransaction{
 		DestTxHash: sql.NullString{mainchainTx.ID.String(), true},
 	}).Error; err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	return mainchainTx, nil
+	return mainchainTx, mainchainTx.ID.String(), nil
 }
 
 // TODO: sign it
@@ -160,6 +181,20 @@ func (w *warder) isLeader() bool {
 }
 
 // TODO: submit it
-func (w *warder) submitTx(destTx interface{}) error {
+func (w *warder) submitTx(destTx interface{}) (string, error) {
+	switch tx := destTx.(type) {
+	case *btmTypes.Tx:
+		return w.mainchainNode.SubmitMainchainTx(tx)
+
+	case *vaporTypes.Tx:
+		return w.sidechainNode.SubmitSidechainTx(tx)
+
+	default:
+		return "", errors.New("unknown destTx type")
+	}
+}
+
+// TODO:
+func (w *warder) updateSubmission(tx *orm.CrossTransaction) error {
 	return nil
 }

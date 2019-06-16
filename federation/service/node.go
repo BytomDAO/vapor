@@ -3,10 +3,12 @@ package service
 import (
 	"encoding/json"
 
+	btmTypes "github.com/bytom/protocol/bc/types"
+
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/util"
 	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
+	vaporTypes "github.com/vapor/protocol/bc/types"
 )
 
 // Node can invoke the api which provide by the full node server
@@ -59,8 +61,38 @@ func (n *Node) getRawBlock(req *getRawBlockReq) (string, *bc.TransactionStatus, 
 	return res.RawBlock, res.TransactionStatus, n.request(url, payload, res)
 }
 
-type submitTxReq struct {
-	Tx *types.Tx `json:"raw_transaction"`
+type submitMainchainTxReq struct {
+	Tx *btmTypes.Tx `json:"raw_transaction"`
+}
+
+type submitSidechainTxReq struct {
+	Tx *vaporTypes.Tx `json:"raw_transaction"`
+}
+
+type submitTxResp struct {
+	TxID string `json:"tx_id"`
+}
+
+func (n *Node) SubmitMainchainTx(tx *btmTypes.Tx) (string, error) {
+	url := "/submit-transaction"
+	payload, err := json.Marshal(submitMainchainTxReq{Tx: tx})
+	if err != nil {
+		return "", errors.Wrap(err, "json marshal")
+	}
+
+	res := &submitTxResp{}
+	return res.TxID, n.request(url, payload, res)
+}
+
+func (n *Node) SubmitSidechainTx(tx *vaporTypes.Tx) (string, error) {
+	url := "/submit-transaction"
+	payload, err := json.Marshal(submitSidechainTxReq{Tx: tx})
+	if err != nil {
+		return "", errors.Wrap(err, "json marshal")
+	}
+
+	res := &submitTxResp{}
+	return res.TxID, n.request(url, payload, res)
 }
 
 type response struct {
