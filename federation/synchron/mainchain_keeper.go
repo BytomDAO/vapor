@@ -31,17 +31,15 @@ type mainchainKeeper struct {
 	node       *service.Node
 	chainName  string
 	assetCache *database.AssetCache
-	txCh       chan *orm.CrossTransaction
 }
 
-func NewMainchainKeeper(db *gorm.DB, chainCfg *config.Chain, txCh chan *orm.CrossTransaction) *mainchainKeeper {
+func NewMainchainKeeper(db *gorm.DB, chainCfg *config.Chain) *mainchainKeeper {
 	return &mainchainKeeper{
 		cfg:        chainCfg,
 		db:         db,
 		node:       service.NewNode(chainCfg.Upstream),
 		chainName:  chainCfg.Name,
 		assetCache: database.NewAssetCache(),
-		txCh:       txCh,
 	}
 }
 
@@ -121,12 +119,9 @@ func (m *mainchainKeeper) processBlock(chain *orm.Chain, block *types.Block, txS
 
 	for i, tx := range block.Transactions {
 		if m.isDepositTx(tx) {
-			ormTx, err := m.processDepositTx(chain, block, txStatus, uint64(i), tx)
-			if err != nil {
+			if err := m.processDepositTx(chain, block, txStatus, uint64(i), tx); err != nil {
 				return err
 			}
-
-			m.txCh <- ormTx
 		}
 
 		if m.isWithdrawalTx(tx) {
@@ -157,7 +152,7 @@ func (m *mainchainKeeper) isWithdrawalTx(tx *types.Tx) bool {
 	return false
 }
 
-func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus, txIndex uint64, tx *types.Tx) (*orm.CrossTransaction, error) {
+func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus, txIndex uint64, tx *types.Tx) error {
 	blockHash := block.Hash()
 
 	var muxID btmBc.Hash
@@ -168,12 +163,12 @@ func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *types.Block,
 	case *btmBc.Retirement:
 		muxID = *res.Source.Ref
 	default:
-		return nil, ErrOutputType
+		return ErrOutputType
 	}
 
 	rawTx, err := tx.MarshalText()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	ormTx := &orm.CrossTransaction{
@@ -191,25 +186,22 @@ func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *types.Block,
 		Status:               common.CrossTxPendingStatus,
 	}
 	if err := m.db.Create(ormTx).Error; err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("create mainchain DepositTx %s", tx.ID.String()))
+		return errors.Wrap(err, fmt.Sprintf("create mainchain DepositTx %s", tx.ID.String()))
 	}
 
 	statusFail := txStatus.VerifyStatus[txIndex].StatusFail
 	crossChainInputs, err := m.getCrossChainReqs(ormTx.ID, tx, statusFail)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, input := range crossChainInputs {
 		if err := m.db.Create(input).Error; err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("create DepositFromMainchain input: txid(%s), pos(%d)", tx.ID.String(), input.SourcePos))
+			return errors.Wrap(err, fmt.Sprintf("create DepositFromMainchain input: txid(%s), pos(%d)", tx.ID.String(), input.SourcePos))
 		}
-
-		ormTx.Reqs = append(ormTx.Reqs, input)
 	}
 
-	ormTx.Chain = chain
-	return ormTx, nil
+	return nil
 }
 
 func (m *mainchainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types.Tx, statusFail bool) ([]*orm.CrossTransactionReq, error) {

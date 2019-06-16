@@ -28,14 +28,14 @@ type warder struct {
 	remotes        []*service.Warder
 }
 
-func NewWarder(cfg *config.Config, db *gorm.DB, txCh chan *orm.CrossTransaction) *warder {
+func NewWarder(cfg *config.Config, db *gorm.DB) *warder {
 	local, remotes := parseWarders(cfg)
 	return &warder{
 		position:       local.Position,
 		xpub:           local.XPub,
 		colletInterval: time.Duration(cfg.CollectMinutes) * time.Minute,
 		db:             db,
-		txCh:           txCh,
+		txCh:           make(chan *orm.CrossTransaction),
 		mainchainNode:  service.NewNode(cfg.Mainchain.Upstream),
 		sidechainNode:  service.NewNode(cfg.Sidechain.Upstream),
 		remotes:        remotes,
