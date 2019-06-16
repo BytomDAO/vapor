@@ -150,7 +150,7 @@ func (w *warder) proposeDestTx(tx *orm.CrossTransaction) (interface{}, string, e
 }
 
 // TODO: build it
-func (w *warder) buildSidechainTx(tx *orm.CrossTransaction) (interface{}, string, error) {
+func (w *warder) buildSidechainTx(tx *orm.CrossTransaction) (*vaporTypes.Tx, string, error) {
 	sidechainTx := &vaporTypes.Tx{}
 
 	if err := w.db.Where(tx).UpdateColumn(&orm.CrossTransaction{
@@ -163,7 +163,7 @@ func (w *warder) buildSidechainTx(tx *orm.CrossTransaction) (interface{}, string
 }
 
 // TODO: build it
-func (w *warder) buildMainchainTx(tx *orm.CrossTransaction) (interface{}, string, error) {
+func (w *warder) buildMainchainTx(tx *orm.CrossTransaction) (*btmTypes.Tx, string, error) {
 	mainchainTx := &btmTypes.Tx{}
 
 	if err := w.db.Where(tx).UpdateColumn(&orm.CrossTransaction{
