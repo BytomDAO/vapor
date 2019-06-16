@@ -3,18 +3,23 @@ package service
 import (
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/federation/config"
+	"github.com/vapor/federation/database/orm"
 )
 
 type Warder struct {
-	hostPort string
-	position uint8
-	xpub     chainkd.XPub
+	HostPort string
+	Position uint8
+	XPub     chainkd.XPub
 }
 
 func NewWarder(cfg *config.Warder) *Warder {
 	return &Warder{
-		hostPort: cfg.HostPort,
-		position: cfg.Position,
-		xpub:     cfg.XPub,
+		HostPort: cfg.HostPort,
+		Position: cfg.Position,
+		XPub:     cfg.XPub,
 	}
+}
+
+func (w *Warder) RequestSign(ormTx *orm.CrossTransaction) (string, error) {
+	return "", nil
 }

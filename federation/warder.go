@@ -91,6 +91,15 @@ func (w *warder) processCrossTxRoutine() {
 		}
 
 		// TODO: elect signer & request sign
+		for _, anotherWarder := range w.others {
+			signs, err := anotherWarder.RequestSign(ormTx)
+			if err != nil {
+				log.WithFields(log.Fields{"err": err, "anotherWarder": anotherWarder, "cross-chain tx": ormTx}).Warnln("RequestSign")
+				continue
+			}
+
+			w.attachSignsForTx(ormTx, anotherWarder.Position, signs)
+		}
 
 		if w.isTxSignsReachQuorum(destTx) && w.isLeader() {
 			submittedTxID, err := w.submitTx(destTx)
@@ -180,6 +189,9 @@ func (w *warder) signDestTx(destTx interface{}, tx *orm.CrossTransaction) error 
 	}
 
 	return nil
+}
+
+func (w *warder) attachSignsForTx(ormTx *orm.CrossTransaction, position uint8, signs string) {
 }
 
 func (w *warder) isTxSignsReachQuorum(destTx interface{}) bool {
