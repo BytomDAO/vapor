@@ -73,7 +73,7 @@ type submitTxResp struct {
 	TxID string `json:"tx_id"`
 }
 
-func (n *Node) SubmitTx(tx interface{} /*, isMainchain bool*/) (string, error) {
+func (n *Node) SubmitTx(tx interface{}) (string, error) {
 	url := "/submit-transaction"
 	var payload []byte
 	var err error
