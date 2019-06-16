@@ -53,6 +53,11 @@ func parseWarders(cfg *config.Config) (*service.Warder, []*service.Warder) {
 			remotes = append(remotes, remoteWarder)
 		}
 	}
+
+	if local == nil {
+		log.Fatal("none local warder set")
+	}
+
 	return local, remotes
 }
 
