@@ -13,12 +13,12 @@ import (
 
 // Node can invoke the api which provide by the full node server
 type Node struct {
-	ip string
+	hostPort string
 }
 
 // Node create a api client with target server
-func NewNode(ip string) *Node {
-	return &Node{ip: ip}
+func NewNode(hostPort string) *Node {
+	return &Node{hostPort: hostPort}
 }
 
 func (n *Node) GetBlockByHash(hash string) (string, *bc.TransactionStatus, error) {
@@ -107,7 +107,7 @@ type response struct {
 
 func (n *Node) request(url string, payload []byte, respData interface{}) error {
 	resp := &response{}
-	if err := util.Post(n.ip+url, payload, resp); err != nil {
+	if err := util.Post(n.hostPort+url, payload, resp); err != nil {
 		return err
 	}
 

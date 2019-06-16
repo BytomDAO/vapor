@@ -22,16 +22,25 @@ type warder struct {
 	txCh           chan *orm.CrossTransaction
 	mainchainNode  *service.Node
 	sidechainNode  *service.Node
-	otherWarders   []*service.Warder
+	others         []*service.Warder
 }
 
 func NewWarder(cfg *config.Config, db *gorm.DB, txCh chan *orm.CrossTransaction) *warder {
+	var others []*service.Warder
+	for _, w := range cfg.Warders {
+		if !w.IsLocal {
+			anotherWarder := service.NewWarder(w.HostPort)
+			others = append(others, anotherWarder)
+		}
+	}
+
 	return &warder{
 		colletInterval: time.Duration(cfg.CollectMinutes) * time.Minute,
 		db:             db,
 		txCh:           txCh,
 		mainchainNode:  service.NewNode(cfg.Mainchain.Upstream),
 		sidechainNode:  service.NewNode(cfg.Sidechain.Upstream),
+		others:         others,
 	}
 }
 

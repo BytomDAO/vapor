@@ -1,9 +1,9 @@
 package service
 
 type Warder struct {
-	ip string
+	hostPort string
 }
 
-func NewWarder(ip string) *Warder {
-	return &Warder{ip: ip}
+func NewWarder(hostPort string) *Warder {
+	return &Warder{hostPort: hostPort}
 }
