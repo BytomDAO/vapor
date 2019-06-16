@@ -35,7 +35,7 @@ func NewWarder(cfg *config.Config, db *gorm.DB, txCh chan *orm.CrossTransaction)
 }
 
 func (w *warder) Run() {
-	go w.collectUnsubmittedTx()
+	go w.collectPendingTx()
 
 	for ormTx := range w.txCh {
 		if err := w.validateCrossTx(ormTx); err != nil {
@@ -97,7 +97,7 @@ func (w *warder) Run() {
 	}
 }
 
-func (w *warder) collectUnsubmittedTx() {
+func (w *warder) collectPendingTx() {
 	ticker := time.NewTicker(w.colletInterval)
 	for ; true; <-ticker.C {
 		txs := []*orm.CrossTransaction{}
@@ -108,7 +108,7 @@ func (w *warder) collectUnsubmittedTx() {
 			Find(&txs).Error; err == gorm.ErrRecordNotFound {
 			continue
 		} else if err != nil {
-			log.Warnln("collectUnsubmittedTx", err)
+			log.Warnln("collectPendingTx", err)
 		}
 
 		for _, tx := range txs {
