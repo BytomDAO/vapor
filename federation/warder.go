@@ -77,7 +77,9 @@ func (w *warder) Run() {
 }
 
 func (w *warder) collectUnsubmittedTx() {
-
+	ticker := time.NewTicker(w.colletInterval)
+	for ; true; <-ticker.C {
+	}
 }
 
 func (w *warder) validateCrossTx(tx *orm.CrossTransaction) error {
