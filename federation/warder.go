@@ -99,12 +99,13 @@ func (w *warder) collectPendingTx() {
 }
 
 func (w *warder) validateCrossTx(tx *orm.CrossTransaction) error {
-	if tx.Status == common.CrossTxRejectedStatus {
-		return errors.New("cross-chain tx rejeted")
-	}
-
-	if tx.Status == common.CrossTxRejectedStatus {
+	switch tx.Status {
+	case common.CrossTxRejectedStatus:
 		return errors.New("cross-chain tx submitted")
+	case common.CrossTxSubmittedStatus:
+		return errors.New("cross-chain tx submitted")
+	case common.CrossTxCompletedStatus:
+		return errors.New("cross-chain tx completed")
 	}
 
 	crossTxReqs := []*orm.CrossTransactionReq{}
