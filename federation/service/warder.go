@@ -20,12 +20,14 @@ func NewWarder(cfg *config.Warder) *Warder {
 	}
 }
 
+// TODO:
 // RequestSign() will request a remote warder to sign a tx, the remote warder
 // will sign the tx, update its tx data & signs data, and response with the signs
 func (w *Warder) RequestSign(destTx interface{}, ormTx *orm.CrossTransaction) (string, error) {
 	return "", nil
 }
 
+// TODO:
 // NotifySubmission() will notify a remote warder the submission of a destTx,
 // the remote warder will check the tx signs count and set the tx submitted if
 // the signs count reach quorum

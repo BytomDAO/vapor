@@ -168,7 +168,7 @@ func (w *warder) proposeDestTx(tx *orm.CrossTransaction) (interface{}, string, e
 	}
 }
 
-// TODO: build it
+// TODO:
 func (w *warder) buildSidechainTx(tx *orm.CrossTransaction) (*vaporTypes.Tx, string, error) {
 	sidechainTx := &vaporTypes.Tx{}
 
@@ -181,7 +181,7 @@ func (w *warder) buildSidechainTx(tx *orm.CrossTransaction) (*vaporTypes.Tx, str
 	return sidechainTx, sidechainTx.ID.String(), nil
 }
 
-// TODO: build it
+// TODO:
 func (w *warder) buildMainchainTx(tx *orm.CrossTransaction) (*btmTypes.Tx, string, error) {
 	mainchainTx := &btmTypes.Tx{}
 
@@ -203,13 +203,16 @@ func (w *warder) signDestTx(destTx interface{}, tx *orm.CrossTransaction) error 
 	return nil
 }
 
+// TODO:
 func (w *warder) attachSignsForTx(destTx interface{}, ormTx *orm.CrossTransaction, position uint8, signs string) {
 }
 
+// TODO:
 func (w *warder) isTxSignsReachQuorum(destTx interface{}) bool {
 	return false
 }
 
+// TODO:
 func (w *warder) isLeader() bool {
 	return false
 }
