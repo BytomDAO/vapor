@@ -321,7 +321,8 @@ func (s *Store) SaveChainStatus(node, irreversibleNode *state.BlockNode, view *s
 		if err != nil {
 			return err
 		}
-		s.db.Set(calcVoteResultKey(vote.Seq), bytes)
+
+		batch.Set(calcVoteResultKey(vote.Seq), bytes)
 		if _, ok := s.cache.getVoteResult(vote.Seq); ok {
 			s.cache.addVoteResult(vote)
 		}
