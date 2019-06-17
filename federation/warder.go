@@ -143,18 +143,9 @@ func (w *warder) validateCrossTx(tx *orm.CrossTransaction) error {
 		return errors.New("cross-chain tx submitted")
 	case common.CrossTxCompletedStatus:
 		return errors.New("cross-chain tx completed")
+	default:
+		return nil
 	}
-
-	crossTxReqs := []*orm.CrossTransactionReq{}
-	if err := w.db.Where(&orm.CrossTransactionReq{CrossTransactionID: tx.ID}).Find(&crossTxReqs).Error; err != nil {
-		return err
-	}
-
-	if len(crossTxReqs) != len(tx.Reqs) {
-		return errors.New("cross-chain requests count mismatch")
-	}
-
-	return nil
 }
 
 func (w *warder) proposeDestTx(tx *orm.CrossTransaction) (interface{}, string, error) {
