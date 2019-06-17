@@ -300,6 +300,12 @@ func (s *Store) SaveBlockHeader(blockHeader *types.BlockHeader) error {
 		s.cache.addBlockHeader(blockHeader)
 	}
 
+	log.WithFields(log.Fields{
+		"module":   logModule,
+		"height":   blockHeader.Height,
+		"hash":     blockHash.String(),
+		"duration": time.Since(startTime),
+	}).Info("blockHeader saved on disk")
 	return nil
 }
 
