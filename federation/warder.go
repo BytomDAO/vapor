@@ -177,7 +177,7 @@ func (w *warder) buildSidechainTx(ormTx *orm.CrossTransaction) (*vaporTypes.Tx, 
 
 	// tx * btmTypes.TxData
 
-	txData := &vaporTypes.TxData{Version: 1}
+	destTxData := &vaporTypes.TxData{Version: 1}
 	// signInsts := []*SigningInstruction{}
 
 	// for?{
@@ -222,16 +222,16 @@ func (w *warder) buildSidechainTx(ormTx *orm.CrossTransaction) (*vaporTypes.Tx, 
 	//     return nil, nil, errors.Wrap(err, "add payment output")
 	// }
 
-	tx := vaporTypes.NewTx(*txData)
+	destTx := vaporTypes.NewTx(*destTxData)
 	// addInputWitness(tx, signInsts)
 
 	if err := w.db.Where(ormTx).UpdateColumn(&orm.CrossTransaction{
-		DestTxHash: sql.NullString{tx.ID.String(), true},
+		DestTxHash: sql.NullString{destTx.ID.String(), true},
 	}).Error; err != nil {
 		return nil, "", err
 	}
 
-	return tx, tx.ID.String(), nil
+	return destTx, destTx.ID.String(), nil
 }
 
 // TODO:
