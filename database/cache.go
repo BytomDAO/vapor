@@ -3,9 +3,7 @@ package database
 import (
 	"fmt"
 	"strconv"
-	"sync"
 
-	"github.com/golang/groupcache/lru"
 	"github.com/golang/groupcache/singleflight"
 
 	"github.com/vapor/common"
@@ -22,26 +20,32 @@ const (
 
 type fillBlockHeaderFn func(hash *bc.Hash, height uint64) (*types.BlockHeader, error)
 type fillBlockTransactionsFn func(hash *bc.Hash) ([]*types.Tx, error)
+type fillVoteResultFn func(seq uint64) (*state.VoteResult, error)
 
-func newBlockCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransactionsFn) blockCache {
+func newBlockCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransactionsFn, fillVoteResult fillVoteResultFn) blockCache {
 	return blockCache{
 		lruBlockHeaders: common.NewCache(maxCachedBlockHeaders),
 		lruBlockTxs:     common.NewCache(maxCachedBlockTransactions),
+		lruVoteResults:  common.NewCache(maxCachedVoteResults),
 
 		fillBlockHeaderFn:      fillBlockHeader,
 		fillBlockTransactionFn: fillBlockTxs,
+		fillVoteResultFn:       fillVoteResult,
 	}
 }
 
 type blockCache struct {
 	lruBlockHeaders *common.Cache
 	lruBlockTxs     *common.Cache
+	lruVoteResults  *common.Cache
 
 	fillBlockHeaderFn      func(hash *bc.Hash, height uint64) (*types.BlockHeader, error)
 	fillBlockTransactionFn func(hash *bc.Hash) ([]*types.Tx, error)
+	fillVoteResultFn       func(seq uint64) (*state.VoteResult, error)
 
 	singleBlockHeader singleflight.Group
 	singleBlockTxs    singleflight.Group
+	singleVoteResult  singleflight.Group
 }
 
 func (c *blockCache) lookupBlockHeader(hash *bc.Hash, height uint64) (*types.BlockHeader, error) {
@@ -92,6 +96,31 @@ func (c *blockCache) lookupBlockTxs(hash *bc.Hash) ([]*types.Tx, error) {
 	return blockTransactions.([]*types.Tx), nil
 }
 
+func (c *blockCache) lookupVoteResult(seq uint64) (*state.VoteResult, error) {
+	if vr, ok := c.getVoteResult(seq); ok {
+		return vr, nil
+	}
+
+	seqStr := strconv.FormatUint(seq, 10)
+	voteResult, err := c.singleVoteResult.Do(seqStr, func() (interface{}, error) {
+		v, err := c.fillVoteResultFn(seq)
+		if err != nil {
+			return nil, err
+		}
+
+		if v == nil {
+			return nil, fmt.Errorf("There are no vote result with given seq %s", seqStr)
+		}
+
+		c.addVoteResult(v)
+		return v, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return voteResult.(*state.VoteResult), nil
+}
+
 func (c *blockCache) getBlockHeader(hash *bc.Hash) (*types.BlockHeader, bool) {
 	blockHeader, ok := c.lruBlockHeaders.Get(*hash)
 	if blockHeader == nil {
@@ -108,6 +137,14 @@ func (c *blockCache) getBlockTransactions(hash *bc.Hash) ([]*types.Tx, bool) {
 	return txs.([]*types.Tx), ok
 }
 
+func (c *blockCache) getVoteResult(seq uint64) (*state.VoteResult, bool) {
+	voteResult, ok := c.lruVoteResults.Get(seq)
+	if voteResult == nil {
+		return nil, ok
+	}
+	return voteResult.(*state.VoteResult), ok
+}
+
 func (c *blockCache) addBlockHeader(blockHeader *types.BlockHeader) {
 	c.lruBlockHeaders.Add(blockHeader.Hash(), blockHeader)
 }
@@ -116,57 +153,20 @@ func (c *blockCache) addBlockTxs(hash bc.Hash, txs []*types.Tx) {
 	c.lruBlockTxs.Add(hash, txs)
 }
 
-func newVoteResultCache(fillFn func(seq uint64) (*state.VoteResult, error)) voteResultCache {
-	return voteResultCache{
-		lru:    lru.New(maxCachedVoteResults),
-		fillFn: fillFn,
-	}
+func (c *blockCache) addVoteResult(voteResult *state.VoteResult) {
+	c.lruVoteResults.Add(voteResult.Seq, voteResult)
 }
 
-type voteResultCache struct {
-	mu     sync.Mutex
-	lru    *lru.Cache
-	fillFn func(seq uint64) (*state.VoteResult, error)
-	single singleflight.Group
-}
+// func newVoteResultCache(fillFn func(seq uint64) (*state.VoteResult, error)) voteResultCache {
+// 	return voteResultCache{
+// 		lru:    lru.New(maxCachedVoteResults),
+// 		fillFn: fillFn,
+// 	}
+// }
 
-func (vrc *voteResultCache) lookup(seq uint64) (*state.VoteResult, error) {
-	if voteResult, ok := vrc.get(seq); ok {
-		return voteResult, nil
-	}
-
-	seqStr := strconv.FormatUint(seq, 10)
-	voteResult, err := vrc.single.Do(seqStr, func() (interface{}, error) {
-		v, err := vrc.fillFn(seq)
-		if err != nil {
-			return nil, err
-		}
-
-		if v == nil {
-			return nil, fmt.Errorf("There are no vote result with given seq %s", seqStr)
-		}
-
-		vrc.add(v)
-		return v, nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return voteResult.(*state.VoteResult), nil
-}
-
-func (vrc *voteResultCache) get(seq uint64) (*state.VoteResult, bool) {
-	vrc.mu.Lock()
-	voteResult, ok := vrc.lru.Get(seq)
-	vrc.mu.Unlock()
-	if voteResult == nil {
-		return nil, ok
-	}
-	return voteResult.(*state.VoteResult), ok
-}
-
-func (vrc *voteResultCache) add(voteResult *state.VoteResult) {
-	vrc.mu.Lock()
-	vrc.lru.Add(voteResult.Seq, voteResult)
-	vrc.mu.Unlock()
-}
+// type voteResultCache struct {
+// 	mu     sync.Mutex
+// 	lru    *lru.Cache
+// 	fillFn func(seq uint64) (*state.VoteResult, error)
+// 	single singleflight.Group
+// }

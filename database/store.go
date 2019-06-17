@@ -44,9 +44,8 @@ func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
 // It satisfies the interface protocol.Store, and provides additional
 // methods for querying current data.
 type Store struct {
-	db  dbm.DB
-	bc  blockCache
-	vrc voteResultCache
+	db     dbm.DB
+	bCache blockCache
 }
 
 func calcBlockHeaderKey(height uint64, hash *bc.Hash) []byte {
@@ -120,14 +119,13 @@ func NewStore(db dbm.DB) *Store {
 	fillBlockTxsFn := func(hash *bc.Hash) ([]*types.Tx, error) {
 		return GetBlockTransactions(db, hash)
 	}
-	bc := newBlockCache(fillBlockHeaderFn, fillBlockTxsFn)
-	vrc := newVoteResultCache(func(seq uint64) (*state.VoteResult, error) {
+	fillVoteResultFn := func(seq uint64) (*state.VoteResult, error) {
 		return GetVoteResult(db, seq)
-	})
+	}
+	bc := newBlockCache(fillBlockHeaderFn, fillBlockTxsFn, fillVoteResultFn)
 	return &Store{
-		db:  db,
-		bc:  bc,
-		vrc: vrc,
+		db:     db,
+		bCache: bc,
 	}
 }
 
@@ -138,7 +136,7 @@ func (s *Store) GetUtxo(hash *bc.Hash) (*storage.UtxoEntry, error) {
 
 // BlockExist check if the block is stored in disk
 func (s *Store) BlockExist(hash *bc.Hash, height uint64) bool {
-	blockHeader, err := s.bc.lookupBlockHeader(hash, height)
+	blockHeader, err := s.bCache.lookupBlockHeader(hash, height)
 	return err == nil && blockHeader != nil
 }
 
@@ -162,7 +160,7 @@ func (s *Store) GetBlock(hash *bc.Hash, height uint64) (*types.Block, error) {
 
 // GetBlockHeader return the BlockHeader by given hash
 func (s *Store) GetBlockHeader(hash *bc.Hash, height uint64) (*types.BlockHeader, error) {
-	blockHeader, err := s.bc.lookupBlockHeader(hash, height)
+	blockHeader, err := s.bCache.lookupBlockHeader(hash, height)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +169,7 @@ func (s *Store) GetBlockHeader(hash *bc.Hash, height uint64) (*types.BlockHeader
 
 // GetBlockTransactions return the Block transactions by given hash
 func (s *Store) GetBlockTransactions(hash *bc.Hash) ([]*types.Tx, error) {
-	txs, err := s.bc.lookupBlockTxs(hash)
+	txs, err := s.bCache.lookupBlockTxs(hash)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +202,7 @@ func (s *Store) GetStoreStatus() *protocol.BlockStoreState {
 
 // GetVoteResult retrive the voting result in specified vote sequence
 func (s *Store) GetVoteResult(seq uint64) (*state.VoteResult, error) {
-	return s.vrc.lookup(seq)
+	return s.bCache.lookupVoteResult(seq)
 }
 
 func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error) {
