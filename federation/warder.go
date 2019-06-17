@@ -183,8 +183,16 @@ func (w *warder) buildSidechainTx(ormTx *orm.CrossTransaction) (*vaporTypes.Tx, 
 		return nil, "", errors.Wrap(err, "Unmarshal muxID")
 	}
 
-	for _, _ = range ormTx.Reqs {
-		// 	txInput := vaporTypes.NewCrossChainInput(nil, muxID, vaporBc.AssetID{}, amount,sourcePos uint64, controlProgram, assetDefinition []byte)
+	for _, req := range ormTx.Reqs {
+		// TODO:
+		assetID := &vaporBc.AssetID{}
+		if err := assetID.UnmarshalText([]byte("req.assetID")); err != nil {
+			return nil, "", errors.Wrap(err, "Unmarshal muxID")
+		}
+
+		// input := vaporTypes.NewCrossChainInput(nil, *muxID, *assetID, req.AssetAmount,req.SourcePos, controlProgram, assetDefinition []byte)
+		input := vaporTypes.NewCrossChainInput(nil, *muxID, *assetID, req.AssetAmount, req.SourcePos, nil, nil)
+		destTxData.Inputs = append(destTxData.Inputs, input)
 	}
 
 	// for?{
