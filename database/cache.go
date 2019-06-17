@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	maxCachedBlockHeaders      = 1024
-	maxCachedBlockTransactions = 1024
+	maxCachedBlockHeaders      = 1000
+	maxCachedBlockTransactions = 1000
 	maxCachedVoteResults       = 144 // int(60 * 60 * 24 * 1000 / consensus.BlockTimeInterval / consensus.RoundVoteBlockNums)
 )
 
@@ -22,8 +22,8 @@ type fillBlockHeaderFn func(hash *bc.Hash, height uint64) (*types.BlockHeader, e
 type fillBlockTransactionsFn func(hash *bc.Hash) ([]*types.Tx, error)
 type fillVoteResultFn func(seq uint64) (*state.VoteResult, error)
 
-func newCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransactionsFn, fillVoteResult fillVoteResultFn) cache {
-	return cache{
+func newBlockCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransactionsFn, fillVoteResult fillVoteResultFn) blockCache {
+	return blockCache{
 		lruBlockHeaders: common.NewCache(maxCachedBlockHeaders),
 		lruBlockTxs:     common.NewCache(maxCachedBlockTransactions),
 		lruVoteResults:  common.NewCache(maxCachedVoteResults),
@@ -34,7 +34,7 @@ func newCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransacti
 	}
 }
 
-type cache struct {
+type blockCache struct {
 	lruBlockHeaders *common.Cache
 	lruBlockTxs     *common.Cache
 	lruVoteResults  *common.Cache
@@ -48,7 +48,7 @@ type cache struct {
 	singleVoteResult  singleflight.Group
 }
 
-func (c *cache) lookupBlockHeader(hash *bc.Hash, height uint64) (*types.BlockHeader, error) {
+func (c *blockCache) lookupBlockHeader(hash *bc.Hash, height uint64) (*types.BlockHeader, error) {
 	if bH, ok := c.getBlockHeader(hash); ok {
 		return bH, nil
 	}
@@ -72,7 +72,7 @@ func (c *cache) lookupBlockHeader(hash *bc.Hash, height uint64) (*types.BlockHea
 	return blockHeader.(*types.BlockHeader), nil
 }
 
-func (c *cache) lookupBlockTxs(hash *bc.Hash) ([]*types.Tx, error) {
+func (c *blockCache) lookupBlockTxs(hash *bc.Hash) ([]*types.Tx, error) {
 	if bTxs, ok := c.getBlockTransactions(hash); ok {
 		return bTxs, nil
 	}
@@ -96,7 +96,7 @@ func (c *cache) lookupBlockTxs(hash *bc.Hash) ([]*types.Tx, error) {
 	return blockTransactions.([]*types.Tx), nil
 }
 
-func (c *cache) lookupVoteResult(seq uint64) (*state.VoteResult, error) {
+func (c *blockCache) lookupVoteResult(seq uint64) (*state.VoteResult, error) {
 	if vr, ok := c.getVoteResult(seq); ok {
 		return vr.Fork(), nil
 	}
@@ -121,7 +121,7 @@ func (c *cache) lookupVoteResult(seq uint64) (*state.VoteResult, error) {
 	return voteResult.(*state.VoteResult).Fork(), nil
 }
 
-func (c *cache) getBlockHeader(hash *bc.Hash) (*types.BlockHeader, bool) {
+func (c *blockCache) getBlockHeader(hash *bc.Hash) (*types.BlockHeader, bool) {
 	blockHeader, ok := c.lruBlockHeaders.Get(*hash)
 	if blockHeader == nil {
 		return nil, ok
@@ -129,7 +129,7 @@ func (c *cache) getBlockHeader(hash *bc.Hash) (*types.BlockHeader, bool) {
 	return blockHeader.(*types.BlockHeader), ok
 }
 
-func (c *cache) getBlockTransactions(hash *bc.Hash) ([]*types.Tx, bool) {
+func (c *blockCache) getBlockTransactions(hash *bc.Hash) ([]*types.Tx, bool) {
 	txs, ok := c.lruBlockTxs.Get(*hash)
 	if txs == nil {
 		return nil, ok
@@ -137,7 +137,7 @@ func (c *cache) getBlockTransactions(hash *bc.Hash) ([]*types.Tx, bool) {
 	return txs.([]*types.Tx), ok
 }
 
-func (c *cache) getVoteResult(seq uint64) (*state.VoteResult, bool) {
+func (c *blockCache) getVoteResult(seq uint64) (*state.VoteResult, bool) {
 	voteResult, ok := c.lruVoteResults.Get(seq)
 	if voteResult == nil {
 		return nil, ok
@@ -145,14 +145,14 @@ func (c *cache) getVoteResult(seq uint64) (*state.VoteResult, bool) {
 	return voteResult.(*state.VoteResult), ok
 }
 
-func (c *cache) addBlockHeader(blockHeader *types.BlockHeader) {
+func (c *blockCache) addBlockHeader(blockHeader *types.BlockHeader) {
 	c.lruBlockHeaders.Add(blockHeader.Hash(), blockHeader)
 }
 
-func (c *cache) addBlockTxs(hash bc.Hash, txs []*types.Tx) {
+func (c *blockCache) addBlockTxs(hash bc.Hash, txs []*types.Tx) {
 	c.lruBlockTxs.Add(hash, txs)
 }
 
-func (c *cache) addVoteResult(voteResult *state.VoteResult) {
+func (c *blockCache) addVoteResult(voteResult *state.VoteResult) {
 	c.lruVoteResults.Add(voteResult.Seq, voteResult)
 }
