@@ -36,6 +36,7 @@ type Config struct {
 	GinGonic    GinGonic    `json:"gin-gonic"`
 	MySQLConfig MySQLConfig `json:"mysql"`
 	Warders     []Warder    `json:"warders"`
+	Quorum      int         `json:"quorum"`
 	Mainchain   Chain       `json:"mainchain"`
 	Sidechain   Chain       `json:"sidechain"`
 }
