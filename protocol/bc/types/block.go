@@ -130,17 +130,15 @@ func (b *Block) WriteTo(w io.Writer) (int64, error) {
 }
 
 func (b *Block) writeTo(w io.Writer, serflags uint8) error {
-	if serflags == SerBlockHeader || serflags == SerBlockFull {
+	if serflags != SerBlockTransactions {
 		if err := b.BlockHeader.writeTo(w, serflags); err != nil {
 			return err
 		}
-	}
 
-	if serflags == SerBlockHeader {
-		return nil
-	}
-
-	if serflags != SerBlockFull {
+		if serflags == SerBlockHeader {
+			return nil
+		}
+	} else {
 		w.Write([]byte{serflags})
 	}
 
