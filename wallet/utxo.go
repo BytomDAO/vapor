@@ -213,7 +213,6 @@ func txInToUtxos(tx *types.Tx, statusFail bool) []*account.UTXO {
 				Vote:           resOut.Vote,
 			}
 		default:
-			log.WithFields(log.Fields{"module": logModule, "err": errors.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", inpID.Bytes(), e)}).Error("txInToUtxos fail on get resOut")
 			continue
 		}
 		utxos = append(utxos, utxo)
