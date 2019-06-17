@@ -44,7 +44,7 @@ func TestBlockCache(t *testing.T) {
 		return voteResults[seq], nil
 	}
 
-	cache := newBlockCache(fillBlockHeaderFn, fillBlockTxsFn, fillVoteResultFn)
+	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillVoteResultFn)
 
 	for i := 0; i < maxCachedBlockHeaders+10; i++ {
 		block := newBlock(uint64(i))
@@ -55,7 +55,7 @@ func TestBlockCache(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		block := newBlock(uint64(i))
 		hash := block.Hash()
-		if b, _ := cache.getBlockHeader(&hash); b != nil {
+		if _, ok := cache.lruBlockHeaders.Get(hash); ok {
 			t.Fatalf("find old block")
 		}
 	}
@@ -63,7 +63,7 @@ func TestBlockCache(t *testing.T) {
 	for i := 10; i < maxCachedBlockHeaders+10; i++ {
 		block := newBlock(uint64(i))
 		hash := block.Hash()
-		if b, _ := cache.getBlockHeader(&hash); b == nil {
+		if _, ok := cache.lruBlockHeaders.Get(hash); !ok {
 			t.Fatalf("can't find new block")
 		}
 	}
@@ -75,14 +75,14 @@ func TestBlockCache(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		voteResult := newVoteResult(uint64(i))
-		if v, _ := cache.getVoteResult(voteResult.Seq); v != nil {
+		if _, ok := cache.lruVoteResults.Get(voteResult.Seq); ok {
 			t.Fatalf("find old vote result")
 		}
 	}
 
 	for i := 10; i < maxCachedVoteResults+10; i++ {
 		voteResult := newVoteResult(uint64(i))
-		if v, _ := cache.getVoteResult(voteResult.Seq); v == nil {
+		if _, ok := cache.lruVoteResults.Get(voteResult.Seq); !ok {
 			t.Fatalf("can't find new vote result")
 		}
 	}
