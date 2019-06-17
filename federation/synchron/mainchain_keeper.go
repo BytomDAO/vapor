@@ -22,6 +22,7 @@ import (
 	"github.com/vapor/protocol/bc"
 )
 
+// TODO:
 var fedProg = []byte{}
 
 type mainchainKeeper struct {
