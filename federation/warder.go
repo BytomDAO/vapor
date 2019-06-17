@@ -14,7 +14,8 @@ import (
 	"github.com/vapor/federation/config"
 	"github.com/vapor/federation/database/orm"
 	"github.com/vapor/federation/service"
-	vaporTypes "github.com/vapor/protocol/bc/types"
+    vaporBc "github.com/vapor/protocol/bc"
+    vaporTypes "github.com/vapor/protocol/bc/types"
 )
 
 var collectInterval = 5 * time.Second
@@ -172,9 +173,15 @@ func (w *warder) proposeDestTx(tx *orm.CrossTransaction) (interface{}, string, e
 }
 
 // TODO:
+// signInsts?
+// addInputWitness(tx, signInsts)?
 func (w *warder) buildSidechainTx(ormTx *orm.CrossTransaction) (*vaporTypes.Tx, string, error) {
 	destTxData := &vaporTypes.TxData{Version: 1, TimeRange: 0}
 	// signInsts := []*SigningInstruction{}
+
+	for _, req := range ormTx.Reqs {
+		txInput := vaporTypes.NewCrossChainInput(nil, vaporBc.Hash{}, vaporBc.AssetID{}, amount,sourcePos uint64, controlProgram, assetDefinition []byte)
+	}
 
 	// for?{
 
@@ -209,7 +216,6 @@ func (w *warder) buildSidechainTx(ormTx *orm.CrossTransaction) (*vaporTypes.Tx, 
 	// return signInst, nil
 
 	// signInsts = append(signInsts, signInst)
-	// balance[utxo.Asset.Asset] += utxo.Amount
 
 	// }
 

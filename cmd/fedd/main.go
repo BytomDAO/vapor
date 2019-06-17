@@ -11,6 +11,8 @@ import (
 	"github.com/vapor/federation/synchron"
 )
 
+// TODO: should we rename bc package
+// https://github.com/golang/protobuf/issues/172
 func main() {
 	cfg := config.NewConfig()
 	db, err := database.NewMySQLDB(cfg.MySQLConfig)
