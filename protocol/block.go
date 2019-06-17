@@ -32,7 +32,7 @@ func (c *Chain) GetBlockByHash(hash *bc.Hash) (*types.Block, error) {
 	if node == nil {
 		return nil, errors.New("can't find block in given hash")
 	}
-	return c.store.GetBlock(hash, node.Height)
+	return c.store.GetBlock(hash)
 }
 
 // GetBlockByHeight return a block header by given height
@@ -41,7 +41,7 @@ func (c *Chain) GetBlockByHeight(height uint64) (*types.Block, error) {
 	if node == nil {
 		return nil, errors.New("can't find block in given height")
 	}
-	return c.store.GetBlock(&node.Hash, height)
+	return c.store.GetBlock(&node.Hash)
 }
 
 // GetHeaderByHash return a block header by given hash
@@ -69,13 +69,13 @@ func (c *Chain) calcReorganizeNodes(node *state.BlockNode) ([]*state.BlockNode, 
 	attachNode := node
 	for c.index.NodeByHeight(attachNode.Height) != attachNode {
 		attachNodes = append([]*state.BlockNode{attachNode}, attachNodes...)
-		attachNode = attachNode.Parent
+		attachNode = c.index.GetNode(attachNode.Parent)
 	}
 
 	detachNode := c.bestNode
 	for detachNode != attachNode {
 		detachNodes = append(detachNodes, detachNode)
-		detachNode = detachNode.Parent
+		detachNode = c.index.GetNode(detachNode.Parent)
 	}
 	return attachNodes, detachNodes
 }
@@ -129,7 +129,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 	}
 
 	for _, detachNode := range detachNodes {
-		b, err := c.store.GetBlock(&detachNode.Hash, detachNode.Height)
+		b, err := c.store.GetBlock(&detachNode.Hash)
 		if err != nil {
 			return err
 		}
@@ -156,7 +156,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 	}
 
 	for _, attachNode := range attachNodes {
-		b, err := c.store.GetBlock(&attachNode.Hash, attachNode.Height)
+		b, err := c.store.GetBlock(&attachNode.Hash)
 		if err != nil {
 			return err
 		}
@@ -219,7 +219,7 @@ func (c *Chain) saveBlock(block *types.Block) error {
 	}
 
 	c.orphanManage.Delete(&bcBlock.ID)
-	node, err := state.NewBlockNode(&block.BlockHeader, parent)
+	node, err := state.NewBlockNode(&block.BlockHeader, &parent.Hash)
 	if err != nil {
 		return err
 	}
@@ -306,10 +306,11 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	bestBlock := c.saveSubBlock(block)
 	bestBlockHash := bestBlock.Hash()
 	bestNode := c.index.GetNode(&bestBlockHash)
+	parentBestNode := c.index.GetNode(bestNode.Parent)
 
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
-	if bestNode.Parent == c.bestNode {
+	if parentBestNode == c.bestNode {
 		log.WithFields(log.Fields{"module": logModule}).Debug("append block to the end of mainchain")
 		return false, c.connectBlock(bestBlock)
 	}

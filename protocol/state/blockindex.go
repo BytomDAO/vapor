@@ -2,24 +2,27 @@ package state
 
 import (
 	"errors"
-	"sort"
 	"sync"
 
 	"github.com/vapor/common"
-	"github.com/vapor/consensus"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
 
-// approxNodesPerDay is an approximation of the number of new blocks there are
-// in a day on average.
-const approxNodesPerDay = 24 * 24
+const (
+	// approxNodesPerDay is the approximate number of new blocks in a day on average.
+	approxNodesPerDay = 2 * 24 * 60 * 60
+	// maxCachedMainBlockNodes is the max number of cached blockNodes
+	maxCachedMainBlockNodes = 10000
+)
+
+type fillBlockNodeFn func(hash *bc.Hash) (*BlockNode, error)
 
 // BlockNode represents a block within the block chain and is primarily used to
 // aid in selecting the best chain to be the main chain.
 type BlockNode struct {
-	Parent *BlockNode // parent is the parent block for this node.
-	Hash   bc.Hash    // hash of the block.
+	Parent *bc.Hash // parent is the parent block for this node.
+	Hash   bc.Hash  // hash of the block.
 
 	Version                uint64
 	Height                 uint64
@@ -29,7 +32,8 @@ type BlockNode struct {
 	TransactionStatusHash  bc.Hash
 }
 
-func NewBlockNode(bh *types.BlockHeader, parent *BlockNode) (*BlockNode, error) {
+// NewBlockNode create a BlockNode
+func NewBlockNode(bh *types.BlockHeader, parent *bc.Hash) (*BlockNode, error) {
 	if bh.Height != 0 && parent == nil {
 		return nil, errors.New("parent node can not be nil")
 	}
@@ -55,11 +59,11 @@ func NewBlockNode(bh *types.BlockHeader, parent *BlockNode) (*BlockNode, error) 
 	return node, nil
 }
 
-// blockHeader convert a node to the header struct
+// BlockHeader convert a BlockNode to the BlockHeader
 func (node *BlockNode) BlockHeader() *types.BlockHeader {
 	previousBlockHash := bc.Hash{}
 	if node.Parent != nil {
-		previousBlockHash = node.Parent.Hash
+		previousBlockHash = *node.Parent
 	}
 	return &types.BlockHeader{
 		Version:           node.Version,
@@ -73,108 +77,112 @@ func (node *BlockNode) BlockHeader() *types.BlockHeader {
 	}
 }
 
-func (node *BlockNode) CalcPastMedianTime() uint64 {
-	timestamps := []uint64{}
-	iterNode := node
-	for i := 0; i < consensus.MedianTimeBlocks && iterNode != nil; i++ {
-		timestamps = append(timestamps, iterNode.Timestamp)
-		iterNode = iterNode.Parent
-	}
-
-	sort.Sort(common.TimeSorter(timestamps))
-	return timestamps[len(timestamps)/2]
-}
-
 // BlockIndex is the struct for help chain trace block chain as tree
 type BlockIndex struct {
 	sync.RWMutex
-
-	index       map[bc.Hash]*BlockNode
-	heightIndex map[uint64][]*BlockNode
-	mainChain   []*BlockNode
+	lruMainBlockNodes *common.Cache
+	fillBlockNodeFn   func(*bc.Hash) (*BlockNode, error)
+	heightIndex       map[uint64][]*bc.Hash
+	mainChain         []*bc.Hash
 }
 
-// NewBlockIndex will create a empty BlockIndex
-func NewBlockIndex() *BlockIndex {
+// NewBlockIndex create a BlockIndex
+func NewBlockIndex(fillBlockNode fillBlockNodeFn) *BlockIndex {
 	return &BlockIndex{
-		index:       make(map[bc.Hash]*BlockNode),
-		heightIndex: make(map[uint64][]*BlockNode),
-		mainChain:   make([]*BlockNode, 0, approxNodesPerDay),
+		lruMainBlockNodes: common.NewCache(maxCachedMainBlockNodes),
+		fillBlockNodeFn:   fillBlockNode,
+		heightIndex:       make(map[uint64][]*bc.Hash),
+		mainChain:         make([]*bc.Hash, 0, approxNodesPerDay),
 	}
 }
 
-// AddNode will add node to the index map
+// AddNode add BlockNode into the index map
 func (bi *BlockIndex) AddNode(node *BlockNode) {
 	bi.Lock()
-	bi.index[node.Hash] = node
-	bi.heightIndex[node.Height] = append(bi.heightIndex[node.Height], node)
+	bi.heightIndex[node.Height] = append(bi.heightIndex[node.Height], &node.Hash)
 	bi.Unlock()
+	bi.lruMainBlockNodes.Add(node.Hash, node)
 }
 
-// GetNode will search node from the index map
+// GetNode search BlockNode from the index map
 func (bi *BlockIndex) GetNode(hash *bc.Hash) *BlockNode {
-	bi.RLock()
-	defer bi.RUnlock()
-	return bi.index[*hash]
+	if hexBlockNode, ok := bi.lruMainBlockNodes.Get(*hash); ok {
+		return hexBlockNode.(*BlockNode)
+	}
+
+	if blockNode, err := bi.fillBlockNodeFn(hash); err != nil {
+		return blockNode
+	}
+	return nil
 }
 
+// BestNode return the best BlockNode
 func (bi *BlockIndex) BestNode() *BlockNode {
 	bi.RLock()
 	defer bi.RUnlock()
-	return bi.mainChain[len(bi.mainChain)-1]
+	bestBlockHash := bi.mainChain[len(bi.mainChain)-1]
+	return bi.GetNode(bestBlockHash)
 }
 
 // BlockExist check does the block existed in blockIndex
 func (bi *BlockIndex) BlockExist(hash *bc.Hash) bool {
-	bi.RLock()
-	_, ok := bi.index[*hash]
-	bi.RUnlock()
-	return ok
+	if _, ok := bi.lruMainBlockNodes.Get(*hash); ok {
+		return ok
+	}
+
+	if _, err := bi.fillBlockNodeFn(hash); err != nil {
+		return true
+	}
+	return false
 }
 
 // TODO: THIS FUNCTION MIGHT BE DELETED
-func (bi *BlockIndex) InMainchain(hash bc.Hash) bool {
-	bi.RLock()
-	defer bi.RUnlock()
-
-	node, ok := bi.index[hash]
-	if !ok {
-		return false
+func (bi *BlockIndex) InMainchain(hash *bc.Hash) bool {
+	if resBlockNode, ok := bi.lruMainBlockNodes.Get(*hash); ok {
+		blockNode := resBlockNode.(*BlockNode)
+		return *bi.mainChain[blockNode.Height] == *hash
 	}
-	return bi.nodeByHeight(node.Height) == node
+
+	if blockNode, err := bi.fillBlockNodeFn(hash); err != nil {
+		return *bi.mainChain[blockNode.Height] == *hash
+	}
+	return false
 }
 
-func (bi *BlockIndex) nodeByHeight(height uint64) *BlockNode {
-	if height >= uint64(len(bi.mainChain)) {
-		return nil
-	}
-	return bi.mainChain[height]
-}
-
-// NodeByHeight returns the block node at the specified height.
+// NodeByHeight return the BlockNode at the specified height
 func (bi *BlockIndex) NodeByHeight(height uint64) *BlockNode {
 	bi.RLock()
 	defer bi.RUnlock()
-	return bi.nodeByHeight(height)
+	if height >= uint64(len(bi.mainChain)) {
+		return nil
+	}
+	return bi.GetNode(bi.mainChain[height])
 }
 
 // NodesByHeight return all block nodes at the specified height.
 func (bi *BlockIndex) NodesByHeight(height uint64) []*BlockNode {
 	bi.RLock()
 	defer bi.RUnlock()
-	return bi.heightIndex[height]
+
+	blockNodeHashes := bi.heightIndex[height]
+	blockNodes := []*BlockNode{}
+	for _, h := range blockNodeHashes {
+		blockNode := bi.GetNode(h)
+		blockNodes = append(blockNodes, blockNode)
+	}
+	return blockNodes
 }
 
-// SetMainChain will set the the mainChain array
+// SetMainChain set the the mainChain array
 func (bi *BlockIndex) SetMainChain(node *BlockNode) {
 	bi.Lock()
 	defer bi.Unlock()
 
 	needed := node.Height + 1
 	if uint64(cap(bi.mainChain)) < needed {
-		nodes := make([]*BlockNode, needed, needed+approxNodesPerDay)
-		copy(nodes, bi.mainChain)
-		bi.mainChain = nodes
+		blockNodeHashes := make([]*bc.Hash, needed, needed+approxNodesPerDay)
+		copy(blockNodeHashes, bi.mainChain)
+		bi.mainChain = blockNodeHashes
 	} else {
 		i := uint64(len(bi.mainChain))
 		bi.mainChain = bi.mainChain[0:needed]
@@ -183,8 +191,8 @@ func (bi *BlockIndex) SetMainChain(node *BlockNode) {
 		}
 	}
 
-	for node != nil && bi.mainChain[node.Height] != node {
-		bi.mainChain[node.Height] = node
-		node = node.Parent
+	for node != nil && *bi.mainChain[node.Height] != node.Hash {
+		bi.mainChain[node.Height] = &node.Hash
+		node = bi.GetNode(node.Parent)
 	}
 }

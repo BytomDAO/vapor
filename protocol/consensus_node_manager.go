@@ -76,7 +76,7 @@ func (c *consensusNodeManager) getPrevRoundLastBlock(prevBlockHash *bc.Hash) (*s
 	}
 
 	for node.Height%consensus.RoundVoteBlockNums != 0 {
-		node = node.Parent
+		node = c.blockIndex.GetNode(node.Parent)
 	}
 	return node, nil
 }
@@ -141,15 +141,15 @@ func (c *consensusNodeManager) reorganizeVoteResult(voteResult *state.VoteResult
 			detachNodes = append(detachNodes, mainChainNode)
 		}
 		if forChainRollback {
-			forkChainNode = forkChainNode.Parent
+			forkChainNode = c.blockIndex.GetNode(forkChainNode.Parent)
 		}
 		if mainChainRollBack {
-			mainChainNode = mainChainNode.Parent
+			mainChainNode = c.blockIndex.GetNode(mainChainNode.Parent)
 		}
 	}
 
 	for _, node := range detachNodes {
-		block, err := c.store.GetBlock(&node.Hash, node.Height)
+		block, err := c.store.GetBlock(&node.Hash)
 		if err != nil {
 			return err
 		}
@@ -160,7 +160,7 @@ func (c *consensusNodeManager) reorganizeVoteResult(voteResult *state.VoteResult
 	}
 
 	for _, node := range attachNodes {
-		block, err := c.store.GetBlock(&node.Hash, node.Height)
+		block, err := c.store.GetBlock(&node.Hash)
 		if err != nil {
 			return err
 		}

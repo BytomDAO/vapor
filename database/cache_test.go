@@ -21,7 +21,7 @@ func TestBlockCache(t *testing.T) {
 		blocks[block.Hash()] = block
 	}
 
-	fillBlockHeaderFn := func(hash *bc.Hash, height uint64) (*types.BlockHeader, error) {
+	fillBlockHeaderFn := func(hash *bc.Hash) (*types.BlockHeader, error) {
 		return &blocks[*hash].BlockHeader, nil
 	}
 
@@ -34,7 +34,7 @@ func TestBlockCache(t *testing.T) {
 	for i := 0; i < maxCachedBlockHeaders+10; i++ {
 		block := newBlock(uint64(i))
 		hash := block.Hash()
-		cache.lookupBlockHeader(&hash, block.Height)
+		cache.lookupBlockHeader(&hash)
 	}
 
 	for i := 0; i < 10; i++ {

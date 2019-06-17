@@ -15,7 +15,7 @@ const (
 	maxCachedBlockTransactions = 1000
 )
 
-type fillBlockHeaderFn func(hash *bc.Hash, height uint64) (*types.BlockHeader, error)
+type fillBlockHeaderFn func(hash *bc.Hash) (*types.BlockHeader, error)
 type fillBlockTransactionsFn func(hash *bc.Hash) ([]*types.Tx, error)
 
 func newBlockCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransactionsFn) blockCache {
@@ -32,20 +32,20 @@ type blockCache struct {
 	lruBlockHeaders *common.Cache
 	lruBlockTxs     *common.Cache
 
-	fillBlockHeaderFn      func(hash *bc.Hash, height uint64) (*types.BlockHeader, error)
+	fillBlockHeaderFn      func(hash *bc.Hash) (*types.BlockHeader, error)
 	fillBlockTransactionFn func(hash *bc.Hash) ([]*types.Tx, error)
 
 	singleBlockHeader singleflight.Group
 	singleBlockTxs    singleflight.Group
 }
 
-func (c *blockCache) lookupBlockHeader(hash *bc.Hash, height uint64) (*types.BlockHeader, error) {
+func (c *blockCache) lookupBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
 	if bH, ok := c.getBlockHeader(hash); ok {
 		return bH, nil
 	}
 
 	blockHeader, err := c.singleBlockHeader.Do(hash.String(), func() (interface{}, error) {
-		bH, err := c.fillBlockHeaderFn(hash, height)
+		bH, err := c.fillBlockHeaderFn(hash)
 		if err != nil {
 			return nil, err
 		}

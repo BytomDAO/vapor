@@ -21,11 +21,12 @@ import (
 const logModule = "leveldb"
 
 var (
-	blockStoreKey          = []byte("blockStore")
-	blockHeaderPrefix      = []byte("BH:")
-	blockTransactonsPrefix = []byte("BTXS:")
-	txStatusPrefix         = []byte("BTS:")
-	voteResultPrefix       = []byte("VR:")
+	blockStoreKey           = []byte("blockStore")
+	blockHashByHeightPrefix = []byte("BHH:")
+	blockHeaderPrefix       = []byte("BH:")
+	blockTransactonsPrefix  = []byte("BTXS:")
+	txStatusPrefix          = []byte("BTS:")
+	voteResultPrefix        = []byte("VR:")
 )
 
 func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
@@ -44,15 +45,19 @@ func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
 // It satisfies the interface protocol.Store, and provides additional
 // methods for querying current data.
 type Store struct {
-	db    dbm.DB
-	cache blockCache
+	db         dbm.DB
+	cache      blockCache
+	blockIndex *state.BlockIndex
 }
 
-func calcBlockHeaderKey(height uint64, hash *bc.Hash) []byte {
+func calcBlockHashByHeightKey(height uint64) []byte {
 	buf := [8]byte{}
 	binary.BigEndian.PutUint64(buf[:], height)
-	key := append(blockHeaderPrefix, buf[:]...)
-	return append(key, hash.Bytes()...)
+	return append(blockHashByHeightPrefix, buf[:]...)
+}
+
+func calcBlockHeaderKey(hash *bc.Hash) []byte {
+	return append(blockHeaderPrefix, hash.Bytes()...)
 }
 
 func calcBlockTransactionsKey(hash *bc.Hash) []byte {
@@ -69,10 +74,10 @@ func calcVoteResultKey(seq uint64) []byte {
 	return append(voteResultPrefix, buf[:]...)
 }
 
-// GetBlockHeader return the block header by given hash and height
-func GetBlockHeader(db dbm.DB, hash *bc.Hash, height uint64) (*types.BlockHeader, error) {
+// GetBlockHeader return the block header by given hash
+func GetBlockHeader(db dbm.DB, hash *bc.Hash) (*types.BlockHeader, error) {
 	block := &types.Block{}
-	binaryBlockHeader := db.Get(calcBlockHeaderKey(height, hash))
+	binaryBlockHeader := db.Get(calcBlockHeaderKey(hash))
 	if binaryBlockHeader == nil {
 		return nil, nil
 	}
@@ -97,20 +102,34 @@ func GetBlockTransactions(db dbm.DB, hash *bc.Hash) ([]*types.Tx, error) {
 	return block.Transactions, nil
 }
 
+func GetBlockNode(db dbm.DB, hash *bc.Hash) (*state.BlockNode, error) {
+	blockHeader, err := GetBlockHeader(db, hash)
+	if err != nil {
+		return nil, err
+	}
+	return state.NewBlockNode(blockHeader, &blockHeader.PreviousBlockHash)
+}
+
 // NewStore creates and returns a new Store object.
 func NewStore(db dbm.DB) *Store {
-	fillBlockHeaderFn := func(hash *bc.Hash, height uint64) (*types.BlockHeader, error) {
-		return GetBlockHeader(db, hash, height)
+	fillBlockHeaderFn := func(hash *bc.Hash) (*types.BlockHeader, error) {
+		return GetBlockHeader(db, hash)
 	}
 
 	fillBlockTxsFn := func(hash *bc.Hash) ([]*types.Tx, error) {
 		return GetBlockTransactions(db, hash)
 	}
 
+	fillBlockNodeFn := func(hash *bc.Hash) (*state.BlockNode, error) {
+		return GetBlockNode(db, hash)
+	}
+
 	cache := newBlockCache(fillBlockHeaderFn, fillBlockTxsFn)
+	blockIndex := state.NewBlockIndex(fillBlockNodeFn)
 	return &Store{
-		db:    db,
-		cache: cache,
+		db:         db,
+		cache:      cache,
+		blockIndex: blockIndex,
 	}
 }
 
@@ -120,14 +139,14 @@ func (s *Store) GetUtxo(hash *bc.Hash) (*storage.UtxoEntry, error) {
 }
 
 // BlockExist check if the block is stored in disk
-func (s *Store) BlockExist(hash *bc.Hash, height uint64) bool {
-	blockHeader, err := s.cache.lookupBlockHeader(hash, height)
+func (s *Store) BlockExist(hash *bc.Hash) bool {
+	blockHeader, err := s.cache.lookupBlockHeader(hash)
 	return err == nil && blockHeader != nil
 }
 
 // GetBlock return the block by given hash
-func (s *Store) GetBlock(hash *bc.Hash, height uint64) (*types.Block, error) {
-	blockHeader, err := s.GetBlockHeader(hash, height)
+func (s *Store) GetBlock(hash *bc.Hash) (*types.Block, error) {
+	blockHeader, err := s.GetBlockHeader(hash)
 	if err != nil {
 		return nil, err
 	}
@@ -144,8 +163,8 @@ func (s *Store) GetBlock(hash *bc.Hash, height uint64) (*types.Block, error) {
 }
 
 // GetBlockHeader return the BlockHeader by given hash
-func (s *Store) GetBlockHeader(hash *bc.Hash, height uint64) (*types.BlockHeader, error) {
-	blockHeader, err := s.cache.lookupBlockHeader(hash, height)
+func (s *Store) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
+	blockHeader, err := s.cache.lookupBlockHeader(hash)
 	if err != nil {
 		return nil, err
 	}
@@ -201,37 +220,35 @@ func (s *Store) GetVoteResult(seq uint64) (*state.VoteResult, error) {
 
 func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error) {
 	startTime := time.Now()
-	blockIndex := state.NewBlockIndex()
-	bhIter := s.db.IteratorPrefix(blockHeaderPrefix)
+	bhIter := s.db.IteratorPrefix(blockHashByHeightPrefix)
 	defer bhIter.Release()
 
-	var lastNode *state.BlockNode
 	for bhIter.Next() {
-		bh := &types.BlockHeader{}
-		if err := bh.UnmarshalText(bhIter.Value()); err != nil {
-			return nil, err
-		}
+		key := bhIter.Key()
+		lenPrefix := len(blockHashByHeightPrefix)
+		blockNodeHeight := binary.BigEndian.Uint64(key[lenPrefix:])
 
 		// If a block with a height greater than the best height of state is added to the index,
 		// It may cause a bug that the new block cant not be process properly.
-		if bh.Height > stateBestHeight {
+		if blockNodeHeight > stateBestHeight {
 			break
 		}
 
-		var parent *state.BlockNode
-		if lastNode == nil || lastNode.Hash == bh.PreviousBlockHash {
-			parent = lastNode
-		} else {
-			parent = blockIndex.GetNode(&bh.PreviousBlockHash)
+		blockNodeHash := &bc.Hash{}
+		if err := blockNodeHash.UnmarshalText(bhIter.Value()); err != nil {
+			return nil, err
 		}
 
-		node, err := state.NewBlockNode(bh, parent)
+		blockHeader, err := GetBlockHeader(s.db, blockNodeHash)
 		if err != nil {
 			return nil, err
 		}
 
-		blockIndex.AddNode(node)
-		lastNode = node
+		node, err := state.NewBlockNode(blockHeader, &blockHeader.PreviousBlockHash)
+		if err != nil {
+			return nil, err
+		}
+		s.blockIndex.AddNode(node)
 	}
 
 	log.WithFields(log.Fields{
@@ -239,7 +256,7 @@ func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error
 		"height":   stateBestHeight,
 		"duration": time.Since(startTime),
 	}).Debug("initialize load history block index from database")
-	return blockIndex, nil
+	return s.blockIndex, nil
 }
 
 // SaveBlock persists a new block in the protocol.
@@ -262,8 +279,14 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 	}
 
 	blockHash := block.Hash()
+	binaryBlockHash, err := blockHash.MarshalText()
+	if err != nil {
+		return errors.Wrap(err, "marshal block hash")
+	}
+
 	batch := s.db.NewBatch()
-	batch.Set(calcBlockHeaderKey(block.Height, &blockHash), binaryBlockHeader)
+	batch.Set(calcBlockHashByHeightKey(block.Height), binaryBlockHash)
+	batch.Set(calcBlockHeaderKey(&blockHash), binaryBlockHeader)
 	batch.Set(calcBlockTransactionsKey(&blockHash), binaryBlockTxs)
 	batch.Set(calcTxStatusKey(&blockHash), binaryTxStatus)
 	batch.Write()
@@ -288,7 +311,7 @@ func (s *Store) SaveBlockHeader(blockHeader *types.BlockHeader) error {
 
 	blockHash := blockHeader.Hash()
 	batch := s.db.NewBatch()
-	batch.Set(calcBlockHeaderKey(blockHeader.Height, &blockHash), binaryBlockHeader)
+	batch.Set(calcBlockHeaderKey(&blockHash), binaryBlockHeader)
 	batch.Write()
 
 	log.WithFields(log.Fields{

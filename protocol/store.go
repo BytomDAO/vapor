@@ -15,10 +15,10 @@ var (
 
 // Store provides storage interface for blockchain data
 type Store interface {
-	BlockExist(*bc.Hash, uint64) bool
+	BlockExist(*bc.Hash) bool
 
-	GetBlock(*bc.Hash, uint64) (*types.Block, error)
-	GetBlockHeader(*bc.Hash, uint64) (*types.BlockHeader, error)
+	GetBlock(*bc.Hash) (*types.Block, error)
+	GetBlockHeader(*bc.Hash) (*types.BlockHeader, error)
 	GetStoreStatus() *BlockStoreState
 	GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error)
 	GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error

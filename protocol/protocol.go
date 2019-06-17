@@ -5,12 +5,12 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/vapor/common"
 	"github.com/vapor/config"
 	"github.com/vapor/event"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
-	"github.com/vapor/common"
 )
 
 const maxProcessBlockChSize = 1024
@@ -120,7 +120,7 @@ func (c *Chain) BestBlockHeader() *types.BlockHeader {
 
 // InMainChain checks wheather a block is in the main chain
 func (c *Chain) InMainChain(hash bc.Hash) bool {
-	return c.index.InMainchain(hash)
+	return c.index.InMainchain(&hash)
 }
 
 // This function must be called with mu lock in above level
