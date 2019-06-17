@@ -14,7 +14,7 @@ import (
 	"github.com/vapor/federation/config"
 	"github.com/vapor/federation/database/orm"
 	"github.com/vapor/federation/service"
-	// vaporBc "github.com/vapor/protocol/bc"
+	vaporBc "github.com/vapor/protocol/bc"
 	vaporTypes "github.com/vapor/protocol/bc/types"
 )
 
@@ -178,12 +178,14 @@ func (w *warder) proposeDestTx(tx *orm.CrossTransaction) (interface{}, string, e
 func (w *warder) buildSidechainTx(ormTx *orm.CrossTransaction) (*vaporTypes.Tx, string, error) {
 	destTxData := &vaporTypes.TxData{Version: 1, TimeRange: 0}
 	// signInsts := []*SigningInstruction{}
+	muxID := &vaporBc.Hash{}
+	if err := muxID.UnmarshalText([]byte(ormTx.SourceMuxID)); err != nil {
+		return nil, "", errors.Wrap(err, "Unmarshal muxID")
+	}
 
-	// for _, req := range ormTx.Reqs {
-	//        muxID := vaporBc.Hash{}
-
-	// 	txInput := vaporTypes.NewCrossChainInput(nil, muxID, vaporBc.AssetID{}, amount,sourcePos uint64, controlProgram, assetDefinition []byte)
-	// }
+	for _, _ = range ormTx.Reqs {
+		// 	txInput := vaporTypes.NewCrossChainInput(nil, muxID, vaporBc.AssetID{}, amount,sourcePos uint64, controlProgram, assetDefinition []byte)
+	}
 
 	// for?{
 
