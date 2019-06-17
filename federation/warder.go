@@ -271,9 +271,8 @@ func (w *warder) isTxSignsReachQuorum(destTx interface{}) bool {
 	return false
 }
 
-// TODO:
 func (w *warder) isLeader() bool {
-	return false
+	return w.position == 1
 }
 
 func (w *warder) submitTx(destTx interface{}) (string, error) {
