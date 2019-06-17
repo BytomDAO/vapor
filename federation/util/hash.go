@@ -1,8 +1,10 @@
 package util
 
-/*
 import (
-    ""
+	"encoding/hex"
+
+	"github.com/vapor/errors"
+	"github.com/vapor/protocol/bc"
 )
 
 func stringToAssetID(s string) (*bc.AssetID, error) {
@@ -16,4 +18,3 @@ func stringToAssetID(s string) (*bc.AssetID, error) {
 	assetID := bc.NewAssetID(b)
 	return &assetID, nil
 }
-*/
