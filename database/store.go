@@ -293,9 +293,12 @@ func (s *Store) SaveBlockHeader(blockHeader *types.BlockHeader) error {
 	}
 
 	blockHash := blockHeader.Hash()
-	batch := s.db.NewBatch()
-	batch.Set(calcBlockHeaderKey(blockHeader.Height, &blockHash), binaryBlockHeader)
-	batch.Write()
+	s.db.Set(calcBlockHeaderKey(blockHeader.Height, &blockHash), binaryBlockHeader)
+
+	// updata blockheader cache
+	if _, ok := s.cache.getBlockHeader(&blockHash); ok {
+		s.cache.addBlockHeader(blockHeader)
+	}
 
 	log.WithFields(log.Fields{
 		"module":   logModule,
