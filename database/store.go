@@ -45,7 +45,7 @@ func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
 // methods for querying current data.
 type Store struct {
 	db    dbm.DB
-	cache blockCache
+	cache cache
 }
 
 func calcBlockHeaderKey(height uint64, hash *bc.Hash) []byte {
@@ -122,7 +122,7 @@ func NewStore(db dbm.DB) *Store {
 	fillVoteResultFn := func(seq uint64) (*state.VoteResult, error) {
 		return GetVoteResult(db, seq)
 	}
-	bc := newBlockCache(fillBlockHeaderFn, fillBlockTxsFn, fillVoteResultFn)
+	bc := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillVoteResultFn)
 	return &Store{
 		db:    db,
 		cache: bc,
@@ -285,8 +285,6 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 
 // SaveBlockHeader persists a new block header in the protocol.
 func (s *Store) SaveBlockHeader(blockHeader *types.BlockHeader) error {
-	startTime := time.Now()
-
 	binaryBlockHeader, err := blockHeader.MarshalText()
 	if err != nil {
 		return errors.Wrap(err, "Marshal block header")
