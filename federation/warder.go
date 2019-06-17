@@ -172,16 +172,66 @@ func (w *warder) proposeDestTx(tx *orm.CrossTransaction) (interface{}, string, e
 }
 
 // TODO:
-func (w *warder) buildSidechainTx(tx *orm.CrossTransaction) (*vaporTypes.Tx, string, error) {
-	sidechainTx := &vaporTypes.Tx{}
+func (w *warder) buildSidechainTx(ormTx *orm.CrossTransaction) (*vaporTypes.Tx, string, error) {
+	// sidechainTx := &vaporTypes.Tx{}
 
-	if err := w.db.Where(tx).UpdateColumn(&orm.CrossTransaction{
-		DestTxHash: sql.NullString{sidechainTx.ID.String(), true},
+	// tx * btmTypes.TxData
+
+	txData := &vaporTypes.TxData{Version: 1}
+	// signInsts := []*SigningInstruction{}
+
+	// for?{
+
+	// txInput := btmTypes.NewSpendInput(nil, *utxoInfo.SourceID, *assetID, utxo.Amount, utxoInfo.SourcePos, cp)
+	// tx.Inputs = append(tx.Inputs, txInput)
+
+	// signInst := &SigningInstruction{}
+	// if utxo.Address == nil || utxo.Address.Wallet == nil {
+	//     return signInst, nil
+	// }
+
+	// path := pathForAddress(utxo.Address.Wallet.Idx, utxo.Address.Idx, utxo.Address.Change)
+	// for _, p := range path {
+	//     signInst.DerivationPath = append(signInst.DerivationPath, hex.EncodeToString(p))
+	// }
+
+	// xPubs, err := signersToXPubs(utxo.Address.Wallet.WalletSigners)
+	// if err != nil {
+	//     return nil, errors.Wrap(err, "signersToXPubs")
+	// }
+
+	// derivedXPubs := chainkd.DeriveXPubs(xPubs, path)
+	// derivedPKs := chainkd.XPubKeys(derivedXPubs)
+	// if len(derivedPKs) == 1 {
+	//     signInst.DataWitness = derivedPKs[0]
+	//     signInst.Pubkey = hex.EncodeToString(derivedPKs[0])
+	// } else if len(derivedPKs) > 1 {
+	//     if signInst.DataWitness, err = vmutil.P2SPMultiSigProgram(derivedPKs, int(utxo.Address.Wallet.M)); err != nil {
+	//         return nil, err
+	//     }
+	// }
+	// return signInst, nil
+
+	// signInsts = append(signInsts, signInst)
+	// balance[utxo.Asset.Asset] += utxo.Amount
+
+	// }
+
+	// add the payment output && handle the fee
+	// if err := addOutput(txData, address, asset, amount, netParams); err != nil {
+	//     return nil, nil, errors.Wrap(err, "add payment output")
+	// }
+
+	tx := vaporTypes.NewTx(*txData)
+	// addInputWitness(tx, signInsts)
+
+	if err := w.db.Where(ormTx).UpdateColumn(&orm.CrossTransaction{
+		DestTxHash: sql.NullString{tx.ID.String(), true},
 	}).Error; err != nil {
 		return nil, "", err
 	}
 
-	return sidechainTx, sidechainTx.ID.String(), nil
+	return tx, tx.ID.String(), nil
 }
 
 // TODO:
