@@ -44,8 +44,8 @@ func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
 // It satisfies the interface protocol.Store, and provides additional
 // methods for querying current data.
 type Store struct {
-	db     dbm.DB
-	bCache blockCache
+	db    dbm.DB
+	cache blockCache
 }
 
 func calcBlockHeaderKey(height uint64, hash *bc.Hash) []byte {
@@ -124,8 +124,8 @@ func NewStore(db dbm.DB) *Store {
 	}
 	bc := newBlockCache(fillBlockHeaderFn, fillBlockTxsFn, fillVoteResultFn)
 	return &Store{
-		db:     db,
-		bCache: bc,
+		db:    db,
+		cache: bc,
 	}
 }
 
@@ -136,7 +136,7 @@ func (s *Store) GetUtxo(hash *bc.Hash) (*storage.UtxoEntry, error) {
 
 // BlockExist check if the block is stored in disk
 func (s *Store) BlockExist(hash *bc.Hash, height uint64) bool {
-	blockHeader, err := s.bCache.lookupBlockHeader(hash, height)
+	blockHeader, err := s.cache.lookupBlockHeader(hash, height)
 	return err == nil && blockHeader != nil
 }
 
@@ -160,7 +160,7 @@ func (s *Store) GetBlock(hash *bc.Hash, height uint64) (*types.Block, error) {
 
 // GetBlockHeader return the BlockHeader by given hash
 func (s *Store) GetBlockHeader(hash *bc.Hash, height uint64) (*types.BlockHeader, error) {
-	blockHeader, err := s.bCache.lookupBlockHeader(hash, height)
+	blockHeader, err := s.cache.lookupBlockHeader(hash, height)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +169,7 @@ func (s *Store) GetBlockHeader(hash *bc.Hash, height uint64) (*types.BlockHeader
 
 // GetBlockTransactions return the Block transactions by given hash
 func (s *Store) GetBlockTransactions(hash *bc.Hash) ([]*types.Tx, error) {
-	txs, err := s.bCache.lookupBlockTxs(hash)
+	txs, err := s.cache.lookupBlockTxs(hash)
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +202,7 @@ func (s *Store) GetStoreStatus() *protocol.BlockStoreState {
 
 // GetVoteResult retrive the voting result in specified vote sequence
 func (s *Store) GetVoteResult(seq uint64) (*state.VoteResult, error) {
-	return s.bCache.lookupVoteResult(seq)
+	return s.cache.lookupVoteResult(seq)
 }
 
 func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error) {

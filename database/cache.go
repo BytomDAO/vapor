@@ -156,17 +156,3 @@ func (c *blockCache) addBlockTxs(hash bc.Hash, txs []*types.Tx) {
 func (c *blockCache) addVoteResult(voteResult *state.VoteResult) {
 	c.lruVoteResults.Add(voteResult.Seq, voteResult)
 }
-
-// func newVoteResultCache(fillFn func(seq uint64) (*state.VoteResult, error)) voteResultCache {
-// 	return voteResultCache{
-// 		lru:    lru.New(maxCachedVoteResults),
-// 		fillFn: fillFn,
-// 	}
-// }
-
-// type voteResultCache struct {
-// 	mu     sync.Mutex
-// 	lru    *lru.Cache
-// 	fillFn func(seq uint64) (*state.VoteResult, error)
-// 	single singleflight.Group
-// }
