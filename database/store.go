@@ -97,20 +97,35 @@ func GetBlockTransactions(db dbm.DB, hash *bc.Hash) ([]*types.Tx, error) {
 	return block.Transactions, nil
 }
 
+// GetVoteResult return the vote result by given sequence
+func GetVoteResult(db dbm.DB, seq uint64) (*state.VoteResult, error) {
+	data := db.Get(calcVoteResultKey(seq))
+	if data == nil {
+		return nil, protocol.ErrNotFoundVoteResult
+	}
+
+	voteResult := new(state.VoteResult)
+	if err := json.Unmarshal(data, voteResult); err != nil {
+		return nil, errors.Wrap(err, "unmarshaling vote result")
+	}
+	return voteResult, nil
+}
+
 // NewStore creates and returns a new Store object.
 func NewStore(db dbm.DB) *Store {
 	fillBlockHeaderFn := func(hash *bc.Hash, height uint64) (*types.BlockHeader, error) {
 		return GetBlockHeader(db, hash, height)
 	}
-
 	fillBlockTxsFn := func(hash *bc.Hash) ([]*types.Tx, error) {
 		return GetBlockTransactions(db, hash)
 	}
-
-	cache := newBlockCache(fillBlockHeaderFn, fillBlockTxsFn)
+	fillVoteResultFn := func(seq uint64) (*state.VoteResult, error) {
+		return GetVoteResult(db, seq)
+	}
+	bc := newBlockCache(fillBlockHeaderFn, fillBlockTxsFn, fillVoteResultFn)
 	return &Store{
 		db:    db,
-		cache: cache,
+		cache: bc,
 	}
 }
 
@@ -187,16 +202,7 @@ func (s *Store) GetStoreStatus() *protocol.BlockStoreState {
 
 // GetVoteResult retrive the voting result in specified vote sequence
 func (s *Store) GetVoteResult(seq uint64) (*state.VoteResult, error) {
-	data := s.db.Get(calcVoteResultKey(seq))
-	if data == nil {
-		return nil, protocol.ErrNotFoundVoteResult
-	}
-
-	vr := &state.VoteResult{}
-	if err := json.Unmarshal(data, vr); err != nil {
-		return nil, errors.Wrap(err, "unmarshaling vote result")
-	}
-	return vr, nil
+	return s.cache.lookupVoteResult(seq)
 }
 
 func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error) {
@@ -287,9 +293,12 @@ func (s *Store) SaveBlockHeader(blockHeader *types.BlockHeader) error {
 	}
 
 	blockHash := blockHeader.Hash()
-	batch := s.db.NewBatch()
-	batch.Set(calcBlockHeaderKey(blockHeader.Height, &blockHash), binaryBlockHeader)
-	batch.Write()
+	s.db.Set(calcBlockHeaderKey(blockHeader.Height, &blockHash), binaryBlockHeader)
+
+	// updata blockheader cache
+	if _, ok := s.cache.getBlockHeader(&blockHash); ok {
+		s.cache.addBlockHeader(blockHeader)
+	}
 
 	log.WithFields(log.Fields{
 		"module":   logModule,
