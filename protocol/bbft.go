@@ -216,19 +216,14 @@ func (c *Chain) updateBlockSignature(blockNode *state.BlockNode, nodeOrder uint6
 		return err
 	}
 
-	block, err := c.store.GetBlock(&blockNode.Hash)
+	blockHeader, err := c.store.GetBlockHeader(&blockNode.Hash, blockNode.Height)
 	if err != nil {
 		return err
 	}
 
-	block.Set(nodeOrder, signature)
+	blockHeader.Set(nodeOrder, signature)
 
-	txStatus, err := c.store.GetTransactionStatus(&blockNode.Hash)
-	if err != nil {
-		return err
-	}
-
-	if err := c.store.SaveBlock(block, txStatus); err != nil {
+	if err := c.store.SaveBlockHeader(blockHeader); err != nil {
 		return err
 	}
 

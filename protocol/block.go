@@ -28,7 +28,11 @@ func (c *Chain) BlockExist(hash *bc.Hash) bool {
 
 // GetBlockByHash return a block by given hash
 func (c *Chain) GetBlockByHash(hash *bc.Hash) (*types.Block, error) {
-	return c.store.GetBlock(hash)
+	node := c.index.GetNode(hash)
+	if node == nil {
+		return nil, errors.New("can't find block in given hash")
+	}
+	return c.store.GetBlock(hash, node.Height)
 }
 
 // GetBlockByHeight return a block header by given height
@@ -37,7 +41,7 @@ func (c *Chain) GetBlockByHeight(height uint64) (*types.Block, error) {
 	if node == nil {
 		return nil, errors.New("can't find block in given height")
 	}
-	return c.store.GetBlock(&node.Hash)
+	return c.store.GetBlock(&node.Hash, height)
 }
 
 // GetHeaderByHash return a block header by given hash
@@ -125,7 +129,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 	}
 
 	for _, detachNode := range detachNodes {
-		b, err := c.store.GetBlock(&detachNode.Hash)
+		b, err := c.store.GetBlock(&detachNode.Hash, detachNode.Height)
 		if err != nil {
 			return err
 		}
@@ -152,7 +156,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 	}
 
 	for _, attachNode := range attachNodes {
-		b, err := c.store.GetBlock(&attachNode.Hash)
+		b, err := c.store.GetBlock(&attachNode.Hash, attachNode.Height)
 		if err != nil {
 			return err
 		}

@@ -5,6 +5,7 @@ import (
 
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/state"
 )
 
 func TestBlockCache(t *testing.T) {
@@ -15,35 +16,74 @@ func TestBlockCache(t *testing.T) {
 			},
 		}
 	}
+	newVoteResult := func(seq uint64) *state.VoteResult {
+		return &state.VoteResult{
+			Seq: seq,
+		}
+	}
 	blocks := make(map[bc.Hash]*types.Block)
-	for i := 0; i < maxCachedBlocks+10; i++ {
+	for i := 0; i < maxCachedBlockHeaders+10; i++ {
 		block := newBlock(uint64(i))
 		blocks[block.Hash()] = block
 	}
+	voteResults := make(map[uint64]*state.VoteResult)
+	for i := 0; i < maxCachedVoteResults+10; i++ {
+		voteResult := newVoteResult(uint64(i))
+		voteResults[voteResult.Seq] = voteResult
+	}
 
-	cache := newBlockCache(func(hash *bc.Hash) (*types.Block, error) {
-		return blocks[*hash], nil
-	})
+	fillBlockHeaderFn := func(hash *bc.Hash, height uint64) (*types.BlockHeader, error) {
+		return &blocks[*hash].BlockHeader, nil
+	}
 
-	for i := 0; i < maxCachedBlocks+10; i++ {
+	fillBlockTxsFn := func(hash *bc.Hash) ([]*types.Tx, error) {
+		return blocks[*hash].Transactions, nil
+	}
+
+	fillVoteResultFn := func(seq uint64) (*state.VoteResult, error) {
+		return voteResults[seq], nil
+	}
+
+	cache := newBlockCache(fillBlockHeaderFn, fillBlockTxsFn, fillVoteResultFn)
+
+	for i := 0; i < maxCachedBlockHeaders+10; i++ {
 		block := newBlock(uint64(i))
 		hash := block.Hash()
-		cache.lookup(&hash)
+		cache.lookupBlockHeader(&hash, block.Height)
 	}
 
 	for i := 0; i < 10; i++ {
 		block := newBlock(uint64(i))
 		hash := block.Hash()
-		if b, _ := cache.get(&hash); b != nil {
+		if b, _ := cache.getBlockHeader(&hash); b != nil {
 			t.Fatalf("find old block")
 		}
 	}
 
-	for i := 10; i < maxCachedBlocks+10; i++ {
+	for i := 10; i < maxCachedBlockHeaders+10; i++ {
 		block := newBlock(uint64(i))
 		hash := block.Hash()
-		if b, _ := cache.get(&hash); b == nil {
+		if b, _ := cache.getBlockHeader(&hash); b == nil {
 			t.Fatalf("can't find new block")
+		}
+	}
+
+	for i := 0; i < maxCachedVoteResults+10; i++ {
+		voteResult := newVoteResult(uint64(i))
+		cache.lookupVoteResult(voteResult.Seq)
+	}
+
+	for i := 0; i < 10; i++ {
+		voteResult := newVoteResult(uint64(i))
+		if v, _ := cache.getVoteResult(voteResult.Seq); v != nil {
+			t.Fatalf("find old vote result")
+		}
+	}
+
+	for i := 10; i < maxCachedVoteResults+10; i++ {
+		voteResult := newVoteResult(uint64(i))
+		if v, _ := cache.getVoteResult(voteResult.Seq); v == nil {
+			t.Fatalf("can't find new vote result")
 		}
 	}
 }
