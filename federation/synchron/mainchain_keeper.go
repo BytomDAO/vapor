@@ -13,7 +13,6 @@ import (
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 
-	vaporCfg "github.com/vapor/config"
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/common"
 	"github.com/vapor/federation/config"
@@ -23,7 +22,7 @@ import (
 	"github.com/vapor/protocol/bc"
 )
 
-var fedProg = vaporCfg.FederationProgrom(vaporCfg.CommonConfig)
+var fedProg = []byte{}
 
 type mainchainKeeper struct {
 	cfg        *config.Chain
