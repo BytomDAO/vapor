@@ -98,7 +98,7 @@ func (c *blockCache) lookupBlockTxs(hash *bc.Hash) ([]*types.Tx, error) {
 
 func (c *blockCache) lookupVoteResult(seq uint64) (*state.VoteResult, error) {
 	if vr, ok := c.getVoteResult(seq); ok {
-		return vr, nil
+		return vr.Fork(), nil
 	}
 
 	seqStr := strconv.FormatUint(seq, 10)
@@ -118,7 +118,7 @@ func (c *blockCache) lookupVoteResult(seq uint64) (*state.VoteResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	return voteResult.(*state.VoteResult), nil
+	return voteResult.(*state.VoteResult).Fork(), nil
 }
 
 func (c *blockCache) getBlockHeader(hash *bc.Hash) (*types.BlockHeader, bool) {
