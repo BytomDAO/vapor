@@ -19,9 +19,9 @@ func main() {
 	}
 
 	// TODO: refactor
-	go synchron.NewMainchainKeeper(db, &cfg.Mainchain, cfg.Warders, cfg.Quorum).Run()
-	go synchron.NewSidechainKeeper(db, &cfg.Sidechain).Run()
-	go federation.NewWarder(cfg, db).Run()
+	go synchron.NewMainchainKeeper(db, cfg).Run()
+	go synchron.NewSidechainKeeper(db, cfg).Run()
+	go federation.NewWarder(db, cfg).Run()
 
 	// keep the main func running in case of terminating goroutines
 	var wg sync.WaitGroup

@@ -40,7 +40,7 @@ type warder struct {
 	remotes        []*service.Warder
 }
 
-func NewWarder(cfg *config.Config, db *gorm.DB) *warder {
+func NewWarder(db *gorm.DB, cfg *config.Config) *warder {
 	local, remotes := parseWarders(cfg)
 	return &warder{
 		position: local.Position,

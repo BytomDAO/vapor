@@ -28,12 +28,12 @@ type sidechainKeeper struct {
 	assetCache *database.AssetCache
 }
 
-func NewSidechainKeeper(db *gorm.DB, chainCfg *config.Chain) *sidechainKeeper {
+func NewSidechainKeeper(db *gorm.DB, cfg *config.Config) *sidechainKeeper {
 	return &sidechainKeeper{
-		cfg:        chainCfg,
+		cfg:        &cfg.Sidechain,
 		db:         db,
-		node:       service.NewNode(chainCfg.Upstream),
-		chainName:  chainCfg.Name,
+		node:       service.NewNode(cfg.Sidechain.Upstream),
+		chainName:  cfg.Sidechain.Name,
 		assetCache: database.NewAssetCache(),
 	}
 }
