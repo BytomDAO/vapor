@@ -14,6 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/errors"
+	"github.com/vapor/federation"
 	"github.com/vapor/federation/common"
 	"github.com/vapor/federation/config"
 	"github.com/vapor/federation/database"
@@ -22,24 +23,23 @@ import (
 	"github.com/vapor/protocol/bc"
 )
 
-// TODO:
-var fedProg = []byte{}
-
 type mainchainKeeper struct {
 	cfg        *config.Chain
 	db         *gorm.DB
 	node       *service.Node
 	chainName  string
 	assetCache *database.AssetCache
+	fedProg    []byte
 }
 
-func NewMainchainKeeper(db *gorm.DB, chainCfg *config.Chain) *mainchainKeeper {
+func NewMainchainKeeper(db *gorm.DB, chainCfg *config.Chain, warders []config.Warder) *mainchainKeeper {
 	return &mainchainKeeper{
 		cfg:        chainCfg,
 		db:         db,
 		node:       service.NewNode(chainCfg.Upstream),
 		chainName:  chainCfg.Name,
 		assetCache: database.NewAssetCache(),
+		fedProg:    federation.ParseFedProg(warders),
 	}
 }
 
@@ -136,7 +136,7 @@ func (m *mainchainKeeper) processBlock(chain *orm.Chain, block *types.Block, txS
 
 func (m *mainchainKeeper) isDepositTx(tx *types.Tx) bool {
 	for _, output := range tx.Outputs {
-		if bytes.Equal(output.OutputCommitment.ControlProgram, fedProg) {
+		if bytes.Equal(output.OutputCommitment.ControlProgram, m.fedProg) {
 			return true
 		}
 	}
@@ -145,7 +145,7 @@ func (m *mainchainKeeper) isDepositTx(tx *types.Tx) bool {
 
 func (m *mainchainKeeper) isWithdrawalTx(tx *types.Tx) bool {
 	for _, input := range tx.Inputs {
-		if bytes.Equal(input.ControlProgram(), fedProg) {
+		if bytes.Equal(input.ControlProgram(), m.fedProg) {
 			return true
 		}
 	}
@@ -210,7 +210,7 @@ func (m *mainchainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types
 	inputs := []*orm.CrossTransactionReq{}
 	for i, rawOutput := range tx.Outputs {
 		// check valid deposit
-		if !bytes.Equal(rawOutput.OutputCommitment.ControlProgram, fedProg) {
+		if !bytes.Equal(rawOutput.OutputCommitment.ControlProgram, m.fedProg) {
 			continue
 		}
 

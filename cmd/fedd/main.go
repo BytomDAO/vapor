@@ -18,7 +18,7 @@ func main() {
 		log.WithField("err", err).Panic("initialize mysql db error")
 	}
 
-	go synchron.NewMainchainKeeper(db, &cfg.Mainchain).Run()
+	go synchron.NewMainchainKeeper(db, &cfg.Mainchain, cfg.Warders).Run()
 	go synchron.NewSidechainKeeper(db, &cfg.Sidechain).Run()
 	go federation.NewWarder(cfg, db).Run()
 
