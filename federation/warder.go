@@ -30,26 +30,27 @@ func string2xprv(str string) (xprv chainkd.XPrv) {
 }
 
 type warder struct {
-	position       uint8
-	xpub           chainkd.XPub
-	xprv           chainkd.XPrv
-	colletInterval time.Duration
-	db             *gorm.DB
-	txCh           chan *orm.CrossTransaction
-	mainchainNode  *service.Node
-	sidechainNode  *service.Node
-	remotes        []*service.Warder
+	db            *gorm.DB
+	txCh          chan *orm.CrossTransaction
+	fedProg       []byte
+	position      uint8
+	xpub          chainkd.XPub
+	xprv          chainkd.XPrv
+	mainchainNode *service.Node
+	sidechainNode *service.Node
+	remotes       []*service.Warder
 }
 
 func NewWarder(db *gorm.DB, cfg *config.Config) *warder {
 	local, remotes := parseWarders(cfg)
 	return &warder{
+		db:       db,
+		txCh:     make(chan *orm.CrossTransaction),
+		fedProg:  ParseFedProg(cfg.Warders, cfg.Quorum),
 		position: local.Position,
 		xpub:     local.XPub,
 		// TODO:
 		xprv:          string2xprv(xprvStr),
-		db:            db,
-		txCh:          make(chan *orm.CrossTransaction),
 		mainchainNode: service.NewNode(cfg.Mainchain.Upstream),
 		sidechainNode: service.NewNode(cfg.Sidechain.Upstream),
 		remotes:       remotes,
@@ -60,6 +61,7 @@ func parseWarders(cfg *config.Config) (*service.Warder, []*service.Warder) {
 	var local *service.Warder
 	var remotes []*service.Warder
 	for _, warderCfg := range cfg.Warders {
+		// TODO: use private key to check
 		if warderCfg.IsLocal {
 			local = service.NewWarder(&warderCfg)
 		} else {
