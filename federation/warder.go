@@ -19,9 +19,19 @@ import (
 
 var collectInterval = 5 * time.Second
 
+var xprvStr = ""
+
+func string2xprv(str string) (xprv chainkd.XPrv) {
+	if err := xprv.UnmarshalText([]byte(str)); err != nil {
+		log.Panicf("fail to convert xprv string")
+	}
+	return xprv
+}
+
 type warder struct {
 	position       uint8
 	xpub           chainkd.XPub
+	xprv           chainkd.XPrv
 	colletInterval time.Duration
 	db             *gorm.DB
 	txCh           chan *orm.CrossTransaction
@@ -33,8 +43,10 @@ type warder struct {
 func NewWarder(cfg *config.Config, db *gorm.DB) *warder {
 	local, remotes := parseWarders(cfg)
 	return &warder{
-		position:      local.Position,
-		xpub:          local.XPub,
+		position: local.Position,
+		xpub:     local.XPub,
+		// TODO:
+		xprv:          string2xprv(xprvStr),
 		db:            db,
 		txCh:          make(chan *orm.CrossTransaction),
 		mainchainNode: service.NewNode(cfg.Mainchain.Upstream),
