@@ -1,6 +1,7 @@
 package database
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/golang/groupcache/singleflight"
@@ -12,9 +13,9 @@ import (
 )
 
 const (
-	maxCachedBlockHeaders      = 4096
+	maxCachedBlockHeaders      = 1024
 	maxCachedBlockTransactions = 1024
-	maxCachedVoteResults       = 128
+	maxCachedVoteResults       = 144 // int(60 * 60 * 24 * 1000 / consensus.BlockTimeInterval / consensus.RoundVoteBlockNums)
 )
 
 type fillBlockHeaderFn func(hash *bc.Hash, height uint64) (*types.BlockHeader, error)
@@ -42,22 +43,28 @@ type cache struct {
 	fillBlockTransactionFn func(hash *bc.Hash) ([]*types.Tx, error)
 	fillVoteResultFn       func(seq uint64) (*state.VoteResult, error)
 
-	sf singleflight.Group
+	singleBlockHeader singleflight.Group
+	singleBlockTxs    singleflight.Group
+	singleVoteResult  singleflight.Group
 }
 
 func (c *cache) lookupBlockHeader(hash *bc.Hash, height uint64) (*types.BlockHeader, error) {
-	if data, ok := c.lruBlockHeaders.Get(*hash); ok {
-		return data.(*types.BlockHeader), nil
+	if bH, ok := c.getBlockHeader(hash); ok {
+		return bH, nil
 	}
 
-	blockHeader, err := c.sf.Do("BlockHeader:"+hash.String(), func() (interface{}, error) {
-		blockHeader, err := c.fillBlockHeaderFn(hash, height)
+	blockHeader, err := c.singleBlockHeader.Do(hash.String(), func() (interface{}, error) {
+		bH, err := c.fillBlockHeaderFn(hash, height)
 		if err != nil {
 			return nil, err
 		}
 
-		c.lruBlockHeaders.Add(blockHeader.Hash(), blockHeader)
-		return blockHeader, nil
+		if bH == nil {
+			return nil, fmt.Errorf("There are no blockHeader with given hash %s", hash.String())
+		}
+
+		c.addBlockHeader(bH)
+		return bH, nil
 	})
 	if err != nil {
 		return nil, err
@@ -66,39 +73,47 @@ func (c *cache) lookupBlockHeader(hash *bc.Hash, height uint64) (*types.BlockHea
 }
 
 func (c *cache) lookupBlockTxs(hash *bc.Hash) ([]*types.Tx, error) {
-	if data, ok := c.lruBlockTxs.Get(*hash); ok {
-		return data.([]*types.Tx), nil
+	if bTxs, ok := c.getBlockTransactions(hash); ok {
+		return bTxs, nil
 	}
 
-	blockTxs, err := c.sf.Do("BlockTxs:"+hash.String(), func() (interface{}, error) {
-		blockTxs, err := c.fillBlockTransactionFn(hash)
+	blockTransactions, err := c.singleBlockTxs.Do(hash.String(), func() (interface{}, error) {
+		bTxs, err := c.fillBlockTransactionFn(hash)
 		if err != nil {
 			return nil, err
 		}
 
-		c.lruBlockTxs.Add(hash, blockTxs)
-		return blockTxs, nil
+		if bTxs == nil {
+			return nil, fmt.Errorf("There are no block transactions with given hash %s", hash.String())
+		}
+
+		c.addBlockTxs(*hash, bTxs)
+		return bTxs, nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	return blockTxs.([]*types.Tx), nil
+	return blockTransactions.([]*types.Tx), nil
 }
 
 func (c *cache) lookupVoteResult(seq uint64) (*state.VoteResult, error) {
-	if data, ok := c.lruVoteResults.Get(seq); ok {
-		return data.(*state.VoteResult).Fork(), nil
+	if vr, ok := c.getVoteResult(seq); ok {
+		return vr.Fork(), nil
 	}
 
 	seqStr := strconv.FormatUint(seq, 10)
-	voteResult, err := c.sf.Do("VoteResult:"+seqStr, func() (interface{}, error) {
-		voteResult, err := c.fillVoteResultFn(seq)
+	voteResult, err := c.singleVoteResult.Do(seqStr, func() (interface{}, error) {
+		v, err := c.fillVoteResultFn(seq)
 		if err != nil {
 			return nil, err
 		}
 
-		c.lruVoteResults.Add(voteResult.Seq, voteResult)
-		return voteResult, nil
+		if v == nil {
+			return nil, fmt.Errorf("There are no vote result with given seq %s", seqStr)
+		}
+
+		c.addVoteResult(v)
+		return v, nil
 	})
 	if err != nil {
 		return nil, err
@@ -106,10 +121,38 @@ func (c *cache) lookupVoteResult(seq uint64) (*state.VoteResult, error) {
 	return voteResult.(*state.VoteResult).Fork(), nil
 }
 
-func (c *cache) removeBlockHeader(blockHeader *types.BlockHeader) {
-	c.lruBlockHeaders.Remove(blockHeader.Hash())
+func (c *cache) getBlockHeader(hash *bc.Hash) (*types.BlockHeader, bool) {
+	blockHeader, ok := c.lruBlockHeaders.Get(*hash)
+	if blockHeader == nil {
+		return nil, ok
+	}
+	return blockHeader.(*types.BlockHeader), ok
 }
 
-func (c *cache) removeVoteResult(voteResult *state.VoteResult) {
-	c.lruVoteResults.Remove(voteResult.Seq)
+func (c *cache) getBlockTransactions(hash *bc.Hash) ([]*types.Tx, bool) {
+	txs, ok := c.lruBlockTxs.Get(*hash)
+	if txs == nil {
+		return nil, ok
+	}
+	return txs.([]*types.Tx), ok
+}
+
+func (c *cache) getVoteResult(seq uint64) (*state.VoteResult, bool) {
+	voteResult, ok := c.lruVoteResults.Get(seq)
+	if voteResult == nil {
+		return nil, ok
+	}
+	return voteResult.(*state.VoteResult), ok
+}
+
+func (c *cache) addBlockHeader(blockHeader *types.BlockHeader) {
+	c.lruBlockHeaders.Add(blockHeader.Hash(), blockHeader)
+}
+
+func (c *cache) addBlockTxs(hash bc.Hash, txs []*types.Tx) {
+	c.lruBlockTxs.Add(hash, txs)
+}
+
+func (c *cache) addVoteResult(voteResult *state.VoteResult) {
+	c.lruVoteResults.Add(voteResult.Seq, voteResult)
 }
