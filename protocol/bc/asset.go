@@ -7,6 +7,7 @@ import (
 
 	"github.com/vapor/crypto/sha3pool"
 	"github.com/vapor/encoding/blockchain"
+	"golang.org/x/crypto/sha3"
 )
 
 // NewAssetID convert byte array to aseet id
@@ -95,4 +96,40 @@ func (a *AssetAmount) Equal(other *AssetAmount) (eq bool, err error) {
 		return false, errors.New("empty asset id")
 	}
 	return a.Amount == other.Amount && *a.AssetId == *other.AssetId, nil
+}
+
+// ReadFrom read the CrossChainAssetDefinition from the bytes
+func (c *CrossChainAssetDefinition) ReadFrom(r *blockchain.Reader) (err error) {
+	if c.VmVersion, err = blockchain.ReadVarint63(r); err != nil {
+		return err
+	}
+
+	if c.RawDefinitionByte, err = blockchain.ReadVarstr31(r); err != nil {
+		return err
+	}
+
+	c.IssuanceProgram, err = blockchain.ReadVarstr31(r)
+	return err
+}
+
+// WriteTo convert struct to byte and write to io
+func (c *CrossChainAssetDefinition) WriteTo(w io.Writer) (int64, error) {
+	n, err := blockchain.WriteVarint63(w, c.VmVersion)
+	if err != nil {
+		return 0, err
+	}
+
+	n1, err := blockchain.WriteVarstr31(w, c.RawDefinitionByte)
+	if err != nil {
+		return 0, err
+	}
+
+	n2, err := blockchain.WriteVarstr31(w, c.IssuanceProgram)
+	return int64(n + n1 + n2), err
+}
+
+// ComputeAssetID calculate the asset id from CrossChainAssetDefinition
+func (c *CrossChainAssetDefinition) ComputeAssetID() AssetID {
+	defHash := NewHash(sha3.Sum256(c.RawDefinitionByte))
+	return ComputeAssetID(c.IssuanceProgram, c.VmVersion, &defHash)
 }

@@ -9,7 +9,6 @@ import (
 
 	"github.com/vapor/common"
 	"github.com/vapor/consensus"
-	"github.com/vapor/crypto/sha3pool"
 	"github.com/vapor/encoding/json"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -262,10 +261,11 @@ func DecodeCrossInAction(data []byte) (Action, error) {
 
 type crossInAction struct {
 	bc.AssetAmount
-	SourceID          bc.Hash       `json:"source_id"`
-	SourcePos         uint64        `json:"source_pos"`
-	RawDefinitionByte json.HexBytes `json:"raw_definition_byte"`
-	IssuanceProgram   json.HexBytes `json:"issuance_program"`
+	SourceID  bc.Hash `json:"source_id"`
+	SourcePos uint64  `json:"source_pos"`
+	//RawDefinitionByte json.HexBytes `json:"raw_definition_byte"`
+	//IssuanceProgram   json.HexBytes `json:"issuance_program"`
+	bc.CrossChainAssetDefinition
 }
 
 func (a *crossInAction) Build(ctx context.Context, builder *TemplateBuilder) error {
@@ -283,13 +283,13 @@ func (a *crossInAction) Build(ctx context.Context, builder *TemplateBuilder) err
 		return MissingFieldsError(missing...)
 	}
 
-	if err := a.CheckAssetID(); err != nil {
+	if err := a.checkAssetID(); err != nil {
 		return err
 	}
 
 	// arguments will be set when materializeWitnesses
 	fedProg := config.FederationProgrom(config.CommonConfig)
-	txin := types.NewCrossChainInput(nil, a.SourceID, *a.AssetId, a.Amount, a.SourcePos, fedProg, a.RawDefinitionByte)
+	txin := types.NewCrossChainInput(nil, a.SourceID, *a.AssetId, a.Amount, a.SourcePos, fedProg, a.CrossChainAssetDefinition)
 	tplIn := &SigningInstruction{}
 	fed := config.CommonConfig.Federation
 	tplIn.AddRawWitnessKeys(fed.Xpubs, nil, fed.Quorum)
@@ -300,28 +300,16 @@ func (a *crossInAction) ActionType() string {
 	return "cross_chain_in"
 }
 
-func (c *crossInAction) CheckAssetID() error {
+func (c *crossInAction) checkAssetID() error {
 	if *c.AssetId == *consensus.BTMAssetID {
 		return nil
 	}
 
-	if c.AssetID() != *c.AssetAmount.AssetId {
+	assetID := c.CrossChainAssetDefinition.ComputeAssetID()
+
+	if assetID != *c.AssetAmount.AssetId {
 		return errors.New("incorrect asset_id")
 	}
 
 	return nil
-}
-
-func (c *crossInAction) AssetID() bc.AssetID {
-	vmVersion := uint64(1)
-	defhash := c.AssetDefinitionHash()
-	return bc.ComputeAssetID(c.IssuanceProgram, vmVersion, &defhash)
-}
-
-func (c *crossInAction) AssetDefinitionHash() (defhash bc.Hash) {
-	sha := sha3pool.Get256()
-	defer sha3pool.Put256(sha)
-	sha.Write(c.RawDefinitionByte)
-	defhash.ReadFrom(sha)
-	return defhash
 }

@@ -210,6 +210,10 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 				return err
 			}
 
+			if err := inp.CrossChainAssetDefinition.ReadFrom(r); err != nil {
+				return err
+			}
+
 		case *VetoInput:
 			if inp.Arguments, err = blockchain.ReadVarstrList(r); err != nil {
 				return err
@@ -223,13 +227,6 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 	})
 	if err != nil {
 		return err
-	}
-
-	switch inp := t.TypedInput.(type) {
-	case *CrossChainInput:
-		if inp.AssetDefinition, err = blockchain.ReadVarstr31(r); err != nil {
-			return err
-		}
 	}
 
 	return nil
@@ -246,13 +243,6 @@ func (t *TxInput) writeTo(w io.Writer) error {
 
 	if _, err := blockchain.WriteExtensibleString(w, t.WitnessSuffix, t.writeInputWitness); err != nil {
 		return errors.Wrap(err, "writing input witness")
-	}
-
-	switch inp := t.TypedInput.(type) {
-	case *CrossChainInput:
-		if _, err := blockchain.WriteVarstr31(w, inp.AssetDefinition); err != nil {
-			return errors.Wrap(err, "writing AssetDefinition")
-		}
 	}
 
 	return nil
@@ -304,7 +294,11 @@ func (t *TxInput) writeInputWitness(w io.Writer) error {
 		return err
 
 	case *CrossChainInput:
-		_, err := blockchain.WriteVarstrList(w, inp.Arguments)
+		if _, err := blockchain.WriteVarstrList(w, inp.Arguments); err != nil {
+			return err
+		}
+
+		_, err := inp.CrossChainAssetDefinition.WriteTo(w)
 		return err
 	case *VetoInput:
 		if _, err := blockchain.WriteVarstrList(w, inp.Arguments); err != nil {

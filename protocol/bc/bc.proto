@@ -133,3 +133,10 @@ message CrossChainInput {
   repeated bytes   witness_arguments   = 5;
   uint64           ordinal             = 6;
 }
+
+message CrossChainAssetDefinition {
+  uint64 vm_version           = 1;
+  bytes  raw_definition_byte  = 2;
+  bytes  issuance_program     = 3;
+
+}
