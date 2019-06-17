@@ -173,10 +173,6 @@ func (w *warder) proposeDestTx(tx *orm.CrossTransaction) (interface{}, string, e
 
 // TODO:
 func (w *warder) buildSidechainTx(ormTx *orm.CrossTransaction) (*vaporTypes.Tx, string, error) {
-	// sidechainTx := &vaporTypes.Tx{}
-
-	// tx * btmTypes.TxData
-
 	destTxData := &vaporTypes.TxData{Version: 1}
 	// signInsts := []*SigningInstruction{}
 
