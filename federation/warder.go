@@ -2,6 +2,7 @@ package federation
 
 import (
 	"database/sql"
+	"encoding/hex"
 	"time"
 
 	btmTypes "github.com/bytom/protocol/bc/types"
@@ -187,13 +188,20 @@ func (w *warder) buildSidechainTx(ormTx *orm.CrossTransaction) (*vaporTypes.Tx, 
 
 	for _, req := range ormTx.Reqs {
 		// TODO:
+		// getAsset
+		// cache for assetID & rawDefinitionByte
+		asset := &orm.Asset{}
 		assetID := &vaporBc.AssetID{}
-		if err := assetID.UnmarshalText([]byte("req.assetID")); err != nil {
+		if err := assetID.UnmarshalText([]byte(asset.AssetID)); err != nil {
 			return nil, "", errors.Wrap(err, "Unmarshal muxID")
 		}
 
-		// input := vaporTypes.NewCrossChainInput(nil, *muxID, *assetID, req.AssetAmount,req.SourcePos, controlProgram, assetDefinition []byte)
-		input := vaporTypes.NewCrossChainInput(nil, *muxID, *assetID, req.AssetAmount, req.SourcePos, w.fedProg, nil)
+		rawDefinitionByte, err := hex.DecodeString(asset.RawDefinitionByte)
+		if err != nil {
+			return nil, "", errors.Wrap(err, "decode rawDefinitionByte")
+		}
+
+		input := vaporTypes.NewCrossChainInput(nil, *muxID, *assetID, req.AssetAmount, req.SourcePos, w.fedProg, rawDefinitionByte)
 		destTxData.Inputs = append(destTxData.Inputs, input)
 	}
 
