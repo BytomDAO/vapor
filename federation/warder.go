@@ -32,6 +32,7 @@ func string2xprv(str string) (xprv chainkd.XPrv) {
 
 type warder struct {
 	db            *gorm.DB
+	assetKeeper   *service.AssetKeeper
 	txCh          chan *orm.CrossTransaction
 	fedProg       []byte
 	position      uint8
@@ -42,14 +43,15 @@ type warder struct {
 	remotes       []*service.Warder
 }
 
-func NewWarder(db *gorm.DB, cfg *config.Config) *warder {
+func NewWarder(db *gorm.DB, assetKeeper *service.AssetKeeper, cfg *config.Config) *warder {
 	local, remotes := parseWarders(cfg)
 	return &warder{
-		db:       db,
-		txCh:     make(chan *orm.CrossTransaction),
-		fedProg:  ParseFedProg(cfg.Warders, cfg.Quorum),
-		position: local.Position,
-		xpub:     local.XPub,
+		db:          db,
+		assetKeeper: assetKeeper,
+		txCh:        make(chan *orm.CrossTransaction),
+		fedProg:     ParseFedProg(cfg.Warders, cfg.Quorum),
+		position:    local.Position,
+		xpub:        local.XPub,
 		// TODO:
 		xprv:          string2xprv(xprvStr),
 		mainchainNode: service.NewNode(cfg.Mainchain.Upstream),

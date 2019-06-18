@@ -8,6 +8,7 @@ import (
 	"github.com/vapor/federation"
 	"github.com/vapor/federation/config"
 	"github.com/vapor/federation/database"
+	"github.com/vapor/federation/service"
 	"github.com/vapor/federation/synchron"
 )
 
@@ -20,10 +21,10 @@ func main() {
 		log.WithField("err", err).Panic("initialize mysql db error")
 	}
 
-	assetKeeper := synchron.NewAssetKeeper(db)
+	assetKeeper := service.NewAssetKeeper(db)
 	go synchron.NewMainchainKeeper(db, assetKeeper, cfg).Run()
 	go synchron.NewSidechainKeeper(db, assetKeeper, cfg).Run()
-	go federation.NewWarder(db, cfg).Run()
+	go federation.NewWarder(db, assetKeeper, cfg).Run()
 
 	// keep the main func running in case of terminating goroutines
 	var wg sync.WaitGroup

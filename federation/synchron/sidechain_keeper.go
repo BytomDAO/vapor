@@ -13,7 +13,6 @@ import (
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/common"
 	"github.com/vapor/federation/config"
-	// "github.com/vapor/federation/database"
 	"github.com/vapor/federation/database/orm"
 	"github.com/vapor/federation/service"
 	"github.com/vapor/protocol/bc"
@@ -25,11 +24,10 @@ type sidechainKeeper struct {
 	db          *gorm.DB
 	node        *service.Node
 	chainName   string
-	assetKeeper *AssetKeeper
-	// assetCache *database.AssetCache
+	assetKeeper *service.AssetKeeper
 }
 
-func NewSidechainKeeper(db *gorm.DB, assetKeeper *AssetKeeper, cfg *config.Config) *sidechainKeeper {
+func NewSidechainKeeper(db *gorm.DB, assetKeeper *service.AssetKeeper, cfg *config.Config) *sidechainKeeper {
 	return &sidechainKeeper{
 		cfg:         &cfg.Sidechain,
 		db:          db,
