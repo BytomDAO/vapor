@@ -12,7 +12,6 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 
 	"github.com/vapor/accesstoken"
-	"github.com/vapor/blockchain/txfeed"
 	cfg "github.com/vapor/config"
 	"github.com/vapor/dashboard/dashboard"
 	"github.com/vapor/dashboard/equity"
@@ -112,7 +111,6 @@ type API struct {
 	chain           *protocol.Chain
 	server          *http.Server
 	handler         http.Handler
-	txFeedTracker   *txfeed.Tracker
 	blockProposer   *blockproposer.BlockProposer
 	notificationMgr *websocket.WSNotificationManager
 	eventDispatcher *event.Dispatcher
@@ -180,13 +178,12 @@ type NetSync interface {
 }
 
 // NewAPI create and initialize the API
-func NewAPI(sync NetSync, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, blockProposer *blockproposer.BlockProposer, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, dispatcher *event.Dispatcher, notificationMgr *websocket.WSNotificationManager) *API {
+func NewAPI(sync NetSync, wallet *wallet.Wallet, blockProposer *blockproposer.BlockProposer, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, dispatcher *event.Dispatcher, notificationMgr *websocket.WSNotificationManager) *API {
 	api := &API{
 		sync:            sync,
 		wallet:          wallet,
 		chain:           chain,
 		accessTokens:    token,
-		txFeedTracker:   txfeeds,
 		blockProposer:   blockProposer,
 		eventDispatcher: dispatcher,
 		notificationMgr: notificationMgr,
@@ -265,12 +262,6 @@ func (a *API) buildHandler() {
 	m.Handle("/list-access-tokens", jsonHandler(a.listAccessTokens))
 	m.Handle("/delete-access-token", jsonHandler(a.deleteAccessToken))
 	m.Handle("/check-access-token", jsonHandler(a.checkAccessToken))
-
-	m.Handle("/create-transaction-feed", jsonHandler(a.createTxFeed))
-	m.Handle("/get-transaction-feed", jsonHandler(a.getTxFeed))
-	m.Handle("/update-transaction-feed", jsonHandler(a.updateTxFeed))
-	m.Handle("/delete-transaction-feed", jsonHandler(a.deleteTxFeed))
-	m.Handle("/list-transaction-feeds", jsonHandler(a.listTxFeeds))
 
 	m.Handle("/submit-transaction", jsonHandler(a.submit))
 	m.Handle("/submit-transactions", jsonHandler(a.submitTxs))
