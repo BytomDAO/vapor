@@ -169,6 +169,7 @@ func (w *warder) proposeDestTx(tx *orm.CrossTransaction) (interface{}, string, e
 
 // TODO:
 // get signInsts?
+// create txSign in db
 // addInputWitness(tx, signInsts)?
 func (w *warder) buildSidechainTx(ormTx *orm.CrossTransaction) (*vaporTypes.Tx, string, error) {
 	destTxData := &vaporTypes.TxData{Version: 1, TimeRange: 0}
