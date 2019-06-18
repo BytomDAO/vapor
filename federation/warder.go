@@ -173,7 +173,6 @@ func (w *warder) proposeDestTx(tx *orm.CrossTransaction) (interface{}, string, e
 // addInputWitness(tx, signInsts)?
 func (w *warder) buildSidechainTx(ormTx *orm.CrossTransaction) (*vaporTypes.Tx, string, error) {
 	destTxData := &vaporTypes.TxData{Version: 1, TimeRange: 0}
-	// signInsts := []*SigningInstruction{}
 	muxID := &vaporBc.Hash{}
 	if err := muxID.UnmarshalText([]byte(ormTx.SourceMuxID)); err != nil {
 		return nil, "", errors.Wrap(err, "Unmarshal muxID")
@@ -198,7 +197,13 @@ func (w *warder) buildSidechainTx(ormTx *orm.CrossTransaction) (*vaporTypes.Tx, 
 
 		input := vaporTypes.NewCrossChainInput(nil, *muxID, *assetID, req.AssetAmount, req.SourcePos, w.fedProg, rawDefinitionByte)
 		destTxData.Inputs = append(destTxData.Inputs, input)
-		output := vaporTypes.NewIntraChainOutput(*assetID, req.AssetAmount, nil)
+
+		controlProgram, err := hex.DecodeString(req.Script)
+		if err != nil {
+			return nil, "", errors.Wrap(err, "decode req.Script")
+		}
+
+		output := vaporTypes.NewIntraChainOutput(*assetID, req.AssetAmount, controlProgram)
 		destTxData.Outputs = append(destTxData.Outputs, output)
 	}
 
