@@ -202,7 +202,7 @@ func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *types.Block,
 func (m *mainchainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types.Tx, statusFail bool) ([]*orm.CrossTransactionReq, error) {
 	// assume inputs are from an identical owner
 	script := hex.EncodeToString(tx.Inputs[0].ControlProgram())
-	inputs := []*orm.CrossTransactionReq{}
+	reqs := []*orm.CrossTransactionReq{}
 	for i, rawOutput := range tx.Outputs {
 		// check valid deposit
 		if !bytes.Equal(rawOutput.OutputCommitment.ControlProgram, m.fedProg) {
@@ -218,16 +218,16 @@ func (m *mainchainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types
 			return nil, err
 		}
 
-		input := &orm.CrossTransactionReq{
+		req := &orm.CrossTransactionReq{
 			CrossTransactionID: crossTransactionID,
 			SourcePos:          uint64(i),
 			AssetID:            asset.ID,
 			AssetAmount:        rawOutput.OutputCommitment.AssetAmount.Amount,
 			Script:             script,
 		}
-		inputs = append(inputs, input)
+		reqs = append(reqs, req)
 	}
-	return inputs, nil
+	return reqs, nil
 }
 
 func (m *mainchainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Block, txIndex uint64, tx *types.Tx) error {
