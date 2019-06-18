@@ -195,13 +195,8 @@ func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *types.Block,
 		return err
 	}
 
-	for _, input := range crossChainInputs {
-		if err := m.db.Create(input).Error; err != nil {
-			return errors.Wrap(err, fmt.Sprintf("create DepositFromMainchain input: txid(%s), pos(%d)", tx.ID.String(), input.SourcePos))
-		}
-	}
-
-	return nil
+	// batch insert
+	return m.db.Create(crossChainInputs).Error
 }
 
 func (m *mainchainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types.Tx, statusFail bool) ([]*orm.CrossTransactionReq, error) {
