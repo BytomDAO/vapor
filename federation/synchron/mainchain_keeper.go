@@ -24,22 +24,22 @@ import (
 )
 
 type mainchainKeeper struct {
-	cfg         *config.Chain
-	db          *gorm.DB
-	node        *service.Node
-	chainName   string
-	assetKeeper *database.AssetKeeper
-	fedProg     []byte
+	cfg        *config.Chain
+	db         *gorm.DB
+	node       *service.Node
+	chainName  string
+	assetStore *database.AssetStore
+	fedProg    []byte
 }
 
-func NewMainchainKeeper(db *gorm.DB, assetKeeper *database.AssetKeeper, cfg *config.Config) *mainchainKeeper {
+func NewMainchainKeeper(db *gorm.DB, assetStore *database.AssetStore, cfg *config.Config) *mainchainKeeper {
 	return &mainchainKeeper{
-		cfg:         &cfg.Mainchain,
-		db:          db,
-		node:        service.NewNode(cfg.Mainchain.Upstream),
-		chainName:   cfg.Mainchain.Name,
-		assetKeeper: assetKeeper,
-		fedProg:     federation.ParseFedProg(cfg.Warders, cfg.Quorum),
+		cfg:        &cfg.Mainchain,
+		db:         db,
+		node:       service.NewNode(cfg.Mainchain.Upstream),
+		chainName:  cfg.Mainchain.Name,
+		assetStore: assetStore,
+		fedProg:    federation.ParseFedProg(cfg.Warders, cfg.Quorum),
 	}
 }
 
@@ -218,7 +218,7 @@ func (m *mainchainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types
 			continue
 		}
 
-		asset, err := m.assetKeeper.Get(rawOutput.OutputCommitment.AssetAmount.AssetId.String())
+		asset, err := m.assetStore.Get(rawOutput.OutputCommitment.AssetAmount.AssetId.String())
 		if err != nil {
 			return nil, err
 		}
@@ -279,11 +279,11 @@ func (m *mainchainKeeper) processIssuing(txs []*types.Tx) error {
 			switch inp := input.TypedInput.(type) {
 			case *types.IssuanceInput:
 				assetID := inp.AssetID()
-				if _, err := m.assetKeeper.Get(assetID.String()); err == nil {
+				if _, err := m.assetStore.Get(assetID.String()); err == nil {
 					continue
 				}
 
-				m.assetKeeper.Add(&orm.Asset{
+				m.assetStore.Add(&orm.Asset{
 					AssetID:           assetID.String(),
 					IssuanceProgram:   hex.EncodeToString(inp.IssuanceProgram),
 					VMVersion:         inp.VMVersion,

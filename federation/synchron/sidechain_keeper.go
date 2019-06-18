@@ -21,20 +21,20 @@ import (
 )
 
 type sidechainKeeper struct {
-	cfg         *config.Chain
-	db          *gorm.DB
-	node        *service.Node
-	chainName   string
-	assetKeeper *database.AssetKeeper
+	cfg        *config.Chain
+	db         *gorm.DB
+	node       *service.Node
+	chainName  string
+	assetStore *database.AssetStore
 }
 
-func NewSidechainKeeper(db *gorm.DB, assetKeeper *database.AssetKeeper, cfg *config.Config) *sidechainKeeper {
+func NewSidechainKeeper(db *gorm.DB, assetStore *database.AssetStore, cfg *config.Config) *sidechainKeeper {
 	return &sidechainKeeper{
-		cfg:         &cfg.Sidechain,
-		db:          db,
-		node:        service.NewNode(cfg.Sidechain.Upstream),
-		chainName:   cfg.Sidechain.Name,
-		assetKeeper: assetKeeper,
+		cfg:        &cfg.Sidechain,
+		db:         db,
+		node:       service.NewNode(cfg.Sidechain.Upstream),
+		chainName:  cfg.Sidechain.Name,
+		assetStore: assetStore,
 	}
 }
 
@@ -233,7 +233,7 @@ func (s *sidechainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types
 			continue
 		}
 
-		asset, err := s.assetKeeper.Get(rawOutput.OutputCommitment().AssetAmount.AssetId.String())
+		asset, err := s.assetStore.Get(rawOutput.OutputCommitment().AssetAmount.AssetId.String())
 		if err != nil {
 			return nil, err
 		}

@@ -10,19 +10,19 @@ import (
 
 const maxAssetCached = 1024
 
-type AssetKeeper struct {
+type AssetStore struct {
 	cache *lru.Cache
 	db    *gorm.DB
 }
 
-func NewAssetKeeper(db *gorm.DB) *AssetKeeper {
-	return &AssetKeeper{
+func NewAssetStore(db *gorm.DB) *AssetStore {
+	return &AssetStore{
 		cache: lru.New(maxAssetCached),
 		db:    db,
 	}
 }
 
-func (a *AssetKeeper) GetByOrmID(id uint64) (*orm.Asset, error) {
+func (a *AssetStore) GetByOrmID(id uint64) (*orm.Asset, error) {
 	asset := &orm.Asset{ID: id}
 	if err := a.db.Where(asset).First(asset).Error; err != nil {
 		return nil, errors.Wrap(err, "asset not found by orm id")
@@ -31,7 +31,7 @@ func (a *AssetKeeper) GetByOrmID(id uint64) (*orm.Asset, error) {
 	return asset, nil
 }
 
-func (a *AssetKeeper) Get(assetID string) (*orm.Asset, error) {
+func (a *AssetStore) Get(assetID string) (*orm.Asset, error) {
 	if v, ok := a.cache.Get(assetID); ok {
 		return v.(*orm.Asset), nil
 	}
@@ -45,7 +45,7 @@ func (a *AssetKeeper) Get(assetID string) (*orm.Asset, error) {
 	return asset, nil
 }
 
-func (a *AssetKeeper) Add(asset *orm.Asset) error {
+func (a *AssetStore) Add(asset *orm.Asset) error {
 	if err := a.db.Create(asset).Error; err != nil {
 		return err
 	}

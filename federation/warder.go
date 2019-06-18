@@ -24,7 +24,7 @@ var collectInterval = 5 * time.Second
 
 type warder struct {
 	db            *gorm.DB
-	assetKeeper   *database.AssetKeeper
+	assetStore    *database.AssetStore
 	txCh          chan *orm.CrossTransaction
 	fedProg       []byte
 	position      uint8
@@ -35,11 +35,11 @@ type warder struct {
 	remotes       []*service.Warder
 }
 
-func NewWarder(db *gorm.DB, assetKeeper *database.AssetKeeper, cfg *config.Config) *warder {
+func NewWarder(db *gorm.DB, assetStore *database.AssetStore, cfg *config.Config) *warder {
 	local, remotes := parseWarders(cfg)
 	return &warder{
 		db:            db,
-		assetKeeper:   assetKeeper,
+		assetStore:    assetStore,
 		txCh:          make(chan *orm.CrossTransaction),
 		fedProg:       ParseFedProg(cfg.Warders, cfg.Quorum),
 		position:      local.Position,
@@ -179,8 +179,8 @@ func (w *warder) buildSidechainTx(ormTx *orm.CrossTransaction) (*vaporTypes.Tx, 
 	}
 
 	for _, req := range ormTx.Reqs {
-		// getAsset from assetKeeper instead of preload asset, in order to save db query overload
-		asset, err := w.assetKeeper.GetByOrmID(req.AssetID)
+		// getAsset from assetStore instead of preload asset, in order to save db query overload
+		asset, err := w.assetStore.GetByOrmID(req.AssetID)
 		if err != nil {
 			return nil, "", errors.Wrap(err, "get asset by ormAsset ID")
 		}
