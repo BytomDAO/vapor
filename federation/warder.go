@@ -247,9 +247,9 @@ func (w *warder) addInputWitness(tx interface{}) {
 }
 
 // TODO: fix WarderID
+// TODO: 事务？
 func (w *warder) initDestTxSigns(destTx interface{}, ormTx *orm.CrossTransaction) error {
 	for _, remote := range w.remotes {
-
 		if err := w.db.Create(&orm.CrossTransactionSign{
 			CrossTransactionID: ormTx.ID,
 			WarderID:           remote.Position,
