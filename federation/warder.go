@@ -207,49 +207,8 @@ func (w *warder) buildSidechainTx(ormTx *orm.CrossTransaction) (*vaporTypes.Tx, 
 		destTxData.Outputs = append(destTxData.Outputs, output)
 	}
 
-	// for?{
-
-	// txInput := btmTypes.NewSpendInput(nil, *utxoInfo.SourceID, *assetID, utxo.Amount, utxoInfo.SourcePos, cp)
-	// tx.Inputs = append(tx.Inputs, txInput)
-
-	// signInst := &SigningInstruction{}
-	// if utxo.Address == nil || utxo.Address.Wallet == nil {
-	//     return signInst, nil
-	// }
-
-	// path := pathForAddress(utxo.Address.Wallet.Idx, utxo.Address.Idx, utxo.Address.Change)
-	// for _, p := range path {
-	//     signInst.DerivationPath = append(signInst.DerivationPath, hex.EncodeToString(p))
-	// }
-
-	// xPubs, err := signersToXPubs(utxo.Address.Wallet.WalletSigners)
-	// if err != nil {
-	//     return nil, errors.Wrap(err, "signersToXPubs")
-	// }
-
-	// derivedXPubs := chainkd.DeriveXPubs(xPubs, path)
-	// derivedPKs := chainkd.XPubKeys(derivedXPubs)
-	// if len(derivedPKs) == 1 {
-	//     signInst.DataWitness = derivedPKs[0]
-	//     signInst.Pubkey = hex.EncodeToString(derivedPKs[0])
-	// } else if len(derivedPKs) > 1 {
-	//     if signInst.DataWitness, err = vmutil.P2SPMultiSigProgram(derivedPKs, int(utxo.Address.Wallet.M)); err != nil {
-	//         return nil, err
-	//     }
-	// }
-	// return signInst, nil
-
-	// signInsts = append(signInsts, signInst)
-
-	// }
-
-	// add the payment output && handle the fee
-	// if err := addOutput(txData, address, asset, amount, netParams); err != nil {
-	//     return nil, nil, errors.Wrap(err, "add payment output")
-	// }
-
 	destTx := vaporTypes.NewTx(*destTxData)
-	// addInputWitness(tx, signInsts)
+	w.addInputWitness(destTx)
 
 	if err := w.db.Where(ormTx).UpdateColumn(&orm.CrossTransaction{
 		DestTxHash: sql.NullString{destTx.ID.String(), true},
@@ -271,6 +230,14 @@ func (w *warder) buildMainchainTx(tx *orm.CrossTransaction) (*btmTypes.Tx, strin
 	}
 
 	return mainchainTx, mainchainTx.ID.String(), nil
+}
+
+func (w *warder) addInputWitness(tx interface{}) {
+	switch tx.(type) {
+	case *vaporTypes.Tx:
+	case *btmTypes.Tx:
+	default:
+	}
 }
 
 // TODO:
