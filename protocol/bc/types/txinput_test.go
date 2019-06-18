@@ -9,6 +9,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 
 	"github.com/vapor/encoding/blockchain"
+	"github.com/vapor/protocol/bc"
 	"github.com/vapor/testutil"
 )
 
@@ -71,7 +72,14 @@ func TestSerializationCrossIn(t *testing.T) {
 		[]byte("arguments1"),
 		[]byte("arguments2"),
 	}
-	crossIn := NewCrossChainInput(arguments, testutil.MustDecodeHash("fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409"), testutil.MustDecodeAsset("fe9791d71b67ee62515e08723c061b5ccb952a80d804417c8aeedf7f633c524a"), 254354, 3, []byte("crossInProgram"), []byte("whatever"))
+
+	assetDefinition := bc.CrossChainAssetDefinition{
+		VmVersion:         1,
+		RawDefinitionByte: []byte("whatever"),
+		IssuanceProgram:   []byte("IssuanceProgram"),
+	}
+
+	crossIn := NewCrossChainInput(arguments, testutil.MustDecodeHash("fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409"), testutil.MustDecodeAsset("fe9791d71b67ee62515e08723c061b5ccb952a80d804417c8aeedf7f633c524a"), 254354, 3, []byte("crossInProgram"), assetDefinition)
 
 	wantHex := strings.Join([]string{
 		"01", // asset version
@@ -80,19 +88,22 @@ func TestSerializationCrossIn(t *testing.T) {
 		"54", // cross-chain input commitment length
 		"fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409", // source id
 		"fe9791d71b67ee62515e08723c061b5ccb952a80d804417c8aeedf7f633c524a", // assetID
-		"92c30f",                       // amount
-		"03",                           // source position
-		"01",                           // vm version
-		"0e",                           // spend program length
-		"63726f7373496e50726f6772616d", // spend program
-		"17",                           // witness length
-		"02",                           // argument array length
-		"0a",                           // first argument length
-		"617267756d656e747331",         // first argument data
-		"0a",                           // second argument length
-		"617267756d656e747332",         // second argument data
-		"08",                           // asset definition length
-		"7768617465766572",             // asset definition data
+		"92c30f",                         // amount
+		"03",                             // source position
+		"01",                             // vm version
+		"0e",                             // spend program length
+		"63726f7373496e50726f6772616d",   // spend program
+		"31",                             // witness length
+		"02",                             // argument array length
+		"0a",                             // first argument length
+		"617267756d656e747331",           // first argument data
+		"0a",                             // second argument length
+		"617267756d656e747332",           // second argument data
+		"01",                             // VmVersion
+		"08",                             // asset definition length
+		"7768617465766572",               // asset definition data
+		"0f",                             // IssuanceProgram length
+		"49737375616e636550726f6772616d", // IssuanceProgram
 	}, "")
 
 	// Test convert struct to hex
