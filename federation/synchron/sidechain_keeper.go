@@ -220,9 +220,7 @@ func (s *sidechainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Blo
 }
 
 func (s *sidechainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types.Tx, statusFail bool) ([]*orm.CrossTransactionReq, error) {
-	// assume inputs are from an identical owner
-	script := hex.EncodeToString(tx.Inputs[0].ControlProgram())
-	inputs := []*orm.CrossTransactionReq{}
+	reqs := []*orm.CrossTransactionReq{}
 	for i, rawOutput := range tx.Outputs {
 		// check valid withdrawal
 		if rawOutput.OutputType() != types.CrossChainOutputType {
@@ -238,16 +236,16 @@ func (s *sidechainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types
 			return nil, err
 		}
 
-		input := &orm.CrossTransactionReq{
+		req := &orm.CrossTransactionReq{
 			CrossTransactionID: crossTransactionID,
 			SourcePos:          uint64(i),
 			AssetID:            asset.ID,
 			AssetAmount:        rawOutput.OutputCommitment().AssetAmount.Amount,
-			Script:             script,
+			Script:             hex.EncodeToString(rawOutput.ControlProgram()),
 		}
-		inputs = append(inputs, input)
+		reqs = append(reqs, req)
 	}
-	return inputs, nil
+	return reqs, nil
 }
 
 func (s *sidechainKeeper) processChainInfo(chain *orm.Chain, block *types.Block) error {
