@@ -103,6 +103,7 @@ func GetBlockTransactions(db dbm.DB, hash *bc.Hash) ([]*types.Tx, error) {
 	return block.Transactions, nil
 }
 
+// GetBlockNode return BlockNode by given hash
 func GetBlockNode(db dbm.DB, hash *bc.Hash) (*state.BlockNode, error) {
 	blockHeader, err := GetBlockHeader(db, hash)
 	if err != nil {
@@ -219,6 +220,7 @@ func (s *Store) GetVoteResult(seq uint64) (*state.VoteResult, error) {
 	return s.cache.lookupVoteResult(seq)
 }
 
+// LoadBlockIndex load BlockIndex from BlockHeader
 func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error) {
 	startTime := time.Now()
 	bhIter := s.db.IteratorPrefix(blockHashByHeightPrefix)
@@ -240,12 +242,7 @@ func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error
 			return nil, err
 		}
 
-		blockHeader, err := GetBlockHeader(s.db, blockNodeHash)
-		if err != nil {
-			return nil, err
-		}
-
-		node, err := state.NewBlockNode(blockHeader)
+		node, err := GetBlockNode(s.db, blockNodeHash)
 		if err != nil {
 			return nil, err
 		}
