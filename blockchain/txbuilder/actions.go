@@ -260,11 +260,6 @@ func DecodeCrossInAction(data []byte) (Action, error) {
 	return a, err
 }
 
-/*
-  uint64 vm_version           = 1;
-  bytes  raw_definition_byte  = 2;
-  bytes  issuance_program     = 3;
-*/
 type crossInAction struct {
 	bc.AssetAmount
 	SourceID          bc.Hash `json:"source_id"`
