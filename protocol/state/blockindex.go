@@ -105,10 +105,11 @@ func (bi *BlockIndex) GetNode(hash *bc.Hash) *BlockNode {
 		return hexBlockNode.(*BlockNode)
 	}
 
-	if blockNode, err := bi.fillBlockNodeFn(hash); err != nil {
-		return blockNode
+	blockNode, err := bi.fillBlockNodeFn(hash)
+	if err != nil {
+		return nil
 	}
-	return nil
+	return blockNode
 }
 
 // BestNode return the best BlockNode
@@ -186,7 +187,7 @@ func (bi *BlockIndex) SetMainChain(node *BlockNode) {
 		}
 	}
 
-	for node != nil && *bi.mainChain[node.Height] != node.Hash {
+	for node != nil && bi.mainChain[node.Height].String() != node.Hash.String() {
 		bi.mainChain[node.Height] = &node.Hash
 		node = bi.GetNode(node.Parent)
 	}
