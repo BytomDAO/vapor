@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"time"
 
-	btmBc "github.com/bytom/protocol/bc"
 	btmTypes "github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
