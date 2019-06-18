@@ -13,7 +13,7 @@ import (
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/common"
 	"github.com/vapor/federation/config"
-	"github.com/vapor/federation/database"
+	// "github.com/vapor/federation/database"
 	"github.com/vapor/federation/database/orm"
 	"github.com/vapor/federation/service"
 	"github.com/vapor/protocol/bc"
@@ -21,20 +21,22 @@ import (
 )
 
 type sidechainKeeper struct {
-	cfg        *config.Chain
-	db         *gorm.DB
-	node       *service.Node
-	chainName  string
-	assetCache *database.AssetCache
+	cfg         *config.Chain
+	db          *gorm.DB
+	node        *service.Node
+	chainName   string
+	assetKeeper *AssetKeeper
+	// assetCache *database.AssetCache
 }
 
-func NewSidechainKeeper(db *gorm.DB, cfg *config.Config) *sidechainKeeper {
+func NewSidechainKeeper(db *gorm.DB, assetKeeper *AssetKeeper, cfg *config.Config) *sidechainKeeper {
 	return &sidechainKeeper{
-		cfg:        &cfg.Sidechain,
-		db:         db,
-		node:       service.NewNode(cfg.Sidechain.Upstream),
-		chainName:  cfg.Sidechain.Name,
-		assetCache: database.NewAssetCache(),
+		cfg:         &cfg.Sidechain,
+		db:          db,
+		node:        service.NewNode(cfg.Sidechain.Upstream),
+		chainName:   cfg.Sidechain.Name,
+		assetKeeper: assetKeeper,
+		// assetCache: database.NewAssetCache(),
 	}
 }
 
@@ -233,7 +235,7 @@ func (s *sidechainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types
 			continue
 		}
 
-		asset, err := s.getAsset(rawOutput.OutputCommitment().AssetAmount.AssetId.String())
+		asset, err := s.assetKeeper.Get(rawOutput.OutputCommitment().AssetAmount.AssetId.String())
 		if err != nil {
 			return nil, err
 		}
@@ -264,18 +266,4 @@ func (s *sidechainKeeper) processChainInfo(chain *orm.Chain, block *types.Block)
 	}
 
 	return nil
-}
-
-func (s *sidechainKeeper) getAsset(assetID string) (*orm.Asset, error) {
-	if asset := s.assetCache.Get(assetID); asset != nil {
-		return asset, nil
-	}
-
-	asset := &orm.Asset{AssetID: assetID}
-	if err := s.db.Where(asset).First(asset).Error; err != nil {
-		return nil, errors.Wrap(err, "asset not found in memory and mysql")
-	}
-
-	s.assetCache.Add(assetID, asset)
-	return asset, nil
 }

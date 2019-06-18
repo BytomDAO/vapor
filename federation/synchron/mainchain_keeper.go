@@ -32,13 +32,13 @@ type mainchainKeeper struct {
 	fedProg     []byte
 }
 
-func NewMainchainKeeper(db *gorm.DB, cfg *config.Config) *mainchainKeeper {
+func NewMainchainKeeper(db *gorm.DB, assetKeeper *AssetKeeper, cfg *config.Config) *mainchainKeeper {
 	return &mainchainKeeper{
 		cfg:         &cfg.Mainchain,
 		db:          db,
 		node:        service.NewNode(cfg.Mainchain.Upstream),
 		chainName:   cfg.Mainchain.Name,
-		assetKeeper: NewAssetKeeper(db),
+		assetKeeper: assetKeeper,
 		fedProg:     federation.ParseFedProg(cfg.Warders, cfg.Quorum),
 	}
 }

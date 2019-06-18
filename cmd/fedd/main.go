@@ -21,8 +21,9 @@ func main() {
 	}
 
 	// TODO: refactor
-	go synchron.NewMainchainKeeper(db, cfg).Run()
-	go synchron.NewSidechainKeeper(db, cfg).Run()
+	assetKeeper := synchron.NewAssetKeeper(db)
+	go synchron.NewMainchainKeeper(db, assetKeeper, cfg).Run()
+	go synchron.NewSidechainKeeper(db, assetKeeper, cfg).Run()
 	go federation.NewWarder(db, cfg).Run()
 
 	// keep the main func running in case of terminating goroutines
