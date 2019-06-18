@@ -96,12 +96,12 @@ func (w *warder) collectPendingTx() {
 }
 
 type SigningInstruction struct {
-	DerivationPath []string `json:"derivation_path"`
-	SignData       []string `json:"sign_data"`
-	DataWitness    []byte   `json:"-"`
+	// DerivationPath []string `json:"derivation_path"`
+	// SignData       []string `json:"sign_data"`
+	DataWitness []byte `json:"-"`
 
 	// only shown for a single-signature tx
-	Pubkey string `json:"pubkey,omitempty"`
+	// Pubkey string `json:"pubkey,omitempty"`
 }
 
 func (w *warder) processCrossTxRoutine() {
