@@ -3,11 +3,11 @@ package database
 import (
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
-	"github.com/tendermint/tmlibs/common"
 
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/database/storage"
@@ -34,9 +34,10 @@ func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
 	if bytes == nil {
 		return nil
 	}
+
 	bsj := &protocol.BlockStoreState{}
 	if err := json.Unmarshal(bytes, bsj); err != nil {
-		common.PanicCrisis(common.Fmt("Could not unmarshal bytes: %X", bytes))
+		log.WithField("err", err).Panic("fail on unmarshal BlockStoreStateJSON")
 	}
 	return bsj
 }
@@ -46,7 +47,7 @@ func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
 // methods for querying current data.
 type Store struct {
 	db         dbm.DB
-	cache      blockCache
+	cache      cache
 	blockIndex *state.BlockIndex
 }
 
@@ -76,26 +77,26 @@ func calcVoteResultKey(seq uint64) []byte {
 
 // GetBlockHeader return the block header by given hash
 func GetBlockHeader(db dbm.DB, hash *bc.Hash) (*types.BlockHeader, error) {
-	block := &types.Block{}
 	binaryBlockHeader := db.Get(calcBlockHeaderKey(hash))
 	if binaryBlockHeader == nil {
-		return nil, nil
-	}
-	if err := block.UnmarshalText(binaryBlockHeader); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("There are no blockHeader with given hash %s", hash.String())
 	}
 
-	return &block.BlockHeader, nil
+	blockHeader := &types.BlockHeader{}
+	if err := blockHeader.UnmarshalText(binaryBlockHeader); err != nil {
+		return nil, err
+	}
+	return blockHeader, nil
 }
 
 // GetBlockTransactions return the block transactions by given hash
 func GetBlockTransactions(db dbm.DB, hash *bc.Hash) ([]*types.Tx, error) {
-	block := &types.Block{}
 	binaryBlockTxs := db.Get(calcBlockTransactionsKey(hash))
 	if binaryBlockTxs == nil {
-		return nil, errors.New("The transactions in the block is empty")
+		return nil, fmt.Errorf("There are no block transactions with given hash %s", hash.String())
 	}
 
+	block := &types.Block{}
 	if err := block.UnmarshalText(binaryBlockTxs); err != nil {
 		return nil, err
 	}
@@ -110,32 +111,44 @@ func GetBlockNode(db dbm.DB, hash *bc.Hash) (*state.BlockNode, error) {
 	return state.NewBlockNode(blockHeader)
 }
 
+// GetVoteResult return the vote result by given sequence
+func GetVoteResult(db dbm.DB, seq uint64) (*state.VoteResult, error) {
+	data := db.Get(calcVoteResultKey(seq))
+	if data == nil {
+		return nil, protocol.ErrNotFoundVoteResult
+	}
+
+	voteResult := new(state.VoteResult)
+	if err := json.Unmarshal(data, voteResult); err != nil {
+		return nil, errors.Wrap(err, "unmarshaling vote result")
+	}
+	return voteResult, nil
+}
+
 // NewStore creates and returns a new Store object.
 func NewStore(db dbm.DB) *Store {
 	fillBlockHeaderFn := func(hash *bc.Hash) (*types.BlockHeader, error) {
 		return GetBlockHeader(db, hash)
 	}
-
 	fillBlockTxsFn := func(hash *bc.Hash) ([]*types.Tx, error) {
 		return GetBlockTransactions(db, hash)
+	}
+
+	fillVoteResultFn := func(seq uint64) (*state.VoteResult, error) {
+		return GetVoteResult(db, seq)
 	}
 
 	fillBlockNodeFn := func(hash *bc.Hash) (*state.BlockNode, error) {
 		return GetBlockNode(db, hash)
 	}
 
-	cache := newBlockCache(fillBlockHeaderFn, fillBlockTxsFn)
+	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillVoteResultFn)
 	blockIndex := state.NewBlockIndex(fillBlockNodeFn)
 	return &Store{
 		db:         db,
 		cache:      cache,
 		blockIndex: blockIndex,
 	}
-}
-
-// GetUtxo will search the utxo in db
-func (s *Store) GetUtxo(hash *bc.Hash) (*storage.UtxoEntry, error) {
-	return getUtxo(s.db, hash)
 }
 
 // BlockExist check if the block is stored in disk
@@ -164,20 +177,17 @@ func (s *Store) GetBlock(hash *bc.Hash) (*types.Block, error) {
 
 // GetBlockHeader return the BlockHeader by given hash
 func (s *Store) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
-	blockHeader, err := s.cache.lookupBlockHeader(hash)
-	if err != nil {
-		return nil, err
-	}
-	return blockHeader, nil
+	return s.cache.lookupBlockHeader(hash)
 }
 
 // GetBlockTransactions return the Block transactions by given hash
 func (s *Store) GetBlockTransactions(hash *bc.Hash) ([]*types.Tx, error) {
-	txs, err := s.cache.lookupBlockTxs(hash)
-	if err != nil {
-		return nil, err
-	}
-	return txs, nil
+	return s.cache.lookupBlockTxs(hash)
+}
+
+// GetStoreStatus return the BlockStoreStateJSON
+func (s *Store) GetStoreStatus() *protocol.BlockStoreState {
+	return loadBlockStoreStateJSON(s.db)
 }
 
 // GetTransactionsUtxo will return all the utxo that related to the input txs
@@ -199,23 +209,14 @@ func (s *Store) GetTransactionStatus(hash *bc.Hash) (*bc.TransactionStatus, erro
 	return ts, nil
 }
 
-// GetStoreStatus return the BlockStoreStateJSON
-func (s *Store) GetStoreStatus() *protocol.BlockStoreState {
-	return loadBlockStoreStateJSON(s.db)
+// GetUtxo will search the utxo in db
+func (s *Store) GetUtxo(hash *bc.Hash) (*storage.UtxoEntry, error) {
+	return getUtxo(s.db, hash)
 }
 
 // GetVoteResult retrive the voting result in specified vote sequence
 func (s *Store) GetVoteResult(seq uint64) (*state.VoteResult, error) {
-	data := s.db.Get(calcVoteResultKey(seq))
-	if data == nil {
-		return nil, protocol.ErrNotFoundVoteResult
-	}
-
-	vr := &state.VoteResult{}
-	if err := json.Unmarshal(data, vr); err != nil {
-		return nil, errors.Wrap(err, "unmarshaling vote result")
-	}
-	return vr, nil
+	return s.cache.lookupVoteResult(seq)
 }
 
 func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error) {
@@ -262,7 +263,6 @@ func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error
 // SaveBlock persists a new block in the protocol.
 func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 	startTime := time.Now()
-
 	binaryBlockHeader, err := block.MarshalTextForBlockHeader()
 	if err != nil {
 		return errors.Wrap(err, "Marshal block header")
@@ -302,24 +302,14 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 
 // SaveBlockHeader persists a new block header in the protocol.
 func (s *Store) SaveBlockHeader(blockHeader *types.BlockHeader) error {
-	startTime := time.Now()
-
 	binaryBlockHeader, err := blockHeader.MarshalText()
 	if err != nil {
 		return errors.Wrap(err, "Marshal block header")
 	}
 
 	blockHash := blockHeader.Hash()
-	batch := s.db.NewBatch()
-	batch.Set(calcBlockHeaderKey(&blockHash), binaryBlockHeader)
-	batch.Write()
-
-	log.WithFields(log.Fields{
-		"module":   logModule,
-		"height":   blockHeader.Height,
-		"hash":     blockHash.String(),
-		"duration": time.Since(startTime),
-	}).Info("blockHeader saved on disk")
+	s.db.Set(calcBlockHeaderKey(&blockHash), binaryBlockHeader)
+	s.cache.removeBlockHeader(blockHeader)
 	return nil
 }
 
@@ -330,8 +320,14 @@ func (s *Store) SaveChainStatus(node, irreversibleNode *state.BlockNode, view *s
 		return err
 	}
 
-	if err := saveVoteResult(batch, voteResults); err != nil {
-		return err
+	for _, vote := range voteResults {
+		bytes, err := json.Marshal(vote)
+		if err != nil {
+			return err
+		}
+
+		batch.Set(calcVoteResultKey(vote.Seq), bytes)
+		s.cache.removeVoteResult(vote)
 	}
 
 	bytes, err := json.Marshal(protocol.BlockStoreState{
@@ -346,18 +342,5 @@ func (s *Store) SaveChainStatus(node, irreversibleNode *state.BlockNode, view *s
 
 	batch.Set(blockStoreKey, bytes)
 	batch.Write()
-	return nil
-}
-
-// saveVoteResult update the voting results generated by each irreversible block
-func saveVoteResult(batch dbm.Batch, voteResults []*state.VoteResult) error {
-	for _, vote := range voteResults {
-		bytes, err := json.Marshal(vote)
-		if err != nil {
-			return err
-		}
-
-		batch.Set(calcVoteResultKey(vote.Seq), bytes)
-	}
 	return nil
 }
