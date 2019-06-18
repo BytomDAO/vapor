@@ -3,6 +3,8 @@ package types
 import (
 	log "github.com/sirupsen/logrus"
 
+	"golang.org/x/crypto/sha3"
+
 	"github.com/vapor/consensus"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/vm"
@@ -147,9 +149,20 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 				Value:    &inp.AssetAmount,
 				Position: inp.SourcePosition,
 			}
+
 			prevout := bc.NewIntraChainOutput(src, prog, 0) // ordinal doesn't matter
 			outputID := bc.EntryID(prevout)
-			crossIn := bc.NewCrossChainInput(&outputID, &inp.AssetAmount, prog, uint64(i), &inp.CrossChainAssetDefinition)
+
+			assetDefHash := bc.NewHash(sha3.Sum256(inp.AssetDefinition))
+			assetDef := &bc.AssetDefinition{
+				Data: &assetDefHash,
+				IssuanceProgram: &bc.Program{
+					VmVersion: inp.VMVersion,
+					Code:      inp.IssuanceProgram,
+				},
+			}
+
+			crossIn := bc.NewCrossChainInput(&outputID, &inp.AssetAmount, prog, uint64(i), assetDef)
 			crossIn.WitnessArguments = inp.Arguments
 			crossInID := addEntry(crossIn)
 			muxSources[i] = &bc.ValueSource{

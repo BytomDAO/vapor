@@ -9,7 +9,6 @@ import (
 	"github.com/davecgh/go-spew/spew"
 
 	"github.com/vapor/encoding/blockchain"
-	"github.com/vapor/protocol/bc"
 	"github.com/vapor/testutil"
 )
 
@@ -73,13 +72,7 @@ func TestSerializationCrossIn(t *testing.T) {
 		[]byte("arguments2"),
 	}
 
-	assetDefinition := bc.CrossChainAssetDefinition{
-		VmVersion:         1,
-		RawDefinitionByte: []byte("whatever"),
-		IssuanceProgram:   []byte("IssuanceProgram"),
-	}
-
-	crossIn := NewCrossChainInput(arguments, testutil.MustDecodeHash("fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409"), testutil.MustDecodeAsset("fe9791d71b67ee62515e08723c061b5ccb952a80d804417c8aeedf7f633c524a"), 254354, 3, []byte("crossInProgram"), assetDefinition)
+	crossIn := NewCrossChainInput(arguments, testutil.MustDecodeHash("fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409"), testutil.MustDecodeAsset("fe9791d71b67ee62515e08723c061b5ccb952a80d804417c8aeedf7f633c524a"), 254354, 3, 1, []byte("crossInProgram"), []byte("whatever"), []byte("IssuanceProgram"))
 
 	wantHex := strings.Join([]string{
 		"01", // asset version

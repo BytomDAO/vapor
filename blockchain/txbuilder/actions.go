@@ -5,9 +5,10 @@ import (
 	stdjson "encoding/json"
 	"errors"
 
-	"github.com/vapor/config"
+	"golang.org/x/crypto/sha3"
 
 	"github.com/vapor/common"
+	"github.com/vapor/config"
 	"github.com/vapor/consensus"
 	"github.com/vapor/encoding/json"
 	"github.com/vapor/protocol/bc"
@@ -259,11 +260,18 @@ func DecodeCrossInAction(data []byte) (Action, error) {
 	return a, err
 }
 
+/*
+  uint64 vm_version           = 1;
+  bytes  raw_definition_byte  = 2;
+  bytes  issuance_program     = 3;
+*/
 type crossInAction struct {
 	bc.AssetAmount
-	SourceID  bc.Hash `json:"source_id"`
-	SourcePos uint64  `json:"source_pos"`
-	bc.CrossChainAssetDefinition
+	SourceID          bc.Hash `json:"source_id"`
+	SourcePos         uint64  `json:"source_pos"`
+	VMVersion         uint64  `json:"vm_version"`
+	RawDefinitionByte []byte  `json:"raw_definition_byte"`
+	IssuanceProgram   []byte  `json:"issuance_program"`
 }
 
 func (a *crossInAction) Build(ctx context.Context, builder *TemplateBuilder) error {
@@ -287,7 +295,7 @@ func (a *crossInAction) Build(ctx context.Context, builder *TemplateBuilder) err
 
 	// arguments will be set when materializeWitnesses
 	fedProg := config.FederationProgrom(config.CommonConfig)
-	txin := types.NewCrossChainInput(nil, a.SourceID, *a.AssetId, a.Amount, a.SourcePos, fedProg, a.CrossChainAssetDefinition)
+	txin := types.NewCrossChainInput(nil, a.SourceID, *a.AssetId, a.Amount, a.SourcePos, a.VMVersion, fedProg, a.RawDefinitionByte, a.IssuanceProgram)
 	tplIn := &SigningInstruction{}
 	fed := config.CommonConfig.Federation
 	tplIn.AddRawWitnessKeys(fed.Xpubs, nil, fed.Quorum)
@@ -299,7 +307,8 @@ func (a *crossInAction) ActionType() string {
 }
 
 func (c *crossInAction) checkAssetID() error {
-	assetID := c.CrossChainAssetDefinition.ComputeAssetID()
+	defHash := bc.NewHash(sha3.Sum256(c.RawDefinitionByte))
+	assetID := bc.ComputeAssetID(c.IssuanceProgram, c.VMVersion, &defHash)
 
 	if *c.AssetId == *consensus.BTMAssetID && assetID != *c.AssetAmount.AssetId {
 		return errors.New("incorrect asset_idincorrect asset_id")

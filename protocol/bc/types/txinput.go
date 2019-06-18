@@ -210,7 +210,15 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 				return err
 			}
 
-			if err := inp.CrossChainAssetDefinition.ReadFrom(r); err != nil {
+			if inp.VMVersion, err = blockchain.ReadVarint63(r); err != nil {
+				return err
+			}
+
+			if inp.AssetDefinition, err = blockchain.ReadVarstr31(r); err != nil {
+				return err
+			}
+
+			if inp.IssuanceProgram, err = blockchain.ReadVarstr31(r); err != nil {
 				return err
 			}
 
@@ -298,7 +306,16 @@ func (t *TxInput) writeInputWitness(w io.Writer) error {
 			return err
 		}
 
-		_, err := inp.CrossChainAssetDefinition.WriteTo(w)
+		if _, err := blockchain.WriteVarint63(w, inp.VMVersion); err != nil {
+			return err
+		}
+
+		if _, err := blockchain.WriteVarstr31(w, inp.AssetDefinition); err != nil {
+			return err
+		}
+
+		_, err := blockchain.WriteVarstr31(w, inp.IssuanceProgram)
+
 		return err
 	case *VetoInput:
 		if _, err := blockchain.WriteVarstrList(w, inp.Arguments); err != nil {

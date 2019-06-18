@@ -132,11 +132,5 @@ message CrossChainInput {
   Program          control_program           = 4;
   repeated bytes   witness_arguments         = 5;
   uint64           ordinal                   = 6;
-  CrossChainAssetDefinition asset_definition = 7;
-}
-
-message CrossChainAssetDefinition {
-  uint64 vm_version           = 1;
-  bytes  raw_definition_byte  = 2;
-  bytes  issuance_program     = 3;
+  AssetDefinition asset_definition           = 7;
 }
