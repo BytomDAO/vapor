@@ -188,8 +188,7 @@ func (w *warder) buildSidechainTx(ormTx *orm.CrossTransaction) (*vaporTypes.Tx, 
 
 	for _, req := range ormTx.Reqs {
 		// TODO:
-		// getAsset
-		// cache for assetID & rawDefinitionByte
+		// getAsset from assetKeeper instead of preload asset, in order to save db query overload
 		asset := &orm.Asset{}
 		assetID := &vaporBc.AssetID{}
 		if err := assetID.UnmarshalText([]byte(asset.AssetID)); err != nil {

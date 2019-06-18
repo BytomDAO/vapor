@@ -20,7 +20,6 @@ func main() {
 		log.WithField("err", err).Panic("initialize mysql db error")
 	}
 
-	// TODO: refactor
 	assetKeeper := synchron.NewAssetKeeper(db)
 	go synchron.NewMainchainKeeper(db, assetKeeper, cfg).Run()
 	go synchron.NewSidechainKeeper(db, assetKeeper, cfg).Run()
