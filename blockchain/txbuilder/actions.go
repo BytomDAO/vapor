@@ -280,6 +280,7 @@ func (a *crossInAction) Build(ctx context.Context, builder *TemplateBuilder) err
 	if a.Amount == 0 {
 		missing = append(missing, "amount")
 	}
+
 	if len(missing) > 0 {
 		return MissingFieldsError(missing...)
 	}

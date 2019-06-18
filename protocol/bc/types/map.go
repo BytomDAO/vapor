@@ -2,7 +2,6 @@ package types
 
 import (
 	log "github.com/sirupsen/logrus"
-
 	"golang.org/x/crypto/sha3"
 
 	"github.com/vapor/consensus"
