@@ -22,15 +22,6 @@ import (
 
 var collectInterval = 5 * time.Second
 
-var xprvStr = "d20e3d81ba2c5509619fbc276d7cd8b94f52a1dce1291ae9e6b28d4a48ee67d8ac5826ba65c9da0b035845b7cb379e816c529194c7e369492d8828dee5ede3e2"
-
-func string2xprv(str string) (xprv chainkd.XPrv) {
-	if err := xprv.UnmarshalText([]byte(str)); err != nil {
-		log.Panicf("fail to convert xprv string")
-	}
-	return xprv
-}
-
 type warder struct {
 	db            *gorm.DB
 	assetKeeper   *database.AssetKeeper
@@ -47,13 +38,12 @@ type warder struct {
 func NewWarder(db *gorm.DB, assetKeeper *database.AssetKeeper, cfg *config.Config) *warder {
 	local, remotes := parseWarders(cfg)
 	return &warder{
-		db:          db,
-		assetKeeper: assetKeeper,
-		txCh:        make(chan *orm.CrossTransaction),
-		fedProg:     ParseFedProg(cfg.Warders, cfg.Quorum),
-		position:    local.Position,
-		xpub:        local.XPub,
-		// TODO:
+		db:            db,
+		assetKeeper:   assetKeeper,
+		txCh:          make(chan *orm.CrossTransaction),
+		fedProg:       ParseFedProg(cfg.Warders, cfg.Quorum),
+		position:      local.Position,
+		xpub:          local.XPub,
 		xprv:          string2xprv(xprvStr),
 		mainchainNode: service.NewNode(cfg.Mainchain.Upstream),
 		sidechainNode: service.NewNode(cfg.Sidechain.Upstream),
@@ -65,7 +55,6 @@ func parseWarders(cfg *config.Config) (*service.Warder, []*service.Warder) {
 	var local *service.Warder
 	var remotes []*service.Warder
 	for _, warderCfg := range cfg.Warders {
-		// TODO: use private key to check
 		if warderCfg.IsLocal {
 			local = service.NewWarder(&warderCfg)
 		} else {
