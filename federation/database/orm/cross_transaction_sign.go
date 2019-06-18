@@ -7,7 +7,7 @@ import (
 type CrossTransactionSign struct {
 	ID                 uint64 `gorm:"primary_key"`
 	CrossTransactionID uint64
-	WarderID           uint64
+	WarderID           uint8
 	Signatures         string
 	Status             uint8
 	CreatedAt          types.Timestamp

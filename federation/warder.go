@@ -246,8 +246,19 @@ func (w *warder) addInputWitness(tx interface{}) {
 	}
 }
 
-// TODO:
-func (w *warder) initDestTxSigns(destTx interface{}, tx *orm.CrossTransaction) error {
+// TODO: fix WarderID
+func (w *warder) initDestTxSigns(destTx interface{}, ormTx *orm.CrossTransaction) error {
+	for _, remote := range w.remotes {
+
+		if err := w.db.Create(&orm.CrossTransactionSign{
+			CrossTransactionID: ormTx.ID,
+			WarderID:           remote.Position,
+			Status:             common.CrossTxSignPendingStatus,
+		}).Error; err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
