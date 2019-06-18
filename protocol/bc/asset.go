@@ -5,9 +5,10 @@ import (
 	"errors"
 	"io"
 
+	"golang.org/x/crypto/sha3"
+
 	"github.com/vapor/crypto/sha3pool"
 	"github.com/vapor/encoding/blockchain"
-	"golang.org/x/crypto/sha3"
 )
 
 // NewAssetID convert byte array to aseet id

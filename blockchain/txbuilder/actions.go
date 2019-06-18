@@ -263,8 +263,6 @@ type crossInAction struct {
 	bc.AssetAmount
 	SourceID  bc.Hash `json:"source_id"`
 	SourcePos uint64  `json:"source_pos"`
-	//RawDefinitionByte json.HexBytes `json:"raw_definition_byte"`
-	//IssuanceProgram   json.HexBytes `json:"issuance_program"`
 	bc.CrossChainAssetDefinition
 }
 
