@@ -299,13 +299,9 @@ func (a *crossInAction) ActionType() string {
 }
 
 func (c *crossInAction) checkAssetID() error {
-	if *c.AssetId == *consensus.BTMAssetID {
-		return nil
-	}
-
 	assetID := c.CrossChainAssetDefinition.ComputeAssetID()
 
-	if assetID != *c.AssetAmount.AssetId {
+	if *c.AssetId == *consensus.BTMAssetID && assetID != *c.AssetAmount.AssetId {
 		return errors.New("incorrect asset_idincorrect asset_id")
 	}
 
