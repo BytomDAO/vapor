@@ -13,6 +13,7 @@ import (
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/common"
 	"github.com/vapor/federation/config"
+	"github.com/vapor/federation/database"
 	"github.com/vapor/federation/database/orm"
 	"github.com/vapor/federation/service"
 	vaporBc "github.com/vapor/protocol/bc"
@@ -32,7 +33,7 @@ func string2xprv(str string) (xprv chainkd.XPrv) {
 
 type warder struct {
 	db            *gorm.DB
-	assetKeeper   *service.AssetKeeper
+	assetKeeper   *database.AssetKeeper
 	txCh          chan *orm.CrossTransaction
 	fedProg       []byte
 	position      uint8
@@ -43,7 +44,7 @@ type warder struct {
 	remotes       []*service.Warder
 }
 
-func NewWarder(db *gorm.DB, assetKeeper *service.AssetKeeper, cfg *config.Config) *warder {
+func NewWarder(db *gorm.DB, assetKeeper *database.AssetKeeper, cfg *config.Config) *warder {
 	local, remotes := parseWarders(cfg)
 	return &warder{
 		db:          db,

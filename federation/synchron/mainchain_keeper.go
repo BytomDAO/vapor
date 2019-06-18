@@ -17,6 +17,7 @@ import (
 	"github.com/vapor/federation"
 	"github.com/vapor/federation/common"
 	"github.com/vapor/federation/config"
+	"github.com/vapor/federation/database"
 	"github.com/vapor/federation/database/orm"
 	"github.com/vapor/federation/service"
 	"github.com/vapor/protocol/bc"
@@ -27,11 +28,11 @@ type mainchainKeeper struct {
 	db          *gorm.DB
 	node        *service.Node
 	chainName   string
-	assetKeeper *service.AssetKeeper
+	assetKeeper *database.AssetKeeper
 	fedProg     []byte
 }
 
-func NewMainchainKeeper(db *gorm.DB, assetKeeper *service.AssetKeeper, cfg *config.Config) *mainchainKeeper {
+func NewMainchainKeeper(db *gorm.DB, assetKeeper *database.AssetKeeper, cfg *config.Config) *mainchainKeeper {
 	return &mainchainKeeper{
 		cfg:         &cfg.Mainchain,
 		db:          db,

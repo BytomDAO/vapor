@@ -8,7 +8,6 @@ import (
 	"github.com/vapor/federation"
 	"github.com/vapor/federation/config"
 	"github.com/vapor/federation/database"
-	"github.com/vapor/federation/service"
 	"github.com/vapor/federation/synchron"
 )
 
@@ -21,7 +20,7 @@ func main() {
 		log.WithField("err", err).Panic("initialize mysql db error")
 	}
 
-	assetKeeper := service.NewAssetKeeper(db)
+	assetKeeper := database.NewAssetKeeper(db)
 	go synchron.NewMainchainKeeper(db, assetKeeper, cfg).Run()
 	go synchron.NewSidechainKeeper(db, assetKeeper, cfg).Run()
 	go federation.NewWarder(db, assetKeeper, cfg).Run()

@@ -1,23 +1,22 @@
-package service
+package database
 
 import (
 	"github.com/jinzhu/gorm"
 
 	"github.com/vapor/errors"
-	"github.com/vapor/federation/database"
 	"github.com/vapor/federation/database/orm"
 )
 
 // TODO:
 type AssetKeeper struct {
 	db         *gorm.DB
-	assetCache *database.AssetCache
+	assetCache *AssetCache
 }
 
 func NewAssetKeeper(db *gorm.DB) *AssetKeeper {
 	return &AssetKeeper{
 		db:         db,
-		assetCache: database.NewAssetCache(),
+		assetCache: NewAssetCache(),
 	}
 }
 
