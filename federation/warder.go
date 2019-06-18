@@ -223,16 +223,6 @@ func (w *warder) buildSidechainTx(ormTx *orm.CrossTransaction) (*vaporTypes.Tx, 
 
 // TODO:
 func (w *warder) buildMainchainTx(ormTx *orm.CrossTransaction) (*btmTypes.Tx, string, error) {
-	// mainchainTx := &btmTypes.Tx{}
-
-	// if err := w.db.Where(tx).UpdateColumn(&orm.CrossTransaction{
-	// 	DestTxHash: sql.NullString{mainchainTx.ID.String(), true},
-	// }).Error; err != nil {
-	// 	return nil, "", err
-	// }
-
-	// return mainchainTx, mainchainTx.ID.String(), nil
-
 	destTxData := &btmTypes.TxData{Version: 1, TimeRange: 0}
 	muxID := &btmBc.Hash{}
 	if err := muxID.UnmarshalText([]byte(ormTx.SourceMuxID)); err != nil {
