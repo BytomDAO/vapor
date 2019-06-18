@@ -308,7 +308,7 @@ func (c *crossInAction) checkAssetID() error {
 	assetID := c.CrossChainAssetDefinition.ComputeAssetID()
 
 	if assetID != *c.AssetAmount.AssetId {
-		return errors.New("incorrect asset_id")
+		return errors.New("incorrect asset_idincorrect asset_id")
 	}
 
 	return nil

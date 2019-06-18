@@ -249,6 +249,12 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		}
 
 	case *bc.CrossChainInput:
+		// check assetID
+		assetID := e.AssetDefinition.ComputeAssetID()
+		if e.Value.AssetId != consensus.BTMAssetID && *e.Value.AssetId != assetID {
+			return errors.New("incorrect asset_id while check CrossChainInput")
+		}
+
 		_, err := vm.Verify(NewTxVMContext(vs, e, e.ControlProgram, e.WitnessArguments), consensus.DefaultGasCredit)
 		if err != nil {
 			return errors.Wrap(err, "checking cross-chain input control program")

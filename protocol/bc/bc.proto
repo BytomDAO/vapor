@@ -126,17 +126,17 @@ message Spend {
 }
 
 message CrossChainInput {
-  Hash             mainchain_output_id = 1;
-  AssetAmount      value               = 2;
-  ValueDestination witness_destination = 3;
-  Program          control_program     = 4;
-  repeated bytes   witness_arguments   = 5;
-  uint64           ordinal             = 6;
+  Hash             mainchain_output_id       = 1;
+  AssetAmount      value                     = 2;
+  ValueDestination witness_destination       = 3;
+  Program          control_program           = 4;
+  repeated bytes   witness_arguments         = 5;
+  uint64           ordinal                   = 6;
+  CrossChainAssetDefinition asset_definition = 7;
 }
 
 message CrossChainAssetDefinition {
   uint64 vm_version           = 1;
   bytes  raw_definition_byte  = 2;
   bytes  issuance_program     = 3;
-
 }
