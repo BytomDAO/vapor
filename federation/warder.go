@@ -108,6 +108,11 @@ func (w *warder) processCrossTxRoutine() {
 			continue
 		}
 
+		if err := w.initDestTxSigns(destTx, ormTx); err != nil {
+			log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx}).Warnln("initDestTxSigns")
+			continue
+		}
+
 		if err := w.signDestTx(destTx, ormTx); err != nil {
 			log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx}).Warnln("signDestTx")
 			continue
@@ -232,12 +237,18 @@ func (w *warder) buildMainchainTx(tx *orm.CrossTransaction) (*btmTypes.Tx, strin
 	return mainchainTx, mainchainTx.ID.String(), nil
 }
 
+// TODO:
 func (w *warder) addInputWitness(tx interface{}) {
 	switch tx.(type) {
 	case *vaporTypes.Tx:
 	case *btmTypes.Tx:
 	default:
 	}
+}
+
+// TODO:
+func (w *warder) initDestTxSigns(destTx interface{}, tx *orm.CrossTransaction) error {
+	return nil
 }
 
 // TODO:
