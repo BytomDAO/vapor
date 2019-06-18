@@ -8,6 +8,7 @@ import (
 	"github.com/vapor/federation/database/orm"
 )
 
+// TODO:
 type AssetKeeper struct {
 	db         *gorm.DB
 	assetCache *database.AssetCache
