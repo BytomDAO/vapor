@@ -241,7 +241,7 @@ func (w *warder) addInputWitness(tx interface{}) {
 }
 
 func (w *warder) initDestTxSigns(destTx interface{}, ormTx *orm.CrossTransaction) error {
-	if err := w.db.Where(&orm.CrossTransactionSign{CrossTransactionID: ormTx.ID}).Error; err == nil {
+	if err := w.db.Where(&orm.CrossTransactionSign{CrossTransactionID: ormTx.ID}).First(&orm.CrossTransactionSign{}).Error; err == nil {
 		return nil
 	}
 
