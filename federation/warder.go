@@ -95,15 +95,6 @@ func (w *warder) collectPendingTx() {
 	}
 }
 
-type SigningInstruction struct {
-	// DerivationPath []string `json:"derivation_path"`
-	// SignData       []string `json:"sign_data"`
-	DataWitness []byte `json:"-"`
-
-	// only shown for a single-signature tx
-	// Pubkey string `json:"pubkey,omitempty"`
-}
-
 func (w *warder) processCrossTxRoutine() {
 	for ormTx := range w.txCh {
 		if err := w.validateCrossTx(ormTx); err != nil {
@@ -111,7 +102,7 @@ func (w *warder) processCrossTxRoutine() {
 			continue
 		}
 
-		destTx, destTxID, _, err := w.proposeDestTx(ormTx)
+		destTx, destTxID, err := w.proposeDestTx(ormTx)
 		if err != nil {
 			log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx}).Warnln("proposeDestTx")
 			continue
@@ -165,43 +156,43 @@ func (w *warder) validateCrossTx(tx *orm.CrossTransaction) error {
 	}
 }
 
-func (w *warder) proposeDestTx(tx *orm.CrossTransaction) (interface{}, string, []*SigningInstruction, error) {
+func (w *warder) proposeDestTx(tx *orm.CrossTransaction) (interface{}, string, error) {
 	switch tx.Chain.Name {
 	case "bytom":
 		return w.buildSidechainTx(tx)
 	case "vapor":
 		return w.buildMainchainTx(tx)
 	default:
-		return nil, "", nil, errors.New("unknown source chain")
+		return nil, "", errors.New("unknown source chain")
 	}
 }
 
 // TODO:
 // signInsts?
 // addInputWitness(tx, signInsts)?
-func (w *warder) buildSidechainTx(ormTx *orm.CrossTransaction) (*vaporTypes.Tx, string, []*SigningInstruction, error) {
+func (w *warder) buildSidechainTx(ormTx *orm.CrossTransaction) (*vaporTypes.Tx, string, error) {
 	destTxData := &vaporTypes.TxData{Version: 1, TimeRange: 0}
 	// signInsts := []*SigningInstruction{}
 	muxID := &vaporBc.Hash{}
 	if err := muxID.UnmarshalText([]byte(ormTx.SourceMuxID)); err != nil {
-		return nil, "", nil, errors.Wrap(err, "Unmarshal muxID")
+		return nil, "", errors.Wrap(err, "Unmarshal muxID")
 	}
 
 	for _, req := range ormTx.Reqs {
 		// getAsset from assetKeeper instead of preload asset, in order to save db query overload
 		asset, err := w.assetKeeper.GetByOrmID(req.AssetID)
 		if err != nil {
-			return nil, "", nil, errors.Wrap(err, "get asset by ormAsset ID")
+			return nil, "", errors.Wrap(err, "get asset by ormAsset ID")
 		}
 
 		assetID := &vaporBc.AssetID{}
 		if err := assetID.UnmarshalText([]byte(asset.AssetID)); err != nil {
-			return nil, "", nil, errors.Wrap(err, "Unmarshal muxID")
+			return nil, "", errors.Wrap(err, "Unmarshal muxID")
 		}
 
 		rawDefinitionByte, err := hex.DecodeString(asset.RawDefinitionByte)
 		if err != nil {
-			return nil, "", nil, errors.Wrap(err, "decode rawDefinitionByte")
+			return nil, "", errors.Wrap(err, "decode rawDefinitionByte")
 		}
 
 		input := vaporTypes.NewCrossChainInput(nil, *muxID, *assetID, req.AssetAmount, req.SourcePos, w.fedProg, rawDefinitionByte)
@@ -255,23 +246,23 @@ func (w *warder) buildSidechainTx(ormTx *orm.CrossTransaction) (*vaporTypes.Tx, 
 	if err := w.db.Where(ormTx).UpdateColumn(&orm.CrossTransaction{
 		DestTxHash: sql.NullString{destTx.ID.String(), true},
 	}).Error; err != nil {
-		return nil, "", nil, err
+		return nil, "", err
 	}
 
-	return destTx, destTx.ID.String(), nil, nil
+	return destTx, destTx.ID.String(), nil
 }
 
 // TODO:
-func (w *warder) buildMainchainTx(tx *orm.CrossTransaction) (*btmTypes.Tx, string, []*SigningInstruction, error) {
+func (w *warder) buildMainchainTx(tx *orm.CrossTransaction) (*btmTypes.Tx, string, error) {
 	mainchainTx := &btmTypes.Tx{}
 
 	if err := w.db.Where(tx).UpdateColumn(&orm.CrossTransaction{
 		DestTxHash: sql.NullString{mainchainTx.ID.String(), true},
 	}).Error; err != nil {
-		return nil, "", nil, err
+		return nil, "", err
 	}
 
-	return mainchainTx, mainchainTx.ID.String(), nil, nil
+	return mainchainTx, mainchainTx.ID.String(), nil
 }
 
 // TODO:
