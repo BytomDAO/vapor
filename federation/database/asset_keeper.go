@@ -8,16 +8,17 @@ import (
 	"github.com/vapor/federation/database/orm"
 )
 
-// TODO:
+const maxAssetCached = 1024
+
 type AssetKeeper struct {
-	db         *gorm.DB
-	assetCache *AssetCache
+	cache *lru.Cache
+	db    *gorm.DB
 }
 
 func NewAssetKeeper(db *gorm.DB) *AssetKeeper {
 	return &AssetKeeper{
-		db:         db,
-		assetCache: NewAssetCache(),
+		cache: lru.New(maxAssetCached),
+		db:    db,
 	}
 }
 
@@ -31,8 +32,8 @@ func (a *AssetKeeper) GetByOrmID(id uint64) (*orm.Asset, error) {
 }
 
 func (a *AssetKeeper) Get(assetID string) (*orm.Asset, error) {
-	if asset := a.assetCache.Get(assetID); asset != nil {
-		return asset, nil
+	if v, ok := a.cache.Get(assetID); ok {
+		return v.(*orm.Asset), nil
 	}
 
 	asset := &orm.Asset{AssetID: assetID}
@@ -40,7 +41,7 @@ func (a *AssetKeeper) Get(assetID string) (*orm.Asset, error) {
 		return nil, errors.Wrap(err, "asset not found in memory and mysql")
 	}
 
-	a.assetCache.Add(assetID, asset)
+	a.cache.Add(assetID, asset)
 	return asset, nil
 }
 
@@ -49,32 +50,6 @@ func (a *AssetKeeper) Add(asset *orm.Asset) error {
 		return err
 	}
 
-	a.assetCache.Add(asset.AssetID, asset)
+	a.cache.Add(asset.AssetID, asset)
 	return nil
-}
-
-const maxAssetCached = 1024
-
-type AssetCache struct {
-	lruCache *lru.Cache
-}
-
-func NewAssetCache() *AssetCache {
-	return &AssetCache{lruCache: lru.New(maxAssetCached)}
-}
-
-func (a *AssetCache) Add(assetID string, asset *orm.Asset) {
-	a.lruCache.Add(assetID, asset)
-}
-
-func (a *AssetCache) Get(assetID string) *orm.Asset {
-	if v, ok := a.lruCache.Get(assetID); ok {
-		return v.(*orm.Asset)
-	}
-
-	return nil
-}
-
-func (a *AssetCache) Remove(assetID string) {
-	a.lruCache.Remove(assetID)
 }
