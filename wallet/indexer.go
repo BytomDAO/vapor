@@ -93,7 +93,7 @@ func saveExternalAssetDefinition(b *types.Block, walletDB dbm.DB) {
 			if cci, ok := orig.TypedInput.(*types.CrossChainInput); ok {
 				assetID := cci.AssetId
 				if assetExist := walletDB.Get(asset.ExtAssetKey(assetID)); assetExist == nil {
-					storeBatch.Set(asset.ExtAssetKey(assetID), cci.AssetDefinition)
+					storeBatch.Set(asset.ExtAssetKey(assetID), cci.CrossChainAssetDefinition.RawDefinitionByte)
 				}
 			}
 		}
