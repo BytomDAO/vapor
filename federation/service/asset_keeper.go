@@ -21,6 +21,15 @@ func NewAssetKeeper(db *gorm.DB) *AssetKeeper {
 	}
 }
 
+func (a *AssetKeeper) GetByOrmID(id uint64) (*orm.Asset, error) {
+	asset := &orm.Asset{ID: id}
+	if err := a.db.Where(asset).First(asset).Error; err != nil {
+		return nil, errors.Wrap(err, "asset not found by orm id")
+	}
+
+	return asset, nil
+}
+
 func (a *AssetKeeper) Get(assetID string) (*orm.Asset, error) {
 	if asset := a.assetCache.Get(assetID); asset != nil {
 		return asset, nil
