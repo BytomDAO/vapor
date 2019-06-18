@@ -17,29 +17,29 @@ import (
 	"github.com/vapor/federation"
 	"github.com/vapor/federation/common"
 	"github.com/vapor/federation/config"
-	"github.com/vapor/federation/database"
+	// "github.com/vapor/federation/database"
 	"github.com/vapor/federation/database/orm"
 	"github.com/vapor/federation/service"
 	"github.com/vapor/protocol/bc"
 )
 
 type mainchainKeeper struct {
-	cfg        *config.Chain
-	db         *gorm.DB
-	node       *service.Node
-	chainName  string
-	assetCache *database.AssetCache
-	fedProg    []byte
+	cfg         *config.Chain
+	db          *gorm.DB
+	node        *service.Node
+	chainName   string
+	assetKeeper *AssetKeeper
+	fedProg     []byte
 }
 
 func NewMainchainKeeper(db *gorm.DB, cfg *config.Config) *mainchainKeeper {
 	return &mainchainKeeper{
-		cfg:        &cfg.Mainchain,
-		db:         db,
-		node:       service.NewNode(cfg.Mainchain.Upstream),
-		chainName:  cfg.Mainchain.Name,
-		assetCache: database.NewAssetCache(),
-		fedProg:    federation.ParseFedProg(cfg.Warders, cfg.Quorum),
+		cfg:         &cfg.Mainchain,
+		db:          db,
+		node:        service.NewNode(cfg.Mainchain.Upstream),
+		chainName:   cfg.Mainchain.Name,
+		assetKeeper: NewAssetKeeper(db),
+		fedProg:     federation.ParseFedProg(cfg.Warders, cfg.Quorum),
 	}
 }
 
@@ -218,7 +218,7 @@ func (m *mainchainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types
 			continue
 		}
 
-		asset, err := m.getAsset(rawOutput.OutputCommitment.AssetAmount.AssetId.String())
+		asset, err := m.assetKeeper.Get(rawOutput.OutputCommitment.AssetAmount.AssetId.String())
 		if err != nil {
 			return nil, err
 		}
@@ -279,38 +279,19 @@ func (m *mainchainKeeper) processIssuing(txs []*types.Tx) error {
 			switch inp := input.TypedInput.(type) {
 			case *types.IssuanceInput:
 				assetID := inp.AssetID()
-				if _, err := m.getAsset(assetID.String()); err == nil {
+				if _, err := m.assetKeeper.Get(assetID.String()); err == nil {
 					continue
 				}
 
-				asset := &orm.Asset{
+				m.assetKeeper.Add(&orm.Asset{
 					AssetID:           assetID.String(),
 					IssuanceProgram:   hex.EncodeToString(inp.IssuanceProgram),
 					VMVersion:         inp.VMVersion,
 					RawDefinitionByte: hex.EncodeToString(inp.AssetDefinition),
-				}
-				if err := m.db.Create(asset).Error; err != nil {
-					return err
-				}
-
-				m.assetCache.Add(asset.AssetID, asset)
+				})
 			}
 		}
 	}
 
 	return nil
-}
-
-func (m *mainchainKeeper) getAsset(assetID string) (*orm.Asset, error) {
-	if asset := m.assetCache.Get(assetID); asset != nil {
-		return asset, nil
-	}
-
-	asset := &orm.Asset{AssetID: assetID}
-	if err := m.db.Where(asset).First(asset).Error; err != nil {
-		return nil, errors.Wrap(err, "asset not found in memory and mysql")
-	}
-
-	m.assetCache.Add(assetID, asset)
-	return asset, nil
 }
