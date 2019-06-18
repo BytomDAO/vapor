@@ -118,21 +118,19 @@ func TestLoadBlockIndexEquals(t *testing.T) {
 		os.RemoveAll("temp")
 	}()
 
+	fillBlockNodeFn := func(hash *bc.Hash) (*state.BlockNode, error) {
+		return GetBlockNode(testDB, hash)
+	}
+
 	block := config.GenesisBlock()
 	txStatus := bc.NewTransactionStatus()
-	expectBlockIndex := state.NewBlockIndex()
-	var parent *state.BlockNode
-
+	expectBlockIndex := state.NewBlockIndex(fillBlockNodeFn)
 	for block.Height <= 100 {
 		if err := store.SaveBlock(block, txStatus); err != nil {
 			t.Fatal(err)
 		}
 
-		if block.Height != 0 {
-			parent = expectBlockIndex.GetNode(&block.PreviousBlockHash)
-		}
-
-		node, err := state.NewBlockNode(&block.BlockHeader, parent)
+		node, err := state.NewBlockNode(&block.BlockHeader)
 		if err != nil {
 			t.Fatal(err)
 		}

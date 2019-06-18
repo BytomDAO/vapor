@@ -1,7 +1,6 @@
 package state
 
 import (
-	"errors"
 	"sync"
 
 	"github.com/vapor/common"
@@ -33,13 +32,9 @@ type BlockNode struct {
 }
 
 // NewBlockNode create a BlockNode
-func NewBlockNode(bh *types.BlockHeader, parent *bc.Hash) (*BlockNode, error) {
-	if bh.Height != 0 && parent == nil {
-		return nil, errors.New("parent node can not be nil")
-	}
-
+func NewBlockNode(bh *types.BlockHeader) (*BlockNode, error) {
 	node := &BlockNode{
-		Parent:                 parent,
+		Parent:                 &bh.PreviousBlockHash,
 		Hash:                   bh.Hash(),
 		Version:                bh.Version,
 		Height:                 bh.Height,

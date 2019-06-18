@@ -13,7 +13,7 @@ func TestCalcReorganizeNodes(t *testing.T) {
 	config.CommonConfig = config.DefaultConfig()
 	c := &Chain{index: state.NewBlockIndex()}
 	header := config.GenesisBlock().BlockHeader
-	initNode, err := state.NewBlockNode(&header, nil)
+	initNode, err := state.NewBlockNode(&header)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -25,7 +25,7 @@ func TestCalcReorganizeNodes(t *testing.T) {
 	mainChainNode := initNode
 	for i := 1; i <= 7; i++ {
 		header.Height = uint64(i)
-		mainChainNode, err = state.NewBlockNode(&header, mainChainNode)
+		mainChainNode, err = state.NewBlockNode(&header)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -38,7 +38,7 @@ func TestCalcReorganizeNodes(t *testing.T) {
 	sideChainNode := initNode
 	for i := 1; i <= 13; i++ {
 		header.Height = uint64(i)
-		sideChainNode, err = state.NewBlockNode(&header, sideChainNode)
+		sideChainNode, err = state.NewBlockNode(&header)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -58,7 +58,7 @@ func TestCalcReorganizeNodes(t *testing.T) {
 func TestEdgeCalcReorganizeNodes(t *testing.T) {
 	config.CommonConfig = config.DefaultConfig()
 	header := config.GenesisBlock().BlockHeader
-	initNode, err := state.NewBlockNode(&header, nil)
+	initNode, err := state.NewBlockNode(&header)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,14 +69,12 @@ func TestEdgeCalcReorganizeNodes(t *testing.T) {
 		node := &state.BlockNode{
 			Height: i,
 			Hash:   bc.Hash{V0: uint64(i)},
-			Parent: testNodes[i-1],
 		}
 		testNodes = append(testNodes, node)
 
 		newNode := &state.BlockNode{
 			Height: i,
 			Hash:   bc.Hash{V1: uint64(i)},
-			Parent: testNewNodes[i-1],
 		}
 		testNewNodes = append(testNewNodes, newNode)
 	}

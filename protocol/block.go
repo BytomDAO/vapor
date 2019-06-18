@@ -219,7 +219,7 @@ func (c *Chain) saveBlock(block *types.Block) error {
 	}
 
 	c.orphanManage.Delete(&bcBlock.ID)
-	node, err := state.NewBlockNode(&block.BlockHeader, &parent.Hash)
+	node, err := state.NewBlockNode(&block.BlockHeader)
 	if err != nil {
 		return err
 	}

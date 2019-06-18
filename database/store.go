@@ -107,7 +107,7 @@ func GetBlockNode(db dbm.DB, hash *bc.Hash) (*state.BlockNode, error) {
 	if err != nil {
 		return nil, err
 	}
-	return state.NewBlockNode(blockHeader, &blockHeader.PreviousBlockHash)
+	return state.NewBlockNode(blockHeader)
 }
 
 // NewStore creates and returns a new Store object.
@@ -244,7 +244,7 @@ func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error
 			return nil, err
 		}
 
-		node, err := state.NewBlockNode(blockHeader, &blockHeader.PreviousBlockHash)
+		node, err := state.NewBlockNode(blockHeader)
 		if err != nil {
 			return nil, err
 		}

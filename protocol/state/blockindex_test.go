@@ -6,61 +6,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 
 	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
 )
-
-func TestCalcPastMedianTime(t *testing.T) {
-	cases := []struct {
-		Timestamps []uint64
-		MedianTime uint64
-	}{
-		{
-			Timestamps: []uint64{1},
-			MedianTime: 1,
-		},
-		{
-			Timestamps: []uint64{1, 2},
-			MedianTime: 2,
-		},
-		{
-			Timestamps: []uint64{1, 3, 2},
-			MedianTime: 2,
-		},
-		{
-			Timestamps: []uint64{1, 3, 2, 3},
-			MedianTime: 3,
-		},
-		{
-			Timestamps: []uint64{1, 2, 3, 4, 5, 6, 7, 8, 11, 10, 9},
-			MedianTime: 6,
-		},
-		{
-			Timestamps: []uint64{1, 2, 3, 4, 5, 6, 7, 8, 11, 10, 9, 11, 11, 11, 14},
-			MedianTime: 10,
-		},
-	}
-
-	for idx, c := range cases {
-		var parentNode *BlockNode
-		for i := range c.Timestamps {
-			blockHeader := &types.BlockHeader{
-				Height:    uint64(i),
-				Timestamp: c.Timestamps[i],
-			}
-
-			blockNode, err := NewBlockNode(blockHeader, parentNode)
-			if err != nil {
-				t.Fatal(err)
-			}
-			parentNode = blockNode
-		}
-
-		medianTime := parentNode.CalcPastMedianTime()
-		if medianTime != c.MedianTime {
-			t.Fatalf("calc median timestamp failed, index: %d, expected: %d, have: %d", idx, c.MedianTime, medianTime)
-		}
-	}
-}
 
 func TestSetMainChain(t *testing.T) {
 	blockIndex := NewBlockIndex()

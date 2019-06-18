@@ -90,7 +90,7 @@ func (c *Chain) initChainStatus() error {
 		BlockHash:   genesisBlock.Hash(),
 		BlockHeight: 0,
 	}}
-	node, err := state.NewBlockNode(&genesisBlock.BlockHeader, nil)
+	node, err := state.NewBlockNode(&genesisBlock.BlockHeader)
 	if err != nil {
 		return err
 	}
