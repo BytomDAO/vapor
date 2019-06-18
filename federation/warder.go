@@ -233,12 +233,18 @@ func (w *warder) buildMainchainTx(tx *orm.CrossTransaction) (*btmTypes.Tx, strin
 	return mainchainTx, mainchainTx.ID.String(), nil
 }
 
-// TODO:
 func (w *warder) addInputWitness(tx interface{}) {
-	switch tx.(type) {
+	witness := [][]byte{w.fedProg}
+	switch tx := tx.(type) {
 	case *vaporTypes.Tx:
+		for i := range tx.Inputs {
+			tx.SetInputArguments(uint32(i), witness)
+		}
+
 	case *btmTypes.Tx:
-	default:
+		for i := range tx.Inputs {
+			tx.SetInputArguments(uint32(i), witness)
+		}
 	}
 }
 
