@@ -197,6 +197,8 @@ func (w *warder) buildSidechainTx(ormTx *orm.CrossTransaction) (*vaporTypes.Tx, 
 
 		input := vaporTypes.NewCrossChainInput(nil, *muxID, *assetID, req.AssetAmount, req.SourcePos, w.fedProg, rawDefinitionByte)
 		destTxData.Inputs = append(destTxData.Inputs, input)
+		output := vaporTypes.NewIntraChainOutput(*assetID, req.AssetAmount, nil)
+		destTxData.Outputs = append(destTxData.Outputs, output)
 	}
 
 	// for?{
