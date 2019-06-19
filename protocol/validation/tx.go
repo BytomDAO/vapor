@@ -1,7 +1,6 @@
 package validation
 
 import (
-	"bytes"
 	"fmt"
 	"math"
 
@@ -521,30 +520,11 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 	return nil
 }
 
-func checkFedaration(tx *bc.Tx) error {
-	for _, id := range tx.InputIDs {
-		switch inp := tx.Entries[id].(type) {
-		case *bc.CrossChainInput:
-			fedProg := config.FederationProgrom(config.CommonConfig)
-			if !bytes.Equal(inp.ControlProgram.Code, fedProg) {
-				return errors.New("The federal controlProgram is incorrect")
-			}
-		default:
-			continue
-		}
-	}
-	return nil
-}
-
 func checkStandardTx(tx *bc.Tx, blockHeight uint64) error {
 	for _, id := range tx.InputIDs {
 		if blockHeight >= ruleAA && id.IsZero() {
 			return ErrEmptyInputIDs
 		}
-	}
-
-	if err := checkFedaration(tx); err != nil {
-		return err
 	}
 
 	for _, id := range tx.GasInputIDs {
