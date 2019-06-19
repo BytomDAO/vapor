@@ -15,6 +15,7 @@ var (
 	FastSyncTimeout          = 200 * time.Second
 	fetchDataParallelTimeout = 100 * time.Second
 
+	maxFetchRetryNum      = 3
 	maxBlockPerMsg        = 100
 	maxBlockHeadersPerMsg = 1000
 	minGapStartFastSync   = 128
@@ -121,6 +122,7 @@ func (bk *blockKeeper) fetchBodies(resultCh chan *taskResult, task *requireTask)
 	bodies, err := bk.requireBlocks([]*bc.Hash{&startHash}, &stopHash, task.length)
 	if err != nil {
 		resultCh <- &taskResult{err: err, task: task}
+		return
 	}
 
 	bk.bodies = append(bk.bodies[:task.index*maxBlockPerMsg], bodies[:]...)
@@ -169,12 +171,12 @@ func (bk *blockKeeper) fetchDataParallel(createTask func(), fetch func(chan *tas
 		select {
 		case result := <-resultCh:
 			bk.peers.SetIdle(result.task.peerID)
-			if result.err != nil && result.task.count > 3 {
+			if result.err != nil && result.task.count >= maxFetchRetryNum {
 				log.WithFields(log.Fields{"module": logModule, "index": result.task.index, "err": result.err}).Error("failed on fetch data")
 				return result.err
 			}
 
-			if result.err != nil && result.task.count < 3 {
+			if result.err != nil && result.task.count < maxFetchRetryNum {
 				log.WithFields(log.Fields{"module": logModule, "count": result.task.count, "index": result.task.index, "err": result.err}).Warn("failed on fetch data")
 				taskQueue.Push(result.task, -float32(result.task.index))
 				break
