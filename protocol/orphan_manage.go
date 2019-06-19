@@ -105,7 +105,7 @@ func (o *OrphanManage) delete(hash *bc.Hash) {
 	}
 
 	for i, preOrphan := range prevOrphans {
-		if preOrphan == hash {
+		if *preOrphan == *hash {
 			o.prevOrphans[block.Block.PreviousBlockHash] = append(prevOrphans[:i], prevOrphans[i+1:]...)
 			return
 		}
