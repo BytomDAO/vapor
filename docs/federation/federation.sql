@@ -17,7 +17,7 @@ USE `federation`;
 
 CREATE TABLE `warders` (
   `id` tinyint(1) NOT NULL AUTO_INCREMENT,
-  `pubkey` varchar(64) NOT NULL,
+  `pubkey` varchar(128) NOT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),

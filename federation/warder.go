@@ -210,7 +210,8 @@ func (w *warder) buildSidechainTx(ormTx *orm.CrossTransaction) (*vaporTypes.Tx, 
 	destTx := vaporTypes.NewTx(*destTxData)
 	w.addInputWitness(destTx)
 
-	if err := w.db.Model(&orm.CrossTransaction{}).Where(&orm.CrossTransaction{ID: ormTx.ID}).
+	if err := w.db.Model(&orm.CrossTransaction{}).
+		Where(&orm.CrossTransaction{ID: ormTx.ID}).
 		UpdateColumn(&orm.CrossTransaction{
 			DestTxHash: sql.NullString{destTx.ID.String(), true},
 		}).Error; err != nil {
@@ -288,15 +289,17 @@ func (w *warder) submitTx(destTx interface{}) (string, error) {
 	}
 }
 
-func (w *warder) updateSubmission(tx *orm.CrossTransaction) error {
-	if err := w.db.Where(tx).UpdateColumn(&orm.CrossTransaction{
-		Status: common.CrossTxSubmittedStatus,
-	}).Error; err != nil {
+func (w *warder) updateSubmission(ormTx *orm.CrossTransaction) error {
+	if err := w.db.Model(&orm.CrossTransaction{}).
+		Where(&orm.CrossTransaction{ID: ormTx.ID}).
+		UpdateColumn(&orm.CrossTransaction{
+			Status: common.CrossTxSubmittedStatus,
+		}).Error; err != nil {
 		return err
 	}
 
 	for _, remote := range w.remotes {
-		remote.NotifySubmission(tx)
+		remote.NotifySubmission(ormTx)
 	}
 	return nil
 }
