@@ -58,13 +58,13 @@ func (v *VoteResult) ApplyBlock(block *types.Block) error {
 
 	for _, tx := range block.Transactions {
 		for _, input := range tx.Inputs {
-			unVoteInput, ok := input.TypedInput.(*types.VetoInput)
+			vetoInput, ok := input.TypedInput.(*types.VetoInput)
 			if !ok {
 				continue
 			}
 
-			pubkey := hex.EncodeToString(unVoteInput.Vote)
-			v.NumOfVote[pubkey], ok = checked.SubUint64(v.NumOfVote[pubkey], unVoteInput.Amount)
+			pubkey := hex.EncodeToString(vetoInput.Vote)
+			v.NumOfVote[pubkey], ok = checked.SubUint64(v.NumOfVote[pubkey], vetoInput.Amount)
 			if !ok {
 				return errVotingOperationOverFlow
 			}
@@ -136,13 +136,13 @@ func (v *VoteResult) DetachBlock(block *types.Block) error {
 	for i := len(block.Transactions) - 1; i >= 0; i-- {
 		tx := block.Transactions[i]
 		for _, input := range tx.Inputs {
-			unVoteInput, ok := input.TypedInput.(*types.VetoInput)
+			vetoInput, ok := input.TypedInput.(*types.VetoInput)
 			if !ok {
 				continue
 			}
 
-			pubkey := hex.EncodeToString(unVoteInput.Vote)
-			if v.NumOfVote[pubkey], ok = checked.AddUint64(v.NumOfVote[pubkey], unVoteInput.Amount); !ok {
+			pubkey := hex.EncodeToString(vetoInput.Vote)
+			if v.NumOfVote[pubkey], ok = checked.AddUint64(v.NumOfVote[pubkey], vetoInput.Amount); !ok {
 				return errVotingOperationOverFlow
 			}
 		}
