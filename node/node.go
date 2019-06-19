@@ -109,7 +109,7 @@ func NewNode(config *cfg.Config) *Node {
 	}
 
 	if !config.Wallet.Disable {
-		walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
+		walletDB := database.NewDB("wallet", config.DBBackend, config.DBDir())
 		accounts = account.NewManager(walletDB, chain)
 		assets = asset.NewRegistry(walletDB, chain)
 		wallet, err = w.NewWallet(walletDB, accounts, assets, hsm, chain, dispatcher, config.Wallet.TxIndex)

@@ -53,7 +53,7 @@ func TestWalletVersion(t *testing.T) {
 	}
 	defer os.RemoveAll(dirPath)
 
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	testDB := database.NewDB("testdb", "leveldb", "temp")
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
