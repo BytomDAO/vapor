@@ -1,8 +1,6 @@
 package state
 
 import (
-	"sync"
-
 	"github.com/vapor/common"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -12,10 +10,16 @@ const (
 	// approxNodesPerDay is the approximate number of new blocks in a day on average.
 	approxNodesPerDay = 2 * 24 * 60 * 60
 	// maxCachedMainBlockNodes is the max number of cached blockNodes
-	maxCachedMainBlockNodes = 10000
+	maxCachedBlockNodes = 10000
+	// maxCachedHeightIndexes is the max number of cached blockNodes
+	maxCachedHeightIndexes = 10000
+	// maxCachedMainChainHashes is the max number of cached blockNodes
+	maxCachedMainChainHashes = 10000
 )
 
 type fillBlockNodeFn func(hash *bc.Hash) (*BlockNode, error)
+type fillHeightIndexFn func(height uint64) ([]*bc.Hash, error)
+type fillMainChainHashFn func(height uint64) (*bc.Hash, error)
 
 // BlockNode represents a block within the block chain and is primarily used to
 // aid in selecting the best chain to be the main chain.
@@ -26,32 +30,23 @@ type BlockNode struct {
 	Version                uint64
 	Height                 uint64
 	Timestamp              uint64
-	BlockWitness           *common.BitMap
+	BlockWitness           [][]byte
 	TransactionsMerkleRoot bc.Hash
 	TransactionStatusHash  bc.Hash
 }
 
 // NewBlockNode create a BlockNode
-func NewBlockNode(bh *types.BlockHeader) (*BlockNode, error) {
-	node := &BlockNode{
+func NewBlockNode(bh *types.BlockHeader) *BlockNode {
+	return &BlockNode{
 		Parent:                 &bh.PreviousBlockHash,
 		Hash:                   bh.Hash(),
 		Version:                bh.Version,
 		Height:                 bh.Height,
 		Timestamp:              bh.Timestamp,
+		BlockWitness:           bh.Witness,
 		TransactionsMerkleRoot: bh.TransactionsMerkleRoot,
 		TransactionStatusHash:  bh.TransactionStatusHash,
 	}
-
-	node.BlockWitness = common.NewBitMap(uint32(len(bh.Witness)))
-	for i, witness := range bh.Witness {
-		if len(witness) != 0 {
-			if err := node.BlockWitness.Set(uint32(i)); err != nil {
-				return nil, err
-			}
-		}
-	}
-	return node, nil
 }
 
 // BlockHeader convert a BlockNode to the BlockHeader
@@ -74,55 +69,50 @@ func (node *BlockNode) BlockHeader() *types.BlockHeader {
 
 // BlockIndex is the struct for help chain trace block chain as tree
 type BlockIndex struct {
-	sync.RWMutex
-	lruMainBlockNodes *common.Cache
-	fillBlockNodeFn   func(*bc.Hash) (*BlockNode, error)
-	heightIndex       map[uint64][]*bc.Hash
-	mainChain         []*bc.Hash
+	lruBlockNodes      *common.Cache
+	lruHeightIndexes   *common.Cache
+	lruMainChainHashes *common.Cache
+
+	fillBlockNodeFn     func(*bc.Hash) (*BlockNode, error)
+	fillHeightIndexFn   func(uint64) ([]*bc.Hash, error)
+	fillMainChainHashFn func(uint64) (*bc.Hash, error)
 }
 
 // NewBlockIndex create a BlockIndex
-func NewBlockIndex(fillBlockNode fillBlockNodeFn) *BlockIndex {
+func NewBlockIndex(fillBlockNode fillBlockNodeFn, fillHeightIndex fillHeightIndexFn, fillMainChainHash fillMainChainHashFn) *BlockIndex {
 	return &BlockIndex{
-		lruMainBlockNodes: common.NewCache(maxCachedMainBlockNodes),
-		fillBlockNodeFn:   fillBlockNode,
-		heightIndex:       make(map[uint64][]*bc.Hash),
-		mainChain:         make([]*bc.Hash, 0, approxNodesPerDay),
+		lruBlockNodes:      common.NewCache(maxCachedBlockNodes),
+		lruHeightIndexes:   common.NewCache(maxCachedHeightIndexes),
+		lruMainChainHashes: common.NewCache(maxCachedMainChainHashes),
+
+		fillBlockNodeFn:     fillBlockNode,
+		fillHeightIndexFn:   fillHeightIndex,
+		fillMainChainHashFn: fillMainChainHash,
 	}
 }
 
-// AddNode add BlockNode into the index map
-func (bi *BlockIndex) AddNode(node *BlockNode) {
-	bi.Lock()
-	bi.heightIndex[node.Height] = append(bi.heightIndex[node.Height], &node.Hash)
-	bi.Unlock()
-	bi.lruMainBlockNodes.Add(node.Hash, node)
-}
-
 // GetNode search BlockNode from the index map
-func (bi *BlockIndex) GetNode(hash *bc.Hash) *BlockNode {
-	if hexBlockNode, ok := bi.lruMainBlockNodes.Get(*hash); ok {
-		return hexBlockNode.(*BlockNode)
+func (bi *BlockIndex) GetBlockNode(hash *bc.Hash) (*BlockNode, error) {
+	if hexBlockNode, ok := bi.lruBlockNodes.Get(*hash); ok {
+		return hexBlockNode.(*BlockNode), nil
 	}
 
 	blockNode, err := bi.fillBlockNodeFn(hash)
 	if err != nil {
-		return nil
+		return nil, nil
 	}
-	return blockNode
+	bi.lruBlockNodes.Add(hash, blockNode)
+	return blockNode, nil
 }
 
 // BestNode return the best BlockNode
-func (bi *BlockIndex) BestNode() *BlockNode {
-	bi.RLock()
-	defer bi.RUnlock()
-	bestBlockHash := bi.mainChain[len(bi.mainChain)-1]
-	return bi.GetNode(bestBlockHash)
-}
+// func (bi *BlockIndex) BestNode() *BlockNode {
+// 	return bi.bestNode
+// }
 
 // BlockExist check does the block existed in blockIndex
 func (bi *BlockIndex) BlockExist(hash *bc.Hash) bool {
-	if _, ok := bi.lruMainBlockNodes.Get(*hash); ok {
+	if _, ok := bi.lruBlockNodes.Get(*hash); ok {
 		return ok
 	}
 
@@ -133,62 +123,66 @@ func (bi *BlockIndex) BlockExist(hash *bc.Hash) bool {
 }
 
 // TODO: THIS FUNCTION MIGHT BE DELETED
-func (bi *BlockIndex) InMainchain(hash *bc.Hash) bool {
-	if resBlockNode, ok := bi.lruMainBlockNodes.Get(*hash); ok {
-		blockNode := resBlockNode.(*BlockNode)
-		return *bi.mainChain[blockNode.Height] == *hash
-	}
+// func (bi *BlockIndex) InMainchain(hash *bc.Hash) bool {
+// 	if resBlockNode, ok := bi.lruBlockNodes.Get(*hash); ok {
+// 		blockNode := resBlockNode.(*BlockNode)
+// 		return *bi.mainChain[blockNode.Height] == *hash
+// 	}
 
-	if blockNode, err := bi.fillBlockNodeFn(hash); err != nil {
-		return *bi.mainChain[blockNode.Height] == *hash
-	}
-	return false
-}
+// 	if blockNode, err := bi.fillBlockNodeFn(hash); err != nil {
+// 		return *bi.mainChain[blockNode.Height] == *hash
+// 	}
+// 	return false
+// }
 
 // NodeByHeight return the BlockNode at the specified height
-func (bi *BlockIndex) NodeByHeight(height uint64) *BlockNode {
-	bi.RLock()
-	defer bi.RUnlock()
-	if height >= uint64(len(bi.mainChain)) {
-		return nil
+func (bi *BlockIndex) GetBlockHashByHeight(height uint64) (*bc.Hash, error) {
+	if hash, ok := bi.lruMainChainHashes.Get(height); ok {
+		return hash.(*bc.Hash), nil
 	}
-	return bi.GetNode(bi.mainChain[height])
+
+	hash, err := bi.fillMainChainHashFn(height)
+	if err != nil {
+		return nil, nil
+	}
+	bi.lruMainChainHashes.Add(height, hash)
+	return hash, nil
 }
 
 // NodesByHeight return all block nodes at the specified height.
-func (bi *BlockIndex) NodesByHeight(height uint64) []*BlockNode {
-	bi.RLock()
-	defer bi.RUnlock()
-
-	blockNodeHashes := bi.heightIndex[height]
-	blockNodes := []*BlockNode{}
-	for _, h := range blockNodeHashes {
-		blockNode := bi.GetNode(h)
-		blockNodes = append(blockNodes, blockNode)
+func (bi *BlockIndex) GetBlockHashesByHeight(height uint64) ([]*bc.Hash, error) {
+	if hashes, ok := bi.lruHeightIndexes.Get(height); ok {
+		return hashes.([]*bc.Hash), nil
 	}
-	return blockNodes
+
+	hashes, err := bi.fillHeightIndexFn(height)
+	if err != nil {
+		return nil, nil
+	}
+	bi.lruHeightIndexes.Add(height, hashes)
+	return hashes, nil
 }
 
 // SetMainChain set the the mainChain array
-func (bi *BlockIndex) SetMainChain(node *BlockNode) {
-	bi.Lock()
-	defer bi.Unlock()
+// func (bi *BlockIndex) SetMainChain(node *BlockNode) {
+// 	bi.Lock()
+// 	defer bi.Unlock()
 
-	needed := node.Height + 1
-	if uint64(cap(bi.mainChain)) < needed {
-		blockNodeHashes := make([]*bc.Hash, needed, needed+approxNodesPerDay)
-		copy(blockNodeHashes, bi.mainChain)
-		bi.mainChain = blockNodeHashes
-	} else {
-		i := uint64(len(bi.mainChain))
-		bi.mainChain = bi.mainChain[0:needed]
-		for ; i < needed; i++ {
-			bi.mainChain[i] = nil
-		}
-	}
+// 	needed := node.Height + 1
+// 	if uint64(cap(bi.mainChain)) < needed {
+// 		blockNodeHashes := make([]*bc.Hash, needed, needed+approxNodesPerDay)
+// 		copy(blockNodeHashes, bi.mainChain)
+// 		bi.mainChain = blockNodeHashes
+// 	} else {
+// 		i := uint64(len(bi.mainChain))
+// 		bi.mainChain = bi.mainChain[0:needed]
+// 		for ; i < needed; i++ {
+// 			bi.mainChain[i] = nil
+// 		}
+// 	}
 
-	for node != nil && bi.mainChain[node.Height].String() != node.Hash.String() {
-		bi.mainChain[node.Height] = &node.Hash
-		node = bi.GetNode(node.Parent)
-	}
-}
+// 	for node != nil && bi.mainChain[node.Height].String() != node.Hash.String() {
+// 		bi.mainChain[node.Height] = &node.Hash
+// 		node = bi.GetNode(node.Parent)
+// 	}
+// }

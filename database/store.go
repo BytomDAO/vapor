@@ -23,6 +23,7 @@ const logModule = "leveldb"
 var (
 	blockStoreKey           = []byte("blockStore")
 	blockHashByHeightPrefix = []byte("BHH:")
+	blockHeightIndexPrefix  = []byte("BHI:")
 	blockHeaderPrefix       = []byte("BH:")
 	blockTransactonsPrefix  = []byte("BTXS:")
 	txStatusPrefix          = []byte("BTS:")
@@ -55,6 +56,12 @@ func calcBlockHashByHeightKey(height uint64) []byte {
 	buf := [8]byte{}
 	binary.BigEndian.PutUint64(buf[:], height)
 	return append(blockHashByHeightPrefix, buf[:]...)
+}
+
+func calcblockHeightIndexPrefix(height uint64) []byte {
+	buf := [8]byte{}
+	binary.BigEndian.PutUint64(buf[:], height)
+	return append(blockHeightIndexPrefix, buf[:]...)
 }
 
 func calcBlockHeaderKey(hash *bc.Hash) []byte {
@@ -103,13 +110,49 @@ func GetBlockTransactions(db dbm.DB, hash *bc.Hash) ([]*types.Tx, error) {
 	return block.Transactions, nil
 }
 
+// GetBlockHashByHeight return BlockHash by given height
+func GetBlockHashByHeight(db dbm.DB, height uint64) (*bc.Hash, error) {
+	binaryHash := db.Get(calcBlockHashByHeightKey(height))
+	if binaryHash == nil {
+		return nil, fmt.Errorf("There are no BlockHash with given height %s", height)
+	}
+
+	hash := &bc.Hash{}
+	if err := hash.UnmarshalText(binaryHash); err != nil {
+		return nil, err
+	}
+	return hash, nil
+}
+
+// GetBlockHeightIndex return block hashes by given height
+func GetBlockHeightIndex(db dbm.DB, height uint64) ([]*bc.Hash, error) {
+	binaryHashes := db.Get(calcblockHeightIndexPrefix(height))
+	if binaryHashes == nil {
+		return nil, fmt.Errorf("There are no block hashes with given height %s", height)
+	}
+
+	if len(binaryHashes)/32 != 0 {
+		return nil, fmt.Errorf("bad length for the array of block hashes")
+	}
+
+	hashes := []*bc.Hash{}
+	for i := 0; i < len(binaryHashes)/32; i++ {
+		hash := &bc.Hash{}
+		if err := hash.UnmarshalText(binaryHashes[i : (i+1)*32]); err != nil {
+			return nil, err
+		}
+		hashes = append(hashes, hash)
+	}
+	return hashes, nil
+}
+
 // GetBlockNode return BlockNode by given hash
 func GetBlockNode(db dbm.DB, hash *bc.Hash) (*state.BlockNode, error) {
 	blockHeader, err := GetBlockHeader(db, hash)
 	if err != nil {
 		return nil, err
 	}
-	return state.NewBlockNode(blockHeader)
+	return state.NewBlockNode(blockHeader), nil
 }
 
 // GetVoteResult return the vote result by given sequence
@@ -143,8 +186,16 @@ func NewStore(db dbm.DB) *Store {
 		return GetBlockNode(db, hash)
 	}
 
+	fillHeightIndexFn := func(height uint64) ([]*bc.Hash, error) {
+		return GetBlockHeightIndex(db, height)
+	}
+
+	fillMainChainHashFn := func(height uint64) (*bc.Hash, error) {
+		return GetBlockHashByHeight(db, height)
+	}
+
 	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillVoteResultFn)
-	blockIndex := state.NewBlockIndex(fillBlockNodeFn)
+	blockIndex := state.NewBlockIndex(fillBlockNodeFn, fillHeightIndexFn, fillMainChainHashFn)
 	return &Store{
 		db:         db,
 		cache:      cache,
@@ -220,12 +271,29 @@ func (s *Store) GetVoteResult(seq uint64) (*state.VoteResult, error) {
 	return s.cache.lookupVoteResult(seq)
 }
 
+// GetBlockHashByHeight return the block hash by the specified height
+func (s *Store) GetBlockHashByHeight(height uint64) (*bc.Hash, error) {
+	return s.blockIndex.GetBlockHashByHeight(height)
+}
+
+// GetBlockHeightIndex return the block hash by the specified height
+func (s *Store) GetBlockHeightIndex(height uint64) ([]*bc.Hash, error) {
+	return s.blockIndex.GetBlockHashesByHeight(height)
+}
+
+// GetBlockNode return the block hash by the specified height
+func (s *Store) GetBlockNode(hash *bc.Hash) (*state.BlockNode, error) {
+	return s.blockIndex.GetBlockNode(hash)
+}
+
+/*
 // LoadBlockIndex load BlockIndex from BlockHeader
 func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error) {
 	startTime := time.Now()
 	bhIter := s.db.IteratorPrefix(blockHashByHeightPrefix)
 	defer bhIter.Release()
 
+	batch := s.db.NewBatch()
 	for bhIter.Next() {
 		key := bhIter.Key()
 		lenPrefix := len(blockHashByHeightPrefix)
@@ -242,12 +310,14 @@ func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error
 			return nil, err
 		}
 
-		node, err := GetBlockNode(s.db, blockNodeHash)
-		if err != nil {
-			return nil, err
+		binaryBlockHashes := []byte{}
+		if binaryHashes := db.Get(calcblockHeightIndexPrefix(blockNodeHeight)); binaryBlockHashes != nil {
+			binaryBlockHashes = append(binaryBlockHashes, binaryHashes...)
 		}
-		s.blockIndex.AddNode(node)
+		binaryBlockHashes = append(binaryBlockHashes, bhIter.Value()...)
+		batch.Set(calcblockHeightIndexPrefix(blockNodeHeight), binaryBlockHashes)
 	}
+	batch.Write()
 
 	log.WithFields(log.Fields{
 		"module":   logModule,
@@ -256,6 +326,7 @@ func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error
 	}).Debug("initialize load history block index from database")
 	return s.blockIndex, nil
 }
+*/
 
 // SaveBlock persists a new block in the protocol.
 func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
@@ -281,8 +352,15 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 		return errors.Wrap(err, "marshal block hash")
 	}
 
+	binaryBlockHashes := []byte{}
+	if hashes := s.db.Get(calcblockHeightIndexPrefix(block.Height)); hashes != nil {
+		binaryBlockHashes = append(binaryBlockHashes, hashes...)
+	}
+	binaryBlockHashes = append(binaryBlockHashes, binaryBlockHash...)
+
 	batch := s.db.NewBatch()
 	batch.Set(calcBlockHashByHeightKey(block.Height), binaryBlockHash)
+	batch.Set(calcblockHeightIndexPrefix(block.Height), binaryBlockHashes)
 	batch.Set(calcBlockHeaderKey(&blockHash), binaryBlockHeader)
 	batch.Set(calcBlockTransactionsKey(&blockHash), binaryBlockTxs)
 	batch.Set(calcTxStatusKey(&blockHash), binaryTxStatus)

@@ -23,43 +23,44 @@ var (
 
 // BlockExist check is a block in chain or orphan
 func (c *Chain) BlockExist(hash *bc.Hash) bool {
-	return c.index.BlockExist(hash) || c.orphanManage.BlockExist(hash)
+	if _, err := c.store.GetBlockNode(hash); err == nil {
+		return true
+	}
+	return c.orphanManage.BlockExist(hash)
 }
 
 // GetBlockByHash return a block by given hash
 func (c *Chain) GetBlockByHash(hash *bc.Hash) (*types.Block, error) {
-	node := c.index.GetNode(hash)
-	if node == nil {
-		return nil, errors.New("can't find block in given hash")
+	if _, err := c.store.GetBlockNode(hash); err != nil {
+		return nil, errors.Wrap(err, "can't find block in given hash")
 	}
 	return c.store.GetBlock(hash)
 }
 
 // GetBlockByHeight return a block header by given height
 func (c *Chain) GetBlockByHeight(height uint64) (*types.Block, error) {
-	node := c.index.NodeByHeight(height)
-	if node == nil {
-		return nil, errors.New("can't find block in given height")
+	hash, err := c.store.GetBlockHashByHeight(height)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't find block in given height")
 	}
-	return c.store.GetBlock(&node.Hash)
+	return c.store.GetBlock(hash)
 }
 
 // GetHeaderByHash return a block header by given hash
 func (c *Chain) GetHeaderByHash(hash *bc.Hash) (*types.BlockHeader, error) {
-	node := c.index.GetNode(hash)
-	if node == nil {
-		return nil, errors.New("can't find block header in given hash")
+	if _, err := c.store.GetBlockNode(hash); err != nil {
+		return nil, errors.Wrap(err, "can't find block header in given hash")
 	}
-	return node.BlockHeader(), nil
+	return c.store.GetBlockHeader(hash)
 }
 
 // GetHeaderByHeight return a block header by given height
 func (c *Chain) GetHeaderByHeight(height uint64) (*types.BlockHeader, error) {
-	node := c.index.NodeByHeight(height)
-	if node == nil {
-		return nil, errors.New("can't find block header in given height")
+	hash, err := c.store.GetBlockHashByHeight(height)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't find block header in given height")
 	}
-	return node.BlockHeader(), nil
+	return c.store.GetBlockHeader(hash)
 }
 
 func (c *Chain) calcReorganizeNodes(node *state.BlockNode) ([]*state.BlockNode, []*state.BlockNode) {
@@ -67,15 +68,26 @@ func (c *Chain) calcReorganizeNodes(node *state.BlockNode) ([]*state.BlockNode, 
 	var detachNodes []*state.BlockNode
 
 	attachNode := node
-	for c.index.NodeByHeight(attachNode.Height) != attachNode {
+	getBlockHash, err := c.store.GetBlockHashByHeight(attachNode.Height)
+	if err != nil {
+		return nil, nil
+	}
+
+	for getBlockHash.String() != attachNode.Hash.String() {
 		attachNodes = append([]*state.BlockNode{attachNode}, attachNodes...)
-		attachNode = c.index.GetNode(attachNode.Parent)
+		attachNode, err = c.store.GetBlockNode(attachNode.Parent)
+		if err != nil {
+			return nil, nil
+		}
 	}
 
 	detachNode := c.bestNode
 	for detachNode != attachNode {
 		detachNodes = append(detachNodes, detachNode)
-		detachNode = c.index.GetNode(detachNode.Parent)
+		detachNode, err = c.store.GetBlockNode(detachNode.Parent)
+		if err != nil {
+			return nil, nil
+		}
 	}
 	return attachNodes, detachNodes
 }
@@ -103,7 +115,11 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
-	node := c.index.GetNode(&bcBlock.ID)
+	node, err := c.store.GetBlockNode(&bcBlock.ID)
+	if err != nil {
+		return err
+	}
+
 	if c.isIrreversible(node) && block.Height > irreversibleNode.Height {
 		irreversibleNode = node
 	}
@@ -203,7 +219,11 @@ func (c *Chain) saveBlock(block *types.Block) error {
 		return errors.Sub(ErrBadBlock, err)
 	}
 
-	parent := c.index.GetNode(&block.PreviousBlockHash)
+	parent, err := c.store.GetBlockNode(&block.PreviousBlockHash)
+	if err != nil {
+		return err
+	}
+
 	bcBlock := types.MapBlock(block)
 	if err := validation.ValidateBlock(bcBlock, parent); err != nil {
 		return errors.Sub(ErrBadBlock, err)
@@ -217,14 +237,7 @@ func (c *Chain) saveBlock(block *types.Block) error {
 	if err := c.store.SaveBlock(block, bcBlock.TransactionStatus); err != nil {
 		return err
 	}
-
 	c.orphanManage.Delete(&bcBlock.ID)
-	node, err := state.NewBlockNode(&block.BlockHeader)
-	if err != nil {
-		return err
-	}
-
-	c.index.AddNode(node)
 
 	if len(signature) != 0 {
 		xPub := config.CommonConfig.PrivateKey().XPub()
@@ -294,7 +307,7 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 		return c.orphanManage.BlockExist(&blockHash), nil
 	}
 
-	if parent := c.index.GetNode(&block.PreviousBlockHash); parent == nil {
+	if _, err := c.store.GetBlockNode(&block.PreviousBlockHash); err != nil {
 		c.orphanManage.Add(block)
 		return true, nil
 	}
@@ -305,8 +318,15 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 
 	bestBlock := c.saveSubBlock(block)
 	bestBlockHash := bestBlock.Hash()
-	bestNode := c.index.GetNode(&bestBlockHash)
-	parentBestNode := c.index.GetNode(bestNode.Parent)
+	bestNode, err := c.store.GetBlockNode(&bestBlockHash)
+	if err != nil {
+		return false, err
+	}
+
+	parentBestNode, err := c.store.GetBlockNode(bestNode.Parent)
+	if err != nil {
+		return false, err
+	}
 
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()

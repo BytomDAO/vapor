@@ -13,14 +13,14 @@ var (
 )
 
 type consensusNodeManager struct {
-	store      Store
-	blockIndex *state.BlockIndex
+	store    Store
+	bestNode *state.BlockNode
 }
 
-func newConsensusNodeManager(store Store, blockIndex *state.BlockIndex) *consensusNodeManager {
+func newConsensusNodeManager(store Store, bestNode *state.BlockNode) *consensusNodeManager {
 	return &consensusNodeManager{
-		store:      store,
-		blockIndex: blockIndex,
+		store:    store,
+		bestNode: bestNode,
 	}
 }
 
@@ -70,25 +70,28 @@ func getBlockerOrder(startTimestamp, blockTimestamp, numOfConsensusNode uint64) 
 }
 
 func (c *consensusNodeManager) getPrevRoundLastBlock(prevBlockHash *bc.Hash) (*state.BlockNode, error) {
-	node := c.blockIndex.GetNode(prevBlockHash)
-	if node == nil {
+	node, err := c.store.GetBlockNode(prevBlockHash)
+	if err != nil {
 		return nil, errNotFoundBlockNode
 	}
 
 	for node.Height%consensus.RoundVoteBlockNums != 0 {
-		node = c.blockIndex.GetNode(node.Parent)
+		node, err = c.store.GetBlockNode(node.Parent)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return node, nil
 }
 
 func (c *consensusNodeManager) getConsensusNodes(prevBlockHash *bc.Hash) (map[string]*state.ConsensusNode, error) {
-	prevBlockNode := c.blockIndex.GetNode(prevBlockHash)
-	if prevBlockNode == nil {
+	prevBlockNode, err := c.store.GetBlockNode(prevBlockHash)
+	if err != nil {
 		return nil, errNotFoundBlockNode
 	}
 
 	preSeq := state.CalcVoteSeq(prevBlockNode.Height+1) - 1
-	if bestSeq := state.CalcVoteSeq(c.blockIndex.BestNode().Height); preSeq > bestSeq {
+	if bestSeq := state.CalcVoteSeq(c.bestNode.Height); preSeq > bestSeq {
 		preSeq = bestSeq
 	}
 
@@ -106,9 +109,8 @@ func (c *consensusNodeManager) getConsensusNodes(prevBlockHash *bc.Hash) (map[st
 }
 
 func (c *consensusNodeManager) getBestVoteResult() (*state.VoteResult, error) {
-	blockNode := c.blockIndex.BestNode()
-	seq := state.CalcVoteSeq(blockNode.Height)
-	return c.getVoteResult(seq, blockNode)
+	seq := state.CalcVoteSeq(c.bestNode.Height)
+	return c.getVoteResult(seq, c.bestNode)
 }
 
 // getVoteResult return the vote result
@@ -129,7 +131,11 @@ func (c *consensusNodeManager) getVoteResult(seq uint64, blockNode *state.BlockN
 }
 
 func (c *consensusNodeManager) reorganizeVoteResult(voteResult *state.VoteResult, node *state.BlockNode) error {
-	mainChainNode := c.blockIndex.GetNode(&voteResult.BlockHash)
+	mainChainNode, err := c.store.GetBlockNode(&voteResult.BlockHash)
+	if err != nil {
+		return errNotFoundBlockNode
+	}
+
 	var attachNodes []*state.BlockNode
 	var detachNodes []*state.BlockNode
 	for forkChainNode := node; mainChainNode != forkChainNode; {
@@ -141,10 +147,16 @@ func (c *consensusNodeManager) reorganizeVoteResult(voteResult *state.VoteResult
 			detachNodes = append(detachNodes, mainChainNode)
 		}
 		if forChainRollback {
-			forkChainNode = c.blockIndex.GetNode(forkChainNode.Parent)
+			forkChainNode, err = c.store.GetBlockNode(forkChainNode.Parent)
+			if err != nil {
+				return errNotFoundBlockNode
+			}
 		}
 		if mainChainRollBack {
-			mainChainNode = c.blockIndex.GetNode(mainChainNode.Parent)
+			mainChainNode, err = c.store.GetBlockNode(mainChainNode.Parent)
+			if err != nil {
+				return errNotFoundBlockNode
+			}
 		}
 	}
 

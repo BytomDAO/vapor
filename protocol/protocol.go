@@ -17,7 +17,6 @@ const maxProcessBlockChSize = 1024
 
 // Chain provides functions for working with the Bytom block chain.
 type Chain struct {
-	index          *state.BlockIndex
 	orphanManage   *OrphanManage
 	txPool         *TxPool
 	store          Store
@@ -52,15 +51,20 @@ func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*
 		storeStatus = store.GetStoreStatus()
 	}
 
-	var err error
-	if c.index, err = store.LoadBlockIndex(storeStatus.Height); err != nil {
+	// TODO common pointer for bestNode
+	bestNode, err := c.store.GetBlockNode(storeStatus.Hash)
+	if err != nil {
 		return nil, err
 	}
 
-	c.bestNode = c.index.GetNode(storeStatus.Hash)
-	c.bestIrreversibleNode = c.index.GetNode(storeStatus.IrreversibleHash)
-	c.consensusNodeManager = newConsensusNodeManager(store, c.index)
-	c.index.SetMainChain(c.bestNode)
+	bestIrreversibleNode, err := c.store.GetBlockNode(storeStatus.IrreversibleHash)
+	if err != nil {
+		return nil, err
+	}
+
+	c.bestNode = bestNode
+	c.bestIrreversibleNode = bestIrreversibleNode
+	c.consensusNodeManager = newConsensusNodeManager(store, c.bestNode)
 	go c.blockProcesser()
 	return c, nil
 }
@@ -90,11 +94,8 @@ func (c *Chain) initChainStatus() error {
 		BlockHash:   genesisBlock.Hash(),
 		BlockHeight: 0,
 	}}
-	node, err := state.NewBlockNode(&genesisBlock.BlockHeader)
-	if err != nil {
-		return err
-	}
 
+	node := state.NewBlockNode(&genesisBlock.BlockHeader)
 	return c.store.SaveChainStatus(node, node, utxoView, voteResults)
 }
 
@@ -114,13 +115,25 @@ func (c *Chain) BestBlockHash() *bc.Hash {
 
 // BestBlockHeader returns the chain tail block
 func (c *Chain) BestBlockHeader() *types.BlockHeader {
-	node := c.index.BestNode()
-	return node.BlockHeader()
+	blockHeader, err := c.store.GetBlockHeader(&c.bestNode.Hash)
+	if err != nil {
+		return nil
+	}
+	return blockHeader
 }
 
 // InMainChain checks wheather a block is in the main chain
 func (c *Chain) InMainChain(hash bc.Hash) bool {
-	return c.index.InMainchain(&hash)
+	blockNode, err := c.store.GetBlockNode(&hash)
+	if err != nil {
+		return false
+	}
+
+	mainBlockHash, err := c.store.GetBlockHashByHeight(blockNode.Height)
+	if err != nil {
+		return false
+	}
+	return *mainBlockHash == hash
 }
 
 // This function must be called with mu lock in above level
@@ -129,7 +142,6 @@ func (c *Chain) setState(node, irreversibleNode *state.BlockNode, view *state.Ut
 		return err
 	}
 
-	c.index.SetMainChain(node)
 	c.bestNode = node
 	c.bestIrreversibleNode = irreversibleNode
 
