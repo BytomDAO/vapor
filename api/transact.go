@@ -31,7 +31,7 @@ func (a *API) actionDecoder(action string) (func([]byte) (txbuilder.Action, erro
 		"cross_chain_in":               txbuilder.DecodeCrossInAction,
 		"spend_account":                a.wallet.AccountMgr.DecodeSpendAction,
 		"spend_account_unspent_output": a.wallet.AccountMgr.DecodeSpendUTXOAction,
-		"unvote":                       a.wallet.AccountMgr.DecodeUnvoteAction,
+		"veto":                         a.wallet.AccountMgr.DecodeVetoAction,
 	}
 	decoder, ok := decoders[action]
 	return decoder, ok
