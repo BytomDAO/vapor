@@ -31,7 +31,7 @@ func (a *AssetStore) GetByOrmID(id uint64) (*orm.Asset, error) {
 	return asset, nil
 }
 
-func (a *AssetStore) Get(assetID string) (*orm.Asset, error) {
+func (a *AssetStore) GetByAssetID(assetID string) (*orm.Asset, error) {
 	if v, ok := a.cache.Get(assetID); ok {
 		return v.(*orm.Asset), nil
 	}

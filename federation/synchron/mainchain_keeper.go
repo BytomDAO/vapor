@@ -212,7 +212,7 @@ func (m *mainchainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types
 			continue
 		}
 
-		asset, err := m.assetStore.Get(rawOutput.OutputCommitment.AssetAmount.AssetId.String())
+		asset, err := m.assetStore.GetByAssetID(rawOutput.OutputCommitment.AssetAmount.AssetId.String())
 		if err != nil {
 			return nil, err
 		}
@@ -273,7 +273,7 @@ func (m *mainchainKeeper) processIssuing(txs []*types.Tx) error {
 			switch inp := input.TypedInput.(type) {
 			case *types.IssuanceInput:
 				assetID := inp.AssetID()
-				if _, err := m.assetStore.Get(assetID.String()); err == nil {
+				if _, err := m.assetStore.GetByAssetID(assetID.String()); err == nil {
 					continue
 				}
 

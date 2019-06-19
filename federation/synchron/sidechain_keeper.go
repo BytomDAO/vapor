@@ -226,7 +226,7 @@ func (s *sidechainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types
 			continue
 		}
 
-		asset, err := s.assetStore.Get(rawOutput.OutputCommitment().AssetAmount.AssetId.String())
+		asset, err := s.assetStore.GetByAssetID(rawOutput.OutputCommitment().AssetAmount.AssetId.String())
 		if err != nil {
 			return nil, err
 		}
