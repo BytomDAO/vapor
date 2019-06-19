@@ -109,16 +109,13 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
-	node, err := c.store.GetBlockHeader(&bcBlock.ID)
-	if err != nil {
-		return err
+	// pointer copy?
+	blockHeader := &block.BlockHeader
+	if c.isIrreversible(blockHeader) && block.Height > irreversibleNode.Height {
+		irreversibleNode = blockHeader
 	}
 
-	if c.isIrreversible(node) && block.Height > irreversibleNode.Height {
-		irreversibleNode = node
-	}
-
-	if err := c.setState(node, irreversibleNode, utxoView, []*state.VoteResult{voteResult}); err != nil {
+	if err := c.setState(blockHeader, irreversibleNode, utxoView, []*state.VoteResult{voteResult}); err != nil {
 		return err
 	}
 
@@ -318,27 +315,22 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	}
 
 	bestBlock := c.saveSubBlock(block)
-	bestBlockHash := bestBlock.Hash()
-	bestNode, err := c.store.GetBlockHeader(&bestBlockHash)
-	if err != nil {
-		return false, err
-	}
-
-	parentBestNode, err := c.store.GetBlockHeader(&bestNode.PreviousBlockHash)
+	bestBlockHeader := &block.BlockHeader
+	parentBestBlockHeader, err := c.store.GetBlockHeader(&bestBlockHeader.PreviousBlockHash)
 	if err != nil {
 		return false, err
 	}
 
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
-	if parentBestNode == c.bestNode {
+	if parentBestBlockHeader.Hash() == c.bestNode.Hash() {
 		log.WithFields(log.Fields{"module": logModule}).Debug("append block to the end of mainchain")
 		return false, c.connectBlock(bestBlock)
 	}
 
-	if bestNode.Height > c.bestNode.Height {
+	if bestBlockHeader.Height > c.bestNode.Height {
 		log.WithFields(log.Fields{"module": logModule}).Debug("start to reorganize chain")
-		return false, c.reorganizeChain(bestNode)
+		return false, c.reorganizeChain(bestBlockHeader)
 	}
 	return false, nil
 }

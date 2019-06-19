@@ -51,19 +51,16 @@ func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*
 		storeStatus = store.GetStoreStatus()
 	}
 
-	// TODO common pointer for bestNode
-	bestNode, err := c.store.GetBlockHeader(storeStatus.Hash)
+	var err error
+	c.bestNode, err = c.store.GetBlockHeader(storeStatus.Hash)
 	if err != nil {
 		return nil, err
 	}
 
-	bestIrreversibleNode, err := c.store.GetBlockHeader(storeStatus.IrreversibleHash)
+	c.bestIrreversibleNode, err = c.store.GetBlockHeader(storeStatus.IrreversibleHash)
 	if err != nil {
 		return nil, err
 	}
-
-	c.bestNode = bestNode
-	c.bestIrreversibleNode = bestIrreversibleNode
 	c.consensusNodeManager = newConsensusNodeManager(store, c.bestNode)
 	go c.blockProcesser()
 	return c, nil
