@@ -30,6 +30,7 @@ const (
 var (
 	errSendStatusMsg = errors.New("send status msg fail")
 	ErrPeerMisbehave = errors.New("peer is misbehave")
+	ErrNoValidPeer   = errors.New("Can't find valid fast sync peer")
 )
 
 //BasePeer is the interface for connection level peer
@@ -82,6 +83,7 @@ type Peer struct {
 	knownSignatures *set.Set // Set of block signatures known to be known by this peer
 	knownStatus     uint64   // Set of chain status known to be known by this peer
 	filterAdds      *set.Set // Set of addresses that the spv node cares about.
+	isBusy          bool
 }
 
 func newPeer(basePeer BasePeer) *Peer {
@@ -93,6 +95,12 @@ func newPeer(basePeer BasePeer) *Peer {
 		knownSignatures: set.New(),
 		filterAdds:      set.New(),
 	}
+}
+
+func (p *Peer) Hash() *bc.Hash {
+	p.mtx.RLock()
+	defer p.mtx.RUnlock()
+	return p.hash
 }
 
 func (p *Peer) Height() uint64 {
@@ -140,8 +148,8 @@ func (p *Peer) GetBlocks(locator []*bc.Hash, stopHash *bc.Hash) bool {
 	return p.TrySend(msgs.BlockchainChannel, msg)
 }
 
-func (p *Peer) GetHeaders(locator []*bc.Hash, stopHash *bc.Hash) bool {
-	msg := struct{ msgs.BlockchainMessage }{msgs.NewGetHeadersMessage(locator, stopHash)}
+func (p *Peer) GetHeaders(locator []*bc.Hash, amount int, skip int) bool {
+	msg := struct{ msgs.BlockchainMessage }{msgs.NewGetHeadersMessage(locator, amount, skip)}
 	return p.TrySend(msgs.BlockchainChannel, msg)
 }
 
@@ -374,6 +382,12 @@ func (p *Peer) SetStatus(height uint64, hash *bc.Hash) {
 	defer p.mtx.Unlock()
 	p.height = height
 	p.hash = hash
+}
+
+func (p *Peer) SetIdle() {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+	p.isBusy = false
 }
 
 type PeerSet struct {
@@ -620,4 +634,30 @@ func (ps *PeerSet) SetStatus(peerID string, height uint64, hash *bc.Hash) {
 	}
 
 	peer.SetStatus(height, hash)
+}
+
+func (ps *PeerSet) SelectPeer(syncHeight uint64) (string, error) {
+	ps.mtx.Lock()
+	ps.mtx.Unlock()
+
+	for _, peer := range ps.peers {
+		if peer.isBusy == true {
+			continue
+		}
+		if peer.height >= syncHeight {
+			peer.isBusy = true
+			return peer.ID(), nil
+		}
+	}
+
+	return "", ErrNoValidPeer
+}
+
+func (ps *PeerSet) SetIdle(peerID string) {
+	peer := ps.GetPeer(peerID)
+	if peer == nil {
+		return
+	}
+
+	peer.SetIdle()
 }
