@@ -18,7 +18,7 @@ var (
 	// ErrBadStateRoot is returned when the computed assets merkle root
 	// disagrees with the one declared in a block header.
 	ErrBadStateRoot           = errors.New("invalid state merkle root")
-	errBelowIrreversibleBlock = errors.New("the height of block below the height of irreversible block")
+	errBelowIrreversibleBlock = errors.New("the height of block below irreversible block")
 )
 
 // BlockExist check is a block in chain or orphan
@@ -57,9 +57,9 @@ func (c *Chain) GetHeaderByHeight(height uint64) (*types.BlockHeader, error) {
 	return c.store.GetBlockHeader(hash)
 }
 
-func (c *Chain) calcReorganizeNodes(node *state.BlockNode) ([]*state.BlockNode, []*state.BlockNode, error) {
-	var attachNodes []*state.BlockNode
-	var detachNodes []*state.BlockNode
+func (c *Chain) calcReorganizeNodes(node *types.BlockHeader) ([]*types.BlockHeader, []*types.BlockHeader, error) {
+	var attachNodes []*types.BlockHeader
+	var detachNodes []*types.BlockHeader
 
 	attachNode := node
 	getBlockHash, err := c.store.GetMainChainHash(attachNode.Height)
@@ -67,9 +67,9 @@ func (c *Chain) calcReorganizeNodes(node *state.BlockNode) ([]*state.BlockNode, 
 		return nil, nil, err
 	}
 
-	for getBlockHash.String() != attachNode.Hash.String() {
-		attachNodes = append([]*state.BlockNode{attachNode}, attachNodes...)
-		attachNode, err = c.store.GetBlockNode(attachNode.Parent)
+	for *getBlockHash != attachNode.Hash() {
+		attachNodes = append([]*types.BlockHeader{attachNode}, attachNodes...)
+		attachNode, err = c.store.GetBlockHeader(&attachNode.PreviousBlockHash)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -78,7 +78,7 @@ func (c *Chain) calcReorganizeNodes(node *state.BlockNode) ([]*state.BlockNode, 
 	detachNode := c.bestNode
 	for detachNode != attachNode {
 		detachNodes = append(detachNodes, detachNode)
-		detachNode, err = c.store.GetBlockNode(detachNode.Parent)
+		detachNode, err = c.store.GetBlockHeader(&detachNode.PreviousBlockHash)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -109,7 +109,7 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
-	node, err := c.store.GetBlockNode(&bcBlock.ID)
+	node, err := c.store.GetBlockHeader(&bcBlock.ID)
 	if err != nil {
 		return err
 	}
@@ -128,7 +128,8 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	return nil
 }
 
-func (c *Chain) reorganizeChain(node *state.BlockNode) error {
+func (c *Chain) reorganizeChain(node *types.BlockHeader) error {
+	nodeHash := node.Hash()
 	attachNodes, detachNodes, err := c.calcReorganizeNodes(node)
 	if err != nil {
 		return err
@@ -143,7 +144,8 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 	}
 
 	for _, detachNode := range detachNodes {
-		b, err := c.store.GetBlock(&detachNode.Hash)
+		detachNodeHash := detachNode.Hash()
+		b, err := c.store.GetBlock(&detachNodeHash)
 		if err != nil {
 			return err
 		}
@@ -166,11 +168,12 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			return err
 		}
 
-		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Debug("detach from mainchain")
+		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": nodeHash.String()}).Debug("detach from mainchain")
 	}
 
 	for _, attachNode := range attachNodes {
-		b, err := c.store.GetBlock(&attachNode.Hash)
+		attachNodeHash := attachNode.Hash()
+		b, err := c.store.GetBlock(&attachNodeHash)
 		if err != nil {
 			return err
 		}
@@ -201,7 +204,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			irreversibleNode = attachNode
 		}
 
-		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Debug("attach from mainchain")
+		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": nodeHash.String()}).Debug("attach from mainchain")
 	}
 
 	if detachNodes[len(detachNodes)-1].Height <= c.bestIrreversibleNode.Height && irreversibleNode.Height <= c.bestIrreversibleNode.Height {
@@ -305,7 +308,7 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 		return c.orphanManage.BlockExist(&blockHash), nil
 	}
 
-	if _, err := c.store.GetBlockNode(&block.PreviousBlockHash); err != nil {
+	if _, err := c.store.GetBlockHeader(&block.PreviousBlockHash); err != nil {
 		c.orphanManage.Add(block)
 		return true, nil
 	}
@@ -316,12 +319,12 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 
 	bestBlock := c.saveSubBlock(block)
 	bestBlockHash := bestBlock.Hash()
-	bestNode, err := c.store.GetBlockNode(&bestBlockHash)
+	bestNode, err := c.store.GetBlockHeader(&bestBlockHash)
 	if err != nil {
 		return false, err
 	}
 
-	parentBestNode, err := c.store.GetBlockNode(bestNode.Parent)
+	parentBestNode, err := c.store.GetBlockHeader(&bestNode.PreviousBlockHash)
 	if err != nil {
 		return false, err
 	}

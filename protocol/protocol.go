@@ -27,8 +27,8 @@ type Chain struct {
 	eventDispatcher      *event.Dispatcher
 
 	cond                 sync.Cond
-	bestNode             *state.BlockNode
-	bestIrreversibleNode *state.BlockNode
+	bestNode             *types.BlockHeader
+	bestIrreversibleNode *types.BlockHeader
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
@@ -52,12 +52,12 @@ func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*
 	}
 
 	// TODO common pointer for bestNode
-	bestNode, err := c.store.GetBlockNode(storeStatus.Hash)
+	bestNode, err := c.store.GetBlockHeader(storeStatus.Hash)
 	if err != nil {
 		return nil, err
 	}
 
-	bestIrreversibleNode, err := c.store.GetBlockNode(storeStatus.IrreversibleHash)
+	bestIrreversibleNode, err := c.store.GetBlockHeader(storeStatus.IrreversibleHash)
 	if err != nil {
 		return nil, err
 	}
@@ -95,8 +95,8 @@ func (c *Chain) initChainStatus() error {
 		BlockHeight: 0,
 	}}
 
-	node := state.NewBlockNode(&genesisBlock.BlockHeader)
-	return c.store.SaveChainStatus(node, node, utxoView, voteResults)
+	node := genesisBlock.BlockHeader
+	return c.store.SaveChainStatus(&node, &node, utxoView, voteResults)
 }
 
 // BestBlockHeight returns the current height of the blockchain.
@@ -110,17 +110,18 @@ func (c *Chain) BestBlockHeight() uint64 {
 func (c *Chain) BestBlockHash() *bc.Hash {
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
-	return &c.bestNode.Hash
+	bestNodeHash := c.bestNode.Hash()
+	return &bestNodeHash
 }
 
 // BestBlockHeader returns the chain tail block
 func (c *Chain) BestBlockHeader() *types.BlockHeader {
-	return c.bestNode.BlockHeader()
+	return c.bestNode
 }
 
 // InMainChain checks wheather a block is in the main chain
 func (c *Chain) InMainChain(hash bc.Hash) bool {
-	blockNode, err := c.store.GetBlockNode(&hash)
+	blockNode, err := c.store.GetBlockHeader(&hash)
 	if err != nil {
 		return false
 	}
@@ -133,7 +134,7 @@ func (c *Chain) InMainChain(hash bc.Hash) bool {
 }
 
 // This function must be called with mu lock in above level
-func (c *Chain) setState(node, irreversibleNode *state.BlockNode, view *state.UtxoViewpoint, voteResults []*state.VoteResult) error {
+func (c *Chain) setState(node, irreversibleNode *types.BlockHeader, view *state.UtxoViewpoint, voteResults []*state.VoteResult) error {
 	if err := c.store.SaveChainStatus(node, irreversibleNode, view, voteResults); err != nil {
 		return err
 	}
@@ -141,7 +142,8 @@ func (c *Chain) setState(node, irreversibleNode *state.BlockNode, view *state.Ut
 	c.bestNode = node
 	c.bestIrreversibleNode = irreversibleNode
 
-	log.WithFields(log.Fields{"module": logModule, "height": c.bestNode.Height, "hash": c.bestNode.Hash.String()}).Debug("chain best status has been update")
+	bestNodeHash := c.bestNode.Hash()
+	log.WithFields(log.Fields{"module": logModule, "height": c.bestNode.Height, "hash": bestNodeHash.String()}).Debug("chain best status has been update")
 	c.cond.Broadcast()
 	return nil
 }

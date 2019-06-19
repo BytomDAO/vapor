@@ -26,11 +26,10 @@ type Store interface {
 	GetVoteResult(uint64) (*state.VoteResult, error)
 	GetMainChainHash(uint64) (*bc.Hash, error)
 	GetBlockHashesByHeight(uint64) ([]*bc.Hash, error)
-	GetBlockNode(*bc.Hash) (*state.BlockNode, error)
 
 	SaveBlock(*types.Block, *bc.TransactionStatus) error
 	SaveBlockHeader(*types.BlockHeader) error
-	SaveChainStatus(*state.BlockNode, *state.BlockNode, *state.UtxoViewpoint, []*state.VoteResult) error
+	SaveChainStatus(*types.BlockHeader, *types.BlockHeader, *state.UtxoViewpoint, []*state.VoteResult) error
 }
 
 // BlockStoreState represents the core's db status

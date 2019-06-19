@@ -137,15 +137,6 @@ func GetBlockHashesByHeight(db dbm.DB, height uint64) ([]*bc.Hash, error) {
 	return hashes, nil
 }
 
-// GetBlockNode return BlockNode by given hash
-func GetBlockNode(db dbm.DB, hash *bc.Hash) (*state.BlockNode, error) {
-	blockHeader, err := GetBlockHeader(db, hash)
-	if err != nil {
-		return nil, err
-	}
-	return state.NewBlockNode(blockHeader), nil
-}
-
 // GetVoteResult return the vote result by given sequence
 func GetVoteResult(db dbm.DB, seq uint64) (*state.VoteResult, error) {
 	data := db.Get(calcVoteResultKey(seq))
@@ -173,10 +164,6 @@ func NewStore(db dbm.DB) *Store {
 		return GetVoteResult(db, seq)
 	}
 
-	fillBlockNodeFn := func(hash *bc.Hash) (*state.BlockNode, error) {
-		return GetBlockNode(db, hash)
-	}
-
 	fillHeightIndexFn := func(height uint64) ([]*bc.Hash, error) {
 		return GetBlockHashesByHeight(db, height)
 	}
@@ -185,7 +172,7 @@ func NewStore(db dbm.DB) *Store {
 		return GetMainChainHash(db, height)
 	}
 
-	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillVoteResultFn, fillBlockNodeFn, fillHeightIndexFn, fillMainChainHashFn)
+	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillVoteResultFn, fillHeightIndexFn, fillMainChainHashFn)
 	return &Store{
 		db:    db,
 		cache: cache,
@@ -270,11 +257,6 @@ func (s *Store) GetBlockHashesByHeight(height uint64) ([]*bc.Hash, error) {
 	return s.cache.lookupBlockHashesByHeight(height)
 }
 
-// GetBlockNode return the block hash by the specified height
-func (s *Store) GetBlockNode(hash *bc.Hash) (*state.BlockNode, error) {
-	return s.cache.lookupBlockNode(hash)
-}
-
 // SaveBlock persists a new block in the protocol.
 func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 	startTime := time.Now()
@@ -339,12 +321,11 @@ func (s *Store) SaveBlockHeader(blockHeader *types.BlockHeader) error {
 	blockHash := blockHeader.Hash()
 	s.db.Set(calcBlockHeaderKey(&blockHash), binaryBlockHeader)
 	s.cache.removeBlockHeader(blockHeader)
-	s.cache.removeBlockNode(&blockHash)
 	return nil
 }
 
 // SaveChainStatus save the core's newest status && delete old status
-func (s *Store) SaveChainStatus(node, irreversibleNode *state.BlockNode, view *state.UtxoViewpoint, voteResults []*state.VoteResult) error {
+func (s *Store) SaveChainStatus(node, irreversibleNode *types.BlockHeader, view *state.UtxoViewpoint, voteResults []*state.VoteResult) error {
 	batch := s.db.NewBatch()
 	if err := saveUtxoView(batch, view); err != nil {
 		return err
@@ -360,11 +341,13 @@ func (s *Store) SaveChainStatus(node, irreversibleNode *state.BlockNode, view *s
 		s.cache.removeVoteResult(vote)
 	}
 
+	nodeHash := node.Hash()
+	irreversibleHash := irreversibleNode.Hash()
 	bytes, err := json.Marshal(protocol.BlockStoreState{
 		Height:             node.Height,
-		Hash:               &node.Hash,
+		Hash:               &nodeHash,
 		IrreversibleHeight: irreversibleNode.Height,
-		IrreversibleHash:   &irreversibleNode.Hash,
+		IrreversibleHash:   &irreversibleHash,
 	})
 	if err != nil {
 		return err

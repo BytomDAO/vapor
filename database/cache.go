@@ -22,24 +22,21 @@ const (
 type fillBlockHeaderFn func(hash *bc.Hash) (*types.BlockHeader, error)
 type fillBlockTransactionsFn func(hash *bc.Hash) ([]*types.Tx, error)
 type fillVoteResultFn func(seq uint64) (*state.VoteResult, error)
-type fillBlockNodeFn func(hash *bc.Hash) (*state.BlockNode, error)
 type fillHeightIndexFn func(height uint64) ([]*bc.Hash, error)
 type fillMainChainHashFn func(height uint64) (*bc.Hash, error)
 
 func newCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransactionsFn, fillVoteResult fillVoteResultFn,
-	fillBlockNode fillBlockNodeFn, fillHeightIndex fillHeightIndexFn, fillMainChainHash fillMainChainHashFn) cache {
+	fillHeightIndex fillHeightIndexFn, fillMainChainHash fillMainChainHashFn) cache {
 	return cache{
 		lruBlockHeaders:    common.NewCache(maxCachedBlockHeaders),
 		lruBlockTxs:        common.NewCache(maxCachedBlockTransactions),
 		lruVoteResults:     common.NewCache(maxCachedVoteResults),
-		lruBlockNodes:      common.NewCache(maxCachedBlockHeaders),
 		lruHeightIndexes:   common.NewCache(maxCachedHeightIndexes),
 		lruMainChainHashes: common.NewCache(maxCachedMainChainHashes),
 
 		fillBlockHeaderFn:      fillBlockHeader,
 		fillBlockTransactionFn: fillBlockTxs,
 		fillVoteResultFn:       fillVoteResult,
-		fillBlockNodeFn:        fillBlockNode,
 		fillHeightIndexFn:      fillHeightIndex,
 		fillMainChainHashFn:    fillMainChainHash,
 	}
@@ -49,14 +46,12 @@ type cache struct {
 	lruBlockHeaders    *common.Cache
 	lruBlockTxs        *common.Cache
 	lruVoteResults     *common.Cache
-	lruBlockNodes      *common.Cache
 	lruHeightIndexes   *common.Cache
 	lruMainChainHashes *common.Cache
 
 	fillBlockHeaderFn      func(hash *bc.Hash) (*types.BlockHeader, error)
 	fillBlockTransactionFn func(hash *bc.Hash) ([]*types.Tx, error)
 	fillVoteResultFn       func(seq uint64) (*state.VoteResult, error)
-	fillBlockNodeFn        func(*bc.Hash) (*state.BlockNode, error)
 	fillHeightIndexFn      func(uint64) ([]*bc.Hash, error)
 	fillMainChainHashFn    func(uint64) (*bc.Hash, error)
 
@@ -124,26 +119,6 @@ func (c *cache) lookupVoteResult(seq uint64) (*state.VoteResult, error) {
 	return voteResult.(*state.VoteResult).Fork(), nil
 }
 
-func (c *cache) lookupBlockNode(hash *bc.Hash) (*state.BlockNode, error) {
-	if hexBlockNode, ok := c.lruBlockNodes.Get(*hash); ok {
-		return hexBlockNode.(*state.BlockNode), nil
-	}
-
-	blockNode, err := c.sf.Do("BlockNode:"+hash.String(), func() (interface{}, error) {
-		blockNode, err := c.fillBlockNodeFn(hash)
-		if err != nil {
-			return nil, err
-		}
-
-		c.lruBlockNodes.Add(hash, blockNode)
-		return blockNode, nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return blockNode.(*state.BlockNode), nil
-}
-
 func (c *cache) lookupMainChainHash(height uint64) (*bc.Hash, error) {
 	if hash, ok := c.lruMainChainHashes.Get(height); ok {
 		return hash.(*bc.Hash), nil
@@ -188,10 +163,6 @@ func (c *cache) lookupBlockHashesByHeight(height uint64) ([]*bc.Hash, error) {
 
 func (c *cache) removeBlockHeader(blockHeader *types.BlockHeader) {
 	c.lruBlockHeaders.Remove(blockHeader.Hash())
-}
-
-func (c *cache) removeBlockNode(hash *bc.Hash) {
-	c.lruBlockNodes.Remove(hash)
 }
 
 func (c *cache) removeVoteResult(voteResult *state.VoteResult) {
