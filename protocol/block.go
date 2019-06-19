@@ -135,7 +135,6 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 }
 
 func (c *Chain) reorganizeChain(node *types.BlockHeader) error {
-	nodeHash := node.Hash()
 	attachNodes, detachNodes, err := c.calcReorganizeNodes(node)
 	if err != nil {
 		return err
@@ -174,6 +173,7 @@ func (c *Chain) reorganizeChain(node *types.BlockHeader) error {
 			return err
 		}
 
+		nodeHash := node.Hash()
 		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": nodeHash.String()}).Debug("detach from mainchain")
 	}
 
@@ -210,6 +210,7 @@ func (c *Chain) reorganizeChain(node *types.BlockHeader) error {
 			irreversibleNode = attachNode
 		}
 
+		nodeHash := node.Hash()
 		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": nodeHash.String()}).Debug("attach from mainchain")
 	}
 
