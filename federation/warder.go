@@ -41,7 +41,7 @@ func NewWarder(db *gorm.DB, assetStore *database.AssetStore, cfg *config.Config)
 		db:            db,
 		assetStore:    assetStore,
 		txCh:          make(chan *orm.CrossTransaction),
-		fedProg:       ParseFedProg(cfg.Warders, cfg.Quorum),
+		fedProg:       config.ParseFedProg(cfg.Warders, cfg.Quorum),
 		position:      local.Position,
 		xpub:          local.XPub,
 		xprv:          string2xprv(xprvStr),

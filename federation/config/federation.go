@@ -1,4 +1,4 @@
-package federation
+package config
 
 import (
 	"sort"
@@ -6,11 +6,10 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/federation/config"
 	"github.com/vapor/protocol/vm/vmutil"
 )
 
-func ParseFedProg(warders []config.Warder, quorum int) []byte {
+func ParseFedProg(warders []Warder, quorum int) []byte {
 	SortWarders(warders)
 
 	xpubs := []chainkd.XPub{}
@@ -26,13 +25,13 @@ func ParseFedProg(warders []config.Warder, quorum int) []byte {
 	return fedpegScript
 }
 
-type ByPosition []config.Warder
+type ByPosition []Warder
 
 func (w ByPosition) Len() int           { return len(w) }
 func (w ByPosition) Swap(i, j int)      { w[i], w[j] = w[j], w[i] }
 func (w ByPosition) Less(i, j int) bool { return w[i].Position < w[j].Position }
 
-func SortWarders(warders []config.Warder) []config.Warder {
+func SortWarders(warders []Warder) []Warder {
 	sort.Sort(ByPosition(warders))
 	return warders
 }
