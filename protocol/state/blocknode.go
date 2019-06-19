@@ -14,7 +14,7 @@ type BlockNode struct {
 	Version                uint64
 	Height                 uint64
 	Timestamp              uint64
-	BlockWitness           [][]byte
+	BlockWitness           types.BlockWitness
 	TransactionsMerkleRoot bc.Hash
 	TransactionStatusHash  bc.Hash
 }
@@ -27,7 +27,7 @@ func NewBlockNode(bh *types.BlockHeader) *BlockNode {
 		Version:                bh.Version,
 		Height:                 bh.Height,
 		Timestamp:              bh.Timestamp,
-		BlockWitness:           bh.Witness,
+		BlockWitness:           bh.BlockWitness,
 		TransactionsMerkleRoot: bh.TransactionsMerkleRoot,
 		TransactionStatusHash:  bh.TransactionStatusHash,
 	}
@@ -48,8 +48,6 @@ func (node *BlockNode) BlockHeader() *types.BlockHeader {
 			TransactionsMerkleRoot: node.TransactionsMerkleRoot,
 			TransactionStatusHash:  node.TransactionStatusHash,
 		},
-		BlockWitness: types.BlockWitness{
-			Witness: node.BlockWitness,
-		},
+		BlockWitness: node.BlockWitness,
 	}
 }

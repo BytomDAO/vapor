@@ -37,7 +37,7 @@ func (c *Chain) isIrreversible(blockNode *state.BlockNode) bool {
 
 	signCount := 0
 	for i := 0; i < len(consensusNodes); i++ {
-		if blockNode.BlockWitness[i] != nil {
+		if blockNode.BlockWitness.Get(uint64(i)) != nil {
 			signCount++
 		}
 	}
@@ -89,7 +89,7 @@ func (c *Chain) ProcessBlockSignature(signature, xPub []byte, blockHash *bc.Hash
 		return err
 	}
 
-	if blockNode.BlockWitness[consensusNode.Order] != nil {
+	if blockNode.BlockWitness.Get(consensusNode.Order) != nil {
 		return nil
 	}
 
@@ -184,7 +184,7 @@ func (c *Chain) checkNodeSign(bh *types.BlockHeader, consensusNode *state.Consen
 			continue
 		}
 
-		if blockNode.BlockWitness[consensusNode.Order] != nil {
+		if blockNode.BlockWitness.Get(consensusNode.Order) != nil {
 			return errDoubleSignBlock
 		}
 	}
@@ -217,7 +217,7 @@ func (c *Chain) SignBlock(block *types.Block) ([]byte, error) {
 		}
 
 		// Has already signed the same height block
-		if blockNode.BlockWitness[node.Order] != nil {
+		if blockNode.BlockWitness.Get(node.Order) != nil {
 			return nil, nil
 		}
 	}
