@@ -47,9 +47,8 @@ func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
 // It satisfies the interface protocol.Store, and provides additional
 // methods for querying current data.
 type Store struct {
-	db         dbm.DB
-	cache      cache
-	blockIndex *BlockIndex
+	db    dbm.DB
+	cache cache
 }
 
 func calcBlockHashByHeightKey(height uint64) []byte {
@@ -194,12 +193,10 @@ func NewStore(db dbm.DB) *Store {
 		return GetBlockHashByHeight(db, height)
 	}
 
-	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillVoteResultFn)
-	blockIndex := NewBlockIndex(fillBlockNodeFn, fillHeightIndexFn, fillMainChainHashFn)
+	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillVoteResultFn, fillBlockNodeFn, fillHeightIndexFn, fillMainChainHashFn)
 	return &Store{
-		db:         db,
-		cache:      cache,
-		blockIndex: blockIndex,
+		db:    db,
+		cache: cache,
 	}
 }
 
@@ -273,17 +270,17 @@ func (s *Store) GetVoteResult(seq uint64) (*state.VoteResult, error) {
 
 // GetBlockHashByHeight return the block hash by the specified height
 func (s *Store) GetBlockHashByHeight(height uint64) (*bc.Hash, error) {
-	return s.blockIndex.GetBlockHashByHeight(height)
+	return s.cache.lookupBlockHashByHeight(height)
 }
 
 // GetBlockHashesByHeight return the block hash by the specified height
 func (s *Store) GetBlockHashesByHeight(height uint64) ([]*bc.Hash, error) {
-	return s.blockIndex.GetBlockHashesByHeight(height)
+	return s.cache.lookupBlockHashesByHeight(height)
 }
 
 // GetBlockNode return the block hash by the specified height
 func (s *Store) GetBlockNode(hash *bc.Hash) (*state.BlockNode, error) {
-	return s.blockIndex.GetBlockNode(hash)
+	return s.cache.lookupBlockNode(hash)
 }
 
 // SaveBlock persists a new block in the protocol.
@@ -343,7 +340,7 @@ func (s *Store) SaveBlockHeader(blockHeader *types.BlockHeader) error {
 	blockHash := blockHeader.Hash()
 	s.db.Set(calcBlockHeaderKey(&blockHash), binaryBlockHeader)
 	s.cache.removeBlockHeader(blockHeader)
-	s.blockIndex.RemoveBlockNode(&blockHash)
+	s.cache.removeBlockNode(&blockHash)
 	return nil
 }
 
