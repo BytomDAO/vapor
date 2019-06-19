@@ -15,10 +15,10 @@ var (
 	FastSyncTimeout          = 200 * time.Second
 	fetchDataParallelTimeout = 100 * time.Second
 
-	maxBlockPerMsg        = 1000
-	maxBlockHeadersPerMsg = 10000
+	maxBlockPerMsg        = 100
+	maxBlockHeadersPerMsg = 1000
 	minGapStartFastSync   = 128
-	maxFastSyncBlockNum   = 100000
+	maxFastSyncBlockNum   = 10000
 
 	errSkeletonMismatch = errors.New("failed on fill the Skeleton")
 	errHeadersMismatch  = errors.New("failed on connect block headers")
@@ -225,7 +225,7 @@ func (bk *blockKeeper) initFastSyncParameters() {
 	bk.blockProcessQueue = prque.New()
 	bk.blocksProcessIndexCh = make(chan int, maxFastSyncBlockNum/maxBlockPerMsg)
 	bk.fastSyncQuit = make(chan struct{})
-	bk.skeleton = make([]*types.BlockHeader, 1)
+	bk.skeleton = make([]*types.BlockHeader, 0)
 	bk.headers = make([]*types.BlockHeader, bk.fastSyncLength)
 	bk.bodies = make([]*types.Block, bk.fastSyncLength)
 }
@@ -360,18 +360,24 @@ func (bk *blockKeeper) fetchHeaders(resultCh chan *taskResult, task *requireTask
 	headerHash := task.startHeader.Hash()
 	headers, err := bk.requireHeaders([]*bc.Hash{&headerHash}, task.length, 0)
 	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("failed on fetch headers")
 		resultCh <- &taskResult{err: err, task: task}
+		return
 	}
 
 	//valid skeleton match
 	if headers[len(headers)-1].Hash() != bk.skeleton[task.index+1].PreviousBlockHash {
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("failed on fetch headers")
 		resultCh <- &taskResult{err: errSkeletonMismatch, task: task}
+		return
 	}
 
 	//valid headers
 	for i := 0; i < len(headers)-1; i++ {
 		if headers[i+1].PreviousBlockHash != headers[i].Hash() {
+			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("failed on fetch headers")
 			resultCh <- &taskResult{err: errHeadersMismatch, task: task}
+			return
 		}
 	}
 
@@ -383,7 +389,7 @@ func (bk *blockKeeper) fetchSkeleton() error {
 	startPoint := bk.commonAncestor.Hash()
 
 	if bk.fastSyncLength > maxBlockHeadersPerMsg {
-		headers, err := bk.requireHeaders([]*bc.Hash{&startPoint}, bk.fastSyncLength/maxBlockHeadersPerMsg, maxBlockHeadersPerMsg-1)
+		headers, err := bk.requireHeaders([]*bc.Hash{&startPoint}, bk.fastSyncLength/maxBlockHeadersPerMsg+1, maxBlockHeadersPerMsg-1)
 		if err != nil {
 			return err
 		}
