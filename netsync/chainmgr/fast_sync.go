@@ -119,7 +119,7 @@ func (bk *blockKeeper) fetchBodies(resultCh chan *taskResult, task *requireTask)
 	task.count++
 	startHash := task.startHeader.Hash()
 	stopHash := task.stopHeader.Hash()
-	bodies, err := bk.requireBlocks([]*bc.Hash{&startHash}, &stopHash, task.length)
+	bodies, err := bk.requireBlocks(task.peerID, []*bc.Hash{&startHash}, &stopHash, task.length)
 	if err != nil {
 		resultCh <- &taskResult{err: err, task: task}
 		return
@@ -200,7 +200,7 @@ func (bk *blockKeeper) fetchHeadersParallel() error {
 }
 
 func (bk *blockKeeper) findCommonAncestor() error {
-	headers, err := bk.requireHeaders(bk.blockLocator(), 1, 0)
+	headers, err := bk.requireHeaders(bk.syncPeer.ID(), bk.blockLocator(), 1, 0)
 	if err != nil {
 		return err
 	}
@@ -305,8 +305,13 @@ func (bk *blockKeeper) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, amou
 	return headers, nil
 }
 
-func (bk *blockKeeper) requireBlocks(locator []*bc.Hash, stopHash *bc.Hash, length int) ([]*types.Block, error) {
-	if ok := bk.syncPeer.GetBlocks(locator, stopHash); !ok {
+func (bk *blockKeeper) requireBlocks(peerID string, locator []*bc.Hash, stopHash *bc.Hash, length int) ([]*types.Block, error) {
+	peer := bk.peers.GetPeer(peerID)
+	if peer == nil {
+		return nil, errPeerDropped
+	}
+
+	if ok := peer.GetBlocks(locator, stopHash); !ok {
 		return nil, errPeerDropped
 	}
 
@@ -316,7 +321,7 @@ func (bk *blockKeeper) requireBlocks(locator []*bc.Hash, stopHash *bc.Hash, leng
 	for {
 		select {
 		case msg := <-bk.blocksProcessCh:
-			if msg.peerID != bk.syncPeer.ID() {
+			if msg.peerID != peerID {
 				continue
 			}
 			if len(msg.blocks) != length {
@@ -332,8 +337,13 @@ func (bk *blockKeeper) requireBlocks(locator []*bc.Hash, stopHash *bc.Hash, leng
 	}
 }
 
-func (bk *blockKeeper) requireHeaders(locator []*bc.Hash, amount int, skip int) ([]*types.BlockHeader, error) {
-	if ok := bk.syncPeer.GetHeaders(locator, amount, skip); !ok {
+func (bk *blockKeeper) requireHeaders(peerID string, locator []*bc.Hash, amount int, skip int) ([]*types.BlockHeader, error) {
+	peer := bk.peers.GetPeer(peerID)
+	if peer == nil {
+		return nil, errPeerDropped
+	}
+
+	if ok := peer.GetHeaders(locator, amount, skip); !ok {
 		return nil, errPeerDropped
 	}
 
@@ -343,7 +353,7 @@ func (bk *blockKeeper) requireHeaders(locator []*bc.Hash, amount int, skip int) 
 	for {
 		select {
 		case msg := <-bk.headersProcessCh:
-			if msg.peerID != bk.syncPeer.ID() {
+			if msg.peerID != peerID {
 				continue
 			}
 
@@ -368,7 +378,7 @@ func (bk *blockKeeper) createFetchHeadersTask() {
 func (bk *blockKeeper) fetchHeaders(resultCh chan *taskResult, task *requireTask) {
 	task.count++
 	headerHash := task.startHeader.Hash()
-	headers, err := bk.requireHeaders([]*bc.Hash{&headerHash}, task.length, 0)
+	headers, err := bk.requireHeaders(task.peerID, []*bc.Hash{&headerHash}, task.length, 0)
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("failed on fetch headers")
 		resultCh <- &taskResult{err: err, task: task}
@@ -399,7 +409,7 @@ func (bk *blockKeeper) fetchSkeleton() error {
 	startPoint := bk.commonAncestor.Hash()
 
 	if bk.fastSyncLength > maxBlockHeadersPerMsg {
-		headers, err := bk.requireHeaders([]*bc.Hash{&startPoint}, bk.fastSyncLength/maxBlockHeadersPerMsg+1, maxBlockHeadersPerMsg-1)
+		headers, err := bk.requireHeaders(bk.syncPeer.ID(), []*bc.Hash{&startPoint}, bk.fastSyncLength/maxBlockHeadersPerMsg+1, maxBlockHeadersPerMsg-1)
 		if err != nil {
 			return err
 		}
@@ -408,7 +418,7 @@ func (bk *blockKeeper) fetchSkeleton() error {
 	}
 
 	if bk.fastSyncLength%maxBlockHeadersPerMsg != 0 {
-		headers, err := bk.requireHeaders([]*bc.Hash{&startPoint}, 2, bk.fastSyncLength-1)
+		headers, err := bk.requireHeaders(bk.syncPeer.ID(), []*bc.Hash{&startPoint}, 2, bk.fastSyncLength-1)
 		if err != nil {
 			return err
 		}
