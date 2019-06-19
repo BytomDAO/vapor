@@ -286,48 +286,6 @@ func (s *Store) GetBlockNode(hash *bc.Hash) (*state.BlockNode, error) {
 	return s.blockIndex.GetBlockNode(hash)
 }
 
-/*
-// LoadBlockIndex load BlockIndex from BlockHeader
-func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error) {
-	startTime := time.Now()
-	bhIter := s.db.IteratorPrefix(blockHashByHeightPrefix)
-	defer bhIter.Release()
-
-	batch := s.db.NewBatch()
-	for bhIter.Next() {
-		key := bhIter.Key()
-		lenPrefix := len(blockHashByHeightPrefix)
-		blockNodeHeight := binary.BigEndian.Uint64(key[lenPrefix:])
-
-		// If a block with a height greater than the best height of state is added to the index,
-		// It may cause a bug that the new block cant not be process properly.
-		if blockNodeHeight > stateBestHeight {
-			break
-		}
-
-		blockNodeHash := &bc.Hash{}
-		if err := blockNodeHash.UnmarshalText(bhIter.Value()); err != nil {
-			return nil, err
-		}
-
-		binaryBlockHashes := []byte{}
-		if binaryHashes := db.Get(calcblockHeightIndexPrefix(blockNodeHeight)); binaryBlockHashes != nil {
-			binaryBlockHashes = append(binaryBlockHashes, binaryHashes...)
-		}
-		binaryBlockHashes = append(binaryBlockHashes, bhIter.Value()...)
-		batch.Set(calcblockHeightIndexPrefix(blockNodeHeight), binaryBlockHashes)
-	}
-	batch.Write()
-
-	log.WithFields(log.Fields{
-		"module":   logModule,
-		"height":   stateBestHeight,
-		"duration": time.Since(startTime),
-	}).Debug("initialize load history block index from database")
-	return s.blockIndex, nil
-}
-*/
-
 // SaveBlock persists a new block in the protocol.
 func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 	startTime := time.Now()

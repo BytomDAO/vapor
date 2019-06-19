@@ -28,7 +28,6 @@ type Store interface {
 	GetBlockHashByHeight(uint64) (*bc.Hash, error)
 	GetBlockHeightIndex(uint64) ([]*bc.Hash, error)
 	GetBlockNode(*bc.Hash) (*state.BlockNode, error)
-	//LoadBlockIndex(uint64) (*state.BlockIndex, error)
 	SaveBlock(*types.Block, *bc.TransactionStatus) error
 	SaveBlockHeader(*types.BlockHeader) error
 	SaveChainStatus(*state.BlockNode, *state.BlockNode, *state.UtxoViewpoint, []*state.VoteResult) error

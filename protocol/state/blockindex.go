@@ -7,8 +7,6 @@ import (
 )
 
 const (
-	// approxNodesPerDay is the approximate number of new blocks in a day on average.
-	approxNodesPerDay = 2 * 24 * 60 * 60
 	// maxCachedMainBlockNodes is the max number of cached blockNodes
 	maxCachedBlockNodes = 10000
 	// maxCachedHeightIndexes is the max number of cached blockNodes
@@ -91,7 +89,7 @@ func NewBlockIndex(fillBlockNode fillBlockNodeFn, fillHeightIndex fillHeightInde
 	}
 }
 
-// GetNode search BlockNode from the index map
+// GetBlockNode search BlockNode by block hash
 func (bi *BlockIndex) GetBlockNode(hash *bc.Hash) (*BlockNode, error) {
 	if hexBlockNode, ok := bi.lruBlockNodes.Get(*hash); ok {
 		return hexBlockNode.(*BlockNode), nil
@@ -105,12 +103,7 @@ func (bi *BlockIndex) GetBlockNode(hash *bc.Hash) (*BlockNode, error) {
 	return blockNode, nil
 }
 
-// BestNode return the best BlockNode
-// func (bi *BlockIndex) BestNode() *BlockNode {
-// 	return bi.bestNode
-// }
-
-// BlockExist check does the block existed in blockIndex
+// BlockExist check does the block existed
 func (bi *BlockIndex) BlockExist(hash *bc.Hash) bool {
 	if _, ok := bi.lruBlockNodes.Get(*hash); ok {
 		return ok
@@ -122,20 +115,7 @@ func (bi *BlockIndex) BlockExist(hash *bc.Hash) bool {
 	return false
 }
 
-// TODO: THIS FUNCTION MIGHT BE DELETED
-// func (bi *BlockIndex) InMainchain(hash *bc.Hash) bool {
-// 	if resBlockNode, ok := bi.lruBlockNodes.Get(*hash); ok {
-// 		blockNode := resBlockNode.(*BlockNode)
-// 		return *bi.mainChain[blockNode.Height] == *hash
-// 	}
-
-// 	if blockNode, err := bi.fillBlockNodeFn(hash); err != nil {
-// 		return *bi.mainChain[blockNode.Height] == *hash
-// 	}
-// 	return false
-// }
-
-// NodeByHeight return the BlockNode at the specified height
+// GetBlockHashByHeight return the block hash at the specified height
 func (bi *BlockIndex) GetBlockHashByHeight(height uint64) (*bc.Hash, error) {
 	if hash, ok := bi.lruMainChainHashes.Get(height); ok {
 		return hash.(*bc.Hash), nil
@@ -149,7 +129,7 @@ func (bi *BlockIndex) GetBlockHashByHeight(height uint64) (*bc.Hash, error) {
 	return hash, nil
 }
 
-// NodesByHeight return all block nodes at the specified height.
+// GetBlockHashesByHeight return all block hashed at the specified height.
 func (bi *BlockIndex) GetBlockHashesByHeight(height uint64) ([]*bc.Hash, error) {
 	if hashes, ok := bi.lruHeightIndexes.Get(height); ok {
 		return hashes.([]*bc.Hash), nil
@@ -162,27 +142,3 @@ func (bi *BlockIndex) GetBlockHashesByHeight(height uint64) ([]*bc.Hash, error) 
 	bi.lruHeightIndexes.Add(height, hashes)
 	return hashes, nil
 }
-
-// SetMainChain set the the mainChain array
-// func (bi *BlockIndex) SetMainChain(node *BlockNode) {
-// 	bi.Lock()
-// 	defer bi.Unlock()
-
-// 	needed := node.Height + 1
-// 	if uint64(cap(bi.mainChain)) < needed {
-// 		blockNodeHashes := make([]*bc.Hash, needed, needed+approxNodesPerDay)
-// 		copy(blockNodeHashes, bi.mainChain)
-// 		bi.mainChain = blockNodeHashes
-// 	} else {
-// 		i := uint64(len(bi.mainChain))
-// 		bi.mainChain = bi.mainChain[0:needed]
-// 		for ; i < needed; i++ {
-// 			bi.mainChain[i] = nil
-// 		}
-// 	}
-
-// 	for node != nil && bi.mainChain[node.Height].String() != node.Hash.String() {
-// 		bi.mainChain[node.Height] = &node.Hash
-// 		node = bi.GetNode(node.Parent)
-// 	}
-// }
