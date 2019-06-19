@@ -103,18 +103,6 @@ func (bi *BlockIndex) GetBlockNode(hash *bc.Hash) (*BlockNode, error) {
 	return blockNode, nil
 }
 
-// BlockExist check does the block existed
-func (bi *BlockIndex) BlockExist(hash *bc.Hash) bool {
-	if _, ok := bi.lruBlockNodes.Get(*hash); ok {
-		return ok
-	}
-
-	if _, err := bi.fillBlockNodeFn(hash); err != nil {
-		return true
-	}
-	return false
-}
-
 // GetBlockHashByHeight return the block hash at the specified height
 func (bi *BlockIndex) GetBlockHashByHeight(height uint64) (*bc.Hash, error) {
 	if hash, ok := bi.lruMainChainHashes.Get(height); ok {
@@ -129,7 +117,7 @@ func (bi *BlockIndex) GetBlockHashByHeight(height uint64) (*bc.Hash, error) {
 	return hash, nil
 }
 
-// GetBlockHashesByHeight return all block hashed at the specified height.
+// GetBlockHashesByHeight return all block hashed at the specified height
 func (bi *BlockIndex) GetBlockHashesByHeight(height uint64) ([]*bc.Hash, error) {
 	if hashes, ok := bi.lruHeightIndexes.Get(height); ok {
 		return hashes.([]*bc.Hash), nil
@@ -141,4 +129,9 @@ func (bi *BlockIndex) GetBlockHashesByHeight(height uint64) ([]*bc.Hash, error) 
 	}
 	bi.lruHeightIndexes.Add(height, hashes)
 	return hashes, nil
+}
+
+// RemoveBlockNode remove the cached BlockNode
+func (bi *BlockIndex) RemoveBlockNode(hash *bc.Hash) {
+	bi.lruBlockNodes.Remove(hash)
 }

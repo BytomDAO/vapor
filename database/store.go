@@ -205,8 +205,8 @@ func NewStore(db dbm.DB) *Store {
 
 // BlockExist check if the block is stored in disk
 func (s *Store) BlockExist(hash *bc.Hash) bool {
-	blockHeader, err := s.cache.lookupBlockHeader(hash)
-	return err == nil && blockHeader != nil
+	_, err := s.cache.lookupBlockHeader(hash)
+	return err == nil
 }
 
 // GetBlock return the block by given hash
@@ -343,6 +343,7 @@ func (s *Store) SaveBlockHeader(blockHeader *types.BlockHeader) error {
 	blockHash := blockHeader.Hash()
 	s.db.Set(calcBlockHeaderKey(&blockHash), binaryBlockHeader)
 	s.cache.removeBlockHeader(blockHeader)
+	s.blockIndex.RemoveBlockNode(&blockHash)
 	return nil
 }
 
