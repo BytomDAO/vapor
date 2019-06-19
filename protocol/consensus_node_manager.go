@@ -24,6 +24,10 @@ func newConsensusNodeManager(store Store, bestNode *state.BlockNode) *consensusN
 	}
 }
 
+func (c *consensusNodeManager) getBestNode() *state.BlockNode {
+	return c.bestNode
+}
+
 func (c *consensusNodeManager) getConsensusNode(prevBlockHash *bc.Hash, pubkey string) (*state.ConsensusNode, error) {
 	consensusNodeMap, err := c.getConsensusNodes(prevBlockHash)
 	if err != nil {
@@ -90,8 +94,9 @@ func (c *consensusNodeManager) getConsensusNodes(prevBlockHash *bc.Hash) (map[st
 		return nil, errNotFoundBlockNode
 	}
 
+	bestNode := c.getBestNode()
 	preSeq := state.CalcVoteSeq(prevBlockNode.Height+1) - 1
-	if bestSeq := state.CalcVoteSeq(c.bestNode.Height); preSeq > bestSeq {
+	if bestSeq := state.CalcVoteSeq(bestNode.Height); preSeq > bestSeq {
 		preSeq = bestSeq
 	}
 
@@ -109,8 +114,9 @@ func (c *consensusNodeManager) getConsensusNodes(prevBlockHash *bc.Hash) (map[st
 }
 
 func (c *consensusNodeManager) getBestVoteResult() (*state.VoteResult, error) {
-	seq := state.CalcVoteSeq(c.bestNode.Height)
-	return c.getVoteResult(seq, c.bestNode)
+	bestNode := c.getBestNode()
+	seq := state.CalcVoteSeq(bestNode.Height)
+	return c.getVoteResult(seq, bestNode)
 }
 
 // getVoteResult return the vote result
