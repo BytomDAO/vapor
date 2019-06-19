@@ -98,13 +98,13 @@ func (s *sidechainKeeper) syncBlock() (bool, error) {
 func (s *sidechainKeeper) tryAttachBlock(chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus) error {
 	blockHash := block.Hash()
 	log.WithFields(log.Fields{"block_height": block.Height, "block_hash": blockHash.String()}).Info("start to attachBlock")
-	s.db.Begin()
+	dbTx := s.db.Begin()
 	if err := s.processBlock(chain, block, txStatus); err != nil {
-		s.db.Rollback()
+		dbTx.Rollback()
 		return err
 	}
 
-	return s.db.Commit().Error
+	return dbTx.Commit().Error
 }
 
 func (s *sidechainKeeper) processBlock(chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus) error {
