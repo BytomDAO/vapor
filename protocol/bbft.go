@@ -72,10 +72,7 @@ func (c *Chain) GetBlocker(prevBlockHash *bc.Hash, timestamp uint64) (string, er
 // return whether a block become irreversible, if so, the chain module must update status
 func (c *Chain) ProcessBlockSignature(signature, xPub []byte, blockHash *bc.Hash) error {
 	xpubStr := hex.EncodeToString(xPub[:])
-	blockNode, err := c.store.GetBlockHeader(blockHash)
-	if err != nil {
-		return err
-	}
+	blockNode, _ := c.store.GetBlockHeader(blockHash)
 
 	// save the signature if the block is not exist
 	if blockNode == nil {
@@ -251,25 +248,17 @@ func (c *Chain) SignBlock(block *types.Block) ([]byte, error) {
 	return signature, nil
 }
 
-func (c *Chain) updateBlockSignature(blockNode *types.BlockHeader, nodeOrder uint64, signature []byte) error {
-	blockNodeHash := blockNode.Hash()
-	blockHeader, err := c.store.GetBlockHeader(&blockNodeHash)
-	if err != nil {
-		return err
-	}
-
+func (c *Chain) updateBlockSignature(blockHeader *types.BlockHeader, nodeOrder uint64, signature []byte) error {
 	blockHeader.Set(nodeOrder, signature)
-
 	if err := c.store.SaveBlockHeader(blockHeader); err != nil {
 		return err
 	}
 
-	if c.isIrreversible(blockNode) && blockNode.Height > c.bestIrreversibleNode.Height {
-		if err := c.store.SaveChainStatus(c.bestNode, blockNode, state.NewUtxoViewpoint(), []*state.VoteResult{}); err != nil {
+	if c.isIrreversible(blockHeader) && blockHeader.Height > c.bestIrreversibleNode.Height {
+		if err := c.store.SaveChainStatus(c.bestNode, blockHeader, state.NewUtxoViewpoint(), []*state.VoteResult{}); err != nil {
 			return err
 		}
-
-		c.bestIrreversibleNode = blockNode
+		c.bestIrreversibleNode = blockHeader
 	}
 	return nil
 }

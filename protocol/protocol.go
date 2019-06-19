@@ -116,6 +116,8 @@ func (c *Chain) BestBlockHash() *bc.Hash {
 
 // BestBlockHeader returns the chain tail block
 func (c *Chain) BestBlockHeader() *types.BlockHeader {
+	c.cond.L.Lock()
+	defer c.cond.L.Unlock()
 	return c.bestNode
 }
 
