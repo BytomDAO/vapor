@@ -217,7 +217,7 @@ func (c *Chain) saveBlock(block *types.Block) error {
 		return errors.Sub(ErrBadBlock, err)
 	}
 
-	parent, err := c.store.GetBlockNode(&block.PreviousBlockHash)
+	parent, err := c.store.GetBlockHeader(&block.PreviousBlockHash)
 	if err != nil {
 		return err
 	}

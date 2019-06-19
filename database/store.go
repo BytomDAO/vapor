@@ -49,7 +49,7 @@ func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
 type Store struct {
 	db         dbm.DB
 	cache      cache
-	blockIndex *state.BlockIndex
+	blockIndex *BlockIndex
 }
 
 func calcBlockHashByHeightKey(height uint64) []byte {
@@ -195,7 +195,7 @@ func NewStore(db dbm.DB) *Store {
 	}
 
 	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillVoteResultFn)
-	blockIndex := state.NewBlockIndex(fillBlockNodeFn, fillHeightIndexFn, fillMainChainHashFn)
+	blockIndex := NewBlockIndex(fillBlockNodeFn, fillHeightIndexFn, fillMainChainHashFn)
 	return &Store{
 		db:         db,
 		cache:      cache,

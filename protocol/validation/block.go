@@ -9,7 +9,6 @@ import (
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/state"
 )
 
 const logModule = "leveldb"
@@ -25,7 +24,7 @@ var (
 	errVersionRegression     = errors.New("version regression")
 )
 
-func checkBlockTime(b *bc.Block, parent *state.BlockNode) error {
+func checkBlockTime(b *bc.Block, parent *types.BlockHeader) error {
 	now := uint64(time.Now().UnixNano() / 1e6)
 	if b.Timestamp < (parent.Timestamp + consensus.BlockTimeInterval) {
 		return errBadTimestamp
@@ -64,22 +63,22 @@ func checkCoinbaseAmount(b *bc.Block, amount uint64) error {
 }
 
 // ValidateBlockHeader check the block's header
-func ValidateBlockHeader(b *bc.Block, parent *state.BlockNode) error {
+func ValidateBlockHeader(b *bc.Block, parent *types.BlockHeader) error {
 	if b.Version != 1 {
 		return errors.WithDetailf(errVersionRegression, "previous block verson %d, current block version %d", parent.Version, b.Version)
 	}
 	if b.Height != parent.Height+1 {
 		return errors.WithDetailf(errMisorderedBlockHeight, "previous block height %d, current block height %d", parent.Height, b.Height)
 	}
-	if parent.Hash != *b.PreviousBlockId {
-		return errors.WithDetailf(errMismatchedBlock, "previous block ID %x, current block wants %x", parent.Hash.Bytes(), b.PreviousBlockId.Bytes())
+	if parent.Hash() != *b.PreviousBlockId {
+		return errors.WithDetailf(errMismatchedBlock, "previous block ID %x, current block wants %x", parent.Hash().Bytes(), b.PreviousBlockId.Bytes())
 	}
 
 	return checkBlockTime(b, parent)
 }
 
 // ValidateBlock validates a block and the transactions within.
-func ValidateBlock(b *bc.Block, parent *state.BlockNode) error {
+func ValidateBlock(b *bc.Block, parent *types.BlockHeader) error {
 	startTime := time.Now()
 	if err := ValidateBlockHeader(b, parent); err != nil {
 		return err
