@@ -227,6 +227,7 @@ func (c *Chain) SignBlock(block *types.Block) ([]byte, error) {
 		return nil, err
 	}
 
+	// check block exist in main chain
 	for {
 		if blockNode.Height <= c.bestIrreversibleNode.Height {
 			return nil, errSignForkChain

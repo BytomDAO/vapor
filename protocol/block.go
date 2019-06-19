@@ -31,9 +31,6 @@ func (c *Chain) BlockExist(hash *bc.Hash) bool {
 
 // GetBlockByHash return a block by given hash
 func (c *Chain) GetBlockByHash(hash *bc.Hash) (*types.Block, error) {
-	if _, err := c.store.GetBlockNode(hash); err != nil {
-		return nil, errors.Wrap(err, "can't find block in given hash")
-	}
 	return c.store.GetBlock(hash)
 }
 
@@ -48,9 +45,6 @@ func (c *Chain) GetBlockByHeight(height uint64) (*types.Block, error) {
 
 // GetHeaderByHash return a block header by given hash
 func (c *Chain) GetHeaderByHash(hash *bc.Hash) (*types.BlockHeader, error) {
-	if _, err := c.store.GetBlockNode(hash); err != nil {
-		return nil, errors.Wrap(err, "can't find block header in given hash")
-	}
 	return c.store.GetBlockHeader(hash)
 }
 
@@ -63,21 +57,21 @@ func (c *Chain) GetHeaderByHeight(height uint64) (*types.BlockHeader, error) {
 	return c.store.GetBlockHeader(hash)
 }
 
-func (c *Chain) calcReorganizeNodes(node *state.BlockNode) ([]*state.BlockNode, []*state.BlockNode) {
+func (c *Chain) calcReorganizeNodes(node *state.BlockNode) ([]*state.BlockNode, []*state.BlockNode, error) {
 	var attachNodes []*state.BlockNode
 	var detachNodes []*state.BlockNode
 
 	attachNode := node
 	getBlockHash, err := c.store.GetBlockHashByHeight(attachNode.Height)
 	if err != nil {
-		return nil, nil
+		return nil, nil, err
 	}
 
 	for getBlockHash.String() != attachNode.Hash.String() {
 		attachNodes = append([]*state.BlockNode{attachNode}, attachNodes...)
 		attachNode, err = c.store.GetBlockNode(attachNode.Parent)
 		if err != nil {
-			return nil, nil
+			return nil, nil, err
 		}
 	}
 
@@ -86,10 +80,10 @@ func (c *Chain) calcReorganizeNodes(node *state.BlockNode) ([]*state.BlockNode, 
 		detachNodes = append(detachNodes, detachNode)
 		detachNode, err = c.store.GetBlockNode(detachNode.Parent)
 		if err != nil {
-			return nil, nil
+			return nil, nil, err
 		}
 	}
-	return attachNodes, detachNodes
+	return attachNodes, detachNodes, nil
 }
 
 func (c *Chain) connectBlock(block *types.Block) (err error) {
@@ -135,7 +129,11 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 }
 
 func (c *Chain) reorganizeChain(node *state.BlockNode) error {
-	attachNodes, detachNodes := c.calcReorganizeNodes(node)
+	attachNodes, detachNodes, err := c.calcReorganizeNodes(node)
+	if err != nil {
+		return err
+	}
+
 	utxoView := state.NewUtxoViewpoint()
 	voteResults := []*state.VoteResult{}
 	irreversibleNode := c.bestIrreversibleNode
