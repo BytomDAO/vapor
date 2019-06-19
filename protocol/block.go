@@ -60,14 +60,19 @@ func (c *Chain) GetHeaderByHeight(height uint64) (*types.BlockHeader, error) {
 func (c *Chain) calcReorganizeNodes(node *types.BlockHeader) ([]*types.BlockHeader, []*types.BlockHeader, error) {
 	var attachNodes []*types.BlockHeader
 	var detachNodes []*types.BlockHeader
+	var err error
 
 	attachNode := node
-	getBlockHash, err := c.store.GetMainChainHash(attachNode.Height)
-	if err != nil {
-		return nil, nil, err
-	}
+	for {
+		getBlockHash, err := c.store.GetMainChainHash(attachNode.Height)
+		if err != nil {
+			return nil, nil, err
+		}
 
-	for *getBlockHash != attachNode.Hash() {
+		if *getBlockHash == attachNode.Hash() {
+			break
+		}
+
 		attachNodes = append([]*types.BlockHeader{attachNode}, attachNodes...)
 		attachNode, err = c.store.GetBlockHeader(&attachNode.PreviousBlockHash)
 		if err != nil {
@@ -76,7 +81,11 @@ func (c *Chain) calcReorganizeNodes(node *types.BlockHeader) ([]*types.BlockHead
 	}
 
 	detachNode := c.bestNode
-	for detachNode != attachNode {
+	for {
+		if detachNode.Hash() == attachNode.Hash() {
+			break
+		}
+
 		detachNodes = append(detachNodes, detachNode)
 		detachNode, err = c.store.GetBlockHeader(&detachNode.PreviousBlockHash)
 		if err != nil {
