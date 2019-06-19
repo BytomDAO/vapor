@@ -15,7 +15,7 @@ func SegWitWrap(script []byte) []byte {
 	scriptHash := crypto.Sha256(script)
 	wscript, err := vmutil.P2WSHProgram(scriptHash)
 	if err != nil {
-		log.Panicf("Fail converts scriptHash to FederationProgrom: %v", err)
+		log.Panicf("Fail converts scriptHash to witness: %v", err)
 	}
 
 	return wscript

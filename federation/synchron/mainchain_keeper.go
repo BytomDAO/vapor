@@ -39,8 +39,7 @@ func NewMainchainKeeper(db *gorm.DB, assetStore *database.AssetStore, cfg *confi
 		node:       service.NewNode(cfg.Mainchain.Upstream),
 		chainName:  cfg.Mainchain.Name,
 		assetStore: assetStore,
-		// TODO:
-		fedProg: util.SegWitWrap(util.ParseFedProg(cfg.Warders, cfg.Quorum)),
+		fedProg:    util.SegWitWrap(util.ParseFedProg(cfg.Warders, cfg.Quorum)),
 	}
 }
 

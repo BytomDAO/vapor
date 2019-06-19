@@ -225,7 +225,6 @@ func (w *warder) buildMainchainTx(ormTx *orm.CrossTransaction) (*btmTypes.Tx, st
 	return nil, "", errors.New("buildMainchainTx not implemented yet")
 }
 
-// TODO: review logic
 // tx is a pointer to types.Tx, so the InputArguments can be set and be valid afterward
 func (w *warder) addInputWitness(tx interface{}) {
 	switch tx := tx.(type) {
