@@ -129,6 +129,7 @@ func (bk *blockKeeper) fetchBodies(resultCh chan *taskResult, task *requireTask)
 }
 
 func (bk *blockKeeper) createFetchBodiesTask() {
+	index := 0
 	for i := 0; i < bk.fastSyncLength; i += maxBlockPerMsg {
 		var stopHeader *types.BlockHeader
 		startHead := bk.headers[i]
@@ -137,7 +138,9 @@ func (bk *blockKeeper) createFetchBodiesTask() {
 		} else {
 			stopHeader = bk.headers[i+maxBlockPerMsg-1]
 		}
-		bk.bodiesTaskQueue.Push(&requireTask{index: i, length: int(stopHeader.Height - startHead.Height + 1), startHeader: startHead, stopHeader: stopHeader}, -float32(i))
+
+		bk.bodiesTaskQueue.Push(&requireTask{index: index, length: int(stopHeader.Height - startHead.Height + 1), startHeader: startHead, stopHeader: stopHeader}, -float32(i))
+		index++
 	}
 }
 
@@ -432,6 +435,8 @@ func (bk *blockKeeper) fetchData(result chan *fastSyncResult) {
 		result <- &fastSyncResult{success: false, err: err}
 		return
 	}
+
+	log.WithFields(log.Fields{"module": logModule}).Info("fetch data success")
 }
 
 func (bk *blockKeeper) verifyBlocks(result chan *fastSyncResult) {
