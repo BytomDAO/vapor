@@ -198,7 +198,7 @@ func (s *sidechainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Blo
 		DestBlockHash:        sql.NullString{Valid: false},
 		DestTxIndex:          sql.NullInt64{Valid: false},
 		DestTxHash:           sql.NullString{Valid: false},
-		Status:               common.CrossTxPendingStatus,
+		Status:               common.CrossTxInitiatedStatus,
 	}
 	if err := s.db.Create(ormTx).Error; err != nil {
 		return errors.Wrap(err, fmt.Sprintf("create sidechain WithdrawalTx %s", tx.ID.String()))

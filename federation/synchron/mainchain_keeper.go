@@ -184,7 +184,7 @@ func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *types.Block,
 		DestBlockHash:        sql.NullString{Valid: false},
 		DestTxIndex:          sql.NullInt64{Valid: false},
 		DestTxHash:           sql.NullString{Valid: false},
-		Status:               common.CrossTxPendingStatus,
+		Status:               common.CrossTxInitiatedStatus,
 	}
 	if err := m.db.Create(ormTx).Error; err != nil {
 		return errors.Wrap(err, fmt.Sprintf("create mainchain DepositTx %s", tx.ID.String()))

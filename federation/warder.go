@@ -76,9 +76,9 @@ func (w *warder) Run() {
 	for ; true; <-ticker.C {
 		txs := []*orm.CrossTransaction{}
 		if err := w.db.Preload("Chain").Preload("Reqs").
-			// do not use "Where(&orm.CrossTransaction{Status: common.CrossTxPendingStatus})" directly,
+			// do not use "Where(&orm.CrossTransaction{Status: common.CrossTxInitiatedStatus})" directly,
 			// otherwise the field "status" will be ignored
-			Model(&orm.CrossTransaction{}).Where("status = ?", common.CrossTxPendingStatus).
+			Model(&orm.CrossTransaction{}).Where("status = ?", common.CrossTxInitiatedStatus).
 			Find(&txs).Error; err == gorm.ErrRecordNotFound {
 			continue
 		} else if err != nil {
@@ -253,7 +253,12 @@ func (w *warder) initDestTxSigns(destTx interface{}, ormTx *orm.CrossTransaction
 			return err
 		}
 	}
-	return nil
+
+	return w.db.Model(&orm.CrossTransaction{}).
+		Where(&orm.CrossTransaction{ID: ormTx.ID}).
+		UpdateColumn(&orm.CrossTransaction{
+			Status: common.CrossTxPendingStatus,
+		}).Error
 }
 
 // TODO:
