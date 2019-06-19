@@ -115,11 +115,7 @@ func (c *Chain) BestBlockHash() *bc.Hash {
 
 // BestBlockHeader returns the chain tail block
 func (c *Chain) BestBlockHeader() *types.BlockHeader {
-	blockHeader, err := c.store.GetBlockHeader(&c.bestNode.Hash)
-	if err != nil {
-		return nil
-	}
-	return blockHeader
+	return c.bestNode.BlockHeader()
 }
 
 // InMainChain checks wheather a block is in the main chain
@@ -129,11 +125,11 @@ func (c *Chain) InMainChain(hash bc.Hash) bool {
 		return false
 	}
 
-	mainBlockHash, err := c.store.GetBlockHashByHeight(blockNode.Height)
+	blockHash, err := c.store.GetBlockHashByHeight(blockNode.Height)
 	if err != nil {
 		return false
 	}
-	return *mainBlockHash == hash
+	return *blockHash == hash
 }
 
 // This function must be called with mu lock in above level

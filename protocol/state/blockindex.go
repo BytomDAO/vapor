@@ -62,6 +62,9 @@ func (node *BlockNode) BlockHeader() *types.BlockHeader {
 			TransactionsMerkleRoot: node.TransactionsMerkleRoot,
 			TransactionStatusHash:  node.TransactionStatusHash,
 		},
+		BlockWitness: types.BlockWitness{
+			Witness: node.BlockWitness,
+		},
 	}
 }
 
