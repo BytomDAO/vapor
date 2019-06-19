@@ -210,9 +210,10 @@ func (w *warder) buildSidechainTx(ormTx *orm.CrossTransaction) (*vaporTypes.Tx, 
 	destTx := vaporTypes.NewTx(*destTxData)
 	w.addInputWitness(destTx)
 
-	if err := w.db.Where(ormTx).UpdateColumn(&orm.CrossTransaction{
-		DestTxHash: sql.NullString{destTx.ID.String(), true},
-	}).Error; err != nil {
+	if err := w.db.Model(&orm.CrossTransaction{}).Where(&orm.CrossTransaction{ID: ormTx.ID}).
+		UpdateColumn(&orm.CrossTransaction{
+			DestTxHash: sql.NullString{destTx.ID.String(), true},
+		}).Error; err != nil {
 		return nil, "", err
 	}
 
