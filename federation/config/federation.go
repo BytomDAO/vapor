@@ -5,9 +5,21 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/vapor/crypto"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/protocol/vm/vmutil"
 )
+
+func ParseFedWSHProgram(warders []Warder, quorum int) []byte {
+	script := ParseFedProg(warders, quorum)
+	scriptHash := crypto.Sha256(script)
+	wscript, err := vmutil.P2WSHProgram(scriptHash)
+	if err != nil {
+		log.Panicf("Fail converts scriptHash to FederationProgrom: %v", err)
+	}
+
+	return wscript
+}
 
 func ParseFedProg(warders []Warder, quorum int) []byte {
 	SortWarders(warders)
@@ -17,12 +29,12 @@ func ParseFedProg(warders []Warder, quorum int) []byte {
 		xpubs = append(xpubs, w.XPub)
 	}
 
-	fedpegScript, err := vmutil.P2SPMultiSigProgram(chainkd.XPubKeys(xpubs), quorum)
+	fedScript, err := vmutil.P2SPMultiSigProgram(chainkd.XPubKeys(xpubs), quorum)
 	if err != nil {
 		log.Panicf("fail to generate federation scirpt for federation: %v", err)
 	}
 
-	return fedpegScript
+	return fedScript
 }
 
 type byPosition []Warder
