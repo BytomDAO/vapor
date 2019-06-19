@@ -130,17 +130,9 @@ func GetBlockHashesByHeight(db dbm.DB, height uint64) ([]*bc.Hash, error) {
 		return nil, fmt.Errorf("There are no block hashes with given height %s", height)
 	}
 
-	if len(binaryHashes)/32 != 0 {
-		return nil, fmt.Errorf("bad length for the array of block hashes")
-	}
-
 	hashes := []*bc.Hash{}
-	for i := 0; i < len(binaryHashes)/32; i++ {
-		hash := &bc.Hash{}
-		if err := hash.UnmarshalText(binaryHashes[i : (i+1)*32]); err != nil {
-			return nil, err
-		}
-		hashes = append(hashes, hash)
+	if err := json.Unmarshal(binaryHashes, hashes); err != nil {
+		return nil, err
 	}
 	return hashes, nil
 }
@@ -298,20 +290,27 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 
 	binaryTxStatus, err := proto.Marshal(ts)
 	if err != nil {
-		return errors.Wrap(err, "marshal block transaction status")
+		return errors.Wrap(err, "Marshal block transaction status")
 	}
 
 	blockHash := block.Hash()
 	binaryBlockHash, err := blockHash.MarshalText()
 	if err != nil {
-		return errors.Wrap(err, "marshal block hash")
+		return errors.Wrap(err, "Marshal block hash")
 	}
 
-	binaryBlockHashes := []byte{}
-	if hashes := s.db.Get(calcblockHeightIndexPrefix(block.Height)); hashes != nil {
-		binaryBlockHashes = append(binaryBlockHashes, hashes...)
+	hashes := []*bc.Hash{}
+	if binaryHashes := s.db.Get(calcblockHeightIndexPrefix(block.Height)); binaryHashes != nil {
+		if err := json.Unmarshal(binaryHashes, hashes); err != nil {
+			return errors.Wrap(err, "Unmarshal block hashes")
+		}
 	}
-	binaryBlockHashes = append(binaryBlockHashes, binaryBlockHash...)
+
+	hashes = append(hashes, &blockHash)
+	binaryBlockHashes, err := json.Marshal(hashes)
+	if err != nil {
+		return errors.Wrap(err, "Marshal block hashes")
+	}
 
 	batch := s.db.NewBatch()
 	batch.Set(calcBlockHashByHeightKey(block.Height), binaryBlockHash)
