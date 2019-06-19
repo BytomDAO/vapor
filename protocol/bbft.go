@@ -160,7 +160,7 @@ func (c *Chain) checkNodeSign(bh *types.BlockHeader, consensusNode *state.Consen
 		return errInvalidSignature
 	}
 
-	blockHashes, err := c.consensusNodeManager.store.GetBlockHeightIndex(bh.Height)
+	blockHashes, err := c.consensusNodeManager.store.GetBlockHashesByHeight(bh.Height)
 	if err != nil {
 		return err
 	}
@@ -205,7 +205,7 @@ func (c *Chain) SignBlock(block *types.Block) ([]byte, error) {
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
 	//check double sign in same block height
-	blockHashes, err := c.consensusNodeManager.store.GetBlockHeightIndex(block.Height)
+	blockHashes, err := c.consensusNodeManager.store.GetBlockHashesByHeight(block.Height)
 	if err != nil {
 		return nil, err
 	}

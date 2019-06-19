@@ -124,8 +124,8 @@ func GetBlockHashByHeight(db dbm.DB, height uint64) (*bc.Hash, error) {
 	return hash, nil
 }
 
-// GetBlockHeightIndex return block hashes by given height
-func GetBlockHeightIndex(db dbm.DB, height uint64) ([]*bc.Hash, error) {
+// GetBlockHashesByHeight return block hashes by given height
+func GetBlockHashesByHeight(db dbm.DB, height uint64) ([]*bc.Hash, error) {
 	binaryHashes := db.Get(calcblockHeightIndexPrefix(height))
 	if binaryHashes == nil {
 		return nil, fmt.Errorf("There are no block hashes with given height %s", height)
@@ -187,7 +187,7 @@ func NewStore(db dbm.DB) *Store {
 	}
 
 	fillHeightIndexFn := func(height uint64) ([]*bc.Hash, error) {
-		return GetBlockHeightIndex(db, height)
+		return GetBlockHashesByHeight(db, height)
 	}
 
 	fillMainChainHashFn := func(height uint64) (*bc.Hash, error) {
@@ -276,8 +276,8 @@ func (s *Store) GetBlockHashByHeight(height uint64) (*bc.Hash, error) {
 	return s.blockIndex.GetBlockHashByHeight(height)
 }
 
-// GetBlockHeightIndex return the block hash by the specified height
-func (s *Store) GetBlockHeightIndex(height uint64) ([]*bc.Hash, error) {
+// GetBlockHashesByHeight return the block hash by the specified height
+func (s *Store) GetBlockHashesByHeight(height uint64) ([]*bc.Hash, error) {
 	return s.blockIndex.GetBlockHashesByHeight(height)
 }
 
