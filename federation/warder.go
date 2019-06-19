@@ -196,7 +196,12 @@ func (w *warder) buildSidechainTx(ormTx *orm.CrossTransaction) (*vaporTypes.Tx, 
 			return nil, "", errors.Wrap(err, "decode rawDefinitionByte")
 		}
 
-		input := vaporTypes.NewCrossChainInput(nil, *muxID, *assetID, req.AssetAmount, req.SourcePos, w.fedProg, rawDefinitionByte)
+		issuanceProgramByte, err := hex.DecodeString(asset.IssuanceProgram)
+		if err != nil {
+			return nil, "", errors.Wrap(err, "decode issuanceProgramByte")
+		}
+
+		input := vaporTypes.NewCrossChainInput(nil, *muxID, *assetID, req.AssetAmount, req.SourcePos, 1, rawDefinitionByte, issuanceProgramByte)
 		destTxData.Inputs = append(destTxData.Inputs, input)
 
 		controlProgram, err := hex.DecodeString(req.Script)
