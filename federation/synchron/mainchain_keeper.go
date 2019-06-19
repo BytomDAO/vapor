@@ -102,13 +102,13 @@ func (m *mainchainKeeper) syncBlock() (bool, error) {
 func (m *mainchainKeeper) tryAttachBlock(chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus) error {
 	blockHash := block.Hash()
 	log.WithFields(log.Fields{"block_height": block.Height, "block_hash": blockHash.String()}).Info("start to attachBlock")
-	m.db.Begin()
+	dbTx := m.db.Begin()
 	if err := m.processBlock(chain, block, txStatus); err != nil {
-		m.db.Rollback()
+		dbTx.Rollback()
 		return err
 	}
 
-	return m.db.Commit().Error
+	return dbTx.Commit().Error
 }
 
 func (m *mainchainKeeper) processBlock(chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus) error {
