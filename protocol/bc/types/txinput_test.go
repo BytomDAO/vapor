@@ -125,7 +125,7 @@ func TestSerializationCrossIn(t *testing.T) {
 	}
 }
 
-func TestSerializationUnvote(t *testing.T) {
+func TestSerializationVeto(t *testing.T) {
 	arguments := [][]byte{
 		[]byte("arguments1"),
 		[]byte("arguments2"),
@@ -136,15 +136,15 @@ func TestSerializationUnvote(t *testing.T) {
 	wantHex := strings.Join([]string{
 		"01", // asset version
 		"54", // input commitment length
-		"03", // unvote type flag
-		"52", // unvote commitment length
+		"03", // veto type flag
+		"52", // veto commitment length
 		"fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409", // source id
 		"fe9791d71b67ee62515e08723c061b5ccb952a80d804417c8aeedf7f633c524a", // assetID
 		"92c30f",                   // amount
 		"03",                       // source position
 		"01",                       // vm version
-		"0c",                       // unvote program length
-		"7370656e6450726f6772616d", // unvote program
+		"0c",                       // veto program length
+		"7370656e6450726f6772616d", // veto program
 		"9901",                     // witness length
 		"02",                       // argument array length
 		"0a",                       // first argument length

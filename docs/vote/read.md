@@ -35,13 +35,13 @@ curl -X POST http://ip:port/build-transaction -d '{"base_transaction":null,"acti
 Example
 
 ```shell
-curl -X POST http://ip:port/build-transaction -d '{"base_transaction":null,"actions":[{"account_id":"0BF63M2U00A04","amount":20000000,"asset_id":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff","type":"spend_account"},{"account_id":"0BF63M2U00A04","amount":99,"asset_id":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff","vote":"af594006a40837d9f028daabb6d589df0b9138daefad5683e5233c2646279217294a8d532e60863bcf196625a35fb8ceeffa3c09610eb92dcfb655a947f13269","type":"unvote"},{"amount":99,"asset_id":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff","address":"bm1q50u3z8empm5ke0g3ngl2t3sqtr6sd7cepd3z68","type":"control_address"}],"ttl":0,"time_range": 43432}'
+curl -X POST http://ip:port/build-transaction -d '{"base_transaction":null,"actions":[{"account_id":"0BF63M2U00A04","amount":20000000,"asset_id":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff","type":"spend_account"},{"account_id":"0BF63M2U00A04","amount":99,"asset_id":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff","vote":"af594006a40837d9f028daabb6d589df0b9138daefad5683e5233c2646279217294a8d532e60863bcf196625a35fb8ceeffa3c09610eb92dcfb655a947f13269","type":"veto"},{"amount":99,"asset_id":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff","address":"bm1q50u3z8empm5ke0g3ngl2t3sqtr6sd7cepd3z68","type":"control_address"}],"ttl":0,"time_range": 43432}'
 ```
 
 以上实例中：
 
 第一个action的type:spend_account 是手续费
 
-第二个action的type:unvote  取消投票，vote 被取消投票的公钥
+第二个action的type:veto  取消投票，vote 被取消投票的公钥
 
 第三个action的type:control_address 还是以前的输出

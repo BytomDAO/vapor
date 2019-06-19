@@ -4,11 +4,11 @@ import (
 	"github.com/vapor/protocol/bc"
 )
 
-// VetoInput satisfies the TypedInput interface and represents a unvote transaction.
+// VetoInput satisfies the TypedInput interface and represents a veto transaction.
 type VetoInput struct {
-	UnvoteCommitmentSuffix []byte   // The unconsumed suffix of the output commitment
-	Arguments              [][]byte // Witness
-	Vote                   []byte   // voter xpub
+	VetoCommitmentSuffix []byte   // The unconsumed suffix of the output commitment
+	Arguments            [][]byte // Witness
+	Vote                 []byte   // voter xpub
 	SpendCommitment
 }
 
