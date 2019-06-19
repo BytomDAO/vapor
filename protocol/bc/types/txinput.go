@@ -180,7 +180,7 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 		case VetoInputType:
 			ui := new(VetoInput)
 			t.TypedInput = ui
-			if ui.UnvoteCommitmentSuffix, err = ui.SpendCommitment.readFrom(r, 1); err != nil {
+			if ui.VetoCommitmentSuffix, err = ui.SpendCommitment.readFrom(r, 1); err != nil {
 
 				return err
 			}
@@ -286,7 +286,7 @@ func (t *TxInput) writeInputCommitment(w io.Writer) (err error) {
 		if _, err = w.Write([]byte{VetoInputType}); err != nil {
 			return err
 		}
-		return inp.SpendCommitment.writeExtensibleString(w, inp.UnvoteCommitmentSuffix, t.AssetVersion)
+		return inp.SpendCommitment.writeExtensibleString(w, inp.VetoCommitmentSuffix, t.AssetVersion)
 	}
 	return nil
 }
