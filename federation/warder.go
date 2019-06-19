@@ -173,6 +173,7 @@ func (w *warder) buildSidechainTx(ormTx *orm.CrossTransaction) (*vaporTypes.Tx, 
 	}
 
 	for _, req := range ormTx.Reqs {
+		// TODO: implement ormID cache
 		// getAsset from assetStore instead of preload asset, in order to save db query overload
 		asset, err := w.assetStore.GetByOrmID(req.AssetID)
 		if err != nil {
