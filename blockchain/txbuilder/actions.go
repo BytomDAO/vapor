@@ -290,8 +290,7 @@ func (a *crossInAction) Build(ctx context.Context, builder *TemplateBuilder) err
 	}
 
 	// arguments will be set when materializeWitnesses
-	fedProg := config.FederationProgrom(config.CommonConfig)
-	txin := types.NewCrossChainInput(nil, a.SourceID, *a.AssetId, a.Amount, a.SourcePos, a.VMVersion, fedProg, a.RawDefinitionByte, a.IssuanceProgram)
+	txin := types.NewCrossChainInput(nil, a.SourceID, *a.AssetId, a.Amount, a.SourcePos, a.VMVersion, a.RawDefinitionByte, a.IssuanceProgram)
 	tplIn := &SigningInstruction{}
 	fed := config.CommonConfig.Federation
 	tplIn.AddRawWitnessKeys(fed.Xpubs, nil, fed.Quorum)

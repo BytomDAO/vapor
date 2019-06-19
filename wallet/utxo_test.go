@@ -671,8 +671,8 @@ func TestTxOutToUtxos(t *testing.T) {
 		{
 			tx: types.NewTx(types.TxData{
 				Inputs: []*types.TxInput{
-					types.NewCrossChainInput([][]byte{}, bc.Hash{V0: 1}, bc.AssetID{V0: 1}, 5, 1, 1, []byte{0x51}, []byte("asset1"), []byte("IssuanceProgram")),
-					types.NewCrossChainInput([][]byte{}, bc.Hash{V0: 2}, *consensus.BTMAssetID, 7, 1, 1, []byte{0x51}, []byte("assetbtm"), []byte("IssuanceProgram"))},
+					types.NewCrossChainInput([][]byte{}, bc.Hash{V0: 1}, bc.AssetID{V0: 1}, 5, 1, 1, []byte("asset1"), []byte("IssuanceProgram")),
+					types.NewCrossChainInput([][]byte{}, bc.Hash{V0: 2}, *consensus.BTMAssetID, 7, 1, 1, []byte("assetbtm"), []byte("IssuanceProgram"))},
 				Outputs: []*types.TxOutput{
 					types.NewIntraChainOutput(bc.AssetID{V0: 1}, 2, []byte{0x51}),
 					types.NewIntraChainOutput(bc.AssetID{V0: 1}, 3, []byte{0x52}),
@@ -684,35 +684,35 @@ func TestTxOutToUtxos(t *testing.T) {
 			blockHeight: 0,
 			wantUtxos: []*account.UTXO{
 				&account.UTXO{
-					OutputID:       bc.Hash{V0: 10846235764839195676, V1: 17124764185649747439, V2: 10628685558750997961, V3: 13297206452120029075},
+					OutputID:       bc.Hash{V0: 5429526025956869574, V1: 12188959875155232503, V2: 14722092106507294798, V3: 27876074648890075},
 					AssetID:        bc.AssetID{V0: 1},
 					Amount:         2,
 					ControlProgram: []byte{0x51},
-					SourceID:       bc.Hash{V0: 2677144440510642284, V1: 17300012684713233857, V2: 8104296098763882727, V3: 11299124826964505999},
+					SourceID:       bc.Hash{V0: 10187915247323429348, V1: 4770401581694266753, V2: 4182269187154655368, V3: 9030883832705174512},
 					SourcePos:      0,
 				},
 				&account.UTXO{
-					OutputID:       bc.Hash{V0: 3381014554514609900, V1: 5680175057309334270, V2: 3343119029029595104, V3: 2354639458888741781},
+					OutputID:       bc.Hash{V0: 18100481287404207387, V1: 3365694797435565990, V2: 8136211093499423216, V3: 12028531817690438568},
 					AssetID:        bc.AssetID{V0: 1},
 					Amount:         3,
 					ControlProgram: []byte{0x52},
-					SourceID:       bc.Hash{V0: 2677144440510642284, V1: 17300012684713233857, V2: 8104296098763882727, V3: 11299124826964505999},
+					SourceID:       bc.Hash{V0: 10187915247323429348, V1: 4770401581694266753, V2: 4182269187154655368, V3: 9030883832705174512},
 					SourcePos:      1,
 				},
 				&account.UTXO{
-					OutputID:       bc.Hash{V0: 2129811970775447483, V1: 5529067197700587525, V2: 17837487178845335220, V3: 1815160195786226238},
+					OutputID:       bc.Hash{V0: 15745816911932387102, V1: 5035893487696724781, V2: 10084725527786878517, V3: 11270352747873435606},
 					AssetID:        *consensus.BTMAssetID,
 					Amount:         2,
 					ControlProgram: []byte{0x53},
-					SourceID:       bc.Hash{V0: 2677144440510642284, V1: 17300012684713233857, V2: 8104296098763882727, V3: 11299124826964505999},
+					SourceID:       bc.Hash{V0: 10187915247323429348, V1: 4770401581694266753, V2: 4182269187154655368, V3: 9030883832705174512},
 					SourcePos:      2,
 				},
 				&account.UTXO{
-					OutputID:       bc.Hash{V0: 8285123326464348167, V1: 11183568691487503969, V2: 2744924970797742540, V3: 7859069673372366746},
+					OutputID:       bc.Hash{V0: 10165799535720725897, V1: 9618876671942765420, V2: 17982649347111502590, V3: 15837286550437859084},
 					AssetID:        *consensus.BTMAssetID,
 					Amount:         5,
 					ControlProgram: []byte{0x54},
-					SourceID:       bc.Hash{V0: 2677144440510642284, V1: 17300012684713233857, V2: 8104296098763882727, V3: 11299124826964505999},
+					SourceID:       bc.Hash{V0: 10187915247323429348, V1: 4770401581694266753, V2: 4182269187154655368, V3: 9030883832705174512},
 					SourcePos:      3,
 				},
 			},

@@ -141,7 +141,6 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			vetoInputs = append(vetoInputs, vetoInput)
 
 		case *CrossChainInput:
-			// TODO: fed peg script
 			prog := &bc.Program{VmVersion: inp.VMVersion, Code: inp.ControlProgram}
 			src := &bc.ValueSource{
 				Ref:      &inp.SourceID,
