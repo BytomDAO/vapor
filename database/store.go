@@ -323,7 +323,7 @@ func (s *Store) SaveBlockHeader(blockHeader *types.BlockHeader) error {
 }
 
 // SaveChainStatus save the core's newest status && delete old status
-func (s *Store) SaveChainStatus(node, irreversibleNode *types.BlockHeader, view *state.UtxoViewpoint, voteResults []*state.VoteResult) error {
+func (s *Store) SaveChainStatus(blockHeader, irrBlockHeader *types.BlockHeader, view *state.UtxoViewpoint, voteResults []*state.VoteResult) error {
 	batch := s.db.NewBatch()
 	if err := saveUtxoView(batch, view); err != nil {
 		return err
@@ -339,12 +339,12 @@ func (s *Store) SaveChainStatus(node, irreversibleNode *types.BlockHeader, view 
 		s.cache.removeVoteResult(vote)
 	}
 
-	nodeHash := node.Hash()
-	irreversibleHash := irreversibleNode.Hash()
+	blockHeaderHash := blockHeader.Hash()
+	irreversibleHash := irrBlockHeader.Hash()
 	bytes, err := json.Marshal(protocol.BlockStoreState{
-		Height:             node.Height,
-		Hash:               &nodeHash,
-		IrreversibleHeight: irreversibleNode.Height,
+		Height:             blockHeader.Height,
+		Hash:               &blockHeaderHash,
+		IrreversibleHeight: irrBlockHeader.Height,
 		IrreversibleHash:   &irreversibleHash,
 	})
 	if err != nil {

@@ -92,8 +92,8 @@ func (c *Chain) initChainStatus() error {
 		BlockHeight: 0,
 	}}
 
-	node := genesisBlock.BlockHeader
-	return c.store.SaveChainStatus(&node, &node, utxoView, voteResults)
+	genesisBlockHeader := &genesisBlock.BlockHeader
+	return c.store.SaveChainStatus(genesisBlockHeader, genesisBlockHeader, utxoView, voteResults)
 }
 
 // BestBlockHeight returns the current height of the blockchain.
