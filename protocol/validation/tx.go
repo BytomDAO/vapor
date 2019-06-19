@@ -253,8 +253,12 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		if *e.Value.AssetId != *consensus.BTMAssetID && *e.Value.AssetId != assetID {
 			return errors.New("incorrect asset_id while check CrossChainInput")
 		}
-		e.ControlProgram.Code = config.FederationProgrom(config.CommonConfig)
-		_, err := vm.Verify(NewTxVMContext(vs, e, e.ControlProgram, e.WitnessArguments), consensus.DefaultGasCredit)
+		code := config.FederationProgrom(config.CommonConfig)
+		prog := &bc.Program{
+			VmVersion: e.ControlProgram.VmVersion,
+			Code:      code,
+		}
+		_, err := vm.Verify(NewTxVMContext(vs, e, prog, e.WitnessArguments), consensus.DefaultGasCredit)
 		if err != nil {
 			return errors.Wrap(err, "checking cross-chain input control program")
 		}
