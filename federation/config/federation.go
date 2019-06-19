@@ -10,8 +10,7 @@ import (
 	"github.com/vapor/protocol/vm/vmutil"
 )
 
-func ParseFedWSHProgram(warders []Warder, quorum int) []byte {
-	script := ParseFedProg(warders, quorum)
+func SegWitWrap(script []byte) []byte {
 	scriptHash := crypto.Sha256(script)
 	wscript, err := vmutil.P2WSHProgram(scriptHash)
 	if err != nil {
