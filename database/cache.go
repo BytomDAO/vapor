@@ -25,8 +25,7 @@ type fillVoteResultFn func(seq uint64) (*state.VoteResult, error)
 type fillHeightIndexFn func(height uint64) ([]*bc.Hash, error)
 type fillMainChainHashFn func(height uint64) (*bc.Hash, error)
 
-func newCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransactionsFn, fillVoteResult fillVoteResultFn,
-	fillHeightIndex fillHeightIndexFn, fillMainChainHash fillMainChainHashFn) cache {
+func newCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransactionsFn, fillVoteResult fillVoteResultFn, fillHeightIndex fillHeightIndexFn, fillMainChainHash fillMainChainHashFn) cache {
 	return cache{
 		lruBlockHeaders:    common.NewCache(maxCachedBlockHeaders),
 		lruBlockTxs:        common.NewCache(maxCachedBlockTransactions),

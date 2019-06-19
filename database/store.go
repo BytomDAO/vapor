@@ -21,13 +21,13 @@ import (
 const logModule = "leveldb"
 
 var (
-	blockStoreKey           = []byte("blockStore")
-	blockHashByHeightPrefix = []byte("BHH:")
-	blockHeightIndexPrefix  = []byte("BHI:")
-	blockHeaderPrefix       = []byte("BH:")
-	blockTransactonsPrefix  = []byte("BTXS:")
-	txStatusPrefix          = []byte("BTS:")
-	voteResultPrefix        = []byte("VR:")
+	blockStoreKey             = []byte("blockStore")
+	blockHashesByHeightPrefix = []byte("BHH:")
+	blockHeaderPrefix         = []byte("BH:")
+	blockTransactonsPrefix    = []byte("BTXS:")
+	mainChainHashPrefix       = []byte("MCH:")
+	txStatusPrefix            = []byte("BTS:")
+	voteResultPrefix          = []byte("VR:")
 )
 
 func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
@@ -51,16 +51,16 @@ type Store struct {
 	cache cache
 }
 
-func calcBlockHashByHeightKey(height uint64) []byte {
+func calcMainChainHashPrefix(height uint64) []byte {
 	buf := [8]byte{}
 	binary.BigEndian.PutUint64(buf[:], height)
-	return append(blockHashByHeightPrefix, buf[:]...)
+	return append(mainChainHashPrefix, buf[:]...)
 }
 
-func calcblockHeightIndexPrefix(height uint64) []byte {
+func calcBlockHashesByHeightPrefix(height uint64) []byte {
 	buf := [8]byte{}
 	binary.BigEndian.PutUint64(buf[:], height)
-	return append(blockHeightIndexPrefix, buf[:]...)
+	return append(blockHashesByHeightPrefix, buf[:]...)
 }
 
 func calcBlockHeaderKey(hash *bc.Hash) []byte {
@@ -111,7 +111,7 @@ func GetBlockTransactions(db dbm.DB, hash *bc.Hash) ([]*types.Tx, error) {
 
 // GetMainChainHash return BlockHash by given height
 func GetMainChainHash(db dbm.DB, height uint64) (*bc.Hash, error) {
-	binaryHash := db.Get(calcBlockHashByHeightKey(height))
+	binaryHash := db.Get(calcMainChainHashPrefix(height))
 	if binaryHash == nil {
 		return nil, fmt.Errorf("There are no BlockHash with given height %s", height)
 	}
@@ -125,7 +125,7 @@ func GetMainChainHash(db dbm.DB, height uint64) (*bc.Hash, error) {
 
 // GetBlockHashesByHeight return block hashes by given height
 func GetBlockHashesByHeight(db dbm.DB, height uint64) ([]*bc.Hash, error) {
-	binaryHashes := db.Get(calcblockHeightIndexPrefix(height))
+	binaryHashes := db.Get(calcBlockHashesByHeightPrefix(height))
 	if binaryHashes == nil {
 		return nil, fmt.Errorf("There are no block hashes with given height %s", height)
 	}
@@ -213,6 +213,16 @@ func (s *Store) GetBlockTransactions(hash *bc.Hash) ([]*types.Tx, error) {
 	return s.cache.lookupBlockTxs(hash)
 }
 
+// GetBlockHashesByHeight return the block hash by the specified height
+func (s *Store) GetBlockHashesByHeight(height uint64) ([]*bc.Hash, error) {
+	return s.cache.lookupBlockHashesByHeight(height)
+}
+
+// GetMainChainHash return the block hash by the specified height
+func (s *Store) GetMainChainHash(height uint64) (*bc.Hash, error) {
+	return s.cache.lookupMainChainHash(height)
+}
+
 // GetStoreStatus return the BlockStoreStateJSON
 func (s *Store) GetStoreStatus() *protocol.BlockStoreState {
 	return loadBlockStoreStateJSON(s.db)
@@ -247,16 +257,6 @@ func (s *Store) GetVoteResult(seq uint64) (*state.VoteResult, error) {
 	return s.cache.lookupVoteResult(seq)
 }
 
-// GetMainChainHash return the block hash by the specified height
-func (s *Store) GetMainChainHash(height uint64) (*bc.Hash, error) {
-	return s.cache.lookupMainChainHash(height)
-}
-
-// GetBlockHashesByHeight return the block hash by the specified height
-func (s *Store) GetBlockHashesByHeight(height uint64) ([]*bc.Hash, error) {
-	return s.cache.lookupBlockHashesByHeight(height)
-}
-
 // SaveBlock persists a new block in the protocol.
 func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 	startTime := time.Now()
@@ -282,10 +282,8 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 	}
 
 	hashes := []*bc.Hash{}
-	if binaryHashes := s.db.Get(calcblockHeightIndexPrefix(block.Height)); binaryHashes != nil {
-		if err := json.Unmarshal(binaryHashes, hashes); err != nil {
-			return errors.Wrap(err, "Unmarshal block hashes")
-		}
+	if hashes, err = s.GetBlockHashesByHeight(block.Height); err != nil {
+		return err
 	}
 
 	hashes = append(hashes, &blockHash)
@@ -295,8 +293,8 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 	}
 
 	batch := s.db.NewBatch()
-	batch.Set(calcBlockHashByHeightKey(block.Height), binaryBlockHash)
-	batch.Set(calcblockHeightIndexPrefix(block.Height), binaryBlockHashes)
+	batch.Set(calcMainChainHashPrefix(block.Height), binaryBlockHash)
+	batch.Set(calcBlockHashesByHeightPrefix(block.Height), binaryBlockHashes)
 	batch.Set(calcBlockHeaderKey(&blockHash), binaryBlockHeader)
 	batch.Set(calcBlockTransactionsKey(&blockHash), binaryBlockTxs)
 	batch.Set(calcTxStatusKey(&blockHash), binaryTxStatus)
