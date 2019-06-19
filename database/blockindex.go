@@ -51,7 +51,7 @@ func (bi *BlockIndex) GetBlockNode(hash *bc.Hash) (*state.BlockNode, error) {
 
 	blockNode, err := bi.fillBlockNodeFn(hash)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 	bi.lruBlockNodes.Add(hash, blockNode)
 	return blockNode, nil
@@ -65,7 +65,7 @@ func (bi *BlockIndex) GetBlockHashByHeight(height uint64) (*bc.Hash, error) {
 
 	hash, err := bi.fillMainChainHashFn(height)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 	bi.lruMainChainHashes.Add(height, hash)
 	return hash, nil
@@ -79,7 +79,7 @@ func (bi *BlockIndex) GetBlockHashesByHeight(height uint64) ([]*bc.Hash, error) 
 
 	hashes, err := bi.fillHeightIndexFn(height)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 	bi.lruHeightIndexes.Add(height, hashes)
 	return hashes, nil
