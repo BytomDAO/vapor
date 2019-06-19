@@ -10,14 +10,14 @@ import (
 
 	"github.com/vapor/account"
 	"github.com/vapor/consensus"
-	dbm "github.com/vapor/database/leveldb"
+	"github.com/vapor/database"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/testutil"
 )
 
 func TestGetAccountUtxos(t *testing.T) {
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	testDB := database.NewDB("testdb", "leveldb", "temp")
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
@@ -209,7 +209,7 @@ func TestGetAccountUtxos(t *testing.T) {
 }
 
 func TestFilterAccountUtxo(t *testing.T) {
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	testDB := database.NewDB("testdb", "leveldb", "temp")
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")

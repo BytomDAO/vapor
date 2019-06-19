@@ -12,7 +12,7 @@ import (
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
-	dbm "github.com/vapor/database/leveldb"
+	"github.com/vapor/database"
 	"github.com/vapor/event"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -26,7 +26,7 @@ func TestWalletUnconfirmedTxs(t *testing.T) {
 	}
 	defer os.RemoveAll(dirPath)
 
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	testDB := database.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 
 	accountManager := account.NewManager(testDB, nil)

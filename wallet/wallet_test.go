@@ -18,7 +18,6 @@ import (
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/database"
 	"github.com/vapor/database/dbutils"
-	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/event"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
@@ -118,7 +117,7 @@ func TestWalletUpdate(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	config.CommonConfig = config.DefaultConfig()
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	testDB := database.NewDB("testdb", "leveldb", "temp")
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
@@ -215,7 +214,7 @@ func TestRescanWallet(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	config.CommonConfig = config.DefaultConfig()
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	testDB := database.NewDB("testdb", "leveldb", "temp")
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
@@ -266,7 +265,7 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 		t.Fatal(err)
 	}
 	config.CommonConfig = config.DefaultConfig()
-	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
+	testDB := database.NewDB("testdb", "leveldb", dirPath)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll(dirPath)
