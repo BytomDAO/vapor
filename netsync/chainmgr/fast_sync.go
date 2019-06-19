@@ -114,7 +114,7 @@ func (bk *blockKeeper) fetchBodiesParallel() error {
 	return bk.fetchDataParallel(bk.createFetchBodiesTask, bk.fetchBodies, bk.bodiesTaskQueue)
 }
 
-func (bk *blockKeeper) fetchBodies(resultCh chan *taskResult, task *requireTask, peerID string) {
+func (bk *blockKeeper) fetchBodies(resultCh chan *taskResult, task *requireTask) {
 	task.count++
 	startHash := task.startHeader.Hash()
 	stopHash := task.stopHeader.Hash()
@@ -141,7 +141,7 @@ func (bk *blockKeeper) createFetchBodiesTask() {
 	}
 }
 
-func (bk *blockKeeper) fetchDataParallel(createTask func(), fetch func(chan *taskResult, *requireTask, string), taskQueue *prque.Prque) error {
+func (bk *blockKeeper) fetchDataParallel(createTask func(), fetch func(chan *taskResult, *requireTask), taskQueue *prque.Prque) error {
 	createTask()
 	resultCh := make(chan *taskResult, 1)
 
@@ -158,7 +158,8 @@ func (bk *blockKeeper) fetchDataParallel(createTask func(), fetch func(chan *tas
 				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("failed on select valid peer")
 				break
 			}
-			go fetch(resultCh, task, peerID)
+			task.peerID = peerID
+			go fetch(resultCh, task)
 		}
 
 		select {
@@ -284,7 +285,7 @@ func (bk *blockKeeper) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, amou
 	headers := []*types.BlockHeader{}
 	num := 0
 	for i := startHeader.Height; i <= stopHeader.Height && num < maxBlockHeadersPerMsg; i += uint64(skip) + 1 {
-		header, err := bk.chain.GetHeaderByHeight(startHeader.Height + i)
+		header, err := bk.chain.GetHeaderByHeight(i)
 		if err != nil {
 			return nil, err
 		}
@@ -355,7 +356,7 @@ func (bk *blockKeeper) createFetchHeadersTask() {
 	}
 }
 
-func (bk *blockKeeper) fetchHeaders(resultCh chan *taskResult, task *requireTask, peerID string) {
+func (bk *blockKeeper) fetchHeaders(resultCh chan *taskResult, task *requireTask) {
 	task.count++
 	headerHash := task.startHeader.Hash()
 	headers, err := bk.requireHeaders([]*bc.Hash{&headerHash}, task.length, 0)
@@ -367,7 +368,7 @@ func (bk *blockKeeper) fetchHeaders(resultCh chan *taskResult, task *requireTask
 
 	//valid skeleton match
 	if headers[len(headers)-1].Hash() != bk.skeleton[task.index+1].PreviousBlockHash {
-		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("failed on fetch headers")
+		log.WithFields(log.Fields{"module": logModule, "error": errSkeletonMismatch}).Error("failed on fetch headers")
 		resultCh <- &taskResult{err: errSkeletonMismatch, task: task}
 		return
 	}
@@ -375,7 +376,7 @@ func (bk *blockKeeper) fetchHeaders(resultCh chan *taskResult, task *requireTask
 	//valid headers
 	for i := 0; i < len(headers)-1; i++ {
 		if headers[i+1].PreviousBlockHash != headers[i].Hash() {
-			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("failed on fetch headers")
+			log.WithFields(log.Fields{"module": logModule, "error": errHeadersMismatch}).Error("failed on fetch headers")
 			resultCh <- &taskResult{err: errHeadersMismatch, task: task}
 			return
 		}
@@ -417,7 +418,7 @@ func (bk *blockKeeper) fetchData(result chan *fastSyncResult) {
 	}
 
 	if err := bk.fetchHeadersParallel(); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("failed on fetch headers")
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("failed on fetch headers parallel")
 		result <- &fastSyncResult{success: false, err: err}
 		return
 	}
