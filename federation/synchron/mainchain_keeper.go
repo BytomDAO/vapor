@@ -39,7 +39,8 @@ func NewMainchainKeeper(db *gorm.DB, assetStore *database.AssetStore, cfg *confi
 		node:       service.NewNode(cfg.Mainchain.Upstream),
 		chainName:  cfg.Mainchain.Name,
 		assetStore: assetStore,
-		fedProg:    util.ParseFedProg(cfg.Warders, cfg.Quorum),
+		// TODO:
+		fedProg: util.SegWitWrap(util.ParseFedProg(cfg.Warders, cfg.Quorum)),
 	}
 }
 
@@ -195,8 +196,13 @@ func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *types.Block,
 		return err
 	}
 
-	// batch insert
-	return m.db.Create(crossChainInputs).Error
+	for _, input := range crossChainInputs {
+		if err := m.db.Create(input).Error; err != nil {
+			return errors.Wrap(err, fmt.Sprintf("create DepositFromMainchain input: txid(%s), pos(%d)", tx.ID.String(), input.SourcePos))
+		}
+	}
+
+	return nil
 }
 
 func (m *mainchainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types.Tx, statusFail bool) ([]*orm.CrossTransactionReq, error) {

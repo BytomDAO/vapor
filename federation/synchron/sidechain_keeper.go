@@ -210,8 +210,13 @@ func (s *sidechainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Blo
 		return err
 	}
 
-	// batch insert
-	return s.db.Create(crossChainOutputs).Error
+	for _, output := range crossChainOutputs {
+		if err := s.db.Create(output).Error; err != nil {
+			return errors.Wrap(err, fmt.Sprintf("create WithdrawalFromSidechain output: txid(%s), pos(%d)", tx.ID.String(), output.SourcePos))
+		}
+	}
+
+	return nil
 }
 
 func (s *sidechainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types.Tx, statusFail bool) ([]*orm.CrossTransactionReq, error) {
