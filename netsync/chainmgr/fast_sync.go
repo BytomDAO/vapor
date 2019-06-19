@@ -144,7 +144,8 @@ func (bk *blockKeeper) createFetchBodiesTask() {
 func (bk *blockKeeper) fetchDataParallel(createTask func(), fetch func(chan *taskResult, *requireTask), taskQueue *prque.Prque) error {
 	createTask()
 	resultCh := make(chan *taskResult, 1)
-
+	taskFinished := 0
+	taskSize := taskQueue.Size()
 	timeout := time.NewTimer(fetchDataParallelTimeout)
 	defer timeout.Stop()
 
@@ -172,10 +173,13 @@ func (bk *blockKeeper) fetchDataParallel(createTask func(), fetch func(chan *tas
 
 			if result.err != nil && result.task.count < 3 {
 				log.WithFields(log.Fields{"module": logModule, "count": result.task.count, "index": result.task.index, "err": result.err}).Warn("failed on fetch data")
-
 				taskQueue.Push(result.task, -float32(result.task.index))
+				break
 			}
-
+			taskFinished++
+			if taskFinished == taskSize {
+				return nil
+			}
 		case <-timeout.C:
 			return errRequestTimeout
 		case <-bk.fastSyncQuit:
