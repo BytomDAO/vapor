@@ -31,6 +31,11 @@ message AssetAmount {
   uint64  amount   = 2;
 }
 
+message AssetDefinition {
+  Program issuance_program = 1;
+  Hash    data             = 2;
+}
+
 message ValueSource {
   Hash        ref      = 1;
   AssetAmount value    = 2;
@@ -121,10 +126,11 @@ message Spend {
 }
 
 message CrossChainInput {
-  Hash             mainchain_output_id = 1;
-  AssetAmount      value               = 2;
-  ValueDestination witness_destination = 3;
-  Program          control_program     = 4;
-  repeated bytes   witness_arguments   = 5;
-  uint64           ordinal             = 6;
+  Hash             mainchain_output_id       = 1;
+  AssetAmount      value                     = 2;
+  ValueDestination witness_destination       = 3;
+  Program          control_program           = 4;
+  AssetDefinition  asset_definition          = 5;
+  repeated bytes   witness_arguments         = 6;
+  uint64           ordinal                   = 7;
 }
