@@ -223,32 +223,35 @@ func (w *warder) buildMainchainTx(ormTx *orm.CrossTransaction) (*btmTypes.Tx, st
 	return nil, "", errors.New("buildMainchainTx not implemented yet")
 }
 
+// TODO: review logic
 // tx is a pointer to types.Tx, so the InputArguments can be set and be valid afterward
 func (w *warder) addInputWitness(tx interface{}) {
-	witness := [][]byte{w.fedProg}
 	switch tx := tx.(type) {
 	case *vaporTypes.Tx:
+		args := [][]byte{w.fedProg}
 		for i := range tx.Inputs {
-			tx.SetInputArguments(uint32(i), witness)
+			tx.SetInputArguments(uint32(i), args)
 		}
 
 	case *btmTypes.Tx:
+		args := [][]byte{util.SegWitWrap(w.fedProg)}
 		for i := range tx.Inputs {
-			tx.SetInputArguments(uint32(i), witness)
+			tx.SetInputArguments(uint32(i), args)
 		}
 	}
 }
 
 func (w *warder) initDestTxSigns(destTx interface{}, ormTx *orm.CrossTransaction) error {
-	crossTxSigns := []*orm.CrossTransactionSign{}
 	for i := 1; i <= len(w.remotes)+1; i++ {
-		crossTxSigns = append(crossTxSigns, &orm.CrossTransactionSign{
+		if err := w.db.Create(&orm.CrossTransactionSign{
 			CrossTransactionID: ormTx.ID,
 			WarderID:           uint8(i),
 			Status:             common.CrossTxSignPendingStatus,
-		})
+		}).Error; err != nil {
+			return err
+		}
 	}
-	return w.db.Create(crossTxSigns).Error
+	return nil
 }
 
 // TODO:
