@@ -15,9 +15,8 @@ const (
 	maxCachedBlockHeaders      = 4096
 	maxCachedBlockTransactions = 1024
 	maxCachedVoteResults       = 128
-	maxCachedBlockNodes        = 10000
-	maxCachedHeightIndexes     = 10000
-	maxCachedMainChainHashes   = 10000
+	maxCachedHeightIndexes     = 8192
+	maxCachedMainChainHashes   = 8192
 )
 
 type fillBlockHeaderFn func(hash *bc.Hash) (*types.BlockHeader, error)
@@ -33,7 +32,7 @@ func newCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransacti
 		lruBlockHeaders:    common.NewCache(maxCachedBlockHeaders),
 		lruBlockTxs:        common.NewCache(maxCachedBlockTransactions),
 		lruVoteResults:     common.NewCache(maxCachedVoteResults),
-		lruBlockNodes:      common.NewCache(maxCachedBlockNodes),
+		lruBlockNodes:      common.NewCache(maxCachedBlockHeaders),
 		lruHeightIndexes:   common.NewCache(maxCachedHeightIndexes),
 		lruMainChainHashes: common.NewCache(maxCachedMainChainHashes),
 
