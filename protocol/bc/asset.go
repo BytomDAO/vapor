@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 
+	"github.com/vapor/crypto/sha3pool"
 	"github.com/vapor/encoding/blockchain"
 )
 
@@ -41,6 +42,28 @@ func (a *AssetID) ReadFrom(r io.Reader) (int64, error) { return (*Hash)(a).ReadF
 
 // IsZero tells whether a Asset pointer is nil or points to an all-zero hash.
 func (a *AssetID) IsZero() bool { return (*Hash)(a).IsZero() }
+
+// ComputeAssetID calculate the asset id from AssetDefinition
+func (ad *AssetDefinition) ComputeAssetID() (assetID AssetID) {
+	h := sha3pool.Get256()
+	defer sha3pool.Put256(h)
+	writeForHash(h, *ad) // error is impossible
+	var b [32]byte
+	h.Read(b[:]) // error is impossible
+	return NewAssetID(b)
+}
+
+// ComputeAssetID implement the assetID calculate logic
+func ComputeAssetID(prog []byte, vmVersion uint64, data *Hash) AssetID {
+	def := &AssetDefinition{
+		IssuanceProgram: &Program{
+			VmVersion: vmVersion,
+			Code:      prog,
+		},
+		Data: data,
+	}
+	return def.ComputeAssetID()
+}
 
 // ReadFrom read the AssetAmount from the bytes
 func (a *AssetAmount) ReadFrom(r *blockchain.Reader) (err error) {

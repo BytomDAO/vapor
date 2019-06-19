@@ -5,9 +5,10 @@ import (
 	stdjson "encoding/json"
 	"errors"
 
-	"github.com/vapor/config"
+	"golang.org/x/crypto/sha3"
 
 	"github.com/vapor/common"
+	"github.com/vapor/config"
 	"github.com/vapor/consensus"
 	"github.com/vapor/encoding/json"
 	"github.com/vapor/protocol/bc"
@@ -261,9 +262,11 @@ func DecodeCrossInAction(data []byte) (Action, error) {
 
 type crossInAction struct {
 	bc.AssetAmount
-	SourceID          bc.Hash       `json:"source_id"`
-	SourcePos         uint64        `json:"source_pos"`
-	RawDefinitionByte json.HexBytes `json:"raw_definition_byte"`
+	SourceID          bc.Hash `json:"source_id"`
+	SourcePos         uint64  `json:"source_pos"`
+	VMVersion         uint64  `json:"vm_version"`
+	RawDefinitionByte []byte  `json:"raw_definition_byte"`
+	IssuanceProgram   []byte  `json:"issuance_program"`
 }
 
 func (a *crossInAction) Build(ctx context.Context, builder *TemplateBuilder) error {
@@ -277,13 +280,17 @@ func (a *crossInAction) Build(ctx context.Context, builder *TemplateBuilder) err
 	if a.Amount == 0 {
 		missing = append(missing, "amount")
 	}
+
 	if len(missing) > 0 {
 		return MissingFieldsError(missing...)
 	}
 
+	if err := a.checkAssetID(); err != nil {
+		return err
+	}
+
 	// arguments will be set when materializeWitnesses
-	fedProg := config.FederationProgrom(config.CommonConfig)
-	txin := types.NewCrossChainInput(nil, a.SourceID, *a.AssetId, a.Amount, a.SourcePos, fedProg, a.RawDefinitionByte)
+	txin := types.NewCrossChainInput(nil, a.SourceID, *a.AssetId, a.Amount, a.SourcePos, a.VMVersion, a.RawDefinitionByte, a.IssuanceProgram)
 	tplIn := &SigningInstruction{}
 	fed := config.CommonConfig.Federation
 	tplIn.AddRawWitnessKeys(fed.Xpubs, nil, fed.Quorum)
@@ -292,4 +299,15 @@ func (a *crossInAction) Build(ctx context.Context, builder *TemplateBuilder) err
 
 func (a *crossInAction) ActionType() string {
 	return "cross_chain_in"
+}
+
+func (c *crossInAction) checkAssetID() error {
+	defHash := bc.NewHash(sha3.Sum256(c.RawDefinitionByte))
+	assetID := bc.ComputeAssetID(c.IssuanceProgram, c.VMVersion, &defHash)
+
+	if *c.AssetId == *consensus.BTMAssetID && assetID != *c.AssetAmount.AssetId {
+		return errors.New("incorrect asset_idincorrect asset_id")
+	}
+
+	return nil
 }
