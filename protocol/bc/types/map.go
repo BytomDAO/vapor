@@ -2,6 +2,7 @@ package types
 
 import (
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/sha3"
 
 	"github.com/vapor/consensus"
 	"github.com/vapor/protocol/bc"
@@ -140,16 +141,26 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			vetoInputs = append(vetoInputs, vetoInput)
 
 		case *CrossChainInput:
-			// TODO: fed peg script
 			prog := &bc.Program{VmVersion: inp.VMVersion, Code: inp.ControlProgram}
 			src := &bc.ValueSource{
 				Ref:      &inp.SourceID,
 				Value:    &inp.AssetAmount,
 				Position: inp.SourcePosition,
 			}
+
 			prevout := bc.NewIntraChainOutput(src, prog, 0) // ordinal doesn't matter
 			outputID := bc.EntryID(prevout)
-			crossIn := bc.NewCrossChainInput(&outputID, &inp.AssetAmount, prog, uint64(i))
+
+			assetDefHash := bc.NewHash(sha3.Sum256(inp.AssetDefinition))
+			assetDef := &bc.AssetDefinition{
+				Data: &assetDefHash,
+				IssuanceProgram: &bc.Program{
+					VmVersion: inp.VMVersion,
+					Code:      inp.IssuanceProgram,
+				},
+			}
+
+			crossIn := bc.NewCrossChainInput(&outputID, &inp.AssetAmount, prog, uint64(i), assetDef)
 			crossIn.WitnessArguments = inp.Arguments
 			crossInID := addEntry(crossIn)
 			muxSources[i] = &bc.ValueSource{

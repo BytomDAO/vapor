@@ -1,7 +1,6 @@
 package validation
 
 import (
-	"bytes"
 	"fmt"
 	"math"
 
@@ -249,7 +248,17 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		}
 
 	case *bc.CrossChainInput:
-		_, err := vm.Verify(NewTxVMContext(vs, e, e.ControlProgram, e.WitnessArguments), consensus.DefaultGasCredit)
+		// check assetID
+		assetID := e.AssetDefinition.ComputeAssetID()
+		if *e.Value.AssetId != *consensus.BTMAssetID && *e.Value.AssetId != assetID {
+			return errors.New("incorrect asset_id while check CrossChainInput")
+		}
+		code := config.FederationProgrom(config.CommonConfig)
+		prog := &bc.Program{
+			VmVersion: e.ControlProgram.VmVersion,
+			Code:      code,
+		}
+		_, err := vm.Verify(NewTxVMContext(vs, e, prog, e.WitnessArguments), consensus.DefaultGasCredit)
 		if err != nil {
 			return errors.Wrap(err, "checking cross-chain input control program")
 		}
@@ -515,30 +524,11 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 	return nil
 }
 
-func checkFedaration(tx *bc.Tx) error {
-	for _, id := range tx.InputIDs {
-		switch inp := tx.Entries[id].(type) {
-		case *bc.CrossChainInput:
-			fedProg := config.FederationProgrom(config.CommonConfig)
-			if !bytes.Equal(inp.ControlProgram.Code, fedProg) {
-				return errors.New("The federal controlProgram is incorrect")
-			}
-		default:
-			continue
-		}
-	}
-	return nil
-}
-
 func checkStandardTx(tx *bc.Tx, blockHeight uint64) error {
 	for _, id := range tx.InputIDs {
 		if blockHeight >= ruleAA && id.IsZero() {
 			return ErrEmptyInputIDs
 		}
-	}
-
-	if err := checkFedaration(tx); err != nil {
-		return err
 	}
 
 	for _, id := range tx.GasInputIDs {

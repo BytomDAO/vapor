@@ -1,7 +1,6 @@
 package node
 
 import (
-	"context"
 	"encoding/hex"
 	"errors"
 	"net"
@@ -21,7 +20,6 @@ import (
 	"github.com/vapor/api"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/pseudohsm"
-	"github.com/vapor/blockchain/txfeed"
 	cfg "github.com/vapor/config"
 	"github.com/vapor/consensus"
 	"github.com/vapor/database"
@@ -54,15 +52,12 @@ type Node struct {
 	notificationMgr *websocket.WSNotificationManager
 	api             *api.API
 	chain           *protocol.Chain
-	txfeed          *txfeed.Tracker
 	cpuMiner        *blockproposer.BlockProposer
 	miningEnable    bool
 }
 
 // NewNode create bytom node
 func NewNode(config *cfg.Config) *Node {
-	ctx := context.Background()
-
 	if err := lockDataDirectory(config); err != nil {
 		cmn.Exit("Error: " + err.Error())
 	}
@@ -107,15 +102,6 @@ func NewNode(config *cfg.Config) *Node {
 	var accounts *account.Manager
 	var assets *asset.Registry
 	var wallet *w.Wallet
-	var txFeed *txfeed.Tracker
-
-	txFeedDB := dbm.NewDB("txfeeds", config.DBBackend, config.DBDir())
-	txFeed = txfeed.NewTracker(txFeedDB, chain)
-
-	if err = txFeed.Prepare(ctx); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("start txfeed")
-		return nil
-	}
 
 	hsm, err := pseudohsm.New(config.KeysDir())
 	if err != nil {
@@ -163,7 +149,6 @@ func NewNode(config *cfg.Config) *Node {
 		accessTokens:    accessTokens,
 		wallet:          wallet,
 		chain:           chain,
-		txfeed:          txFeed,
 		miningEnable:    config.Mining,
 
 		notificationMgr: notificationMgr,
@@ -236,7 +221,7 @@ func launchWebBrowser(port string) {
 }
 
 func (n *Node) initAndstartAPIServer() {
-	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.cpuMiner, n.chain, n.config, n.accessTokens, n.eventDispatcher, n.notificationMgr)
+	n.api = api.NewAPI(n.syncManager, n.wallet, n.cpuMiner, n.chain, n.config, n.accessTokens, n.eventDispatcher, n.notificationMgr)
 
 	listenAddr := env.String("LISTEN", n.config.ApiAddress)
 	env.Parse()

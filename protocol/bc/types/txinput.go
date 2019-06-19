@@ -180,7 +180,7 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 		case VetoInputType:
 			ui := new(VetoInput)
 			t.TypedInput = ui
-			if ui.UnvoteCommitmentSuffix, err = ui.SpendCommitment.readFrom(r, 1); err != nil {
+			if ui.VetoCommitmentSuffix, err = ui.SpendCommitment.readFrom(r, 1); err != nil {
 
 				return err
 			}
@@ -210,6 +210,18 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 				return err
 			}
 
+			if inp.VMVersion, err = blockchain.ReadVarint63(r); err != nil {
+				return err
+			}
+
+			if inp.AssetDefinition, err = blockchain.ReadVarstr31(r); err != nil {
+				return err
+			}
+
+			if inp.IssuanceProgram, err = blockchain.ReadVarstr31(r); err != nil {
+				return err
+			}
+
 		case *VetoInput:
 			if inp.Arguments, err = blockchain.ReadVarstrList(r); err != nil {
 				return err
@@ -223,13 +235,6 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 	})
 	if err != nil {
 		return err
-	}
-
-	switch inp := t.TypedInput.(type) {
-	case *CrossChainInput:
-		if inp.AssetDefinition, err = blockchain.ReadVarstr31(r); err != nil {
-			return err
-		}
 	}
 
 	return nil
@@ -246,13 +251,6 @@ func (t *TxInput) writeTo(w io.Writer) error {
 
 	if _, err := blockchain.WriteExtensibleString(w, t.WitnessSuffix, t.writeInputWitness); err != nil {
 		return errors.Wrap(err, "writing input witness")
-	}
-
-	switch inp := t.TypedInput.(type) {
-	case *CrossChainInput:
-		if _, err := blockchain.WriteVarstr31(w, inp.AssetDefinition); err != nil {
-			return errors.Wrap(err, "writing AssetDefinition")
-		}
 	}
 
 	return nil
@@ -288,7 +286,7 @@ func (t *TxInput) writeInputCommitment(w io.Writer) (err error) {
 		if _, err = w.Write([]byte{VetoInputType}); err != nil {
 			return err
 		}
-		return inp.SpendCommitment.writeExtensibleString(w, inp.UnvoteCommitmentSuffix, t.AssetVersion)
+		return inp.SpendCommitment.writeExtensibleString(w, inp.VetoCommitmentSuffix, t.AssetVersion)
 	}
 	return nil
 }
@@ -304,7 +302,20 @@ func (t *TxInput) writeInputWitness(w io.Writer) error {
 		return err
 
 	case *CrossChainInput:
-		_, err := blockchain.WriteVarstrList(w, inp.Arguments)
+		if _, err := blockchain.WriteVarstrList(w, inp.Arguments); err != nil {
+			return err
+		}
+
+		if _, err := blockchain.WriteVarint63(w, inp.VMVersion); err != nil {
+			return err
+		}
+
+		if _, err := blockchain.WriteVarstr31(w, inp.AssetDefinition); err != nil {
+			return err
+		}
+
+		_, err := blockchain.WriteVarstr31(w, inp.IssuanceProgram)
+
 		return err
 	case *VetoInput:
 		if _, err := blockchain.WriteVarstrList(w, inp.Arguments); err != nil {

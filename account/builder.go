@@ -386,13 +386,13 @@ func (m *Manager) insertControlProgramDelayed(b *txbuilder.TemplateBuilder, acp 
 	})
 }
 
-//DecodeUnvoteAction unmarshal JSON-encoded data of spend action
-func (m *Manager) DecodeUnvoteAction(data []byte) (txbuilder.Action, error) {
-	a := &unvoteAction{accounts: m}
+//DecodeVetoAction unmarshal JSON-encoded data of spend action
+func (m *Manager) DecodeVetoAction(data []byte) (txbuilder.Action, error) {
+	a := &vetoAction{accounts: m}
 	return a, stdjson.Unmarshal(data, a)
 }
 
-type unvoteAction struct {
+type vetoAction struct {
 	accounts *Manager
 	bc.AssetAmount
 	AccountID      string        `json:"account_id"`
@@ -400,11 +400,11 @@ type unvoteAction struct {
 	UseUnconfirmed bool          `json:"use_unconfirmed"`
 }
 
-func (a *unvoteAction) ActionType() string {
-	return "unvote"
+func (a *vetoAction) ActionType() string {
+	return "veto"
 }
 
-func (a *unvoteAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
+func (a *vetoAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
 	var missing []string
 	if a.AccountID == "" {
 		missing = append(missing, "account_id")
