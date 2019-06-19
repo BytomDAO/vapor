@@ -36,7 +36,7 @@ func (c *Chain) GetBlockByHash(hash *bc.Hash) (*types.Block, error) {
 
 // GetBlockByHeight return a block header by given height
 func (c *Chain) GetBlockByHeight(height uint64) (*types.Block, error) {
-	hash, err := c.store.GetBlockHashByHeight(height)
+	hash, err := c.store.GetMainChainHash(height)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't find block in given height")
 	}
@@ -50,7 +50,7 @@ func (c *Chain) GetHeaderByHash(hash *bc.Hash) (*types.BlockHeader, error) {
 
 // GetHeaderByHeight return a block header by given height
 func (c *Chain) GetHeaderByHeight(height uint64) (*types.BlockHeader, error) {
-	hash, err := c.store.GetBlockHashByHeight(height)
+	hash, err := c.store.GetMainChainHash(height)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't find block header in given height")
 	}
@@ -62,7 +62,7 @@ func (c *Chain) calcReorganizeNodes(node *state.BlockNode) ([]*state.BlockNode, 
 	var detachNodes []*state.BlockNode
 
 	attachNode := node
-	getBlockHash, err := c.store.GetBlockHashByHeight(attachNode.Height)
+	getBlockHash, err := c.store.GetMainChainHash(attachNode.Height)
 	if err != nil {
 		return nil, nil, err
 	}

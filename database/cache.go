@@ -144,7 +144,7 @@ func (c *cache) lookupBlockNode(hash *bc.Hash) (*state.BlockNode, error) {
 	return blockNode.(*state.BlockNode), nil
 }
 
-func (c *cache) lookupBlockHashByHeight(height uint64) (*bc.Hash, error) {
+func (c *cache) lookupMainChainHash(height uint64) (*bc.Hash, error) {
 	if hash, ok := c.lruMainChainHashes.Get(height); ok {
 		return hash.(*bc.Hash), nil
 	}

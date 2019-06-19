@@ -125,7 +125,7 @@ func (c *Chain) InMainChain(hash bc.Hash) bool {
 		return false
 	}
 
-	blockHash, err := c.store.GetBlockHashByHeight(blockNode.Height)
+	blockHash, err := c.store.GetMainChainHash(blockNode.Height)
 	if err != nil {
 		return false
 	}

@@ -109,8 +109,8 @@ func GetBlockTransactions(db dbm.DB, hash *bc.Hash) ([]*types.Tx, error) {
 	return block.Transactions, nil
 }
 
-// GetBlockHashByHeight return BlockHash by given height
-func GetBlockHashByHeight(db dbm.DB, height uint64) (*bc.Hash, error) {
+// GetMainChainHash return BlockHash by given height
+func GetMainChainHash(db dbm.DB, height uint64) (*bc.Hash, error) {
 	binaryHash := db.Get(calcBlockHashByHeightKey(height))
 	if binaryHash == nil {
 		return nil, fmt.Errorf("There are no BlockHash with given height %s", height)
@@ -190,7 +190,7 @@ func NewStore(db dbm.DB) *Store {
 	}
 
 	fillMainChainHashFn := func(height uint64) (*bc.Hash, error) {
-		return GetBlockHashByHeight(db, height)
+		return GetMainChainHash(db, height)
 	}
 
 	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillVoteResultFn, fillBlockNodeFn, fillHeightIndexFn, fillMainChainHashFn)
@@ -268,9 +268,9 @@ func (s *Store) GetVoteResult(seq uint64) (*state.VoteResult, error) {
 	return s.cache.lookupVoteResult(seq)
 }
 
-// GetBlockHashByHeight return the block hash by the specified height
-func (s *Store) GetBlockHashByHeight(height uint64) (*bc.Hash, error) {
-	return s.cache.lookupBlockHashByHeight(height)
+// GetMainChainHash return the block hash by the specified height
+func (s *Store) GetMainChainHash(height uint64) (*bc.Hash, error) {
+	return s.cache.lookupMainChainHash(height)
 }
 
 // GetBlockHashesByHeight return the block hash by the specified height

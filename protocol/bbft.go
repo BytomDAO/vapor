@@ -233,7 +233,7 @@ func (c *Chain) SignBlock(block *types.Block) ([]byte, error) {
 			return nil, errSignForkChain
 		}
 
-		if _, err := c.store.GetBlockHashByHeight(block.Height); err != nil {
+		if _, err := c.store.GetMainChainHash(block.Height); err != nil {
 			break
 		}
 
