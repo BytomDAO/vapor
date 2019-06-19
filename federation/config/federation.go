@@ -25,13 +25,13 @@ func ParseFedProg(warders []Warder, quorum int) []byte {
 	return fedpegScript
 }
 
-type ByPosition []Warder
+type byPosition []Warder
 
-func (w ByPosition) Len() int           { return len(w) }
-func (w ByPosition) Swap(i, j int)      { w[i], w[j] = w[j], w[i] }
-func (w ByPosition) Less(i, j int) bool { return w[i].Position < w[j].Position }
+func (w byPosition) Len() int           { return len(w) }
+func (w byPosition) Swap(i, j int)      { w[i], w[j] = w[j], w[i] }
+func (w byPosition) Less(i, j int) bool { return w[i].Position < w[j].Position }
 
 func SortWarders(warders []Warder) []Warder {
-	sort.Sort(ByPosition(warders))
+	sort.Sort(byPosition(warders))
 	return warders
 }
