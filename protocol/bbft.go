@@ -89,7 +89,7 @@ func (c *Chain) ProcessBlockSignature(signature, xPub []byte, blockHash *bc.Hash
 		return err
 	}
 
-	if blockNode.BlockWitness[int64(consensusNode.Order)] != nil {
+	if blockNode.BlockWitness[consensusNode.Order] != nil {
 		return nil
 	}
 
@@ -217,7 +217,7 @@ func (c *Chain) SignBlock(block *types.Block) ([]byte, error) {
 		}
 
 		// Has already signed the same height block
-		if blockNode.BlockWitness[int64(node.Order)] != nil {
+		if blockNode.BlockWitness[node.Order] != nil {
 			return nil, nil
 		}
 	}
