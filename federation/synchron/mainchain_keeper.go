@@ -19,6 +19,7 @@ import (
 	"github.com/vapor/federation/database"
 	"github.com/vapor/federation/database/orm"
 	"github.com/vapor/federation/service"
+	"github.com/vapor/federation/util"
 	"github.com/vapor/protocol/bc"
 )
 
@@ -38,7 +39,7 @@ func NewMainchainKeeper(db *gorm.DB, assetStore *database.AssetStore, cfg *confi
 		node:       service.NewNode(cfg.Mainchain.Upstream),
 		chainName:  cfg.Mainchain.Name,
 		assetStore: assetStore,
-		fedProg:    config.ParseFedProg(cfg.Warders, cfg.Quorum),
+		fedProg:    util.ParseFedProg(cfg.Warders, cfg.Quorum),
 	}
 }
 

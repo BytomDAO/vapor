@@ -16,6 +16,7 @@ import (
 	"github.com/vapor/federation/database"
 	"github.com/vapor/federation/database/orm"
 	"github.com/vapor/federation/service"
+	"github.com/vapor/federation/util"
 	vaporBc "github.com/vapor/protocol/bc"
 	vaporTypes "github.com/vapor/protocol/bc/types"
 )
@@ -41,7 +42,7 @@ func NewWarder(db *gorm.DB, assetStore *database.AssetStore, cfg *config.Config)
 		db:            db,
 		assetStore:    assetStore,
 		txCh:          make(chan *orm.CrossTransaction),
-		fedProg:       config.ParseFedProg(cfg.Warders, cfg.Quorum),
+		fedProg:       util.ParseFedProg(cfg.Warders, cfg.Quorum),
 		position:      local.Position,
 		xpub:          local.XPub,
 		xprv:          string2xprv(xprvStr),

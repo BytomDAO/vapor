@@ -1,4 +1,4 @@
-package config
+package util
 
 import (
 	"sort"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/vapor/crypto"
 	"github.com/vapor/crypto/ed25519/chainkd"
+	"github.com/vapor/federation/config"
 	"github.com/vapor/protocol/vm/vmutil"
 )
 
@@ -20,7 +21,7 @@ func SegWitWrap(script []byte) []byte {
 	return wscript
 }
 
-func ParseFedProg(warders []Warder, quorum int) []byte {
+func ParseFedProg(warders []config.Warder, quorum int) []byte {
 	SortWarders(warders)
 
 	xpubs := []chainkd.XPub{}
@@ -36,13 +37,13 @@ func ParseFedProg(warders []Warder, quorum int) []byte {
 	return fedScript
 }
 
-type byPosition []Warder
+type byPosition []config.Warder
 
 func (w byPosition) Len() int           { return len(w) }
 func (w byPosition) Swap(i, j int)      { w[i], w[j] = w[j], w[i] }
 func (w byPosition) Less(i, j int) bool { return w[i].Position < w[j].Position }
 
-func SortWarders(warders []Warder) []Warder {
+func SortWarders(warders []config.Warder) []config.Warder {
 	sort.Sort(byPosition(warders))
 	return warders
 }
