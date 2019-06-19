@@ -1,41 +1,9 @@
 package db
 
-import . "github.com/tendermint/tmlibs/common"
-
-type DB interface {
-	Get([]byte) []byte
-	Set([]byte, []byte)
-	SetSync([]byte, []byte)
-	Delete([]byte)
-	DeleteSync([]byte)
-	Close()
-	NewBatch() Batch
-	Iterator() Iterator
-	IteratorPrefix([]byte) Iterator
-
-	// For debugging
-	Print()
-	Stats() map[string]string
-}
-
-type Batch interface {
-	Set(key, value []byte)
-	Delete(key []byte)
-	Write()
-}
-
-type Iterator interface {
-	Next() bool
-
-	Key() []byte
-	Value() []byte
-	Seek([]byte) bool
-
-	Release()
-	Error() error
-}
-
-//-----------------------------------------------------------------------------
+import (
+	. "github.com/tendermint/tmlibs/common"
+	"github.com/vapor/database/dbutils"
+)
 
 const (
 	LevelDBBackendStr   = "leveldb" // legacy, defaults to goleveldb.
@@ -44,7 +12,7 @@ const (
 	MemDBBackendStr     = "memdb"
 )
 
-type dbCreator func(name string, dir string) (DB, error)
+type dbCreator func(name string, dir string) (dbutils.DB, error)
 
 var backends = map[string]dbCreator{}
 
@@ -56,7 +24,7 @@ func registerDBCreator(backend string, creator dbCreator, force bool) {
 	backends[backend] = creator
 }
 
-func NewDB(name string, backend string, dir string) DB {
+func NewDB(name string, backend string, dir string) dbutils.DB {
 	db, err := backends[backend](name, dir)
 	if err != nil {
 		PanicSanity(Fmt("Error initializing DB: %v", err))

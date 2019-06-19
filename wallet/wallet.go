@@ -9,7 +9,7 @@ import (
 	"github.com/vapor/account"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/pseudohsm"
-	dbm "github.com/vapor/database/leveldb"
+	"github.com/vapor/database/dbutils"
 	"github.com/vapor/errors"
 	"github.com/vapor/event"
 	"github.com/vapor/protocol"
@@ -42,7 +42,7 @@ type StatusInfo struct {
 
 //Wallet is related to storing account unspent outputs
 type Wallet struct {
-	DB              dbm.DB
+	DB              dbutils.DB
 	rw              sync.RWMutex
 	status          StatusInfo
 	TxIndexFlag     bool
@@ -58,7 +58,7 @@ type Wallet struct {
 }
 
 //NewWallet return a new wallet instance
-func NewWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) (*Wallet, error) {
+func NewWallet(walletDB dbutils.DB, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) (*Wallet, error) {
 	w := &Wallet{
 		DB:              walletDB,
 		AccountMgr:      account,
@@ -156,7 +156,7 @@ func (w *Wallet) loadWalletInfo() error {
 	return w.AttachBlock(block)
 }
 
-func (w *Wallet) commitWalletInfo(batch dbm.Batch) error {
+func (w *Wallet) commitWalletInfo(batch dbutils.Batch) error {
 	rawWallet, err := json.Marshal(w.status)
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("save wallet info")

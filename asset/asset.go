@@ -9,7 +9,7 @@ import (
 	"github.com/golang/groupcache/lru"
 
 	"github.com/vapor/consensus"
-	dbm "github.com/vapor/database/leveldb"
+	"github.com/vapor/database/dbutils"
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol"
@@ -70,7 +70,7 @@ var (
 )
 
 //NewRegistry create new registry
-func NewRegistry(db dbm.DB, chain *protocol.Chain) *Registry {
+func NewRegistry(db dbutils.DB, chain *protocol.Chain) *Registry {
 	initNativeAsset()
 	return &Registry{
 		db:         db,
@@ -82,7 +82,7 @@ func NewRegistry(db dbm.DB, chain *protocol.Chain) *Registry {
 
 // Registry tracks and stores all known assets on a blockchain.
 type Registry struct {
-	db    dbm.DB
+	db    dbutils.DB
 	chain *protocol.Chain
 
 	cacheMu    sync.Mutex

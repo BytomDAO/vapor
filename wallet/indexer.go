@@ -14,7 +14,7 @@ import (
 	"github.com/vapor/blockchain/query"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/sha3pool"
-	dbm "github.com/vapor/database/leveldb"
+	"github.com/vapor/database/dbutils"
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
@@ -68,7 +68,7 @@ func parseGlobalTxIdx(globalTxIdx []byte) (*bc.Hash, uint64) {
 }
 
 // deleteTransaction delete transactions when orphan block rollback
-func (w *Wallet) deleteTransactions(batch dbm.Batch, height uint64) {
+func (w *Wallet) deleteTransactions(batch dbutils.Batch, height uint64) {
 	tmpTx := query.AnnotatedTx{}
 	txIter := w.DB.IteratorPrefix(calcDeleteKey(height))
 	defer txIter.Release()
@@ -84,7 +84,7 @@ func (w *Wallet) deleteTransactions(batch dbm.Batch, height uint64) {
 // saveExternalAssetDefinition save external and local assets definition,
 // when query ,query local first and if have no then query external
 // details see getAliasDefinition
-func saveExternalAssetDefinition(b *types.Block, walletDB dbm.DB) {
+func saveExternalAssetDefinition(b *types.Block, walletDB dbutils.DB) {
 	storeBatch := walletDB.NewBatch()
 	defer storeBatch.Write()
 
@@ -120,7 +120,7 @@ type TxSummary struct {
 }
 
 // indexTransactions saves all annotated transactions to the database.
-func (w *Wallet) indexTransactions(batch dbm.Batch, b *types.Block, txStatus *bc.TransactionStatus) error {
+func (w *Wallet) indexTransactions(batch dbutils.Batch, b *types.Block, txStatus *bc.TransactionStatus) error {
 	annotatedTxs := w.filterAccountTxs(b, txStatus)
 	saveExternalAssetDefinition(b, w.DB)
 	annotateTxsAccount(annotatedTxs, w.DB)

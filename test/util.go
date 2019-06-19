@@ -11,7 +11,7 @@ import (
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/database"
-	dbm "github.com/vapor/database/leveldb"
+	"github.com/vapor/database/dbutils"
 	"github.com/vapor/event"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
@@ -25,7 +25,7 @@ const (
 )
 
 // MockChain mock chain with genesis block
-func MockChain(testDB dbm.DB) (*protocol.Chain, *database.Store, *protocol.TxPool, error) {
+func MockChain(testDB dbutils.DB) (*protocol.Chain, *database.Store, *protocol.TxPool, error) {
 	config.CommonConfig = config.DefaultConfig()
 	store := database.NewStore(testDB)
 	dispatcher := event.NewDispatcher()

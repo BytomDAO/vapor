@@ -9,12 +9,13 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/syndtr/goleveldb/leveldb/util"
+	"github.com/vapor/database/dbutils"
 
 	. "github.com/tendermint/tmlibs/common"
 )
 
 func init() {
-	dbCreator := func(name string, dir string) (DB, error) {
+	dbCreator := func(name string, dir string) (dbutils.DB, error) {
 		return NewGoLevelDB(name, dir)
 	}
 	registerDBCreator(LevelDBBackendStr, dbCreator, false)
@@ -155,15 +156,15 @@ func (it *goLevelDBIterator) Release() {
 	it.source.Release()
 }
 
-func (db *GoLevelDB) Iterator() Iterator {
+func (db *GoLevelDB) Iterator() dbutils.Iterator {
 	return &goLevelDBIterator{db.db.NewIterator(nil, nil)}
 }
 
-func (db *GoLevelDB) IteratorPrefix(prefix []byte) Iterator {
+func (db *GoLevelDB) IteratorPrefix(prefix []byte) dbutils.Iterator {
 	return &goLevelDBIterator{db.db.NewIterator(util.BytesPrefix(prefix), nil)}
 }
 
-func (db *GoLevelDB) NewBatch() Batch {
+func (db *GoLevelDB) NewBatch() dbutils.Batch {
 	batch := new(leveldb.Batch)
 	return &goLevelDBBatch{db, batch}
 }

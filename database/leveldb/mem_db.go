@@ -5,10 +5,12 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/vapor/database/dbutils"
 )
 
 func init() {
-	registerDBCreator(MemDBBackendStr, func(name string, dir string) (DB, error) {
+	registerDBCreator(MemDBBackendStr, func(name string, dir string) (dbutils.DB, error) {
 		return NewMemDB(), nil
 	}, false)
 }
@@ -120,11 +122,11 @@ func (it *memDBIterator) Error() error {
 	return nil
 }
 
-func (db *MemDB) Iterator() Iterator {
+func (db *MemDB) Iterator() dbutils.Iterator {
 	return db.IteratorPrefix([]byte{})
 }
 
-func (db *MemDB) IteratorPrefix(prefix []byte) Iterator {
+func (db *MemDB) IteratorPrefix(prefix []byte) dbutils.Iterator {
 	it := newMemDBIterator()
 	it.db = db
 	it.last = -1
@@ -143,7 +145,7 @@ func (db *MemDB) IteratorPrefix(prefix []byte) Iterator {
 	return it
 }
 
-func (db *MemDB) NewBatch() Batch {
+func (db *MemDB) NewBatch() dbutils.Batch {
 	return &memDBBatch{db, nil}
 }
 

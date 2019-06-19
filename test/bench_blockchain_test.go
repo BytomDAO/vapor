@@ -15,6 +15,7 @@ import (
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/database"
+	"github.com/vapor/database/dbutils"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/database/storage"
 	"github.com/vapor/event"
@@ -97,7 +98,7 @@ func benchInsertChain(b *testing.B, blockTxNumber int, otherAssetNum int, txType
 	}
 }
 
-func GenerateChainData(dirPath string, testDB dbm.DB, txNumber, otherAssetNum int, txType string) (*protocol.Chain, []*types.Tx, *protocol.TxPool, error) {
+func GenerateChainData(dirPath string, testDB dbutils.DB, txNumber, otherAssetNum int, txType string) (*protocol.Chain, []*types.Tx, *protocol.TxPool, error) {
 	var err error
 
 	// generate transactions
@@ -159,7 +160,7 @@ func InsertChain(chain *protocol.Chain, txPool *protocol.TxPool, txs []*types.Tx
 		}
 	}
 
-	block, err := proposal.NewBlockTemplate(chain, txPool, nil, uint64(time.Now().UnixNano() / 1e6))
+	block, err := proposal.NewBlockTemplate(chain, txPool, nil, uint64(time.Now().UnixNano()/1e6))
 	if err != nil {
 		return err
 	}
@@ -357,7 +358,7 @@ func CreateTxbyNum(txNumber, otherAssetNum int) ([]*types.Tx, error) {
 	return txs, nil
 }
 
-func SetUtxoView(db dbm.DB, view *state.UtxoViewpoint) error {
+func SetUtxoView(db dbutils.DB, view *state.UtxoViewpoint) error {
 	batch := db.NewBatch()
 	if err := database.SaveUtxoView(batch, view); err != nil {
 		return err
@@ -367,7 +368,7 @@ func SetUtxoView(db dbm.DB, view *state.UtxoViewpoint) error {
 }
 
 //-------------------------Mock actual transaction----------------------------------
-func MockTxsP2PKH(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum int) ([]*types.Tx, error) {
+func MockTxsP2PKH(keyDirPath string, testDB dbutils.DB, txNumber, otherAssetNum int) ([]*types.Tx, error) {
 	accountManager := account.NewManager(testDB, nil)
 	hsm, err := pseudohsm.New(keyDirPath)
 	if err != nil {
@@ -409,7 +410,7 @@ func MockTxsP2PKH(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum int)
 	return txs, nil
 }
 
-func MockTxsP2SH(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum int) ([]*types.Tx, error) {
+func MockTxsP2SH(keyDirPath string, testDB dbutils.DB, txNumber, otherAssetNum int) ([]*types.Tx, error) {
 	accountManager := account.NewManager(testDB, nil)
 	hsm, err := pseudohsm.New(keyDirPath)
 	if err != nil {
@@ -456,7 +457,7 @@ func MockTxsP2SH(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum int) 
 	return txs, nil
 }
 
-func MockTxsMultiSign(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum int) ([]*types.Tx, error) {
+func MockTxsMultiSign(keyDirPath string, testDB dbutils.DB, txNumber, otherAssetNum int) ([]*types.Tx, error) {
 	accountManager := account.NewManager(testDB, nil)
 	hsm, err := pseudohsm.New(keyDirPath)
 	if err != nil {

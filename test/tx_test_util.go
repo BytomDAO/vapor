@@ -14,7 +14,7 @@ import (
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/crypto/sha3pool"
-	dbm "github.com/vapor/database/leveldb"
+	"github.com/vapor/database/dbutils"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -263,7 +263,7 @@ func CreateSpendInput(tx *types.Tx, outputIndex uint64) (*types.SpendInput, erro
 }
 
 // SignInstructionFor read CtrlProgram from db, construct SignInstruction for SpendInput
-func SignInstructionFor(input *types.SpendInput, db dbm.DB, signer *signers.Signer) (*txbuilder.SigningInstruction, error) {
+func SignInstructionFor(input *types.SpendInput, db dbutils.DB, signer *signers.Signer) (*txbuilder.SigningInstruction, error) {
 	cp := account.CtrlProgram{}
 	var hash [32]byte
 	sha3pool.Sum256(hash[:], input.ControlProgram)

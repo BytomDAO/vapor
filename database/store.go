@@ -9,7 +9,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
 
-	dbm "github.com/vapor/database/leveldb"
+	"github.com/vapor/database/dbutils"
 	"github.com/vapor/database/storage"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol"
@@ -28,7 +28,7 @@ var (
 	voteResultPrefix       = []byte("VR:")
 )
 
-func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
+func loadBlockStoreStateJSON(db dbutils.DB) *protocol.BlockStoreState {
 	bytes := db.Get(blockStoreKey)
 	if bytes == nil {
 		return nil
@@ -45,7 +45,7 @@ func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
 // It satisfies the interface protocol.Store, and provides additional
 // methods for querying current data.
 type Store struct {
-	db    dbm.DB
+	db    dbutils.DB
 	cache cache
 }
 
@@ -71,7 +71,7 @@ func calcVoteResultKey(seq uint64) []byte {
 }
 
 // GetBlockHeader return the block header by given hash and height
-func GetBlockHeader(db dbm.DB, hash *bc.Hash, height uint64) (*types.BlockHeader, error) {
+func GetBlockHeader(db dbutils.DB, hash *bc.Hash, height uint64) (*types.BlockHeader, error) {
 	binaryBlockHeader := db.Get(calcBlockHeaderKey(height, hash))
 	if binaryBlockHeader == nil {
 		return nil, fmt.Errorf("There are no blockHeader with given hash %s", hash.String())
@@ -85,7 +85,7 @@ func GetBlockHeader(db dbm.DB, hash *bc.Hash, height uint64) (*types.BlockHeader
 }
 
 // GetBlockTransactions return the block transactions by given hash
-func GetBlockTransactions(db dbm.DB, hash *bc.Hash) ([]*types.Tx, error) {
+func GetBlockTransactions(db dbutils.DB, hash *bc.Hash) ([]*types.Tx, error) {
 	binaryBlockTxs := db.Get(calcBlockTransactionsKey(hash))
 	if binaryBlockTxs == nil {
 		return nil, fmt.Errorf("There are no block transactions with given hash %s", hash.String())
@@ -99,7 +99,7 @@ func GetBlockTransactions(db dbm.DB, hash *bc.Hash) ([]*types.Tx, error) {
 }
 
 // GetVoteResult return the vote result by given sequence
-func GetVoteResult(db dbm.DB, seq uint64) (*state.VoteResult, error) {
+func GetVoteResult(db dbutils.DB, seq uint64) (*state.VoteResult, error) {
 	data := db.Get(calcVoteResultKey(seq))
 	if data == nil {
 		return nil, protocol.ErrNotFoundVoteResult
@@ -113,7 +113,7 @@ func GetVoteResult(db dbm.DB, seq uint64) (*state.VoteResult, error) {
 }
 
 // NewStore creates and returns a new Store object.
-func NewStore(db dbm.DB) *Store {
+func NewStore(db dbutils.DB) *Store {
 	fillBlockHeaderFn := func(hash *bc.Hash, height uint64) (*types.BlockHeader, error) {
 		return GetBlockHeader(db, hash, height)
 	}

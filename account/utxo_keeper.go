@@ -11,7 +11,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	dbm "github.com/vapor/database/leveldb"
+	"github.com/vapor/database/dbutils"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 )
@@ -55,7 +55,7 @@ type utxoKeeper struct {
 	// `sync/atomic` expects the first word in an allocated struct to be 64-bit
 	// aligned on both ARM and x86-32. See https://goo.gl/zW7dgq for more details.
 	nextIndex     uint64
-	db            dbm.DB
+	db            dbutils.DB
 	mtx           sync.RWMutex
 	currentHeight func() uint64
 
@@ -64,7 +64,7 @@ type utxoKeeper struct {
 	reservations map[uint64]*reservation
 }
 
-func newUtxoKeeper(f func() uint64, walletdb dbm.DB) *utxoKeeper {
+func newUtxoKeeper(f func() uint64, walletdb dbutils.DB) *utxoKeeper {
 	uk := &utxoKeeper{
 		db:            walletdb,
 		currentHeight: f,

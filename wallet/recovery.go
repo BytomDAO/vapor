@@ -12,7 +12,7 @@ import (
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/crypto/sha3pool"
-	dbm "github.com/vapor/database/leveldb"
+	"github.com/vapor/database/dbutils"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -170,7 +170,7 @@ func (rs *recoveryState) stateForScope(account *account.Account) {
 type recoveryManager struct {
 	mu sync.Mutex
 
-	db         dbm.DB
+	db         dbutils.DB
 	accountMgr *account.Manager
 
 	locked int32
@@ -187,7 +187,7 @@ type recoveryManager struct {
 }
 
 // newRecoveryManager create recovery manger.
-func newRecoveryManager(db dbm.DB, accountMgr *account.Manager) *recoveryManager {
+func newRecoveryManager(db dbutils.DB, accountMgr *account.Manager) *recoveryManager {
 	return &recoveryManager{
 		db:         db,
 		accountMgr: accountMgr,

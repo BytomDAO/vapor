@@ -9,7 +9,7 @@ import (
 	"github.com/vapor/consensus"
 	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/crypto/sha3pool"
-	dbm "github.com/vapor/database/leveldb"
+	"github.com/vapor/database/dbutils"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -48,7 +48,7 @@ func (w *Wallet) GetAccountUtxos(accountID string, id string, unconfirmed, isSma
 	return accountUtxos
 }
 
-func (w *Wallet) attachUtxos(batch dbm.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
+func (w *Wallet) attachUtxos(batch dbutils.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
 	for txIndex, tx := range b.Transactions {
 		statusFail, err := txStatus.GetStatus(txIndex)
 		if err != nil {
@@ -75,7 +75,7 @@ func (w *Wallet) attachUtxos(batch dbm.Batch, b *types.Block, txStatus *bc.Trans
 	}
 }
 
-func (w *Wallet) detachUtxos(batch dbm.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
+func (w *Wallet) detachUtxos(batch dbutils.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
 	for txIndex := len(b.Transactions) - 1; txIndex >= 0; txIndex-- {
 		tx := b.Transactions[txIndex]
 		for j := range tx.Outputs {
@@ -151,7 +151,7 @@ func (w *Wallet) filterAccountUtxo(utxos []*account.UTXO) []*account.UTXO {
 	return result
 }
 
-func batchSaveUtxos(utxos []*account.UTXO, batch dbm.Batch) error {
+func batchSaveUtxos(utxos []*account.UTXO, batch dbutils.Batch) error {
 	for _, utxo := range utxos {
 		data, err := json.Marshal(utxo)
 		if err != nil {

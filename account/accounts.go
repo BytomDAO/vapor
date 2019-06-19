@@ -19,7 +19,7 @@ import (
 	"github.com/vapor/crypto"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/crypto/sha3pool"
-	dbm "github.com/vapor/database/leveldb"
+	"github.com/vapor/database/dbutils"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
@@ -103,7 +103,7 @@ type CtrlProgram struct {
 
 // Manager stores accounts and their associated control programs.
 type Manager struct {
-	db         dbm.DB
+	db         dbutils.DB
 	chain      *protocol.Chain
 	utxoKeeper *utxoKeeper
 
@@ -119,7 +119,7 @@ type Manager struct {
 }
 
 // NewManager creates a new account manager
-func NewManager(walletDB dbm.DB, chain *protocol.Chain) *Manager {
+func NewManager(walletDB dbutils.DB, chain *protocol.Chain) *Manager {
 	return &Manager{
 		db:          walletDB,
 		chain:       chain,

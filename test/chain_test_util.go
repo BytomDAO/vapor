@@ -9,6 +9,7 @@ import (
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/consensus"
 	"github.com/vapor/database"
+	"github.com/vapor/database/dbutils"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/database/storage"
 	"github.com/vapor/protocol"
@@ -21,7 +22,7 @@ const utxoPrefix = "UT:"
 
 type chainTestContext struct {
 	Chain *protocol.Chain
-	DB    dbm.DB
+	DB    dbutils.DB
 	Store *database.Store
 }
 

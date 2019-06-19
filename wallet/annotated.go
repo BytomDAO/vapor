@@ -13,7 +13,7 @@ import (
 	"github.com/vapor/consensus"
 	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/crypto/sha3pool"
-	dbm "github.com/vapor/database/leveldb"
+	"github.com/vapor/database/dbutils"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
@@ -82,7 +82,7 @@ func (w *Wallet) getAliasDefinition(assetID bc.AssetID) (string, json.RawMessage
 }
 
 // annotateTxs adds account data to transactions
-func annotateTxsAccount(txs []*query.AnnotatedTx, walletDB dbm.DB) {
+func annotateTxsAccount(txs []*query.AnnotatedTx, walletDB dbutils.DB) {
 	for i, tx := range txs {
 		for j, input := range tx.Inputs {
 			//issue asset tx input SpentOutputID is nil
@@ -107,7 +107,7 @@ func annotateTxsAccount(txs []*query.AnnotatedTx, walletDB dbm.DB) {
 	}
 }
 
-func getAccountFromACP(program []byte, walletDB dbm.DB) (*account.Account, error) {
+func getAccountFromACP(program []byte, walletDB dbutils.DB) (*account.Account, error) {
 	var hash common.Hash
 	accountCP := account.CtrlProgram{}
 	localAccount := account.Account{}

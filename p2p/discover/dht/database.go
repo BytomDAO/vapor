@@ -16,6 +16,7 @@ import (
 	wire "github.com/tendermint/go-wire"
 
 	"github.com/vapor/crypto"
+	"github.com/vapor/database/dbutils"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 )
@@ -28,7 +29,7 @@ var (
 
 // nodeDB stores all nodes we know about.
 type nodeDB struct {
-	lvl    dbm.DB        // Interface to the database itself
+	lvl    dbutils.DB    // Interface to the database itself
 	self   NodeID        // Own node id to prevent adding it into the database
 	runner sync.Once     // Ensures we can start at most one expirer
 	quit   chan struct{} // Channel to signal the expiring thread to stop
@@ -345,7 +346,7 @@ func (db *nodeDB) updateTopicRegTickets(id NodeID, issued, used uint32) {
 
 // reads the next node record from the iterator, skipping over other
 // database entries.
-func nextNode(it dbm.Iterator) *Node {
+func nextNode(it dbutils.Iterator) *Node {
 	var (
 		n    = int(0)
 		err  = error(nil)

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	cfg "github.com/vapor/config"
+	"github.com/vapor/database/dbutils"
 	dbm "github.com/vapor/database/leveldb"
 )
 
@@ -21,7 +22,7 @@ var (
 
 type Blacklist struct {
 	peers map[string]time.Time
-	db    dbm.DB
+	db    dbutils.DB
 
 	mtx sync.Mutex
 }

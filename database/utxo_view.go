@@ -2,7 +2,7 @@ package database
 
 import (
 	"github.com/golang/protobuf/proto"
-	dbm "github.com/vapor/database/leveldb"
+	"github.com/vapor/database/dbutils"
 	"github.com/vapor/database/storage"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
@@ -15,7 +15,7 @@ func calcUtxoKey(hash *bc.Hash) []byte {
 	return []byte(utxoPreFix + hash.String())
 }
 
-func getTransactionsUtxo(db dbm.DB, view *state.UtxoViewpoint, txs []*bc.Tx) error {
+func getTransactionsUtxo(db dbutils.DB, view *state.UtxoViewpoint, txs []*bc.Tx) error {
 	for _, tx := range txs {
 		for _, prevout := range tx.SpentOutputIDs {
 			if view.HasUtxo(&prevout) {
@@ -58,7 +58,7 @@ func getTransactionsUtxo(db dbm.DB, view *state.UtxoViewpoint, txs []*bc.Tx) err
 	return nil
 }
 
-func getUtxo(db dbm.DB, hash *bc.Hash) (*storage.UtxoEntry, error) {
+func getUtxo(db dbutils.DB, hash *bc.Hash) (*storage.UtxoEntry, error) {
 	var utxo storage.UtxoEntry
 	data := db.Get(calcUtxoKey(hash))
 	if data == nil {
@@ -70,7 +70,7 @@ func getUtxo(db dbm.DB, hash *bc.Hash) (*storage.UtxoEntry, error) {
 	return &utxo, nil
 }
 
-func saveUtxoView(batch dbm.Batch, view *state.UtxoViewpoint) error {
+func saveUtxoView(batch dbutils.Batch, view *state.UtxoViewpoint) error {
 	for key, entry := range view.Entries {
 		if (entry.Type == storage.CrosschainUTXOType) && (!entry.Spent) {
 			batch.Delete(calcUtxoKey(&key))
@@ -91,6 +91,6 @@ func saveUtxoView(batch dbm.Batch, view *state.UtxoViewpoint) error {
 	return nil
 }
 
-func SaveUtxoView(batch dbm.Batch, view *state.UtxoViewpoint) error {
+func SaveUtxoView(batch dbutils.Batch, view *state.UtxoViewpoint) error {
 	return saveUtxoView(batch, view)
 }

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/vapor/crypto/sha3pool"
-	dbm "github.com/vapor/database/leveldb"
+	"github.com/vapor/database/dbutils"
 	"github.com/vapor/errors"
 )
 
@@ -44,11 +44,11 @@ type Token struct {
 
 // CredentialStore store user access credential.
 type CredentialStore struct {
-	DB dbm.DB
+	DB dbutils.DB
 }
 
 // NewStore creates and returns a new Store object.
-func NewStore(db dbm.DB) *CredentialStore {
+func NewStore(db dbutils.DB) *CredentialStore {
 	return &CredentialStore{
 		DB: db,
 	}
