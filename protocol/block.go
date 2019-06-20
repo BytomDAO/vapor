@@ -80,7 +80,7 @@ func (c *Chain) calcReorganizeNodes(node *types.BlockHeader) ([]*types.BlockHead
 		}
 	}
 
-	detachNode := c.bestNode
+	detachNode := c.bestBlockHeader
 	for {
 		if detachNode.Hash() == attachNode.Hash() {
 			break
@@ -96,7 +96,7 @@ func (c *Chain) calcReorganizeNodes(node *types.BlockHeader) ([]*types.BlockHead
 }
 
 func (c *Chain) connectBlock(block *types.Block) (err error) {
-	irreversibleNode := c.bestIrreversibleNode
+	irreversibleNode := c.bestIrrBlockHeader
 	bcBlock := types.MapBlock(block)
 	if bcBlock.TransactionStatus, err = c.store.GetTransactionStatus(&bcBlock.ID); err != nil {
 		return err
@@ -142,7 +142,7 @@ func (c *Chain) reorganizeChain(node *types.BlockHeader) error {
 
 	utxoView := state.NewUtxoViewpoint()
 	voteResults := []*state.VoteResult{}
-	irreversibleNode := c.bestIrreversibleNode
+	irreversibleNode := c.bestIrrBlockHeader
 	voteResult, err := c.getBestVoteResult()
 	if err != nil {
 		return err
@@ -214,7 +214,7 @@ func (c *Chain) reorganizeChain(node *types.BlockHeader) error {
 		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": nodeHash.String()}).Debug("attach from mainchain")
 	}
 
-	if detachNodes[len(detachNodes)-1].Height <= c.bestIrreversibleNode.Height && irreversibleNode.Height <= c.bestIrreversibleNode.Height {
+	if detachNodes[len(detachNodes)-1].Height <= c.bestIrrBlockHeader.Height && irreversibleNode.Height <= c.bestIrrBlockHeader.Height {
 		return errors.New("rollback block below the height of irreversible block")
 	}
 	voteResults = append(voteResults, voteResult.Fork())
@@ -333,12 +333,12 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
-	if parentBestBlockHeader.Hash() == c.bestNode.Hash() {
+	if parentBestBlockHeader.Hash() == c.bestBlockHeader.Hash() {
 		log.WithFields(log.Fields{"module": logModule}).Debug("append block to the end of mainchain")
 		return false, c.connectBlock(bestBlock)
 	}
 
-	if bestBlockHeader.Height > c.bestNode.Height {
+	if bestBlockHeader.Height > c.bestBlockHeader.Height {
 		log.WithFields(log.Fields{"module": logModule}).Debug("start to reorganize chain")
 		return false, c.reorganizeChain(bestBlockHeader)
 	}

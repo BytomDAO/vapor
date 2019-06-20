@@ -32,7 +32,7 @@ func TestCalcReorganizeNodes(t *testing.T) {
 		wantDetachNodes = append([]*state.BlockNode{mainChainNode}, wantDetachNodes...)
 		c.index.AddNode(mainChainNode)
 	}
-	c.bestNode = mainChainNode
+	c.bestBlockHeader = mainChainNode
 	c.index.SetMainChain(mainChainNode)
 
 	sideChainNode := initNode

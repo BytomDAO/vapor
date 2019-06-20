@@ -25,9 +25,9 @@ type Chain struct {
 	signatureCache  *common.Cache
 	eventDispatcher *event.Dispatcher
 
-	cond                 sync.Cond
-	bestNode             *types.BlockHeader
-	bestIrreversibleNode *types.BlockHeader
+	cond               sync.Cond
+	bestBlockHeader    *types.BlockHeader
+	bestIrrBlockHeader *types.BlockHeader
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
@@ -51,12 +51,12 @@ func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*
 	}
 
 	var err error
-	c.bestNode, err = c.store.GetBlockHeader(storeStatus.Hash)
+	c.bestBlockHeader, err = c.store.GetBlockHeader(storeStatus.Hash)
 	if err != nil {
 		return nil, err
 	}
 
-	c.bestIrreversibleNode, err = c.store.GetBlockHeader(storeStatus.IrreversibleHash)
+	c.bestIrrBlockHeader, err = c.store.GetBlockHeader(storeStatus.IrreversibleHash)
 	if err != nil {
 		return nil, err
 	}
@@ -98,22 +98,22 @@ func (c *Chain) initChainStatus() error {
 func (c *Chain) BestBlockHeight() uint64 {
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
-	return c.bestNode.Height
+	return c.bestBlockHeader.Height
 }
 
 // BestBlockHash return the hash of the chain tail block
 func (c *Chain) BestBlockHash() *bc.Hash {
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
-	bestNodeHash := c.bestNode.Hash()
-	return &bestNodeHash
+	bestHash := c.bestBlockHeader.Hash()
+	return &bestHash
 }
 
 // BestBlockHeader returns the chain tail block
 func (c *Chain) BestBlockHeader() *types.BlockHeader {
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
-	return c.bestNode
+	return c.bestBlockHeader
 }
 
 // InMainChain checks wheather a block is in the main chain
@@ -131,16 +131,16 @@ func (c *Chain) InMainChain(hash bc.Hash) bool {
 }
 
 // This function must be called with mu lock in above level
-func (c *Chain) setState(node, irreversibleNode *types.BlockHeader, view *state.UtxoViewpoint, voteResults []*state.VoteResult) error {
-	if err := c.store.SaveChainStatus(node, irreversibleNode, view, voteResults); err != nil {
+func (c *Chain) setState(blockHeader, irrBlockHeader *types.BlockHeader, view *state.UtxoViewpoint, voteResults []*state.VoteResult) error {
+	if err := c.store.SaveChainStatus(blockHeader, irrBlockHeader, view, voteResults); err != nil {
 		return err
 	}
 
-	c.bestNode = node
-	c.bestIrreversibleNode = irreversibleNode
+	c.bestBlockHeader = blockHeader
+	c.bestIrrBlockHeader = irrBlockHeader
 
-	bestNodeHash := c.bestNode.Hash()
-	log.WithFields(log.Fields{"module": logModule, "height": c.bestNode.Height, "hash": bestNodeHash.String()}).Debug("chain best status has been update")
+	bestHash := c.bestBlockHeader.Hash()
+	log.WithFields(log.Fields{"module": logModule, "height": c.bestBlockHeader.Height, "hash": bestHash.String()}).Debug("chain best status has been update")
 	c.cond.Broadcast()
 	return nil
 }
@@ -151,7 +151,7 @@ func (c *Chain) BlockWaiter(height uint64) <-chan struct{} {
 	go func() {
 		c.cond.L.Lock()
 		defer c.cond.L.Unlock()
-		for c.bestNode.Height < height {
+		for c.bestBlockHeader.Height < height {
 			c.cond.Wait()
 		}
 		ch <- struct{}{}

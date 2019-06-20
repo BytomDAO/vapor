@@ -29,15 +29,15 @@ func signCacheKey(blockHash, pubkey string) string {
 	return fmt.Sprintf("%s:%s", blockHash, pubkey)
 }
 
-func (c *Chain) isIrreversible(blockNode *types.BlockHeader) bool {
-	consensusNodes, err := c.getConsensusNodes(&blockNode.PreviousBlockHash)
+func (c *Chain) isIrreversible(blockHeader *types.BlockHeader) bool {
+	consensusNodes, err := c.getConsensusNodes(&blockHeader.PreviousBlockHash)
 	if err != nil {
 		return false
 	}
 
 	signCount := 0
 	for i := 0; i < len(consensusNodes); i++ {
-		if blockNode.BlockWitness.Get(uint64(i)) != nil {
+		if blockHeader.BlockWitness.Get(uint64(i)) != nil {
 			signCount++
 		}
 	}
@@ -47,11 +47,11 @@ func (c *Chain) isIrreversible(blockNode *types.BlockHeader) bool {
 
 // GetVoteResultByHash return vote result by block hash
 func (c *Chain) GetVoteResultByHash(blockHash *bc.Hash) (*state.VoteResult, error) {
-	blockNode, err := c.store.GetBlockHeader(blockHash)
+	blockHeader, err := c.store.GetBlockHeader(blockHash)
 	if err != nil {
 		return nil, err
 	}
-	return c.getVoteResult(state.CalcVoteSeq(blockNode.Height), blockNode)
+	return c.getVoteResult(state.CalcVoteSeq(blockHeader.Height), blockHeader)
 }
 
 // IsBlocker returns whether the consensus node is a blocker at the specified time
@@ -63,7 +63,7 @@ func (c *Chain) IsBlocker(prevBlockHash *bc.Hash, pubKey string, timeStamp uint6
 	return xPub == pubKey, nil
 }
 
-// GetBlock return blocker by specified timestamp
+// GetBlocker return blocker by specified timestamp
 func (c *Chain) GetBlocker(prevBlockHash *bc.Hash, timestamp uint64) (string, error) {
 	return c.getBlocker(prevBlockHash, timestamp)
 }
@@ -226,7 +226,7 @@ func (c *Chain) SignBlock(block *types.Block) ([]byte, error) {
 
 	// check block exist in main chain
 	for {
-		if blockNode.Height <= c.bestIrreversibleNode.Height {
+		if blockNode.Height <= c.bestIrrBlockHeader.Height {
 			return nil, errSignForkChain
 		}
 
@@ -254,11 +254,11 @@ func (c *Chain) updateBlockSignature(blockHeader *types.BlockHeader, nodeOrder u
 		return err
 	}
 
-	if c.isIrreversible(blockHeader) && blockHeader.Height > c.bestIrreversibleNode.Height {
-		if err := c.store.SaveChainStatus(c.bestNode, blockHeader, state.NewUtxoViewpoint(), []*state.VoteResult{}); err != nil {
+	if c.isIrreversible(blockHeader) && blockHeader.Height > c.bestIrrBlockHeader.Height {
+		if err := c.store.SaveChainStatus(c.bestBlockHeader, blockHeader, state.NewUtxoViewpoint(), []*state.VoteResult{}); err != nil {
 			return err
 		}
-		c.bestIrreversibleNode = blockHeader
+		c.bestIrrBlockHeader = blockHeader
 	}
 	return nil
 }
