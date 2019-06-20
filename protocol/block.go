@@ -332,7 +332,7 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	}
 
 	bestBlock := c.saveSubBlock(block)
-	bestBlockHeader := &block.BlockHeader
+	bestBlockHeader := &bestBlock.BlockHeader
 	parentBestBlockHeader, err := c.store.GetBlockHeader(&bestBlockHeader.PreviousBlockHash)
 	if err != nil {
 		return false, err
