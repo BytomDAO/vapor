@@ -164,7 +164,7 @@ func NewStore(db dbm.DB) *Store {
 		return GetVoteResult(db, seq)
 	}
 
-	fillHeightIndexFn := func(height uint64) ([]*bc.Hash, error) {
+	fillBlockHashesFn := func(height uint64) ([]*bc.Hash, error) {
 		return GetBlockHashesByHeight(db, height)
 	}
 
@@ -172,7 +172,7 @@ func NewStore(db dbm.DB) *Store {
 		return GetMainChainHash(db, height)
 	}
 
-	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillVoteResultFn, fillHeightIndexFn, fillMainChainHashFn)
+	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillVoteResultFn, fillBlockHashesFn, fillMainChainHashFn)
 	return &Store{
 		db:    db,
 		cache: cache,

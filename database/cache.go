@@ -22,10 +22,10 @@ const (
 type fillBlockHeaderFn func(hash *bc.Hash) (*types.BlockHeader, error)
 type fillBlockTransactionsFn func(hash *bc.Hash) ([]*types.Tx, error)
 type fillVoteResultFn func(seq uint64) (*state.VoteResult, error)
-type fillHeightIndexFn func(height uint64) ([]*bc.Hash, error)
+type fillBlockHashesFn func(height uint64) ([]*bc.Hash, error)
 type fillMainChainHashFn func(height uint64) (*bc.Hash, error)
 
-func newCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransactionsFn, fillVoteResult fillVoteResultFn, fillHeightIndex fillHeightIndexFn, fillMainChainHash fillMainChainHashFn) cache {
+func newCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransactionsFn, fillVoteResult fillVoteResultFn, fillBlockHashes fillBlockHashesFn, fillMainChainHash fillMainChainHashFn) cache {
 	return cache{
 		lruBlockHeaders:    common.NewCache(maxCachedBlockHeaders),
 		lruBlockTxs:        common.NewCache(maxCachedBlockTransactions),
@@ -36,7 +36,7 @@ func newCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransacti
 		fillBlockHeaderFn:      fillBlockHeader,
 		fillBlockTransactionFn: fillBlockTxs,
 		fillVoteResultFn:       fillVoteResult,
-		fillHeightIndexFn:      fillHeightIndex,
+		fillBlockHashesFn:      fillBlockHashes,
 		fillMainChainHashFn:    fillMainChainHash,
 	}
 }
@@ -51,7 +51,7 @@ type cache struct {
 	fillBlockHeaderFn      func(hash *bc.Hash) (*types.BlockHeader, error)
 	fillBlockTransactionFn func(hash *bc.Hash) ([]*types.Tx, error)
 	fillVoteResultFn       func(seq uint64) (*state.VoteResult, error)
-	fillHeightIndexFn      func(uint64) ([]*bc.Hash, error)
+	fillBlockHashesFn      func(uint64) ([]*bc.Hash, error)
 	fillMainChainHashFn    func(uint64) (*bc.Hash, error)
 
 	sf singleflight.Group
@@ -146,7 +146,7 @@ func (c *cache) lookupBlockHashesByHeight(height uint64) ([]*bc.Hash, error) {
 
 	heightStr := strconv.FormatUint(height, 10)
 	hashes, err := c.sf.Do("BlockHashesByHeight:"+heightStr, func() (interface{}, error) {
-		hashes, err := c.fillHeightIndexFn(height)
+		hashes, err := c.fillBlockHashesFn(height)
 		if err != nil {
 			return nil, err
 		}
