@@ -3,6 +3,7 @@ package federation
 import (
 	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"time"
 
 	btmTypes "github.com/bytom/protocol/bc/types"
@@ -278,12 +279,27 @@ func (w *warder) signDestTx(destTx interface{}, ormTx *orm.CrossTransaction) err
 		return errors.New("cross-chain tx status error")
 	}
 
-	_ /*signData*/, err := w.getSignData(destTx)
+	signData, err := w.getSignData(destTx)
 	if err != nil {
 		return errors.New("getSignData")
 	}
 
-	return w.db.Model(nil).Where(nil).UpdateColumn(nil).Error
+	// TODO: compose
+
+	b, err := json.Marshal(signData)
+	if err != nil {
+		return errors.Wrap(err, "marshal signData")
+	}
+
+	return w.db.Model(&orm.CrossTransactionSign{}).
+		Where(&orm.CrossTransactionSign{
+			CrossTransactionID: ormTx.ID,
+			WarderID:           w.position,
+		}).
+		UpdateColumn(&orm.CrossTransactionSign{
+			Signatures: string(b),
+			Status:     common.CrossTxSignCompletedStatus,
+		}).Error
 }
 
 func (w *warder) getSignData(destTx interface{}) ([]string, error) {
