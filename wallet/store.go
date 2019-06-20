@@ -25,6 +25,9 @@ type DB interface {
 	DeleteUnconfirmedTxByTxID(string)
 	SetGlobalTxIndex(string, *bc.Hash, uint64)
 	GetStandardUTXOByID(bc.Hash) []byte
+	GetTxIndexByTxID(string) []byte
+	GetTxByTxIndex([]byte) []byte
+	GetGlobalTxByTxID(string) []byte
 }
 
 // LevelDBStore store wallet using leveldb
@@ -102,4 +105,40 @@ func (store *LevelDBStore) SetGlobalTxIndex(globalTxID string, blockHash *bc.Has
 // GetStandardUTXOByID get standard utxo by id
 func (store *LevelDBStore) GetStandardUTXOByID(outid bc.Hash) []byte {
 	return store.DB.Get(account.StandardUTXOKey(outid))
+}
+
+// GetTxIndexByTxID get tx index by txID
+func (store *LevelDBStore) GetTxIndexByTxID(txID string) []byte {
+	return store.DB.Get(calcTxIndexKey(txID))
+}
+
+// GetTxByTxIndex get tx by tx index
+func (store *LevelDBStore) GetTxByTxIndex(txIndex []byte) []byte {
+	return store.DB.Get(calcAnnotatedKey(string(txIndex)))
+}
+
+// GetGlobalTxByTxID get global tx by txID
+func (store *LevelDBStore) GetGlobalTxByTxID(txID string) []byte {
+	return store.DB.Get(calcGlobalTxIndexKey(txID))
+}
+
+// GetTransactions get all walletDB transactions, and filter transactions by accountID optional
+func (store *LevelDBStore) GetTransactionsByAccountID(accountID string) ([]*query.AnnotatedTx, error) {
+	annotatedTxs := []*query.AnnotatedTx{}
+
+	txIter := store.DB.IteratorPrefix([]byte(TxPrefix))
+	defer txIter.Release()
+	for txIter.Next() {
+		annotatedTx := &query.AnnotatedTx{}
+		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
+			return nil, err
+		}
+
+		if accountID == "" || findTransactionsByAccount(annotatedTx, accountID) {
+			annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
+			annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
+		}
+	}
+
+	return annotatedTxs, nil
 }
