@@ -32,19 +32,19 @@ $ make install
 Firstly, you need initialize node:
 
 ```
-$ bytomd init --chain_id=vapor --home <vapor-data-path>
+$ vapord init --chain_id=vapor --home <vapor-data-path>
 ```
 
 For example, you can store vapor data in `$HOME/bytom/vapor`:
 
 ```
-$ bytomd init --chain_id=vapor --home $HOME/bytom/vapor
+$ vapord init --chain_id=vapor --home $HOME/bytom/vapor
 ```
 
 Then, start your node:
 
 ```
-$ bytomd node --home <vapor-data-path>
+$ vapord node --home <vapor-data-path>
 ```
 
 ## Running in Docker
@@ -68,8 +68,6 @@ vapor data directory has three config files:
 - `federation.json`
 - `node_key.txt`
 
-Then you can use bytomd and bytomcli following [Bytom Wiki](https://github.com/Bytom/bytom/wiki/Command-Line-Options).
-
 Use `exit` to exit Docker's iterative mode.
 
 ### Daemon mode
@@ -77,7 +75,7 @@ Use `exit` to exit Docker's iterative mode.
 For example,
 
 ```bash
-$ docker run -d --net=host -v <vapor/data/directory/on/host/machine>:/root/.vapor vapor:latest bytomd node --web.closed --auth.disable
+$ docker run -d --net=host -v <vapor/data/directory/on/host/machine>:/root/.vapor vapor:latest vapord node --web.closed --auth.disable
 ```
 
 To list the running containners and check their container id, image, corresponding command, created time, status, name and ports being used:
@@ -95,7 +93,7 @@ $ docker ps
 To execute a command inside a containner, for example:
 
 ```
-$ docker exec -it <containerId> bytomcli create-access-token <tokenId>
+$ docker exec -it <containerId> vaporcli create-access-token <tokenId>
 ```
 
 To stop a running containner:
