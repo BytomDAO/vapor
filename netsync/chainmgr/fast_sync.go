@@ -360,6 +360,7 @@ func (bk *blockKeeper) requireHeaders(peerID string, locator []*bc.Hash, amount 
 			if len(msg.headers) != int(amount) {
 				return nil, errHeadersNum
 			}
+
 			return msg.headers, nil
 		case <-timeout.C:
 			return nil, errors.Wrap(errRequestTimeout, "requireHeaders")
@@ -408,13 +409,14 @@ func (bk *blockKeeper) fetchHeaders(resultCh chan *taskResult, task *requireTask
 func (bk *blockKeeper) fetchSkeleton() error {
 	startPoint := bk.commonAncestor.Hash()
 
+	bk.skeleton = append(bk.skeleton, bk.commonAncestor)
 	if bk.fastSyncLength > maxBlockHeadersPerMsg {
 		headers, err := bk.requireHeaders(bk.syncPeer.ID(), []*bc.Hash{&startPoint}, bk.fastSyncLength/maxBlockHeadersPerMsg+1, maxBlockHeadersPerMsg-1)
 		if err != nil {
 			return err
 		}
 
-		bk.skeleton = append(bk.skeleton, headers[:]...)
+		bk.skeleton = append(bk.skeleton, headers[1:]...)
 	}
 
 	if bk.fastSyncLength%maxBlockHeadersPerMsg != 0 {
