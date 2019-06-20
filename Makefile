@@ -13,28 +13,24 @@ PACKAGES    := $(shell go list ./... | grep -v '/vendor/' | grep -v '/crypto/ed2
 
 BUILD_FLAGS := -ldflags "-X github.com/vapor/version.GitCommit=`git rev-parse HEAD`"
 
-MINER_BINARY32 := miner-$(GOOS)_386
-MINER_BINARY64 := miner-$(GOOS)_amd64
 
-BYTOMD_BINARY32 := bytomd-$(GOOS)_386
-BYTOMD_BINARY64 := bytomd-$(GOOS)_amd64
+VAPORD_BINARY32 := vapord-$(GOOS)_386
+VAPORD_BINARY64 := vapord-$(GOOS)_amd64
 
-BYTOMCLI_BINARY32 := bytomcli-$(GOOS)_386
-BYTOMCLI_BINARY64 := bytomcli-$(GOOS)_amd64
+VAPORCLI_BINARY32 := vaporcli-$(GOOS)_386
+VAPORCLI_BINARY64 := vaporcli-$(GOOS)_amd64
 
 VERSION := $(shell awk -F= '/Version =/ {print $$2}' version/version.go | tr -d "\" ")
 
-MINER_RELEASE32 := miner-$(VERSION)-$(GOOS)_386
-MINER_RELEASE64 := miner-$(VERSION)-$(GOOS)_amd64
 
-BYTOMD_RELEASE32 := bytomd-$(VERSION)-$(GOOS)_386
-BYTOMD_RELEASE64 := bytomd-$(VERSION)-$(GOOS)_amd64
+VAPORD_RELEASE32 := vapord-$(VERSION)-$(GOOS)_386
+VAPORD_RELEASE64 := vapord-$(VERSION)-$(GOOS)_amd64
 
-BYTOMCLI_RELEASE32 := bytomcli-$(VERSION)-$(GOOS)_386
-BYTOMCLI_RELEASE64 := bytomcli-$(VERSION)-$(GOOS)_amd64
+VAPORCLI_RELEASE32 := vaporcli-$(VERSION)-$(GOOS)_386
+VAPORCLI_RELEASE64 := vaporcli-$(VERSION)-$(GOOS)_amd64
 
-BYTOM_RELEASE32 := bytom-$(VERSION)-$(GOOS)_386
-BYTOM_RELEASE64 := bytom-$(VERSION)-$(GOOS)_amd64
+VAPOR_RELEASE32 := vapor-$(VERSION)-$(GOOS)_386
+VAPOR_RELEASE64 := vapor-$(VERSION)-$(GOOS)_amd64
 
 all: test target release-all install
 
@@ -42,51 +38,44 @@ fedd:
 	@echo "Building fedd to cmd/fedd/fedd"
 	@go build $(BUILD_FLAGS) -o cmd/fedd/fedd cmd/fedd/main.go
 
-bytomd:
-	@echo "Building bytomd to cmd/bytomd/bytomd"
-	@go build $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
+vapord:
+	@echo "Building vapord to cmd/vapord/vapord"
+	@go build $(BUILD_FLAGS) -o cmd/vapord/vapord cmd/vapord/main.go
 
-bytomd-simd:
-	@echo "Building SIMD version bytomd to cmd/bytomd/bytomd"
-	@cd mining/tensority/cgo_algorithm/lib/ && make
-	@go build -tags="simd" $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
-
-bytomcli:
-	@echo "Building bytomcli to cmd/bytomcli/bytomcli"
-	@go build $(BUILD_FLAGS) -o cmd/bytomcli/bytomcli cmd/bytomcli/main.go
+vaporcli:
+	@echo "Building vaporcli to cmd/vaporcli/vaporcli"
+	@go build $(BUILD_FLAGS) -o cmd/vaporcli/vaporcli cmd/vaporcli/main.go
 
 install:
-	@echo "Installing bytomd and bytomcli to $(GOPATH)/bin"
-	@go install ./cmd/bytomd
-	@go install ./cmd/bytomcli
+	@echo "Installing vapord and vaporcli to $(GOPATH)/bin"
+	@go install ./cmd/vapord
+	@go install ./cmd/vaporcli
 
 target:
 	mkdir -p $@
 
-binary: target/$(BYTOMD_BINARY32) target/$(BYTOMD_BINARY64) target/$(BYTOMCLI_BINARY32) target/$(BYTOMCLI_BINARY64) target/$(MINER_BINARY32) target/$(MINER_BINARY64)
+binary: target/$(VAPORD_BINARY32) target/$(VAPORD_BINARY64) target/$(VAPORCLI_BINARY32) target/$(VAPORCLI_BINARY64)
 
 ifeq ($(GOOS),windows)
 release: binary
-	cd target && cp -f $(MINER_BINARY32) $(MINER_BINARY32).exe
-	cd target && cp -f $(BYTOMD_BINARY32) $(BYTOMD_BINARY32).exe
-	cd target && cp -f $(BYTOMCLI_BINARY32) $(BYTOMCLI_BINARY32).exe
-	cd target && md5sum $(MINER_BINARY32).exe $(BYTOMD_BINARY32).exe $(BYTOMCLI_BINARY32).exe >$(BYTOM_RELEASE32).md5
-	cd target && zip $(BYTOM_RELEASE32).zip $(MINER_BINARY32).exe $(BYTOMD_BINARY32).exe $(BYTOMCLI_BINARY32).exe $(BYTOM_RELEASE32).md5
-	cd target && rm -f $(MINER_BINARY32) $(BYTOMD_BINARY32) $(BYTOMCLI_BINARY32) $(MINER_BINARY32).exe $(BYTOMD_BINARY32).exe $(BYTOMCLI_BINARY32).exe $(BYTOM_RELEASE32).md5
-	cd target && cp -f $(MINER_BINARY64) $(MINER_BINARY64).exe
-	cd target && cp -f $(BYTOMD_BINARY64) $(BYTOMD_BINARY64).exe
-	cd target && cp -f $(BYTOMCLI_BINARY64) $(BYTOMCLI_BINARY64).exe
-	cd target && md5sum $(MINER_BINARY64).exe $(BYTOMD_BINARY64).exe $(BYTOMCLI_BINARY64).exe >$(BYTOM_RELEASE64).md5
-	cd target && zip $(BYTOM_RELEASE64).zip $(MINER_BINARY64).exe $(BYTOMD_BINARY64).exe $(BYTOMCLI_BINARY64).exe $(BYTOM_RELEASE64).md5
-	cd target && rm -f $(MINER_BINARY64) $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) $(MINER_BINARY64).exe $(BYTOMD_BINARY64).exe $(BYTOMCLI_BINARY64).exe $(BYTOM_RELEASE64).md5
+	cd target && cp -f $(VAPORD_BINARY32) $(VAPORD_BINARY32).exe
+	cd target && cp -f $(VAPORCLI_BINARY32) $(VAPORCLI_BINARY32).exe
+	cd target && md5sum $(VAPORD_BINARY32).exe $(VAPORCLI_BINARY32).exe >$(VAPOR_RELEASE32).md5
+	cd target && zip $(VAPOR_RELEASE32).zip $(VAPORD_BINARY32).exe $(VAPORCLI_BINARY32).exe $(VAPOR_RELEASE32).md5
+	cd target && rm -f $(VAPORD_BINARY32) $(VAPORCLI_BINARY32) $(VAPORD_BINARY32).exe $(VAPORCLI_BINARY32).exe $(VAPOR_RELEASE32).md5
+	cd target && cp -f $(VAPORD_BINARY64) $(VAPORD_BINARY64).exe
+	cd target && cp -f $(VAPORCLI_BINARY64) $(VAPORCLI_BINARY64).exe
+	cd target && md5sum $(VAPORD_BINARY64).exe $(VAPORCLI_BINARY64).exe >$(VAPOR_RELEASE64).md5
+	cd target && zip $(VAPOR_RELEASE64).zip $(VAPORD_BINARY64).exe $(VAPORCLI_BINARY64).exe $(VAPOR_RELEASE64).md5
+	cd target && rm -f $(VAPORD_BINARY64) $(VAPORCLI_BINARY64) $(VAPORD_BINARY64).exe $(VAPORCLI_BINARY64).exe $(VAPOR_RELEASE64).md5
 else
 release: binary
-	cd target && md5sum $(MINER_BINARY32) $(BYTOMD_BINARY32) $(BYTOMCLI_BINARY32) >$(BYTOM_RELEASE32).md5
-	cd target && tar -czf $(BYTOM_RELEASE32).tgz $(MINER_BINARY32) $(BYTOMD_BINARY32) $(BYTOMCLI_BINARY32) $(BYTOM_RELEASE32).md5
-	cd target && rm -f $(MINER_BINARY32) $(BYTOMD_BINARY32) $(BYTOMCLI_BINARY32) $(BYTOM_RELEASE32).md5
-	cd target && md5sum $(MINER_BINARY64) $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) >$(BYTOM_RELEASE64).md5
-	cd target && tar -czf $(BYTOM_RELEASE64).tgz $(MINER_BINARY64) $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) $(BYTOM_RELEASE64).md5
-	cd target && rm -f $(MINER_BINARY64) $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) $(BYTOM_RELEASE64).md5
+	cd target && md5sum $(VAPORD_BINARY32) $(VAPORCLI_BINARY32) >$(VAPOR_RELEASE32).md5
+	cd target && tar -czf $(VAPOR_RELEASE32).tgz $(VAPORD_BINARY32) $(VAPORCLI_BINARY32) $(VAPOR_RELEASE32).md5
+	cd target && rm -f $(VAPORD_BINARY32) $(VAPORCLI_BINARY32) $(VAPOR_RELEASE32).md5
+	cd target && md5sum $(VAPORD_BINARY64) $(VAPORCLI_BINARY64) >$(VAPOR_RELEASE64).md5
+	cd target && tar -czf $(VAPOR_RELEASE64).tgz $(VAPORD_BINARY64) $(VAPORCLI_BINARY64) $(VAPOR_RELEASE64).md5
+	cd target && rm -f $(VAPORD_BINARY64) $(VAPORCLI_BINARY64) $(VAPOR_RELEASE64).md5
 endif
 
 release-all: clean
@@ -96,12 +85,11 @@ release-all: clean
 
 clean:
 	@echo "Cleaning binaries built..."
-	@rm -rf cmd/bytomd/bytomd
-	@rm -rf cmd/bytomcli/bytomcli
-	@rm -rf cmd/miner/miner
+	@rm -rf cmd/vapord/vapord
+	@rm -rf cmd/vaporcli/vaporcli
 	@rm -rf target
-	@rm -rf $(GOPATH)/bin/bytomd
-	@rm -rf $(GOPATH)/bin/bytomcli
+	@rm -rf $(GOPATH)/bin/vapord
+	@rm -rf $(GOPATH)/bin/vaporcli
 	@echo "Cleaning temp test data..."
 	@rm -rf test/pseudo_hsm*
 	@rm -rf blockchain/pseudohsm/testdata/pseudo/
@@ -109,23 +97,18 @@ clean:
 	@rm -rf crypto/sm2/*.pem
 	@echo "Done."
 
-target/$(BYTOMD_BINARY32):
-	CGO_ENABLED=0 GOARCH=386 go build $(BUILD_FLAGS) -o $@ cmd/bytomd/main.go
+target/$(VAPORD_BINARY32):
+	CGO_ENABLED=0 GOARCH=386 go build $(BUILD_FLAGS) -o $@ cmd/vapord/main.go
 
-target/$(BYTOMD_BINARY64):
-	CGO_ENABLED=0 GOARCH=amd64 go build $(BUILD_FLAGS) -o $@ cmd/bytomd/main.go
+target/$(VAPORD_BINARY64):
+	CGO_ENABLED=0 GOARCH=amd64 go build $(BUILD_FLAGS) -o $@ cmd/vapord/main.go
 
-target/$(BYTOMCLI_BINARY32):
-	CGO_ENABLED=0 GOARCH=386 go build $(BUILD_FLAGS) -o $@ cmd/bytomcli/main.go
+target/$(VAPORCLI_BINARY32):
+	CGO_ENABLED=0 GOARCH=386 go build $(BUILD_FLAGS) -o $@ cmd/vaporcli/main.go
 
-target/$(BYTOMCLI_BINARY64):
-	CGO_ENABLED=0 GOARCH=amd64 go build $(BUILD_FLAGS) -o $@ cmd/bytomcli/main.go
+target/$(VAPORCLI_BINARY64):
+	CGO_ENABLED=0 GOARCH=amd64 go build $(BUILD_FLAGS) -o $@ cmd/vaporcli/main.go
 
-target/$(MINER_BINARY32):
-	CGO_ENABLED=0 GOARCH=386 go build $(BUILD_FLAGS) -o $@ cmd/miner/main.go
-
-target/$(MINER_BINARY64):
-	CGO_ENABLED=0 GOARCH=amd64 go build $(BUILD_FLAGS) -o $@ cmd/miner/main.go
 
 test:
 	@echo "====> Running go test"
