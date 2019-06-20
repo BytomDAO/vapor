@@ -7,7 +7,7 @@ Vapor
 
 ## Requirements
 
-- [Go](https://golang.org/doc/install) version 1.8 or higher, with `$GOPATH` set to your preferred directory
+- [Go](https://golang.org/doc/install) version 1.11 or higher, with `$GOPATH` set to your preferred directory
 
 ## Get source code
 
