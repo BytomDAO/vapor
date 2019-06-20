@@ -53,18 +53,19 @@ type blockKeeper struct {
 	skeleton       []*types.BlockHeader
 	commonAncestor *types.BlockHeader
 	fastSyncLength int
+
+	quite chan struct{}
 }
 
 func newBlockKeeper(chain Chain, peers *peers.PeerSet) *blockKeeper {
-	bk := &blockKeeper{
+	return &blockKeeper{
 		chain:            chain,
 		peers:            peers,
 		blockProcessCh:   make(chan *blockMsg, blockProcessChSize),
 		blocksProcessCh:  make(chan *blocksMsg, blocksProcessChSize),
 		headersProcessCh: make(chan *headersMsg, headersProcessChSize),
+		quite:            make(chan struct{}),
 	}
-	go bk.syncWorker()
-	return bk
 }
 
 func (bk *blockKeeper) processBlock(peerID string, block *types.Block) {
@@ -125,6 +126,10 @@ func (bk *blockKeeper) requireBlock(height uint64) (*types.Block, error) {
 	}
 }
 
+func (bk *blockKeeper) start() {
+	go bk.syncWorker()
+}
+
 func (bk *blockKeeper) startSync() bool {
 	blockHeight := bk.chain.BestBlockHeight()
 	peer := bk.peers.BestPeer(consensus.SFFastSync | consensus.SFFullNode)
@@ -157,23 +162,31 @@ func (bk *blockKeeper) startSync() bool {
 	return false
 }
 
+func (bk *blockKeeper) stop() {
+	close(bk.quite)
+}
+
 func (bk *blockKeeper) syncWorker() {
 	syncTicker := time.NewTicker(syncCycle)
 	defer syncTicker.Stop()
 
 	for {
-		<-syncTicker.C
-		if update := bk.startSync(); !update {
-			continue
-		}
+		select {
+		case <-syncTicker.C:
+			if update := bk.startSync(); !update {
+				continue
+			}
 
-		block, err := bk.chain.GetBlockByHeight(bk.chain.BestBlockHeight())
-		if err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on syncWorker get best block")
-		}
+			block, err := bk.chain.GetBlockByHeight(bk.chain.BestBlockHeight())
+			if err != nil {
+				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on syncWorker get best block")
+			}
 
-		if err = bk.peers.BroadcastNewStatus(block); err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on syncWorker broadcast new status")
+			if err = bk.peers.BroadcastNewStatus(block); err != nil {
+				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on syncWorker broadcast new status")
+			}
+		case <-bk.quite:
+			return
 		}
 	}
 }

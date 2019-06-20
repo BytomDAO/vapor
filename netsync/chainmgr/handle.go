@@ -164,9 +164,6 @@ func (m *Manager) handleGetBlocksMsg(peer *peers.Peer, msg *msgs.GetBlocksMessag
 			continue
 		}
 
-		if totalSize+len(rawData) > msgs.MaxBlockchainResponseSize/2 {
-			break
-		}
 		totalSize += len(rawData)
 		sendBlocks = append(sendBlocks, block)
 	}
@@ -181,15 +178,17 @@ func (m *Manager) handleGetBlocksMsg(peer *peers.Peer, msg *msgs.GetBlocksMessag
 }
 
 func (m *Manager) handleGetHeadersMsg(peer *peers.Peer, msg *msgs.GetHeadersMessage) {
-	headers, err := m.blockKeeper.locateHeaders(msg.GetBlockLocator(), nil, msg.GetAmount(), msg.GetSkip())
+	if msg.Amount > maxHeadersPerMsg {
+		log.WithFields(log.Fields{"module": logModule, "peerID": peer.ID(), "err": errExceedMaxHeadersNum}).Debug("fail on process GetHeadersMsg")
+		return
+	}
+
+	headers, err := m.blockKeeper.locateHeaders(msg.GetBlockLocator(), nil, msg.GetAmount(), msg.GetSkip(), maxHeadersPerMsg)
 	if err != nil || len(headers) == 0 {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Debug("fail on handleGetHeadersMsg locateHeaders")
 		return
 	}
 
-	if len(headers) > maxHeadersPerMsg {
-		headers = headers[:maxHeadersPerMsg]
-	}
 	ok, err := peer.SendHeaders(headers)
 	if !ok {
 		m.peers.RemovePeer(peer.ID())
@@ -366,7 +365,7 @@ func (m *Manager) Start() error {
 	if err != nil {
 		return err
 	}
-
+	m.blockKeeper.start()
 	go m.broadcastTxsLoop()
 	go m.syncMempoolLoop()
 
@@ -375,5 +374,6 @@ func (m *Manager) Start() error {
 
 //Stop stop sync manager
 func (m *Manager) Stop() {
+	m.blockKeeper.stop()
 	close(m.quit)
 }

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -14,11 +15,12 @@ var (
 	maxHeadersPerMsg     = 500
 	fastSyncPivotGap     = 64
 	minGapStartFastSync  = 128
-	maxFastSyncBlocksNum = 10000
+	maxFastSyncBlocksNum = (maxHeadersPerMsg - 1) * maxHeadersPerMsg
 
-	errHeadersNum       = errors.New("headers number error")
-	errBlocksNum        = errors.New("blocks number error")
-	errNoCommonAncestor = errors.New("can't find common ancestor")
+	errHeadersNum          = errors.New("headers number error")
+	errExceedMaxHeadersNum = errors.New("exceed max headers number per msg")
+	errBlocksNum           = errors.New("blocks number error")
+	errNoCommonAncestor    = errors.New("can't find common ancestor")
 )
 
 func (bk *blockKeeper) blockLocator() []*bc.Hash {
@@ -110,8 +112,11 @@ func (bk *blockKeeper) findFastSyncRange() error {
 		return err
 	}
 
-	gap := bk.syncPeer.Height() - uint64(fastSyncPivotGap) - bk.commonAncestor.Height
+	if bk.syncPeer.Height() <= uint64(fastSyncPivotGap)+bk.commonAncestor.Height {
+		return nil
+	}
 
+	gap := bk.syncPeer.Height() - uint64(fastSyncPivotGap) - bk.commonAncestor.Height
 	if gap > uint64(maxFastSyncBlocksNum) {
 		bk.fastSyncLength = maxFastSyncBlocksNum
 		return nil
@@ -128,17 +133,13 @@ func (bk *blockKeeper) initFastSyncParameters() {
 }
 
 func (bk *blockKeeper) locateBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*types.Block, error) {
-	headers, err := bk.locateHeaders(locator, stopHash, 0, 0)
+	headers, err := bk.locateHeaders(locator, stopHash, 0, 0, maxBlocksPerMsg)
 	if err != nil {
 		return nil, err
 	}
 
 	blocks := []*types.Block{}
-	for i, header := range headers {
-		if i >= maxBlocksPerMsg {
-			break
-		}
-
+	for _, header := range headers {
 		headerHash := header.Hash()
 		block, err := bk.chain.GetBlockByHash(&headerHash)
 		if err != nil {
@@ -150,7 +151,7 @@ func (bk *blockKeeper) locateBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*t
 	return blocks, nil
 }
 
-func (bk *blockKeeper) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, amount int, skip int) ([]*types.BlockHeader, error) {
+func (bk *blockKeeper) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, amount int, skip int, maxNum int) ([]*types.BlockHeader, error) {
 	startHeader, err := bk.chain.GetHeaderByHeight(0)
 	if err != nil {
 		return nil, err
@@ -175,13 +176,14 @@ func (bk *blockKeeper) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, amou
 	}
 
 	headers := []*types.BlockHeader{}
-	for i := startHeader.Height; i <= stopHeader.Height; i += uint64(skip) + 1 {
+	num := 0
+	for i := startHeader.Height; i <= stopHeader.Height && num < maxNum; i += uint64(skip) + 1 {
 		header, err := bk.chain.GetHeaderByHeight(i)
 		if err != nil {
 			return nil, err
 		}
-
 		headers = append(headers, header)
+		num++
 	}
 	return headers, nil
 }
