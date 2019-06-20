@@ -26,7 +26,8 @@ func (c *Chain) getConsensusNode(prevBlockHash *bc.Hash, pubkey string) (*state.
 	return node, nil
 }
 
-func (c *Chain) getBlocker(prevBlockHash *bc.Hash, timeStamp uint64) (string, error) {
+// GetBlocker return blocker by specified timestamp
+func (c *Chain) GetBlocker(prevBlockHash *bc.Hash, timeStamp uint64) (string, error) {
 	consensusNodeMap, err := c.getConsensusNodes(prevBlockHash)
 	if err != nil {
 		return "", err

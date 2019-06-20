@@ -56,16 +56,11 @@ func (c *Chain) GetVoteResultByHash(blockHash *bc.Hash) (*state.VoteResult, erro
 
 // IsBlocker returns whether the consensus node is a blocker at the specified time
 func (c *Chain) IsBlocker(prevBlockHash *bc.Hash, pubKey string, timeStamp uint64) (bool, error) {
-	xPub, err := c.getBlocker(prevBlockHash, timeStamp)
+	xPub, err := c.GetBlocker(prevBlockHash, timeStamp)
 	if err != nil {
 		return false, err
 	}
 	return xPub == pubKey, nil
-}
-
-// GetBlocker return blocker by specified timestamp
-func (c *Chain) GetBlocker(prevBlockHash *bc.Hash, timestamp uint64) (string, error) {
-	return c.getBlocker(prevBlockHash, timestamp)
 }
 
 // ProcessBlockSignature process the received block signature messages
