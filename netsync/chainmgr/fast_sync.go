@@ -4,8 +4,6 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
-
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -16,8 +14,8 @@ var (
 	fetchDataParallelTimeout = 100 * time.Second
 
 	maxFetchRetryNum      = 3
-	maxBlockPerMsg        = 100
-	maxBlockHeadersPerMsg = 1000
+	maxBlockPerMsg        = 500
+	maxBlockHeadersPerMsg = 500
 	minGapStartFastSync   = 128
 	maxFastSyncBlockNum   = 10000
 
@@ -84,119 +82,42 @@ func (bk *blockKeeper) blockLocator() []*bc.Hash {
 }
 
 func (bk *blockKeeper) fastSynchronize() error {
+	bk.initFastSyncParameters()
+
 	err := bk.findFastSyncRange()
 	if err != nil {
 		return err
 	}
 
-	bk.initFastSyncParameters()
-	timeout := time.NewTimer(FastSyncTimeout)
-	defer timeout.Stop()
+	if err := bk.fetchSkeleton(); err != nil {
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("failed on fetch skeleton")
+	}
 
-	resultCh := make(chan *fastSyncResult, 1)
-	go bk.fetchData(resultCh)
-	go bk.verifyBlocks(resultCh)
-
-	select {
-	case result := <-resultCh:
-		if result.err != nil {
-			close(bk.fastSyncQuit)
+	for i := 0; i < len(bk.skeleton)-1; i++ {
+		blocks, err := bk.fetchBlocks(bk.skeleton[i], bk.skeleton[i+1])
+		if err != nil {
+			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("failed on fetch blocks")
 			return err
 		}
-		return nil
-	case <-timeout.C:
-		close(bk.fastSyncQuit)
-		return errFastSyncTimeout
+
+		if err := bk.verifyBlocks(blocks); err != nil {
+			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("failed on process blocks")
+			return err
+		}
 	}
+
 	return nil
 }
 
-func (bk *blockKeeper) fetchBodiesParallel() error {
-	return bk.fetchDataParallel(bk.createFetchBodiesTask, bk.fetchBodies, bk.bodiesTaskQueue)
-}
-
-func (bk *blockKeeper) fetchBodies(resultCh chan *taskResult, task *requireTask) {
-	task.count++
-	startHash := task.startHeader.Hash()
-	stopHash := task.stopHeader.Hash()
-	bodies, err := bk.requireBlocks(task.peerID, []*bc.Hash{&startHash}, &stopHash, task.length)
+func (bk *blockKeeper) fetchBlocks(startHeader *types.BlockHeader, stopHeader *types.BlockHeader) ([]*types.Block, error) {
+	startHash := startHeader.Hash()
+	stopHash := stopHeader.Hash()
+	bodies, err := bk.requireBlocks(bk.syncPeer.ID(), []*bc.Hash{&startHash}, &stopHash, int(stopHeader.Height-startHeader.Height+1))
 	if err != nil {
-		resultCh <- &taskResult{err: err, task: task}
-		return
+		return nil, err
 	}
 
-	bk.bodies = append(bk.bodies[:task.index*maxBlockPerMsg], bodies[:]...)
-	bk.blocksProcessIndexCh <- task.index
-	resultCh <- &taskResult{err: nil, task: task}
-}
-
-func (bk *blockKeeper) createFetchBodiesTask() {
-	index := 0
-	for i := 0; i < bk.fastSyncLength; i += maxBlockPerMsg {
-		var stopHeader *types.BlockHeader
-		startHead := bk.headers[i]
-		if i+maxBlockPerMsg >= bk.fastSyncLength {
-			stopHeader = bk.headers[bk.fastSyncLength-1]
-		} else {
-			stopHeader = bk.headers[i+maxBlockPerMsg-1]
-		}
-
-		bk.bodiesTaskQueue.Push(&requireTask{index: index, length: int(stopHeader.Height - startHead.Height + 1), startHeader: startHead, stopHeader: stopHeader}, -float32(i))
-		index++
-	}
-}
-
-func (bk *blockKeeper) fetchDataParallel(createTask func(), fetch func(chan *taskResult, *requireTask), taskQueue *prque.Prque) error {
-	createTask()
-	resultCh := make(chan *taskResult, 1)
-	taskFinished := 0
-	taskSize := taskQueue.Size()
-	timeout := time.NewTimer(fetchDataParallelTimeout)
-	defer timeout.Stop()
-
-	// schedule task
-	for {
-		for !taskQueue.Empty() {
-			task := taskQueue.PopItem().(*requireTask)
-			peerID, err := bk.peers.SelectPeer(bk.skeleton[len(bk.skeleton)-1].Height - uint64(minGapStartFastSync))
-			if err != nil {
-				taskQueue.Push(task, -float32(task.index))
-				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("failed on select valid peer")
-				break
-			}
-			task.peerID = peerID
-			go fetch(resultCh, task)
-		}
-
-		select {
-		case result := <-resultCh:
-			bk.peers.SetIdle(result.task.peerID)
-			if result.err != nil && result.task.count >= maxFetchRetryNum {
-				log.WithFields(log.Fields{"module": logModule, "index": result.task.index, "err": result.err}).Error("failed on fetch data")
-				return result.err
-			}
-
-			if result.err != nil && result.task.count < maxFetchRetryNum {
-				log.WithFields(log.Fields{"module": logModule, "count": result.task.count, "index": result.task.index, "err": result.err}).Warn("failed on fetch data")
-				taskQueue.Push(result.task, -float32(result.task.index))
-				break
-			}
-			taskFinished++
-			if taskFinished == taskSize {
-				return nil
-			}
-		case <-timeout.C:
-			return errRequestTimeout
-		case <-bk.fastSyncQuit:
-			return nil
-		}
-	}
-
-	return nil
-}
-
-func (bk *blockKeeper) fetchHeadersParallel() error {
-	return bk.fetchDataParallel(bk.createFetchHeadersTask, bk.fetchHeaders, bk.headersTaskQueue)
+	return bodies, nil
 }
 
 func (bk *blockKeeper) findCommonAncestor() error {
@@ -230,14 +151,9 @@ func (bk *blockKeeper) findFastSyncRange() error {
 }
 
 func (bk *blockKeeper) initFastSyncParameters() {
-	bk.headersTaskQueue = prque.New()
-	bk.bodiesTaskQueue = prque.New()
-	bk.blockProcessQueue = prque.New()
-	bk.blocksProcessIndexCh = make(chan int, maxFastSyncBlockNum/maxBlockPerMsg)
-	bk.fastSyncQuit = make(chan struct{})
 	bk.skeleton = make([]*types.BlockHeader, 0)
-	bk.headers = make([]*types.BlockHeader, bk.fastSyncLength)
-	bk.bodies = make([]*types.Block, bk.fastSyncLength)
+	bk.commonAncestor = nil
+	bk.fastSyncLength = 0
 }
 
 func (bk *blockKeeper) locateBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*types.Block, error) {
@@ -331,8 +247,6 @@ func (bk *blockKeeper) requireBlocks(peerID string, locator []*bc.Hash, stopHash
 			return msg.blocks, nil
 		case <-timeout.C:
 			return nil, errors.Wrap(errRequestTimeout, "requireBlocks")
-		case <-bk.fastSyncQuit:
-			return nil, nil
 		}
 	}
 }
@@ -364,46 +278,8 @@ func (bk *blockKeeper) requireHeaders(peerID string, locator []*bc.Hash, amount 
 			return msg.headers, nil
 		case <-timeout.C:
 			return nil, errors.Wrap(errRequestTimeout, "requireHeaders")
-		case <-bk.fastSyncQuit:
-			return nil, nil
 		}
 	}
-}
-
-func (bk *blockKeeper) createFetchHeadersTask() {
-	for index := 0; index < len(bk.skeleton)-1; index++ {
-		bk.headersTaskQueue.Push(&requireTask{index: index, length: int(bk.skeleton[index+1].Height - bk.skeleton[index].Height), startHeader: bk.skeleton[index]}, -float32(index))
-	}
-}
-
-func (bk *blockKeeper) fetchHeaders(resultCh chan *taskResult, task *requireTask) {
-	task.count++
-	headerHash := task.startHeader.Hash()
-	headers, err := bk.requireHeaders(task.peerID, []*bc.Hash{&headerHash}, task.length, 0)
-	if err != nil {
-		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("failed on fetch headers")
-		resultCh <- &taskResult{err: err, task: task}
-		return
-	}
-
-	//valid skeleton match
-	if headers[len(headers)-1].Hash() != bk.skeleton[task.index+1].PreviousBlockHash {
-		log.WithFields(log.Fields{"module": logModule, "error": errSkeletonMismatch}).Error("failed on fetch headers")
-		resultCh <- &taskResult{err: errSkeletonMismatch, task: task}
-		return
-	}
-
-	//valid headers
-	for i := 0; i < len(headers)-1; i++ {
-		if headers[i+1].PreviousBlockHash != headers[i].Hash() {
-			log.WithFields(log.Fields{"module": logModule, "error": errHeadersMismatch}).Error("failed on fetch headers")
-			resultCh <- &taskResult{err: errHeadersMismatch, task: task}
-			return
-		}
-	}
-
-	bk.headers = append(bk.headers[:task.index*maxBlockHeadersPerMsg], headers[:]...)
-	resultCh <- &taskResult{err: nil, task: task}
 }
 
 func (bk *blockKeeper) fetchSkeleton() error {
@@ -431,62 +307,17 @@ func (bk *blockKeeper) fetchSkeleton() error {
 	return nil
 }
 
-func (bk *blockKeeper) fetchData(result chan *fastSyncResult) {
-	if err := bk.fetchSkeleton(); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("failed on fetch skeleton")
-		result <- &fastSyncResult{success: false, err: err}
-		return
-	}
+func (bk *blockKeeper) verifyBlocks(blocks []*types.Block) error {
+	for _, block := range blocks {
+		isOrphan, err := bk.chain.ProcessBlock(block)
+		if err != nil {
+			return err
+		}
 
-	if err := bk.fetchHeadersParallel(); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("failed on fetch headers parallel")
-		result <- &fastSyncResult{success: false, err: err}
-		return
-	}
-
-	if err := bk.fetchBodiesParallel(); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("failed on fetch bodies")
-		result <- &fastSyncResult{success: false, err: err}
-		return
-	}
-
-	log.WithFields(log.Fields{"module": logModule}).Info("fetch data success")
-}
-
-func (bk *blockKeeper) verifyBlocks(result chan *fastSyncResult) {
-	processIndex := 0
-
-	for {
-		select {
-		case index := <-bk.blocksProcessIndexCh:
-			bk.blockProcessQueue.Push(nil, -float32(index))
-			for !bk.blockProcessQueue.Empty() {
-				_, priority := bk.blockProcessQueue.Pop()
-				if -priority > float32(processIndex) {
-					bk.blockProcessQueue.Push(nil, float32(priority))
-					break
-				}
-
-				for index := processIndex * maxBlockPerMsg; index < (processIndex+1)*maxBlockPerMsg && index < bk.fastSyncLength; index++ {
-					isOrphan, err := bk.chain.ProcessBlock(bk.bodies[index])
-					if err != nil {
-						result <- &fastSyncResult{success: false, err: err}
-					}
-
-					if isOrphan {
-						log.WithFields(log.Fields{"module": logModule}).Error("failed on fast sync block is orphan")
-						result <- &fastSyncResult{success: false, err: errOrphanBlock}
-					}
-
-					if index == bk.fastSyncLength-1 {
-						result <- &fastSyncResult{success: true, err: nil}
-					}
-				}
-
-				processIndex++
-			}
-		case <-bk.fastSyncQuit:
-			return
+		if isOrphan {
+			log.WithFields(log.Fields{"module": logModule, "height": block.Height, "hash": block.Hash()}).Warn("fast sync block is orphan")
 		}
 	}
+
+	return nil
 }

@@ -4,7 +4,6 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 
 	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
@@ -51,16 +50,9 @@ type blockKeeper struct {
 	blocksProcessCh  chan *blocksMsg
 	headersProcessCh chan *headersMsg
 
-	headers              []*types.BlockHeader
-	bodies               []*types.Block
-	skeleton             []*types.BlockHeader
-	commonAncestor       *types.BlockHeader
-	fastSyncLength       int
-	blockProcessQueue    *prque.Prque
-	headersTaskQueue     *prque.Prque
-	bodiesTaskQueue      *prque.Prque
-	blocksProcessIndexCh chan int
-	fastSyncQuit         chan struct{}
+	skeleton       []*types.BlockHeader
+	commonAncestor *types.BlockHeader
+	fastSyncLength int
 }
 
 func newBlockKeeper(chain Chain, peers *peers.PeerSet) *blockKeeper {
@@ -70,8 +62,6 @@ func newBlockKeeper(chain Chain, peers *peers.PeerSet) *blockKeeper {
 		blockProcessCh:   make(chan *blockMsg, blockProcessChSize),
 		blocksProcessCh:  make(chan *blocksMsg, blocksProcessChSize),
 		headersProcessCh: make(chan *headersMsg, headersProcessChSize),
-
-		fastSyncQuit: make(chan struct{}),
 	}
 	go bk.syncWorker()
 	return bk
