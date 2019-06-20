@@ -27,7 +27,7 @@ $ cd $GOPATH/src/github.com/vapor
 $ make install
 ```
 
-## Run
+## Run Directly
 
 Firstly, you need initialize node:
 
@@ -41,58 +41,9 @@ For example, you can store vapor data in `$HOME/bytom/vapor`:
 $ bytomd init --chain_id=vapor --home $HOME/bytom/vapor
 ```
 
-And some files in `<vapor-data-path>`:
-
-```
-$ cd <vapor-data-path>
-$ tree -L 1
-.
-├── LOCK
-├── config.toml
-├── data
-├── federation.json
-├── keystore
-└── node_key.txt
-```
-
-`config.toml` save vapor network info, like:
-
-```
-$ cat config.toml
-# This is a TOML config file.
-# For more information, see https://github.com/toml-lang/toml
-fast_sync = true
-db_backend = "leveldb"
-api_addr = "0.0.0.0:9889"
-moniker = ""
-chain_id = "vapor"
-[p2p]
-laddr = "tcp://0.0.0.0:56659"
-seeds = "52.83.133.152:56659"
-```
-
-`federation.json` save relayed node xpub, like:
-
-```
-$ cat federation.json
-{
-  "xpubs": [
-    "50ef22b3a3fca7bc08916187cc9ec2f4005c9c6b1353aa1decbd4be3f3bb0fbe1967589f0d9dec13a388c0412002d2c267bdf3b920864e1ddc50581be5604ce1"
-  ],
-  "quorum": 1
-}
-```
-
 Then, start your node:
 
 ```
-$ bytomd node --home <vapor-data-path>
-```
-
-Solonet mode:
-
-```
-$ bytomd init --chain_id=solonet --home <vapor-data-path>
 $ bytomd node --home <vapor-data-path>
 ```
 
