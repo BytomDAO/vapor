@@ -1,12 +1,9 @@
 package test
 
 import (
-	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"time"
-
-	"github.com/tendermint/tmlibs/db"
 
 	"github.com/vapor/account"
 	"github.com/vapor/asset"
@@ -17,6 +14,7 @@ import (
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/crypto/sha3pool"
+	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -73,14 +71,6 @@ func (g *TxGenerator) createAccount(name string, keys []string, quorum int) erro
 	}
 	_, err := g.AccountManager.Create(xpubs, quorum, name, signers.BIP0044)
 	return err
-}
-
-func (g *TxGenerator) createAsset(accountAlias string, assetAlias string) (*asset.Asset, error) {
-	acc, err := g.AccountManager.FindByAlias(accountAlias)
-	if err != nil {
-		return nil, err
-	}
-	return g.Assets.Define(acc.XPubs, len(acc.XPubs), nil, assetAlias, nil)
 }
 
 func (g *TxGenerator) mockUtxo(accountAlias, assetAlias string, amount uint64) (*account.UTXO, error) {
@@ -183,26 +173,6 @@ func (g *TxGenerator) AddTxInputFromUtxo(utxo *account.UTXO, accountAlias string
 	return g.AddTxInput(txInput, signInst)
 }
 
-// AddIssuanceInput add a issue input
-func (g *TxGenerator) AddIssuanceInput(assetAlias string, amount uint64) error {
-	asset, err := g.Assets.FindByAlias(assetAlias)
-	if err != nil {
-		return err
-	}
-
-	var nonce [8]byte
-	_, err = rand.Read(nonce[:])
-	if err != nil {
-		return err
-	}
-	issuanceInput := types.NewIssuanceInput(nonce[:], amount, asset.IssuanceProgram, nil, asset.RawDefinitionByte)
-	signInstruction := &txbuilder.SigningInstruction{}
-	path := signers.GetBip0032Path(asset.Signer, signers.AssetKeySpace)
-	signInstruction.AddRawWitnessKeys(asset.Signer.XPubs, path, asset.Signer.Quorum)
-	g.Builder.RestrictMinTime(time.Now())
-	return g.Builder.AddInput(issuanceInput, signInstruction)
-}
-
 // AddTxOutput add a tx output
 func (g *TxGenerator) AddTxOutput(accountAlias, assetAlias string, amount uint64) error {
 	assetAmount, err := g.assetAmount(assetAlias, uint64(amount))
@@ -213,7 +183,7 @@ func (g *TxGenerator) AddTxOutput(accountAlias, assetAlias string, amount uint64
 	if err != nil {
 		return err
 	}
-	out := types.NewTxOutput(*assetAmount.AssetId, assetAmount.Amount, controlProgram.ControlProgram)
+	out := types.NewIntraChainOutput(*assetAmount.AssetId, assetAmount.Amount, controlProgram.ControlProgram)
 	return g.Builder.AddOutput(out)
 }
 
@@ -224,7 +194,7 @@ func (g *TxGenerator) AddRetirement(assetAlias string, amount uint64) error {
 		return err
 	}
 	retirementProgram := []byte{byte(vm.OP_FAIL)}
-	out := types.NewTxOutput(*assetAmount.AssetId, assetAmount.Amount, retirementProgram)
+	out := types.NewIntraChainOutput(*assetAmount.AssetId, assetAmount.Amount, retirementProgram)
 	return g.Builder.AddOutput(out)
 }
 
@@ -265,8 +235,8 @@ func txFee(tx *types.Tx) uint64 {
 	}
 
 	for _, output := range tx.Outputs {
-		if *output.AssetId == *consensus.BTMAssetID {
-			outputSum += output.Amount
+		if *output.AssetAmount().AssetId == *consensus.BTMAssetID {
+			outputSum += output.AssetAmount().Amount
 		}
 	}
 	return inputSum - outputSum
@@ -275,7 +245,7 @@ func txFee(tx *types.Tx) uint64 {
 // CreateSpendInput create SpendInput which spent the output from tx
 func CreateSpendInput(tx *types.Tx, outputIndex uint64) (*types.SpendInput, error) {
 	outputID := tx.ResultIds[outputIndex]
-	output, ok := tx.Entries[*outputID].(*bc.Output)
+	output, ok := tx.Entries[*outputID].(*bc.IntraChainOutput)
 	if !ok {
 		return nil, fmt.Errorf("retirement can't be spent")
 	}
@@ -293,7 +263,7 @@ func CreateSpendInput(tx *types.Tx, outputIndex uint64) (*types.SpendInput, erro
 }
 
 // SignInstructionFor read CtrlProgram from db, construct SignInstruction for SpendInput
-func SignInstructionFor(input *types.SpendInput, db db.DB, signer *signers.Signer) (*txbuilder.SigningInstruction, error) {
+func SignInstructionFor(input *types.SpendInput, db dbm.DB, signer *signers.Signer) (*txbuilder.SigningInstruction, error) {
 	cp := account.CtrlProgram{}
 	var hash [32]byte
 	sha3pool.Sum256(hash[:], input.ControlProgram)
@@ -363,7 +333,7 @@ func CreateCoinbaseTx(controlProgram []byte, height, txsFee uint64) (*types.Tx, 
 	if err := builder.AddInput(types.NewCoinbaseInput([]byte(string(height))), &txbuilder.SigningInstruction{}); err != nil {
 		return nil, err
 	}
-	if err := builder.AddOutput(types.NewTxOutput(*consensus.BTMAssetID, coinbaseValue, controlProgram)); err != nil {
+	if err := builder.AddOutput(types.NewIntraChainOutput(*consensus.BTMAssetID, coinbaseValue, controlProgram)); err != nil {
 		return nil, err
 	}
 
@@ -393,7 +363,7 @@ func CreateTxFromTx(baseTx *types.Tx, outputIndex uint64, outputAmount uint64, c
 		AssetVersion: assetVersion,
 		TypedInput:   spendInput,
 	}
-	output := types.NewTxOutput(*consensus.BTMAssetID, outputAmount, ctrlProgram)
+	output := types.NewIntraChainOutput(*consensus.BTMAssetID, outputAmount, ctrlProgram)
 	builder := txbuilder.NewBuilder(time.Now())
 	if err := builder.AddInput(txInput, &txbuilder.SigningInstruction{}); err != nil {
 		return nil, err

@@ -9,18 +9,15 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"golang.org/x/crypto/sha3"
 
 	"github.com/vapor/common"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto"
-	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/vm"
 	"github.com/vapor/protocol/vm/vmutil"
 	"github.com/vapor/testutil"
 )
@@ -35,7 +32,7 @@ func (t testAction) Build(ctx context.Context, b *TemplateBuilder) error {
 	if err != nil {
 		return err
 	}
-	return b.AddOutput(types.NewTxOutput(*t.AssetId, t.Amount, []byte("change")))
+	return b.AddOutput(types.NewIntraChainOutput(*t.AssetId, t.Amount, []byte("change")))
 }
 
 func (t testAction) ActionType() string {
@@ -49,7 +46,7 @@ func newControlProgramAction(assetAmt bc.AssetAmount, script []byte) *controlPro
 	}
 }
 
-func TestBuild(t *testing.T) {
+func TestBuildIntra(t *testing.T) {
 	ctx := context.Background()
 
 	assetID1 := bc.NewAssetID([32]byte{1})
@@ -72,8 +69,8 @@ func TestBuild(t *testing.T) {
 				types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), assetID1, 5, 0, nil),
 			},
 			Outputs: []*types.TxOutput{
-				types.NewTxOutput(assetID2, 6, []byte("dest")),
-				types.NewTxOutput(assetID1, 5, []byte("change")),
+				types.NewIntraChainOutput(assetID2, 6, []byte("dest")),
+				types.NewIntraChainOutput(assetID1, 5, []byte("change")),
 			},
 		}),
 		SigningInstructions: []*SigningInstruction{{
@@ -90,94 +87,59 @@ func TestBuild(t *testing.T) {
 	}
 }
 
-func TestSignatureWitnessMaterialize(t *testing.T) {
-	privkey1, pubkey1, err := chainkd.NewXKeys(nil)
+func newCrossOutAction(assetAmt bc.AssetAmount, redeemContract []byte) *crossOutAction {
+	address, err := common.NewAddressWitnessPubKeyHash(redeemContract, &consensus.MainNetParams)
 	if err != nil {
-		t.Fatal(err)
-	}
-	privkey2, pubkey2, err := chainkd.NewXKeys(nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	privkey3, pubkey3, err := chainkd.NewXKeys(nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	issuanceProg, _ := vmutil.P2SPMultiSigProgram([]ed25519.PublicKey{pubkey1.PublicKey(), pubkey2.PublicKey(), pubkey3.PublicKey()}, 2)
-	assetID := bc.ComputeAssetID(issuanceProg, 1, &bc.EmptyStringHash)
-	outscript := mustDecodeHex("76a914c5d128911c28776f56baaac550963f7b88501dc388c0")
-	unsigned := types.NewTx(types.TxData{
-		Version: 1,
-		Inputs: []*types.TxInput{
-			types.NewIssuanceInput([]byte{1}, 100, issuanceProg, nil, nil),
-		},
-		Outputs: []*types.TxOutput{
-			types.NewTxOutput(assetID, 100, outscript),
-		},
-	})
-
-	tpl := &Template{
-		Transaction: unsigned,
-	}
-	h := tpl.Hash(0)
-	builder := vmutil.NewBuilder()
-	builder.AddData(h.Bytes())
-	builder.AddOp(vm.OP_TXSIGHASH).AddOp(vm.OP_EQUAL)
-	prog, _ := builder.Build()
-	msg := sha3.Sum256(prog)
-	sig1 := privkey1.Sign(msg[:])
-	sig2 := privkey2.Sign(msg[:])
-	sig3 := privkey3.Sign(msg[:])
-	want := [][]byte{
-		vm.Int64Bytes(0),
-		sig1,
-		sig2,
-		prog,
+		panic(err)
 	}
 
-	// Test with more signatures than required, in correct order
-	tpl.SigningInstructions = []*SigningInstruction{{
-		WitnessComponents: []witnessComponent{
-			&SignatureWitness{
-				Quorum: 2,
-				Keys: []keyID{
-					{
-						XPub:           pubkey1,
-						DerivationPath: []chainjson.HexBytes{{0, 0, 0, 0}},
-					},
-					{
-						XPub:           pubkey2,
-						DerivationPath: []chainjson.HexBytes{{0, 0, 0, 0}},
-					},
-					{
-						XPub:           pubkey3,
-						DerivationPath: []chainjson.HexBytes{{0, 0, 0, 0}},
-					},
-				},
-				Program: prog,
-				Sigs:    []chainjson.HexBytes{sig1, sig2, sig3},
+	return &crossOutAction{
+		AssetAmount: assetAmt,
+		Address:     address.String(),
+	}
+}
+
+func TestBuildCrossOut(t *testing.T) {
+	ctx := context.Background()
+
+	assetID1 := bc.NewAssetID([32]byte{1})
+	assetID2 := bc.NewAssetID([32]byte{2})
+
+	redeemContract := make([]byte, 20)
+	controlProgram := append([]byte{0x00, byte(len(redeemContract))}, redeemContract...)
+
+	actions := []Action{
+		newCrossOutAction(bc.AssetAmount{AssetId: &assetID2, Amount: 6}, redeemContract),
+		testAction(bc.AssetAmount{AssetId: &assetID1, Amount: 5}),
+	}
+	expiryTime := time.Now().Add(time.Minute)
+	got, err := Build(ctx, nil, actions, expiryTime, 0)
+	if err != nil {
+		testutil.FatalErr(t, err)
+	}
+
+	want := &Template{
+		Transaction: types.NewTx(types.TxData{
+			Version: 1,
+			Inputs: []*types.TxInput{
+				types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), assetID1, 5, 0, nil),
 			},
-		},
-	}}
-	err = materializeWitnesses(tpl)
-	if err != nil {
-		testutil.FatalErr(t, err)
-	}
-	got := tpl.Transaction.Inputs[0].Arguments()
-	if !testutil.DeepEqual(got, want) {
-		t.Errorf("got input witness %v, want input witness %v", got, want)
+			Outputs: []*types.TxOutput{
+				types.NewCrossChainOutput(assetID2, 6, controlProgram),
+				types.NewIntraChainOutput(assetID1, 5, []byte("change")),
+			},
+		}),
+		SigningInstructions: []*SigningInstruction{{
+			WitnessComponents: []witnessComponent{},
+		}},
 	}
 
-	// Test with exact amount of signatures required, in correct order
-	component := tpl.SigningInstructions[0].WitnessComponents[0].(*SignatureWitness)
-	component.Sigs = []chainjson.HexBytes{sig1, sig2}
-	err = materializeWitnesses(tpl)
-	if err != nil {
-		testutil.FatalErr(t, err)
+	if !testutil.DeepEqual(got.Transaction.TxData, want.Transaction.TxData) {
+		t.Errorf("got tx:\n%s\nwant tx:\n%s", spew.Sdump(got.Transaction.TxData), spew.Sdump(want.Transaction.TxData))
 	}
-	got = tpl.Transaction.Inputs[0].Arguments()
-	if !testutil.DeepEqual(got, want) {
-		t.Errorf("got input witness %v, want input witness %v", got, want)
+
+	if !testutil.DeepEqual(got.SigningInstructions, want.SigningInstructions) {
+		t.Errorf("got signing instructions:\n\t%#v\nwant signing instructions:\n\t%#v", got.SigningInstructions, want.SigningInstructions)
 	}
 }
 
@@ -201,7 +163,7 @@ func TestCheckBlankCheck(t *testing.T) {
 	}, {
 		tx: &types.TxData{
 			Inputs:  []*types.TxInput{types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil)},
-			Outputs: []*types.TxOutput{types.NewTxOutput(bc.AssetID{}, 3, nil)},
+			Outputs: []*types.TxOutput{types.NewIntraChainOutput(bc.AssetID{}, 3, nil)},
 		},
 		want: ErrBlankCheck,
 	}, {
@@ -210,15 +172,15 @@ func TestCheckBlankCheck(t *testing.T) {
 				types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil),
 				types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.NewAssetID([32]byte{1}), 5, 0, nil),
 			},
-			Outputs: []*types.TxOutput{types.NewTxOutput(bc.AssetID{}, 5, nil)},
+			Outputs: []*types.TxOutput{types.NewIntraChainOutput(bc.AssetID{}, 5, nil)},
 		},
 		want: ErrBlankCheck,
 	}, {
 		tx: &types.TxData{
 			Inputs: []*types.TxInput{types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil)},
 			Outputs: []*types.TxOutput{
-				types.NewTxOutput(bc.AssetID{}, math.MaxInt64, nil),
-				types.NewTxOutput(bc.AssetID{}, 7, nil),
+				types.NewIntraChainOutput(bc.AssetID{}, math.MaxInt64, nil),
+				types.NewIntraChainOutput(bc.AssetID{}, 7, nil),
 			},
 		},
 		want: ErrBadAmount,
@@ -233,18 +195,18 @@ func TestCheckBlankCheck(t *testing.T) {
 	}, {
 		tx: &types.TxData{
 			Inputs:  []*types.TxInput{types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil)},
-			Outputs: []*types.TxOutput{types.NewTxOutput(bc.AssetID{}, 5, nil)},
+			Outputs: []*types.TxOutput{types.NewIntraChainOutput(bc.AssetID{}, 5, nil)},
 		},
 		want: nil,
 	}, {
 		tx: &types.TxData{
-			Outputs: []*types.TxOutput{types.NewTxOutput(bc.AssetID{}, 5, nil)},
+			Outputs: []*types.TxOutput{types.NewIntraChainOutput(bc.AssetID{}, 5, nil)},
 		},
 		want: nil,
 	}, {
 		tx: &types.TxData{
 			Inputs:  []*types.TxInput{types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil)},
-			Outputs: []*types.TxOutput{types.NewTxOutput(bc.NewAssetID([32]byte{1}), 5, nil)},
+			Outputs: []*types.TxOutput{types.NewIntraChainOutput(bc.NewAssetID([32]byte{1}), 5, nil)},
 		},
 		want: nil,
 	}}
@@ -299,7 +261,7 @@ func TestCreateTxByUtxo(t *testing.T) {
 			types.NewSpendInput(nil, utxo.SourceID, utxo.AssetID, utxo.Amount, utxo.SourcePos, utxo.ControlProgram),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, 10000000000, recvProg),
+			types.NewIntraChainOutput(*consensus.BTMAssetID, 10000000000, recvProg),
 		},
 	})
 

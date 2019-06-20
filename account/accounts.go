@@ -2,7 +2,6 @@
 package account
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"reflect"
 	"sort"
@@ -11,7 +10,6 @@ import (
 
 	"github.com/golang/groupcache/lru"
 	log "github.com/sirupsen/logrus"
-	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/blockchain/txbuilder"
@@ -21,7 +19,7 @@ import (
 	"github.com/vapor/crypto"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/crypto/sha3pool"
-	"github.com/vapor/equity/pegin_contract"
+	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
@@ -34,6 +32,7 @@ const (
 	// HardenedKeyStart bip32 hierarchical deterministic wallets
 	// keys with index ≥ 0x80000000 are hardened keys
 	HardenedKeyStart = 0x80000000
+	logModule        = "account"
 )
 
 var (
@@ -48,16 +47,16 @@ var (
 
 // pre-define errors for supporting bytom errorFormatter
 var (
-	ErrDuplicateAlias  = errors.New("duplicate account alias")
-	ErrDuplicateIndex  = errors.New("duplicate account with same xPubs and index")
-	ErrFindAccount     = errors.New("fail to find account")
-	ErrMarshalAccount  = errors.New("failed marshal account")
-	ErrInvalidAddress  = errors.New("invalid address")
-	ErrFindCtrlProgram = errors.New("fail to find account control program")
-	ErrDeriveRule      = errors.New("invalid key derive rule")
-	ErrContractIndex   = errors.New("exceed the maximum addresses per account")
-	ErrAccountIndex    = errors.New("exceed the maximum accounts per xpub")
-	ErrFindTransaction = errors.New("no transaction")
+	ErrDuplicateAlias  = errors.New("Duplicate account alias")
+	ErrDuplicateIndex  = errors.New("Duplicate account with same xPubs and index")
+	ErrFindAccount     = errors.New("Failed to find account")
+	ErrMarshalAccount  = errors.New("Failed to marshal account")
+	ErrInvalidAddress  = errors.New("Invalid address")
+	ErrFindCtrlProgram = errors.New("Failed to find account control program")
+	ErrDeriveRule      = errors.New("Invalid key derivation rule")
+	ErrContractIndex   = errors.New("Exceeded maximum addresses per account")
+	ErrAccountIndex    = errors.New("Exceeded maximum accounts per xpub")
+	ErrFindTransaction = errors.New("No transaction")
 )
 
 // ContractKey account control promgram store prefix
@@ -316,6 +315,9 @@ func (m *Manager) deleteAccountControlPrograms(accountID string) error {
 			m.db.Delete(ContractKey(hash))
 		}
 	}
+	m.db.Delete(bip44ContractIndexKey(accountID, false))
+	m.db.Delete(bip44ContractIndexKey(accountID, true))
+	m.db.Delete(contractIndexKey(accountID))
 	return nil
 }
 
@@ -786,117 +788,4 @@ func (m *Manager) SaveControlPrograms(progs ...*CtrlProgram) error {
 		m.saveControlProgram(prog, prog.KeyIndex > currentIndex)
 	}
 	return nil
-}
-
-func (m *Manager) CreatePeginAddress(accountID string, change bool) (string, []byte, error) {
-	// 通过配置获取
-	claimCtrlProg, err := m.CreateAddress(accountID, change)
-	if err != nil {
-		return "", nil, err
-	}
-	claimScript := claimCtrlProg.ControlProgram
-
-	federationRedeemScript := vmutil.CalculateContract(consensus.ActiveNetParams.FedpegXPubs, claimScript)
-
-	scriptHash := crypto.Sha256(federationRedeemScript)
-
-	address, err := common.NewPeginAddressWitnessScriptHash(scriptHash, &consensus.ActiveNetParams)
-	if err != nil {
-		return "", nil, err
-	}
-
-	return address.EncodeAddress(), claimScript, nil
-
-}
-
-func (m *Manager) GetPeginControlPrograms(claimScript []byte) (string, []byte) {
-	federationRedeemScript := vmutil.CalculateContract(consensus.ActiveNetParams.FedpegXPubs, claimScript)
-	scriptHash := crypto.Sha256(federationRedeemScript)
-
-	address, err := common.NewPeginAddressWitnessScriptHash(scriptHash, &consensus.ActiveNetParams)
-	if err != nil {
-		return "", nil
-	}
-
-	redeemContract := address.ScriptAddress()
-
-	program := []byte{}
-	program, err = vmutil.P2WSHProgram(redeemContract)
-	if err != nil {
-		return "", nil
-	}
-
-	return address.EncodeAddress(), program
-}
-
-func (m *Manager) CreatePeginContractPrograms(accountID string, change bool) (string, []byte, error) {
-	// 通过配置获取
-	claimCtrlProg, err := m.CreateAddress(accountID, change)
-	if err != nil {
-		return "", nil, err
-	}
-	claimScript := claimCtrlProg.ControlProgram
-
-	peginContractPrograms, err := pegin_contract.GetPeginContractPrograms(claimScript)
-	if err != nil {
-		return "", nil, err
-	}
-	return hex.EncodeToString(peginContractPrograms), claimScript, nil
-
-}
-
-func (m *Manager) CreatePeginContractAddress(accountID string, change bool) (string, []byte, []byte, error) {
-	// 通过配置获取
-	claimCtrlProg, err := m.CreateAddress(accountID, change)
-	if err != nil {
-		return "", nil, nil, err
-	}
-	claimScript := claimCtrlProg.ControlProgram
-
-	peginContractPrograms, err := pegin_contract.GetPeginContractPrograms(claimScript)
-	if err != nil {
-		return "", nil, nil, err
-	}
-
-	scriptHash := crypto.Sha256(peginContractPrograms)
-
-	address, err := common.NewPeginAddressWitnessScriptHash(scriptHash, &consensus.ActiveNetParams)
-	if err != nil {
-		return "", nil, nil, err
-	}
-
-	redeemContract := address.ScriptAddress()
-
-	program := []byte{}
-	program, err = vmutil.P2WSHProgram(redeemContract)
-	if err != nil {
-		return "", nil, nil, err
-	}
-
-	return address.EncodeAddress(), program, claimScript, nil
-
-}
-
-func (m *Manager) GetPeginContractControlPrograms(claimScript []byte) (string, []byte) {
-
-	peginContractPrograms, err := pegin_contract.GetPeginContractPrograms(claimScript)
-	if err != nil {
-		return "", nil
-	}
-	scriptHash := crypto.Sha256(peginContractPrograms)
-
-	address, err := common.NewPeginAddressWitnessScriptHash(scriptHash, &consensus.ActiveNetParams)
-	if err != nil {
-		return "", nil
-	}
-
-	redeemContract := address.ScriptAddress()
-
-	program := []byte{}
-	program, err = vmutil.P2WSHProgram(redeemContract)
-	if err != nil {
-		return "", nil
-	}
-
-	return address.EncodeAddress(), program
 }

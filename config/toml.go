@@ -23,34 +23,27 @@ var defaultConfigTmpl = `# This is a TOML config file.
 # For more information, see https://github.com/toml-lang/toml
 fast_sync = true
 db_backend = "leveldb"
-api_addr = "0.0.0.0:8888"
-`
-
-var mainNetConfigTmpl = `chain_id = "mainnet"
-[p2p]
-laddr = "tcp://0.0.0.0:56657"
-seeds = ""
-`
-
-var testNetConfigTmpl = `chain_id = "wisdom"
-[p2p]
-laddr = "tcp://0.0.0.0:56656"
-seeds = ""
+api_addr = "0.0.0.0:9889"
+moniker = ""
 `
 
 var soloNetConfigTmpl = `chain_id = "solonet"
 [p2p]
-laddr = "tcp://0.0.0.0:56658"
+laddr = "tcp://0.0.0.0:46658"
 seeds = ""
+`
+
+var vaporNetConfigTmpl = `chain_id = "vapor"
+[p2p]
+laddr = "tcp://0.0.0.0:56656"
+seeds = "52.82.77.112:56656"
 `
 
 // Select network seeds to merge a new string.
 func selectNetwork(network string) string {
 	switch network {
-	case "mainnet":
-		return defaultConfigTmpl + mainNetConfigTmpl
-	case "testnet":
-		return defaultConfigTmpl + testNetConfigTmpl
+	case "vapor":
+		return defaultConfigTmpl + vaporNetConfigTmpl
 	default:
 		return defaultConfigTmpl + soloNetConfigTmpl
 	}

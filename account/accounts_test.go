@@ -7,16 +7,14 @@ import (
 	"strings"
 	"testing"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/vapor/blockchain/pseudohsm"
 	"github.com/vapor/blockchain/signers"
-	"github.com/vapor/common"
 	"github.com/vapor/config"
-	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/database/leveldb"
+	"github.com/vapor/database"
+	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
+	"github.com/vapor/event"
 	"github.com/vapor/protocol"
 	"github.com/vapor/testutil"
 )
@@ -208,30 +206,18 @@ func TestGetAccountIndexKey(t *testing.T) {
 }
 
 func mockAccountManager(t *testing.T) *Manager {
-
-	config.CommonConfig = config.DefaultConfig()
-	consensus.SoloNetParams.Signer = "78673764e0ba91a4c5ba9ec0c8c23c69e3d73bf27970e05e0a977e81e13bde475264d3b177a96646bc0ce517ae7fd63504c183ab6d330dea184331a4cf5912d5"
-	config.CommonConfig.Consensus.SelfVoteSigners = append(config.CommonConfig.Consensus.SelfVoteSigners, "vsm1qkm743xmgnvh84pmjchq2s4tnfpgu9ae2f9slep")
-	config.CommonConfig.Consensus.XPrv = "a8e281b615809046698fb0b0f2804a36d824d48fa443350f10f1b80649d39e5f1e85cf9855548915e36137345910606cbc8e7dd8497c831dce899ee6ac112445"
-	for _, v := range config.CommonConfig.Consensus.SelfVoteSigners {
-		address, err := common.DecodeAddress(v, &consensus.SoloNetParams)
-		if err != nil {
-			t.Fatal(err)
-		}
-		config.CommonConfig.Consensus.Signers = append(config.CommonConfig.Consensus.Signers, address)
-	}
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(dirPath)
 
-	testDB := dbm.NewDB("testdb", "memdb", "temp")
-	defer os.RemoveAll("temp")
-
-	store := leveldb.NewStore(testDB)
-	txPool := protocol.NewTxPool(store)
-	chain, err := protocol.NewChain(store, txPool)
+	testDB := dbm.NewDB("testdb", "memdb", dirPath)
+	dispatcher := event.NewDispatcher()
+	store := database.NewStore(testDB)
+	txPool := protocol.NewTxPool(store, dispatcher)
+	config.CommonConfig = config.DefaultConfig()
+	chain, err := protocol.NewChain(store, txPool, dispatcher)
 	if err != nil {
 		t.Fatal(err)
 	}

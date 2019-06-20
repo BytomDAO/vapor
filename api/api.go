@@ -12,20 +12,20 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 
 	"github.com/vapor/accesstoken"
-	"github.com/vapor/blockchain/txfeed"
 	cfg "github.com/vapor/config"
 	"github.com/vapor/dashboard/dashboard"
 	"github.com/vapor/dashboard/equity"
 	"github.com/vapor/errors"
-	"github.com/vapor/mining/miner"
+	"github.com/vapor/event"
 	"github.com/vapor/net/http/authn"
 	"github.com/vapor/net/http/gzip"
 	"github.com/vapor/net/http/httpjson"
 	"github.com/vapor/net/http/static"
 	"github.com/vapor/net/websocket"
-	"github.com/vapor/netsync"
+	"github.com/vapor/netsync/peers"
+	"github.com/vapor/p2p"
+	"github.com/vapor/proposal/blockproposer"
 	"github.com/vapor/protocol"
-	"github.com/vapor/protocol/bc"
 	"github.com/vapor/wallet"
 )
 
@@ -39,7 +39,8 @@ const (
 	// SUCCESS indicates the rpc calling is successful.
 	SUCCESS = "success"
 	// FAIL indicated the rpc calling is failed.
-	FAIL = "fail"
+	FAIL      = "fail"
+	logModule = "api"
 )
 
 // Response describes the response standard.
@@ -104,17 +105,15 @@ func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 // API is the scheduling center for server
 type API struct {
-	sync          *netsync.SyncManager
-	wallet        *wallet.Wallet
-	accessTokens  *accesstoken.CredentialStore
-	chain         *protocol.Chain
-	server        *http.Server
-	handler       http.Handler
-	txFeedTracker *txfeed.Tracker
-	//cpuMiner        *cpuminer.CPUMiner
-	miner           *miner.Miner
+	sync            NetSync
+	wallet          *wallet.Wallet
+	accessTokens    *accesstoken.CredentialStore
+	chain           *protocol.Chain
+	server          *http.Server
+	handler         http.Handler
+	blockProposer   *blockproposer.BlockProposer
 	notificationMgr *websocket.WSNotificationManager
-	newBlockCh      chan *bc.Hash
+	eventDispatcher *event.Dispatcher
 }
 
 func (a *API) initServer(config *cfg.Config) {
@@ -151,7 +150,7 @@ func (a *API) initServer(config *cfg.Config) {
 
 // StartServer start the server
 func (a *API) StartServer(address string) {
-	log.WithField("api address:", address).Info("Rpc listen")
+	log.WithFields(log.Fields{"module": logModule, "api address:": address}).Info("Rpc listen")
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to register tcp port: %v", err))
@@ -162,22 +161,31 @@ func (a *API) StartServer(address string) {
 	// we call it.
 	go func() {
 		if err := a.server.Serve(listener); err != nil {
-			log.WithField("error", errors.Wrap(err, "Serve")).Error("Rpc server")
+			log.WithFields(log.Fields{"module": logModule, "error": errors.Wrap(err, "Serve")}).Error("Rpc server")
 		}
 	}()
 }
 
-// NewAPI create and initialize the API
-func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, miner *miner.Miner, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, newBlockCh chan *bc.Hash, notificationMgr *websocket.WSNotificationManager) *API {
-	api := &API{
-		sync:          sync,
-		wallet:        wallet,
-		chain:         chain,
-		accessTokens:  token,
-		txFeedTracker: txfeeds,
-		miner:         miner,
+type NetSync interface {
+	IsListening() bool
+	IsCaughtUp() bool
+	PeerCount() int
+	GetNetwork() string
+	BestPeer() *peers.PeerInfo
+	DialPeerWithAddress(addr *p2p.NetAddress) error
+	GetPeerInfos() []*peers.PeerInfo
+	StopPeer(peerID string) error
+}
 
-		newBlockCh:      newBlockCh,
+// NewAPI create and initialize the API
+func NewAPI(sync NetSync, wallet *wallet.Wallet, blockProposer *blockproposer.BlockProposer, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, dispatcher *event.Dispatcher, notificationMgr *websocket.WSNotificationManager) *API {
+	api := &API{
+		sync:            sync,
+		wallet:          wallet,
+		chain:           chain,
+		accessTokens:    token,
+		blockProposer:   blockProposer,
+		eventDispatcher: dispatcher,
 		notificationMgr: notificationMgr,
 	}
 	api.buildHandler()
@@ -196,7 +204,6 @@ func (a *API) buildHandler() {
 	m := http.NewServeMux()
 	if a.wallet != nil {
 		walletEnable = true
-
 		m.Handle("/create-account", jsonHandler(a.createAccount))
 		m.Handle("/update-account-alias", jsonHandler(a.updateAccountAlias))
 		m.Handle("/list-accounts", jsonHandler(a.listAccounts))
@@ -213,7 +220,6 @@ func (a *API) buildHandler() {
 		m.Handle("/get-coinbase-arbitrary", jsonHandler(a.getCoinbaseArbitrary))
 		m.Handle("/set-coinbase-arbitrary", jsonHandler(a.setCoinbaseArbitrary))
 
-		m.Handle("/create-asset", jsonHandler(a.createAsset))
 		m.Handle("/update-asset-alias", jsonHandler(a.updateAssetAlias))
 		m.Handle("/get-asset", jsonHandler(a.getAsset))
 		m.Handle("/list-assets", jsonHandler(a.listAssets))
@@ -236,6 +242,7 @@ func (a *API) buildHandler() {
 
 		m.Handle("/list-balances", jsonHandler(a.listBalances))
 		m.Handle("/list-unspent-outputs", jsonHandler(a.listUnspentOutputs))
+		m.Handle("/list-account-votes", jsonHandler(a.listAccountVotes))
 
 		m.Handle("/decode-program", jsonHandler(a.decodeProgram))
 
@@ -244,26 +251,6 @@ func (a *API) buildHandler() {
 		m.Handle("/rescan-wallet", jsonHandler(a.rescanWallet))
 		m.Handle("/wallet-info", jsonHandler(a.getWalletInfo))
 		m.Handle("/recovery-wallet", jsonHandler(a.recoveryFromRootXPubs))
-
-		m.Handle("/get-pegin-address", jsonHandler(a.getPeginAddress))
-		m.Handle("/get-pegin-contract-address", jsonHandler(a.getPeginContractAddress))
-		m.Handle("/claim-pegin-transaction", jsonHandler(a.claimContractPeginTx))
-		m.Handle("/create-key-pair", jsonHandler(a.createXKeys))
-		m.Handle("/get-utxo-from-transaction", jsonHandler(a.getUnspentOutputs))
-		m.Handle("/get-side-raw-transaction", jsonHandler(a.getSideRawTransaction))
-		m.Handle("/build-mainchain-tx", jsonHandler(a.buildMainChainTxForContract))
-		m.Handle("/sign-with-key", jsonHandler(a.signWithKey))
-		m.Handle("/sign-with-xprv", jsonHandler(a.signWithPriKey))
-		// listdelegates
-		m.Handle("/list-delegates", jsonHandler(a.listDelegates))
-		// getdelegatevotes
-		m.Handle("/get-delegate-votes", jsonHandler(a.getDelegateVotes))
-		// listvoteddelegates
-		m.Handle("/list-voted-delegates", jsonHandler(a.listVotedDelegates))
-		// listreceivedvotes
-		m.Handle("/list-received-votes", jsonHandler(a.listReceivedVotes))
-
-		m.Handle("/get-address-balance", jsonHandler(a.getAddressBalance))
 	} else {
 		log.Warn("Please enable wallet")
 	}
@@ -276,12 +263,6 @@ func (a *API) buildHandler() {
 	m.Handle("/delete-access-token", jsonHandler(a.deleteAccessToken))
 	m.Handle("/check-access-token", jsonHandler(a.checkAccessToken))
 
-	m.Handle("/create-transaction-feed", jsonHandler(a.createTxFeed))
-	m.Handle("/get-transaction-feed", jsonHandler(a.getTxFeed))
-	m.Handle("/update-transaction-feed", jsonHandler(a.updateTxFeed))
-	m.Handle("/delete-transaction-feed", jsonHandler(a.deleteTxFeed))
-	m.Handle("/list-transaction-feeds", jsonHandler(a.listTxFeeds))
-
 	m.Handle("/submit-transaction", jsonHandler(a.submit))
 	m.Handle("/submit-transactions", jsonHandler(a.submitTxs))
 	m.Handle("/estimate-transaction-gas", jsonHandler(a.estimateTxGas))
@@ -289,15 +270,12 @@ func (a *API) buildHandler() {
 	m.Handle("/get-unconfirmed-transaction", jsonHandler(a.getUnconfirmedTx))
 	m.Handle("/list-unconfirmed-transactions", jsonHandler(a.listUnconfirmedTxs))
 	m.Handle("/decode-raw-transaction", jsonHandler(a.decodeRawTransaction))
-	m.Handle("/get-raw-transaction", jsonHandler(a.getRawTransaction))
 
 	m.Handle("/get-block", jsonHandler(a.getBlock))
 	m.Handle("/get-raw-block", jsonHandler(a.getRawBlock))
 	m.Handle("/get-block-hash", jsonHandler(a.getBestBlockHash))
 	m.Handle("/get-block-header", jsonHandler(a.getBlockHeader))
 	m.Handle("/get-block-count", jsonHandler(a.getBlockCount))
-	m.Handle("/get-difficulty", jsonHandler(a.getDifficulty))
-	m.Handle("/get-hash-rate", jsonHandler(a.getHashRate))
 
 	m.Handle("/is-mining", jsonHandler(a.isMining))
 	m.Handle("/set-mining", jsonHandler(a.setMining))
@@ -314,12 +292,13 @@ func (a *API) buildHandler() {
 
 	m.Handle("/get-merkle-proof", jsonHandler(a.getMerkleProof))
 
+	m.Handle("/get-vote-result", jsonHandler(a.getVoteResult))
+
 	m.HandleFunc("/websocket-subscribe", a.websocketHandler)
 
-	handler := latencyHandler(m, walletEnable)
+	handler := walletHandler(m, walletEnable)
 	handler = webAssetsHandler(handler)
 	handler = gzip.Handler{Handler: handler}
-
 	a.handler = handler
 }
 
@@ -360,7 +339,7 @@ func AuthHandler(handler http.Handler, accessTokens *accesstoken.CredentialStore
 		// TODO(tessr): check that this path exists; return early if this path isn't legit
 		req, err := authenticator.Authenticate(req)
 		if err != nil {
-			log.WithField("error", errors.Wrap(err, "Serve")).Error("Authenticate fail")
+			log.WithFields(log.Fields{"module": logModule, "error": errors.Wrap(err, "Serve")}).Error("Authenticate fail")
 			err = errors.WithDetail(errNotAuthenticated, err.Error())
 			errorFormatter.Write(req.Context(), rw, err)
 			return
@@ -380,14 +359,8 @@ func RedirectHandler(next http.Handler) http.Handler {
 	})
 }
 
-// latencyHandler take latency for the request url path, and redirect url path to wait-disable when wallet is closed
-func latencyHandler(m *http.ServeMux, walletEnable bool) http.Handler {
+func walletHandler(m *http.ServeMux, walletEnable bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		// latency for the request url path
-		if l := latency(m, req); l != nil {
-			defer l.RecordSince(time.Now())
-		}
-
 		// when the wallet is not been opened and the url path is not been found, modify url path to error,
 		// and redirect handler to error
 		if _, pattern := m.Handler(req); pattern != req.URL.Path && !walletEnable {

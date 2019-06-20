@@ -1,6 +1,7 @@
 package account
 
 import (
+	"bytes"
 	"container/list"
 	"encoding/json"
 	"sort"
@@ -9,8 +10,8 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	dbm "github.com/tendermint/tmlibs/db"
 
+	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 )
@@ -34,6 +35,7 @@ type UTXO struct {
 	Amount              uint64
 	SourcePos           uint64
 	ControlProgram      []byte
+	Vote                []byte
 	AccountID           string
 	Address             string
 	ControlProgramIndex uint64
@@ -111,11 +113,11 @@ func (uk *utxoKeeper) RemoveUnconfirmedUtxo(hashes []*bc.Hash) {
 	}
 }
 
-func (uk *utxoKeeper) Reserve(accountID string, assetID *bc.AssetID, amount uint64, useUnconfirmed bool, exp time.Time) (*reservation, error) {
+func (uk *utxoKeeper) Reserve(accountID string, assetID *bc.AssetID, amount uint64, useUnconfirmed bool, vote []byte, exp time.Time) (*reservation, error) {
 	uk.mtx.Lock()
 	defer uk.mtx.Unlock()
 
-	utxos, immatureAmount := uk.findUtxos(accountID, assetID, useUnconfirmed)
+	utxos, immatureAmount := uk.findUtxos(accountID, assetID, useUnconfirmed, vote)
 	optUtxos, optAmount, reservedAmount := uk.optUTXOs(utxos, amount)
 	if optAmount+reservedAmount+immatureAmount < amount {
 		return nil, ErrInsufficient
@@ -140,39 +142,6 @@ func (uk *utxoKeeper) Reserve(accountID string, assetID *bc.AssetID, amount uint
 	for _, u := range optUtxos {
 		uk.reserved[u.OutputID] = result.id
 	}
-	return result, nil
-}
-
-func (uk *utxoKeeper) ReserveByAddress(address string, assetID *bc.AssetID, amount uint64, useUnconfirmed bool, isReserved bool) (*reservation, error) {
-	uk.mtx.Lock()
-	defer uk.mtx.Unlock()
-
-	utxos, immatureAmount := uk.findUtxosByAddress(address, assetID, useUnconfirmed)
-	optUtxos, optAmount, reservedAmount := uk.optUTXOs(utxos, amount)
-	if optAmount+reservedAmount+immatureAmount < amount {
-		return nil, ErrInsufficient
-	}
-	if optAmount+reservedAmount < amount {
-		return nil, ErrImmature
-	}
-
-	if optAmount < amount {
-		return nil, ErrReserved
-	}
-
-	result := &reservation{
-		id:     atomic.AddUint64(&uk.nextIndex, 1),
-		utxos:  optUtxos,
-		change: optAmount - amount,
-	}
-
-	uk.reservations[result.id] = result
-	if isReserved {
-		for _, u := range optUtxos {
-			uk.reserved[u.OutputID] = result.id
-		}
-	}
-
 	return result, nil
 }
 
@@ -217,10 +186,13 @@ func (uk *utxoKeeper) cancel(rid uint64) {
 
 func (uk *utxoKeeper) expireWorker() {
 	ticker := time.NewTicker(1000 * time.Millisecond)
+	defer ticker.Stop()
+
 	for now := range ticker.C {
 		uk.expireReservation(now)
 	}
 }
+
 func (uk *utxoKeeper) expireReservation(t time.Time) {
 	uk.mtx.Lock()
 	defer uk.mtx.Unlock()
@@ -232,12 +204,12 @@ func (uk *utxoKeeper) expireReservation(t time.Time) {
 	}
 }
 
-func (uk *utxoKeeper) findUtxos(accountID string, assetID *bc.AssetID, useUnconfirmed bool) ([]*UTXO, uint64) {
+func (uk *utxoKeeper) findUtxos(accountID string, assetID *bc.AssetID, useUnconfirmed bool, vote []byte) ([]*UTXO, uint64) {
 	immatureAmount := uint64(0)
 	currentHeight := uk.currentHeight()
 	utxos := []*UTXO{}
 	appendUtxo := func(u *UTXO) {
-		if u.AccountID != accountID || u.AssetID != *assetID {
+		if u.AccountID != accountID || u.AssetID != *assetID || !bytes.Equal(u.Vote, vote) {
 			return
 		}
 		if u.ValidHeight > currentHeight {
@@ -252,42 +224,7 @@ func (uk *utxoKeeper) findUtxos(accountID string, assetID *bc.AssetID, useUnconf
 	for utxoIter.Next() {
 		u := &UTXO{}
 		if err := json.Unmarshal(utxoIter.Value(), u); err != nil {
-			log.WithField("err", err).Error("utxoKeeper findUtxos fail on unmarshal utxo")
-			continue
-		}
-		appendUtxo(u)
-	}
-	if !useUnconfirmed {
-		return utxos, immatureAmount
-	}
-
-	for _, u := range uk.unconfirmed {
-		appendUtxo(u)
-	}
-	return utxos, immatureAmount
-}
-
-func (uk *utxoKeeper) findUtxosByAddress(address string, assetID *bc.AssetID, useUnconfirmed bool) ([]*UTXO, uint64) {
-	immatureAmount := uint64(0)
-	currentHeight := uk.currentHeight()
-	utxos := []*UTXO{}
-	appendUtxo := func(u *UTXO) {
-		if u.Address != address || u.AssetID != *assetID {
-			return
-		}
-		if u.ValidHeight > currentHeight {
-			immatureAmount += u.Amount
-		} else {
-			utxos = append(utxos, u)
-		}
-	}
-
-	utxoIter := uk.db.IteratorPrefix([]byte(UTXOPreFix))
-	defer utxoIter.Release()
-	for utxoIter.Next() {
-		u := &UTXO{}
-		if err := json.Unmarshal(utxoIter.Value(), u); err != nil {
-			log.WithField("err", err).Error("utxoKeeper findUtxos fail on unmarshal utxo")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("utxoKeeper findUtxos fail on unmarshal utxo")
 			continue
 		}
 		appendUtxo(u)

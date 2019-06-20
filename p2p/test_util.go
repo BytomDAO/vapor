@@ -1,14 +1,16 @@
 package p2p
 
 import (
-	"math/rand"
 	"net"
 
-	"github.com/tendermint/go-crypto"
+	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
 
 	cfg "github.com/vapor/config"
+	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/p2p/connection"
+	"github.com/vapor/p2p/discover/dht"
+	"github.com/vapor/p2p/signlib"
 )
 
 //PanicOnAddPeerErr add peer error
@@ -41,30 +43,6 @@ func CreateRoutableAddr() (addr string, netAddr *NetAddress) {
 		}
 	}
 	return
-}
-
-// MakeConnectedSwitches switches connected via arbitrary net.Conn; useful for testing
-// Returns n switches, connected according to the connect func.
-// If connect==Connect2Switches, the switches will be fully connected.
-// initSwitch defines how the ith switch should be initialized (ie. with what reactors).
-// NOTE: panics if any switch fails to start.
-func MakeConnectedSwitches(cfg *cfg.Config, n int, initSwitch func(int, *Switch) *Switch, connect func([]*Switch, int, int)) []*Switch {
-	switches := make([]*Switch, n)
-	for i := 0; i < n; i++ {
-		switches[i] = MakeSwitch(cfg, i, "testing", "123.123.123", initSwitch)
-	}
-
-	if err := startSwitches(switches); err != nil {
-		panic(err)
-	}
-
-	for i := 0; i < n; i++ {
-		for j := i; j < n; j++ {
-			connect(switches, i, j)
-		}
-	}
-
-	return switches
 }
 
 // Connect2Switches will connect switches i and j via net.Pipe()
@@ -103,18 +81,22 @@ func startSwitches(switches []*Switch) error {
 	return nil
 }
 
-func MakeSwitch(cfg *cfg.Config, i int, network, version string, initSwitch func(int, *Switch) *Switch) *Switch {
-	privKey := crypto.GenPrivKeyEd25519()
+type mockDiscv struct {
+}
+
+func (m *mockDiscv) ReadRandomNodes(buf []*dht.Node) (n int) {
+	return 0
+}
+
+func MakeSwitch(cfg *cfg.Config, testdb dbm.DB, privKey signlib.PrivKey, initSwitch func(*Switch) *Switch) *Switch {
 	// new switch, add reactors
-	// TODO: let the config be passed in?
-	s := initSwitch(i, NewSwitch(cfg))
-	s.SetNodeInfo(&NodeInfo{
-		PubKey:     privKey.PubKey().Unwrap().(crypto.PubKeyEd25519),
-		Moniker:    cmn.Fmt("switch%d", i),
-		Network:    network,
-		Version:    version,
-		ListenAddr: cmn.Fmt("%v:%v", network, rand.Intn(64512)+1023),
-	})
-	s.SetNodePrivKey(privKey)
+	l, listenAddr := GetListener(cfg.P2P)
+	cfg.P2P.LANDiscover = false
+	sw, err := newSwitch(cfg, new(mockDiscv), nil, l, privKey, listenAddr, 0)
+	if err != nil {
+		log.Errorf("create switch error: %s", err)
+		return nil
+	}
+	s := initSwitch(sw)
 	return s
 }

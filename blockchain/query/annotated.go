@@ -29,7 +29,6 @@ type AnnotatedInput struct {
 	AssetAlias       string               `json:"asset_alias,omitempty"`
 	AssetDefinition  *json.RawMessage     `json:"asset_definition,omitempty"`
 	Amount           uint64               `json:"amount"`
-	IssuanceProgram  chainjson.HexBytes   `json:"issuance_program,omitempty"`
 	ControlProgram   chainjson.HexBytes   `json:"control_program,omitempty"`
 	Address          string               `json:"address,omitempty"`
 	SpentOutputID    *bc.Hash             `json:"spent_output_id,omitempty"`
@@ -38,7 +37,6 @@ type AnnotatedInput struct {
 	Arbitrary        chainjson.HexBytes   `json:"arbitrary,omitempty"`
 	InputID          bc.Hash              `json:"input_id"`
 	WitnessArguments []chainjson.HexBytes `json:"witness_arguments"`
-	Peginwitness     [][]byte             `json:"pegin_witness"`
 }
 
 //AnnotatedOutput means an annotated transaction output.
@@ -55,6 +53,7 @@ type AnnotatedOutput struct {
 	AccountAlias    string             `json:"account_alias,omitempty"`
 	ControlProgram  chainjson.HexBytes `json:"control_program"`
 	Address         string             `json:"address,omitempty"`
+	Vote            chainjson.HexBytes `json:"vote,omitempty"`
 }
 
 //AnnotatedAccount means an annotated account.
@@ -69,19 +68,11 @@ type AnnotatedAccount struct {
 
 //AnnotatedAsset means an annotated asset.
 type AnnotatedAsset struct {
-	ID              bc.AssetID         `json:"id"`
-	Alias           string             `json:"alias,omitempty"`
-	IssuanceProgram chainjson.HexBytes `json:"issuance_program"`
-	Keys            []*AssetKey        `json:"keys"`
-	Quorum          int                `json:"quorum"`
-	Definition      *json.RawMessage   `json:"definition"`
-}
-
-//AssetKey means an asset key.
-type AssetKey struct {
-	RootXPub            chainkd.XPub         `json:"root_xpub"`
-	AssetPubkey         chainjson.HexBytes   `json:"asset_pubkey"`
-	AssetDerivationPath []chainjson.HexBytes `json:"asset_derivation_path"`
+	ID                bc.AssetID         `json:"id"`
+	Alias             string             `json:"alias"`
+	VMVersion         uint64             `json:"vm_version"`
+	RawDefinitionByte chainjson.HexBytes `json:"raw_definition_byte"`
+	Definition        *json.RawMessage   `json:"definition"`
 }
 
 //AnnotatedUTXO means an annotated utxo.

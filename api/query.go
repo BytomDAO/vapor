@@ -3,19 +3,17 @@ package api
 import (
 	"context"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
-
-	"github.com/vapor/blockchain/txbuilder"
-	"github.com/vapor/crypto/ed25519"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/account"
+	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/query"
 	"github.com/vapor/blockchain/signers"
-	bytomtypes "github.com/vapor/claim/bytom/protocolbc/types"
+	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/consensus"
+	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/errors"
@@ -55,13 +53,17 @@ func (a *API) listAccounts(ctx context.Context, filter struct {
 func (a *API) getAsset(ctx context.Context, filter struct {
 	ID string `json:"id"`
 }) Response {
-	asset, err := a.wallet.AssetReg.GetAsset(filter.ID)
+	ass, err := a.wallet.AssetReg.GetAsset(filter.ID)
 	if err != nil {
 		log.Errorf("getAsset: %v", err)
 		return NewErrorResponse(err)
 	}
 
-	return NewSuccessResponse(asset)
+	annotatedAsset, err := asset.Annotated(ass)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(annotatedAsset)
 }
 
 // POST /list-assets
@@ -74,7 +76,15 @@ func (a *API) listAssets(ctx context.Context, filter struct {
 		return NewErrorResponse(err)
 	}
 
-	return NewSuccessResponse(assets)
+	annotatedAssets := []*query.AnnotatedAsset{}
+	for _, ass := range assets {
+		annotatedAsset, err := asset.Annotated(ass)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+		annotatedAssets = append(annotatedAssets, annotatedAsset)
+	}
+	return NewSuccessResponse(annotatedAssets)
 }
 
 // POST /list-balances
@@ -96,6 +106,26 @@ func (a *API) listBalances(ctx context.Context, filter struct {
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(balances)
+}
+
+func (a *API) listAccountVotes(ctx context.Context, filter struct {
+	AccountID    string `json:"account_id"`
+	AccountAlias string `json:"account_alias"`
+}) Response {
+	accountID := filter.AccountID
+	if filter.AccountAlias != "" {
+		acc, err := a.wallet.AccountMgr.FindByAlias(filter.AccountAlias)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+		accountID = acc.ID
+	}
+
+	votes, err := a.wallet.GetAccountVotes(accountID, "")
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(votes)
 }
 
 // POST /get-transaction
@@ -134,9 +164,10 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 		transaction, err = a.wallet.GetTransactionByTxID(filter.ID)
 		if err != nil && filter.Unconfirmed {
 			transaction, err = a.wallet.GetUnconfirmedTxByTxID(filter.ID)
-			if err != nil {
-				return NewErrorResponse(err)
-			}
+		}
+
+		if err != nil {
+			return NewErrorResponse(err)
 		}
 		transactions = []*query.AnnotatedTx{transaction}
 	} else {
@@ -190,7 +221,9 @@ func (a *API) getUnconfirmedTx(ctx context.Context, filter struct {
 	resOutID := txDesc.Tx.ResultIds[0]
 	resOut := txDesc.Tx.Entries[*resOutID]
 	switch out := resOut.(type) {
-	case *bc.Output:
+	case *bc.IntraChainOutput:
+		tx.MuxID = *out.Source.Ref
+	case *bc.VoteOutput:
 		tx.MuxID = *out.Source.Ref
 	case *bc.Retirement:
 		tx.MuxID = *out.Source.Ref
@@ -280,7 +313,7 @@ func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 		}
 		accountID = acc.ID
 	}
-	accountUTXOs := a.wallet.GetAccountUtxos(accountID, filter.ID, filter.Unconfirmed, filter.SmartContract)
+	accountUTXOs := a.wallet.GetAccountUtxos(accountID, filter.ID, filter.Unconfirmed, filter.SmartContract, false)
 
 	UTXOs := []query.AnnotatedUTXO{}
 	for _, utxo := range accountUTXOs {
@@ -411,143 +444,4 @@ func (a *API) listPubKeys(ctx context.Context, ins struct {
 		RootXPub:    account.XPubs[0],
 		PubKeyInfos: pubKeyInfos,
 	})
-}
-
-type GetRawTransationResp struct {
-	Tx        *bytomtypes.Tx `json:"raw_transaction"`
-	BlockHash bc.Hash        `json:"block_hash"`
-}
-
-func (a *API) getRawTransaction(ins struct {
-	RawBlock string `json:"raw_block"`
-	TxID     string `json:"tx_id"`
-}) Response {
-
-	var rawTransaction *bytomtypes.Tx
-	block := &bytomtypes.Block{}
-	err := block.UnmarshalText([]byte(ins.RawBlock))
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	txID := bc.Hash{}
-	txID.UnmarshalText([]byte(ins.TxID))
-	for _, tx := range block.Transactions {
-		if tx.ID.String() == txID.String() {
-			rawTransaction = tx
-			break
-		}
-	}
-	if rawTransaction == nil {
-		return NewErrorResponse(errors.New("raw transaction do not find"))
-	}
-	resp := GetRawTransationResp{Tx: rawTransaction, BlockHash: block.Hash()}
-	return NewSuccessResponse(resp)
-}
-
-type GetSideRawTransationResp struct {
-	Tx        *types.Tx `json:"raw_transaction"`
-	BlockHash bc.Hash   `json:"block_hash"`
-}
-
-func (a *API) getSideRawTransaction(ins struct {
-	BlockHeight uint64 `json:"block_height"`
-	TxID        string `json:"tx_id"`
-}) Response {
-	block, err := a.chain.GetBlockByHeight(ins.BlockHeight)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	var rawTransaction *types.Tx
-
-	txID := bc.Hash{}
-	txID.UnmarshalText([]byte(ins.TxID))
-
-	for _, tx := range block.Transactions {
-		if tx.ID.String() == txID.String() {
-			rawTransaction = tx
-			break
-		}
-	}
-	if rawTransaction == nil {
-		return NewErrorResponse(errors.New("raw transaction do not find"))
-	}
-	resp := GetSideRawTransationResp{Tx: rawTransaction, BlockHash: block.Hash()}
-	return NewSuccessResponse(resp)
-}
-
-type utxoResp struct {
-	Utxo []byte `json:"utxo"`
-}
-
-func (a *API) getUnspentOutputs(ins struct {
-	RawBlock string `json:"raw_block"`
-	TxID     string `json:"tx_id"`
-	ID       string `json:"id"`
-	Address  string `json:"address"`
-}) Response {
-	var rawTransaction *bytomtypes.Tx
-	block := &bytomtypes.Block{}
-	if err := block.UnmarshalText([]byte(ins.RawBlock)); err != nil {
-		return NewErrorResponse(err)
-	}
-
-	txID := bc.Hash{}
-	txID.UnmarshalText([]byte(ins.TxID))
-
-	for _, tx := range block.Transactions {
-		if tx.ID.String() == txID.String() {
-			rawTransaction = tx
-			break
-		}
-	}
-	utxo := account.UTXO{}
-
-	for i, out := range rawTransaction.Outputs {
-		key := rawTransaction.ResultIds[i]
-		if key.String() == ins.ID {
-			outPut, err := rawTransaction.Output(*key)
-			if err != nil {
-				continue
-			}
-			outputID := bc.Hash{
-				V0: key.GetV0(),
-				V1: key.GetV1(),
-				V2: key.GetV2(),
-				V3: key.GetV3(),
-			}
-
-			assetID := bc.AssetID{
-				V0: out.AssetAmount.AssetId.GetV0(),
-				V1: out.AssetAmount.AssetId.GetV1(),
-				V2: out.AssetAmount.AssetId.GetV2(),
-				V3: out.AssetAmount.AssetId.GetV3(),
-			}
-
-			sourceID := bc.Hash{
-				V0: outPut.Source.Ref.GetV0(),
-				V1: outPut.Source.Ref.GetV1(),
-				V2: outPut.Source.Ref.GetV2(),
-				V3: outPut.Source.Ref.GetV3(),
-			}
-			utxo = account.UTXO{
-				OutputID:       outputID,
-				AssetID:        assetID,
-				Amount:         out.Amount,
-				ControlProgram: out.ControlProgram,
-				SourceID:       sourceID,
-				SourcePos:      outPut.Source.Position,
-				ValidHeight:    block.Height,
-				Address:        ins.Address,
-			}
-		}
-	}
-
-	resp, err := json.Marshal(&utxo)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	return NewSuccessResponse(&utxoResp{Utxo: resp})
 }

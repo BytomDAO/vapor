@@ -36,7 +36,7 @@ func (a SortByTimestamp) Less(i, j int) bool { return a[i].Timestamp > a[j].Time
 // AddUnconfirmedTx handle wallet status update when tx add into txpool
 func (w *Wallet) AddUnconfirmedTx(txD *protocol.TxDesc) {
 	if err := w.saveUnconfirmedTx(txD.Tx); err != nil {
-		log.WithField("err", err).Error("wallet fail on saveUnconfirmedTx")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("wallet fail on saveUnconfirmedTx")
 	}
 
 	utxos := txOutToUtxos(txD.Tx, txD.StatusFail, 0)
@@ -84,13 +84,17 @@ func (w *Wallet) GetUnconfirmedTxByTxID(txID string) (*query.AnnotatedTx, error)
 
 // RemoveUnconfirmedTx handle wallet status update when tx removed from txpool
 func (w *Wallet) RemoveUnconfirmedTx(txD *protocol.TxDesc) {
+	if !w.checkRelatedTransaction(txD.Tx) {
+		return
+	}
+	w.DB.Delete(calcUnconfirmedTxKey(txD.Tx.ID.String()))
 	w.AccountMgr.RemoveUnconfirmedUtxo(txD.Tx.ResultIds)
 }
 
 func (w *Wallet) buildAnnotatedUnconfirmedTx(tx *types.Tx) *query.AnnotatedTx {
 	annotatedTx := &query.AnnotatedTx{
 		ID:        tx.ID,
-		Timestamp: uint64(time.Now().Unix()),
+		Timestamp: uint64(time.Now().UnixNano() / int64(time.Millisecond)),
 		Inputs:    make([]*query.AnnotatedInput, 0, len(tx.Inputs)),
 		Outputs:   make([]*query.AnnotatedOutput, 0, len(tx.Outputs)),
 		Size:      tx.SerializedSize,
@@ -109,7 +113,7 @@ func (w *Wallet) buildAnnotatedUnconfirmedTx(tx *types.Tx) *query.AnnotatedTx {
 func (w *Wallet) checkRelatedTransaction(tx *types.Tx) bool {
 	for _, v := range tx.Outputs {
 		var hash [32]byte
-		sha3pool.Sum256(hash[:], v.ControlProgram)
+		sha3pool.Sum256(hash[:], v.ControlProgram())
 		if bytes := w.DB.Get(account.ContractKey(hash)); bytes != nil {
 			return true
 		}
@@ -164,7 +168,7 @@ func (w *Wallet) delExpiredTxs() error {
 //delUnconfirmedTx periodically delete locally stored timeout did not confirm txs
 func (w *Wallet) delUnconfirmedTx() {
 	if err := w.delExpiredTxs(); err != nil {
-		log.WithField("err", err).Error("wallet fail on delUnconfirmedTx")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("wallet fail on delUnconfirmedTx")
 		return
 	}
 	ticker := time.NewTicker(UnconfirmedTxCheckPeriod)
@@ -172,7 +176,7 @@ func (w *Wallet) delUnconfirmedTx() {
 	for {
 		<-ticker.C
 		if err := w.delExpiredTxs(); err != nil {
-			log.WithField("err", err).Error("wallet fail on delUnconfirmedTx")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("wallet fail on delUnconfirmedTx")
 		}
 	}
 }

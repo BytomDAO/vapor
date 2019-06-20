@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
 
+	cfg "github.com/vapor/config"
 	"github.com/vapor/errors"
 	"github.com/vapor/p2p/upnp"
 )
@@ -26,6 +28,31 @@ type Listener interface {
 	ExternalAddress() *NetAddress
 	String() string
 	Stop() bool
+}
+
+// Defaults to tcp
+func protocolAndAddress(listenAddr string) (string, string) {
+	p, address := "tcp", listenAddr
+	parts := strings.SplitN(address, "://", 2)
+	if len(parts) == 2 {
+		p, address = parts[0], parts[1]
+	}
+	return p, address
+}
+
+// GetListener get listener and listen address.
+func GetListener(config *cfg.P2PConfig) (Listener, string) {
+	p, address := protocolAndAddress(config.ListenAddress)
+	l, listenerStatus := NewDefaultListener(p, address, config.SkipUPNP)
+
+	// We assume that the rpcListener has the same ExternalAddress.
+	// This is probably true because both P2P and RPC listeners use UPnP,
+	// except of course if the rpc is only bound to localhost
+	if listenerStatus {
+		return l, cmn.Fmt("%v:%v", l.ExternalAddress().IP.String(), l.ExternalAddress().Port)
+	}
+
+	return l, cmn.Fmt("%v:%v", l.InternalAddress().IP.String(), l.InternalAddress().Port)
 }
 
 //getUPNPExternalAddress UPNP external address discovery & port mapping
@@ -52,27 +79,6 @@ func getUPNPExternalAddress(externalPort, internalPort int) (*NetAddress, error)
 		return nil, errors.Wrap(err, "could not add udp UPNP port mapping")
 	}
 	return NewNetAddressIPPort(ext, uint16(externalPort)), nil
-}
-
-func getNaiveExternalAddress(port int, settleForLocal bool) *NetAddress {
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		cmn.PanicCrisis(cmn.Fmt("Could not fetch interface addresses: %v", err))
-	}
-
-	for _, a := range addrs {
-		ipnet, ok := a.(*net.IPNet)
-		if !ok {
-			continue
-		}
-		if v4 := ipnet.IP.To4(); v4 == nil || (!settleForLocal && v4[0] == 127) {
-			continue
-		}
-		return NewNetAddressIPPort(ipnet.IP, uint16(port))
-	}
-
-	log.Info("Node may not be connected to internet. Settling for local address")
-	return getNaiveExternalAddress(port, true)
 }
 
 func splitHostPort(addr string) (host string, port int) {
@@ -108,12 +114,12 @@ func NewDefaultListener(protocol string, lAddr string, skipUPNP bool) (Listener,
 		listener, err = net.Listen(protocol, lAddr)
 	}
 	if err != nil {
-		cmn.PanicCrisis(err)
+		log.Panic(err)
 	}
 
 	intAddr, err := NewNetAddressString(lAddr)
 	if err != nil {
-		cmn.PanicCrisis(err)
+		log.Panic(err)
 	}
 
 	// Actual listener local IP & port
@@ -126,19 +132,18 @@ func NewDefaultListener(protocol string, lAddr string, skipUPNP bool) (Listener,
 	if !skipUPNP && (lAddrIP == "" || lAddrIP == "0.0.0.0") {
 		extAddr, err = getUPNPExternalAddress(lAddrPort, listenerPort)
 		upnpMap = err == nil
-		log.WithField("err", err).Info("get UPNP external address")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Info("get UPNP external address")
 	}
 
+	// Get the IPv4 available
 	if extAddr == nil {
-		if address := GetIP(); address.Success == true {
-			extAddr = NewNetAddressIPPort(net.ParseIP(address.IP), uint16(lAddrPort))
+		if ip, err := ExternalIPv4(); err != nil {
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("get ipv4 external address")
+			log.Panic("get ipv4 external address fail!")
+		} else {
+			extAddr = NewNetAddressIPPort(net.ParseIP(ip), uint16(lAddrPort))
+			log.WithFields(log.Fields{"module": logModule, "addr": extAddr}).Info("get ipv4 external address success")
 		}
-	}
-	if extAddr == nil {
-		extAddr = getNaiveExternalAddress(listenerPort, false)
-	}
-	if extAddr == nil {
-		cmn.PanicCrisis("could not determine external address!")
 	}
 
 	dl := &DefaultListener{
@@ -184,7 +189,7 @@ func (l *DefaultListener) listenRoutine() {
 		// listener wasn't stopped,
 		// yet we encountered an error.
 		if err != nil {
-			cmn.PanicCrisis(err)
+			log.Panic(err)
 		}
 		l.connections <- conn
 	}

@@ -1,13 +1,16 @@
 package config
 
 import (
+	"encoding/hex"
+	"io"
 	"os"
 	"os/user"
 	"path/filepath"
 	"runtime"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/vapor/common"
+
+	"github.com/vapor/crypto/ed25519/chainkd"
 )
 
 var (
@@ -19,14 +22,12 @@ type Config struct {
 	// Top level options use an anonymous struct
 	BaseConfig `mapstructure:",squash"`
 	// Options for services
-	P2P       *P2PConfig          `mapstructure:"p2p"`
-	Wallet    *WalletConfig       `mapstructure:"wallet"`
-	Auth      *RPCAuthConfig      `mapstructure:"auth"`
-	Web       *WebConfig          `mapstructure:"web"`
-	Side      *SideChainConfig    `mapstructure:"side"`
-	MainChain *MainChainRpcConfig `mapstructure:"mainchain"`
-	Websocket *WebsocketConfig    `mapstructure:"ws"`
-	Consensus *ConsensusConfig    `mapstructure:"consensus"`
+	P2P        *P2PConfig        `mapstructure:"p2p"`
+	Wallet     *WalletConfig     `mapstructure:"wallet"`
+	Auth       *RPCAuthConfig    `mapstructure:"auth"`
+	Web        *WebConfig        `mapstructure:"web"`
+	Websocket  *WebsocketConfig  `mapstructure:"ws"`
+	Federation *FederationConfig `mapstructure:"federation"`
 }
 
 // Default configurable parameters.
@@ -37,10 +38,8 @@ func DefaultConfig() *Config {
 		Wallet:     DefaultWalletConfig(),
 		Auth:       DefaultRPCAuthConfig(),
 		Web:        DefaultWebConfig(),
-		Side:       DefaultSideChainConfig(),
-		MainChain:  DefaultMainChainRpc(),
 		Websocket:  DefaultWebsocketConfig(),
-		Consensus:  DefaultConsensusCOnfig(),
+		Federation: DefaultFederationConfig(),
 	}
 }
 
@@ -48,6 +47,37 @@ func DefaultConfig() *Config {
 func (cfg *Config) SetRoot(root string) *Config {
 	cfg.BaseConfig.RootDir = root
 	return cfg
+}
+
+// NodeKey retrieves the currently configured private key of the node, checking
+// first any manually set key, falling back to the one found in the configured
+// data folder. If no key can be found, a new one is generated.
+func (cfg *Config) PrivateKey() *chainkd.XPrv {
+	if cfg.XPrv != nil {
+		return cfg.XPrv
+	}
+
+	filePath := rootify(cfg.PrivateKeyFile, cfg.BaseConfig.RootDir)
+	fildReader, err := os.Open(filePath)
+	if err != nil {
+		log.WithField("err", err).Panic("fail on open private key file")
+	}
+
+	defer fildReader.Close()
+	buf := make([]byte, 128)
+	if _, err = io.ReadFull(fildReader, buf); err != nil {
+		log.WithField("err", err).Panic("fail on read private key file")
+	}
+
+	var xprv chainkd.XPrv
+	if _, err := hex.Decode(xprv[:], buf); err != nil {
+		log.WithField("err", err).Panic("fail on decode private key")
+	}
+
+	cfg.XPrv = &xprv
+	xpub := cfg.XPrv.XPub()
+	cfg.XPub = &xpub
+	return cfg.XPrv
 }
 
 //-----------------------------------------------------------------------------
@@ -87,25 +117,25 @@ type BaseConfig struct {
 	// log file name
 	LogFile string `mapstructure:"log_file"`
 
-	// Validate pegin proof by checking bytom transaction inclusion in mainchain.
-	ValidatePegin bool   `mapstructure:"validate_pegin"`
-	Signer        string `mapstructure:"signer"`
+	PrivateKeyFile string `mapstructure:"private_key_file"`
+	XPrv           *chainkd.XPrv
+	XPub           *chainkd.XPub
 
-	ConsensusConfigFile string `mapstructure:"consensus_config_file"`
-
-	IpfsAddress string `mapstructure:"ipfs_addr"`
+	// Federation file name
+	FederationFileName string `mapstructure:"federation_file"`
 }
 
 // Default configurable base parameters.
 func DefaultBaseConfig() BaseConfig {
 	return BaseConfig{
-		Moniker:           "anonymous",
-		ProfListenAddress: "",
-		Mining:            false,
-		DBBackend:         "leveldb",
-		DBPath:            "data",
-		KeysPath:          "keystore",
-		IpfsAddress:       "127.0.0.1:5001",
+		Moniker:            "anonymous",
+		ProfListenAddress:  "",
+		Mining:             false,
+		DBBackend:          "leveldb",
+		DBPath:             "data",
+		KeysPath:           "keystore",
+		PrivateKeyFile:     "node_key.txt",
+		FederationFileName: "federation.json",
 	}
 }
 
@@ -117,17 +147,23 @@ func (b BaseConfig) KeysDir() string {
 	return rootify(b.KeysPath, b.RootDir)
 }
 
+func (b BaseConfig) FederationFile() string {
+	return rootify(b.FederationFileName, b.RootDir)
+}
+
 // P2PConfig
 type P2PConfig struct {
 	ListenAddress    string `mapstructure:"laddr"`
 	Seeds            string `mapstructure:"seeds"`
 	SkipUPNP         bool   `mapstructure:"skip_upnp"`
+	LANDiscover      bool   `mapstructure:"lan_discoverable"`
 	MaxNumPeers      int    `mapstructure:"max_num_peers"`
 	HandshakeTimeout int    `mapstructure:"handshake_timeout"`
 	DialTimeout      int    `mapstructure:"dial_timeout"`
 	ProxyAddress     string `mapstructure:"proxy_address"`
 	ProxyUsername    string `mapstructure:"proxy_username"`
 	ProxyPassword    string `mapstructure:"proxy_password"`
+	KeepDial         string `mapstructure:"keep_dial"`
 }
 
 // Default configurable p2p parameters.
@@ -135,6 +171,7 @@ func DefaultP2PConfig() *P2PConfig {
 	return &P2PConfig{
 		ListenAddress:    "tcp://0.0.0.0:46656",
 		SkipUPNP:         false,
+		LANDiscover:      true,
 		MaxNumPeers:      50,
 		HandshakeTimeout: 30,
 		DialTimeout:      3,
@@ -148,6 +185,7 @@ func DefaultP2PConfig() *P2PConfig {
 type WalletConfig struct {
 	Disable  bool   `mapstructure:"disable"`
 	Rescan   bool   `mapstructure:"rescan"`
+	TxIndex  bool   `mapstructure:"txindex"`
 	MaxTxFee uint64 `mapstructure:"max_tx_fee"`
 }
 
@@ -159,45 +197,14 @@ type WebConfig struct {
 	Closed bool `mapstructure:"closed"`
 }
 
-type SideChainConfig struct {
-	FedpegXPubs            string `mapstructure:"fedpeg_xpubs"`
-	SignBlockXPubs         string `mapstructure:"sign_block_xpubs"`
-	PeginMinDepth          uint64 `mapstructure:"pegin_confirmation_depth"`
-	ParentGenesisBlockHash string `mapstructure:"parent_genesis_block_hash"`
-}
-
-type MainChainRpcConfig struct {
-	MainchainRpcHost string `mapstructure:"mainchain_rpc_host"`
-	MainchainRpcPort string `mapstructure:"mainchain_rpc_port"`
-	MainchainToken   string `mapstructure:"mainchain_rpc_token"`
-}
-
 type WebsocketConfig struct {
 	MaxNumWebsockets     int `mapstructure:"max_num_websockets"`
 	MaxNumConcurrentReqs int `mapstructure:"max_num_concurrent_reqs"`
 }
 
-type ConsensusConfig struct {
-	Type             string   `mapstructure:"consensus_type"`
-	Period           uint64   `json:"period"`            // Number of seconds between blocks to enforce
-	MaxSignerCount   uint64   `json:"max_signers_count"` // Max count of signers
-	MinVoterBalance  uint64   `json:"min_boter_balance"` // Min voter balance to valid this vote
-	GenesisTimestamp uint64   `json:"genesis_timestamp"` // The LoopStartTime of first Block
-	Coinbase         string   `json:"coinbase"`
-	XPrv             string   `json:"xprv"`
-	SelfVoteSigners  []string `json:"signers"` // Signers vote by themselves to seal the block, make sure the signer accounts are pre-funded
-	Signers          []common.Address
-}
-
-type DposConfig struct {
-	Period           uint64   `json:"period"`            // Number of seconds between blocks to enforce
-	MaxSignerCount   uint64   `json:"max_signers_count"` // Max count of signers
-	MinVoterBalance  uint64   `json:"min_boter_balance"` // Min voter balance to valid this vote
-	GenesisTimestamp uint64   `json:"genesis_timestamp"` // The LoopStartTime of first Block
-	Coinbase         string   `json:"coinbase"`
-	XPrv             string   `json:"xprv"`
-	SelfVoteSigners  []string `json:"signers"` // Signers vote by themselves to seal the block, make sure the signer accounts are pre-funded
-	Signers          []common.Address
+type FederationConfig struct {
+	Xpubs  []chainkd.XPub `json:"xpubs"`
+	Quorum int            `json:"quorum"`
 }
 
 // Default configurable rpc's auth parameters.
@@ -219,22 +226,8 @@ func DefaultWalletConfig() *WalletConfig {
 	return &WalletConfig{
 		Disable:  false,
 		Rescan:   false,
+		TxIndex:  false,
 		MaxTxFee: uint64(1000000000),
-	}
-}
-
-// DeafultSideChainConfig for sidechain
-func DefaultSideChainConfig() *SideChainConfig {
-	return &SideChainConfig{
-		PeginMinDepth:          6,
-		ParentGenesisBlockHash: "a75483474799ea1aa6bb910a1a5025b4372bf20bef20f246a2c2dc5e12e8a053",
-	}
-}
-
-func DefaultMainChainRpc() *MainChainRpcConfig {
-	return &MainChainRpcConfig{
-		MainchainRpcHost: "127.0.0.1",
-		MainchainRpcPort: "9888",
 	}
 }
 
@@ -245,22 +238,20 @@ func DefaultWebsocketConfig() *WebsocketConfig {
 	}
 }
 
-func DefaultDposConfig() *DposConfig {
-	return &DposConfig{
-		Period:           1,
-		MaxSignerCount:   1,
-		MinVoterBalance:  0,
-		GenesisTimestamp: 1524549600,
+func DefaultFederationConfig() *FederationConfig {
+	return &FederationConfig{
+		Xpubs: []chainkd.XPub{
+			xpub("50ef22b3a3fca7bc08916187cc9ec2f4005c9c6b1353aa1decbd4be3f3bb0fbe1967589f0d9dec13a388c0412002d2c267bdf3b920864e1ddc50581be5604ce1"),
+		},
+		Quorum: 1,
 	}
 }
 
-func DefaultConsensusCOnfig() *ConsensusConfig {
-	return &ConsensusConfig{
-		Type:             "dpos",
-		Period:           1,
-		MaxSignerCount:   1,
-		MinVoterBalance:  0,
-		GenesisTimestamp: 1524549600}
+func xpub(str string) (xpub chainkd.XPub) {
+	if err := xpub.UnmarshalText([]byte(str)); err != nil {
+		log.Panicf("Fail converts a string to xpub")
+	}
+	return xpub
 }
 
 //-----------------------------------------------------------------------------
@@ -280,25 +271,15 @@ func DefaultDataDir() string {
 	// Try to place the data folder in the user's home dir
 	home := homeDir()
 	if home == "" {
-		return "./.bytom_sidechain"
+		return "./.vapor"
 	}
 	switch runtime.GOOS {
 	case "darwin":
-		// In order to be compatible with old data path,
-		// copy the data from the old path to the new path
-		oldPath := filepath.Join(home, "Library", "Bytom_sidechain")
-		newPath := filepath.Join(home, "Library", "Application Support", "Bytom_sidechain")
-		if !isFolderNotExists(oldPath) && isFolderNotExists(newPath) {
-			if err := os.Rename(oldPath, newPath); err != nil {
-				log.Errorf("DefaultDataDir: %v", err)
-				return oldPath
-			}
-		}
-		return newPath
+		return filepath.Join(home, "Library", "Application Support", "Vapor")
 	case "windows":
-		return filepath.Join(home, "AppData", "Roaming", "Bytom_sidechain")
+		return filepath.Join(home, "AppData", "Roaming", "Vapor")
 	default:
-		return filepath.Join(home, ".bytom_sidechain")
+		return filepath.Join(home, ".vapor")
 	}
 }
 

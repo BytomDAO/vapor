@@ -4,16 +4,15 @@ import (
 	"context"
 	"time"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/vapor/account"
 	"github.com/vapor/blockchain/pseudohsm"
 	"github.com/vapor/blockchain/txbuilder"
-	"github.com/vapor/common"
 	"github.com/vapor/config"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/database/leveldb"
+	"github.com/vapor/database"
+	dbm "github.com/vapor/database/leveldb"
+	"github.com/vapor/event"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -26,24 +25,12 @@ const (
 )
 
 // MockChain mock chain with genesis block
-func MockChain(testDB dbm.DB) (*protocol.Chain, *leveldb.Store, *protocol.TxPool, error) {
+func MockChain(testDB dbm.DB) (*protocol.Chain, *database.Store, *protocol.TxPool, error) {
 	config.CommonConfig = config.DefaultConfig()
-	consensus.SoloNetParams.Signer = "78673764e0ba91a4c5ba9ec0c8c23c69e3d73bf27970e05e0a977e81e13bde475264d3b177a96646bc0ce517ae7fd63504c183ab6d330dea184331a4cf5912d5"
-	config.CommonConfig.Consensus.SelfVoteSigners = append(config.CommonConfig.Consensus.SelfVoteSigners, "vsm1qkm743xmgnvh84pmjchq2s4tnfpgu9ae2f9slep")
-	config.CommonConfig.Consensus.XPrv = "a8e281b615809046698fb0b0f2804a36d824d48fa443350f10f1b80649d39e5f1e85cf9855548915e36137345910606cbc8e7dd8497c831dce899ee6ac112445"
-	for _, v := range config.CommonConfig.Consensus.SelfVoteSigners {
-		address, err := common.DecodeAddress(v, &consensus.SoloNetParams)
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		config.CommonConfig.Consensus.Signers = append(config.CommonConfig.Consensus.Signers, address)
-	}
-
-	store := leveldb.NewStore(testDB)
-	txPool := protocol.NewTxPool(store)
-
-	chain, err := protocol.NewChain(store, txPool)
-	consensus.ActiveNetParams.Signer = "78673764e0ba91a4c5ba9ec0c8c23c69e3d73bf27970e05e0a977e81e13bde475264d3b177a96646bc0ce517ae7fd63504c183ab6d330dea184331a4cf5912d5"
+	store := database.NewStore(testDB)
+	dispatcher := event.NewDispatcher()
+	txPool := protocol.NewTxPool(store, dispatcher)
+	chain, err := protocol.NewChain(store, txPool, dispatcher)
 	return chain, store, txPool, err
 }
 
@@ -74,7 +61,7 @@ func MockTx(utxo *account.UTXO, testAccount *account.Account) (*txbuilder.Templa
 	if err := b.AddInput(txInput, sigInst); err != nil {
 		return nil, nil, err
 	}
-	out := types.NewTxOutput(*consensus.BTMAssetID, 100, []byte{byte(vm.OP_FAIL)})
+	out := types.NewIntraChainOutput(*consensus.BTMAssetID, 100, []byte{byte(vm.OP_FAIL)})
 	if err := b.AddOutput(out); err != nil {
 		return nil, nil, err
 	}

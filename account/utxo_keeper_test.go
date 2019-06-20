@@ -6,8 +6,7 @@ import (
 	"testing"
 	"time"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
+	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/testutil"
 )
@@ -274,7 +273,10 @@ func TestRemoveUnconfirmedUtxo(t *testing.T) {
 func TestReserve(t *testing.T) {
 	currentHeight := func() uint64 { return 9527 }
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer os.RemoveAll("temp")
+	defer func() {
+		testDB.Close()
+		os.RemoveAll("temp")
+	}()
 
 	cases := []struct {
 		before        utxoKeeper
@@ -282,6 +284,7 @@ func TestReserve(t *testing.T) {
 		err           error
 		reserveAmount uint64
 		exp           time.Time
+		vote          []byte
 	}{
 		{
 			before: utxoKeeper{
@@ -517,10 +520,60 @@ func TestReserve(t *testing.T) {
 			err:           nil,
 			exp:           time.Date(2016, 8, 10, 0, 0, 0, 0, time.UTC),
 		},
+		{
+			before: utxoKeeper{
+				db:            testDB,
+				currentHeight: currentHeight,
+				unconfirmed: map[bc.Hash]*UTXO{
+					bc.NewHash([32]byte{0x01}): &UTXO{
+						OutputID:  bc.NewHash([32]byte{0x01}),
+						AccountID: "testAccount",
+						Amount:    3,
+						Vote:      []byte("af594006a40837d9f028daabb6d589df0b9138daefad5683e5233c2646279217294a8d532e60863bcf196625a35fb8ceeffa3c09610eb92dcfb655a947f13269"),
+					},
+				},
+				reserved:     map[bc.Hash]uint64{},
+				reservations: map[uint64]*reservation{},
+			},
+			after: utxoKeeper{
+				db:            testDB,
+				currentHeight: currentHeight,
+				unconfirmed: map[bc.Hash]*UTXO{
+					bc.NewHash([32]byte{0x01}): &UTXO{
+						OutputID:  bc.NewHash([32]byte{0x01}),
+						AccountID: "testAccount",
+						Amount:    3,
+						Vote:      []byte("af594006a40837d9f028daabb6d589df0b9138daefad5683e5233c2646279217294a8d532e60863bcf196625a35fb8ceeffa3c09610eb92dcfb655a947f13269"),
+					},
+				},
+				reserved: map[bc.Hash]uint64{
+					bc.NewHash([32]byte{0x01}): 1,
+				},
+				reservations: map[uint64]*reservation{
+					1: &reservation{
+						id: 1,
+						utxos: []*UTXO{
+							&UTXO{
+								OutputID:  bc.NewHash([32]byte{0x01}),
+								AccountID: "testAccount",
+								Amount:    3,
+								Vote:      []byte("af594006a40837d9f028daabb6d589df0b9138daefad5683e5233c2646279217294a8d532e60863bcf196625a35fb8ceeffa3c09610eb92dcfb655a947f13269"),
+							},
+						},
+						change: 1,
+						expiry: time.Date(2016, 8, 10, 0, 0, 0, 0, time.UTC),
+					},
+				},
+			},
+			reserveAmount: 2,
+			err:           nil,
+			exp:           time.Date(2016, 8, 10, 0, 0, 0, 0, time.UTC),
+			vote:          []byte("af594006a40837d9f028daabb6d589df0b9138daefad5683e5233c2646279217294a8d532e60863bcf196625a35fb8ceeffa3c09610eb92dcfb655a947f13269"),
+		},
 	}
 
 	for i, c := range cases {
-		if _, err := c.before.Reserve("testAccount", &bc.AssetID{}, c.reserveAmount, true, c.exp); err != c.err {
+		if _, err := c.before.Reserve("testAccount", &bc.AssetID{}, c.reserveAmount, true, c.vote, c.exp); err != c.err {
 			t.Errorf("case %d: got error %v want error %v", i, err, c.err)
 		}
 		checkUtxoKeeperEqual(t, i, &c.before, &c.after)
@@ -685,7 +738,10 @@ func TestExpireReservation(t *testing.T) {
 func TestFindUtxos(t *testing.T) {
 	currentHeight := func() uint64 { return 9527 }
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer os.RemoveAll("temp")
+	defer func() {
+		testDB.Close()
+		os.RemoveAll("temp")
+	}()
 
 	cases := []struct {
 		uk             utxoKeeper
@@ -693,6 +749,7 @@ func TestFindUtxos(t *testing.T) {
 		useUnconfirmed bool
 		wantUtxos      []*UTXO
 		immatureAmount uint64
+		vote           []byte
 	}{
 		{
 			uk: utxoKeeper{
@@ -859,6 +916,32 @@ func TestFindUtxos(t *testing.T) {
 			},
 			immatureAmount: 0,
 		},
+		{
+			uk: utxoKeeper{
+				db:            testDB,
+				currentHeight: currentHeight,
+				unconfirmed:   map[bc.Hash]*UTXO{},
+			},
+			dbUtxos: []*UTXO{
+				&UTXO{
+					OutputID:  bc.NewHash([32]byte{0x01}),
+					AccountID: "testAccount",
+					Amount:    6,
+					Vote:      []byte("af594006a40837d9f028daabb6d589df0b9138daefad5683e5233c2646279217294a8d532e60863bcf196625a35fb8ceeffa3c09610eb92dcfb655a947f13269"),
+				},
+			},
+			useUnconfirmed: false,
+			wantUtxos: []*UTXO{
+				&UTXO{
+					OutputID:  bc.NewHash([32]byte{0x01}),
+					AccountID: "testAccount",
+					Amount:    6,
+					Vote:      []byte("af594006a40837d9f028daabb6d589df0b9138daefad5683e5233c2646279217294a8d532e60863bcf196625a35fb8ceeffa3c09610eb92dcfb655a947f13269"),
+				},
+			},
+			immatureAmount: 0,
+			vote:           []byte("af594006a40837d9f028daabb6d589df0b9138daefad5683e5233c2646279217294a8d532e60863bcf196625a35fb8ceeffa3c09610eb92dcfb655a947f13269"),
+		},
 	}
 
 	for i, c := range cases {
@@ -870,7 +953,7 @@ func TestFindUtxos(t *testing.T) {
 			testDB.Set(StandardUTXOKey(u.OutputID), data)
 		}
 
-		gotUtxos, immatureAmount := c.uk.findUtxos("testAccount", &bc.AssetID{}, c.useUnconfirmed)
+		gotUtxos, immatureAmount := c.uk.findUtxos("testAccount", &bc.AssetID{}, c.useUnconfirmed, c.vote)
 		if !testutil.DeepEqual(gotUtxos, c.wantUtxos) {
 			t.Errorf("case %d: got %v want %v", i, gotUtxos, c.wantUtxos)
 		}

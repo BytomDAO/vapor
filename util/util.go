@@ -4,6 +4,7 @@ import (
 	"context"
 
 	jww "github.com/spf13/jwalterweatherman"
+	"github.com/vapor/api"
 	"github.com/vapor/blockchain/rpc"
 	"github.com/vapor/env"
 )
@@ -23,7 +24,7 @@ const (
 )
 
 var (
-	coreURL = env.String("BYTOM_URL", "http://localhost:8888")
+	coreURL = env.String("BYTOM_URL", "http://127.0.0.1:9889")
 )
 
 // Wraper rpc's client
@@ -35,7 +36,7 @@ func MustRPCClient() *rpc.Client {
 // Wrapper rpc call api.
 func ClientCall(path string, req ...interface{}) (interface{}, int) {
 
-	var response = &Response{}
+	var response = &api.Response{}
 	var request interface{}
 
 	if req != nil {
@@ -46,7 +47,7 @@ func ClientCall(path string, req ...interface{}) (interface{}, int) {
 	client.Call(context.Background(), path, request, response)
 
 	switch response.Status {
-	case "fail":
+	case api.FAIL:
 		jww.ERROR.Println(response.Msg)
 		return nil, ErrRemote
 	case "":

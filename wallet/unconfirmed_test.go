@@ -5,38 +5,21 @@ import (
 	"os"
 	"testing"
 
-	dbm "github.com/tendermint/tmlibs/db"
-	"github.com/vapor/blockchain/signers"
-	"github.com/vapor/common"
-	"github.com/vapor/config"
-
 	"github.com/vapor/account"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/pseudohsm"
 	"github.com/vapor/blockchain/query"
+	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
+	dbm "github.com/vapor/database/leveldb"
+	"github.com/vapor/event"
+	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/testutil"
 )
 
 func TestWalletUnconfirmedTxs(t *testing.T) {
-	config.CommonConfig = config.DefaultConfig()
-	consensus.SoloNetParams.Signer = "78673764e0ba91a4c5ba9ec0c8c23c69e3d73bf27970e05e0a977e81e13bde475264d3b177a96646bc0ce517ae7fd63504c183ab6d330dea184331a4cf5912d5"
-	config.CommonConfig.Consensus.SelfVoteSigners = append(config.CommonConfig.Consensus.SelfVoteSigners, "vsm1qkm743xmgnvh84pmjchq2s4tnfpgu9ae2f9slep")
-	config.CommonConfig.Consensus.XPrv = "a8e281b615809046698fb0b0f2804a36d824d48fa443350f10f1b80649d39e5f1e85cf9855548915e36137345910606cbc8e7dd8497c831dce899ee6ac112445"
-	for _, v := range config.CommonConfig.Consensus.SelfVoteSigners {
-		address, err := common.DecodeAddress(v, &consensus.SoloNetParams)
-		if err != nil {
-			t.Fatal(err)
-		}
-		config.CommonConfig.Consensus.Signers = append(config.CommonConfig.Consensus.Signers, address)
-	}
-	config.CommonConfig.Consensus.Coinbase = "vsm1qkm743xmgnvh84pmjchq2s4tnfpgu9ae2f9slep"
-	address, err := common.DecodeAddress(config.CommonConfig.Consensus.Coinbase, &consensus.SoloNetParams)
-	if err != nil {
-		t.Fatal(err)
-	}
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatal(err)
@@ -70,17 +53,15 @@ func TestWalletUnconfirmedTxs(t *testing.T) {
 	controlProg.KeyIndex = 1
 
 	reg := asset.NewRegistry(testDB, nil)
-	asset, err := reg.Define([]chainkd.XPub{xpub1.XPub}, 1, nil, "TESTASSET", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	asset := bc.AssetID{V0: 5}
 
-	w := mockWallet(testDB, accountManager, reg, nil, address)
+	dispatcher := event.NewDispatcher()
+	w := mockWallet(testDB, accountManager, reg, nil, dispatcher, false)
 	utxos := []*account.UTXO{}
 	btmUtxo := mockUTXO(controlProg, consensus.BTMAssetID)
 	utxos = append(utxos, btmUtxo)
 
-	OtherUtxo := mockUTXO(controlProg, &asset.AssetID)
+	OtherUtxo := mockUTXO(controlProg, &asset)
 	utxos = append(utxos, OtherUtxo)
 	_, txData, err := mockTxData(utxos, testAccount)
 	if err != nil {

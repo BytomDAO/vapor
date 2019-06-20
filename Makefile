@@ -16,35 +16,49 @@ BUILD_FLAGS := -ldflags "-X github.com/vapor/version.GitCommit=`git rev-parse HE
 MINER_BINARY32 := miner-$(GOOS)_386
 MINER_BINARY64 := miner-$(GOOS)_amd64
 
-BYTOMD_BINARY32 := vapor-$(GOOS)_386
-BYTOMD_BINARY64 := vapor-$(GOOS)_amd64
+BYTOMD_BINARY32 := bytomd-$(GOOS)_386
+BYTOMD_BINARY64 := bytomd-$(GOOS)_amd64
 
-BYTOMCLI_BINARY32 := vaporcli-$(GOOS)_386
-BYTOMCLI_BINARY64 := vaporcli-$(GOOS)_amd64
+BYTOMCLI_BINARY32 := bytomcli-$(GOOS)_386
+BYTOMCLI_BINARY64 := bytomcli-$(GOOS)_amd64
 
 VERSION := $(shell awk -F= '/Version =/ {print $$2}' version/version.go | tr -d "\" ")
 
 MINER_RELEASE32 := miner-$(VERSION)-$(GOOS)_386
 MINER_RELEASE64 := miner-$(VERSION)-$(GOOS)_amd64
 
-BYTOMD_RELEASE32 := vapor-$(VERSION)-$(GOOS)_386
-BYTOMD_RELEASE64 := vapor-$(VERSION)-$(GOOS)_amd64
+BYTOMD_RELEASE32 := bytomd-$(VERSION)-$(GOOS)_386
+BYTOMD_RELEASE64 := bytomd-$(VERSION)-$(GOOS)_amd64
 
-BYTOMCLI_RELEASE32 := vaporcli-$(VERSION)-$(GOOS)_386
-BYTOMCLI_RELEASE64 := vaporcli-$(VERSION)-$(GOOS)_amd64
+BYTOMCLI_RELEASE32 := bytomcli-$(VERSION)-$(GOOS)_386
+BYTOMCLI_RELEASE64 := bytomcli-$(VERSION)-$(GOOS)_amd64
 
-BYTOM_RELEASE32 := vapor-$(VERSION)-$(GOOS)_386
-BYTOM_RELEASE64 := vapor-$(VERSION)-$(GOOS)_amd64
+BYTOM_RELEASE32 := bytom-$(VERSION)-$(GOOS)_386
+BYTOM_RELEASE64 := bytom-$(VERSION)-$(GOOS)_amd64
 
-all: test target release-all
+all: test target release-all install
 
-vapor:
-	@echo "Building vapor to cmd/vapor/vapor"
-	@go build $(BUILD_FLAGS) -o cmd/vapor/vapor cmd/vapor/main.go
+fedd:
+	@echo "Building fedd to cmd/fedd/fedd"
+	@go build $(BUILD_FLAGS) -o cmd/fedd/fedd cmd/fedd/main.go
 
-vaporcli:
-	@echo "Building vaporcli to cmd/vaporcli/vaporcli"
-	@go build $(BUILD_FLAGS) -o cmd/vaporcli/vaporcli cmd/vaporcli/main.go
+bytomd:
+	@echo "Building bytomd to cmd/bytomd/bytomd"
+	@go build $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
+
+bytomd-simd:
+	@echo "Building SIMD version bytomd to cmd/bytomd/bytomd"
+	@cd mining/tensority/cgo_algorithm/lib/ && make
+	@go build -tags="simd" $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
+
+bytomcli:
+	@echo "Building bytomcli to cmd/bytomcli/bytomcli"
+	@go build $(BUILD_FLAGS) -o cmd/bytomcli/bytomcli cmd/bytomcli/main.go
+
+install:
+	@echo "Installing bytomd and bytomcli to $(GOPATH)/bin"
+	@go install ./cmd/bytomd
+	@go install ./cmd/bytomcli
 
 target:
 	mkdir -p $@
@@ -86,8 +100,8 @@ clean:
 	@rm -rf cmd/bytomcli/bytomcli
 	@rm -rf cmd/miner/miner
 	@rm -rf target
-	@rm -rf $(GOPATH)/bin/vapor
-	@rm -rf $(GOPATH)/bin/vaporcli
+	@rm -rf $(GOPATH)/bin/bytomd
+	@rm -rf $(GOPATH)/bin/bytomcli
 	@echo "Cleaning temp test data..."
 	@rm -rf test/pseudo_hsm*
 	@rm -rf blockchain/pseudohsm/testdata/pseudo/
@@ -121,7 +135,7 @@ benchmark:
 	@go test -bench $(PACKAGES)
 
 functional-tests:
-	@go test -timeout=10m -tags="functional" ./test 
+	@go test -timeout=5m -tags="functional" ./test 
 
 ci: test
 

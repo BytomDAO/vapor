@@ -5,15 +5,16 @@ import (
 	"github.com/vapor/errors"
 )
 
+// Tx is a wrapper for the entries-based representation of a transaction.
 type Tx struct {
-	// Tx is a wrapper for the entries-based representation of a transaction.
 	*TxHeader
 	ID       Hash
 	Entries  map[Hash]Entry
 	InputIDs []Hash // 1:1 correspondence with TxData.Inputs
 
-	SpentOutputIDs []Hash
-	GasInputIDs    []Hash
+	SpentOutputIDs     []Hash
+	MainchainOutputIDs []Hash
+	GasInputIDs        []Hash
 }
 
 // SigHash ...
@@ -33,17 +34,39 @@ var (
 	ErrMissingEntry = errors.New("missing entry")
 )
 
-// Output try to get the output entry by given hash
-func (tx *Tx) Output(id Hash) (*Output, error) {
+// IntraChainOutput try to get the intra-chain output entry by given hash
+func (tx *Tx) IntraChainOutput(id Hash) (*IntraChainOutput, error) {
 	e, ok := tx.Entries[id]
 	if !ok || e == nil {
 		return nil, errors.Wrapf(ErrMissingEntry, "id %x", id.Bytes())
 	}
-	o, ok := e.(*Output)
+	o, ok := e.(*IntraChainOutput)
 	if !ok {
 		return nil, errors.Wrapf(ErrEntryType, "entry %x has unexpected type %T", id.Bytes(), e)
 	}
 	return o, nil
+}
+
+// CrossChainOutput try to get the cross-chain output entry by given hash
+func (tx *Tx) CrossChainOutput(id Hash) (*CrossChainOutput, error) {
+	e, ok := tx.Entries[id]
+	if !ok || e == nil {
+		return nil, errors.Wrapf(ErrMissingEntry, "id %x", id.Bytes())
+	}
+	o, ok := e.(*CrossChainOutput)
+	if !ok {
+		return nil, errors.Wrapf(ErrEntryType, "entry %x has unexpected type %T", id.Bytes(), e)
+	}
+	return o, nil
+}
+
+// Entry try to get the  entry by given hash
+func (tx *Tx) Entry(id Hash) (Entry, error) {
+	e, ok := tx.Entries[id]
+	if !ok || e == nil {
+		return nil, errors.Wrapf(ErrMissingEntry, "id %x", id.Bytes())
+	}
+	return e, nil
 }
 
 // Spend try to get the spend entry by given hash
@@ -59,26 +82,26 @@ func (tx *Tx) Spend(id Hash) (*Spend, error) {
 	return sp, nil
 }
 
-// Issuance try to get the issuance entry by given hash
-func (tx *Tx) Issuance(id Hash) (*Issuance, error) {
+// VetoInput try to get the veto entry by given hash
+func (tx *Tx) VetoInput(id Hash) (*VetoInput, error) {
 	e, ok := tx.Entries[id]
 	if !ok || e == nil {
 		return nil, errors.Wrapf(ErrMissingEntry, "id %x", id.Bytes())
 	}
-	iss, ok := e.(*Issuance)
+	sp, ok := e.(*VetoInput)
 	if !ok {
 		return nil, errors.Wrapf(ErrEntryType, "entry %x has unexpected type %T", id.Bytes(), e)
 	}
-	return iss, nil
+	return sp, nil
 }
 
-// Output try to get the output entry by given hash
-func (tx *Tx) Retire(id Hash) (*Retirement, error) {
+// VoteOutput try to get the vote output entry by given hash
+func (tx *Tx) VoteOutput(id Hash) (*VoteOutput, error) {
 	e, ok := tx.Entries[id]
 	if !ok || e == nil {
 		return nil, errors.Wrapf(ErrMissingEntry, "id %x", id.Bytes())
 	}
-	o, ok := e.(*Retirement)
+	o, ok := e.(*VoteOutput)
 	if !ok {
 		return nil, errors.Wrapf(ErrEntryType, "entry %x has unexpected type %T", id.Bytes(), e)
 	}

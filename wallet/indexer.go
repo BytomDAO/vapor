@@ -1,22 +1,24 @@
 package wallet
 
 import (
-	"bytes"
+	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"sort"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tendermint/tmlibs/db"
 
 	"github.com/vapor/account"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/query"
+	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/sha3pool"
+	dbm "github.com/vapor/database/leveldb"
 	chainjson "github.com/vapor/encoding/json"
+	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/vm/vmutil"
 )
 
 const (
@@ -24,7 +26,11 @@ const (
 	TxPrefix = "TXS:"
 	//TxIndexPrefix is wallet database tx index prefix
 	TxIndexPrefix = "TID:"
+	//TxIndexPrefix is wallet database global tx index prefix
+	GlobalTxIndexPrefix = "GTID:"
 )
+
+var errAccntTxIDNotFound = errors.New("account TXID not found")
 
 func formatKey(blockHeight uint64, position uint32) string {
 	return fmt.Sprintf("%016x%08x", blockHeight, position)
@@ -42,8 +48,27 @@ func calcTxIndexKey(txID string) []byte {
 	return []byte(TxIndexPrefix + txID)
 }
 
+func calcGlobalTxIndexKey(txID string) []byte {
+	return []byte(GlobalTxIndexPrefix + txID)
+}
+
+func calcGlobalTxIndex(blockHash *bc.Hash, position uint64) []byte {
+	txIdx := make([]byte, 40)
+	copy(txIdx[:32], blockHash.Bytes())
+	binary.BigEndian.PutUint64(txIdx[32:], position)
+	return txIdx
+}
+
+func parseGlobalTxIdx(globalTxIdx []byte) (*bc.Hash, uint64) {
+	var hashBytes [32]byte
+	copy(hashBytes[:], globalTxIdx[:32])
+	hash := bc.NewHash(hashBytes)
+	position := binary.BigEndian.Uint64(globalTxIdx[32:])
+	return &hash, position
+}
+
 // deleteTransaction delete transactions when orphan block rollback
-func (w *Wallet) deleteTransactions(batch db.Batch, height uint64) {
+func (w *Wallet) deleteTransactions(batch dbm.Batch, height uint64) {
 	tmpTx := query.AnnotatedTx{}
 	txIter := w.DB.IteratorPrefix(calcDeleteKey(height))
 	defer txIter.Release()
@@ -59,18 +84,16 @@ func (w *Wallet) deleteTransactions(batch db.Batch, height uint64) {
 // saveExternalAssetDefinition save external and local assets definition,
 // when query ,query local first and if have no then query external
 // details see getAliasDefinition
-func saveExternalAssetDefinition(b *types.Block, walletDB db.DB) {
+func saveExternalAssetDefinition(b *types.Block, walletDB dbm.DB) {
 	storeBatch := walletDB.NewBatch()
 	defer storeBatch.Write()
 
 	for _, tx := range b.Transactions {
 		for _, orig := range tx.Inputs {
-			if ii, ok := orig.TypedInput.(*types.IssuanceInput); ok {
-				if isValidJSON(ii.AssetDefinition) {
-					assetID := ii.AssetID()
-					if assetExist := walletDB.Get(asset.ExtAssetKey(&assetID)); assetExist == nil {
-						storeBatch.Set(asset.ExtAssetKey(&assetID), ii.AssetDefinition)
-					}
+			if cci, ok := orig.TypedInput.(*types.CrossChainInput); ok {
+				assetID := cci.AssetId
+				if assetExist := walletDB.Get(asset.ExtAssetKey(assetID)); assetExist == nil {
+					storeBatch.Set(asset.ExtAssetKey(assetID), cci.AssetDefinition)
 				}
 			}
 		}
@@ -97,7 +120,7 @@ type TxSummary struct {
 }
 
 // indexTransactions saves all annotated transactions to the database.
-func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.TransactionStatus) error {
+func (w *Wallet) indexTransactions(batch dbm.Batch, b *types.Block, txStatus *bc.TransactionStatus) error {
 	annotatedTxs := w.filterAccountTxs(b, txStatus)
 	saveExternalAssetDefinition(b, w.DB)
 	annotateTxsAccount(annotatedTxs, w.DB)
@@ -105,7 +128,7 @@ func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.
 	for _, tx := range annotatedTxs {
 		rawTx, err := json.Marshal(tx)
 		if err != nil {
-			log.WithField("err", err).Error("inserting annotated_txs to db")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("inserting annotated_txs to db")
 			return err
 		}
 
@@ -115,26 +138,30 @@ func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.
 		// delete unconfirmed transaction
 		batch.Delete(calcUnconfirmedTxKey(tx.ID.String()))
 	}
+
+	if !w.TxIndexFlag {
+		return nil
+	}
+
+	for position, globalTx := range b.Transactions {
+		blockHash := b.BlockHeader.Hash()
+		batch.Set(calcGlobalTxIndexKey(globalTx.ID.String()), calcGlobalTxIndex(&blockHash, uint64(position)))
+	}
+
 	return nil
 }
 
 // filterAccountTxs related and build the fully annotated transactions.
 func (w *Wallet) filterAccountTxs(b *types.Block, txStatus *bc.TransactionStatus) []*query.AnnotatedTx {
 	annotatedTxs := make([]*query.AnnotatedTx, 0, len(b.Transactions))
-	redeemContract := w.dposAddress.ScriptAddress()
-	program, _ := vmutil.P2WPKHProgram(redeemContract)
+
 transactionLoop:
 	for pos, tx := range b.Transactions {
 		statusFail, _ := txStatus.GetStatus(pos)
 		for _, v := range tx.Outputs {
-
-			if bytes.Equal(v.ControlProgram, program) {
-				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
-				continue transactionLoop
-			}
-
 			var hash [32]byte
-			sha3pool.Sum256(hash[:], v.ControlProgram)
+			sha3pool.Sum256(hash[:], v.ControlProgram())
+
 			if bytes := w.DB.Get(account.ContractKey(hash)); bytes != nil {
 				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
 				continue transactionLoop
@@ -142,11 +169,6 @@ transactionLoop:
 		}
 
 		for _, v := range tx.Inputs {
-			if bytes.Equal(v.ControlProgram(), program) {
-				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
-				continue transactionLoop
-			}
-
 			outid, err := v.SpentOutputID()
 			if err != nil {
 				continue
@@ -163,19 +185,55 @@ transactionLoop:
 
 // GetTransactionByTxID get transaction by txID
 func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
-	formatKey := w.DB.Get(calcTxIndexKey(txID))
-	if formatKey == nil {
-		return nil, fmt.Errorf("No transaction(tx_id=%s) ", txID)
+	if annotatedTx, err := w.getAccountTxByTxID(txID); err == nil {
+		return annotatedTx, nil
+	} else if !w.TxIndexFlag {
+		return nil, err
 	}
 
+	return w.getGlobalTxByTxID(txID)
+}
+
+func (w *Wallet) getAccountTxByTxID(txID string) (*query.AnnotatedTx, error) {
 	annotatedTx := &query.AnnotatedTx{}
+	formatKey := w.DB.Get(calcTxIndexKey(txID))
+	if formatKey == nil {
+		return nil, errAccntTxIDNotFound
+	}
+
 	txInfo := w.DB.Get(calcAnnotatedKey(string(formatKey)))
 	if err := json.Unmarshal(txInfo, annotatedTx); err != nil {
 		return nil, err
 	}
-	annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 
+	annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 	return annotatedTx, nil
+}
+
+func (w *Wallet) getGlobalTxByTxID(txID string) (*query.AnnotatedTx, error) {
+	globalTxIdx := w.DB.Get(calcGlobalTxIndexKey(txID))
+	if globalTxIdx == nil {
+		return nil, fmt.Errorf("No transaction(tx_id=%s) ", txID)
+	}
+
+	blockHash, pos := parseGlobalTxIdx(globalTxIdx)
+	block, err := w.chain.GetBlockByHash(blockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	txStatus, err := w.chain.GetTransactionStatus(blockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	statusFail, err := txStatus.GetStatus(int(pos))
+	if err != nil {
+		return nil, err
+	}
+
+	tx := block.Transactions[int(pos)]
+	return w.buildAnnotatedTransaction(tx, block, statusFail, int(pos)), nil
 }
 
 // GetTransactionsSummary get transactions summary
@@ -253,7 +311,7 @@ func (w *Wallet) GetTransactions(accountID string) ([]*query.AnnotatedTx, error)
 
 // GetAccountBalances return all account balances
 func (w *Wallet) GetAccountBalances(accountID string, id string) ([]AccountBalance, error) {
-	return w.indexBalances(w.GetAccountUtxos(accountID, "", false, false))
+	return w.indexBalances(w.GetAccountUtxos(accountID, "", false, false, false))
 }
 
 // AccountBalance account balance
@@ -316,4 +374,73 @@ func (w *Wallet) indexBalances(accountUTXOs []*account.UTXO) ([]AccountBalance, 
 	}
 
 	return balances, nil
+}
+
+// GetAccountVotes return all account votes
+func (w *Wallet) GetAccountVotes(accountID string, id string) ([]AccountVotes, error) {
+	return w.indexVotes(w.GetAccountUtxos(accountID, "", false, false, true))
+}
+
+type voteDetail struct {
+	Vote       string `json:"vote"`
+	VoteNumber uint64 `json:"vote_number"`
+}
+
+// AccountVotes account vote
+type AccountVotes struct {
+	AccountID       string       `json:"account_id"`
+	Alias           string       `json:"account_alias"`
+	TotalVoteNumber uint64       `json:"total_vote_number"`
+	VoteDetails     []voteDetail `json:"vote_details"`
+}
+
+func (w *Wallet) indexVotes(accountUTXOs []*account.UTXO) ([]AccountVotes, error) {
+	accVote := make(map[string]map[string]uint64)
+	votes := []AccountVotes{}
+
+	for _, accountUTXO := range accountUTXOs {
+		if accountUTXO.AssetID != *consensus.BTMAssetID || accountUTXO.Vote == nil {
+			continue
+		}
+		xpub := hex.EncodeToString(accountUTXO.Vote)
+		if _, ok := accVote[accountUTXO.AccountID]; ok {
+			accVote[accountUTXO.AccountID][xpub] += accountUTXO.Amount
+		} else {
+			accVote[accountUTXO.AccountID] = map[string]uint64{xpub: accountUTXO.Amount}
+
+		}
+	}
+
+	var sortedAccount []string
+	for k := range accVote {
+		sortedAccount = append(sortedAccount, k)
+	}
+	sort.Strings(sortedAccount)
+
+	for _, id := range sortedAccount {
+		var sortedXpub []string
+		for k := range accVote[id] {
+			sortedXpub = append(sortedXpub, k)
+		}
+		sort.Strings(sortedXpub)
+
+		voteDetails := []voteDetail{}
+		voteTotal := uint64(0)
+		for _, xpub := range sortedXpub {
+			voteDetails = append(voteDetails, voteDetail{
+				Vote:       xpub,
+				VoteNumber: accVote[id][xpub],
+			})
+			voteTotal += accVote[id][xpub]
+		}
+		alias := w.AccountMgr.GetAliasByID(id)
+		votes = append(votes, AccountVotes{
+			Alias:           alias,
+			AccountID:       id,
+			VoteDetails:     voteDetails,
+			TotalVoteNumber: voteTotal,
+		})
+	}
+
+	return votes, nil
 }

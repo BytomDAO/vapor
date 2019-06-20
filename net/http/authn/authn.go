@@ -54,6 +54,7 @@ func (a *API) Authenticate(req *http.Request) (*http.Request, error) {
 		// if this request was successfully authenticated with a token, pass the token along
 		ctx = newContextWithToken(ctx, token)
 	}
+
 	local := a.localhostAuthn(req)
 	if local {
 		ctx = newContextWithLocalhost(ctx)

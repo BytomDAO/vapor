@@ -1,11 +1,7 @@
 package vmutil
 
 import (
-	"crypto/hmac"
-	"crypto/sha256"
-
 	"github.com/vapor/crypto/ed25519"
-	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/vm"
 )
@@ -96,7 +92,7 @@ func P2SHProgram(scriptHash []byte) ([]byte, error) {
 	return builder.Build()
 }
 
-// P2SPMultiSigProgram generates the script for contorl transaction output
+// P2SPMultiSigProgram generates the script for control transaction output
 func P2SPMultiSigProgram(pubkeys []ed25519.PublicKey, nrequired int) ([]byte, error) {
 	builder := NewBuilder()
 	if err := builder.addP2SPMultiSig(pubkeys, nrequired); err != nil {
@@ -105,46 +101,21 @@ func P2SPMultiSigProgram(pubkeys []ed25519.PublicKey, nrequired int) ([]byte, er
 	return builder.Build()
 }
 
-// ParseP2SPMultiSigProgram is unknow for us yet
-func ParseP2SPMultiSigProgram(program []byte) ([]ed25519.PublicKey, int, error) {
-	pops, err := vm.ParseProgram(program)
-	if err != nil {
-		return nil, 0, err
+// P2SPMultiSigProgramWithHeight generates the script with block height for control transaction output
+func P2SPMultiSigProgramWithHeight(pubkeys []ed25519.PublicKey, nrequired int, blockHeight int64) ([]byte, error) {
+	builder := NewBuilder()
+	if blockHeight > 0 {
+		builder.AddInt64(blockHeight)
+		builder.AddOp(vm.OP_BLOCKHEIGHT)
+		builder.AddOp(vm.OP_GREATERTHAN)
+		builder.AddOp(vm.OP_VERIFY)
+	} else if blockHeight < 0 {
+		return nil, errors.WithDetail(ErrBadValue, "negative blockHeight")
 	}
-	if len(pops) < 11 {
-		return nil, 0, vm.ErrShortProgram
+	if err := builder.addP2SPMultiSig(pubkeys, nrequired); err != nil {
+		return nil, err
 	}
-
-	// Count all instructions backwards from the end in case there are
-	// extra instructions at the beginning of the program (like a
-	// <pushdata> DROP).
-
-	npubkeys, err := vm.AsInt64(pops[len(pops)-6].Data)
-	if err != nil {
-		return nil, 0, err
-	}
-	if int(npubkeys) > len(pops)-10 {
-		return nil, 0, vm.ErrShortProgram
-	}
-	nrequired, err := vm.AsInt64(pops[len(pops)-7].Data)
-	if err != nil {
-		return nil, 0, err
-	}
-	err = checkMultiSigParams(nrequired, npubkeys)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	firstPubkeyIndex := len(pops) - 7 - int(npubkeys)
-
-	pubkeys := make([]ed25519.PublicKey, 0, npubkeys)
-	for i := firstPubkeyIndex; i < firstPubkeyIndex+int(npubkeys); i++ {
-		if len(pops[i].Data) != ed25519.PublicKeySize {
-			return nil, 0, err
-		}
-		pubkeys = append(pubkeys, ed25519.PublicKey(pops[i].Data))
-	}
-	return pubkeys, int(nrequired), nil
+	return builder.Build()
 }
 
 func checkMultiSigParams(nrequired, npubkeys int64) error {
@@ -161,27 +132,4 @@ func checkMultiSigParams(nrequired, npubkeys int64) error {
 		return errors.WithDetail(ErrBadValue, "quorum empty with non-empty pubkey list")
 	}
 	return nil
-}
-
-func CalculateContract(federationRedeemXPub []chainkd.XPub, claimScript []byte) []byte {
-	//func CalculateContract(federationRedeemScript []byte, scriptPubKey []byte) []byte {
-	//-fedpegscript=需要的公钥+公钥长度+公钥+……+公钥长度+公钥+公钥个数+OP_CHECKMULTISIG
-	var federationRedeemScript []byte
-	if len(federationRedeemXPub) == 0 {
-		federationRedeemScript, _ = DefaultCoinbaseProgram()
-	} else {
-		var pubkeys []ed25519.PublicKey
-		for _, xpub := range federationRedeemXPub {
-			// pub + scriptPubKey 生成一个随机数A
-			var tmp [32]byte
-			h := hmac.New(sha256.New, xpub[:])
-			h.Write(claimScript)
-			tweak := h.Sum(tmp[:])
-			// pub +  A 生成一个新的公钥pub_new
-			chaildXPub := xpub.Child(tweak)
-			pubkeys = append(pubkeys, chaildXPub.PublicKey())
-		}
-		federationRedeemScript, _ = P2SPMultiSigProgram(pubkeys, len(pubkeys))
-	}
-	return federationRedeemScript
 }

@@ -8,12 +8,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/tendermint/tmlibs/db"
-
 	"github.com/vapor/account"
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/crypto/sha3pool"
+	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -171,7 +170,7 @@ func (rs *recoveryState) stateForScope(account *account.Account) {
 type recoveryManager struct {
 	mu sync.Mutex
 
-	db         db.DB
+	db         dbm.DB
 	accountMgr *account.Manager
 
 	locked int32
@@ -188,7 +187,7 @@ type recoveryManager struct {
 }
 
 // newRecoveryManager create recovery manger.
-func newRecoveryManager(db db.DB, accountMgr *account.Manager) *recoveryManager {
+func newRecoveryManager(db dbm.DB, accountMgr *account.Manager) *recoveryManager {
 	return &recoveryManager{
 		db:         db,
 		accountMgr: accountMgr,
@@ -203,16 +202,24 @@ func (m *recoveryManager) AddrResurrect(accts []*account.Account) error {
 
 	for _, acct := range accts {
 		m.state.stateForScope(acct)
-		if err := m.extendScanAddresses(acct.ID, true); err != nil {
+		if err := m.extendScanAddresses(acct.ID, false); err != nil {
 			return err
 		}
 
-		if err := m.extendScanAddresses(acct.ID, false); err != nil {
+		//Bip32 path no change field, no need to create addresses repeatedly.
+		if acct.DeriveRule == signers.BIP0032 {
+			continue
+		}
+		if err := m.extendScanAddresses(acct.ID, true); err != nil {
 			return err
 		}
 	}
 
 	m.state.StartTime = time.Now()
+	if err := m.commitStatusInfo(); err != nil {
+		return err
+	}
+
 	m.started = true
 	return nil
 }
@@ -233,6 +240,10 @@ func (m *recoveryManager) AcctResurrect(xPubs []chainkd.XPub) error {
 		return err
 	}
 	m.state.StartTime = time.Now()
+	if err := m.commitStatusInfo(); err != nil {
+		return err
+	}
+
 	m.started = true
 	return nil
 }
@@ -321,7 +332,7 @@ func (m *recoveryManager) extendScanAddresses(accountID string, change bool) err
 func (m *recoveryManager) processBlock(b *types.Block) error {
 	for _, tx := range b.Transactions {
 		for _, output := range tx.Outputs {
-			if cp, ok := m.addresses[getCPHash(output.ControlProgram)]; ok {
+			if cp, ok := m.addresses[getCPHash(output.ControlProgram())]; ok {
 				status, ok := m.state.AccountsStatus[cp.AccountID]
 				if !ok {
 					return ErrInvalidAcctID

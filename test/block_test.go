@@ -7,9 +7,8 @@ import (
 	"testing"
 	"time"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/vapor/consensus"
+	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/vm"
@@ -18,7 +17,11 @@ import (
 func TestBlockHeader(t *testing.T) {
 	db := dbm.NewDB("block_test_db", "leveldb", "block_test_db")
 	defer os.RemoveAll("block_test_db")
-	chain, _, _, _ := MockChain(db)
+	chain, _, _, err := MockChain(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	genesisHeader := chain.BestBlockHeader()
 	if err := AppendBlocks(chain, 1); err != nil {
 		t.Fatal(err)
@@ -30,25 +33,14 @@ func TestBlockHeader(t *testing.T) {
 		prevHeight func() uint64
 		timestamp  func() uint64
 		prevHash   func() *bc.Hash
-		solve      bool
 		valid      bool
 	}{
 		{
-			desc:       "block version is 0",
-			version:    func() uint64 { return 0 },
+			desc:       "block version is 1",
+			version:    func() uint64 { return 1 },
 			prevHeight: chain.BestBlockHeight,
 			timestamp:  func() uint64 { return chain.BestBlockHeader().Timestamp + 1 },
 			prevHash:   chain.BestBlockHash,
-			solve:      true,
-			valid:      false,
-		},
-		{
-			desc:       "block version grater than prevBlock.Version",
-			version:    func() uint64 { return chain.BestBlockHeader().Version + 10 },
-			prevHeight: chain.BestBlockHeight,
-			timestamp:  func() uint64 { return chain.BestBlockHeader().Timestamp + 1 },
-			prevHash:   chain.BestBlockHash,
-			solve:      true,
 			valid:      true,
 		},
 		{
@@ -57,7 +49,6 @@ func TestBlockHeader(t *testing.T) {
 			prevHeight: func() uint64 { return chain.BestBlockHeight() + 1 },
 			timestamp:  func() uint64 { return chain.BestBlockHeader().Timestamp + 1 },
 			prevHash:   chain.BestBlockHash,
-			solve:      true,
 			valid:      false,
 		},
 		{
@@ -66,16 +57,14 @@ func TestBlockHeader(t *testing.T) {
 			prevHeight: chain.BestBlockHeight,
 			timestamp:  func() uint64 { return chain.BestBlockHeader().Timestamp + 1 },
 			prevHash:   func() *bc.Hash { hash := genesisHeader.Hash(); return &hash },
-			solve:      true,
 			valid:      false,
 		},
 		{
-			desc:       "invalid timestamp, greater than MaxTimeOffsetSeconds from system time",
+			desc:       "invalid timestamp, greater than MaxTimeOffsetMs  from system time",
 			version:    func() uint64 { return chain.BestBlockHeader().Version },
 			prevHeight: chain.BestBlockHeight,
-			timestamp:  func() uint64 { return uint64(time.Now().Unix()) + consensus.MaxTimeOffsetSeconds + 60 },
+			timestamp:  func() uint64 { return uint64(time.Now().Unix()) + consensus.MaxTimeOffsetMs + 60 },
 			prevHash:   chain.BestBlockHash,
-			solve:      true,
 			valid:      false,
 		},
 		{
@@ -84,7 +73,6 @@ func TestBlockHeader(t *testing.T) {
 			prevHeight: chain.BestBlockHeight,
 			timestamp:  func() uint64 { return chain.BestBlockHeader().Timestamp + 3 },
 			prevHash:   chain.BestBlockHash,
-			solve:      true,
 			valid:      true,
 		},
 		{
@@ -93,7 +81,6 @@ func TestBlockHeader(t *testing.T) {
 			prevHeight: chain.BestBlockHeight,
 			timestamp:  func() uint64 { return chain.BestBlockHeader().Timestamp - 1 },
 			prevHash:   chain.BestBlockHash,
-			solve:      true,
 			valid:      true,
 		},
 		{
@@ -102,7 +89,6 @@ func TestBlockHeader(t *testing.T) {
 			prevHeight: chain.BestBlockHeight,
 			timestamp:  func() uint64 { return genesisHeader.Timestamp },
 			prevHash:   chain.BestBlockHash,
-			solve:      true,
 			valid:      false,
 		},
 	}
@@ -164,7 +150,7 @@ func TestMaxBlockGas(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := SolveAndUpdate(chain, block); err == nil {
+	if _, err := chain.ProcessBlock(block); err == nil {
 		t.Fatalf("test max block gas failed")
 	}
 }

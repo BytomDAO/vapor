@@ -6,12 +6,11 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/config"
-	engine "github.com/vapor/consensus/consensus"
-	dpos "github.com/vapor/consensus/consensus/dpos"
-	"github.com/vapor/errors"
+	"github.com/vapor/event"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
+	"github.com/vapor/common"
 )
 
 const maxProcessBlockChSize = 1024
@@ -24,26 +23,24 @@ type Chain struct {
 	store          Store
 	processBlockCh chan *processBlockMsg
 
-	cond     sync.Cond
-	bestNode *state.BlockNode
-	Engine   engine.Engine
+	consensusNodeManager *consensusNodeManager
+	signatureCache       *common.Cache
+	eventDispatcher      *event.Dispatcher
+
+	cond                 sync.Cond
+	bestNode             *state.BlockNode
+	bestIrreversibleNode *state.BlockNode
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
-func NewChain(store Store, txPool *TxPool) (*Chain, error) {
-
-	var engine engine.Engine
-	switch config.CommonConfig.Consensus.Type {
-	case "dpos":
-		engine = dpos.GDpos
-	}
-
+func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*Chain, error) {
 	c := &Chain{
-		orphanManage:   NewOrphanManage(),
-		txPool:         txPool,
-		store:          store,
-		processBlockCh: make(chan *processBlockMsg, maxProcessBlockChSize),
-		Engine:         engine,
+		orphanManage:    NewOrphanManage(),
+		txPool:          txPool,
+		store:           store,
+		signatureCache:  common.NewCache(maxSignatureCacheSize),
+		eventDispatcher: eventDispatcher,
+		processBlockCh:  make(chan *processBlockMsg, maxProcessBlockChSize),
 	}
 	c.cond.L = new(sync.Mutex)
 
@@ -61,6 +58,8 @@ func NewChain(store Store, txPool *TxPool) (*Chain, error) {
 	}
 
 	c.bestNode = c.index.GetNode(storeStatus.Hash)
+	c.bestIrreversibleNode = c.index.GetNode(storeStatus.IrreversibleHash)
+	c.consensusNodeManager = newConsensusNodeManager(store, c.index)
 	c.index.SetMainChain(c.bestNode)
 	go c.blockProcesser()
 	return c, nil
@@ -85,11 +84,18 @@ func (c *Chain) initChainStatus() error {
 		return err
 	}
 
+	voteResults := []*state.VoteResult{&state.VoteResult{
+		Seq:         0,
+		NumOfVote:   map[string]uint64{},
+		BlockHash:   genesisBlock.Hash(),
+		BlockHeight: 0,
+	}}
 	node, err := state.NewBlockNode(&genesisBlock.BlockHeader, nil)
 	if err != nil {
 		return err
 	}
-	return c.store.SaveChainStatus(node, utxoView)
+
+	return c.store.SaveChainStatus(node, node, utxoView, voteResults)
 }
 
 // BestBlockHeight returns the current height of the blockchain.
@@ -117,37 +123,17 @@ func (c *Chain) InMainChain(hash bc.Hash) bool {
 	return c.index.InMainchain(hash)
 }
 
-// CalcNextSeed return the seed for the given block
-func (c *Chain) CalcNextSeed(preBlock *bc.Hash) (*bc.Hash, error) {
-	node := c.index.GetNode(preBlock)
-	if node == nil {
-		return nil, errors.New("can't find preblock in the blockindex")
-	}
-	return node.CalcNextSeed(), nil
-}
-
-// CalcNextBits return the seed for the given block
-func (c *Chain) CalcNextBits(preBlock *bc.Hash) (uint64, error) {
-	node := c.index.GetNode(preBlock)
-	if node == nil {
-		return 0, errors.New("can't find preblock in the blockindex")
-	}
-	return node.CalcNextBits(), nil
-}
-
 // This function must be called with mu lock in above level
-func (c *Chain) setState(node *state.BlockNode, view *state.UtxoViewpoint) error {
-	if err := c.store.SaveChainStatus(node, view); err != nil {
+func (c *Chain) setState(node, irreversibleNode *state.BlockNode, view *state.UtxoViewpoint, voteResults []*state.VoteResult) error {
+	if err := c.store.SaveChainStatus(node, irreversibleNode, view, voteResults); err != nil {
 		return err
 	}
 
-	c.cond.L.Lock()
-	defer c.cond.L.Unlock()
-
 	c.index.SetMainChain(node)
 	c.bestNode = node
+	c.bestIrreversibleNode = irreversibleNode
 
-	log.WithFields(log.Fields{"height": c.bestNode.Height, "hash": c.bestNode.Hash.String()}).Debug("chain best status has been update")
+	log.WithFields(log.Fields{"module": logModule, "height": c.bestNode.Height, "hash": c.bestNode.Hash.String()}).Debug("chain best status has been update")
 	c.cond.Broadcast()
 	return nil
 }

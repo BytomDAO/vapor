@@ -1,21 +1,15 @@
 package protocol
 
 import (
-	"encoding/json"
-
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/common"
-	"github.com/vapor/consensus"
-	engine "github.com/vapor/consensus/consensus"
-	dpos "github.com/vapor/consensus/consensus/dpos"
+	"github.com/vapor/config"
 	"github.com/vapor/errors"
+	"github.com/vapor/event"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
 	"github.com/vapor/protocol/validation"
-	"github.com/vapor/protocol/vm"
-	"github.com/vapor/protocol/vm/vmutil"
 )
 
 var (
@@ -23,7 +17,8 @@ var (
 	ErrBadBlock = errors.New("invalid block")
 	// ErrBadStateRoot is returned when the computed assets merkle root
 	// disagrees with the one declared in a block header.
-	ErrBadStateRoot = errors.New("invalid state merkle root")
+	ErrBadStateRoot           = errors.New("invalid state merkle root")
+	errBelowIrreversibleBlock = errors.New("the height of block below the height of irreversible block")
 )
 
 // BlockExist check is a block in chain or orphan
@@ -33,7 +28,11 @@ func (c *Chain) BlockExist(hash *bc.Hash) bool {
 
 // GetBlockByHash return a block by given hash
 func (c *Chain) GetBlockByHash(hash *bc.Hash) (*types.Block, error) {
-	return c.store.GetBlock(hash)
+	node := c.index.GetNode(hash)
+	if node == nil {
+		return nil, errors.New("can't find block in given hash")
+	}
+	return c.store.GetBlock(hash, node.Height)
 }
 
 // GetBlockByHeight return a block header by given height
@@ -42,7 +41,7 @@ func (c *Chain) GetBlockByHeight(height uint64) (*types.Block, error) {
 	if node == nil {
 		return nil, errors.New("can't find block in given height")
 	}
-	return c.store.GetBlock(&node.Hash)
+	return c.store.GetBlock(&node.Hash, height)
 }
 
 // GetHeaderByHash return a block header by given hash
@@ -82,6 +81,7 @@ func (c *Chain) calcReorganizeNodes(node *state.BlockNode) ([]*state.BlockNode, 
 }
 
 func (c *Chain) connectBlock(block *types.Block) (err error) {
+	irreversibleNode := c.bestIrreversibleNode
 	bcBlock := types.MapBlock(block)
 	if bcBlock.TransactionStatus, err = c.store.GetTransactionStatus(&bcBlock.ID); err != nil {
 		return err
@@ -94,19 +94,25 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	if err := utxoView.ApplyBlock(bcBlock, bcBlock.TransactionStatus); err != nil {
 		return err
 	}
-	node := c.index.GetNode(&bcBlock.ID)
-	if err := c.setState(node, utxoView); err != nil {
+
+	voteResult, err := c.consensusNodeManager.getBestVoteResult()
+	if err != nil {
 		return err
 	}
+	if err := voteResult.ApplyBlock(block); err != nil {
+		return err
+	}
+
+	node := c.index.GetNode(&bcBlock.ID)
+	if c.isIrreversible(node) && block.Height > irreversibleNode.Height {
+		irreversibleNode = node
+	}
+
+	if err := c.setState(node, irreversibleNode, utxoView, []*state.VoteResult{voteResult}); err != nil {
+		return err
+	}
+
 	for _, tx := range block.Transactions {
-		for key, value := range tx.Entries {
-			switch value.(type) {
-			case *bc.Claim:
-				c.store.SetWithdrawSpent(&key)
-			default:
-				continue
-			}
-		}
 		c.txPool.RemoveTransaction(&tx.Tx.ID)
 	}
 	return nil
@@ -115,9 +121,15 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 	attachNodes, detachNodes := c.calcReorganizeNodes(node)
 	utxoView := state.NewUtxoViewpoint()
+	voteResults := []*state.VoteResult{}
+	irreversibleNode := c.bestIrreversibleNode
+	voteResult, err := c.consensusNodeManager.getBestVoteResult()
+	if err != nil {
+		return err
+	}
 
 	for _, detachNode := range detachNodes {
-		b, err := c.store.GetBlock(&detachNode.Hash)
+		b, err := c.store.GetBlock(&detachNode.Hash, detachNode.Height)
 		if err != nil {
 			return err
 		}
@@ -126,19 +138,25 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 		if err := c.store.GetTransactionsUtxo(utxoView, detachBlock.Transactions); err != nil {
 			return err
 		}
+
 		txStatus, err := c.GetTransactionStatus(&detachBlock.ID)
 		if err != nil {
 			return err
 		}
+
 		if err := utxoView.DetachBlock(detachBlock, txStatus); err != nil {
 			return err
 		}
 
-		log.WithFields(log.Fields{"height": node.Height, "hash": node.Hash.String()}).Debug("detach from mainchain")
+		if err := voteResult.DetachBlock(b); err != nil {
+			return err
+		}
+
+		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Debug("detach from mainchain")
 	}
 
 	for _, attachNode := range attachNodes {
-		b, err := c.store.GetBlock(&attachNode.Hash)
+		b, err := c.store.GetBlock(&attachNode.Hash, attachNode.Height)
 		if err != nil {
 			return err
 		}
@@ -147,50 +165,53 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 		if err := c.store.GetTransactionsUtxo(utxoView, attachBlock.Transactions); err != nil {
 			return err
 		}
+
 		txStatus, err := c.GetTransactionStatus(&attachBlock.ID)
 		if err != nil {
 			return err
 		}
+
 		if err := utxoView.ApplyBlock(attachBlock, txStatus); err != nil {
 			return err
 		}
 
-		log.WithFields(log.Fields{"height": node.Height, "hash": node.Hash.String()}).Debug("attach from mainchain")
+		if err := voteResult.ApplyBlock(b); err != nil {
+			return err
+		}
+
+		if voteResult.IsFinalize() {
+			voteResults = append(voteResults, voteResult.Fork())
+		}
+
+		if c.isIrreversible(attachNode) && attachNode.Height > irreversibleNode.Height {
+			irreversibleNode = attachNode
+		}
+
+		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Debug("attach from mainchain")
 	}
 
-	return c.setState(node, utxoView)
-}
-
-func (c *Chain) consensusCheck(block *types.Block) error {
-	if err := dpos.GDpos.CheckBlockHeader(block.BlockHeader); err != nil {
-		return err
+	if detachNodes[len(detachNodes)-1].Height <= c.bestIrreversibleNode.Height && irreversibleNode.Height <= c.bestIrreversibleNode.Height {
+		return errors.New("rollback block below the height of irreversible block")
 	}
-
-	if err := dpos.GDpos.IsValidBlockCheckIrreversibleBlock(block.Height, block.Hash()); err != nil {
-		return err
-	}
-
-	if err := dpos.GDpos.CheckBlock(*block, true); err != nil {
-		return err
-	}
-	return nil
+	voteResults = append(voteResults, voteResult.Fork())
+	return c.setState(node, irreversibleNode, utxoView, voteResults)
 }
 
 // SaveBlock will validate and save block into storage
 func (c *Chain) saveBlock(block *types.Block) error {
-	bcBlock := types.MapBlock(block)
-	parent := c.index.GetNode(&block.PreviousBlockHash)
-
-	if err := c.consensusCheck(block); err != nil {
-		return err
-	}
-
-	if err := validation.ValidateBlock(bcBlock, parent, block); err != nil {
+	if err := c.validateSign(block); err != nil {
 		return errors.Sub(ErrBadBlock, err)
 	}
 
-	if err := c.ProcessDPoSConnectBlock(block); err != nil {
-		return err
+	parent := c.index.GetNode(&block.PreviousBlockHash)
+	bcBlock := types.MapBlock(block)
+	if err := validation.ValidateBlock(bcBlock, parent); err != nil {
+		return errors.Sub(ErrBadBlock, err)
+	}
+
+	signature, err := c.SignBlock(block)
+	if err != nil {
+		return errors.Sub(ErrBadBlock, err)
 	}
 
 	if err := c.store.SaveBlock(block, bcBlock.TransactionStatus); err != nil {
@@ -204,6 +225,13 @@ func (c *Chain) saveBlock(block *types.Block) error {
 	}
 
 	c.index.AddNode(node)
+
+	if len(signature) != 0 {
+		xPub := config.CommonConfig.PrivateKey().XPub()
+		if err := c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: block.Hash(), Signature: signature, XPub: xPub[:]}); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -218,11 +246,11 @@ func (c *Chain) saveSubBlock(block *types.Block) *types.Block {
 	for _, prevOrphan := range prevOrphans {
 		orphanBlock, ok := c.orphanManage.Get(prevOrphan)
 		if !ok {
-			log.WithFields(log.Fields{"hash": prevOrphan.String()}).Warning("saveSubBlock fail to get block from orphanManage")
+			log.WithFields(log.Fields{"module": logModule, "hash": prevOrphan.String()}).Warning("saveSubBlock fail to get block from orphanManage")
 			continue
 		}
 		if err := c.saveBlock(orphanBlock); err != nil {
-			log.WithFields(log.Fields{"hash": prevOrphan.String(), "height": orphanBlock.Height}).Warning("saveSubBlock fail to save block")
+			log.WithFields(log.Fields{"module": logModule, "hash": prevOrphan.String(), "height": orphanBlock.Height}).Warning("saveSubBlock fail to save block")
 			continue
 		}
 
@@ -262,7 +290,7 @@ func (c *Chain) blockProcesser() {
 func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	blockHash := block.Hash()
 	if c.BlockExist(&blockHash) {
-		log.WithFields(log.Fields{"hash": blockHash.String(), "height": block.Height}).Info("block has been processed")
+		log.WithFields(log.Fields{"module": logModule, "hash": blockHash.String(), "height": block.Height}).Info("block has been processed")
 		return c.orphanManage.BlockExist(&blockHash), nil
 	}
 
@@ -279,160 +307,16 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	bestBlockHash := bestBlock.Hash()
 	bestNode := c.index.GetNode(&bestBlockHash)
 
+	c.cond.L.Lock()
+	defer c.cond.L.Unlock()
 	if bestNode.Parent == c.bestNode {
-		log.Debug("append block to the end of mainchain")
+		log.WithFields(log.Fields{"module": logModule}).Debug("append block to the end of mainchain")
 		return false, c.connectBlock(bestBlock)
 	}
 
 	if bestNode.Height > c.bestNode.Height {
-		log.Debug("start to reorganize chain")
+		log.WithFields(log.Fields{"module": logModule}).Debug("start to reorganize chain")
 		return false, c.reorganizeChain(bestNode)
 	}
 	return false, nil
-}
-
-func (c *Chain) ProcessDPoSConnectBlock(block *types.Block) error {
-	mapTxFee := c.CalculateBalance(block, true)
-	if err := c.DoVoting(block, mapTxFee); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (c *Chain) DoVoting(block *types.Block, mapTxFee map[bc.Hash]uint64) error {
-	for _, tx := range block.Transactions {
-		to := tx.Outputs[0]
-		msg := &dpos.DposMsg{}
-
-		if err := json.Unmarshal(tx.TxData.ReferenceData, &msg); err != nil {
-			continue
-		}
-		var (
-			address common.Address
-			err     error
-		)
-		address, err = common.NewAddressWitnessPubKeyHash(to.ControlProgram[2:], &consensus.ActiveNetParams)
-		if err != nil {
-			address, err = common.NewAddressWitnessScriptHash(to.ControlProgram[2:], &consensus.ActiveNetParams)
-			if err != nil {
-				return errors.New("ControlProgram cannot be converted to address")
-			}
-		}
-		hash := block.Hash()
-		height := block.Height
-		switch msg.Type {
-		case vm.OP_DELEGATE:
-			continue
-		case vm.OP_REGISTE:
-			if mapTxFee[tx.Tx.ID] >= consensus.RegisrerForgerFee {
-				data := &dpos.RegisterForgerData{}
-				if err := json.Unmarshal(msg.Data, data); err != nil {
-					return err
-				}
-				c.Engine.ProcessRegister(address.EncodeAddress(), data.Name, hash, height)
-			}
-		case vm.OP_VOTE:
-			if mapTxFee[tx.Tx.ID] >= consensus.VoteForgerFee {
-				data := &dpos.VoteForgerData{}
-				if err := json.Unmarshal(msg.Data, data); err != nil {
-					return err
-				}
-				c.Engine.ProcessVote(address.EncodeAddress(), data.Forgers, hash, height)
-			}
-		case vm.OP_REVOKE:
-			if mapTxFee[tx.Tx.ID] >= consensus.CancelVoteForgerFee {
-				data := &dpos.CancelVoteForgerData{}
-				if err := json.Unmarshal(msg.Data, data); err != nil {
-					return err
-				}
-				c.Engine.ProcessCancelVote(address.EncodeAddress(), data.Forgers, hash, height)
-			}
-		}
-	}
-	return nil
-}
-
-func (c *Chain) CalculateBalance(block *types.Block, fIsAdd bool) map[bc.Hash]uint64 {
-
-	addressBalances := []engine.AddressBalance{}
-	mapTxFee := make(map[bc.Hash]uint64)
-	var (
-		address common.Address
-		err     error
-	)
-
-	for _, tx := range block.Transactions {
-		fee := uint64(0)
-		for _, input := range tx.Inputs {
-			if input.AssetID() != *consensus.BTMAssetID {
-				continue
-			}
-
-			if len(tx.TxData.Inputs) == 1 &&
-				(tx.TxData.Inputs[0].InputType() == types.CoinbaseInputType ||
-					tx.TxData.Inputs[0].InputType() == types.ClainPeginInputType) {
-				continue
-			}
-
-			fee += input.Amount()
-			value := int64(input.Amount())
-			address, err = common.NewAddressWitnessPubKeyHash(input.ControlProgram()[2:], &consensus.ActiveNetParams)
-			if err != nil {
-				address, err = common.NewAddressWitnessScriptHash(input.ControlProgram()[2:], &consensus.ActiveNetParams)
-				if err != nil {
-					continue
-				}
-			}
-			if fIsAdd {
-				value = 0 - value
-			}
-			addressBalances = append(addressBalances, engine.AddressBalance{address.EncodeAddress(), value})
-		}
-		for _, output := range tx.Outputs {
-			fee -= output.Amount
-			if vmutil.IsUnspendable(output.ControlProgram) {
-				continue
-			}
-			if *output.AssetId != *consensus.BTMAssetID {
-				continue
-			}
-			value := int64(output.Amount)
-			address, err = common.NewAddressWitnessPubKeyHash(output.ControlProgram[2:], &consensus.ActiveNetParams)
-			if err != nil {
-				address, err = common.NewAddressWitnessScriptHash(output.ControlProgram[2:], &consensus.ActiveNetParams)
-				if err != nil {
-					continue
-				}
-			}
-			if !fIsAdd {
-				value = 0 - value
-			}
-			addressBalances = append(addressBalances, engine.AddressBalance{address.EncodeAddress(), value})
-		}
-		mapTxFee[tx.Tx.ID] = fee
-	}
-
-	c.Engine.UpdateAddressBalance(addressBalances)
-	return mapTxFee
-}
-
-func (c *Chain) RepairDPoSData(oldBlockHeight uint64, oldBlockHash bc.Hash) error {
-	block, err := c.GetBlockByHash(&oldBlockHash)
-	if err != nil {
-		return err
-	}
-	if block.Height != oldBlockHeight {
-		return errors.New("The module vote records data with a problem")
-	}
-	for i := block.Height + 1; i <= c.bestNode.Height; i++ {
-		b, err := c.GetBlockByHeight(i)
-		if err != nil {
-			return err
-		}
-		if err := c.ProcessDPoSConnectBlock(b); err != nil {
-			return err
-		}
-
-	}
-	return nil
 }

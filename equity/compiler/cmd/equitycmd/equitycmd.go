@@ -63,9 +63,9 @@ func main() {
 	fmt.Fprintf(header, "package instance\n\n")
 
 	imports := map[string]bool{
-		"bytes":        true,
-		"encoding/hex": true,
-		"fmt":          true,
+		"bytes":                            true,
+		"encoding/hex":                     true,
+		"fmt":                              true,
 		"github.com/vapor/equity/compiler": true,
 		"github.com/vapor/protocol/vm":     true,
 	}

@@ -88,11 +88,6 @@ func writeForHash(w io.Writer, c interface{}) error {
 		binary.LittleEndian.PutUint64(buf[:], v)
 		_, err := w.Write(buf[:])
 		return errors.Wrapf(err, "writing uint64 (%d) for hash", v)
-	case uint32:
-		buf := [8]byte{}
-		binary.LittleEndian.PutUint32(buf[:], v)
-		_, err := w.Write(buf[:])
-		return errors.Wrapf(err, "writing uint64 (%d) for hash", v)
 	case []byte:
 		_, err := blockchain.WriteVarstr31(w, v)
 		return errors.Wrapf(err, "writing []byte (len %d) for hash", len(v))

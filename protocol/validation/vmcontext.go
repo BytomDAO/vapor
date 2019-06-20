@@ -25,20 +25,30 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 	)
 
 	switch e := entry.(type) {
-	case *bc.Issuance:
+	case *bc.CrossChainInput:
 		a1 := e.Value.AssetId.Bytes()
 		assetID = &a1
 		amount = &e.Value.Amount
 		destPos = &e.WitnessDestination.Position
 
 	case *bc.Spend:
-		spentOutput := tx.Entries[*e.SpentOutputId].(*bc.Output)
+		spentOutput := tx.Entries[*e.SpentOutputId].(*bc.IntraChainOutput)
 		a1 := spentOutput.Source.Value.AssetId.Bytes()
 		assetID = &a1
 		amount = &spentOutput.Source.Value.Amount
 		destPos = &e.WitnessDestination.Position
 		s := e.SpentOutputId.Bytes()
 		spentOutputID = &s
+
+	case *bc.VetoInput:
+		voteOutput := tx.Entries[*e.SpentOutputId].(*bc.VoteOutput)
+		a1 := voteOutput.Source.Value.AssetId.Bytes()
+		assetID = &a1
+		amount = &voteOutput.Source.Value.Amount
+		destPos = &e.WitnessDestination.Position
+		s := e.SpentOutputId.Bytes()
+		spentOutputID = &s
+
 	}
 
 	var txSigHash *[]byte
@@ -113,7 +123,10 @@ func (ec *entryContext) checkOutput(index uint64, amount uint64, assetID []byte,
 		}
 
 		switch e := e.(type) {
-		case *bc.Output:
+		case *bc.IntraChainOutput:
+			return check(e.ControlProgram, e.Source.Value), nil
+
+		case *bc.VoteOutput:
 			return check(e.ControlProgram, e.Source.Value), nil
 
 		case *bc.Retirement:
@@ -148,10 +161,10 @@ func (ec *entryContext) checkOutput(index uint64, amount uint64, assetID []byte,
 	case *bc.Mux:
 		return checkMux(e)
 
-	case *bc.Issuance:
+	case *bc.Spend:
 		d, ok := ec.entries[*e.WitnessDestination.Ref]
 		if !ok {
-			return false, errors.Wrapf(bc.ErrMissingEntry, "entry for issuance destination %x not found", e.WitnessDestination.Ref.Bytes())
+			return false, errors.Wrapf(bc.ErrMissingEntry, "entry for spend destination %x not found", e.WitnessDestination.Ref.Bytes())
 		}
 		if m, ok := d.(*bc.Mux); ok {
 			return checkMux(m)
@@ -161,10 +174,10 @@ func (ec *entryContext) checkOutput(index uint64, amount uint64, assetID []byte,
 		}
 		return checkEntry(d)
 
-	case *bc.Spend:
+	case *bc.VetoInput:
 		d, ok := ec.entries[*e.WitnessDestination.Ref]
 		if !ok {
-			return false, errors.Wrapf(bc.ErrMissingEntry, "entry for spend destination %x not found", e.WitnessDestination.Ref.Bytes())
+			return false, errors.Wrapf(bc.ErrMissingEntry, "entry for vetoInput destination %x not found", e.WitnessDestination.Ref.Bytes())
 		}
 		if m, ok := d.(*bc.Mux); ok {
 			return checkMux(m)

@@ -7,16 +7,13 @@ import (
 	"path"
 	"reflect"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/vapor/account"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/pseudohsm"
 	"github.com/vapor/blockchain/signers"
-	"github.com/vapor/common"
-	"github.com/vapor/config"
-	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
+	dbm "github.com/vapor/database/leveldb"
+	"github.com/vapor/event"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc/types"
 	w "github.com/vapor/wallet"
@@ -88,14 +85,6 @@ func (t *wtTransaction) create(ctx *walletTestContext) (*types.Tx, error) {
 			if err := generator.AddSpendInput(input.AccountAlias, input.AssetAlias, input.Amount); err != nil {
 				return nil, err
 			}
-		case "issue":
-			_, err := ctx.createAsset(input.AccountAlias, input.AssetAlias)
-			if err != nil {
-				return nil, err
-			}
-			if err := generator.AddIssuanceInput(input.AssetAlias, input.Amount); err != nil {
-				return nil, err
-			}
 		}
 	}
 
@@ -151,14 +140,6 @@ func (ctx *walletTestContext) getPubkey(keyAlias string) *chainkd.XPub {
 	return nil
 }
 
-func (ctx *walletTestContext) createAsset(accountAlias string, assetAlias string) (*asset.Asset, error) {
-	acc, err := ctx.Wallet.AccountMgr.FindByAlias(accountAlias)
-	if err != nil {
-		return nil, err
-	}
-	return ctx.Wallet.AssetReg.Define(acc.XPubs, len(acc.XPubs), nil, assetAlias, nil)
-}
-
 func (ctx *walletTestContext) newBlock(txs []*types.Tx, coinbaseAccount string) (*types.Block, error) {
 	controlProgram, err := ctx.createControlProgram(coinbaseAccount, true)
 	if err != nil {
@@ -186,7 +167,7 @@ func (ctx *walletTestContext) createAccount(name string, keys []string, quorum i
 }
 
 func (ctx *walletTestContext) update(block *types.Block) error {
-	if err := SolveAndUpdate(ctx.Chain, block); err != nil {
+	if _, err := ctx.Chain.ProcessBlock(block); err != nil {
 		return err
 	}
 	if err := ctx.Wallet.AttachBlock(block); err != nil {
@@ -259,15 +240,11 @@ func (cfg *walletTestConfig) Run() error {
 	if err != nil {
 		return err
 	}
-	config.CommonConfig.Consensus.Coinbase = "vsm1qkm743xmgnvh84pmjchq2s4tnfpgu9ae2f9slep"
-	address, err := common.DecodeAddress(config.CommonConfig.Consensus.Coinbase, &consensus.SoloNetParams)
-	if err != nil {
-		return err
-	}
 	walletDB := dbm.NewDB("wallet", "leveldb", path.Join(dirPath, "wallet_db"))
 	accountManager := account.NewManager(walletDB, chain)
 	assets := asset.NewRegistry(walletDB, chain)
-	wallet, err := w.NewWallet(walletDB, accountManager, assets, hsm, chain, address)
+	dispatcher := event.NewDispatcher()
+	wallet, err := w.NewWallet(walletDB, accountManager, assets, hsm, chain, dispatcher, false)
 	if err != nil {
 		return err
 	}

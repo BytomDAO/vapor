@@ -17,6 +17,8 @@ import (
 	"github.com/vapor/protocol/vm"
 )
 
+const logModule = "txbuilder"
+
 // errors
 var (
 	//ErrBadRefData means invalid reference data
@@ -54,7 +56,7 @@ func Build(ctx context.Context, tx *types.TxData, actions []Action, maxTime time
 	for i, action := range actions {
 		err := action.Build(ctx, &builder)
 		if err != nil {
-			log.WithFields(log.Fields{"action index": i, "error": err}).Error("Loop tx's action")
+			log.WithFields(log.Fields{"module": logModule, "action index": i, "error": err}).Error("Loop tx's action")
 			errs = append(errs, errors.WithDetailf(err, "action index %v", i))
 		}
 	}
@@ -115,9 +117,9 @@ func checkBlankCheck(tx *types.TxData) error {
 		}
 	}
 	for _, out := range tx.Outputs {
-		assetMap[*out.AssetId], ok = checked.SubInt64(assetMap[*out.AssetId], int64(out.Amount))
+		assetMap[*out.AssetAmount().AssetId], ok = checked.SubInt64(assetMap[*out.AssetAmount().AssetId], int64(out.AssetAmount().Amount))
 		if !ok {
-			return errors.WithDetailf(ErrBadAmount, "cumulative amounts for asset %x overflow the allowed asset amount 2^63", out.AssetId.Bytes())
+			return errors.WithDetailf(ErrBadAmount, "cumulative amounts for asset %x overflow the allowed asset amount 2^63", out.AssetAmount().AssetId.Bytes())
 		}
 	}
 

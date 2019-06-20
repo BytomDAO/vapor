@@ -7,17 +7,18 @@ import (
 	"testing"
 	"time"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/vapor/account"
 	"github.com/vapor/blockchain/pseudohsm"
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/blockchain/txbuilder"
+	"github.com/vapor/config"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/database/leveldb"
+	"github.com/vapor/database"
+	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/database/storage"
-	"github.com/vapor/mining"
+	"github.com/vapor/event"
+	"github.com/vapor/proposal"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -126,7 +127,7 @@ func GenerateChainData(dirPath string, testDB dbm.DB, txNumber, otherAssetNum in
 
 	// init UtxoViewpoint
 	utxoView := state.NewUtxoViewpoint()
-	utxoEntry := storage.NewUtxoEntry(false, 1, false)
+	utxoEntry := storage.NewUtxoEntry(storage.NormalUTXOType, 1, false)
 	for _, tx := range txs {
 		for _, id := range tx.SpentOutputIDs {
 			utxoView.Entries[id] = utxoEntry
@@ -137,9 +138,11 @@ func GenerateChainData(dirPath string, testDB dbm.DB, txNumber, otherAssetNum in
 		return nil, nil, nil, err
 	}
 
-	store := leveldb.NewStore(testDB)
-	txPool := protocol.NewTxPool(store)
-	chain, err := protocol.NewChain(store, txPool)
+	config.CommonConfig = config.DefaultConfig()
+	store := database.NewStore(testDB)
+	dispatcher := event.NewDispatcher()
+	txPool := protocol.NewTxPool(store, dispatcher)
+	chain, err := protocol.NewChain(store, txPool, dispatcher)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -156,7 +159,7 @@ func InsertChain(chain *protocol.Chain, txPool *protocol.TxPool, txs []*types.Tx
 		}
 	}
 
-	block, err := mining.NewBlockTemplate(chain, txPool, nil, nil, nil, uint64(time.Now().Unix()))
+	block, err := proposal.NewBlockTemplate(chain, txPool, nil, uint64(time.Now().UnixNano() / 1e6))
 	if err != nil {
 		return err
 	}
@@ -181,11 +184,6 @@ func InsertChain(chain *protocol.Chain, txPool *protocol.TxPool, txs []*types.Tx
 }
 
 func processNewTxch(txPool *protocol.TxPool) {
-	newTxCh := txPool.GetMsgCh()
-	for tx := range newTxCh {
-		if tx == nil {
-		}
-	}
 }
 
 func MockSimpleUtxo(index uint64, assetID *bc.AssetID, amount uint64, ctrlProg *account.CtrlProgram) *account.UTXO {
@@ -253,7 +251,7 @@ func AddTxInputFromUtxo(utxo *account.UTXO, singer *signers.Signer) (*types.TxIn
 }
 
 func AddTxOutput(assetID bc.AssetID, amount uint64, controlProgram []byte) *types.TxOutput {
-	out := types.NewTxOutput(assetID, amount, controlProgram)
+	out := types.NewIntraChainOutput(assetID, amount, controlProgram)
 	return out
 }
 
@@ -361,7 +359,7 @@ func CreateTxbyNum(txNumber, otherAssetNum int) ([]*types.Tx, error) {
 
 func SetUtxoView(db dbm.DB, view *state.UtxoViewpoint) error {
 	batch := db.NewBatch()
-	if err := leveldb.SaveUtxoView(batch, view); err != nil {
+	if err := database.SaveUtxoView(batch, view); err != nil {
 		return err
 	}
 	batch.Write()

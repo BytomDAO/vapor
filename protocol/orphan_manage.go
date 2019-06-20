@@ -11,8 +11,9 @@ import (
 )
 
 var (
-	orphanBlockTTL           = 60 * time.Minute
-	orphanExpireWorkInterval = 3 * time.Minute
+	orphanBlockTTL           = 3 * time.Minute
+	orphanExpireWorkInterval = 1 * time.Minute
+	numOrphanBlockLimit      = 256
 )
 
 type orphanBlock struct {
@@ -56,10 +57,15 @@ func (o *OrphanManage) Add(block *types.Block) {
 		return
 	}
 
+	if len(o.orphan) >= numOrphanBlockLimit {
+		o.deleteLRU()
+		log.WithFields(log.Fields{"module": logModule, "hash": blockHash.String(), "height": block.Height}).Info("the number of orphan blocks exceeds the limit")
+	}
+
 	o.orphan[blockHash] = &orphanBlock{block, time.Now().Add(orphanBlockTTL)}
 	o.prevOrphans[block.PreviousBlockHash] = append(o.prevOrphans[block.PreviousBlockHash], &blockHash)
 
-	log.WithFields(log.Fields{"hash": blockHash.String(), "height": block.Height}).Info("add block to orphan")
+	log.WithFields(log.Fields{"module": logModule, "hash": blockHash.String(), "height": block.Height}).Info("add block to orphan")
 }
 
 // Delete will delete the block from OrphanManage
@@ -99,10 +105,24 @@ func (o *OrphanManage) delete(hash *bc.Hash) {
 	}
 
 	for i, preOrphan := range prevOrphans {
-		if preOrphan == hash {
+		if *preOrphan == *hash {
 			o.prevOrphans[block.Block.PreviousBlockHash] = append(prevOrphans[:i], prevOrphans[i+1:]...)
 			return
 		}
+	}
+}
+
+func (o *OrphanManage) deleteLRU() {
+	var deleteBlock *orphanBlock
+	for _, orphan := range o.orphan {
+		if deleteBlock == nil || orphan.expiration.Before(deleteBlock.expiration) {
+			deleteBlock = orphan
+		}
+	}
+
+	if deleteBlock != nil {
+		blockHash := deleteBlock.Block.Hash()
+		o.delete(&blockHash)
 	}
 }
 

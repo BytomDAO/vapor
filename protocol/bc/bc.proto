@@ -48,24 +48,6 @@ message ValueDestination {
   uint64      position = 3;
 }
 
-message Proof {
-	bytes sign           = 1;
-	bytes controlProgram = 2;
-  bytes address        = 3;
-}
-
-message BytomBlockHeader {
-  uint64            version                 = 1;
-  uint64            height                  = 2;
-  Hash              previous_block_id       = 3;
-  uint64            timestamp               = 4;
-  Hash              transactions_root       = 5;
-  Hash              transaction_status_hash = 6;
-  uint64            nonce                   = 7;
-  uint64            bits                    = 8;
-  TransactionStatus transaction_status      = 9;
-}
-
 message BlockHeader {
   uint64            version                 = 1;
   uint64            height                  = 2;
@@ -73,18 +55,15 @@ message BlockHeader {
   uint64            timestamp               = 4;
   Hash              transactions_root       = 5;
   Hash              transaction_status_hash = 6;
-  uint64            nonce                   = 7;
-  uint64            bits                    = 8;
-  TransactionStatus transaction_status      = 9;
+  TransactionStatus transaction_status      = 7;
+  repeated bytes    witness_arguments       = 8;
 }
 
 message TxHeader {
   uint64        version         = 1;
   uint64        serialized_size = 2;
-  Hash          data            = 3;
-  uint64        time_range      = 4;
-  repeated Hash result_ids      = 5;
-  bool          side            = 6;
+  uint64        time_range      = 3;
+  repeated Hash result_ids      = 4;
 }
 
 message TxVerifyResult {
@@ -108,24 +87,35 @@ message Coinbase {
   bytes            arbitrary           = 2;
 }
 
-message Output {
+message IntraChainOutput {
   ValueSource source          = 1;
   Program     control_program = 2;
   uint64      ordinal         = 3;
 }
 
+message CrossChainOutput {
+  ValueSource source          = 1;
+  Program     control_program = 2;
+  uint64      ordinal         = 3;
+}
+
+message VoteOutput {
+  ValueSource source          = 1;
+  Program     control_program = 2;
+  uint64      ordinal         = 3;
+  bytes       vote            = 4;
+}
+
+message VetoInput {
+  Hash             spent_output_id     = 1;
+  ValueDestination witness_destination = 2;
+  repeated bytes   witness_arguments   = 3;
+  uint64           ordinal             = 4;
+}
+
 message Retirement {
   ValueSource source   = 1;
   uint64      ordinal  = 2;
-}
-
-message Issuance {
-  Hash             nonce_hash               = 1;
-  AssetAmount      value                    = 2;
-  ValueDestination witness_destination      = 3;
-  AssetDefinition  witness_asset_definition = 4;
-  repeated bytes   witness_arguments        = 5;
-  uint64           ordinal                  = 6;
 }
 
 message Spend {
@@ -135,11 +125,12 @@ message Spend {
   uint64           ordinal             = 4;
 }
 
-message Claim {
-  Hash             spent_output_id     = 1;
-  ValueDestination witness_destination = 2;
-  repeated bytes   witness_arguments   = 3;
-  uint64           ordinal             = 4;
-  repeated bytes   Peginwitness        = 5;
+message CrossChainInput {
+  Hash             mainchain_output_id       = 1;
+  AssetAmount      value                     = 2;
+  ValueDestination witness_destination       = 3;
+  Program          control_program           = 4;
+  AssetDefinition  asset_definition          = 5;
+  repeated bytes   witness_arguments         = 6;
+  uint64           ordinal                   = 7;
 }
-

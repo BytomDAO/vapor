@@ -11,6 +11,8 @@ import (
 	"github.com/vapor/errors"
 )
 
+const logModule = "httpjson"
+
 // ErrBadRequest indicates the user supplied malformed JSON input,
 // possibly including a datatype that doesn't match what we expected.
 var ErrBadRequest = errors.New("httpjson: bad request")
@@ -42,7 +44,7 @@ func Write(ctx context.Context, w http.ResponseWriter, status int, v interface{}
 
 	err := json.NewEncoder(w).Encode(Array(v))
 	if err != nil {
-		log.WithField("error", err).Error("Error encountered during writing the Content-Type header using status")
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("Error encountered during writing the Content-Type header using status")
 	}
 }
 

@@ -29,20 +29,6 @@ func (si *SigningInstruction) AddWitnessKeys(xpubs []chainkd.XPub, path [][]byte
 	si.WitnessComponents = append(si.WitnessComponents, sw)
 }
 
-func (si *SigningInstruction) AddWitnessKeysWithOutPath(xpubs []chainkd.XPub, quorum int) {
-
-	keyIDs := make([]keyID, 0, len(xpubs))
-	for _, xpub := range xpubs {
-		keyIDs = append(keyIDs, keyID{XPub: xpub})
-	}
-
-	sw := &SignatureWitness{
-		Quorum: quorum,
-		Keys:   keyIDs,
-	}
-	si.WitnessComponents = append(si.WitnessComponents, sw)
-}
-
 // AddRawWitnessKeys adds a SignatureWitness with the given quorum and
 // list of keys derived by applying the derivation path to each of the
 // xpubs.
@@ -64,20 +50,6 @@ func (si *SigningInstruction) AddRawWitnessKeys(xpubs []chainkd.XPub, path [][]b
 	si.WitnessComponents = append(si.WitnessComponents, sw)
 }
 
-func (si *SigningInstruction) AddRawWitnessKeysWithoutPath(xpubs []chainkd.XPub, quorum int) {
-
-	keyIDs := make([]keyID, 0, len(xpubs))
-	for _, xpub := range xpubs {
-		keyIDs = append(keyIDs, keyID{XPub: xpub})
-	}
-
-	sw := &RawTxSigWitness{
-		Quorum: quorum,
-		Keys:   keyIDs,
-	}
-	si.WitnessComponents = append(si.WitnessComponents, sw)
-}
-
 // SigningInstruction gives directions for signing inputs in a TxTemplate.
 type SigningInstruction struct {
 	Position          uint32             `json:"position"`
@@ -89,7 +61,7 @@ type SigningInstruction struct {
 // arguments for a VM program via its materialize method. Concrete
 // witnessComponent types include SignatureWitness and dataWitness.
 type witnessComponent interface {
-	Materialize(*[][]byte) error
+	materialize(*[][]byte) error
 }
 
 // UnmarshalJSON unmarshal SigningInstruction

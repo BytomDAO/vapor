@@ -6,21 +6,9 @@ import (
 
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/errors"
-	"github.com/vapor/protocol/bc"
+	"github.com/vapor/event"
 	"github.com/vapor/protocol/bc/types"
 )
-
-// BlockHeaderJSON struct provides support for get work in json format, when it also follows
-// BlockHeader structure
-type BlockHeaderJSON struct {
-	Version           uint64                 `json:"version"`             // The version of the block.
-	Height            uint64                 `json:"height"`              // The height of the block.
-	PreviousBlockHash bc.Hash                `json:"previous_block_hash"` // The hash of the previous block.
-	Timestamp         uint64                 `json:"timestamp"`           // The time of the block in seconds.
-	Nonce             uint64                 `json:"nonce"`               // Nonce used to generate the block.
-	Bits              uint64                 `json:"bits"`                // Difficulty target for the block.
-	BlockCommitment   *types.BlockCommitment `json:"block_commitment"`    // Block commitment
-}
 
 type CoinbaseArbitrary struct {
 	Arbitrary chainjson.HexBytes `json:"arbitrary"`
@@ -61,35 +49,16 @@ func (a *API) submitBlock(ctx context.Context, req *SubmitBlockReq) Response {
 	if err != nil {
 		return NewErrorResponse(err)
 	}
+
 	if isOrphan {
 		return NewErrorResponse(errors.New("block submitted is orphan"))
 	}
 
-	blockHash := req.Block.BlockHeader.Hash()
-	a.newBlockCh <- &blockHash
+	if err = a.eventDispatcher.Post(event.NewProposedBlockEvent{Block: *req.Block}); err != nil {
+		return NewErrorResponse(err)
+	}
+
 	return NewSuccessResponse(true)
-}
-
-// SubmitWorkReq is req struct for submit-work API
-type SubmitWorkReq struct {
-	BlockHeader *types.BlockHeader `json:"block_header"`
-}
-
-// SubmitWorkJSONReq is req struct for submit-work-json API
-type SubmitWorkJSONReq struct {
-	BlockHeader *BlockHeaderJSON `json:"block_header"`
-}
-
-// GetWorkResp is resp struct for get-work API
-type GetWorkResp struct {
-	BlockHeader *types.BlockHeader `json:"block_header"`
-	Seed        *bc.Hash           `json:"seed"`
-}
-
-// GetWorkJSONResp is resp struct for get-work-json API
-type GetWorkJSONResp struct {
-	BlockHeader *BlockHeaderJSON `json:"block_header"`
-	Seed        *bc.Hash         `json:"seed"`
 }
 
 func (a *API) setMining(in struct {
@@ -105,8 +74,7 @@ func (a *API) setMining(in struct {
 }
 
 func (a *API) startMining() Response {
-	//a.cpuMiner.Start()
-	a.miner.Start()
+	a.blockProposer.Start()
 	if !a.IsMining() {
 		return NewErrorResponse(errors.New("Failed to start mining"))
 	}
@@ -114,8 +82,7 @@ func (a *API) startMining() Response {
 }
 
 func (a *API) stopMining() Response {
-	//a.cpuMiner.Stop()
-	a.miner.Stop()
+	a.blockProposer.Stop()
 	if a.IsMining() {
 		return NewErrorResponse(errors.New("Failed to stop mining"))
 	}

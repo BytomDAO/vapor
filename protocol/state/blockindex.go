@@ -2,13 +2,11 @@ package state
 
 import (
 	"errors"
-	"math/big"
 	"sort"
 	"sync"
 
 	"github.com/vapor/common"
 	"github.com/vapor/consensus"
-	"github.com/vapor/consensus/difficulty"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
@@ -20,16 +18,13 @@ const approxNodesPerDay = 24 * 24
 // BlockNode represents a block within the block chain and is primarily used to
 // aid in selecting the best chain to be the main chain.
 type BlockNode struct {
-	Parent  *BlockNode // parent is the parent block for this node.
-	Hash    bc.Hash    // hash of the block.
-	Seed    *bc.Hash   // seed hash of the block
-	WorkSum *big.Int   // total amount of work in the chain up to
+	Parent *BlockNode // parent is the parent block for this node.
+	Hash   bc.Hash    // hash of the block.
 
 	Version                uint64
 	Height                 uint64
 	Timestamp              uint64
-	Nonce                  uint64
-	Bits                   uint64
+	BlockWitness           *common.BitMap
 	TransactionsMerkleRoot bc.Hash
 	TransactionStatusHash  bc.Hash
 }
@@ -40,25 +35,23 @@ func NewBlockNode(bh *types.BlockHeader, parent *BlockNode) (*BlockNode, error) 
 	}
 
 	node := &BlockNode{
-		Parent: parent,
-		Hash:   bh.Hash(),
-		//WorkSum:   difficulty.CalcWork(bh.Bits),
-		Version:   bh.Version,
-		Height:    bh.Height,
-		Timestamp: bh.Timestamp,
-		//Nonce:     bh.Nonce,
-		//Bits:      bh.Bits,
+		Parent:                 parent,
+		Hash:                   bh.Hash(),
+		Version:                bh.Version,
+		Height:                 bh.Height,
+		Timestamp:              bh.Timestamp,
 		TransactionsMerkleRoot: bh.TransactionsMerkleRoot,
 		TransactionStatusHash:  bh.TransactionStatusHash,
 	}
-	/*
-		if bh.Height == 0 {
-			node.Seed = consensus.InitialSeed
-		} else {
-			node.Seed = parent.CalcNextSeed()
-			node.WorkSum = node.WorkSum.Add(parent.WorkSum, node.WorkSum)
+
+	node.BlockWitness = common.NewBitMap(uint32(len(bh.Witness)))
+	for i, witness := range bh.Witness {
+		if len(witness) != 0 {
+			if err := node.BlockWitness.Set(uint32(i)); err != nil {
+				return nil, err
+			}
 		}
-	*/
+	}
 	return node, nil
 }
 
@@ -92,43 +85,21 @@ func (node *BlockNode) CalcPastMedianTime() uint64 {
 	return timestamps[len(timestamps)/2]
 }
 
-// CalcNextBits calculate the bits for next block
-func (node *BlockNode) CalcNextBits() uint64 {
-	if node.Height%consensus.BlocksPerRetarget != 0 || node.Height == 0 {
-		return node.Bits
-	}
-
-	compareNode := node.Parent
-	for compareNode.Height%consensus.BlocksPerRetarget != 0 {
-		compareNode = compareNode.Parent
-	}
-	return difficulty.CalcNextRequiredDifficulty(node.BlockHeader(), compareNode.BlockHeader())
-}
-
-// CalcNextSeed calculate the seed for next block
-func (node *BlockNode) CalcNextSeed() *bc.Hash {
-	if node.Height == 0 {
-		return consensus.InitialSeed
-	}
-	if node.Height%consensus.SeedPerRetarget == 0 {
-		return &node.Hash
-	}
-	return node.Seed
-}
-
 // BlockIndex is the struct for help chain trace block chain as tree
 type BlockIndex struct {
 	sync.RWMutex
 
-	index     map[bc.Hash]*BlockNode
-	mainChain []*BlockNode
+	index       map[bc.Hash]*BlockNode
+	heightIndex map[uint64][]*BlockNode
+	mainChain   []*BlockNode
 }
 
 // NewBlockIndex will create a empty BlockIndex
 func NewBlockIndex() *BlockIndex {
 	return &BlockIndex{
-		index:     make(map[bc.Hash]*BlockNode),
-		mainChain: make([]*BlockNode, 0, approxNodesPerDay),
+		index:       make(map[bc.Hash]*BlockNode),
+		heightIndex: make(map[uint64][]*BlockNode),
+		mainChain:   make([]*BlockNode, 0, approxNodesPerDay),
 	}
 }
 
@@ -136,6 +107,7 @@ func NewBlockIndex() *BlockIndex {
 func (bi *BlockIndex) AddNode(node *BlockNode) {
 	bi.Lock()
 	bi.index[node.Hash] = node
+	bi.heightIndex[node.Height] = append(bi.heightIndex[node.Height], node)
 	bi.Unlock()
 }
 
@@ -184,6 +156,13 @@ func (bi *BlockIndex) NodeByHeight(height uint64) *BlockNode {
 	bi.RLock()
 	defer bi.RUnlock()
 	return bi.nodeByHeight(height)
+}
+
+// NodesByHeight return all block nodes at the specified height.
+func (bi *BlockIndex) NodesByHeight(height uint64) []*BlockNode {
+	bi.RLock()
+	defer bi.RUnlock()
+	return bi.heightIndex[height]
 }
 
 // SetMainChain will set the the mainChain array

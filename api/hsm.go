@@ -5,11 +5,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/blockchain/pseudohsm"
 	"github.com/vapor/blockchain/txbuilder"
-	"github.com/vapor/common"
-	"github.com/vapor/consensus"
-	"github.com/vapor/crypto"
 	"github.com/vapor/crypto/ed25519/chainkd"
 )
 
@@ -76,27 +72,12 @@ func (a *API) signTemplate(ctx context.Context, x struct {
 	Password string             `json:"password"`
 	Txs      txbuilder.Template `json:"transaction"`
 }) Response {
-	if err := txbuilder.Sign(ctx, &x.Txs, x.Password, a.PseudohsmSignTemplate); err != nil {
+	if err := txbuilder.Sign(ctx, &x.Txs, x.Password, a.pseudohsmSignTemplate); err != nil {
 		log.WithField("build err", err).Error("fail on sign transaction.")
 		return NewErrorResponse(err)
 	}
 	log.Info("Sign Transaction complete.")
 	return NewSuccessResponse(&signTemplateResp{Tx: &x.Txs, SignComplete: txbuilder.SignProgress(&x.Txs)})
-}
-
-func (a *API) signWithPriKey(ins struct {
-	Xprv string             `json:"xprv"`
-	Tx   txbuilder.Template `json:"transaction"`
-}) Response {
-	xprv := &chainkd.XPrv{}
-	if err := xprv.UnmarshalText([]byte(ins.Xprv)); err != nil {
-		return NewErrorResponse(err)
-	}
-	if err := pseudohsm.SignWithKey(&ins.Tx, *xprv); err != nil {
-		return NewErrorResponse(err)
-	}
-	log.Info("Sign Transaction complete.")
-	return NewSuccessResponse(&signTemplateResp{Tx: &ins.Tx, SignComplete: txbuilder.SignProgress(&ins.Tx)})
 }
 
 type signTemplatesResp struct {
@@ -110,7 +91,7 @@ func (a *API) signTemplates(ctx context.Context, x struct {
 }) Response {
 	signComplete := true
 	for _, tx := range x.Txs {
-		if err := txbuilder.Sign(ctx, tx, x.Password, a.PseudohsmSignTemplate); err != nil {
+		if err := txbuilder.Sign(ctx, tx, x.Password, a.pseudohsmSignTemplate); err != nil {
 			log.WithField("build err", err).Error("fail on sign transaction.")
 			return NewErrorResponse(err)
 		}
@@ -121,7 +102,7 @@ func (a *API) signTemplates(ctx context.Context, x struct {
 	return NewSuccessResponse(&signTemplatesResp{Tx: x.Txs, SignComplete: signComplete})
 }
 
-func (a *API) PseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {
+func (a *API) pseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {
 	return a.wallet.Hsm.XSign(xpub, path, data[:], password)
 }
 
@@ -158,26 +139,4 @@ func (a *API) pseudohsmCheckPassword(ctx context.Context, ins struct {
 	}
 	resp.CheckResult = true
 	return NewSuccessResponse(resp)
-}
-
-type keyPair struct {
-	Xpub    chainkd.XPub `json:"xpub"`
-	Xprv    chainkd.XPrv `json:"xprv"`
-	Address string       `json:"address,omitempty"`
-}
-
-func (a *API) createXKeys(ctx context.Context) Response {
-	xprv, xpub, err := chainkd.NewXKeys(nil)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	pubHash := crypto.Ripemd160(xpub.PublicKey())
-
-	address, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.ActiveNetParams)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	return NewSuccessResponse(&keyPair{Xprv: xprv, Xpub: xpub, Address: address.EncodeAddress()})
 }

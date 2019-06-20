@@ -8,19 +8,24 @@ import (
 	"github.com/vapor/protocol/bc/types"
 )
 
+type mempool interface {
+	AddTx(tx *types.Tx)
+}
+
 type Chain struct {
 	bestBlockHeader *types.BlockHeader
 	heightMap       map[uint64]*types.Block
 	blockMap        map[bc.Hash]*types.Block
-
-	prevOrphans map[bc.Hash]*types.Block
+	prevOrphans     map[bc.Hash]*types.Block
+	mempool         mempool
 }
 
-func NewChain() *Chain {
+func NewChain(mempool *Mempool) *Chain {
 	return &Chain{
 		heightMap:   map[uint64]*types.Block{},
 		blockMap:    map[bc.Hash]*types.Block{},
 		prevOrphans: make(map[bc.Hash]*types.Block),
+		mempool:     mempool,
 	}
 }
 
@@ -137,6 +142,7 @@ func (c *Chain) SetBlockByHeight(height uint64, block *types.Block) {
 	c.blockMap[block.Hash()] = block
 }
 
-func (c *Chain) ValidateTx(*types.Tx) (bool, error) {
+func (c *Chain) ValidateTx(tx *types.Tx) (bool, error) {
+	c.mempool.AddTx(tx)
 	return false, nil
 }

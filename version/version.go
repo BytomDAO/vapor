@@ -42,11 +42,12 @@ const (
 	noUpdate uint16 = iota
 	hasUpdate
 	hasMUpdate
+	logModule = "version"
 )
 
 var (
 	// The full version string
-	Version = "1.0.7"
+	Version = "1.0.9"
 	// GitCommit is set with --ldflags "-X main.gitCommit=$(git rev-parse HEAD)"
 	GitCommit string
 	Status    *UpdateStatus
@@ -91,7 +92,7 @@ func (s *UpdateStatus) CheckUpdate(localVerStr string, remoteVerStr string, remo
 	s.Lock()
 	defer s.Unlock()
 
-	if s.notified || !s.seedSet.Has(remoteAddr) {
+	if !s.seedSet.Has(remoteAddr) {
 		return nil
 	}
 
@@ -104,18 +105,29 @@ func (s *UpdateStatus) CheckUpdate(localVerStr string, remoteVerStr string, remo
 		return err
 	}
 	if remoteVersion.GreaterThan(localVersion) {
-		s.versionStatus = hasUpdate
-		s.maxVerSeen = remoteVerStr
+		if s.versionStatus == noUpdate {
+			s.versionStatus = hasUpdate
+		}
+
+		maxVersion, err := gover.NewVersion(s.maxVerSeen)
+		if err != nil {
+			return err
+		}
+
+		if remoteVersion.GreaterThan(maxVersion) {
+			s.maxVerSeen = remoteVerStr
+		}
 	}
 	if remoteVersion.Segments()[0] > localVersion.Segments()[0] {
 		s.versionStatus = hasMUpdate
 	}
 	if s.versionStatus != noUpdate {
 		log.WithFields(log.Fields{
+			"module":          logModule,
 			"Current version": localVerStr,
 			"Newer version":   remoteVerStr,
 			"seed":            remoteAddr,
-		}).Warn("Please update your bytomd via https://github.com/Bytom/vapor/releases/ or http://bytom.io/wallet/")
+		}).Warn("Please update your bytomd via https://github.com/Bytom/bytom/releases/ or http://bytom.io/wallet/")
 		s.notified = true
 	}
 	return nil

@@ -49,9 +49,11 @@ func (tx *Tx) SetInputArguments(n uint32, args [][]byte) {
 	id := tx.Tx.InputIDs[n]
 	e := tx.Entries[id]
 	switch e := e.(type) {
-	case *bc.Issuance:
-		e.WitnessArguments = args
 	case *bc.Spend:
+		e.WitnessArguments = args
+	case *bc.CrossChainInput:
+		e.WitnessArguments = args
+	case *bc.VetoInput:
 		e.WitnessArguments = args
 	}
 }
@@ -63,7 +65,6 @@ type TxData struct {
 	TimeRange      uint64
 	Inputs         []*TxInput
 	Outputs        []*TxOutput
-	ReferenceData  []byte
 }
 
 // MarshalText fulfills the json.Marshaler interface.
@@ -139,11 +140,6 @@ func (tx *TxData) readFrom(r *blockchain.Reader) (err error) {
 		tx.Outputs = append(tx.Outputs, to)
 	}
 	tx.SerializedSize = uint64(startSerializedSize - r.Len())
-
-	if tx.ReferenceData, err = blockchain.ReadVarstr31(r); err != nil {
-		return errors.Wrap(err, "reading transaction referenceData")
-	}
-
 	return nil
 }
 
@@ -186,10 +182,5 @@ func (tx *TxData) writeTo(w io.Writer, serflags byte) error {
 			return errors.Wrapf(err, "writing tx output %d", i)
 		}
 	}
-
-	if _, err := blockchain.WriteVarstr31(w, tx.ReferenceData); err != nil {
-		return errors.Wrap(err, "writing tx ReferenceData")
-	}
-
 	return nil
 }

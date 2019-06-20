@@ -24,7 +24,6 @@ type TemplateBuilder struct {
 	timeRange           uint64
 	rollbacks           []func()
 	callbacks           []func() error
-	referenceData       []byte
 }
 
 // AddInput add inputs of transactions
@@ -39,15 +38,11 @@ func (b *TemplateBuilder) AddInput(in *types.TxInput, sigInstruction *SigningIns
 
 // AddOutput add outputs of transactions
 func (b *TemplateBuilder) AddOutput(o *types.TxOutput) error {
-	if o.Amount > math.MaxInt64 {
-		return errors.WithDetailf(ErrBadAmount, "amount %d exceeds maximum value 2^63", o.Amount)
+	if o.AssetAmount().Amount > math.MaxInt64 {
+		return errors.WithDetailf(ErrBadAmount, "amount %d exceeds maximum value 2^63", o.AssetAmount().Amount)
 	}
 	b.outputs = append(b.outputs, o)
 	return nil
-}
-
-func (b *TemplateBuilder) SetReferenceData(referenceData []byte) {
-	b.referenceData = referenceData
 }
 
 // InputCount return number of input in the template builder
@@ -135,8 +130,6 @@ func (b *TemplateBuilder) Build() (*Template, *types.TxData, error) {
 		tpl.SigningInstructions = append(tpl.SigningInstructions, instruction)
 		tx.Inputs = append(tx.Inputs, in)
 	}
-
-	tx.ReferenceData = b.referenceData
 
 	tpl.Transaction = types.NewTx(*tx)
 	tpl.Fee = CalculateTxFee(tpl.Transaction)

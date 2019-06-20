@@ -19,7 +19,6 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 	}
 
 	preBlockHeader := chain.BestBlockHeader()
-
 	b := &types.Block{
 		BlockHeader: types.BlockHeader{
 			Version:           1,
@@ -84,15 +83,9 @@ func AppendBlocks(chain *protocol.Chain, num uint64) error {
 		if err != nil {
 			return err
 		}
-		if err := SolveAndUpdate(chain, block); err != nil {
+		if _, err := chain.ProcessBlock(block); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-// SolveAndUpdate solve difficulty and update chain status
-func SolveAndUpdate(chain *protocol.Chain, block *types.Block) error {
-	_, err := chain.ProcessBlock(block)
-	return err
 }

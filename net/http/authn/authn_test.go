@@ -6,9 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/vapor/accesstoken"
+	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 )
 

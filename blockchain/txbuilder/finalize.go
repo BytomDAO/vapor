@@ -23,6 +23,8 @@ var (
 	ErrOrphanTx = errors.New("finalize can't find transaction input utxo")
 	// ErrExtTxFee means transaction fee exceed max limit
 	ErrExtTxFee = errors.New("transaction fee exceed max limit")
+	// ErrNoGasInput means transaction has no gas input
+	ErrNoGasInput = errors.New("transaction has no gas input")
 )
 
 // FinalizeTx validates a transaction signature template,
@@ -37,13 +39,18 @@ func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *types.Tx) error {
 		return err
 	}
 
+	if len(tx.GasInputIDs) == 0 {
+		return ErrNoGasInput
+	}
+
 	// This part is use for prevent tx size  is 0
 	data, err := tx.TxData.MarshalText()
 	if err != nil {
 		return err
 	}
-	tx.TxData.SerializedSize = uint64(len(data))
-	tx.Tx.SerializedSize = uint64(len(data))
+	tx.TxData.SerializedSize = uint64(len(data) / 2)
+	tx.Tx.SerializedSize = uint64(len(data) / 2)
+
 	isOrphan, err := c.ValidateTx(tx)
 	if errors.Root(err) == protocol.ErrBadTx {
 		return errors.Sub(ErrRejected, err)
@@ -83,10 +90,6 @@ func checkTxSighashCommitment(tx *types.Tx) error {
 		var args [][]byte
 		switch t := inp.TypedInput.(type) {
 		case *types.SpendInput:
-			args = t.Arguments
-		case *types.IssuanceInput:
-			args = t.Arguments
-		case *types.ClaimInput:
 			args = t.Arguments
 		}
 		// Note: These numbers will need to change if more args are added such that the minimum length changes
@@ -131,16 +134,20 @@ func CalculateTxFee(tx *types.Tx) (fee uint64) {
 	totalOutputBTM := uint64(0)
 
 	for _, input := range tx.Inputs {
-		if input.InputType() != types.CoinbaseInputType && input.AssetID() == *consensus.BTMAssetID {
+		if input.InputType() == types.CoinbaseInputType {
+			return 0
+		}
+		if input.AssetID() == *consensus.BTMAssetID {
 			totalInputBTM += input.Amount()
 		}
 	}
 
 	for _, output := range tx.Outputs {
-		if *output.AssetId == *consensus.BTMAssetID {
-			totalOutputBTM += output.Amount
+		if *output.AssetAmount().AssetId == *consensus.BTMAssetID {
+			totalOutputBTM += output.AssetAmount().Amount
 		}
 	}
+
 	fee = totalInputBTM - totalOutputBTM
 	return
 }

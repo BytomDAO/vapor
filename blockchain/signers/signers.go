@@ -4,7 +4,6 @@ package signers
 import (
 	"bytes"
 	"encoding/binary"
-
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
 )

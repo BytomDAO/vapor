@@ -1,10 +1,9 @@
 package state
 
 import (
-	"errors"
-
 	"github.com/vapor/consensus"
 	"github.com/vapor/database/storage"
+	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 )
 
@@ -21,12 +20,41 @@ func NewUtxoViewpoint() *UtxoViewpoint {
 }
 
 func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFail bool) error {
+	for _, prevout := range tx.MainchainOutputIDs {
+		entry, ok := view.Entries[prevout]
+		if !ok {
+			return errors.New("fail to find mainchain output entry")
+		}
+
+		if entry.Type != storage.CrosschainUTXOType {
+			return errors.New("look up mainchainOutputID but find utxo not from mainchain")
+		}
+
+		if entry.Spent {
+			return errors.New("mainchain output has been spent")
+		}
+
+		entry.BlockHeight = block.Height
+		entry.SpendOutput()
+	}
+
 	for _, prevout := range tx.SpentOutputIDs {
-		spentOutput, err := tx.Output(prevout)
+		assetID := bc.AssetID{}
+		entryOutput, err := tx.Entry(prevout)
 		if err != nil {
 			return err
 		}
-		if statusFail && *spentOutput.Source.Value.AssetId != *consensus.BTMAssetID {
+
+		switch output := entryOutput.(type) {
+		case *bc.IntraChainOutput:
+			assetID = *output.Source.Value.AssetId
+		case *bc.VoteOutput:
+			assetID = *output.Source.Value.AssetId
+		default:
+			return errors.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", prevout.Bytes(), entryOutput)
+		}
+
+		if statusFail && assetID != *consensus.BTMAssetID {
 			continue
 		}
 
@@ -34,30 +62,57 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFa
 		if !ok {
 			return errors.New("fail to find utxo entry")
 		}
+
 		if entry.Spent {
 			return errors.New("utxo has been spent")
 		}
-		if entry.IsCoinBase && entry.BlockHeight+consensus.CoinbasePendingBlockNumber > block.Height {
-			return errors.New("coinbase utxo is not ready for use")
+
+		switch entry.Type {
+		case storage.CrosschainUTXOType:
+			return errors.New("look up spentOutputID but find utxo from mainchain")
+
+		case storage.CoinbaseUTXOType:
+			if (entry.BlockHeight + consensus.CoinbasePendingBlockNumber) > block.Height {
+				return errors.New("coinbase utxo is not ready for use")
+			}
+
+		case storage.VoteUTXOType:
+			if (entry.BlockHeight + consensus.VotePendingBlockNumber) > block.Height {
+				return errors.New("Coin is  within the voting lock time")
+			}
 		}
+
 		entry.SpendOutput()
 	}
 
 	for _, id := range tx.TxHeader.ResultIds {
-		output, err := tx.Output(*id)
+		assetID := bc.AssetID{}
+		entryOutput, err := tx.Entry(*id)
 		if err != nil {
-			// error due to it's a retirement, utxo doesn't care this output type so skip it
-			continue
-		}
-		if statusFail && *output.Source.Value.AssetId != *consensus.BTMAssetID {
 			continue
 		}
 
-		isCoinbase := false
-		if block != nil && len(block.Transactions) > 0 && block.Transactions[0].ID == tx.ID {
-			isCoinbase = true
+		utxoType := storage.NormalUTXOType
+
+		switch output := entryOutput.(type) {
+		case *bc.IntraChainOutput:
+			assetID = *output.Source.Value.AssetId
+		case *bc.VoteOutput:
+			assetID = *output.Source.Value.AssetId
+			utxoType = storage.VoteUTXOType
+		default:
+			// due to it's a retirement, utxo doesn't care this output type so skip it
+			continue
 		}
-		view.Entries[*id] = storage.NewUtxoEntry(isCoinbase, block.Height, false)
+
+		if statusFail && assetID != *consensus.BTMAssetID {
+			continue
+		}
+
+		if block != nil && len(block.Transactions) > 0 && block.Transactions[0].ID == tx.ID {
+			utxoType = storage.CoinbaseUTXOType
+		}
+		view.Entries[*id] = storage.NewUtxoEntry(utxoType, block.Height, false)
 	}
 	return nil
 }
@@ -81,48 +136,97 @@ func (view *UtxoViewpoint) CanSpend(hash *bc.Hash) bool {
 }
 
 func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
+	for _, prevout := range tx.MainchainOutputIDs {
+		// don't simply delete(view.Entries, prevout), because we need to delete from db in saveUtxoView()
+		entry, ok := view.Entries[prevout]
+		if ok && (entry.Type != storage.CrosschainUTXOType) {
+			return errors.New("look up mainchainOutputID but find utxo not from mainchain")
+		}
+
+		if ok && !entry.Spent {
+			return errors.New("try to revert an unspent utxo")
+		}
+
+		if !ok {
+			view.Entries[prevout] = storage.NewUtxoEntry(storage.CrosschainUTXOType, 0, false)
+			continue
+		}
+		entry.UnspendOutput()
+	}
+
 	for _, prevout := range tx.SpentOutputIDs {
-		spentOutput, err := tx.Output(prevout)
+		assetID := bc.AssetID{}
+		entryOutput, err := tx.Entry(prevout)
 		if err != nil {
 			return err
 		}
-		if statusFail && *spentOutput.Source.Value.AssetId != *consensus.BTMAssetID {
+
+		utxoType := storage.NormalUTXOType
+		switch output := entryOutput.(type) {
+		case *bc.IntraChainOutput:
+			assetID = *output.Source.Value.AssetId
+		case *bc.VoteOutput:
+			assetID = *output.Source.Value.AssetId
+			utxoType = storage.VoteUTXOType
+		default:
+			return errors.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", prevout.Bytes(), entryOutput)
+		}
+
+		if statusFail && assetID != *consensus.BTMAssetID {
 			continue
 		}
 
 		entry, ok := view.Entries[prevout]
+		if ok && (entry.Type == storage.CrosschainUTXOType) {
+			return errors.New("look up SpentOutputIDs but find mainchain utxo")
+		}
+
 		if ok && !entry.Spent {
 			return errors.New("try to revert an unspent utxo")
 		}
+
 		if !ok {
-			view.Entries[prevout] = storage.NewUtxoEntry(false, 0, false)
+			view.Entries[prevout] = storage.NewUtxoEntry(utxoType, 0, false)
 			continue
 		}
 		entry.UnspendOutput()
 	}
 
 	for _, id := range tx.TxHeader.ResultIds {
-		output, err := tx.Output(*id)
+		assetID := bc.AssetID{}
+		entryOutput, err := tx.Entry(*id)
 		if err != nil {
-			// error due to it's a retirement, utxo doesn't care this output type so skip it
-			continue
-		}
-		if statusFail && *output.Source.Value.AssetId != *consensus.BTMAssetID {
 			continue
 		}
 
-		view.Entries[*id] = storage.NewUtxoEntry(false, 0, true)
+		utxoType := storage.NormalUTXOType
+		switch output := entryOutput.(type) {
+		case *bc.IntraChainOutput:
+			assetID = *output.Source.Value.AssetId
+		case *bc.VoteOutput:
+			assetID = *output.Source.Value.AssetId
+			utxoType = storage.VoteUTXOType
+		default:
+			// due to it's a retirement, utxo doesn't care this output type so skip it
+			continue
+		}
+
+		if statusFail && assetID != *consensus.BTMAssetID {
+			continue
+		}
+
+		view.Entries[*id] = storage.NewUtxoEntry(utxoType, 0, true)
 	}
 	return nil
 }
 
 func (view *UtxoViewpoint) DetachBlock(block *bc.Block, txStatus *bc.TransactionStatus) error {
-	for i, tx := range block.Transactions {
+	for i := len(block.Transactions) - 1; i >= 0; i-- {
 		statusFail, err := txStatus.GetStatus(i)
 		if err != nil {
 			return err
 		}
-		if err := view.DetachTransaction(tx, statusFail); err != nil {
+		if err := view.DetachTransaction(block.Transactions[i], statusFail); err != nil {
 			return err
 		}
 	}

@@ -58,6 +58,7 @@ func requireAllParamsUsedInClauses(params []*Param, clauses []*Clause) error {
 				break
 			}
 		}
+
 		if !used {
 			return fmt.Errorf("parameter \"%s\" is unused", p.Name)
 		}
