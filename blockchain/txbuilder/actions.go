@@ -262,11 +262,11 @@ func DecodeCrossInAction(data []byte) (Action, error) {
 
 type crossInAction struct {
 	bc.AssetAmount
-	SourceID          bc.Hash `json:"source_id"`
-	SourcePos         uint64  `json:"source_pos"`
-	VMVersion         uint64  `json:"vm_version"`
-	RawDefinitionByte []byte  `json:"raw_definition_byte"`
-	IssuanceProgram   []byte  `json:"issuance_program"`
+	SourceID          bc.Hash       `json:"source_id"`
+	SourcePos         uint64        `json:"source_pos"`
+	VMVersion         uint64        `json:"vm_version"`
+	RawDefinitionByte json.HexBytes `json:"raw_definition_byte"`
+	IssuanceProgram   json.HexBytes `json:"issuance_program"`
 }
 
 func (a *crossInAction) Build(ctx context.Context, builder *TemplateBuilder) error {
