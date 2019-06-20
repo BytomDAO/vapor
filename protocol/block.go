@@ -81,7 +81,8 @@ func (c *Chain) calcReorganizeNodes(blockHeader *types.BlockHeader) ([]*types.Bl
 
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
-	detachBlockHeader := c.bestBlockHeader
+	detachBlockHeader := &types.BlockHeader{}
+	*detachBlockHeader = *c.bestBlockHeader
 	for {
 		if detachBlockHeader.Hash() == attachBlockHeader.Hash() {
 			break
