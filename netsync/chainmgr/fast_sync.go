@@ -10,47 +10,16 @@ import (
 )
 
 var (
-	FastSyncTimeout          = 200 * time.Second
-	fetchDataParallelTimeout = 100 * time.Second
+	maxBlocksPerMsg      = maxHeadersPerMsg + 1
+	maxHeadersPerMsg     = 500
+	fastSyncPivotGap     = 64
+	minGapStartFastSync  = 128
+	maxFastSyncBlocksNum = 10000
 
-	maxFetchRetryNum      = 3
-	maxBlockPerMsg        = maxBlockHeadersPerMsg + 1
-	maxBlockHeadersPerMsg = 500
-	fastSyncPivotGap      = 64
-	minGapStartFastSync   = 128
-	maxFastSyncBlockNum   = 10000
-
-	errSkeletonMismatch = errors.New("failed on fill the Skeleton")
-	errHeadersMismatch  = errors.New("failed on connect block headers")
 	errHeadersNum       = errors.New("headers number error")
 	errBlocksNum        = errors.New("blocks number error")
 	errNoCommonAncestor = errors.New("can't find common ancestor")
-	errNoSkeleton       = errors.New("can't find Skeleton")
-	errRequireHeaders   = errors.New("require headers err")
-	errRequireBlocks    = errors.New("require blocks err")
-	errWrongHeaderSize  = errors.New("wrong header size")
-	errOrphanBlock      = errors.New("block is orphan")
-	errFastSyncTimeout  = errors.New("fast sync timeout")
 )
-
-type requireTask struct {
-	index       int
-	count       int
-	length      int
-	peerID      string
-	startHeader *types.BlockHeader
-	stopHeader  *types.BlockHeader
-}
-
-type taskResult struct {
-	err  error
-	task *requireTask
-}
-
-type fastSyncResult struct {
-	success bool
-	err     error
-}
 
 func (bk *blockKeeper) blockLocator() []*bc.Hash {
 	header := bk.chain.BestBlockHeader()
@@ -92,6 +61,7 @@ func (bk *blockKeeper) fastSynchronize() error {
 
 	if err := bk.fetchSkeleton(); err != nil {
 		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("failed on fetch skeleton")
+		return err
 	}
 
 	for i := 0; i < len(bk.skeleton)-1; i++ {
@@ -142,8 +112,8 @@ func (bk *blockKeeper) findFastSyncRange() error {
 
 	gap := bk.syncPeer.Height() - uint64(fastSyncPivotGap) - bk.commonAncestor.Height
 
-	if gap > uint64(maxFastSyncBlockNum) {
-		bk.fastSyncLength = maxFastSyncBlockNum
+	if gap > uint64(maxFastSyncBlocksNum) {
+		bk.fastSyncLength = maxFastSyncBlocksNum
 		return nil
 	}
 
@@ -165,7 +135,7 @@ func (bk *blockKeeper) locateBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*t
 
 	blocks := []*types.Block{}
 	for i, header := range headers {
-		if i >= maxBlockPerMsg {
+		if i >= maxBlocksPerMsg {
 			break
 		}
 
@@ -181,8 +151,8 @@ func (bk *blockKeeper) locateBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*t
 }
 
 func (bk *blockKeeper) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, amount int, skip int) ([]*types.BlockHeader, error) {
-	if amount > maxBlockHeadersPerMsg {
-		amount = maxBlockHeadersPerMsg
+	if amount > maxHeadersPerMsg {
+		amount = maxHeadersPerMsg
 	}
 
 	startHeader, err := bk.chain.GetHeaderByHeight(0)
@@ -287,8 +257,8 @@ func (bk *blockKeeper) fetchSkeleton() error {
 	startPoint := bk.commonAncestor.Hash()
 
 	bk.skeleton = append(bk.skeleton, bk.commonAncestor)
-	if bk.fastSyncLength > maxBlockHeadersPerMsg {
-		headers, err := bk.requireHeaders(bk.syncPeer.ID(), []*bc.Hash{&startPoint}, bk.fastSyncLength/maxBlockHeadersPerMsg+1, maxBlockHeadersPerMsg-1)
+	if bk.fastSyncLength > maxHeadersPerMsg {
+		headers, err := bk.requireHeaders(bk.syncPeer.ID(), []*bc.Hash{&startPoint}, bk.fastSyncLength/maxHeadersPerMsg+1, maxHeadersPerMsg-1)
 		if err != nil {
 			return err
 		}
@@ -296,7 +266,7 @@ func (bk *blockKeeper) fetchSkeleton() error {
 		bk.skeleton = append(bk.skeleton, headers[1:]...)
 	}
 
-	if bk.fastSyncLength%maxBlockHeadersPerMsg != 0 {
+	if bk.fastSyncLength%maxHeadersPerMsg != 0 {
 		headers, err := bk.requireHeaders(bk.syncPeer.ID(), []*bc.Hash{&startPoint}, 2, bk.fastSyncLength-1)
 		if err != nil {
 			return err
