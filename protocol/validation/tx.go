@@ -6,7 +6,6 @@ import (
 
 	"github.com/vapor/config"
 	"github.com/vapor/consensus"
-	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/errors"
 	"github.com/vapor/math/checked"
 	"github.com/vapor/protocol/bc"
@@ -524,35 +523,10 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 	return nil
 }
 
-func checkStandardTx(tx *bc.Tx, blockHeight uint64) error {
+func checkInputID(tx *bc.Tx, blockHeight uint64) error {
 	for _, id := range tx.InputIDs {
 		if blockHeight >= ruleAA && id.IsZero() {
 			return ErrEmptyInputIDs
-		}
-	}
-
-	for _, id := range tx.GasInputIDs {
-		spend, err := tx.Spend(id)
-		if err != nil {
-			continue
-		}
-
-		code := []byte{}
-		outputEntry, err := tx.Entry(*spend.SpentOutputId)
-		if err != nil {
-			return err
-		}
-		switch output := outputEntry.(type) {
-		case *bc.IntraChainOutput:
-			code = output.ControlProgram.Code
-		case *bc.VoteOutput:
-			code = output.ControlProgram.Code
-		default:
-			return errors.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", id.Bytes(), outputEntry)
-		}
-
-		if !segwit.IsP2WScript(code) {
-			return ErrNotStandardTx
 		}
 	}
 	return nil
@@ -582,7 +556,7 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
 	if err := checkTimeRange(tx, block); err != nil {
 		return gasStatus, err
 	}
-	if err := checkStandardTx(tx, block.Height); err != nil {
+	if err := checkInputID(tx, block.Height); err != nil {
 		return gasStatus, err
 	}
 
