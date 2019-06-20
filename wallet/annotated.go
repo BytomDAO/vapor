@@ -33,6 +33,7 @@ func annotateTxsAsset(w *Wallet, txs []*query.AnnotatedTx) {
 }
 
 func (w *Wallet) getExternalDefinition(assetID *bc.AssetID) json.RawMessage {
+	// definitionByte := w.DB.GetAssetDefinitionByAssetID(assetID) will replace next line
 	definitionByte := w.DB.Get(asset.ExtAssetKey(assetID))
 	if definitionByte == nil {
 		return nil
