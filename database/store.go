@@ -339,13 +339,13 @@ func (s *Store) SaveChainStatus(blockHeader, irrBlockHeader *types.BlockHeader, 
 		s.cache.removeVoteResult(vote)
 	}
 
-	blockHeaderHash := blockHeader.Hash()
-	irreversibleHash := irrBlockHeader.Hash()
+	blockHash := blockHeader.Hash()
+	irrBlockHash := irrBlockHeader.Hash()
 	bytes, err := json.Marshal(protocol.BlockStoreState{
 		Height:             blockHeader.Height,
-		Hash:               &blockHeaderHash,
+		Hash:               &blockHash,
 		IrreversibleHeight: irrBlockHeader.Height,
-		IrreversibleHash:   &irreversibleHash,
+		IrreversibleHash:   &irrBlockHash,
 	})
 	if err != nil {
 		return err
