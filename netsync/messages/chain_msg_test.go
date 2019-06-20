@@ -169,24 +169,31 @@ func TestGetBlockMessage(t *testing.T) {
 
 type testGetHeadersMessage struct {
 	blockLocator []*bc.Hash
-	stopHash     *bc.Hash
+	amount       int
+	skip         int
 }
 
 func TestGetHeadersMessage(t *testing.T) {
 	testMsg := testGetHeadersMessage{
 		blockLocator: []*bc.Hash{{V0: 0x01}, {V0: 0x02}, {V0: 0x03}},
-		stopHash:     &bc.Hash{V0: 0xaa, V2: 0x55},
+		amount:       100,
+		skip:         888,
 	}
-	getHeadersMsg := NewGetHeadersMessage(testMsg.blockLocator, testMsg.stopHash)
+	getHeadersMsg := NewGetHeadersMessage(testMsg.blockLocator, testMsg.amount, testMsg.skip)
 	gotBlockLocator := getHeadersMsg.GetBlockLocator()
-	gotStopHash := getHeadersMsg.GetStopHash()
+	gotAmount := getHeadersMsg.GetAmount()
+	gotSkip := getHeadersMsg.GetSkip()
 
 	if !reflect.DeepEqual(testMsg.blockLocator, gotBlockLocator) {
 		t.Errorf("get headers msg test err: got %s\nwant %s", spew.Sdump(gotBlockLocator), spew.Sdump(testMsg.blockLocator))
 	}
 
-	if !reflect.DeepEqual(testMsg.stopHash, gotStopHash) {
-		t.Errorf("get headers msg test err: got %s\nwant %s", spew.Sdump(gotStopHash), spew.Sdump(testMsg.stopHash))
+	if !reflect.DeepEqual(testMsg.amount, gotAmount) {
+		t.Errorf("get headers msg test err: amount:got %d\nwant %d", gotAmount, testMsg.amount)
+	}
+
+	if !reflect.DeepEqual(testMsg.skip, gotSkip) {
+		t.Errorf("get headers msg test err: skip:got %d\nwant %d", gotSkip, testMsg.skip)
 	}
 }
 
