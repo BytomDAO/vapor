@@ -187,6 +187,9 @@ func (m *Manager) handleGetHeadersMsg(peer *peers.Peer, msg *msgs.GetHeadersMess
 		return
 	}
 
+	if len(headers) > maxHeadersPerMsg {
+		headers = headers[:maxHeadersPerMsg]
+	}
 	ok, err := peer.SendHeaders(headers)
 	if !ok {
 		m.peers.RemovePeer(peer.ID())

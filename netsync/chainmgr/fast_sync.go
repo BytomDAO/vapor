@@ -151,10 +151,6 @@ func (bk *blockKeeper) locateBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*t
 }
 
 func (bk *blockKeeper) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, amount int, skip int) ([]*types.BlockHeader, error) {
-	if amount > maxHeadersPerMsg {
-		amount = maxHeadersPerMsg
-	}
-
 	startHeader, err := bk.chain.GetHeaderByHeight(0)
 	if err != nil {
 		return nil, err
@@ -179,7 +175,6 @@ func (bk *blockKeeper) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, amou
 	}
 
 	headers := []*types.BlockHeader{}
-	num := 0
 	for i := startHeader.Height; i <= stopHeader.Height; i += uint64(skip) + 1 {
 		header, err := bk.chain.GetHeaderByHeight(i)
 		if err != nil {
@@ -187,7 +182,6 @@ func (bk *blockKeeper) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, amou
 		}
 
 		headers = append(headers, header)
-		num++
 	}
 	return headers, nil
 }
