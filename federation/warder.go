@@ -273,12 +273,33 @@ func (w *warder) initDestTxSigns(destTx interface{}, ormTx *orm.CrossTransaction
 }
 
 // TODO:
-func (w *warder) signDestTx(destTx interface{}, tx *orm.CrossTransaction) error {
-	if tx.Status != common.CrossTxPendingStatus || !tx.DestTxHash.Valid {
+func (w *warder) signDestTx(destTx interface{}, ormTx *orm.CrossTransaction) error {
+	if ormTx.Status != common.CrossTxPendingStatus || !ormTx.DestTxHash.Valid {
 		return errors.New("cross-chain tx status error")
 	}
 
 	return nil
+}
+
+func (w *warder) getSignData(destTx interface{}) ([][]byte, error) {
+	var signData [][]byte
+
+	switch destTx := destTx.(type) {
+	case *vaporTypes.Tx:
+		signData = make([][]byte, len(destTx.Inputs))
+		for _, input := range tx.Inputs {
+			signHash := tx.SigHash(uint32(i))
+
+		}
+
+	case *btmTypes.Tx:
+		signData = make([][]byte, len(destTx.Inputs))
+
+	default:
+		return [][]byte{}, errors.New("unknown tx type")
+	}
+
+	return signData, nil
 }
 
 // TODO:
