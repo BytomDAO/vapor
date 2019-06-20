@@ -14,7 +14,7 @@ import (
 const (
 	maxCachedBlockHeaders      = 4096
 	maxCachedBlockTransactions = 1024
-	maxCachedHeightIndexes     = 8192
+	maxCachedBlockHashes       = 8192
 	maxCachedMainChainHashes   = 8192
 	maxCachedVoteResults       = 128
 )
@@ -29,7 +29,7 @@ func newCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransacti
 	return cache{
 		lruBlockHeaders:    common.NewCache(maxCachedBlockHeaders),
 		lruBlockTxs:        common.NewCache(maxCachedBlockTransactions),
-		lruBlockHashes:     common.NewCache(maxCachedHeightIndexes),
+		lruBlockHashes:     common.NewCache(maxCachedBlockHashes),
 		lruMainChainHashes: common.NewCache(maxCachedMainChainHashes),
 		lruVoteResults:     common.NewCache(maxCachedVoteResults),
 
@@ -88,7 +88,7 @@ func (c *cache) lookupBlockTxs(hash *bc.Hash) ([]*types.Tx, error) {
 			return nil, err
 		}
 
-		c.lruBlockTxs.Add(hash, blockTxs)
+		c.lruBlockTxs.Add(*hash, blockTxs)
 		return blockTxs, nil
 	})
 	if err != nil {

@@ -113,7 +113,7 @@ func GetBlockTransactions(db dbm.DB, hash *bc.Hash) ([]*types.Tx, error) {
 func GetMainChainHash(db dbm.DB, height uint64) (*bc.Hash, error) {
 	binaryHash := db.Get(calcMainChainHashPrefix(height))
 	if binaryHash == nil {
-		return nil, fmt.Errorf("There are no BlockHash with given height %s", height)
+		return nil, fmt.Errorf("There are no BlockHash with given height %d", height)
 	}
 
 	hash := &bc.Hash{}
