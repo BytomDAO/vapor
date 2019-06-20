@@ -14,9 +14,9 @@ import (
 const (
 	maxCachedBlockHeaders      = 4096
 	maxCachedBlockTransactions = 1024
-	maxCachedVoteResults       = 128
 	maxCachedHeightIndexes     = 8192
 	maxCachedMainChainHashes   = 8192
+	maxCachedVoteResults       = 128
 )
 
 type fillBlockHeaderFn func(hash *bc.Hash) (*types.BlockHeader, error)

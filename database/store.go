@@ -127,7 +127,7 @@ func GetMainChainHash(db dbm.DB, height uint64) (*bc.Hash, error) {
 func GetBlockHashesByHeight(db dbm.DB, height uint64) ([]*bc.Hash, error) {
 	binaryHashes := db.Get(calcBlockHashesByHeightPrefix(height))
 	if binaryHashes == nil {
-		return nil, fmt.Errorf("There are no block hashes with given height %s", height)
+		return nil, fmt.Errorf("There are no block hashes with given height %d", height)
 	}
 
 	hashes := []*bc.Hash{}
@@ -281,13 +281,12 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 		return errors.Wrap(err, "Marshal block hash")
 	}
 
-	hashes := []*bc.Hash{}
-	if hashes, err = s.GetBlockHashesByHeight(block.Height); err != nil {
-		return err
+	blockHashes := []*bc.Hash{}
+	if hashes, _ := s.GetBlockHashesByHeight(block.Height); hashes != nil {
+		blockHashes = append(blockHashes, hashes...)
 	}
-
-	hashes = append(hashes, &blockHash)
-	binaryBlockHashes, err := json.Marshal(hashes)
+	blockHashes = append(blockHashes, &blockHash)
+	binaryBlockHashes, err := json.Marshal(blockHashes)
 	if err != nil {
 		return errors.Wrap(err, "Marshal block hashes")
 	}
