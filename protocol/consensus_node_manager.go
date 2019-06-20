@@ -60,38 +60,38 @@ func getBlockerOrder(startTimestamp, blockTimestamp, numOfConsensusNode uint64) 
 }
 
 func (c *Chain) getPrevRoundLastBlock(prevBlockHash *bc.Hash) (*types.BlockHeader, error) {
-	node, err := c.store.GetBlockHeader(prevBlockHash)
+	blockHeader, err := c.store.GetBlockHeader(prevBlockHash)
 	if err != nil {
 		return nil, errNotFoundBlockNode
 	}
 
-	for node.Height%consensus.RoundVoteBlockNums != 0 {
-		node, err = c.store.GetBlockHeader(&node.PreviousBlockHash)
+	for blockHeader.Height%consensus.RoundVoteBlockNums != 0 {
+		blockHeader, err = c.store.GetBlockHeader(&blockHeader.PreviousBlockHash)
 		if err != nil {
 			return nil, err
 		}
 	}
-	return node, nil
+	return blockHeader, nil
 }
 
 func (c *Chain) getConsensusNodes(prevBlockHash *bc.Hash) (map[string]*state.ConsensusNode, error) {
-	prevBlockNode, err := c.store.GetBlockHeader(prevBlockHash)
+	prevBlockHeader, err := c.store.GetBlockHeader(prevBlockHash)
 	if err != nil {
 		return nil, errNotFoundBlockNode
 	}
 
-	bestNode := c.BestBlockHeader()
-	preSeq := state.CalcVoteSeq(prevBlockNode.Height+1) - 1
-	if bestSeq := state.CalcVoteSeq(bestNode.Height); preSeq > bestSeq {
+	bestBlockHeader := c.BestBlockHeader()
+	preSeq := state.CalcVoteSeq(prevBlockHeader.Height+1) - 1
+	if bestSeq := state.CalcVoteSeq(bestBlockHeader.Height); preSeq > bestSeq {
 		preSeq = bestSeq
 	}
 
-	lastBlockNode, err := c.getPrevRoundLastBlock(prevBlockHash)
+	lastBlockHeader, err := c.getPrevRoundLastBlock(prevBlockHash)
 	if err != nil {
 		return nil, err
 	}
 
-	voteResult, err := c.getVoteResult(preSeq, lastBlockNode)
+	voteResult, err := c.getVoteResult(preSeq, lastBlockHeader)
 	if err != nil {
 		return nil, err
 	}
@@ -100,61 +100,61 @@ func (c *Chain) getConsensusNodes(prevBlockHash *bc.Hash) (map[string]*state.Con
 }
 
 func (c *Chain) getBestVoteResult() (*state.VoteResult, error) {
-	bestNode := c.BestBlockHeader()
-	seq := state.CalcVoteSeq(bestNode.Height)
-	return c.getVoteResult(seq, bestNode)
+	bestBlockHeader := c.BestBlockHeader()
+	seq := state.CalcVoteSeq(bestBlockHeader.Height)
+	return c.getVoteResult(seq, bestBlockHeader)
 }
 
 // getVoteResult return the vote result
 // seq represent the sequence of vote
-// blockNode represent the chain in which the result of the vote is located
+// blockHeader represent the chain in which the result of the vote is located
 // Voting results need to be adjusted according to the chain
-func (c *Chain) getVoteResult(seq uint64, blockNode *types.BlockHeader) (*state.VoteResult, error) {
+func (c *Chain) getVoteResult(seq uint64, blockHeader *types.BlockHeader) (*state.VoteResult, error) {
 	voteResult, err := c.store.GetVoteResult(seq)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := c.reorganizeVoteResult(voteResult, blockNode); err != nil {
+	if err := c.reorganizeVoteResult(voteResult, blockHeader); err != nil {
 		return nil, err
 	}
 
 	return voteResult, nil
 }
 
-func (c *Chain) reorganizeVoteResult(voteResult *state.VoteResult, node *types.BlockHeader) error {
-	mainChainNode, err := c.store.GetBlockHeader(&voteResult.BlockHash)
+func (c *Chain) reorganizeVoteResult(voteResult *state.VoteResult, blockHeader *types.BlockHeader) error {
+	mainChainBlockHeader, err := c.store.GetBlockHeader(&voteResult.BlockHash)
 	if err != nil {
 		return errNotFoundBlockNode
 	}
 
-	var attachNodes []*types.BlockHeader
-	var detachNodes []*types.BlockHeader
-	for forkChainNode := node; mainChainNode != forkChainNode; {
+	var attachBlockHeaders []*types.BlockHeader
+	var detachBlockHeaders []*types.BlockHeader
+	for forkChainBlockHeader := blockHeader; mainChainBlockHeader != forkChainBlockHeader; {
 		var forChainRollback, mainChainRollBack bool
-		if forChainRollback = forkChainNode.Height >= mainChainNode.Height; forChainRollback {
-			attachNodes = append([]*types.BlockHeader{forkChainNode}, attachNodes...)
+		if forChainRollback = forkChainBlockHeader.Height >= mainChainBlockHeader.Height; forChainRollback {
+			attachBlockHeaders = append([]*types.BlockHeader{forkChainBlockHeader}, attachBlockHeaders...)
 		}
-		if mainChainRollBack = forkChainNode.Height <= mainChainNode.Height; mainChainRollBack {
-			detachNodes = append(detachNodes, mainChainNode)
+		if mainChainRollBack = forkChainBlockHeader.Height <= mainChainBlockHeader.Height; mainChainRollBack {
+			detachBlockHeaders = append(detachBlockHeaders, mainChainBlockHeader)
 		}
 		if forChainRollback {
-			forkChainNode, err = c.store.GetBlockHeader(&forkChainNode.PreviousBlockHash)
+			forkChainBlockHeader, err = c.store.GetBlockHeader(&forkChainBlockHeader.PreviousBlockHash)
 			if err != nil {
 				return errNotFoundBlockNode
 			}
 		}
 		if mainChainRollBack {
-			mainChainNode, err = c.store.GetBlockHeader(&mainChainNode.PreviousBlockHash)
+			mainChainBlockHeader, err = c.store.GetBlockHeader(&mainChainBlockHeader.PreviousBlockHash)
 			if err != nil {
 				return errNotFoundBlockNode
 			}
 		}
 	}
 
-	for _, node := range detachNodes {
-		nodeHash := node.Hash()
-		block, err := c.store.GetBlock(&nodeHash)
+	for _, blockHeader := range detachBlockHeaders {
+		blockHash := blockHeader.Hash()
+		block, err := c.store.GetBlock(&blockHash)
 		if err != nil {
 			return err
 		}
@@ -164,9 +164,9 @@ func (c *Chain) reorganizeVoteResult(voteResult *state.VoteResult, node *types.B
 		}
 	}
 
-	for _, node := range attachNodes {
-		nodeHash := node.Hash()
-		block, err := c.store.GetBlock(&nodeHash)
+	for _, blockHeader := range attachBlockHeaders {
+		blockHash := blockHeader.Hash()
+		block, err := c.store.GetBlock(&blockHash)
 		if err != nil {
 			return err
 		}

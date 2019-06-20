@@ -57,42 +57,42 @@ func (c *Chain) GetHeaderByHeight(height uint64) (*types.BlockHeader, error) {
 	return c.store.GetBlockHeader(hash)
 }
 
-func (c *Chain) calcReorganizeNodes(node *types.BlockHeader) ([]*types.BlockHeader, []*types.BlockHeader, error) {
-	var attachNodes []*types.BlockHeader
-	var detachNodes []*types.BlockHeader
+func (c *Chain) calcReorganizeNodes(blockHeader *types.BlockHeader) ([]*types.BlockHeader, []*types.BlockHeader, error) {
+	var attachBlockHeaders []*types.BlockHeader
+	var detachBlockHeaders []*types.BlockHeader
 	var err error
 
-	attachNode := node
+	attachBlockHeader := blockHeader
 	for {
-		getBlockHash, err := c.store.GetMainChainHash(attachNode.Height)
+		getBlockHash, err := c.store.GetMainChainHash(attachBlockHeader.Height)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		if *getBlockHash == attachNode.Hash() {
+		if *getBlockHash == attachBlockHeader.Hash() {
 			break
 		}
 
-		attachNodes = append([]*types.BlockHeader{attachNode}, attachNodes...)
-		attachNode, err = c.store.GetBlockHeader(&attachNode.PreviousBlockHash)
+		attachBlockHeaders = append([]*types.BlockHeader{attachBlockHeader}, attachBlockHeaders...)
+		attachBlockHeader, err = c.store.GetBlockHeader(&attachBlockHeader.PreviousBlockHash)
 		if err != nil {
 			return nil, nil, err
 		}
 	}
 
-	detachNode := c.bestBlockHeader
+	detachBlockHeader := c.bestBlockHeader
 	for {
-		if detachNode.Hash() == attachNode.Hash() {
+		if detachBlockHeader.Hash() == attachBlockHeader.Hash() {
 			break
 		}
 
-		detachNodes = append(detachNodes, detachNode)
-		detachNode, err = c.store.GetBlockHeader(&detachNode.PreviousBlockHash)
+		detachBlockHeaders = append(detachBlockHeaders, detachBlockHeader)
+		detachBlockHeader, err = c.store.GetBlockHeader(&detachBlockHeader.PreviousBlockHash)
 		if err != nil {
 			return nil, nil, err
 		}
 	}
-	return attachNodes, detachNodes, nil
+	return attachBlockHeaders, detachBlockHeaders, nil
 }
 
 func (c *Chain) connectBlock(block *types.Block) (err error) {
@@ -134,8 +134,8 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	return nil
 }
 
-func (c *Chain) reorganizeChain(node *types.BlockHeader) error {
-	attachNodes, detachNodes, err := c.calcReorganizeNodes(node)
+func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
+	attachBlockHeaders, detachBlockHeaders, err := c.calcReorganizeNodes(blockHeader)
 	if err != nil {
 		return err
 	}
@@ -148,9 +148,9 @@ func (c *Chain) reorganizeChain(node *types.BlockHeader) error {
 		return err
 	}
 
-	for _, detachNode := range detachNodes {
-		detachNodeHash := detachNode.Hash()
-		b, err := c.store.GetBlock(&detachNodeHash)
+	for _, detachBlockHeader := range detachBlockHeaders {
+		detachHash := detachBlockHeader.Hash()
+		b, err := c.store.GetBlock(&detachHash)
 		if err != nil {
 			return err
 		}
@@ -173,13 +173,13 @@ func (c *Chain) reorganizeChain(node *types.BlockHeader) error {
 			return err
 		}
 
-		nodeHash := node.Hash()
-		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": nodeHash.String()}).Debug("detach from mainchain")
+		nodeHash := blockHeader.Hash()
+		log.WithFields(log.Fields{"module": logModule, "height": blockHeader.Height, "hash": nodeHash.String()}).Debug("detach from mainchain")
 	}
 
-	for _, attachNode := range attachNodes {
-		attachNodeHash := attachNode.Hash()
-		b, err := c.store.GetBlock(&attachNodeHash)
+	for _, attachBlockHeader := range attachBlockHeaders {
+		attachHash := attachBlockHeader.Hash()
+		b, err := c.store.GetBlock(&attachHash)
 		if err != nil {
 			return err
 		}
@@ -206,19 +206,19 @@ func (c *Chain) reorganizeChain(node *types.BlockHeader) error {
 			voteResults = append(voteResults, voteResult.Fork())
 		}
 
-		if c.isIrreversible(attachNode) && attachNode.Height > irreversibleNode.Height {
-			irreversibleNode = attachNode
+		if c.isIrreversible(attachBlockHeader) && attachBlockHeader.Height > irreversibleNode.Height {
+			irreversibleNode = attachBlockHeader
 		}
 
-		nodeHash := node.Hash()
-		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": nodeHash.String()}).Debug("attach from mainchain")
+		nodeHash := blockHeader.Hash()
+		log.WithFields(log.Fields{"module": logModule, "height": blockHeader.Height, "hash": nodeHash.String()}).Debug("attach from mainchain")
 	}
 
-	if detachNodes[len(detachNodes)-1].Height <= c.bestIrrBlockHeader.Height && irreversibleNode.Height <= c.bestIrrBlockHeader.Height {
+	if detachBlockHeaders[len(detachBlockHeaders)-1].Height <= c.bestIrrBlockHeader.Height && irreversibleNode.Height <= c.bestIrrBlockHeader.Height {
 		return errors.New("rollback block below the height of irreversible block")
 	}
 	voteResults = append(voteResults, voteResult.Fork())
-	return c.setState(node, irreversibleNode, utxoView, voteResults)
+	return c.setState(blockHeader, irreversibleNode, utxoView, voteResults)
 }
 
 // SaveBlock will validate and save block into storage

@@ -67,31 +67,31 @@ func (c *Chain) IsBlocker(prevBlockHash *bc.Hash, pubKey string, timeStamp uint6
 // return whether a block become irreversible, if so, the chain module must update status
 func (c *Chain) ProcessBlockSignature(signature, xPub []byte, blockHash *bc.Hash) error {
 	xpubStr := hex.EncodeToString(xPub[:])
-	blockNode, _ := c.store.GetBlockHeader(blockHash)
+	blockHeader, _ := c.store.GetBlockHeader(blockHash)
 
 	// save the signature if the block is not exist
-	if blockNode == nil {
+	if blockHeader == nil {
 		cacheKey := signCacheKey(blockHash.String(), xpubStr)
 		c.signatureCache.Add(cacheKey, signature)
 		return nil
 	}
 
-	consensusNode, err := c.getConsensusNode(&blockNode.PreviousBlockHash, xpubStr)
+	consensusNode, err := c.getConsensusNode(&blockHeader.PreviousBlockHash, xpubStr)
 	if err != nil {
 		return err
 	}
 
-	if blockNode.BlockWitness.Get(consensusNode.Order) != nil {
+	if blockHeader.BlockWitness.Get(consensusNode.Order) != nil {
 		return nil
 	}
 
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
-	if err := c.checkNodeSign(blockNode, consensusNode, signature); err != nil {
+	if err := c.checkNodeSign(blockHeader, consensusNode, signature); err != nil {
 		return err
 	}
 
-	if err := c.updateBlockSignature(blockNode, consensusNode.Order, signature); err != nil {
+	if err := c.updateBlockSignature(blockHeader, consensusNode.Order, signature); err != nil {
 		return err
 	}
 	return c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: *blockHash, Signature: signature, XPub: xPub})
@@ -162,12 +162,12 @@ func (c *Chain) checkNodeSign(bh *types.BlockHeader, consensusNode *state.Consen
 			continue
 		}
 
-		blockNode, err := c.store.GetBlockHeader(blockHash)
+		blockHeader, err := c.store.GetBlockHeader(blockHash)
 		if err != nil {
 			return err
 		}
 
-		consensusNode, err := c.getConsensusNode(&blockNode.PreviousBlockHash, consensusNode.XPub.String())
+		consensusNode, err := c.getConsensusNode(&blockHeader.PreviousBlockHash, consensusNode.XPub.String())
 		if err != nil && err != errNotFoundConsensusNode {
 			return err
 		}
@@ -176,7 +176,7 @@ func (c *Chain) checkNodeSign(bh *types.BlockHeader, consensusNode *state.Consen
 			continue
 		}
 
-		if blockNode.BlockWitness.Get(consensusNode.Order) != nil {
+		if blockHeader.BlockWitness.Get(consensusNode.Order) != nil {
 			return errDoubleSignBlock
 		}
 	}
@@ -203,25 +203,25 @@ func (c *Chain) SignBlock(block *types.Block) ([]byte, error) {
 	}
 
 	for _, hash := range blockHashes {
-		blockNode, err := c.store.GetBlockHeader(hash)
+		blockHeader, err := c.store.GetBlockHeader(hash)
 		if err != nil {
 			return nil, err
 		}
 
 		// Has already signed the same height block
-		if blockNode.BlockWitness.Get(node.Order) != nil {
+		if blockHeader.BlockWitness.Get(node.Order) != nil {
 			return nil, nil
 		}
 	}
 
-	blockNode, err := c.store.GetBlockHeader(&block.PreviousBlockHash)
+	blockHeader, err := c.store.GetBlockHeader(&block.PreviousBlockHash)
 	if err != nil {
 		return nil, err
 	}
 
 	// check block exist in main chain
 	for {
-		if blockNode.Height <= c.bestIrrBlockHeader.Height {
+		if blockHeader.Height <= c.bestIrrBlockHeader.Height {
 			return nil, errSignForkChain
 		}
 
@@ -229,7 +229,7 @@ func (c *Chain) SignBlock(block *types.Block) ([]byte, error) {
 			break
 		}
 
-		blockNode, err = c.store.GetBlockHeader(&blockNode.PreviousBlockHash)
+		blockHeader, err = c.store.GetBlockHeader(&blockHeader.PreviousBlockHash)
 		if err != nil {
 			return nil, err
 		}

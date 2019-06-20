@@ -118,12 +118,12 @@ func (c *Chain) BestBlockHeader() *types.BlockHeader {
 
 // InMainChain checks wheather a block is in the main chain
 func (c *Chain) InMainChain(hash bc.Hash) bool {
-	blockNode, err := c.store.GetBlockHeader(&hash)
+	blockHeader, err := c.store.GetBlockHeader(&hash)
 	if err != nil {
 		return false
 	}
 
-	blockHash, err := c.store.GetMainChainHash(blockNode.Height)
+	blockHash, err := c.store.GetMainChainHash(blockHeader.Height)
 	if err != nil {
 		return false
 	}
