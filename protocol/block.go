@@ -17,8 +17,7 @@ var (
 	ErrBadBlock = errors.New("invalid block")
 	// ErrBadStateRoot is returned when the computed assets merkle root
 	// disagrees with the one declared in a block header.
-	ErrBadStateRoot           = errors.New("invalid state merkle root")
-	errBelowIrreversibleBlock = errors.New("the height of block below irreversible block")
+	ErrBadStateRoot = errors.New("invalid state merkle root")
 )
 
 // BlockExist check is a block in chain or orphan
@@ -34,7 +33,7 @@ func (c *Chain) GetBlockByHash(hash *bc.Hash) (*types.Block, error) {
 	return c.store.GetBlock(hash)
 }
 
-// GetBlockByHeight return a block header by given height
+// GetBlockByHeight return a block by given height
 func (c *Chain) GetBlockByHeight(height uint64) (*types.Block, error) {
 	hash, err := c.store.GetMainChainHash(height)
 	if err != nil {
@@ -80,6 +79,8 @@ func (c *Chain) calcReorganizeNodes(blockHeader *types.BlockHeader) ([]*types.Bl
 		}
 	}
 
+	c.cond.L.Lock()
+	defer c.cond.L.Unlock()
 	detachBlockHeader := c.bestBlockHeader
 	for {
 		if detachBlockHeader.Hash() == attachBlockHeader.Hash() {
@@ -96,7 +97,6 @@ func (c *Chain) calcReorganizeNodes(blockHeader *types.BlockHeader) ([]*types.Bl
 }
 
 func (c *Chain) connectBlock(block *types.Block) (err error) {
-	irreversibleNode := c.bestIrrBlockHeader
 	bcBlock := types.MapBlock(block)
 	if bcBlock.TransactionStatus, err = c.store.GetTransactionStatus(&bcBlock.ID); err != nil {
 		return err
@@ -118,13 +118,16 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
-	// pointer copy?
+	c.cond.L.Lock()
+	defer c.cond.L.Unlock()
+	irrBlockHeader := &types.BlockHeader{}
+	*irrBlockHeader = *c.bestIrrBlockHeader
 	blockHeader := &block.BlockHeader
-	if c.isIrreversible(blockHeader) && block.Height > irreversibleNode.Height {
-		irreversibleNode = blockHeader
+	if c.isIrreversible(blockHeader) && block.Height > irrBlockHeader.Height {
+		irrBlockHeader = blockHeader
 	}
 
-	if err := c.setState(blockHeader, irreversibleNode, utxoView, []*state.VoteResult{voteResult}); err != nil {
+	if err := c.setState(blockHeader, irrBlockHeader, utxoView, []*state.VoteResult{voteResult}); err != nil {
 		return err
 	}
 
@@ -142,7 +145,6 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 
 	utxoView := state.NewUtxoViewpoint()
 	voteResults := []*state.VoteResult{}
-	irreversibleNode := c.bestIrrBlockHeader
 	voteResult, err := c.getBestVoteResult()
 	if err != nil {
 		return err
@@ -173,10 +175,14 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 			return err
 		}
 
-		nodeHash := blockHeader.Hash()
-		log.WithFields(log.Fields{"module": logModule, "height": blockHeader.Height, "hash": nodeHash.String()}).Debug("detach from mainchain")
+		blockHash := blockHeader.Hash()
+		log.WithFields(log.Fields{"module": logModule, "height": blockHeader.Height, "hash": blockHash.String()}).Debug("detach from mainchain")
 	}
 
+	c.cond.L.Lock()
+	defer c.cond.L.Unlock()
+	irrBlockHeader := &types.BlockHeader{}
+	*irrBlockHeader = *c.bestIrrBlockHeader
 	for _, attachBlockHeader := range attachBlockHeaders {
 		attachHash := attachBlockHeader.Hash()
 		b, err := c.store.GetBlock(&attachHash)
@@ -206,19 +212,19 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 			voteResults = append(voteResults, voteResult.Fork())
 		}
 
-		if c.isIrreversible(attachBlockHeader) && attachBlockHeader.Height > irreversibleNode.Height {
-			irreversibleNode = attachBlockHeader
+		if c.isIrreversible(attachBlockHeader) && attachBlockHeader.Height > irrBlockHeader.Height {
+			irrBlockHeader = attachBlockHeader
 		}
 
-		nodeHash := blockHeader.Hash()
-		log.WithFields(log.Fields{"module": logModule, "height": blockHeader.Height, "hash": nodeHash.String()}).Debug("attach from mainchain")
+		blockHash := blockHeader.Hash()
+		log.WithFields(log.Fields{"module": logModule, "height": blockHeader.Height, "hash": blockHash.String()}).Debug("attach from mainchain")
 	}
 
-	if detachBlockHeaders[len(detachBlockHeaders)-1].Height <= c.bestIrrBlockHeader.Height && irreversibleNode.Height <= c.bestIrrBlockHeader.Height {
+	if detachBlockHeaders[len(detachBlockHeaders)-1].Height <= c.bestIrrBlockHeader.Height && irrBlockHeader.Height <= c.bestIrrBlockHeader.Height {
 		return errors.New("rollback block below the height of irreversible block")
 	}
 	voteResults = append(voteResults, voteResult.Fork())
-	return c.setState(blockHeader, irreversibleNode, utxoView, voteResults)
+	return c.setState(blockHeader, irrBlockHeader, utxoView, voteResults)
 }
 
 // SaveBlock will validate and save block into storage

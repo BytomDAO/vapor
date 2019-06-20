@@ -194,8 +194,6 @@ func (c *Chain) SignBlock(block *types.Block) ([]byte, error) {
 		return nil, err
 	}
 
-	c.cond.L.Lock()
-	defer c.cond.L.Unlock()
 	//check double sign in same block height
 	blockHashes, err := c.store.GetBlockHashesByHeight(block.Height)
 	if err != nil {
@@ -219,6 +217,8 @@ func (c *Chain) SignBlock(block *types.Block) ([]byte, error) {
 		return nil, err
 	}
 
+	c.cond.L.Lock()
+	defer c.cond.L.Unlock()
 	// check block exist in main chain
 	for {
 		if blockHeader.Height <= c.bestIrrBlockHeader.Height {
@@ -249,6 +249,8 @@ func (c *Chain) updateBlockSignature(blockHeader *types.BlockHeader, nodeOrder u
 		return err
 	}
 
+	c.cond.L.Lock()
+	defer c.cond.L.Unlock()
 	if c.isIrreversible(blockHeader) && blockHeader.Height > c.bestIrrBlockHeader.Height {
 		if err := c.store.SaveChainStatus(c.bestBlockHeader, blockHeader, state.NewUtxoViewpoint(), []*state.VoteResult{}); err != nil {
 			return err

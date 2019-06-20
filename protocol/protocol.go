@@ -136,11 +136,13 @@ func (c *Chain) setState(blockHeader, irrBlockHeader *types.BlockHeader, view *s
 		return err
 	}
 
+	c.cond.L.Lock()
+	defer c.cond.L.Unlock()
 	c.bestBlockHeader = blockHeader
 	c.bestIrrBlockHeader = irrBlockHeader
 
-	bestHash := c.bestBlockHeader.Hash()
-	log.WithFields(log.Fields{"module": logModule, "height": c.bestBlockHeader.Height, "hash": bestHash.String()}).Debug("chain best status has been update")
+	blockHash := blockHeader.Hash()
+	log.WithFields(log.Fields{"module": logModule, "height": blockHeader.Height, "hash": blockHash.String()}).Debug("chain best status has been update")
 	c.cond.Broadcast()
 	return nil
 }
