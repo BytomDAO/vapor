@@ -4,7 +4,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/vapor/config"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/database/storage"
 	"github.com/vapor/protocol"
@@ -23,7 +22,8 @@ func TestSaveChainStatus(t *testing.T) {
 
 	store := NewStore(testDB)
 
-	node := &state.BlockNode{Height: 100, Hash: bc.Hash{V0: 0, V1: 1, V2: 2, V3: 3}}
+	blockHeader := &types.BlockHeader{Height: 100}
+	blockHash := blockHeader.Hash() //Hash: bc.Hash{V0: 0, V1: 1, V2: 2, V3: 3}
 	view := &state.UtxoViewpoint{
 		Entries: map[bc.Hash]*storage.UtxoEntry{
 			bc.Hash{V0: 1, V1: 2, V2: 3, V3: 4}: &storage.UtxoEntry{Type: storage.NormalUTXOType, BlockHeight: 100, Spent: false},
@@ -36,11 +36,11 @@ func TestSaveChainStatus(t *testing.T) {
 		},
 	}
 
-	if err := store.SaveChainStatus(node, node, view, []*state.VoteResult{}); err != nil {
+	if err := store.SaveChainStatus(blockHeader, blockHeader, view, []*state.VoteResult{}); err != nil {
 		t.Fatal(err)
 	}
 
-	expectStatus := &protocol.BlockStoreState{Height: node.Height, Hash: &node.Hash, IrreversibleHeight: node.Height, IrreversibleHash: &node.Hash}
+	expectStatus := &protocol.BlockStoreState{Height: blockHeader.Height, Hash: &blockHash, IrreversibleHeight: blockHeader.Height, IrreversibleHash: &blockHash}
 	if !testutil.DeepEqual(store.GetStoreStatus(), expectStatus) {
 		t.Errorf("got block status:%v, expect block status:%v", store.GetStoreStatus(), expectStatus)
 	}
@@ -75,15 +75,14 @@ func TestSaveBlock(t *testing.T) {
 	}()
 
 	store := NewStore(testDB)
-
-	block := config.GenesisBlock()
+	block := mockGenesisBlock()
 	status := &bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{{StatusFail: true}}}
 	if err := store.SaveBlock(block, status); err != nil {
 		t.Fatal(err)
 	}
 
 	blockHash := block.Hash()
-	gotBlock, err := store.GetBlock(&blockHash, block.Height)
+	gotBlock, err := store.GetBlock(&blockHash)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,4 +111,34 @@ func TestSaveBlock(t *testing.T) {
 	if !testutil.DeepEqual(block.BlockHeader, gotBlockHeader) {
 		t.Errorf("got block header:%v, expect block header:%v", gotBlockHeader, block.BlockHeader)
 	}
+}
+
+func mockGenesisBlock() *types.Block {
+	txData := types.TxData{
+		Version: 1,
+		Inputs: []*types.TxInput{
+			types.NewCoinbaseInput([]byte("Information is power. -- Jan/11/2013. Computing is power. -- Apr/24/2018.")),
+		},
+		Outputs: []*types.TxOutput{
+			types.NewVoteOutput(bc.AssetID{V0: 1}, uint64(10000), []byte{0x51}, []byte{0x51}),
+		},
+	}
+	tx := types.NewTx(txData)
+	txStatus := bc.NewTransactionStatus()
+	txStatus.SetStatus(0, false)
+	txStatusHash, _ := types.TxStatusMerkleRoot(txStatus.VerifyStatus)
+	merkleRoot, _ := types.TxMerkleRoot([]*bc.Tx{tx.Tx})
+	block := &types.Block{
+		BlockHeader: types.BlockHeader{
+			Version:   1,
+			Height:    0,
+			Timestamp: 1528945000,
+			BlockCommitment: types.BlockCommitment{
+				TransactionsMerkleRoot: merkleRoot,
+				TransactionStatusHash:  txStatusHash,
+			},
+		},
+		Transactions: []*types.Tx{tx},
+	}
+	return block
 }
