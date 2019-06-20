@@ -153,15 +153,14 @@ func CalculateTxFee(tx *types.Tx) (fee uint64) {
 }
 
 func checkGasInputIDs(tx *types.Tx) error {
-	crossChainInputNum := 0
 	for _, inp := range tx.Inputs {
 		switch inp.InputType() {
 		case types.CrossChainInputType:
-			crossChainInputNum++
+			return nil
 		}
 	}
 
-	if crossChainInputNum != len(tx.Inputs) && len(tx.GasInputIDs) == 0 {
+	if len(tx.GasInputIDs) == 0 {
 		return ErrNoGasInput
 	}
 	return nil
