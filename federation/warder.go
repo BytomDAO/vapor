@@ -278,7 +278,12 @@ func (w *warder) signDestTx(destTx interface{}, ormTx *orm.CrossTransaction) err
 		return errors.New("cross-chain tx status error")
 	}
 
-	return nil
+	_ /*signData*/, err := w.getSignData(destTx)
+	if err != nil {
+		return errors.New("getSignData")
+	}
+
+	return w.db.Model(nil).Where(nil).UpdateColumn(nil).Error
 }
 
 func (w *warder) getSignData(destTx interface{}) ([]string, error) {
