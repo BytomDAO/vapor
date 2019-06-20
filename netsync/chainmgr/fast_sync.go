@@ -14,8 +14,9 @@ var (
 	fetchDataParallelTimeout = 100 * time.Second
 
 	maxFetchRetryNum      = 3
-	maxBlockPerMsg        = 500
+	maxBlockPerMsg        = maxBlockHeadersPerMsg + 1
 	maxBlockHeadersPerMsg = 500
+	fastSyncPivotGap      = 64
 	minGapStartFastSync   = 128
 	maxFastSyncBlockNum   = 10000
 
@@ -139,14 +140,14 @@ func (bk *blockKeeper) findFastSyncRange() error {
 		return err
 	}
 
-	gap := bk.syncPeer.Height() - bk.commonAncestor.Height
+	gap := bk.syncPeer.Height() - uint64(fastSyncPivotGap) - bk.commonAncestor.Height
 
-	if gap > uint64(maxFastSyncBlockNum+minGapStartFastSync) {
+	if gap > uint64(maxFastSyncBlockNum) {
 		bk.fastSyncLength = maxFastSyncBlockNum
 		return nil
 	}
 
-	bk.fastSyncLength = int(gap) - minGapStartFastSync
+	bk.fastSyncLength = int(gap)
 	return nil
 }
 
@@ -209,7 +210,7 @@ func (bk *blockKeeper) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, amou
 
 	headers := []*types.BlockHeader{}
 	num := 0
-	for i := startHeader.Height; i <= stopHeader.Height && num < maxBlockHeadersPerMsg; i += uint64(skip) + 1 {
+	for i := startHeader.Height; i <= stopHeader.Height; i += uint64(skip) + 1 {
 		header, err := bk.chain.GetHeaderByHeight(i)
 		if err != nil {
 			return nil, err
