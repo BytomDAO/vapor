@@ -305,7 +305,7 @@ func (c *crossInAction) checkAssetID() error {
 	defHash := bc.NewHash(sha3.Sum256(c.RawDefinitionByte))
 	assetID := bc.ComputeAssetID(c.IssuanceProgram, c.VMVersion, &defHash)
 
-	if *c.AssetId == *consensus.BTMAssetID && assetID != *c.AssetAmount.AssetId {
+	if *c.AssetId != *consensus.BTMAssetID && assetID != *c.AssetAmount.AssetId {
 		return errors.New("incorrect asset_idincorrect asset_id")
 	}
 
