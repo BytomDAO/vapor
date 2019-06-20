@@ -281,22 +281,26 @@ func (w *warder) signDestTx(destTx interface{}, ormTx *orm.CrossTransaction) err
 	return nil
 }
 
-func (w *warder) getSignData(destTx interface{}) ([][]byte, error) {
-	var signData [][]byte
+func (w *warder) getSignData(destTx interface{}) ([]string, error) {
+	var signData []string
 
 	switch destTx := destTx.(type) {
 	case *vaporTypes.Tx:
-		signData = make([][]byte, len(destTx.Inputs))
-		for _, input := range tx.Inputs {
-			signHash := tx.SigHash(uint32(i))
-
+		signData = make([]string, len(destTx.Inputs))
+		for i := range destTx.Inputs {
+			signHash := destTx.SigHash(uint32(i))
+			signData[i] = signHash.String()
 		}
 
 	case *btmTypes.Tx:
-		signData = make([][]byte, len(destTx.Inputs))
+		signData = make([]string, len(destTx.Inputs))
+		for i := range destTx.Inputs {
+			signHash := destTx.SigHash(uint32(i))
+			signData[i] = signHash.String()
+		}
 
 	default:
-		return [][]byte{}, errors.New("unknown tx type")
+		return []string{}, errors.New("unknown tx type")
 	}
 
 	return signData, nil
