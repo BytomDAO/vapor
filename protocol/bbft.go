@@ -30,7 +30,7 @@ func signCacheKey(blockHash, pubkey string) string {
 }
 
 func (c *Chain) isIrreversible(blockNode *types.BlockHeader) bool {
-	consensusNodes, err := c.consensusNodeManager.getConsensusNodes(&blockNode.PreviousBlockHash)
+	consensusNodes, err := c.getConsensusNodes(&blockNode.PreviousBlockHash)
 	if err != nil {
 		return false
 	}
@@ -51,12 +51,12 @@ func (c *Chain) GetVoteResultByHash(blockHash *bc.Hash) (*state.VoteResult, erro
 	if err != nil {
 		return nil, err
 	}
-	return c.consensusNodeManager.getVoteResult(state.CalcVoteSeq(blockNode.Height), blockNode)
+	return c.getVoteResult(state.CalcVoteSeq(blockNode.Height), blockNode)
 }
 
 // IsBlocker returns whether the consensus node is a blocker at the specified time
 func (c *Chain) IsBlocker(prevBlockHash *bc.Hash, pubKey string, timeStamp uint64) (bool, error) {
-	xPub, err := c.consensusNodeManager.getBlocker(prevBlockHash, timeStamp)
+	xPub, err := c.getBlocker(prevBlockHash, timeStamp)
 	if err != nil {
 		return false, err
 	}
@@ -65,7 +65,7 @@ func (c *Chain) IsBlocker(prevBlockHash *bc.Hash, pubKey string, timeStamp uint6
 
 // GetBlock return blocker by specified timestamp
 func (c *Chain) GetBlocker(prevBlockHash *bc.Hash, timestamp uint64) (string, error) {
-	return c.consensusNodeManager.getBlocker(prevBlockHash, timestamp)
+	return c.getBlocker(prevBlockHash, timestamp)
 }
 
 // ProcessBlockSignature process the received block signature messages
@@ -81,7 +81,7 @@ func (c *Chain) ProcessBlockSignature(signature, xPub []byte, blockHash *bc.Hash
 		return nil
 	}
 
-	consensusNode, err := c.consensusNodeManager.getConsensusNode(&blockNode.PreviousBlockHash, xpubStr)
+	consensusNode, err := c.getConsensusNode(&blockNode.PreviousBlockHash, xpubStr)
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func (c *Chain) ProcessBlockSignature(signature, xPub []byte, blockHash *bc.Hash
 // if some signature is invalid, they will be reset to nil
 // if the block has not the signature of blocker, it will return error
 func (c *Chain) validateSign(block *types.Block) error {
-	consensusNodeMap, err := c.consensusNodeManager.getConsensusNodes(&block.PreviousBlockHash)
+	consensusNodeMap, err := c.getConsensusNodes(&block.PreviousBlockHash)
 	if err != nil {
 		return err
 	}
@@ -157,7 +157,7 @@ func (c *Chain) checkNodeSign(bh *types.BlockHeader, consensusNode *state.Consen
 		return errInvalidSignature
 	}
 
-	blockHashes, err := c.consensusNodeManager.store.GetBlockHashesByHeight(bh.Height)
+	blockHashes, err := c.store.GetBlockHashesByHeight(bh.Height)
 	if err != nil {
 		return err
 	}
@@ -172,7 +172,7 @@ func (c *Chain) checkNodeSign(bh *types.BlockHeader, consensusNode *state.Consen
 			return err
 		}
 
-		consensusNode, err := c.consensusNodeManager.getConsensusNode(&blockNode.PreviousBlockHash, consensusNode.XPub.String())
+		consensusNode, err := c.getConsensusNode(&blockNode.PreviousBlockHash, consensusNode.XPub.String())
 		if err != nil && err != errNotFoundConsensusNode {
 			return err
 		}
@@ -192,7 +192,7 @@ func (c *Chain) checkNodeSign(bh *types.BlockHeader, consensusNode *state.Consen
 func (c *Chain) SignBlock(block *types.Block) ([]byte, error) {
 	xprv := config.CommonConfig.PrivateKey()
 	xpubStr := xprv.XPub().String()
-	node, err := c.consensusNodeManager.getConsensusNode(&block.PreviousBlockHash, xpubStr)
+	node, err := c.getConsensusNode(&block.PreviousBlockHash, xpubStr)
 	if err == errNotFoundConsensusNode {
 		return nil, nil
 	} else if err != nil {
@@ -202,13 +202,13 @@ func (c *Chain) SignBlock(block *types.Block) ([]byte, error) {
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
 	//check double sign in same block height
-	blockHashes, err := c.consensusNodeManager.store.GetBlockHashesByHeight(block.Height)
+	blockHashes, err := c.store.GetBlockHashesByHeight(block.Height)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, hash := range blockHashes {
-		blockNode, err := c.consensusNodeManager.store.GetBlockHeader(hash)
+		blockNode, err := c.store.GetBlockHeader(hash)
 		if err != nil {
 			return nil, err
 		}

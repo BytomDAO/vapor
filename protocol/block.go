@@ -110,7 +110,7 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
-	voteResult, err := c.consensusNodeManager.getBestVoteResult()
+	voteResult, err := c.getBestVoteResult()
 	if err != nil {
 		return err
 	}
@@ -143,7 +143,7 @@ func (c *Chain) reorganizeChain(node *types.BlockHeader) error {
 	utxoView := state.NewUtxoViewpoint()
 	voteResults := []*state.VoteResult{}
 	irreversibleNode := c.bestIrreversibleNode
-	voteResult, err := c.consensusNodeManager.getBestVoteResult()
+	voteResult, err := c.getBestVoteResult()
 	if err != nil {
 		return err
 	}

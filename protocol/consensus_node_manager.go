@@ -13,23 +13,7 @@ var (
 	errNotFoundBlockNode     = errors.New("can not find block node")
 )
 
-type consensusNodeManager struct {
-	store    Store
-	bestNode *types.BlockHeader
-}
-
-func newConsensusNodeManager(store Store, bestNode *types.BlockHeader) *consensusNodeManager {
-	return &consensusNodeManager{
-		store:    store,
-		bestNode: bestNode,
-	}
-}
-
-func (c *consensusNodeManager) getBestNode() *types.BlockHeader {
-	return c.bestNode
-}
-
-func (c *consensusNodeManager) getConsensusNode(prevBlockHash *bc.Hash, pubkey string) (*state.ConsensusNode, error) {
+func (c *Chain) getConsensusNode(prevBlockHash *bc.Hash, pubkey string) (*state.ConsensusNode, error) {
 	consensusNodeMap, err := c.getConsensusNodes(prevBlockHash)
 	if err != nil {
 		return nil, err
@@ -42,7 +26,7 @@ func (c *consensusNodeManager) getConsensusNode(prevBlockHash *bc.Hash, pubkey s
 	return node, nil
 }
 
-func (c *consensusNodeManager) getBlocker(prevBlockHash *bc.Hash, timeStamp uint64) (string, error) {
+func (c *Chain) getBlocker(prevBlockHash *bc.Hash, timeStamp uint64) (string, error) {
 	consensusNodeMap, err := c.getConsensusNodes(prevBlockHash)
 	if err != nil {
 		return "", err
@@ -74,7 +58,7 @@ func getBlockerOrder(startTimestamp, blockTimestamp, numOfConsensusNode uint64) 
 	return (blockTimestamp - lastRoundStartTime) / (consensus.BlockNumEachNode * consensus.BlockTimeInterval)
 }
 
-func (c *consensusNodeManager) getPrevRoundLastBlock(prevBlockHash *bc.Hash) (*types.BlockHeader, error) {
+func (c *Chain) getPrevRoundLastBlock(prevBlockHash *bc.Hash) (*types.BlockHeader, error) {
 	node, err := c.store.GetBlockHeader(prevBlockHash)
 	if err != nil {
 		return nil, errNotFoundBlockNode
@@ -89,13 +73,13 @@ func (c *consensusNodeManager) getPrevRoundLastBlock(prevBlockHash *bc.Hash) (*t
 	return node, nil
 }
 
-func (c *consensusNodeManager) getConsensusNodes(prevBlockHash *bc.Hash) (map[string]*state.ConsensusNode, error) {
+func (c *Chain) getConsensusNodes(prevBlockHash *bc.Hash) (map[string]*state.ConsensusNode, error) {
 	prevBlockNode, err := c.store.GetBlockHeader(prevBlockHash)
 	if err != nil {
 		return nil, errNotFoundBlockNode
 	}
 
-	bestNode := c.getBestNode()
+	bestNode := c.BestBlockHeader()
 	preSeq := state.CalcVoteSeq(prevBlockNode.Height+1) - 1
 	if bestSeq := state.CalcVoteSeq(bestNode.Height); preSeq > bestSeq {
 		preSeq = bestSeq
@@ -114,8 +98,8 @@ func (c *consensusNodeManager) getConsensusNodes(prevBlockHash *bc.Hash) (map[st
 	return voteResult.ConsensusNodes()
 }
 
-func (c *consensusNodeManager) getBestVoteResult() (*state.VoteResult, error) {
-	bestNode := c.getBestNode()
+func (c *Chain) getBestVoteResult() (*state.VoteResult, error) {
+	bestNode := c.BestBlockHeader()
 	seq := state.CalcVoteSeq(bestNode.Height)
 	return c.getVoteResult(seq, bestNode)
 }
@@ -124,7 +108,7 @@ func (c *consensusNodeManager) getBestVoteResult() (*state.VoteResult, error) {
 // seq represent the sequence of vote
 // blockNode represent the chain in which the result of the vote is located
 // Voting results need to be adjusted according to the chain
-func (c *consensusNodeManager) getVoteResult(seq uint64, blockNode *types.BlockHeader) (*state.VoteResult, error) {
+func (c *Chain) getVoteResult(seq uint64, blockNode *types.BlockHeader) (*state.VoteResult, error) {
 	voteResult, err := c.store.GetVoteResult(seq)
 	if err != nil {
 		return nil, err
@@ -137,7 +121,7 @@ func (c *consensusNodeManager) getVoteResult(seq uint64, blockNode *types.BlockH
 	return voteResult, nil
 }
 
-func (c *consensusNodeManager) reorganizeVoteResult(voteResult *state.VoteResult, node *types.BlockHeader) error {
+func (c *Chain) reorganizeVoteResult(voteResult *state.VoteResult, node *types.BlockHeader) error {
 	mainChainNode, err := c.store.GetBlockHeader(&voteResult.BlockHash)
 	if err != nil {
 		return errNotFoundBlockNode

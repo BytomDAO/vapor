@@ -22,9 +22,8 @@ type Chain struct {
 	store          Store
 	processBlockCh chan *processBlockMsg
 
-	consensusNodeManager *consensusNodeManager
-	signatureCache       *common.Cache
-	eventDispatcher      *event.Dispatcher
+	signatureCache  *common.Cache
+	eventDispatcher *event.Dispatcher
 
 	cond                 sync.Cond
 	bestNode             *types.BlockHeader
@@ -61,7 +60,6 @@ func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*
 	if err != nil {
 		return nil, err
 	}
-	c.consensusNodeManager = newConsensusNodeManager(store, c.bestNode)
 	go c.blockProcesser()
 	return c, nil
 }
