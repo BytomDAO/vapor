@@ -136,8 +136,6 @@ func (c *Chain) setState(blockHeader, irrBlockHeader *types.BlockHeader, view *s
 		return err
 	}
 
-	c.cond.L.Lock()
-	defer c.cond.L.Unlock()
 	c.bestBlockHeader = blockHeader
 	c.bestIrrBlockHeader = irrBlockHeader
 

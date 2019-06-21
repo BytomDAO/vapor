@@ -333,14 +333,10 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 
 	bestBlock := c.saveSubBlock(block)
 	bestBlockHeader := &bestBlock.BlockHeader
-	parentBestBlockHeader, err := c.store.GetBlockHeader(&bestBlockHeader.PreviousBlockHash)
-	if err != nil {
-		return false, err
-	}
 
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
-	if parentBestBlockHeader.Hash() == c.bestBlockHeader.Hash() {
+	if bestBlockHeader.PreviousBlockHash == c.bestBlockHeader.Hash() {
 		log.WithFields(log.Fields{"module": logModule}).Debug("append block to the end of mainchain")
 		return false, c.connectBlock(bestBlock)
 	}
