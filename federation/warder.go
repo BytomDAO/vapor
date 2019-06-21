@@ -345,8 +345,9 @@ func (w *warder) getSigns(destTx interface{}, ormTx *orm.CrossTransaction) ([][]
 	return signs, nil
 }
 
+// destTx interface{}
 // TODO:
-func (w *warder) attachSignsForTx( /*destTx interface{}, */ ormTx *orm.CrossTransaction, signersSigns [][][]byte, position uint8, signerSigns [][]byte) error {
+func (w *warder) attachSignsForTx(ormTx *orm.CrossTransaction, signersSigns [][][]byte, position uint8, signerSigns [][]byte) error {
 	// TODO: rename
 	// signWitness := make([][]string, len(signersSigns))
 
