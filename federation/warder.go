@@ -122,8 +122,7 @@ func (w *warder) processCrossTx(ormTx *orm.CrossTransaction) error {
 		return err
 	}
 
-	inputsCnt := getInputsCnt(destTx)
-	signersSigns := make([][][]byte, inputsCnt)
+	signersSigns := make([][][]byte, getInputsCnt(destTx))
 
 	signerSigns, err := w.getSigns(destTx, ormTx)
 	if err != nil {
