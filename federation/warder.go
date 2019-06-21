@@ -121,7 +121,8 @@ func (w *warder) processCrossTx(ormTx *orm.CrossTransaction) error {
 		return err
 	}
 
-	var signersSigns [][][]byte
+	inputsCnt := getInputsCnt(destTx)
+	signersSigns := make([][][]byte, inputsCnt)
 
 	signerSigns, err := w.getSigns(destTx, ormTx)
 	if err != nil {
@@ -129,8 +130,8 @@ func (w *warder) processCrossTx(ormTx *orm.CrossTransaction) error {
 		return err
 	}
 
-	// TODO: pass ref?
-	signersSigns = w.attachSignsForTx( /*destTx,*/ ormTx, w.position, signerSigns)
+	// TODO: pass ref? err?
+	w.attachSignsForTx( /*destTx,*/ ormTx, signersSigns, w.position, signerSigns)
 
 	for _, remote := range w.remotes {
 		signerSigns, err := remote.RequestSigns(destTx, ormTx)
@@ -139,8 +140,8 @@ func (w *warder) processCrossTx(ormTx *orm.CrossTransaction) error {
 			return err
 		}
 
-		// TODO: pass ref?
-		signersSigns = w.attachSignsForTx( /*destTx,*/ ormTx, remote.Position, signerSigns)
+		// TODO: pass ref? err?
+		w.attachSignsForTx( /*destTx,*/ ormTx, signersSigns, remote.Position, signerSigns)
 	}
 
 	if w.isTxSignsReachQuorum(signersSigns) && w.isLeader() {
@@ -164,6 +165,17 @@ func (w *warder) processCrossTx(ormTx *orm.CrossTransaction) error {
 	}
 
 	return nil
+}
+
+func getInputsCnt(tx interface{}) uint64 {
+	switch tx := tx.(type) {
+	case *btmTypes.Tx:
+		return uint64(len(tx.Inputs))
+	case *vaporTypes.Tx:
+		return uint64(len(tx.Inputs))
+	default:
+		return 0
+	}
 }
 
 func (w *warder) validateCrossTx(tx *orm.CrossTransaction) error {
@@ -333,7 +345,7 @@ func (w *warder) getSigns(destTx interface{}, ormTx *orm.CrossTransaction) ([][]
 }
 
 // TODO:
-func (w *warder) attachSignsForTx(destTx interface{}, ormTx *orm.CrossTransaction, position uint8, signs []string) error {
+func (w *warder) attachSignsForTx( /*destTx interface{}, */ ormTx *orm.CrossTransaction, signersSigns [][][]byte, position uint8, signs []string) error {
 	var inputsLen int
 	switch destTx := destTx.(type) {
 	case *vaporTypes.Tx:
