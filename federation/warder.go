@@ -279,6 +279,31 @@ func (w *warder) initDestTxSigns(destTx interface{}, ormTx *orm.CrossTransaction
 		}).Error
 }
 
+func (w *warder) getSignData(destTx interface{}) ([]string, error) {
+	var signData []string
+
+	switch destTx := destTx.(type) {
+	case *vaporTypes.Tx:
+		signData = make([]string, len(destTx.Inputs))
+		for i := range destTx.Inputs {
+			signHash := destTx.SigHash(uint32(i))
+			signData[i] = signHash.String()
+		}
+
+	case *btmTypes.Tx:
+		signData = make([]string, len(destTx.Inputs))
+		for i := range destTx.Inputs {
+			signHash := destTx.SigHash(uint32(i))
+			signData[i] = signHash.String()
+		}
+
+	default:
+		return []string{}, errUnknownTxType
+	}
+
+	return signData, nil
+}
+
 func (w *warder) getSigns(destTx interface{}, ormTx *orm.CrossTransaction) ([]string, error) {
 	if ormTx.Status != common.CrossTxPendingStatus || !ormTx.DestTxHash.Valid {
 		return nil, errors.New("cross-chain tx status error")
@@ -317,31 +342,6 @@ func (w *warder) getSigns(destTx interface{}, ormTx *orm.CrossTransaction) ([]st
 	}
 
 	return signs, nil
-}
-
-func (w *warder) getSignData(destTx interface{}) ([]string, error) {
-	var signData []string
-
-	switch destTx := destTx.(type) {
-	case *vaporTypes.Tx:
-		signData = make([]string, len(destTx.Inputs))
-		for i := range destTx.Inputs {
-			signHash := destTx.SigHash(uint32(i))
-			signData[i] = signHash.String()
-		}
-
-	case *btmTypes.Tx:
-		signData = make([]string, len(destTx.Inputs))
-		for i := range destTx.Inputs {
-			signHash := destTx.SigHash(uint32(i))
-			signData[i] = signHash.String()
-		}
-
-	default:
-		return []string{}, errUnknownTxType
-	}
-
-	return signData, nil
 }
 
 // TODO:
