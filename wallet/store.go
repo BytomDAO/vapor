@@ -3,6 +3,7 @@ package wallet
 import (
 	"encoding/json"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/vapor/account"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/query"
@@ -38,6 +39,7 @@ type DB interface {
 	SetWalletInfo([]byte)
 	DeleteAllWalletTxs()
 	DeleteAllWalletUTXOs()
+	GetAccountUtxos(string, string, bool, bool, []*account.UTXO) []*account.UTXO
 }
 
 // LevelDBStore store wallet using leveldb
@@ -259,3 +261,31 @@ func (store *LevelDBStore) DeleteAllWalletUTXOs() {
 	storeBatch.Write()
 }
 
+// GetAccountUtxos get all account unspent outputs
+func (store *LevelDBStore) GetAccountUtxos(accountID, id string, isSmartContract, vote bool, accountUtxos []*account.UTXO) []*account.UTXO {
+	prefix := account.UTXOPreFix
+	if isSmartContract {
+		prefix = account.SUTXOPrefix
+	}
+	accountUtxoIter := store.DB.IteratorPrefix([]byte(prefix + id))
+	defer accountUtxoIter.Release()
+
+	for accountUtxoIter.Next() {
+		accountUtxo := &account.UTXO{}
+		if err := json.Unmarshal(accountUtxoIter.Value(), accountUtxo); err != nil {
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Warn("GetAccountUtxos fail on unmarshal utxo")
+			continue
+		}
+
+		if vote && accountUtxo.Vote == nil {
+			continue
+		}
+
+		if accountID == accountUtxo.AccountID || accountID == "" {
+			accountUtxos = append(accountUtxos, accountUtxo)
+		}
+	}
+	newAccountUtxos := []*account.UTXO{}
+	newAccountUtxos = accountUtxos
+	return newAccountUtxos
+}

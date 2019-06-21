@@ -27,6 +27,7 @@ func (w *Wallet) GetAccountUtxos(accountID string, id string, unconfirmed, isSma
 		accountUtxos = w.AccountMgr.ListUnconfirmedUtxo(accountID, isSmartContract)
 	}
 
+	// replace with GetAccountUtxos
 	accountUtxoIter := w.DB.IteratorPrefix([]byte(prefix + id))
 	defer accountUtxoIter.Release()
 
