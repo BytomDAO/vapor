@@ -28,6 +28,12 @@ type DB interface {
 	GetTxIndexByTxID(string) []byte
 	GetTxByTxIndex([]byte) []byte
 	GetGlobalTxByTxID(string) []byte
+	GetUnconfirmedTxByTxID(string) []byte
+	SetUnconfirmedTx(string, []byte)
+	DeleteStardardUTXOByOutputID(bc.Hash)
+	DeleteContractUTXOByOutputID(bc.Hash)
+	SetStandardUTXO(bc.Hash, []byte)
+	SetContractUTXO(bc.Hash, []byte)
 }
 
 // LevelDBStore store wallet using leveldb
@@ -143,3 +149,58 @@ func (store *LevelDBStore) GetGlobalTxByTxID(txID string) []byte {
 // 	return annotatedTxs, nil
 // }
 
+// // GetUnconfirmedTxs get account unconfirmed transactions, filter transactions by accountID when accountID is not empty
+// func (w *Wallet) GetUnconfirmedTxs(accountID string) ([]*query.AnnotatedTx, error) {
+// 	annotatedTxs := []*query.AnnotatedTx{}
+// 	txIter := w.DB.IteratorPrefix([]byte(UnconfirmedTxPrefix))
+// 	defer txIter.Release()
+
+// 	for txIter.Next() {
+// 		annotatedTx := &query.AnnotatedTx{}
+// 		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
+// 			return nil, err
+// 		}
+
+// 		if accountID == "" || findTransactionsByAccount(annotatedTx, accountID) {
+// 			annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
+// 			annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
+// 		}
+// 	}
+
+// 	sort.Sort(SortByTimestamp(annotatedTxs))
+// 	return annotatedTxs, nil
+// }
+
+// GetUnconfirmedTxByTxID get unconfirmed tx by txID
+func (store *LevelDBStore) GetUnconfirmedTxByTxID(txID string) []byte {
+	return store.DB.Get(calcUnconfirmedTxKey(txID))
+}
+
+// SetUnconfirmedTx set unconfirmed tx by txID
+func (store *LevelDBStore) SetUnconfirmedTx(txID string, rawTx []byte) {
+	store.DB.Set(calcUnconfirmedTxKey(txID), rawTx)
+}
+
+// DeleteStardardUTXOByOutputID delete stardard utxo by outputID
+func (store *LevelDBStore) DeleteStardardUTXOByOutputID(outputID bc.Hash) {
+	batch := store.DB.NewBatch()
+	batch.Delete(account.StandardUTXOKey(outputID))
+}
+
+// DeleteContractUTXOByOutputID delete contract utxo by outputID
+func (store *LevelDBStore) DeleteContractUTXOByOutputID(outputID bc.Hash) {
+	batch := store.DB.NewBatch()
+	batch.Delete(account.ContractUTXOKey(outputID))
+}
+
+// SetStandardUTXO set standard utxo
+func (store *LevelDBStore) SetStandardUTXO(outputID bc.Hash, data []byte) {
+	batch := store.DB.NewBatch()
+	batch.Set(account.StandardUTXOKey(outputID), data)
+}
+
+// SetContractUTXO set standard utxo
+func (store *LevelDBStore) SetContractUTXO(outputID bc.Hash, data []byte) {
+	batch := store.DB.NewBatch()
+	batch.Set(account.ContractUTXOKey(outputID), data)
+}
