@@ -181,9 +181,9 @@ func (w *warder) validateCrossTx(tx *orm.CrossTransaction) error {
 
 func (w *warder) proposeDestTx(tx *orm.CrossTransaction) (interface{}, string, error) {
 	switch tx.Chain.Name {
-	case "bytom":
+	case common.MainchainNameLabel:
 		return w.buildSidechainTx(tx)
-	case "vapor":
+	case common.SidechainNameLabel:
 		return w.buildMainchainTx(tx)
 	default:
 		return nil, "", errors.New("unknown source chain")

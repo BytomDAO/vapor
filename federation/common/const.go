@@ -13,3 +13,8 @@ const (
 	CrossTxSignCompletedStatus
 	CrossTxSignRejectedStatus
 )
+
+const (
+	MainchainNameLabel = "bytom"
+	SidechainNameLabel = "vapor"
+)
