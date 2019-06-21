@@ -12,7 +12,6 @@ import (
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/crypto/sha3pool"
-	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -170,7 +169,7 @@ func (rs *recoveryState) stateForScope(account *account.Account) {
 type recoveryManager struct {
 	mu sync.Mutex
 
-	db         dbm.DB
+	store      Store
 	accountMgr *account.Manager
 
 	locked int32
@@ -187,9 +186,9 @@ type recoveryManager struct {
 }
 
 // newRecoveryManager create recovery manger.
-func newRecoveryManager(db dbm.DB, accountMgr *account.Manager) *recoveryManager {
+func newRecoveryManager(store Store, accountMgr *account.Manager) *recoveryManager {
 	return &recoveryManager{
-		db:         db,
+		store:      store,
 		accountMgr: accountMgr,
 		addresses:  make(map[bc.Hash]*account.CtrlProgram),
 		state:      newRecoveryState(),
@@ -254,7 +253,7 @@ func (m *recoveryManager) commitStatusInfo() error {
 		return err
 	}
 
-	m.db.Set(recoveryKey, rawStatus)
+	m.store.SetRecoveryStatus(recoveryKey, rawStatus)
 	return nil
 }
 
@@ -364,7 +363,7 @@ func (m *recoveryManager) FilterRecoveryTxs(b *types.Block) error {
 }
 
 func (m *recoveryManager) finished() {
-	m.db.Delete(recoveryKey)
+	m.store.DeleteRecoveryStatusByRecoveryKey(recoveryKey)
 	m.started = false
 	m.addresses = make(map[bc.Hash]*account.CtrlProgram)
 	m.state = newRecoveryState()
@@ -375,7 +374,7 @@ func (m *recoveryManager) LoadStatusInfo() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	rawStatus := m.db.Get(recoveryKey)
+	rawStatus := m.store.GetRecoveryStatusByRecoveryKey(recoveryKey)
 	if rawStatus == nil {
 		return nil
 	}

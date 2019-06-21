@@ -9,7 +9,6 @@ import (
 	"github.com/vapor/consensus"
 	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/crypto/sha3pool"
-	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -27,29 +26,22 @@ func (w *Wallet) GetAccountUtxos(accountID string, id string, unconfirmed, isSma
 		accountUtxos = w.AccountMgr.ListUnconfirmedUtxo(accountID, isSmartContract)
 	}
 
-	// replace with GetAccountUtxos
-	accountUtxoIter := w.DB.IteratorPrefix([]byte(prefix + id))
-	defer accountUtxoIter.Release()
-
-	for accountUtxoIter.Next() {
-		accountUtxo := &account.UTXO{}
-		if err := json.Unmarshal(accountUtxoIter.Value(), accountUtxo); err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Warn("GetAccountUtxos fail on unmarshal utxo")
-			continue
-		}
-
+	confirmedUtxos := w.store.GetAccountUtxos(prefix + id)
+	accountUtxos = append(accountUtxos, confirmedUtxos...)
+	newAccountUtxos := []*account.UTXO{}
+	for _, accountUtxo := range accountUtxos {
 		if vote && accountUtxo.Vote == nil {
 			continue
 		}
 
 		if accountID == accountUtxo.AccountID || accountID == "" {
-			accountUtxos = append(accountUtxos, accountUtxo)
+			newAccountUtxos = append(newAccountUtxos, accountUtxo)
 		}
 	}
-	return accountUtxos
+	return newAccountUtxos
 }
 
-func (w *Wallet) attachUtxos(batch dbm.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
+func (w *Wallet) attachUtxos(b *types.Block, txStatus *bc.TransactionStatus) {
 	for txIndex, tx := range b.Transactions {
 		statusFail, err := txStatus.GetStatus(txIndex)
 		if err != nil {
@@ -61,22 +53,22 @@ func (w *Wallet) attachUtxos(batch dbm.Batch, b *types.Block, txStatus *bc.Trans
 		inputUtxos := txInToUtxos(tx, statusFail)
 		for _, inputUtxo := range inputUtxos {
 			if segwit.IsP2WScript(inputUtxo.ControlProgram) {
-				batch.Delete(account.StandardUTXOKey(inputUtxo.OutputID))
+				w.store.DeleteStardardUTXOByOutputID(inputUtxo.OutputID)
 			} else {
-				batch.Delete(account.ContractUTXOKey(inputUtxo.OutputID))
+				w.store.DeleteContractUTXOByOutputID(inputUtxo.OutputID)
 			}
 		}
 
 		//hand update the transaction output utxos
 		outputUtxos := txOutToUtxos(tx, statusFail, b.Height)
 		utxos := w.filterAccountUtxo(outputUtxos)
-		if err := batchSaveUtxos(utxos, batch); err != nil {
+		if err := w.saveUtxos(utxos); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("attachUtxos fail on batchSaveUtxos")
 		}
 	}
 }
 
-func (w *Wallet) detachUtxos(batch dbm.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
+func (w *Wallet) detachUtxos(b *types.Block, txStatus *bc.TransactionStatus) {
 	for txIndex := len(b.Transactions) - 1; txIndex >= 0; txIndex-- {
 		tx := b.Transactions[txIndex]
 		for j := range tx.Outputs {
@@ -91,9 +83,9 @@ func (w *Wallet) detachUtxos(batch dbm.Batch, b *types.Block, txStatus *bc.Trans
 			}
 
 			if segwit.IsP2WScript(code) {
-				batch.Delete(account.StandardUTXOKey(*tx.ResultIds[j]))
+				w.store.DeleteStardardUTXOByOutputID(*tx.ResultIds[j])
 			} else {
-				batch.Delete(account.ContractUTXOKey(*tx.ResultIds[j]))
+				w.store.DeleteContractUTXOByOutputID(*tx.ResultIds[j])
 			}
 		}
 
@@ -105,7 +97,7 @@ func (w *Wallet) detachUtxos(batch dbm.Batch, b *types.Block, txStatus *bc.Trans
 
 		inputUtxos := txInToUtxos(tx, statusFail)
 		utxos := w.filterAccountUtxo(inputUtxos)
-		if err := batchSaveUtxos(utxos, batch); err != nil {
+		if err := w.saveUtxos(utxos); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("detachUtxos fail on batchSaveUtxos")
 			return
 		}
@@ -130,7 +122,7 @@ func (w *Wallet) filterAccountUtxo(utxos []*account.UTXO) []*account.UTXO {
 
 		var hash [32]byte
 		sha3pool.Sum256(hash[:], []byte(s))
-		data := w.DB.Get(account.ContractKey(hash))
+		data := w.store.GetRawProgramByAccountHash(hash)
 		if data == nil {
 			continue
 		}
@@ -152,7 +144,7 @@ func (w *Wallet) filterAccountUtxo(utxos []*account.UTXO) []*account.UTXO {
 	return result
 }
 
-func batchSaveUtxos(utxos []*account.UTXO, batch dbm.Batch) error {
+func (w *Wallet) saveUtxos(utxos []*account.UTXO) error {
 	for _, utxo := range utxos {
 		data, err := json.Marshal(utxo)
 		if err != nil {
@@ -160,9 +152,9 @@ func batchSaveUtxos(utxos []*account.UTXO, batch dbm.Batch) error {
 		}
 
 		if segwit.IsP2WScript(utxo.ControlProgram) {
-			batch.Set(account.StandardUTXOKey(utxo.OutputID), data)
+			w.store.SetStandardUTXO(utxo.OutputID, data)
 		} else {
-			batch.Set(account.ContractUTXOKey(utxo.OutputID), data)
+			w.store.SetContractUTXO(utxo.OutputID, data)
 		}
 	}
 	return nil

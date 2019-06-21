@@ -42,8 +42,7 @@ type StatusInfo struct {
 
 //Wallet is related to storing account unspent outputs
 type Wallet struct {
-	// DB DB
-	DB              dbm.DB
+	store           Store
 	rw              sync.RWMutex
 	status          StatusInfo
 	TxIndexFlag     bool
@@ -59,14 +58,14 @@ type Wallet struct {
 }
 
 //NewWallet return a new wallet instance
-func NewWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) (*Wallet, error) {
+func NewWallet(store Store, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) (*Wallet, error) {
 	w := &Wallet{
-		DB:              walletDB,
+		store:           store,
 		AccountMgr:      account,
 		AssetReg:        asset,
 		chain:           chain,
 		Hsm:             hsm,
-		RecoveryMgr:     newRecoveryManager(walletDB, account),
+		RecoveryMgr:     newRecoveryManager(store, account),
 		eventDispatcher: dispatcher,
 		rescanCh:        make(chan struct{}, 1),
 		TxIndexFlag:     txIndexFlag,
@@ -133,7 +132,7 @@ func (w *Wallet) checkWalletInfo() error {
 //loadWalletInfo return stored wallet info and nil,
 //if error, return initial wallet info and err
 func (w *Wallet) loadWalletInfo() error {
-	if rawWallet := w.DB.Get(walletKey); rawWallet != nil {
+	if rawWallet := w.store.GetWalletInfo(); rawWallet != nil {
 		if err := json.Unmarshal(rawWallet, &w.status); err != nil {
 			return err
 		}
@@ -191,11 +190,11 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 	}
 
 	storeBatch := w.DB.NewBatch()
-	if err := w.indexTransactions(storeBatch, block, txStatus); err != nil {
+	if err := w.indexTransactions(block, txStatus); err != nil {
 		return err
 	}
 
-	w.attachUtxos(storeBatch, block, txStatus)
+	w.attachUtxos(block, txStatus)
 	w.status.WorkHeight = block.Height
 	w.status.WorkHash = block.Hash()
 	if w.status.WorkHeight >= w.status.BestHeight {
@@ -218,7 +217,7 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 
 	storeBatch := w.DB.NewBatch()
 	w.detachUtxos(storeBatch, block, txStatus)
-	w.deleteTransactions(storeBatch, w.status.BestHeight)
+	w.store.DeleteTransactionByHeight(w.status.BestHeight)
 
 	w.status.BestHeight = block.Height - 1
 	w.status.BestHash = block.PreviousBlockHash

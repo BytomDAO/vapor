@@ -13,7 +13,6 @@ import (
 	"github.com/vapor/consensus"
 	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/crypto/sha3pool"
-	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
@@ -33,7 +32,7 @@ func annotateTxsAsset(w *Wallet, txs []*query.AnnotatedTx) {
 }
 
 func (w *Wallet) getExternalDefinition(assetID *bc.AssetID) json.RawMessage {
-	definitionByte := w.DB.Get(asset.ExtAssetKey(assetID))
+	definitionByte := w.store.GetAssetDefinitionByAssetID(assetID)
 	if definitionByte == nil {
 		return nil
 	}
@@ -82,14 +81,14 @@ func (w *Wallet) getAliasDefinition(assetID bc.AssetID) (string, json.RawMessage
 }
 
 // annotateTxs adds account data to transactions
-func annotateTxsAccount(txs []*query.AnnotatedTx, walletDB dbm.DB) {
+func annotateTxsAccount(txs []*query.AnnotatedTx, store Store) {
 	for i, tx := range txs {
 		for j, input := range tx.Inputs {
 			//issue asset tx input SpentOutputID is nil
 			if input.SpentOutputID == nil {
 				continue
 			}
-			localAccount, err := getAccountFromACP(input.ControlProgram, walletDB)
+			localAccount, err := getAccountFromACP(input.ControlProgram, store)
 			if localAccount == nil || err != nil {
 				continue
 			}
@@ -97,7 +96,7 @@ func annotateTxsAccount(txs []*query.AnnotatedTx, walletDB dbm.DB) {
 			txs[i].Inputs[j].AccountID = localAccount.ID
 		}
 		for j, output := range tx.Outputs {
-			localAccount, err := getAccountFromACP(output.ControlProgram, walletDB)
+			localAccount, err := getAccountFromACP(output.ControlProgram, store)
 			if localAccount == nil || err != nil {
 				continue
 			}
@@ -107,14 +106,13 @@ func annotateTxsAccount(txs []*query.AnnotatedTx, walletDB dbm.DB) {
 	}
 }
 
-func getAccountFromACP(program []byte, walletDB dbm.DB) (*account.Account, error) {
+func getAccountFromACP(program []byte, store Store) (*account.Account, error) {
 	var hash common.Hash
 	accountCP := account.CtrlProgram{}
 	localAccount := account.Account{}
 
 	sha3pool.Sum256(hash[:], program)
-
-	rawProgram := walletDB.Get(account.ContractKey(hash))
+	rawProgram := store.GetRawProgramByAccountHash(hash)
 	if rawProgram == nil {
 		return nil, fmt.Errorf("failed get account control program:%x ", hash)
 	}
@@ -123,7 +121,7 @@ func getAccountFromACP(program []byte, walletDB dbm.DB) (*account.Account, error
 		return nil, err
 	}
 
-	accountValue := walletDB.Get(account.Key(accountCP.AccountID))
+	accountValue := store.GetAccountValueByAccountID(accountCP.AccountID)
 	if accountValue == nil {
 		return nil, fmt.Errorf("failed get account:%s ", accountCP.AccountID)
 	}

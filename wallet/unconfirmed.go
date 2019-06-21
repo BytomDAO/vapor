@@ -8,7 +8,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/account"
 	"github.com/vapor/blockchain/query"
 	"github.com/vapor/crypto/sha3pool"
 	"github.com/vapor/protocol"
@@ -47,30 +46,26 @@ func (w *Wallet) AddUnconfirmedTx(txD *protocol.TxDesc) {
 // GetUnconfirmedTxs get account unconfirmed transactions, filter transactions by accountID when accountID is not empty
 func (w *Wallet) GetUnconfirmedTxs(accountID string) ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
-	txIter := w.DB.IteratorPrefix([]byte(UnconfirmedTxPrefix))
-	defer txIter.Release()
+	if annotatedTxs, err := w.store.GetAllUnconfirmedTxs(); err != nil {
+		return nil, err
+	}
 
-	// replace with GetAllUnconfirmedTxs
-	for txIter.Next() {
-		annotatedTx := &query.AnnotatedTx{}
-		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
-			return nil, err
-		}
-
+	newAnnotatedTxs := []*query.AnnotatedTx{}
+	for _, annotatedTx := range annotatedTxs {
 		if accountID == "" || findTransactionsByAccount(annotatedTx, accountID) {
 			annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
-			annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
+			newAnnotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, newAnnotatedTxs...)
 		}
 	}
 
-	sort.Sort(SortByTimestamp(annotatedTxs))
-	return annotatedTxs, nil
+	sort.Sort(SortByTimestamp(newAnnotatedTxs))
+	return newAnnotatedTxs, nil
 }
 
 // GetUnconfirmedTxByTxID get unconfirmed transaction by txID
 func (w *Wallet) GetUnconfirmedTxByTxID(txID string) (*query.AnnotatedTx, error) {
 	annotatedTx := &query.AnnotatedTx{}
-	txInfo := w.DB.Get(calcUnconfirmedTxKey(txID))
+	txInfo := w.store.GetUnconfirmedTxByTxID(txID)
 	if txInfo == nil {
 		return nil, fmt.Errorf("No transaction(tx_id=%s) from txpool", txID)
 	}
@@ -88,7 +83,7 @@ func (w *Wallet) RemoveUnconfirmedTx(txD *protocol.TxDesc) {
 	if !w.checkRelatedTransaction(txD.Tx) {
 		return
 	}
-	w.DB.Delete(calcUnconfirmedTxKey(txD.Tx.ID.String()))
+	w.store.DeleteUnconfirmedTxByTxID(txD.Tx.ID.String())
 	w.AccountMgr.RemoveUnconfirmedUtxo(txD.Tx.ResultIds)
 }
 
@@ -115,7 +110,7 @@ func (w *Wallet) checkRelatedTransaction(tx *types.Tx) bool {
 	for _, v := range tx.Outputs {
 		var hash [32]byte
 		sha3pool.Sum256(hash[:], v.ControlProgram())
-		if bytes := w.DB.Get(account.ContractKey(hash)); bytes != nil {
+		if bytes := w.store.GetRawProgramByAccountHash(hash); bytes != nil {
 			return true
 		}
 	}
@@ -125,7 +120,7 @@ func (w *Wallet) checkRelatedTransaction(tx *types.Tx) bool {
 		if err != nil {
 			continue
 		}
-		if bytes := w.DB.Get(account.StandardUTXOKey(outid)); bytes != nil {
+		if bytes := w.store.GetStandardUTXOByID(outid); bytes != nil {
 			return true
 		}
 	}
@@ -142,14 +137,14 @@ func (w *Wallet) saveUnconfirmedTx(tx *types.Tx) error {
 	annotatedTx := w.buildAnnotatedUnconfirmedTx(tx)
 	annotatedTxs := []*query.AnnotatedTx{}
 	annotatedTxs = append(annotatedTxs, annotatedTx)
-	annotateTxsAccount(annotatedTxs, w.DB)
+	annotateTxsAccount(annotatedTxs, w.store)
 
 	rawTx, err := json.Marshal(annotatedTxs[0])
 	if err != nil {
 		return err
 	}
 
-	w.DB.Set(calcUnconfirmedTxKey(tx.ID.String()), rawTx)
+	w.store.SetUnconfirmedTx(tx.ID.String(), rawTx)
 	return nil
 }
 
@@ -160,7 +155,7 @@ func (w *Wallet) delExpiredTxs() error {
 	}
 	for _, tx := range AnnotatedTx {
 		if time.Now().After(time.Unix(int64(tx.Timestamp), 0).Add(MaxUnconfirmedTxDuration)) {
-			w.DB.Delete(calcUnconfirmedTxKey(tx.ID.String()))
+			w.store.DeleteUnconfirmedTxByTxID(tx.ID.String())
 		}
 	}
 	return nil

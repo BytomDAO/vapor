@@ -10,11 +10,9 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/account"
-	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/query"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/sha3pool"
-	dbm "github.com/vapor/database/leveldb"
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
@@ -67,33 +65,16 @@ func parseGlobalTxIdx(globalTxIdx []byte) (*bc.Hash, uint64) {
 	return &hash, position
 }
 
-// deleteTransaction delete transactions when orphan block rollback
-func (w *Wallet) deleteTransactions(batch dbm.Batch, height uint64) {
-	tmpTx := query.AnnotatedTx{}
-	txIter := w.DB.IteratorPrefix(calcDeleteKey(height))
-	defer txIter.Release()
-
-	for txIter.Next() {
-		if err := json.Unmarshal(txIter.Value(), &tmpTx); err == nil {
-			batch.Delete(calcTxIndexKey(tmpTx.ID.String()))
-		}
-		batch.Delete(txIter.Key())
-	}
-}
-
 // saveExternalAssetDefinition save external and local assets definition,
 // when query ,query local first and if have no then query external
 // details see getAliasDefinition
-func saveExternalAssetDefinition(b *types.Block, walletDB dbm.DB) {
-	storeBatch := walletDB.NewBatch()
-	defer storeBatch.Write()
-
+func saveExternalAssetDefinition(b *types.Block, store Store) {
 	for _, tx := range b.Transactions {
 		for _, orig := range tx.Inputs {
 			if cci, ok := orig.TypedInput.(*types.CrossChainInput); ok {
 				assetID := cci.AssetId
-				if assetExist := walletDB.Get(asset.ExtAssetKey(assetID)); assetExist == nil {
-					storeBatch.Set(asset.ExtAssetKey(assetID), cci.AssetDefinition)
+				if assetExist := store.GetAssetDefinitionByAssetID(assetID); assetExist == nil {
+					store.SetAssetDefinition(assetID, cci.AssetDefinition)
 				}
 			}
 		}
@@ -120,10 +101,10 @@ type TxSummary struct {
 }
 
 // indexTransactions saves all annotated transactions to the database.
-func (w *Wallet) indexTransactions(batch dbm.Batch, b *types.Block, txStatus *bc.TransactionStatus) error {
+func (w *Wallet) indexTransactions(b *types.Block, txStatus *bc.TransactionStatus) error {
 	annotatedTxs := w.filterAccountTxs(b, txStatus)
-	saveExternalAssetDefinition(b, w.DB)
-	annotateTxsAccount(annotatedTxs, w.DB)
+	saveExternalAssetDefinition(b, w.store)
+	annotateTxsAccount(annotatedTxs, w.store)
 
 	for _, tx := range annotatedTxs {
 		rawTx, err := json.Marshal(tx)
@@ -132,11 +113,11 @@ func (w *Wallet) indexTransactions(batch dbm.Batch, b *types.Block, txStatus *bc
 			return err
 		}
 
-		batch.Set(calcAnnotatedKey(formatKey(b.Height, uint32(tx.Position))), rawTx)
-		batch.Set(calcTxIndexKey(tx.ID.String()), []byte(formatKey(b.Height, uint32(tx.Position))))
+		w.store.SetRawTransaction(b.Height, tx.Position, rawTx)
+		w.store.SetHeightAndPostion(tx.ID.String(), b.Height, tx.Position)
 
 		// delete unconfirmed transaction
-		batch.Delete(calcUnconfirmedTxKey(tx.ID.String()))
+		w.store.DeleteUnconfirmedTxByTxID(tx.ID.String())
 	}
 
 	if !w.TxIndexFlag {
@@ -145,7 +126,7 @@ func (w *Wallet) indexTransactions(batch dbm.Batch, b *types.Block, txStatus *bc
 
 	for position, globalTx := range b.Transactions {
 		blockHash := b.BlockHeader.Hash()
-		batch.Set(calcGlobalTxIndexKey(globalTx.ID.String()), calcGlobalTxIndex(&blockHash, uint64(position)))
+		w.store.SetGlobalTxIndex(globalTx.ID.String(), &blockHash, uint64(position))
 	}
 
 	return nil
@@ -162,7 +143,7 @@ transactionLoop:
 			var hash [32]byte
 			sha3pool.Sum256(hash[:], v.ControlProgram())
 
-			if bytes := w.DB.Get(account.ContractKey(hash)); bytes != nil {
+			if bytes := w.store.GetRawProgramByAccountHash(hash); bytes != nil {
 				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
 				continue transactionLoop
 			}
@@ -173,7 +154,7 @@ transactionLoop:
 			if err != nil {
 				continue
 			}
-			if bytes := w.DB.Get(account.StandardUTXOKey(outid)); bytes != nil {
+			if bytes := w.store.GetStandardUTXOByID(outid); bytes != nil {
 				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
 				continue transactionLoop
 			}
@@ -196,12 +177,12 @@ func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
 
 func (w *Wallet) getAccountTxByTxID(txID string) (*query.AnnotatedTx, error) {
 	annotatedTx := &query.AnnotatedTx{}
-	formatKey := w.DB.Get(calcTxIndexKey(txID))
+	formatKey := w.store.GetTxIndexByTxID(txID)
 	if formatKey == nil {
 		return nil, errAccntTxIDNotFound
 	}
 
-	txInfo := w.DB.Get(calcAnnotatedKey(string(formatKey)))
+	txInfo := w.store.GetTxByTxIndex(formatKey)
 	if err := json.Unmarshal(txInfo, annotatedTx); err != nil {
 		return nil, err
 	}
@@ -211,7 +192,7 @@ func (w *Wallet) getAccountTxByTxID(txID string) (*query.AnnotatedTx, error) {
 }
 
 func (w *Wallet) getGlobalTxByTxID(txID string) (*query.AnnotatedTx, error) {
-	globalTxIdx := w.DB.Get(calcGlobalTxIndexKey(txID))
+	globalTxIdx := w.store.GetGlobalTxByTxID(txID)
 	if globalTxIdx == nil {
 		return nil, fmt.Errorf("No transaction(tx_id=%s) ", txID)
 	}
@@ -291,22 +272,19 @@ func findTransactionsByAccount(annotatedTx *query.AnnotatedTx, accountID string)
 // GetTransactions get all walletDB transactions, and filter transactions by accountID optional
 func (w *Wallet) GetTransactions(accountID string) ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
+	if annotatedTxs, err := w.store.GetTransactions(); err != nil {
+		return nil, err
+	}
 
-	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
-	defer txIter.Release()
-	for txIter.Next() {
-		annotatedTx := &query.AnnotatedTx{}
-		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
-			return nil, err
-		}
-
+	newAnnotatedTxs := []*query.AnnotatedTx{}
+	for _, annotatedTx := range annotatedTxs {
 		if accountID == "" || findTransactionsByAccount(annotatedTx, accountID) {
 			annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
-			annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
+			newAnnotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, newAnnotatedTxs...)
 		}
 	}
 
-	return annotatedTxs, nil
+	return newAnnotatedTxs, nil
 }
 
 // GetAccountBalances return all account balances

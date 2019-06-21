@@ -13,8 +13,8 @@ import (
 	"github.com/vapor/protocol/bc/types"
 )
 
-// DB interface contains wallet storage functions.
-type DB interface {
+// Store interface contains wallet storage functions.
+type Store interface {
 	GetAssetDefinitionByAssetID(*bc.AssetID) []byte
 	SetAssetDefinition(*bc.AssetID, []byte)
 	GetRawProgramByAccountHash(common.Hash) []byte
@@ -41,7 +41,10 @@ type DB interface {
 	SetWalletInfo([]byte)
 	DeleteAllWalletTxs()
 	DeleteAllWalletUTXOs()
-	GetAccountUtxos(string, string, bool, bool, []*account.UTXO) []*account.UTXO
+	GetAccountUtxos(key string) []*account.UTXO
+	SetRecoveryStatus([]byte, []byte)
+	DeleteRecoveryStatusByRecoveryKey([]byte)
+	GetRecoveryStatusByRecoveryKey([]byte) []byte
 }
 
 // LevelDBStore store wallet using leveldb
@@ -254,12 +257,9 @@ func (store *LevelDBStore) DeleteAllWalletUTXOs() {
 }
 
 // GetAccountUtxos get all account unspent outputs
-func (store *LevelDBStore) GetAccountUtxos(accountID, id string, isSmartContract, vote bool, accountUtxos []*account.UTXO) []*account.UTXO {
-	prefix := account.UTXOPreFix
-	if isSmartContract {
-		prefix = account.SUTXOPrefix
-	}
-	accountUtxoIter := store.DB.IteratorPrefix([]byte(prefix + id))
+func (store *LevelDBStore) GetAccountUtxos(key string) []*account.UTXO {
+	accountUtxos := []*account.UTXO{}
+	accountUtxoIter := store.DB.IteratorPrefix([]byte(key))
 	defer accountUtxoIter.Release()
 
 	for accountUtxoIter.Next() {
@@ -268,16 +268,23 @@ func (store *LevelDBStore) GetAccountUtxos(accountID, id string, isSmartContract
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Warn("GetAccountUtxos fail on unmarshal utxo")
 			continue
 		}
+		accountUtxos = append(accountUtxos, accountUtxo)
 
-		if vote && accountUtxo.Vote == nil {
-			continue
-		}
-
-		if accountID == accountUtxo.AccountID || accountID == "" {
-			accountUtxos = append(accountUtxos, accountUtxo)
-		}
 	}
-	newAccountUtxos := []*account.UTXO{}
-	newAccountUtxos = accountUtxos
-	return newAccountUtxos
+	return accountUtxos
+}
+
+// SetRecoveryStatus set recovery status
+func (store *LevelDBStore) SetRecoveryStatus(recoveryKey, rawStatus []byte) {
+	store.DB.Set(recoveryKey, rawStatus)
+}
+
+// DeleteRecoveryStatusByRecoveryKey delete recovery status
+func (store *LevelDBStore) DeleteRecoveryStatusByRecoveryKey(recoveryKey []byte) {
+	store.DB.Delete(recoveryKey)
+}
+
+// GetRecoveryStatusByRecoveryKey delete recovery status
+func (store *LevelDBStore) GetRecoveryStatusByRecoveryKey(recoveryKey []byte) []byte {
+	return store.DB.Get(recoveryKey)
 }
