@@ -24,6 +24,8 @@ import (
 
 var collectInterval = 5 * time.Second
 
+var errUnknownTxType = errors.New("unknown tx type")
+
 type warder struct {
 	db            *gorm.DB
 	assetStore    *database.AssetStore
@@ -289,6 +291,12 @@ func (w *warder) getSigns(destTx interface{}, ormTx *orm.CrossTransaction) ([]st
 
 	var signs []string
 	for _, data := range signData {
+		switch destTx.(type) {
+		case *vaporTypes.Tx:
+		case *btmTypes.Tx:
+		default:
+			return nil, errUnknownTxType
+		}
 		// TODO: sign it
 		msg := []byte{}
 		sign := w.xprv.Sign(msg)
@@ -317,7 +325,7 @@ func (w *warder) getSignData(destTx interface{}) ([]string, error) {
 		}
 
 	default:
-		return []string{}, errors.New("unknown tx type")
+		return []string{}, errUnknownTxType
 	}
 
 	return signData, nil
@@ -359,7 +367,7 @@ func (w *warder) submitTx(destTx interface{}) (string, error) {
 	case *vaporTypes.Tx:
 		return w.sidechainNode.SubmitTx(tx)
 	default:
-		return "", errors.New("unknown destTx type")
+		return "", errUnknownTxType
 	}
 }
 
