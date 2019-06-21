@@ -132,8 +132,9 @@ func (w *warder) processCrossTx(ormTx *orm.CrossTransaction) error {
 	}
 
 	// TODO: pass ref? err?
-	w.attachSignsForTx( /*destTx,*/ ormTx, signersSigns, w.position, signerSigns)
+	w.attachSignsForTx(ormTx, signersSigns, w.position, signerSigns)
 
+	// TODO: should we always request?
 	for _, remote := range w.remotes {
 		signerSigns, err := remote.RequestSigns(destTx, ormTx)
 		if err != nil {
@@ -142,7 +143,7 @@ func (w *warder) processCrossTx(ormTx *orm.CrossTransaction) error {
 		}
 
 		// TODO: pass ref? err?
-		w.attachSignsForTx( /*destTx,*/ ormTx, signersSigns, remote.Position, signerSigns)
+		w.attachSignsForTx(ormTx, signersSigns, remote.Position, signerSigns)
 	}
 
 	if w.isTxSignsReachQuorum(signersSigns) && w.isLeader() {
