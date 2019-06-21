@@ -6,7 +6,7 @@ usage() {
 cat << EOF
 bash deploy.sh operation [options]
 operation
-    --build=num : build node images
+    --build=num : build node images only
     
     --run=image1,image2,...: run selected node images
     
@@ -49,59 +49,56 @@ WALLET_PORT_BEGIN=9889
 scale=1
 # operation: build, run, run-all, all, list, remove, remove-all help
 op="all"
-op_arg="vapord_test-2951a1"
 
-# Call getopt to validate the provided input. 
-options=$(getopt -o brg --long build:run:run-all:list:rm:rm-all:scale:help:down -- "$@")
-[ $? -eq 0 ] || { 
-    echo "Incorrect options provided"
-    exit 1
-}
-
-eval set -- "$options"
-while true; do
-    case "$1" in
-    --build)
-        shift;
-        op="build"
-        scale=$1
+for i in "$@"
+do
+case $i in
+    --scale=*)
+        op="all"
+        scale="${i#*=}"
+        shift # past argument=value
         ;;
-    --run)
-        shift;
+    --build=*)
+        op="build"
+        scale="${i#*=}"
+        shift # past argument=value
+        ;;
+    --run=*)
         op="run"
-        op_arg=$1
+        op_arg="${i#*=}"
+        shift # past argument=value
         ;;
     --run-all)
         op="run-all"
+        shift
         ;;
-    --list)
-        op="list"
-        ;;
-    --rm)
-        shift;
+    --rm=*)
         op="remove"
-        op_arg=$1
+        op_arg="${i#*=}"
+        shift # past argument=value
         ;;
     --rm-all)
         op="remove-all"
+        shift
         ;;
-    --scale)
-        shift; # The arg is next in position args
-        op="all"
-        scale=$1
-        ;;
-    --help)
-        op="help"
+    --list)
+        op="list"
+        shift
         ;;
     --down)
         op="down"
-        ;;
-    --)
         shift
-        break
         ;;
-    esac
-    shift
+    --help)
+        op="help"
+        shift # past argument with no value
+        ;;
+    *)
+        echo "unknown option $i"
+        usage
+        exit 1
+        ;;
+esac
 done
 
 echo "options: scale:${scale}, op:${op} op_arg:${op_arg}"
@@ -157,7 +154,7 @@ if [ "${op}" == "list" ]; then
     echo -e "${GREEN}list all node images${NC}"
     docker images --filter=reference="${IMG_PREFIX}-*:*"
     echo
-    echo "public keys"
+    printf "${CYAN}image name\t\tpublic key${NC}\n"
     img_array=(`docker images --filter=reference="${IMG_PREFIX}-*:*" --format "{{.Repository}}"`)
     for img in "${img_array[@]}"; do
         pubkey=$( get_pubkey ${img} )
@@ -235,7 +232,7 @@ elif [ "${op}" == "run-all" ]; then
     done
 fi
 
-echo -e "image/node/pkey"
+printf "${CYAN}image name\t\tnode name\tpublic key${NC}\n"
 
 for id in "${!img_array[@]}"; do
     node=${node_array[id]}
