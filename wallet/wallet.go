@@ -42,8 +42,8 @@ type StatusInfo struct {
 
 //Wallet is related to storing account unspent outputs
 type Wallet struct {
-	// store           Store
-	DB              dbm.DB // delete it and replace
+	// DB DB
+	DB              dbm.DB
 	rw              sync.RWMutex
 	status          StatusInfo
 	TxIndexFlag     bool

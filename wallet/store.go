@@ -122,23 +122,24 @@ func (store *LevelDBStore) GetGlobalTxByTxID(txID string) []byte {
 	return store.DB.Get(calcGlobalTxIndexKey(txID))
 }
 
-// GetTransactions get all walletDB transactions, and filter transactions by accountID optional
-func (store *LevelDBStore) GetTransactionsByAccountID(accountID string) ([]*query.AnnotatedTx, error) {
-	annotatedTxs := []*query.AnnotatedTx{}
+// // GetTransactions get all walletDB transactions, and filter transactions by accountID optional
+// func (store *LevelDBStore) GetTransactionsByAccountID(accountID string) ([]*query.AnnotatedTx, error) {
+// 	annotatedTxs := []*query.AnnotatedTx{}
 
-	txIter := store.DB.IteratorPrefix([]byte(TxPrefix))
-	defer txIter.Release()
-	for txIter.Next() {
-		annotatedTx := &query.AnnotatedTx{}
-		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
-			return nil, err
-		}
+// 	txIter := store.DB.IteratorPrefix([]byte(TxPrefix))
+// 	defer txIter.Release()
+// 	for txIter.Next() {
+// 		annotatedTx := &query.AnnotatedTx{}
+// 		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
+// 			return nil, err
+// 		}
 
-		if accountID == "" || findTransactionsByAccount(annotatedTx, accountID) {
-			annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
-			annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
-		}
-	}
+// 		if accountID == "" || findTransactionsByAccount(annotatedTx, accountID) {
+// 			annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
+// 			annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
+// 		}
+// 	}
 
-	return annotatedTxs, nil
-}
+// 	return annotatedTxs, nil
+// }
+
