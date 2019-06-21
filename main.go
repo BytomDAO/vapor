@@ -40,7 +40,6 @@ func main() {
 
 	fmt.Println(raw)
 	fmt.Println(raw2)
-
 }
 
 func inner(bs []byte) {
@@ -54,9 +53,9 @@ func inner(bs []byte) {
 //     + pass test
 // + refactor asset
 // + sign by code
+// + refactor string
 
 // # TODO
-// + refactor string
 // + request sign
 // + maybe witness
 // + xprv
