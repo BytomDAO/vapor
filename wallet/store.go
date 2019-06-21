@@ -34,6 +34,8 @@ type DB interface {
 	DeleteContractUTXOByOutputID(bc.Hash)
 	SetStandardUTXO(bc.Hash, []byte)
 	SetContractUTXO(bc.Hash, []byte)
+	GetWalletInfo() []byte
+	SetWalletInfo([]byte)
 }
 
 // LevelDBStore store wallet using leveldb
@@ -204,3 +206,16 @@ func (store *LevelDBStore) SetContractUTXO(outputID bc.Hash, data []byte) {
 	batch := store.DB.NewBatch()
 	batch.Set(account.ContractUTXOKey(outputID), data)
 }
+
+// GetWalletInfo get wallet information
+func (store *LevelDBStore) GetWalletInfo() []byte {
+	return store.DB.Get(walletKey)
+}
+
+// SetWalletInfo get wallet information
+func (store *LevelDBStore) SetWalletInfo(rawWallet []byte) {
+	batch := store.DB.NewBatch()
+	batch.Set(walletKey, rawWallet)
+	batch.Write()
+}
+
