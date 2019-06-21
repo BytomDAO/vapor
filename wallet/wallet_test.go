@@ -2,7 +2,6 @@ package wallet
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"reflect"
@@ -330,10 +329,8 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 	go w.memPoolTxQueryLoop()
 	w.eventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: protocol.MsgNewTx}})
 	time.Sleep(time.Millisecond * 10)
-	if txxx, err := w.GetUnconfirmedTxByTxID(tx.ID.String()); err != nil {
+	if _, err := w.GetUnconfirmedTxByTxID(tx.ID.String()); err != nil {
 		t.Fatal("dispatch new tx msg error:", err)
-	} else {
-		fmt.Println("txxx:", txxx)
 	}
 	w.eventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: protocol.MsgRemoveTx}})
 	time.Sleep(time.Millisecond * 10)
@@ -341,8 +338,6 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 	if err != nil {
 		t.Fatal("get unconfirmed tx error:", err)
 	}
-
-	fmt.Println("len(txs) is:", len(txs))
 
 	if len(txs) != 0 {
 		t.Fatal("dispatch remove tx msg error")

@@ -66,6 +66,7 @@ func (store *LevelDBStore) GetAssetDefinitionByAssetID(assetID *bc.AssetID) []by
 func (store *LevelDBStore) SetAssetDefinition(assetID *bc.AssetID, definition []byte) {
 	batch := store.DB.NewBatch()
 	batch.Set(asset.ExtAssetKey(assetID), definition)
+	batch.Write()
 }
 
 // GetRawProgramByAccountHash get raw program by account hash
@@ -91,30 +92,35 @@ func (store *LevelDBStore) DeleteTransactionByHeight(height uint64) {
 		}
 		batch.Delete(txIter.Key())
 	}
+	batch.Write()
 }
 
 // SetRawTransaction set raw transaction by block height and tx position
 func (store *LevelDBStore) SetRawTransaction(height uint64, position uint32, rawTx []byte) {
 	batch := store.DB.NewBatch()
 	batch.Set(calcAnnotatedKey(formatKey(height, position)), rawTx)
+	batch.Write()
 }
 
 // SetHeightAndPostion set block height and tx position according to tx ID
 func (store *LevelDBStore) SetHeightAndPostion(txID string, height uint64, position uint32) {
 	batch := store.DB.NewBatch()
 	batch.Set(calcTxIndexKey(txID), []byte(formatKey(height, position)))
+	batch.Write()
 }
 
 // DeleteUnconfirmedTxByTxID delete unconfirmed tx by txID
 func (store *LevelDBStore) DeleteUnconfirmedTxByTxID(txID string) {
 	batch := store.DB.NewBatch()
 	batch.Delete(calcUnconfirmedTxKey(txID))
+	batch.Write()
 }
 
 // SetGlobalTxIndex set global tx index by blockhash and position
 func (store *LevelDBStore) SetGlobalTxIndex(globalTxID string, blockHash *bc.Hash, position uint64) {
 	batch := store.DB.NewBatch()
 	batch.Set(calcGlobalTxIndexKey(globalTxID), calcGlobalTxIndex(blockHash, position))
+	batch.Write()
 }
 
 // GetStandardUTXOByID get standard utxo by id
@@ -184,24 +190,28 @@ func (store *LevelDBStore) SetUnconfirmedTx(txID string, rawTx []byte) {
 func (store *LevelDBStore) DeleteStardardUTXOByOutputID(outputID bc.Hash) {
 	batch := store.DB.NewBatch()
 	batch.Delete(account.StandardUTXOKey(outputID))
+	batch.Write()
 }
 
 // DeleteContractUTXOByOutputID delete contract utxo by outputID
 func (store *LevelDBStore) DeleteContractUTXOByOutputID(outputID bc.Hash) {
 	batch := store.DB.NewBatch()
 	batch.Delete(account.ContractUTXOKey(outputID))
+	batch.Write()
 }
 
 // SetStandardUTXO set standard utxo
 func (store *LevelDBStore) SetStandardUTXO(outputID bc.Hash, data []byte) {
 	batch := store.DB.NewBatch()
 	batch.Set(account.StandardUTXOKey(outputID), data)
+	batch.Write()
 }
 
 // SetContractUTXO set standard utxo
 func (store *LevelDBStore) SetContractUTXO(outputID bc.Hash, data []byte) {
 	batch := store.DB.NewBatch()
 	batch.Set(account.ContractUTXOKey(outputID), data)
+	batch.Write()
 }
 
 // GetWalletInfo get wallet information
