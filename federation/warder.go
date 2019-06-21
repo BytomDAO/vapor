@@ -119,13 +119,16 @@ func (w *warder) processCrossTx(ormTx *orm.CrossTransaction) error {
 		return err
 	}
 
-	if err := w.signDestTx(destTx, ormTx); err != nil {
-		log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx}).Warnln("signDestTx")
+	signs, err := w.getSigns(destTx, ormTx)
+	if err != nil {
+		log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx}).Warnln("getSigns")
 		return err
 	}
 
+	w.attachSignsForTx(destTx, ormTx, w.position, signs)
+
 	for _, remote := range w.remotes {
-		signs, err := remote.RequestSign(destTx, ormTx)
+		signs, err := remote.RequestSigns(destTx, ormTx)
 		if err != nil {
 			log.WithFields(log.Fields{"err": err, "remote": remote, "cross-chain tx": ormTx}).Warnln("RequestSign")
 			return err
@@ -274,32 +277,25 @@ func (w *warder) initDestTxSigns(destTx interface{}, ormTx *orm.CrossTransaction
 }
 
 // TODO:
-func (w *warder) signDestTx(destTx interface{}, ormTx *orm.CrossTransaction) error {
+func (w *warder) getSigns(destTx interface{}, ormTx *orm.CrossTransaction) ([]string, error) {
 	if ormTx.Status != common.CrossTxPendingStatus || !ormTx.DestTxHash.Valid {
-		return errors.New("cross-chain tx status error")
+		return nil, errors.New("cross-chain tx status error")
 	}
 
 	signData, err := w.getSignData(destTx)
 	if err != nil {
-		return errors.New("getSignData")
+		return nil, errors.New("getSignData")
 	}
 
-	// TODO: compose
-
-	b, err := json.Marshal(signData)
-	if err != nil {
-		return errors.Wrap(err, "marshal signData")
+	var signs []string
+	for _, data := range signData {
+		// TODO: sign it
+		msg := []byte{}
+		sign := w.xprv.Sign(msg)
+		signs = append(signs, hex.EncodeToString(sign))
 	}
 
-	return w.db.Model(&orm.CrossTransactionSign{}).
-		Where(&orm.CrossTransactionSign{
-			CrossTransactionID: ormTx.ID,
-			WarderID:           w.position,
-		}).
-		UpdateColumn(&orm.CrossTransactionSign{
-			Signatures: string(b),
-			Status:     common.CrossTxSignCompletedStatus,
-		}).Error
+	return signs, nil
 }
 
 func (w *warder) getSignData(destTx interface{}) ([]string, error) {
@@ -328,7 +324,23 @@ func (w *warder) getSignData(destTx interface{}) ([]string, error) {
 }
 
 // TODO:
-func (w *warder) attachSignsForTx(destTx interface{}, ormTx *orm.CrossTransaction, position uint8, signs string) {
+func (w *warder) attachSignsForTx(destTx interface{}, ormTx *orm.CrossTransaction, position uint8, signs []string) error {
+
+	b, err := json.Marshal(signs)
+	if err != nil {
+		return errors.Wrap(err, "marshal signs")
+	}
+
+	return w.db.Model(&orm.CrossTransactionSign{}).
+		Where(&orm.CrossTransactionSign{
+			CrossTransactionID: ormTx.ID,
+			WarderID:           w.position,
+		}).
+		UpdateColumn(&orm.CrossTransactionSign{
+			Signatures: string(b),
+			Status:     common.CrossTxSignCompletedStatus,
+		}).Error
+
 }
 
 // TODO:
