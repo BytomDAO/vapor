@@ -3,7 +3,8 @@ package federation
 import (
 	"database/sql"
 	"encoding/hex"
-	"encoding/json"
+	// TODO:
+	// "encoding/json"
 	"time"
 
 	btmTypes "github.com/bytom/protocol/bc/types"
@@ -345,25 +346,11 @@ func (w *warder) getSigns(destTx interface{}, ormTx *orm.CrossTransaction) ([][]
 }
 
 // TODO:
-func (w *warder) attachSignsForTx( /*destTx interface{}, */ ormTx *orm.CrossTransaction, signersSigns [][][]byte, position uint8, signs []string) error {
-	var inputsLen int
-	switch destTx := destTx.(type) {
-	case *vaporTypes.Tx:
-		inputsLen = len(destTx.Inputs)
-	case *btmTypes.Tx:
-		inputsLen = len(destTx.Inputs)
-	default:
-		return errUnknownTxType
-	}
+func (w *warder) attachSignsForTx( /*destTx interface{}, */ ormTx *orm.CrossTransaction, signersSigns [][][]byte, position uint8, signerSigns [][]byte) error {
+	// TODO: rename
+	// signWitness := make([][]string, len(signersSigns))
 
-	// finalize tx?
-
-	signWitness := make([][]string, inputsLen)
-
-	b, err := json.Marshal(signs)
-	if err != nil {
-		return errors.Wrap(err, "marshal signs")
-	}
+	// TODO:
 
 	return w.db.Model(&orm.CrossTransactionSign{}).
 		Where(&orm.CrossTransactionSign{
@@ -371,7 +358,8 @@ func (w *warder) attachSignsForTx( /*destTx interface{}, */ ormTx *orm.CrossTran
 			WarderID:           w.position,
 		}).
 		UpdateColumn(&orm.CrossTransactionSign{
-			Signatures: string(b),
+			// TODO:
+			Signatures: "",
 			Status:     common.CrossTxSignCompletedStatus,
 		}).Error
 }
