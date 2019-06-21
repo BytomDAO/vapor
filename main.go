@@ -1,7 +1,17 @@
 package main
 
-func main() {
+import (
+	"fmt"
+)
 
+func main() {
+	bs := []byte{0}
+	inner(bs)
+	fmt.Println(bs)
+}
+
+func inner(bs []byte) {
+	bs[0] = byte(1)
 }
 
 // # DONE
