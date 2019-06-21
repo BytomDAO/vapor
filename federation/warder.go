@@ -131,7 +131,7 @@ func (w *warder) processCrossTx(ormTx *orm.CrossTransaction) error {
 		return err
 	}
 
-	// TODO: pass ref? err?
+	// TODO: err?
 	w.attachSignsForTx(ormTx, signersSigns, w.position, signerSigns)
 
 	// TODO: should we always request?
@@ -142,7 +142,7 @@ func (w *warder) processCrossTx(ormTx *orm.CrossTransaction) error {
 			return err
 		}
 
-		// TODO: pass ref? err?
+		// TODO: err?
 		w.attachSignsForTx(ormTx, signersSigns, remote.Position, signerSigns)
 	}
 
