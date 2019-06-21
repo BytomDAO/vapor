@@ -29,6 +29,8 @@ type DB interface {
 	GetTxIndexByTxID(string) []byte
 	GetTxByTxIndex([]byte) []byte
 	GetGlobalTxByTxID(string) []byte
+	GetTransactions() ([]*query.AnnotatedTx, error)
+	GetAllUnconfirmedTxs() ([]*query.AnnotatedTx, error)
 	GetUnconfirmedTxByTxID(string) []byte
 	SetUnconfirmedTx(string, []byte)
 	DeleteStardardUTXOByOutputID(bc.Hash)
@@ -134,48 +136,38 @@ func (store *LevelDBStore) GetGlobalTxByTxID(txID string) []byte {
 	return store.DB.Get(calcGlobalTxIndexKey(txID))
 }
 
-// // GetTransactions get all walletDB transactions, and filter transactions by accountID optional
-// func (store *LevelDBStore) GetTransactionsByAccountID(accountID string) ([]*query.AnnotatedTx, error) {
-// 	annotatedTxs := []*query.AnnotatedTx{}
+// GetTransactions get all walletDB transactions
+func (store *LevelDBStore) GetTransactions() ([]*query.AnnotatedTx, error) {
+	annotatedTxs := []*query.AnnotatedTx{}
 
-// 	txIter := store.DB.IteratorPrefix([]byte(TxPrefix))
-// 	defer txIter.Release()
-// 	for txIter.Next() {
-// 		annotatedTx := &query.AnnotatedTx{}
-// 		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
-// 			return nil, err
-// 		}
+	txIter := store.DB.IteratorPrefix([]byte(TxPrefix))
+	defer txIter.Release()
+	for txIter.Next() {
+		annotatedTx := &query.AnnotatedTx{}
+		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
+			return nil, err
+		}
+		annotatedTxs = append(annotatedTxs, annotatedTx)
+	}
 
-// 		if accountID == "" || findTransactionsByAccount(annotatedTx, accountID) {
-// 			annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
-// 			annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
-// 		}
-// 	}
+	return annotatedTxs, nil
+}
 
-// 	return annotatedTxs, nil
-// }
+// GetAllUnconfirmedTxs get all unconfirmed txs
+func (store *LevelDBStore) GetAllUnconfirmedTxs() ([]*query.AnnotatedTx, error) {
+	annotatedTxs := []*query.AnnotatedTx{}
+	txIter := store.DB.IteratorPrefix([]byte(UnconfirmedTxPrefix))
+	defer txIter.Release()
 
-// // GetUnconfirmedTxs get account unconfirmed transactions, filter transactions by accountID when accountID is not empty
-// func (w *Wallet) GetUnconfirmedTxs(accountID string) ([]*query.AnnotatedTx, error) {
-// 	annotatedTxs := []*query.AnnotatedTx{}
-// 	txIter := w.DB.IteratorPrefix([]byte(UnconfirmedTxPrefix))
-// 	defer txIter.Release()
-
-// 	for txIter.Next() {
-// 		annotatedTx := &query.AnnotatedTx{}
-// 		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
-// 			return nil, err
-// 		}
-
-// 		if accountID == "" || findTransactionsByAccount(annotatedTx, accountID) {
-// 			annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
-// 			annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
-// 		}
-// 	}
-
-// 	sort.Sort(SortByTimestamp(annotatedTxs))
-// 	return annotatedTxs, nil
-// }
+	for txIter.Next() {
+		annotatedTx := &query.AnnotatedTx{}
+		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
+			return nil, err
+		}
+		annotatedTxs = append(annotatedTxs, annotatedTx)
+	}
+	return annotatedTxs, nil
+}
 
 // GetUnconfirmedTxByTxID get unconfirmed tx by txID
 func (store *LevelDBStore) GetUnconfirmedTxByTxID(txID string) []byte {

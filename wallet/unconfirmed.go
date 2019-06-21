@@ -50,6 +50,7 @@ func (w *Wallet) GetUnconfirmedTxs(accountID string) ([]*query.AnnotatedTx, erro
 	txIter := w.DB.IteratorPrefix([]byte(UnconfirmedTxPrefix))
 	defer txIter.Release()
 
+	// replace with GetAllUnconfirmedTxs
 	for txIter.Next() {
 		annotatedTx := &query.AnnotatedTx{}
 		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
