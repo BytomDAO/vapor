@@ -316,7 +316,7 @@ func (w *warder) getSigns(destTx interface{}, ormTx *orm.CrossTransaction) ([]st
 	var signs []string
 	for _, data := range signData {
 		var sign []byte
-		// vaporBc.Hash & btmBc.Hash marshal in the same way
+		// vaporBc.Hash & btmBc.Hash are marshaled in the same way
 		msg := &vaporBc.Hash{}
 		if err := msg.UnmarshalText([]byte(data)); err != nil {
 			return nil, errors.Wrap(err, "Unmarshal signData")
@@ -346,7 +346,6 @@ func (w *warder) attachSignsForTx(destTx interface{}, ormTx *orm.CrossTransactio
 			Signatures: string(b),
 			Status:     common.CrossTxSignCompletedStatus,
 		}).Error
-
 }
 
 // TODO:
