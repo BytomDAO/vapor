@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"reflect"
@@ -53,13 +54,14 @@ func TestWalletVersion(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	testStore := NewStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
 	}()
 
 	dispatcher := event.NewDispatcher()
-	w := mockWallet(testDB, nil, nil, nil, dispatcher, false)
+	w := mockWallet(testStore, nil, nil, nil, dispatcher, false)
 
 	// legacy status test case
 	type legacyStatusInfo struct {
@@ -73,8 +75,8 @@ func TestWalletVersion(t *testing.T) {
 		t.Fatal("Marshal legacyStatusInfo")
 	}
 
-	w.DB.Set(walletKey, rawWallet)
-	rawWallet = w.DB.Get(walletKey)
+	w.store.SetWalletInfo(rawWallet)
+	rawWallet = w.store.GetWalletInfo()
 	if rawWallet == nil {
 		t.Fatal("fail to load wallet StatusInfo")
 	}
@@ -94,8 +96,8 @@ func TestWalletVersion(t *testing.T) {
 		t.Fatal("save wallet info")
 	}
 
-	w.DB.Set(walletKey, rawWallet)
-	rawWallet = w.DB.Get(walletKey)
+	w.store.SetWalletInfo(rawWallet)
+	rawWallet = w.store.GetWalletInfo()
 	if rawWallet == nil {
 		t.Fatal("fail to load wallet StatusInfo")
 	}
@@ -118,6 +120,7 @@ func TestWalletUpdate(t *testing.T) {
 
 	config.CommonConfig = config.DefaultConfig()
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	testStore := NewStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
@@ -176,7 +179,7 @@ func TestWalletUpdate(t *testing.T) {
 	txStatus.SetStatus(1, false)
 	store.SaveBlock(block, txStatus)
 
-	w := mockWallet(testDB, accountManager, reg, chain, dispatcher, true)
+	w := mockWallet(testStore, accountManager, reg, chain, dispatcher, true)
 	err = w.AttachBlock(block)
 	if err != nil {
 		t.Fatal(err)
@@ -196,7 +199,7 @@ func TestWalletUpdate(t *testing.T) {
 	}
 
 	for position, tx := range block.Transactions {
-		get := w.DB.Get(calcGlobalTxIndexKey(tx.ID.String()))
+		get := w.store.GetGlobalTxByTxID(tx.ID.String())
 		bh := block.BlockHeader.Hash()
 		expect := calcGlobalTxIndex(&bh, uint64(position))
 		if !reflect.DeepEqual(get, expect) {
@@ -215,6 +218,7 @@ func TestRescanWallet(t *testing.T) {
 
 	config.CommonConfig = config.DefaultConfig()
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	testStore := NewStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
@@ -237,9 +241,9 @@ func TestRescanWallet(t *testing.T) {
 		t.Fatal("save wallet info")
 	}
 
-	w := mockWallet(testDB, nil, nil, chain, dispatcher, false)
-	w.DB.Set(walletKey, rawWallet)
-	rawWallet = w.DB.Get(walletKey)
+	w := mockWallet(testStore, nil, nil, chain, dispatcher, false)
+	w.store.SetWalletInfo(rawWallet)
+	rawWallet = w.store.GetWalletInfo()
 	if rawWallet == nil {
 		t.Fatal("fail to load wallet StatusInfo")
 	}
@@ -266,6 +270,7 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 	}
 	config.CommonConfig = config.DefaultConfig()
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
+	testStore := NewStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll(dirPath)
@@ -321,12 +326,14 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 	//block := mockSingleBlock(tx)
 	txStatus := bc.NewTransactionStatus()
 	txStatus.SetStatus(0, false)
-	w, err := NewWallet(testDB, accountManager, reg, hsm, chain, dispatcher, false)
+	w, err := NewWallet(testStore, accountManager, reg, hsm, chain, dispatcher, false)
 	go w.memPoolTxQueryLoop()
 	w.eventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: protocol.MsgNewTx}})
 	time.Sleep(time.Millisecond * 10)
-	if _, err = w.GetUnconfirmedTxByTxID(tx.ID.String()); err != nil {
-		t.Fatal("disaptch new tx msg error:", err)
+	if txxx, err := w.GetUnconfirmedTxByTxID(tx.ID.String()); err != nil {
+		t.Fatal("dispatch new tx msg error:", err)
+	} else {
+		fmt.Println("txxx:", txxx)
 	}
 	w.eventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: protocol.MsgRemoveTx}})
 	time.Sleep(time.Millisecond * 10)
@@ -335,8 +342,10 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 		t.Fatal("get unconfirmed tx error:", err)
 	}
 
+	fmt.Println("len(txs) is:", len(txs))
+
 	if len(txs) != 0 {
-		t.Fatal("disaptch remove tx msg error")
+		t.Fatal("dispatch remove tx msg error")
 	}
 
 	w.eventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: 2}})
@@ -378,13 +387,13 @@ func mockTxData(utxos []*account.UTXO, testAccount *account.Account) (*txbuilder
 	return tplBuilder.Build()
 }
 
-func mockWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) *Wallet {
+func mockWallet(store Store, account *account.Manager, asset *asset.Registry, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) *Wallet {
 	wallet := &Wallet{
-		DB:              walletDB,
+		store:           store,
 		AccountMgr:      account,
 		AssetReg:        asset,
 		chain:           chain,
-		RecoveryMgr:     newRecoveryManager(walletDB, account),
+		RecoveryMgr:     newRecoveryManager(store, account),
 		eventDispatcher: dispatcher,
 		TxIndexFlag:     txIndexFlag,
 	}

@@ -18,6 +18,7 @@ import (
 
 func TestGetAccountUtxos(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	testStore := NewStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
@@ -185,7 +186,7 @@ func TestGetAccountUtxos(t *testing.T) {
 		},
 	}
 
-	w := &Wallet{DB: testDB}
+	w := &Wallet{store: testStore}
 	for i, c := range cases {
 		for k, u := range c.dbUtxos {
 			data, err := json.Marshal(u)
@@ -210,6 +211,7 @@ func TestGetAccountUtxos(t *testing.T) {
 
 func TestFilterAccountUtxo(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	testStore := NewStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
@@ -349,7 +351,7 @@ func TestFilterAccountUtxo(t *testing.T) {
 		},
 	}
 
-	w := &Wallet{DB: testDB}
+	w := &Wallet{store: testStore}
 	for i, c := range cases {
 		for s, p := range c.dbPrograms {
 			data, err := json.Marshal(p)

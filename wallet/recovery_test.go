@@ -136,6 +136,7 @@ func TestXPubsRecoveryLock(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
+	testStore := NewStore(testDB)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -147,7 +148,7 @@ func TestXPubsRecoveryLock(t *testing.T) {
 	}
 
 	acctMgr := account.NewManager(testDB, nil)
-	recoveryMgr := newRecoveryManager(testDB, acctMgr)
+	recoveryMgr := newRecoveryManager(testStore, acctMgr)
 	recoveryMgr.state = newRecoveryState()
 	recoveryMgr.state.XPubs = []chainkd.XPub{xpub.XPub}
 	recoveryMgr.state.XPubsStatus = newBranchRecoveryState(acctRecoveryWindow)
@@ -185,6 +186,7 @@ func TestExtendScanAddresses(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
+	testStore := NewStore(testDB)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -196,7 +198,7 @@ func TestExtendScanAddresses(t *testing.T) {
 	}
 
 	acctMgr := account.NewManager(testDB, nil)
-	recoveryMgr := newRecoveryManager(testDB, acctMgr)
+	recoveryMgr := newRecoveryManager(testStore, acctMgr)
 	acc1 := &account.Account{ID: "testA", Alias: "test1", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub.XPub}, KeyIndex: 1, DeriveRule: signers.BIP0044}}
 	acc2 := &account.Account{ID: "testB", Alias: "test2"}
 	acc3 := &account.Account{ID: "testC", Alias: "test3", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub.XPub}, KeyIndex: 2, DeriveRule: 3}}
@@ -241,6 +243,7 @@ func TestRecoveryFromXPubs(t *testing.T) {
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
 	recoveryDB := dbm.NewDB("recdb", "leveldb", dirPath)
+	recoveryStore := NewStore(recoveryDB)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -254,7 +257,7 @@ func TestRecoveryFromXPubs(t *testing.T) {
 	acctMgr := account.NewManager(testDB, nil)
 	txs, err := MockTxsP2PKH(acctMgr, xpub.XPub, false)
 	recAcctMgr := account.NewManager(recoveryDB, nil)
-	recoveryMgr := newRecoveryManager(recoveryDB, recAcctMgr)
+	recoveryMgr := newRecoveryManager(recoveryStore, recAcctMgr)
 
 	cases := []struct {
 		xPubs []chainkd.XPub
@@ -315,6 +318,7 @@ func TestRecoveryByRescanAccount(t *testing.T) {
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
 	recoveryDB := dbm.NewDB("recdb", "leveldb", dirPath)
+	recoveryStore := NewStore(recoveryDB)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -343,7 +347,7 @@ func TestRecoveryByRescanAccount(t *testing.T) {
 		}
 	}
 
-	recoveryMgr := newRecoveryManager(recoveryDB, recAcctMgr)
+	recoveryMgr := newRecoveryManager(recoveryStore, recAcctMgr)
 
 	acct := &account.Account{ID: "testA", Alias: "test1", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub.XPub}, KeyIndex: 1, DeriveRule: 3}}
 
@@ -403,6 +407,7 @@ func TestReportFound(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
+	testStore := NewStore(testDB)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -419,7 +424,7 @@ func TestReportFound(t *testing.T) {
 	}
 
 	acctMgr := account.NewManager(testDB, nil)
-	recoveryMgr := newRecoveryManager(testDB, acctMgr)
+	recoveryMgr := newRecoveryManager(testStore, acctMgr)
 	acc1 := &account.Account{ID: "testA", Alias: "test1", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub1.XPub}, KeyIndex: 1, DeriveRule: signers.BIP0044}}
 	acc2 := &account.Account{ID: "testB", Alias: "test2", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub2.XPub}, KeyIndex: 1, DeriveRule: signers.BIP0032}}
 	acc3 := &account.Account{ID: "testC", Alias: "test3", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub2.XPub}, KeyIndex: 2, DeriveRule: signers.BIP0044}}
@@ -490,6 +495,7 @@ func TestLoadStatusInfo(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	testStore := NewStore(testDB)
 	defer os.RemoveAll("temp")
 
 	hsm, err := pseudohsm.New(dirPath)
@@ -503,7 +509,7 @@ func TestLoadStatusInfo(t *testing.T) {
 	}
 
 	acctMgr := account.NewManager(testDB, nil)
-	recoveryMgr := newRecoveryManager(testDB, acctMgr)
+	recoveryMgr := newRecoveryManager(testStore, acctMgr)
 	// StatusInit init recovery status manager.
 	recoveryMgr.state = newRecoveryState()
 	recoveryMgr.state.XPubs = []chainkd.XPub{xpub.XPub}
@@ -516,7 +522,7 @@ func TestLoadStatusInfo(t *testing.T) {
 
 	recoveryMgr.commitStatusInfo()
 
-	recoveryMgrRestore := newRecoveryManager(testDB, acctMgr)
+	recoveryMgrRestore := newRecoveryManager(testStore, acctMgr)
 	if err := recoveryMgrRestore.LoadStatusInfo(); err != nil {
 		t.Fatal("TestLoadStatusInfo err:", err)
 	}
@@ -564,10 +570,11 @@ func TestLock(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	testStore := NewStore(testDB)
 	defer os.RemoveAll("temp")
 
 	acctMgr := account.NewManager(testDB, nil)
-	recoveryMgr := newRecoveryManager(testDB, acctMgr)
+	recoveryMgr := newRecoveryManager(testStore, acctMgr)
 	if !recoveryMgr.tryStartXPubsRec() {
 		t.Fatal("recovery manager try lock test err")
 	}
@@ -622,6 +629,7 @@ func TestContractIndexResidue(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
+	testStore := NewStore(testDB)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -634,7 +642,7 @@ func TestContractIndexResidue(t *testing.T) {
 
 	contractIndexResidue := uint64(5)
 	acctMgr := account.NewManager(testDB, nil)
-	recoveryMgr := newRecoveryManager(testDB, acctMgr)
+	recoveryMgr := newRecoveryManager(testStore, acctMgr)
 	acct := &account.Account{ID: "testA", Alias: "test1", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub1.XPub}, KeyIndex: 1, DeriveRule: signers.BIP0044}}
 
 	cp1 := &account.CtrlProgram{AccountID: acct.ID, Address: "address1", KeyIndex: 10, Change: false}

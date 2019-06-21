@@ -51,6 +51,8 @@ func (w *Wallet) GetUnconfirmedTxs(accountID string) ([]*query.AnnotatedTx, erro
 		return nil, err
 	}
 
+	fmt.Println("GetUnconfirmedTxs len(annotatedTxs):", len(annotatedTxs))
+
 	newAnnotatedTxs := []*query.AnnotatedTx{}
 	for _, annotatedTx := range annotatedTxs {
 		if accountID == "" || findTransactionsByAccount(annotatedTx, accountID) {
@@ -60,6 +62,7 @@ func (w *Wallet) GetUnconfirmedTxs(accountID string) ([]*query.AnnotatedTx, erro
 	}
 
 	sort.Sort(SortByTimestamp(newAnnotatedTxs))
+	fmt.Println("GetUnconfirmedTxs:", len(newAnnotatedTxs))
 	return newAnnotatedTxs, nil
 }
 
@@ -150,6 +153,7 @@ func (w *Wallet) saveUnconfirmedTx(tx *types.Tx) error {
 }
 
 func (w *Wallet) delExpiredTxs() error {
+	fmt.Println("delExpiredTxs...")
 	AnnotatedTx, err := w.GetUnconfirmedTxs("")
 	if err != nil {
 		return err

@@ -10,7 +10,6 @@ import (
 	"github.com/vapor/common"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
 )
 
 // Store interface contains wallet storage functions.
@@ -21,7 +20,6 @@ type Store interface {
 	GetAccountValueByAccountID(string) []byte
 	DeleteTransactionByHeight(uint64)
 	SetRawTransaction(uint64, uint32, []byte)
-	SaveExternalAssetDefinition(*types.Block)
 	SetHeightAndPostion(string, uint64, uint32)
 	DeleteUnconfirmedTxByTxID(string)
 	SetGlobalTxIndex(string, *bc.Hash, uint64)
@@ -53,7 +51,7 @@ type LevelDBStore struct {
 }
 
 // NewLevelDBStore create new LevelDBStore struct
-func NewLevelDBStore(db dbm.DB) *LevelDBStore {
+func NewStore(db dbm.DB) *LevelDBStore {
 	return &LevelDBStore{
 		DB: db,
 	}
