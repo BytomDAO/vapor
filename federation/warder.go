@@ -31,6 +31,7 @@ type warder struct {
 	assetStore    *database.AssetStore
 	txCh          chan *orm.CrossTransaction
 	fedProg       []byte
+	quorum        int
 	position      uint8
 	xpub          chainkd.XPub
 	xprv          chainkd.XPrv
@@ -46,6 +47,7 @@ func NewWarder(db *gorm.DB, assetStore *database.AssetStore, cfg *config.Config)
 		assetStore:    assetStore,
 		txCh:          make(chan *orm.CrossTransaction),
 		fedProg:       util.ParseFedProg(cfg.Warders, cfg.Quorum),
+		quorum:        cfg.Quorum,
 		position:      local.Position,
 		xpub:          local.XPub,
 		xprv:          string2xprv(xprvStr),
@@ -121,32 +123,42 @@ func (w *warder) processCrossTx(ormTx *orm.CrossTransaction) error {
 		return err
 	}
 
+	approvalCnt := 0
 	signersSigns := make([][][]byte, getInputsCnt(destTx))
-
 	signerSigns, err := w.getSigns(destTx, ormTx)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx}).Warnln("getSigns")
 		return err
 	}
 
-	// TODO: err?
-	w.attachSignsForTx(ormTx, signersSigns, w.position, signerSigns)
+	if err := w.attachSignsForTx(ormTx, signersSigns, w.position, signerSigns); err != nil {
+		log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx}).Warnln("attachSignsForTx")
+		return err
+	}
 
-	// TODO: should we always request?
+	approvalCnt += 1
+
 	for _, remote := range w.remotes {
 		signerSigns, err := remote.RequestSigns(destTx, ormTx)
 		if err != nil {
 			log.WithFields(log.Fields{"err": err, "remote": remote, "cross-chain tx": ormTx}).Warnln("RequestSign")
+			continue
+		}
+
+		if err := w.attachSignsForTx(ormTx, signersSigns, remote.Position, signerSigns); err != nil {
+			log.WithFields(log.Fields{"err": err, "remote position": remote.Position, "cross-chain tx": ormTx}).Warnln("attachSignsForTx")
+			continue
+		}
+
+		approvalCnt += 1
+	}
+
+	if approvalCnt >= w.quorum && w.isLeader() {
+		if err := w.finalizeTx(destTx, signersSigns); err != nil {
+			log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx, "dest tx": destTx}).Warnln("finalizeTx")
 			return err
 		}
 
-		// TODO: err?
-		w.attachSignsForTx(ormTx, signersSigns, remote.Position, signerSigns)
-	}
-
-	if w.isTxSignsReachQuorum(signersSigns) && w.isLeader() {
-		// TODO: check err
-		w.finalizeTx(destTx, signersSigns)
 		submittedTxID, err := w.submitTx(destTx)
 		if err != nil {
 			log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx, "dest tx": destTx}).Warnln("submitTx")
@@ -344,13 +356,10 @@ func (w *warder) getSigns(destTx interface{}, ormTx *orm.CrossTransaction) ([][]
 	return signs, nil
 }
 
-// destTx interface{}
-// TODO:
 func (w *warder) attachSignsForTx(ormTx *orm.CrossTransaction, signersSigns [][][]byte, position uint8, signerSigns [][]byte) error {
-	// TODO: rename
-	// signWitness := make([][]string, len(signersSigns))
-
-	// TODO:
+	for inpIdx := range signerSigns {
+		signerSigns[inpIdx][position] = signerSigns[inpIdx]
+	}
 
 	var signsStrs []string
 	for _, signerSign := range signerSigns {
@@ -370,11 +379,6 @@ func (w *warder) attachSignsForTx(ormTx *orm.CrossTransaction, signersSigns [][]
 			Signatures: string(b),
 			Status:     common.CrossTxSignCompletedStatus,
 		}).Error
-}
-
-// TODO:
-func (w *warder) isTxSignsReachQuorum(destTx interface{}) bool {
-	return false
 }
 
 func (w *warder) isLeader() bool {
