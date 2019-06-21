@@ -357,6 +357,7 @@ func (w *warder) getSigns(destTx interface{}, ormTx *orm.CrossTransaction) ([][]
 }
 
 func (w *warder) attachSignsForTx(ormTx *orm.CrossTransaction, signersSigns [][][]byte, position uint8, signerSigns [][]byte) error {
+	// TODO: fix
 	for inpIdx := range signerSigns {
 		signerSigns[inpIdx][position] = signerSigns[inpIdx]
 	}
