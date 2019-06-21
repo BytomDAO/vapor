@@ -25,7 +25,7 @@ var (
 	blockHashesByHeightPrefix = []byte("BHH:")
 	blockHeaderPrefix         = []byte("BH:")
 	blockTransactonsPrefix    = []byte("BTXS:")
-	mainChainHashPrefix       = []byte("MCH:")
+	mainChainIndexPrefix      = []byte("MCI:")
 	txStatusPrefix            = []byte("BTS:")
 	voteResultPrefix          = []byte("VR:")
 )
@@ -51,10 +51,10 @@ type Store struct {
 	cache cache
 }
 
-func calcMainChainHashPrefix(height uint64) []byte {
+func calcMainChainIndexPrefix(height uint64) []byte {
 	buf := [8]byte{}
 	binary.BigEndian.PutUint64(buf[:], height)
-	return append(mainChainHashPrefix, buf[:]...)
+	return append(mainChainIndexPrefix, buf[:]...)
 }
 
 func calcBlockHashesByHeightPrefix(height uint64) []byte {
@@ -125,7 +125,7 @@ func GetBlockHashesByHeight(db dbm.DB, height uint64) ([]*bc.Hash, error) {
 
 // GetMainChainHash return BlockHash by given height
 func GetMainChainHash(db dbm.DB, height uint64) (*bc.Hash, error) {
-	binaryHash := db.Get(calcMainChainHashPrefix(height))
+	binaryHash := db.Get(calcMainChainIndexPrefix(height))
 	if binaryHash == nil {
 		return nil, fmt.Errorf("There are no BlockHash with given height %d", height)
 	}
@@ -292,7 +292,7 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 	}
 
 	batch := s.db.NewBatch()
-	batch.Set(calcMainChainHashPrefix(block.Height), binaryBlockHash)
+	batch.Set(calcMainChainIndexPrefix(block.Height), binaryBlockHash)
 	batch.Set(calcBlockHashesByHeightPrefix(block.Height), binaryBlockHashes)
 	batch.Set(calcBlockHeaderKey(&blockHash), binaryBlockHeader)
 	batch.Set(calcBlockTransactionsKey(&blockHash), binaryBlockTxs)
