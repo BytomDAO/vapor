@@ -3,8 +3,7 @@ package federation
 import (
 	"database/sql"
 	"encoding/hex"
-	// TODO:
-	// "encoding/json"
+	"encoding/json"
 	"time"
 
 	btmTypes "github.com/bytom/protocol/bc/types"
@@ -353,14 +352,22 @@ func (w *warder) attachSignsForTx(ormTx *orm.CrossTransaction, signersSigns [][]
 
 	// TODO:
 
+	var signsStrs []string
+	for _, signerSign := range signerSigns {
+		signsStrs = append(signsStrs, hex.EncodeToString(signerSign))
+	}
+	b, err := json.Marshal(signsStrs)
+	if err != nil {
+		return err
+	}
+
 	return w.db.Model(&orm.CrossTransactionSign{}).
 		Where(&orm.CrossTransactionSign{
 			CrossTransactionID: ormTx.ID,
 			WarderID:           w.position,
 		}).
 		UpdateColumn(&orm.CrossTransactionSign{
-			// TODO:
-			Signatures: "",
+			Signatures: string(b),
 			Status:     common.CrossTxSignCompletedStatus,
 		}).Error
 }
