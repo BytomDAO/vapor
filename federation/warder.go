@@ -129,7 +129,8 @@ func (w *warder) processCrossTx(ormTx *orm.CrossTransaction) error {
 		return err
 	}
 
-	signersSigns = w.attachSignsForTx(destTx, ormTx, w.position, signs)
+	// TODO: pass ref?
+	signersSigns = w.attachSignsForTx( /*destTx,*/ ormTx, w.position, signerSigns)
 
 	for _, remote := range w.remotes {
 		signerSigns, err := remote.RequestSigns(destTx, ormTx)
@@ -138,12 +139,13 @@ func (w *warder) processCrossTx(ormTx *orm.CrossTransaction) error {
 			return err
 		}
 
-		signersSigns = w.attachSignsForTx(destTx, ormTx, remote.Position, signerSigns)
+		// TODO: pass ref?
+		signersSigns = w.attachSignsForTx( /*destTx,*/ ormTx, remote.Position, signerSigns)
 	}
 
 	if w.isTxSignsReachQuorum(signersSigns) && w.isLeader() {
-		destTx := w.finalizeTx(destTx, signersSigns)
-
+		// TODO: check err
+		w.finalizeTx(destTx, signersSigns)
 		submittedTxID, err := w.submitTx(destTx)
 		if err != nil {
 			log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx, "dest tx": destTx}).Warnln("submitTx")
@@ -282,26 +284,26 @@ func (w *warder) initDestTxSigns(destTx interface{}, ormTx *orm.CrossTransaction
 		}).Error
 }
 
-func (w *warder) getSignData(destTx interface{}) ([]string, error) {
-	var signData []string
+func (w *warder) getSignData(destTx interface{}) ([][]byte, error) {
+	var signData [][]byte
 
 	switch destTx := destTx.(type) {
 	case *vaporTypes.Tx:
-		signData = make([]string, len(destTx.Inputs))
+		signData = make([][]byte, len(destTx.Inputs))
 		for i := range destTx.Inputs {
 			signHash := destTx.SigHash(uint32(i))
-			signData[i] = signHash.String()
+			signData[i] = signHash.Bytes()
 		}
 
 	case *btmTypes.Tx:
-		signData = make([]string, len(destTx.Inputs))
+		signData = make([][]byte, len(destTx.Inputs))
 		for i := range destTx.Inputs {
 			signHash := destTx.SigHash(uint32(i))
-			signData[i] = signHash.String()
+			signData[i] = signHash.Bytes()
 		}
 
 	default:
-		return []string{}, errUnknownTxType
+		return [][]byte{}, errUnknownTxType
 	}
 
 	return signData, nil
