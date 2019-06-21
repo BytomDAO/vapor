@@ -309,7 +309,7 @@ func (w *warder) getSignData(destTx interface{}) ([][]byte, error) {
 	return signData, nil
 }
 
-func (w *warder) getSigns(destTx interface{}, ormTx *orm.CrossTransaction) ([]string, error) {
+func (w *warder) getSigns(destTx interface{}, ormTx *orm.CrossTransaction) ([][]byte, error) {
 	if ormTx.Status != common.CrossTxPendingStatus || !ormTx.DestTxHash.Valid {
 		return nil, errors.New("cross-chain tx status error")
 	}
@@ -319,17 +319,14 @@ func (w *warder) getSigns(destTx interface{}, ormTx *orm.CrossTransaction) ([]st
 		return nil, errors.New("getSignData")
 	}
 
-	var signs []string
+	var signs [][]byte
 	for _, data := range signData {
-		var sign []byte
+		var b [32]byte
+		copy(b[:], data)
 		// vaporBc.Hash & btmBc.Hash are marshaled in the same way
-		msg := &vaporBc.Hash{}
-		if err := msg.UnmarshalText([]byte(data)); err != nil {
-			return nil, errors.Wrap(err, "Unmarshal signData")
-		}
-
-		sign = w.xprv.Sign([]byte(msg.String()))
-		signs = append(signs, hex.EncodeToString(sign))
+		msg := vaporBc.NewHash(b)
+		sign := w.xprv.Sign([]byte(msg.String()))
+		signs = append(signs, sign)
 	}
 
 	return signs, nil
