@@ -39,8 +39,8 @@ func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *types.Tx) error {
 		return err
 	}
 
-	if len(tx.GasInputIDs) == 0 {
-		return ErrNoGasInput
+	if err := checkGasInputIDs(tx); err != nil {
+		return err
 	}
 
 	// This part is use for prevent tx size  is 0
@@ -150,4 +150,18 @@ func CalculateTxFee(tx *types.Tx) (fee uint64) {
 
 	fee = totalInputBTM - totalOutputBTM
 	return
+}
+
+func checkGasInputIDs(tx *types.Tx) error {
+	for _, inp := range tx.Inputs {
+		switch inp.InputType() {
+		case types.CrossChainInputType:
+			return nil
+		}
+	}
+
+	if len(tx.GasInputIDs) == 0 {
+		return ErrNoGasInput
+	}
+	return nil
 }
