@@ -9,7 +9,6 @@ import (
 	"github.com/vapor/account"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/pseudohsm"
-	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 	"github.com/vapor/event"
 	"github.com/vapor/protocol"
@@ -143,8 +142,8 @@ func (w *Wallet) loadWalletInfo() error {
 		}
 
 		log.WithFields(log.Fields{"module": logModule}).Warn(err.Error())
-		w.deleteAccountTxs()
-		w.deleteUtxos()
+		w.store.DeleteAllWalletTxs()
+		w.store.DeleteAllWalletUTXOs()
 	}
 
 	w.status.Version = currentVersion
@@ -156,15 +155,14 @@ func (w *Wallet) loadWalletInfo() error {
 	return w.AttachBlock(block)
 }
 
-func (w *Wallet) commitWalletInfo(batch dbm.Batch) error {
+func (w *Wallet) commitWalletInfo() error {
 	rawWallet, err := json.Marshal(w.status)
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("save wallet info")
 		return err
 	}
 
-	batch.Set(walletKey, rawWallet)
-	batch.Write()
+	w.store.SetWalletInfo(rawWallet)
 	return nil
 }
 
@@ -189,7 +187,6 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 		w.RecoveryMgr.finished()
 	}
 
-	storeBatch := w.DB.NewBatch()
 	if err := w.indexTransactions(block, txStatus); err != nil {
 		return err
 	}
@@ -201,7 +198,7 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 		w.status.BestHeight = w.status.WorkHeight
 		w.status.BestHash = w.status.WorkHash
 	}
-	return w.commitWalletInfo(storeBatch)
+	return w.commitWalletInfo()
 }
 
 // DetachBlock detach a block and rollback state
@@ -215,8 +212,7 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 		return err
 	}
 
-	storeBatch := w.DB.NewBatch()
-	w.detachUtxos(storeBatch, block, txStatus)
+	w.detachUtxos(block, txStatus)
 	w.store.DeleteTransactionByHeight(w.status.BestHeight)
 
 	w.status.BestHeight = block.Height - 1
@@ -227,7 +223,7 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 		w.status.WorkHash = w.status.BestHash
 	}
 
-	return w.commitWalletInfo(storeBatch)
+	return w.commitWalletInfo()
 }
 
 //WalletUpdate process every valid block and reverse every invalid block which need to rollback
@@ -269,43 +265,6 @@ func (w *Wallet) RescanBlocks() {
 	}
 }
 
-// deleteAccountTxs deletes all txs in wallet
-func (w *Wallet) deleteAccountTxs() { // DeleteAllWalletTxs
-	storeBatch := w.DB.NewBatch()
-
-	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
-	defer txIter.Release()
-
-	for txIter.Next() {
-		storeBatch.Delete(txIter.Key())
-	}
-
-	txIndexIter := w.DB.IteratorPrefix([]byte(TxIndexPrefix))
-	defer txIndexIter.Release()
-
-	for txIndexIter.Next() {
-		storeBatch.Delete(txIndexIter.Key())
-	}
-
-	storeBatch.Write()
-}
-
-func (w *Wallet) deleteUtxos() {
-	storeBatch := w.DB.NewBatch()
-	ruIter := w.DB.IteratorPrefix([]byte(account.UTXOPreFix))
-	defer ruIter.Release()
-	for ruIter.Next() {
-		storeBatch.Delete(ruIter.Key())
-	}
-
-	suIter := w.DB.IteratorPrefix([]byte(account.SUTXOPrefix))
-	defer suIter.Release()
-	for suIter.Next() {
-		storeBatch.Delete(suIter.Key())
-	}
-	storeBatch.Write()
-}
-
 // DeleteAccount deletes account matching accountID, then rescan wallet
 func (w *Wallet) DeleteAccount(accountID string) (err error) {
 	w.rw.Lock()
@@ -315,7 +274,7 @@ func (w *Wallet) DeleteAccount(accountID string) (err error) {
 		return err
 	}
 
-	w.deleteAccountTxs()
+	w.store.DeleteAllWalletTxs()
 	w.RescanBlocks()
 	return nil
 }
@@ -328,7 +287,7 @@ func (w *Wallet) UpdateAccountAlias(accountID string, newAlias string) (err erro
 		return err
 	}
 
-	w.deleteAccountTxs()
+	w.store.DeleteAllWalletTxs()
 	w.RescanBlocks()
 	return nil
 }

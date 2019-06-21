@@ -46,7 +46,8 @@ func (w *Wallet) AddUnconfirmedTx(txD *protocol.TxDesc) {
 // GetUnconfirmedTxs get account unconfirmed transactions, filter transactions by accountID when accountID is not empty
 func (w *Wallet) GetUnconfirmedTxs(accountID string) ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
-	if annotatedTxs, err := w.store.GetAllUnconfirmedTxs(); err != nil {
+	annotatedTxs, err := w.store.GetAllUnconfirmedTxs()
+	if err != nil {
 		return nil, err
 	}
 
