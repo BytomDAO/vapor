@@ -21,7 +21,7 @@ import (
 const logModule = "leveldb"
 
 var (
-	blockStoreKey             = []byte("blockStore")
+	blockStoreKey             = []byte("BS:")
 	blockHashesByHeightPrefix = []byte("BHH:")
 	blockHeaderPrefix         = []byte("BH:")
 	blockTransactonsPrefix    = []byte("BTXS:")
@@ -109,6 +109,20 @@ func GetBlockTransactions(db dbm.DB, hash *bc.Hash) ([]*types.Tx, error) {
 	return block.Transactions, nil
 }
 
+// GetBlockHashesByHeight return block hashes by given height
+func GetBlockHashesByHeight(db dbm.DB, height uint64) ([]*bc.Hash, error) {
+	binaryHashes := db.Get(calcBlockHashesByHeightPrefix(height))
+	if binaryHashes == nil {
+		return nil, fmt.Errorf("There are no block hashes with given height %d", height)
+	}
+
+	hashes := []*bc.Hash{}
+	if err := json.Unmarshal(binaryHashes, &hashes); err != nil {
+		return nil, err
+	}
+	return hashes, nil
+}
+
 // GetMainChainHash return BlockHash by given height
 func GetMainChainHash(db dbm.DB, height uint64) (*bc.Hash, error) {
 	binaryHash := db.Get(calcMainChainHashPrefix(height))
@@ -121,20 +135,6 @@ func GetMainChainHash(db dbm.DB, height uint64) (*bc.Hash, error) {
 		return nil, err
 	}
 	return hash, nil
-}
-
-// GetBlockHashesByHeight return block hashes by given height
-func GetBlockHashesByHeight(db dbm.DB, height uint64) ([]*bc.Hash, error) {
-	binaryHashes := db.Get(calcBlockHashesByHeightPrefix(height))
-	if binaryHashes == nil {
-		return nil, fmt.Errorf("There are no block hashes with given height %d", height)
-	}
-
-	hashes := []*bc.Hash{}
-	if err := json.Unmarshal(binaryHashes, hashes); err != nil {
-		return nil, err
-	}
-	return hashes, nil
 }
 
 // GetVoteResult return the vote result by given sequence
