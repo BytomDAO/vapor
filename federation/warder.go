@@ -373,6 +373,10 @@ func (w *warder) isLeader() bool {
 	return w.position == 1
 }
 
+func (w *warder) finalizeTx(destTx interface{}, signersSigns [][][]byte) error {
+	return nil
+}
+
 func (w *warder) submitTx(destTx interface{}) (string, error) {
 	switch tx := destTx.(type) {
 	case *btmTypes.Tx:
