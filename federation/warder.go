@@ -121,25 +121,29 @@ func (w *warder) processCrossTx(ormTx *orm.CrossTransaction) error {
 		return err
 	}
 
-	signs, err := w.getSigns(destTx, ormTx)
+	var signersSigns [][][]byte
+
+	signerSigns, err := w.getSigns(destTx, ormTx)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx}).Warnln("getSigns")
 		return err
 	}
 
-	w.attachSignsForTx(destTx, ormTx, w.position, signs)
+	signersSigns = w.attachSignsForTx(destTx, ormTx, w.position, signs)
 
 	for _, remote := range w.remotes {
-		signs, err := remote.RequestSigns(destTx, ormTx)
+		signerSigns, err := remote.RequestSigns(destTx, ormTx)
 		if err != nil {
 			log.WithFields(log.Fields{"err": err, "remote": remote, "cross-chain tx": ormTx}).Warnln("RequestSign")
 			return err
 		}
 
-		w.attachSignsForTx(destTx, ormTx, remote.Position, signs)
+		signersSigns = w.attachSignsForTx(destTx, ormTx, remote.Position, signerSigns)
 	}
 
-	if w.isTxSignsReachQuorum(destTx) && w.isLeader() {
+	if w.isTxSignsReachQuorum(signersSigns) && w.isLeader() {
+		destTx := w.finalizeTx(destTx, signersSigns)
+
 		submittedTxID, err := w.submitTx(destTx)
 		if err != nil {
 			log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx, "dest tx": destTx}).Warnln("submitTx")
@@ -340,6 +344,8 @@ func (w *warder) attachSignsForTx(destTx interface{}, ormTx *orm.CrossTransactio
 	default:
 		return errUnknownTxType
 	}
+
+	// finalize tx?
 
 	signWitness := make([][]string, inputsLen)
 
