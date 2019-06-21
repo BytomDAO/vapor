@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"time"
 
-	btmBc "github.com/bytom/protocol/bc"
 	btmTypes "github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
@@ -317,27 +316,13 @@ func (w *warder) getSigns(destTx interface{}, ormTx *orm.CrossTransaction) ([]st
 	var signs []string
 	for _, data := range signData {
 		var sign []byte
-		switch destTx.(type) {
-		case *vaporTypes.Tx:
-			msg := &vaporBc.Hash{}
-			if err := msg.UnmarshalText([]byte(data)); err != nil {
-				return nil, errors.Wrap(err, "Unmarshal signData")
-			}
-
-			sign = w.xprv.Sign([]byte(msg.String()))
-
-		case *btmTypes.Tx:
-			msg := &btmBc.Hash{}
-			if err := msg.UnmarshalText([]byte(data)); err != nil {
-				return nil, errors.Wrap(err, "Unmarshal signData")
-			}
-
-			sign = w.xprv.Sign([]byte(msg.String()))
-
-		default:
-			return nil, errUnknownTxType
+		// vaporBc.Hash & btmBc.Hash marshal in the same way
+		msg := &vaporBc.Hash{}
+		if err := msg.UnmarshalText([]byte(data)); err != nil {
+			return nil, errors.Wrap(err, "Unmarshal signData")
 		}
 
+		sign = w.xprv.Sign([]byte(msg.String()))
 		signs = append(signs, hex.EncodeToString(sign))
 	}
 
