@@ -331,6 +331,17 @@ func (w *warder) getSigns(destTx interface{}, ormTx *orm.CrossTransaction) ([]st
 
 // TODO:
 func (w *warder) attachSignsForTx(destTx interface{}, ormTx *orm.CrossTransaction, position uint8, signs []string) error {
+	var inputsLen int
+	switch destTx := destTx.(type) {
+	case *vaporTypes.Tx:
+		inputsLen = len(destTx.Inputs)
+	case *btmTypes.Tx:
+		inputsLen = len(destTx.Inputs)
+	default:
+		return errUnknownTxType
+	}
+
+	signWitness := make([][]string, inputsLen)
 
 	b, err := json.Marshal(signs)
 	if err != nil {
