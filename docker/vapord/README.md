@@ -1,59 +1,61 @@
 # quick start
 
-execute deploy.sh at the root of vapor repo
+execute ./docker/vapord/deploy.sh from the root of vapor repo.
 
-## usage
+every vapord image has a unique public key, always create only one instance per image, otherwise you would end up with multiple nodes with same public key.
+
+## print usage
 
 ```bash
-bash deploy.sh --help
+bash ./docker/vapord/deploy.sh --help
 ```
 
-## build and run a 2-node vapor nodes
+## build and run 2 vapor nodes
 
 ```bash
-bash deploy.sh --scale=2
+bash ./docker/vapord/deploy.sh --scale=2
 ```
 
 ## list available node images and public keys
 
 ```bash
-bash deploy.sh --list
+bash ./docker/vapord/deploy.sh --list
 ```
 
 ## remove all node images
 
 ```bash
-bash deploy.sh --rm-all
+bash ./docker/vapord/deploy.sh --rm-all
 ```
 
-## remove 2 images
+## remove 2 node images
 
 ```bash
-bash deploy.sh --rm=vapord_test-ade32,vapord_test-342de
+bash ./docker/vapord/deploy.sh --rm=vapord_test-ade32,vapord_test-342de
 ```
 
-## build 2 vapord images (build only)
+## build 2 node images (build only)
 
 ```bash
-bash deploy.sh --build=2
+bash ./docker/vapord/deploy.sh --build=2
 ```
 
-## run 2 vapor nodes from existing images
+## run 2 vapor nodes instances from existing images
 
 ```bash
-bash deploy.sh --run=vapord_test-ade32,vapord_test-342de
+bash ./docker/vapord/deploy.sh --run=vapord_test-ade32,vapord_test-342de
 ```
 
-## run vapor node from all existing images
+## run vapor node instances from all existing images
 
 ```bash
-bash deploy.sh --run-all
+bash ./docker/vapord/deploy.sh --run-all
 ```
 
-## bring down running nodes
+## bring down running node instances
 
 ```bash
-bash deploy.sh --down
+bash ./docker/vapord/deploy.sh --down
 ```
 
 ## node naming
@@ -64,3 +66,7 @@ bash deploy.sh --down
 * wallet port : start from 9889, and increases by 1 every time a new node image is created.
 * log location: ~/vapord/log/${node_name}
 * docker-compose.yml location: ~/vapord/docker-compose.yml
+
+## customize
+
+* config.toml and federation.json are provided for reference only. They should be modified for your own test env.
