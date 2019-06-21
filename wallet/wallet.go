@@ -271,7 +271,7 @@ func (w *Wallet) RescanBlocks() {
 }
 
 // deleteAccountTxs deletes all txs in wallet
-func (w *Wallet) deleteAccountTxs() {
+func (w *Wallet) deleteAccountTxs() { // DeleteAllWalletTxs
 	storeBatch := w.DB.NewBatch()
 
 	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))

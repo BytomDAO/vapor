@@ -36,6 +36,8 @@ type DB interface {
 	SetContractUTXO(bc.Hash, []byte)
 	GetWalletInfo() []byte
 	SetWalletInfo([]byte)
+	DeleteAllWalletTxs()
+	DeleteAllWalletUTXOs()
 }
 
 // LevelDBStore store wallet using leveldb
@@ -217,5 +219,43 @@ func (store *LevelDBStore) SetWalletInfo(rawWallet []byte) {
 	batch := store.DB.NewBatch()
 	batch.Set(walletKey, rawWallet)
 	batch.Write()
+}
+
+// DeleteAllWalletTxs delete all txs in wallet
+func (store *LevelDBStore) DeleteAllWalletTxs() {
+	storeBatch := store.DB.NewBatch()
+
+	txIter := store.DB.IteratorPrefix([]byte(TxPrefix))
+	defer txIter.Release()
+
+	for txIter.Next() {
+		storeBatch.Delete(txIter.Key())
+	}
+
+	txIndexIter := store.DB.IteratorPrefix([]byte(TxIndexPrefix))
+	defer txIndexIter.Release()
+
+	for txIndexIter.Next() {
+		storeBatch.Delete(txIndexIter.Key())
+	}
+
+	storeBatch.Write()
+}
+
+// DeleteAllWalletUTXOs delete all txs in wallet
+func (store *LevelDBStore) DeleteAllWalletUTXOs() {
+	storeBatch := store.DB.NewBatch()
+	ruIter := store.DB.IteratorPrefix([]byte(account.UTXOPreFix))
+	defer ruIter.Release()
+	for ruIter.Next() {
+		storeBatch.Delete(ruIter.Key())
+	}
+
+	suIter := store.DB.IteratorPrefix([]byte(account.SUTXOPrefix))
+	defer suIter.Release()
+	for suIter.Next() {
+		storeBatch.Delete(suIter.Key())
+	}
+	storeBatch.Write()
 }
 
