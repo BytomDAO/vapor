@@ -13,11 +13,11 @@ import (
 )
 
 var (
-	maxBlocksPerMsg      = uint64(maxHeadersPerMsg + 1)
-	maxHeadersPerMsg     = uint64(500)
+	maxBlocksPerMsg      = uint64(1000)
+	maxHeadersPerMsg     = uint64(1000)
 	fastSyncPivotGap     = uint64(64)
 	minGapStartFastSync  = uint64(128)
-	maxFastSyncBlocksNum = uint64((maxHeadersPerMsg - 1) * maxHeadersPerMsg)
+	maxFastSyncBlocksNum = uint64(10000)
 
 	errHeadersNum          = errors.New("headers number error")
 	errExceedMaxHeadersNum = errors.New("exceed max headers number per msg")
@@ -83,12 +83,12 @@ func (fs *fastSync) blockLocator() []*bc.Hash {
 func (fs *fastSync) process() error {
 	peer := fs.peers.BestPeer(consensus.SFFastSync | consensus.SFFullNode)
 	if peer == nil {
-		return errNoSyncPeer
+		log.WithFields(log.Fields{"module": logModule}).Debug("can't find sync peer")
+		return nil
 	}
 
-	if peer.Height() < fs.chain.BestBlockHeight()+uint64(minGapStartFastSync) {
-		//todo:debug
-		log.WithFields(log.Fields{"module": logModule}).Info("Height gap does not meet fast synchronization condition")
+	if peer.Height() < fs.chain.BestBlockHeight()+minGapStartFastSync {
+		log.WithFields(log.Fields{"module": logModule}).Debug("Height gap does not meet fast synchronization condition")
 		return nil
 	}
 
@@ -149,8 +149,8 @@ func (fs *fastSync) findFastSyncRange() error {
 	}
 
 	gap := fs.syncPeer.Height() - uint64(fastSyncPivotGap) - fs.commonAncestor.Height
-	if gap > uint64(maxFastSyncBlocksNum) {
-		fs.length = uint64(maxFastSyncBlocksNum)
+	if gap > maxFastSyncBlocksNum {
+		fs.length = maxFastSyncBlocksNum
 	} else {
 		fs.length = gap
 	}

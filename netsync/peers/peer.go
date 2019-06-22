@@ -652,12 +652,3 @@ func (ps *PeerSet) SelectPeer(syncHeight uint64) (string, error) {
 
 	return "", ErrNoValidPeer
 }
-
-func (ps *PeerSet) SetIdle(peerID string) {
-	peer := ps.GetPeer(peerID)
-	if peer == nil {
-		return
-	}
-
-	peer.SetIdle()
-}
