@@ -142,8 +142,8 @@ func (w *Wallet) loadWalletInfo() error {
 		}
 
 		log.WithFields(log.Fields{"module": logModule}).Warn(err.Error())
-		w.store.DeleteAllWalletTxs()
-		w.store.DeleteAllWalletUTXOs()
+		w.store.DeleteWalletTransactions()
+		w.store.DeleteWalletUTXOs()
 	}
 
 	w.status.Version = currentVersion
@@ -213,7 +213,7 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 	}
 
 	w.detachUtxos(block, txStatus)
-	w.store.DeleteTransactionByHeight(w.status.BestHeight)
+	w.store.DeleteTransaction(w.status.BestHeight)
 
 	w.status.BestHeight = block.Height - 1
 	w.status.BestHash = block.PreviousBlockHash
@@ -274,7 +274,7 @@ func (w *Wallet) DeleteAccount(accountID string) (err error) {
 		return err
 	}
 
-	w.store.DeleteAllWalletTxs()
+	w.store.DeleteWalletTransactions()
 	w.RescanBlocks()
 	return nil
 }
@@ -287,7 +287,7 @@ func (w *Wallet) UpdateAccountAlias(accountID string, newAlias string) (err erro
 		return err
 	}
 
-	w.store.DeleteAllWalletTxs()
+	w.store.DeleteWalletTransactions()
 	w.RescanBlocks()
 	return nil
 }

@@ -32,7 +32,7 @@ func annotateTxsAsset(w *Wallet, txs []*query.AnnotatedTx) {
 }
 
 func (w *Wallet) getExternalDefinition(assetID *bc.AssetID) json.RawMessage {
-	definitionByte := w.store.GetAssetDefinitionByAssetID(assetID)
+	definitionByte := w.store.GetAssetDefinition(assetID)
 	if definitionByte == nil {
 		return nil
 	}
@@ -112,7 +112,7 @@ func getAccountFromACP(program []byte, store Store) (*account.Account, error) {
 	localAccount := account.Account{}
 
 	sha3pool.Sum256(hash[:], program)
-	rawProgram := store.GetRawProgramByAccountHash(hash)
+	rawProgram := store.GetRawProgramByHash(hash)
 	if rawProgram == nil {
 		return nil, fmt.Errorf("failed get account control program:%x ", hash)
 	}
@@ -121,7 +121,7 @@ func getAccountFromACP(program []byte, store Store) (*account.Account, error) {
 		return nil, err
 	}
 
-	accountValue := store.GetAccountValueByAccountID(accountCP.AccountID)
+	accountValue := store.GetAccount(accountCP.AccountID)
 	if accountValue == nil {
 		return nil, fmt.Errorf("failed get account:%s ", accountCP.AccountID)
 	}

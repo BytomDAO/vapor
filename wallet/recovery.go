@@ -363,7 +363,7 @@ func (m *recoveryManager) FilterRecoveryTxs(b *types.Block) error {
 }
 
 func (m *recoveryManager) finished() {
-	m.store.DeleteRecoveryStatusByRecoveryKey(recoveryKey)
+	m.store.DeleteRecoveryStatus(recoveryKey)
 	m.started = false
 	m.addresses = make(map[bc.Hash]*account.CtrlProgram)
 	m.state = newRecoveryState()
@@ -374,7 +374,7 @@ func (m *recoveryManager) LoadStatusInfo() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	rawStatus := m.store.GetRecoveryStatusByRecoveryKey(recoveryKey)
+	rawStatus := m.store.GetRecoveryStatus(recoveryKey)
 	if rawStatus == nil {
 		return nil
 	}

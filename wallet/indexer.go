@@ -73,7 +73,7 @@ func saveExternalAssetDefinition(b *types.Block, store Store) {
 		for _, orig := range tx.Inputs {
 			if cci, ok := orig.TypedInput.(*types.CrossChainInput); ok {
 				assetID := cci.AssetId
-				if assetExist := store.GetAssetDefinitionByAssetID(assetID); assetExist == nil {
+				if assetExist := store.GetAssetDefinition(assetID); assetExist == nil {
 					store.SetAssetDefinition(assetID, cci.AssetDefinition)
 				}
 			}
@@ -115,9 +115,7 @@ func (w *Wallet) indexTransactions(b *types.Block, txStatus *bc.TransactionStatu
 
 		w.store.SetRawTransaction(b.Height, tx.Position, rawTx)
 		w.store.SetHeightAndPostion(tx.ID.String(), b.Height, tx.Position)
-
-		// delete unconfirmed transaction
-		w.store.DeleteUnconfirmedTxByTxID(tx.ID.String())
+		w.store.DeleteUnconfirmedTx(tx.ID.String())
 	}
 
 	if !w.TxIndexFlag {
@@ -143,7 +141,7 @@ transactionLoop:
 			var hash [32]byte
 			sha3pool.Sum256(hash[:], v.ControlProgram())
 
-			if bytes := w.store.GetRawProgramByAccountHash(hash); bytes != nil {
+			if bytes := w.store.GetRawProgramByHash(hash); bytes != nil {
 				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
 				continue transactionLoop
 			}
@@ -154,7 +152,7 @@ transactionLoop:
 			if err != nil {
 				continue
 			}
-			if bytes := w.store.GetStandardUTXOByID(outid); bytes != nil {
+			if bytes := w.store.GetStandardUTXO(outid); bytes != nil {
 				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
 				continue transactionLoop
 			}
@@ -177,12 +175,12 @@ func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
 
 func (w *Wallet) getAccountTxByTxID(txID string) (*query.AnnotatedTx, error) {
 	annotatedTx := &query.AnnotatedTx{}
-	formatKey := w.store.GetTxIndexByTxID(txID)
+	formatKey := w.store.GetTransactionIndex(txID)
 	if formatKey == nil {
 		return nil, errAccntTxIDNotFound
 	}
 
-	txInfo := w.store.GetTxByTxIndex(formatKey)
+	txInfo := w.store.GetTransaction(formatKey)
 	if err := json.Unmarshal(txInfo, annotatedTx); err != nil {
 		return nil, err
 	}
@@ -192,7 +190,7 @@ func (w *Wallet) getAccountTxByTxID(txID string) (*query.AnnotatedTx, error) {
 }
 
 func (w *Wallet) getGlobalTxByTxID(txID string) (*query.AnnotatedTx, error) {
-	globalTxIdx := w.store.GetGlobalTxByTxID(txID)
+	globalTxIdx := w.store.GetGlobalTransaction(txID)
 	if globalTxIdx == nil {
 		return nil, fmt.Errorf("No transaction(tx_id=%s) ", txID)
 	}

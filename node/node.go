@@ -108,7 +108,7 @@ func NewNode(config *cfg.Config) *Node {
 		cmn.Exit(cmn.Fmt("initialize HSM failed: %v", err))
 	}
 
-	if !config.Wallet.Disable { // modify next some lines
+	if !config.Wallet.Disable {
 		walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
 		walletStore := w.NewStore(walletDB)
 		accounts = account.NewManager(walletDB, chain)

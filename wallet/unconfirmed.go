@@ -46,7 +46,7 @@ func (w *Wallet) AddUnconfirmedTx(txD *protocol.TxDesc) {
 // GetUnconfirmedTxs get account unconfirmed transactions, filter transactions by accountID when accountID is not empty
 func (w *Wallet) GetUnconfirmedTxs(accountID string) ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
-	annotatedTxs, err := w.store.GetAllUnconfirmedTxs()
+	annotatedTxs, err := w.store.GetUnconfirmedTransactions()
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func (w *Wallet) GetUnconfirmedTxs(accountID string) ([]*query.AnnotatedTx, erro
 // GetUnconfirmedTxByTxID get unconfirmed transaction by txID
 func (w *Wallet) GetUnconfirmedTxByTxID(txID string) (*query.AnnotatedTx, error) {
 	annotatedTx := &query.AnnotatedTx{}
-	txInfo := w.store.GetUnconfirmedTxByTxID(txID)
+	txInfo := w.store.GetUnconfirmedTransaction(txID)
 	if txInfo == nil {
 		return nil, fmt.Errorf("No transaction(tx_id=%s) from txpool", txID)
 	}
@@ -84,7 +84,7 @@ func (w *Wallet) RemoveUnconfirmedTx(txD *protocol.TxDesc) {
 	if !w.checkRelatedTransaction(txD.Tx) {
 		return
 	}
-	w.store.DeleteUnconfirmedTxByTxID(txD.Tx.ID.String())
+	w.store.DeleteUnconfirmedTx(txD.Tx.ID.String())
 	w.AccountMgr.RemoveUnconfirmedUtxo(txD.Tx.ResultIds)
 }
 
@@ -111,7 +111,7 @@ func (w *Wallet) checkRelatedTransaction(tx *types.Tx) bool {
 	for _, v := range tx.Outputs {
 		var hash [32]byte
 		sha3pool.Sum256(hash[:], v.ControlProgram())
-		if bytes := w.store.GetRawProgramByAccountHash(hash); bytes != nil {
+		if bytes := w.store.GetRawProgramByHash(hash); bytes != nil {
 			return true
 		}
 	}
@@ -121,7 +121,7 @@ func (w *Wallet) checkRelatedTransaction(tx *types.Tx) bool {
 		if err != nil {
 			continue
 		}
-		if bytes := w.store.GetStandardUTXOByID(outid); bytes != nil {
+		if bytes := w.store.GetStandardUTXO(outid); bytes != nil {
 			return true
 		}
 	}
@@ -145,7 +145,7 @@ func (w *Wallet) saveUnconfirmedTx(tx *types.Tx) error {
 		return err
 	}
 
-	w.store.SetUnconfirmedTx(tx.ID.String(), rawTx)
+	w.store.SetUnconfirmedTransaction(tx.ID.String(), rawTx)
 	return nil
 }
 
@@ -156,7 +156,7 @@ func (w *Wallet) delExpiredTxs() error {
 	}
 	for _, tx := range AnnotatedTx {
 		if time.Now().After(time.Unix(int64(tx.Timestamp), 0).Add(MaxUnconfirmedTxDuration)) {
-			w.store.DeleteUnconfirmedTxByTxID(tx.ID.String())
+			w.store.DeleteUnconfirmedTx(tx.ID.String())
 		}
 	}
 	return nil

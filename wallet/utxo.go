@@ -53,9 +53,9 @@ func (w *Wallet) attachUtxos(b *types.Block, txStatus *bc.TransactionStatus) {
 		inputUtxos := txInToUtxos(tx, statusFail)
 		for _, inputUtxo := range inputUtxos {
 			if segwit.IsP2WScript(inputUtxo.ControlProgram) {
-				w.store.DeleteStardardUTXOByOutputID(inputUtxo.OutputID)
+				w.store.DeleteStardardUTXO(inputUtxo.OutputID)
 			} else {
-				w.store.DeleteContractUTXOByOutputID(inputUtxo.OutputID)
+				w.store.DeleteContractUTXO(inputUtxo.OutputID)
 			}
 		}
 
@@ -83,9 +83,9 @@ func (w *Wallet) detachUtxos(b *types.Block, txStatus *bc.TransactionStatus) {
 			}
 
 			if segwit.IsP2WScript(code) {
-				w.store.DeleteStardardUTXOByOutputID(*tx.ResultIds[j])
+				w.store.DeleteStardardUTXO(*tx.ResultIds[j])
 			} else {
-				w.store.DeleteContractUTXOByOutputID(*tx.ResultIds[j])
+				w.store.DeleteContractUTXO(*tx.ResultIds[j])
 			}
 		}
 
@@ -122,7 +122,7 @@ func (w *Wallet) filterAccountUtxo(utxos []*account.UTXO) []*account.UTXO {
 
 		var hash [32]byte
 		sha3pool.Sum256(hash[:], []byte(s))
-		data := w.store.GetRawProgramByAccountHash(hash)
+		data := w.store.GetRawProgramByHash(hash)
 		if data == nil {
 			continue
 		}
