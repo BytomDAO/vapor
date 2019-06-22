@@ -24,7 +24,7 @@ const (
 	TxPrefix = "TXS:"
 	//TxIndexPrefix is wallet database tx index prefix
 	TxIndexPrefix = "TID:"
-	//TxIndexPrefix is wallet database global tx index prefix
+	//GlobalTxIndexPrefix is wallet database global tx index prefix
 	GlobalTxIndexPrefix = "GTID:"
 )
 
