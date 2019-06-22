@@ -39,7 +39,7 @@ type Store interface {
 	SetWalletInfo([]byte)
 	DeleteWalletTransactions()
 	DeleteWalletUTXOs()
-	GetAccountUtxos(key string) []*account.UTXO
+	GetAccountUTXOs(key string) []*account.UTXO
 	SetRecoveryStatus([]byte, []byte)
 	DeleteRecoveryStatus([]byte)
 	GetRecoveryStatus([]byte) []byte
@@ -264,8 +264,8 @@ func (store *LevelDBStore) DeleteWalletUTXOs() {
 	storeBatch.Write()
 }
 
-// GetAccountUtxos get all account unspent outputs
-func (store *LevelDBStore) GetAccountUtxos(key string) []*account.UTXO {
+// GetAccountUTXOs get all account unspent outputs
+func (store *LevelDBStore) GetAccountUTXOs(key string) []*account.UTXO {
 	accountUtxos := []*account.UTXO{}
 	accountUtxoIter := store.DB.IteratorPrefix([]byte(key))
 	defer accountUtxoIter.Release()
@@ -273,7 +273,7 @@ func (store *LevelDBStore) GetAccountUtxos(key string) []*account.UTXO {
 	for accountUtxoIter.Next() {
 		accountUtxo := &account.UTXO{}
 		if err := json.Unmarshal(accountUtxoIter.Value(), accountUtxo); err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Warn("GetAccountUtxos fail on unmarshal utxo")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Warn("GetAccountUTXOs fail on unmarshal utxo")
 			continue
 		}
 		accountUtxos = append(accountUtxos, accountUtxo)
