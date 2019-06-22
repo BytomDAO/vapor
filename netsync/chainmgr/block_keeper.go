@@ -90,16 +90,29 @@ func (bk *blockKeeper) processHeaders(peerID string, headers []*types.BlockHeade
 	bk.fastSync.processHeaders(peerID, headers)
 }
 
-func (bk *blockKeeper) regularBlockSync(wantHeight uint64) error {
+func (bk *blockKeeper) regularBlockSync() error {
+	peer := bk.peers.BestPeer(consensus.SFFastSync | consensus.SFFullNode)
+	if peer == nil {
+		log.WithFields(log.Fields{"module": logModule}).Debug("can't find sync peer")
+		return nil
+	}
+	peerHeight := peer.Height()
+	if peerHeight >= bk.chain.BestBlockHeight()+minGapStartFastSync {
+		log.WithFields(log.Fields{"module": logModule}).Debug("Height gap meet fast synchronization condition")
+		return nil
+	}
+
 	i := bk.chain.BestBlockHeight() + 1
-	for i <= wantHeight {
+	for i <= peerHeight {
 		block, err := bk.requireBlock(i)
 		if err != nil {
+			bk.peers.ErrorHandler(peer.ID(), security.LevelConnException, err)
 			return err
 		}
 
 		isOrphan, err := bk.chain.ProcessBlock(block)
 		if err != nil {
+			bk.peers.ErrorHandler(peer.ID(), security.LevelMsgIllegal, err)
 			return err
 		}
 
@@ -146,23 +159,11 @@ func (bk *blockKeeper) startSync() bool {
 		return false
 	}
 
-	blockHeight := bk.chain.BestBlockHeight()
-	peer := bk.peers.BestPeer(consensus.SFFullNode)
-	if peer != nil && peer.Height() > blockHeight {
-		bk.syncPeer = peer
-		targetHeight := blockHeight + uint64(maxBlocksPerMsg)
-		if targetHeight > peer.Height() {
-			targetHeight = peer.Height()
-		}
-
-		if err := bk.regularBlockSync(targetHeight); err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on regularBlockSync")
-			bk.peers.ErrorHandler(peer.ID(), security.LevelMsgIllegal, err)
-			return false
-		}
-		return true
+	if err := bk.regularBlockSync(); err != nil {
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on regularBlockSync")
+		return false
 	}
-	return false
+	return true
 }
 
 func (bk *blockKeeper) stop() {
