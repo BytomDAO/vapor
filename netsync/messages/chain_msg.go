@@ -116,12 +116,12 @@ func (m *BlockMessage) String() string {
 //GetHeadersMessage is one of the bytom msg type
 type GetHeadersMessage struct {
 	RawBlockLocator [][32]byte
-	Amount          int
-	Skip            int
+	Amount          uint64
+	Skip            uint64
 }
 
 //NewGetHeadersMessage return a new GetHeadersMessage
-func NewGetHeadersMessage(blockLocator []*bc.Hash, amount int, skip int) *GetHeadersMessage {
+func NewGetHeadersMessage(blockLocator []*bc.Hash, amount uint64, skip uint64) *GetHeadersMessage {
 	msg := &GetHeadersMessage{
 		Amount: amount,
 		Skip:   skip,
@@ -147,11 +147,11 @@ func (m *GetHeadersMessage) String() string {
 }
 
 //GetStopHash return the stop hash of the msg
-func (m *GetHeadersMessage) GetAmount() int {
+func (m *GetHeadersMessage) GetAmount() uint64 {
 	return m.Amount
 }
 
-func (m *GetHeadersMessage) GetSkip() int {
+func (m *GetHeadersMessage) GetSkip() uint64 {
 	return m.Skip
 }
 

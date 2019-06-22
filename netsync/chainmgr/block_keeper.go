@@ -9,6 +9,7 @@ import (
 	"github.com/vapor/errors"
 	"github.com/vapor/netsync/peers"
 	"github.com/vapor/p2p/security"
+	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
 
@@ -26,6 +27,16 @@ var (
 	errPeerDropped    = errors.New("Peer dropped")
 )
 
+type FastSync interface {
+	locateBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*types.Block, error)
+	locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, amount uint64, skip uint64, maxNum uint64) ([]*types.BlockHeader, error)
+	process() error
+	processBlocks(peerID string, blocks []*types.Block)
+	processHeaders(peerID string, headers []*types.BlockHeader)
+	//setSyncPeer(peer *peers.Peer)
+	stop()
+}
+
 type blockMsg struct {
 	block  *types.Block
 	peerID string
@@ -42,30 +53,29 @@ type headersMsg struct {
 }
 
 type blockKeeper struct {
-	chain Chain
-	peers *peers.PeerSet
+	chain    Chain
+	fastSync FastSync
+	peers    *peers.PeerSet
 
-	syncPeer         *peers.Peer
-	blockProcessCh   chan *blockMsg
-	blocksProcessCh  chan *blocksMsg
-	headersProcessCh chan *headersMsg
-
-	skeleton       []*types.BlockHeader
-	commonAncestor *types.BlockHeader
-	fastSyncLength int
-
-	quite chan struct{}
+	syncPeer       *peers.Peer
+	blockProcessCh chan *blockMsg
 }
 
 func newBlockKeeper(chain Chain, peers *peers.PeerSet) *blockKeeper {
 	return &blockKeeper{
-		chain:            chain,
-		peers:            peers,
-		blockProcessCh:   make(chan *blockMsg, blockProcessChSize),
-		blocksProcessCh:  make(chan *blocksMsg, blocksProcessChSize),
-		headersProcessCh: make(chan *headersMsg, headersProcessChSize),
-		quite:            make(chan struct{}),
+		chain:          chain,
+		fastSync:       newFastSync(chain, peers),
+		peers:          peers,
+		blockProcessCh: make(chan *blockMsg, blockProcessChSize),
 	}
+}
+
+func (bk *blockKeeper) locateBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*types.Block, error) {
+	return bk.fastSync.locateBlocks(locator, stopHash)
+}
+
+func (bk *blockKeeper) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, amount uint64, skip uint64, maxNum uint64) ([]*types.BlockHeader, error) {
+	return bk.fastSync.locateHeaders(locator, stopHash, amount, skip, maxNum)
 }
 
 func (bk *blockKeeper) processBlock(peerID string, block *types.Block) {
@@ -73,11 +83,11 @@ func (bk *blockKeeper) processBlock(peerID string, block *types.Block) {
 }
 
 func (bk *blockKeeper) processBlocks(peerID string, blocks []*types.Block) {
-	bk.blocksProcessCh <- &blocksMsg{blocks: blocks, peerID: peerID}
+	bk.fastSync.processBlocks(peerID, blocks)
 }
 
 func (bk *blockKeeper) processHeaders(peerID string, headers []*types.BlockHeader) {
-	bk.headersProcessCh <- &headersMsg{headers: headers, peerID: peerID}
+	bk.fastSync.processHeaders(peerID, headers)
 }
 
 func (bk *blockKeeper) regularBlockSync(wantHeight uint64) error {
@@ -131,20 +141,13 @@ func (bk *blockKeeper) start() {
 }
 
 func (bk *blockKeeper) startSync() bool {
-	blockHeight := bk.chain.BestBlockHeight()
-	peer := bk.peers.BestPeer(consensus.SFFastSync | consensus.SFFullNode)
-	if peer != nil && peer.Height() >= blockHeight+uint64(minGapStartFastSync) {
-		bk.syncPeer = peer
-		if err := bk.fastSynchronize(); err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on fastBlockSync")
-			bk.peers.ErrorHandler(peer.ID(), security.LevelMsgIllegal, err)
-			return false
-		}
-		return true
+	if err := bk.fastSync.process(); err != nil {
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("failed on fast sync")
+		return false
 	}
 
-	blockHeight = bk.chain.BestBlockHeight()
-	peer = bk.peers.BestPeer(consensus.SFFullNode)
+	blockHeight := bk.chain.BestBlockHeight()
+	peer := bk.peers.BestPeer(consensus.SFFullNode)
 	if peer != nil && peer.Height() > blockHeight {
 		bk.syncPeer = peer
 		targetHeight := blockHeight + uint64(maxBlocksPerMsg)
@@ -163,7 +166,7 @@ func (bk *blockKeeper) startSync() bool {
 }
 
 func (bk *blockKeeper) stop() {
-	close(bk.quite)
+	bk.fastSync.stop()
 }
 
 func (bk *blockKeeper) syncWorker() {
@@ -185,8 +188,6 @@ func (bk *blockKeeper) syncWorker() {
 			if err = bk.peers.BroadcastNewStatus(block); err != nil {
 				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on syncWorker broadcast new status")
 			}
-		case <-bk.quite:
-			return
 		}
 	}
 }

@@ -148,7 +148,7 @@ func (p *Peer) GetBlocks(locator []*bc.Hash, stopHash *bc.Hash) bool {
 	return p.TrySend(msgs.BlockchainChannel, msg)
 }
 
-func (p *Peer) GetHeaders(locator []*bc.Hash, amount int, skip int) bool {
+func (p *Peer) GetHeaders(locator []*bc.Hash, amount uint64, skip uint64) bool {
 	msg := struct{ msgs.BlockchainMessage }{msgs.NewGetHeadersMessage(locator, amount, skip)}
 	return p.TrySend(msgs.BlockchainChannel, msg)
 }

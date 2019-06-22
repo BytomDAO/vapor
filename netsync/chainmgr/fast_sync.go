@@ -5,26 +5,53 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
+	"github.com/vapor/netsync/peers"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
 
 var (
-	maxBlocksPerMsg      = maxHeadersPerMsg + 1
-	maxHeadersPerMsg     = 500
-	fastSyncPivotGap     = 64
-	minGapStartFastSync  = 128
-	maxFastSyncBlocksNum = (maxHeadersPerMsg - 1) * maxHeadersPerMsg
+	maxBlocksPerMsg      = uint64(maxHeadersPerMsg + 1)
+	maxHeadersPerMsg     = uint64(500)
+	fastSyncPivotGap     = uint64(64)
+	minGapStartFastSync  = uint64(128)
+	maxFastSyncBlocksNum = uint64((maxHeadersPerMsg - 1) * maxHeadersPerMsg)
 
 	errHeadersNum          = errors.New("headers number error")
 	errExceedMaxHeadersNum = errors.New("exceed max headers number per msg")
 	errBlocksNum           = errors.New("blocks number error")
 	errNoCommonAncestor    = errors.New("can't find common ancestor")
+	errNoSyncPeer          = errors.New("can't find sync peer")
 )
 
-func (bk *blockKeeper) blockLocator() []*bc.Hash {
-	header := bk.chain.BestBlockHeader()
+type fastSync struct {
+	chain          Chain
+	peers          *peers.PeerSet
+	syncPeer       *peers.Peer
+	commonAncestor *types.BlockHeader
+	stopHeader     *types.BlockHeader
+	length         uint64
+
+	blocksProcessCh  chan *blocksMsg
+	headersProcessCh chan *headersMsg
+
+	quite chan struct{}
+}
+
+func newFastSync(chain Chain, peers *peers.PeerSet) *fastSync {
+	return &fastSync{
+		chain:            chain,
+		peers:            peers,
+		blocksProcessCh:  make(chan *blocksMsg, blocksProcessChSize),
+		headersProcessCh: make(chan *headersMsg, headersProcessChSize),
+		quite:            make(chan struct{}),
+	}
+}
+
+func (fs *fastSync) blockLocator() []*bc.Hash {
+	header := fs.chain.BestBlockHeader()
 	locator := []*bc.Hash{}
 
 	step := uint64(1)
@@ -37,9 +64,9 @@ func (bk *blockKeeper) blockLocator() []*bc.Hash {
 
 		var err error
 		if header.Height < step {
-			header, err = bk.chain.GetHeaderByHeight(0)
+			header, err = fs.chain.GetHeaderByHeight(0)
 		} else {
-			header, err = bk.chain.GetHeaderByHeight(header.Height - step)
+			header, err = fs.chain.GetHeaderByHeight(header.Height - step)
 		}
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("blockKeeper fail on get blockLocator")
@@ -53,39 +80,52 @@ func (bk *blockKeeper) blockLocator() []*bc.Hash {
 	return locator
 }
 
-func (bk *blockKeeper) fastSynchronize() error {
-	bk.initFastSyncParameters()
+func (fs *fastSync) process() error {
+	peer := fs.peers.BestPeer(consensus.SFFastSync | consensus.SFFullNode)
+	if peer == nil {
+		return errNoSyncPeer
+	}
 
-	err := bk.findFastSyncRange()
+	if peer.Height() < fs.chain.BestBlockHeight()+uint64(minGapStartFastSync) {
+		//todo:debug
+		log.WithFields(log.Fields{"module": logModule}).Info("Height gap does not meet fast synchronization condition")
+		return nil
+	}
+
+	fs.syncPeer = peer
+	fs.initFastSyncParameters()
+	err := fs.findFastSyncRange()
 	if err != nil {
 		return err
 	}
 
-	if err := bk.fetchSkeleton(); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("failed on fetch skeleton")
-		return err
-	}
-
-	for i := 0; i < len(bk.skeleton)-1; i++ {
-		blocks, err := bk.fetchBlocks(bk.skeleton[i], bk.skeleton[i+1])
+	for {
+		blocks, err := fs.fetchBlocks(fs.commonAncestor, fs.stopHeader)
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("failed on fetch blocks")
 			return err
 		}
 
-		if err := bk.verifyBlocks(blocks); err != nil {
+		if err := fs.verifyBlocks(blocks); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("failed on process blocks")
 			return err
 		}
+
+		if fs.chain.BestBlockHeight() >= fs.stopHeader.Height {
+			log.WithFields(log.Fields{"module": logModule}).Info("fast sync success")
+			break
+		}
+
+		fs.commonAncestor = fs.chain.BestBlockHeader()
 	}
 
 	return nil
 }
 
-func (bk *blockKeeper) fetchBlocks(startHeader *types.BlockHeader, stopHeader *types.BlockHeader) ([]*types.Block, error) {
+func (fs *fastSync) fetchBlocks(startHeader *types.BlockHeader, stopHeader *types.BlockHeader) ([]*types.Block, error) {
 	startHash := startHeader.Hash()
 	stopHash := stopHeader.Hash()
-	bodies, err := bk.requireBlocks(bk.syncPeer.ID(), []*bc.Hash{&startHash}, &stopHash, int(stopHeader.Height-startHeader.Height+1))
+	bodies, err := fs.requireBlocks(fs.syncPeer.ID(), []*bc.Hash{&startHash}, &stopHash)
 	if err != nil {
 		return nil, err
 	}
@@ -93,47 +133,46 @@ func (bk *blockKeeper) fetchBlocks(startHeader *types.BlockHeader, stopHeader *t
 	return bodies, nil
 }
 
-func (bk *blockKeeper) findCommonAncestor() error {
-	headers, err := bk.requireHeaders(bk.syncPeer.ID(), bk.blockLocator(), 1, 0)
+func (fs *fastSync) findCommonAncestor() error {
+	headers, err := fs.requireHeaders(fs.syncPeer.ID(), fs.blockLocator(), 1, 0)
 	if err != nil {
 		return err
 	}
 
-	if len(headers) != 1 {
-		return errNoCommonAncestor
-	}
-
-	bk.commonAncestor = headers[0]
+	fs.commonAncestor = headers[0]
 	return nil
 }
 
-func (bk *blockKeeper) findFastSyncRange() error {
-	if err := bk.findCommonAncestor(); err != nil {
+func (fs *fastSync) findFastSyncRange() error {
+	if err := fs.findCommonAncestor(); err != nil {
 		return err
 	}
 
-	if bk.syncPeer.Height() <= uint64(fastSyncPivotGap)+bk.commonAncestor.Height {
-		return nil
-	}
-
-	gap := bk.syncPeer.Height() - uint64(fastSyncPivotGap) - bk.commonAncestor.Height
+	gap := fs.syncPeer.Height() - uint64(fastSyncPivotGap) - fs.commonAncestor.Height
 	if gap > uint64(maxFastSyncBlocksNum) {
-		bk.fastSyncLength = maxFastSyncBlocksNum
-		return nil
+		fs.length = uint64(maxFastSyncBlocksNum)
+	} else {
+		fs.length = gap
 	}
 
-	bk.fastSyncLength = int(gap)
+	startPoint := fs.commonAncestor.Hash()
+	headers, err := fs.requireHeaders(fs.syncPeer.ID(), []*bc.Hash{&startPoint}, 2, fs.length-1)
+	if err != nil {
+		return err
+	}
+
+	fs.stopHeader = headers[1]
 	return nil
 }
 
-func (bk *blockKeeper) initFastSyncParameters() {
-	bk.skeleton = make([]*types.BlockHeader, 0)
-	bk.commonAncestor = nil
-	bk.fastSyncLength = 0
+func (fs *fastSync) initFastSyncParameters() {
+	fs.commonAncestor = nil
+	fs.stopHeader = nil
+	fs.length = 0
 }
 
-func (bk *blockKeeper) locateBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*types.Block, error) {
-	headers, err := bk.locateHeaders(locator, stopHash, 0, 0, maxBlocksPerMsg)
+func (fs *fastSync) locateBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*types.Block, error) {
+	headers, err := fs.locateHeaders(locator, stopHash, 0, 0, uint64(maxBlocksPerMsg))
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +180,7 @@ func (bk *blockKeeper) locateBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*t
 	blocks := []*types.Block{}
 	for _, header := range headers {
 		headerHash := header.Hash()
-		block, err := bk.chain.GetBlockByHash(&headerHash)
+		block, err := fs.chain.GetBlockByHash(&headerHash)
 		if err != nil {
 			return nil, err
 		}
@@ -151,15 +190,15 @@ func (bk *blockKeeper) locateBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*t
 	return blocks, nil
 }
 
-func (bk *blockKeeper) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, amount int, skip int, maxNum int) ([]*types.BlockHeader, error) {
-	startHeader, err := bk.chain.GetHeaderByHeight(0)
+func (fs *fastSync) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, amount uint64, skip uint64, maxNum uint64) ([]*types.BlockHeader, error) {
+	startHeader, err := fs.chain.GetHeaderByHeight(0)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, hash := range locator {
-		header, err := bk.chain.GetHeaderByHash(hash)
-		if err == nil && bk.chain.InMainChain(header.Hash()) {
+		header, err := fs.chain.GetHeaderByHash(hash)
+		if err == nil && fs.chain.InMainChain(header.Hash()) {
 			startHeader = header
 			break
 		}
@@ -167,18 +206,18 @@ func (bk *blockKeeper) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, amou
 
 	var stopHeader *types.BlockHeader
 	if stopHash != nil {
-		stopHeader, err = bk.chain.GetHeaderByHash(stopHash)
+		stopHeader, err = fs.chain.GetHeaderByHash(stopHash)
 	} else {
-		stopHeader, err = bk.chain.GetHeaderByHeight(startHeader.Height + uint64((amount-1)*(skip+1)))
+		stopHeader, err = fs.chain.GetHeaderByHeight(startHeader.Height + uint64((amount-1)*(skip+1)))
 	}
 	if err != nil {
 		return nil, err
 	}
 
 	headers := []*types.BlockHeader{}
-	num := 0
+	num := uint64(0)
 	for i := startHeader.Height; i <= stopHeader.Height && num < maxNum; i += uint64(skip) + 1 {
-		header, err := bk.chain.GetHeaderByHeight(i)
+		header, err := fs.chain.GetHeaderByHeight(i)
 		if err != nil {
 			return nil, err
 		}
@@ -188,8 +227,16 @@ func (bk *blockKeeper) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, amou
 	return headers, nil
 }
 
-func (bk *blockKeeper) requireBlocks(peerID string, locator []*bc.Hash, stopHash *bc.Hash, length int) ([]*types.Block, error) {
-	peer := bk.peers.GetPeer(peerID)
+func (fs *fastSync) processBlocks(peerID string, blocks []*types.Block) {
+	fs.blocksProcessCh <- &blocksMsg{blocks: blocks, peerID: peerID}
+}
+
+func (fs *fastSync) processHeaders(peerID string, headers []*types.BlockHeader) {
+	fs.headersProcessCh <- &headersMsg{headers: headers, peerID: peerID}
+}
+
+func (fs *fastSync) requireBlocks(peerID string, locator []*bc.Hash, stopHash *bc.Hash) ([]*types.Block, error) {
+	peer := fs.peers.GetPeer(peerID)
 	if peer == nil {
 		return nil, errPeerDropped
 	}
@@ -203,12 +250,9 @@ func (bk *blockKeeper) requireBlocks(peerID string, locator []*bc.Hash, stopHash
 
 	for {
 		select {
-		case msg := <-bk.blocksProcessCh:
+		case msg := <-fs.blocksProcessCh:
 			if msg.peerID != peerID {
 				continue
-			}
-			if len(msg.blocks) != length {
-				return nil, errBlocksNum
 			}
 
 			return msg.blocks, nil
@@ -218,8 +262,8 @@ func (bk *blockKeeper) requireBlocks(peerID string, locator []*bc.Hash, stopHash
 	}
 }
 
-func (bk *blockKeeper) requireHeaders(peerID string, locator []*bc.Hash, amount int, skip int) ([]*types.BlockHeader, error) {
-	peer := bk.peers.GetPeer(peerID)
+func (fs *fastSync) requireHeaders(peerID string, locator []*bc.Hash, amount uint64, skip uint64) ([]*types.BlockHeader, error) {
+	peer := fs.peers.GetPeer(peerID)
 	if peer == nil {
 		return nil, errPeerDropped
 	}
@@ -233,7 +277,7 @@ func (bk *blockKeeper) requireHeaders(peerID string, locator []*bc.Hash, amount 
 
 	for {
 		select {
-		case msg := <-bk.headersProcessCh:
+		case msg := <-fs.headersProcessCh:
 			if msg.peerID != peerID {
 				continue
 			}
@@ -249,34 +293,17 @@ func (bk *blockKeeper) requireHeaders(peerID string, locator []*bc.Hash, amount 
 	}
 }
 
-func (bk *blockKeeper) fetchSkeleton() error {
-	startPoint := bk.commonAncestor.Hash()
-
-	bk.skeleton = append(bk.skeleton, bk.commonAncestor)
-	if bk.fastSyncLength > maxHeadersPerMsg {
-		headers, err := bk.requireHeaders(bk.syncPeer.ID(), []*bc.Hash{&startPoint}, bk.fastSyncLength/maxHeadersPerMsg+1, maxHeadersPerMsg-1)
-		if err != nil {
-			return err
-		}
-
-		bk.skeleton = append(bk.skeleton, headers[1:]...)
-	}
-
-	if bk.fastSyncLength%maxHeadersPerMsg != 0 {
-		headers, err := bk.requireHeaders(bk.syncPeer.ID(), []*bc.Hash{&startPoint}, 2, bk.fastSyncLength-1)
-		if err != nil {
-			return err
-		}
-
-		bk.skeleton = append(bk.skeleton, headers[1])
-	}
-
-	return nil
+func (fs *fastSync) setSyncPeer(peer *peers.Peer) {
+	fs.syncPeer = peer
 }
 
-func (bk *blockKeeper) verifyBlocks(blocks []*types.Block) error {
+func (fs *fastSync) stop() {
+	close(fs.quite)
+}
+
+func (fs *fastSync) verifyBlocks(blocks []*types.Block) error {
 	for _, block := range blocks {
-		isOrphan, err := bk.chain.ProcessBlock(block)
+		isOrphan, err := fs.chain.ProcessBlock(block)
 		if err != nil {
 			return err
 		}
