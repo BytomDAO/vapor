@@ -22,9 +22,6 @@ var (
 
 	errHeadersNum          = errors.New("headers number error")
 	errExceedMaxHeadersNum = errors.New("exceed max headers number per msg")
-	errBlocksNum           = errors.New("blocks number error")
-	errNoCommonAncestor    = errors.New("can't find common ancestor")
-	errNoSyncPeer          = errors.New("can't find sync peer")
 )
 
 type fastSync struct {
@@ -151,7 +148,7 @@ func (fs *fastSync) findFastSyncRange() error {
 		return err
 	}
 
-	gap := fs.syncPeer.Height() - uint64(fastSyncPivotGap) - fs.commonAncestor.Height
+	gap := fs.syncPeer.Height() - fastSyncPivotGap - fs.commonAncestor.Height
 	if gap > maxFastSyncBlocksNum {
 		fs.length = maxFastSyncBlocksNum
 	} else {
@@ -175,7 +172,7 @@ func (fs *fastSync) initFastSyncParameters() {
 }
 
 func (fs *fastSync) locateBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*types.Block, error) {
-	headers, err := fs.locateHeaders(locator, stopHash, 0, 0, uint64(maxBlocksPerMsg))
+	headers, err := fs.locateHeaders(locator, stopHash, 0, 0, maxBlocksPerMsg)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +208,7 @@ func (fs *fastSync) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, amount 
 	if stopHash != nil {
 		stopHeader, err = fs.chain.GetHeaderByHash(stopHash)
 	} else {
-		stopHeader, err = fs.chain.GetHeaderByHeight(startHeader.Height + uint64((amount-1)*(skip+1)))
+		stopHeader, err = fs.chain.GetHeaderByHeight(startHeader.Height + (amount-1)*(skip+1))
 	}
 	if err != nil {
 		return nil, err
@@ -219,7 +216,7 @@ func (fs *fastSync) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, amount 
 
 	headers := []*types.BlockHeader{}
 	num := uint64(0)
-	for i := startHeader.Height; i <= stopHeader.Height && num < maxNum; i += uint64(skip) + 1 {
+	for i := startHeader.Height; i <= stopHeader.Height && num < maxNum; i += skip + 1 {
 		header, err := fs.chain.GetHeaderByHeight(i)
 		if err != nil {
 			return nil, err
@@ -294,10 +291,6 @@ func (fs *fastSync) requireHeaders(peerID string, locator []*bc.Hash, amount uin
 			return nil, errors.Wrap(errRequestTimeout, "requireHeaders")
 		}
 	}
-}
-
-func (fs *fastSync) setSyncPeer(peer *peers.Peer) {
-	fs.syncPeer = peer
 }
 
 func (fs *fastSync) verifyBlocks(blocks []*types.Block) error {

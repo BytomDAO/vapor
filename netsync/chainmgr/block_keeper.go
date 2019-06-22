@@ -91,7 +91,7 @@ func (bk *blockKeeper) processHeaders(peerID string, headers []*types.BlockHeade
 }
 
 func (bk *blockKeeper) regularBlockSync() error {
-	peer := bk.peers.BestPeer(consensus.SFFastSync | consensus.SFFullNode)
+	peer := bk.peers.BestPeer(consensus.SFFullNode)
 	if peer == nil {
 		log.WithFields(log.Fields{"module": logModule}).Debug("can't find sync peer")
 		return nil

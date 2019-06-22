@@ -169,8 +169,8 @@ func TestGetBlockMessage(t *testing.T) {
 
 type testGetHeadersMessage struct {
 	blockLocator []*bc.Hash
-	amount       int
-	skip         int
+	amount       uint64
+	skip         uint64
 }
 
 func TestGetHeadersMessage(t *testing.T) {
