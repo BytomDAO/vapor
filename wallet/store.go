@@ -21,8 +21,8 @@ type Store interface {
 	DeleteTransaction(uint64)
 	SetRawTransaction(uint64, uint32, []byte)
 	SetHeightAndPostion(string, uint64, uint32)
-	DeleteUnconfirmedTx(string)
-	SetGlobalTxIndex(string, *bc.Hash, uint64)
+	DeleteUnconfirmedTransaction(string)
+	SetGlobalTransactionIndex(string, *bc.Hash, uint64)
 	GetStandardUTXO(bc.Hash) []byte
 	GetTransactionIndex(string) []byte
 	GetTransaction([]byte) []byte
@@ -50,7 +50,7 @@ type LevelDBStore struct {
 	DB dbm.DB
 }
 
-// NewLevelDBStore create new LevelDBStore struct
+// NewStore create new LevelDBStore struct
 func NewStore(db dbm.DB) *LevelDBStore {
 	return &LevelDBStore{
 		DB: db,
@@ -109,15 +109,15 @@ func (store *LevelDBStore) SetHeightAndPostion(txID string, height uint64, posit
 	batch.Write()
 }
 
-// DeleteUnconfirmedTx delete unconfirmed tx by txID
-func (store *LevelDBStore) DeleteUnconfirmedTx(txID string) {
+// DeleteUnconfirmedTransaction delete unconfirmed tx by txID
+func (store *LevelDBStore) DeleteUnconfirmedTransaction(txID string) {
 	batch := store.DB.NewBatch()
 	batch.Delete(calcUnconfirmedTxKey(txID))
 	batch.Write()
 }
 
-// SetGlobalTxIndex set global tx index by blockhash and position
-func (store *LevelDBStore) SetGlobalTxIndex(globalTxID string, blockHash *bc.Hash, position uint64) {
+// SetGlobalTransactionIndex set global tx index by blockhash and position
+func (store *LevelDBStore) SetGlobalTransactionIndex(globalTxID string, blockHash *bc.Hash, position uint64) {
 	batch := store.DB.NewBatch()
 	batch.Set(calcGlobalTxIndexKey(globalTxID), calcGlobalTxIndex(blockHash, position))
 	batch.Write()

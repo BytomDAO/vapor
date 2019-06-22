@@ -84,7 +84,7 @@ func (w *Wallet) RemoveUnconfirmedTx(txD *protocol.TxDesc) {
 	if !w.checkRelatedTransaction(txD.Tx) {
 		return
 	}
-	w.store.DeleteUnconfirmedTx(txD.Tx.ID.String())
+	w.store.DeleteUnconfirmedTransaction(txD.Tx.ID.String())
 	w.AccountMgr.RemoveUnconfirmedUtxo(txD.Tx.ResultIds)
 }
 
@@ -156,7 +156,7 @@ func (w *Wallet) delExpiredTxs() error {
 	}
 	for _, tx := range AnnotatedTx {
 		if time.Now().After(time.Unix(int64(tx.Timestamp), 0).Add(MaxUnconfirmedTxDuration)) {
-			w.store.DeleteUnconfirmedTx(tx.ID.String())
+			w.store.DeleteUnconfirmedTransaction(tx.ID.String())
 		}
 	}
 	return nil

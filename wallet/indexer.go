@@ -115,7 +115,7 @@ func (w *Wallet) indexTransactions(b *types.Block, txStatus *bc.TransactionStatu
 
 		w.store.SetRawTransaction(b.Height, tx.Position, rawTx)
 		w.store.SetHeightAndPostion(tx.ID.String(), b.Height, tx.Position)
-		w.store.DeleteUnconfirmedTx(tx.ID.String())
+		w.store.DeleteUnconfirmedTransaction(tx.ID.String())
 	}
 
 	if !w.TxIndexFlag {
@@ -124,7 +124,7 @@ func (w *Wallet) indexTransactions(b *types.Block, txStatus *bc.TransactionStatu
 
 	for position, globalTx := range b.Transactions {
 		blockHash := b.BlockHeader.Hash()
-		w.store.SetGlobalTxIndex(globalTx.ID.String(), &blockHash, uint64(position))
+		w.store.SetGlobalTransactionIndex(globalTx.ID.String(), &blockHash, uint64(position))
 	}
 
 	return nil
