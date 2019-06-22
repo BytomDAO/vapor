@@ -16,7 +16,7 @@ import (
 type Store interface {
 	GetAssetDefinition(*bc.AssetID) []byte
 	SetAssetDefinition(*bc.AssetID, []byte)
-	GetRawProgramByHash(common.Hash) []byte
+	GetRawProgram(common.Hash) []byte
 	GetAccount(string) []byte
 	DeleteTransaction(uint64)
 	SetTransaction(uint64, uint32, string, []byte)
@@ -65,8 +65,8 @@ func (store *LevelDBStore) SetAssetDefinition(assetID *bc.AssetID, definition []
 	store.DB.Set(asset.ExtAssetKey(assetID), definition)
 }
 
-// GetRawProgramByHash get raw program by hash
-func (store *LevelDBStore) GetRawProgramByHash(hash common.Hash) []byte {
+// GetRawProgram get raw program by hash
+func (store *LevelDBStore) GetRawProgram(hash common.Hash) []byte {
 	return store.DB.Get(account.ContractKey(hash))
 }
 

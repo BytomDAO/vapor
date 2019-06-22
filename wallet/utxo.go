@@ -122,7 +122,7 @@ func (w *Wallet) filterAccountUtxo(utxos []*account.UTXO) []*account.UTXO {
 
 		var hash [32]byte
 		sha3pool.Sum256(hash[:], []byte(s))
-		data := w.store.GetRawProgramByHash(hash)
+		data := w.store.GetRawProgram(hash)
 		if data == nil {
 			continue
 		}

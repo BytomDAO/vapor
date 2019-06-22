@@ -111,7 +111,7 @@ func (w *Wallet) checkRelatedTransaction(tx *types.Tx) bool {
 	for _, v := range tx.Outputs {
 		var hash [32]byte
 		sha3pool.Sum256(hash[:], v.ControlProgram())
-		if bytes := w.store.GetRawProgramByHash(hash); bytes != nil {
+		if bytes := w.store.GetRawProgram(hash); bytes != nil {
 			return true
 		}
 	}

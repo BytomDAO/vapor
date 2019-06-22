@@ -112,7 +112,7 @@ func getAccountFromACP(program []byte, store Store) (*account.Account, error) {
 	localAccount := account.Account{}
 
 	sha3pool.Sum256(hash[:], program)
-	rawProgram := store.GetRawProgramByHash(hash)
+	rawProgram := store.GetRawProgram(hash)
 	if rawProgram == nil {
 		return nil, fmt.Errorf("failed get account control program:%x ", hash)
 	}

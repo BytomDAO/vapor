@@ -140,7 +140,7 @@ transactionLoop:
 			var hash [32]byte
 			sha3pool.Sum256(hash[:], v.ControlProgram())
 
-			if bytes := w.store.GetRawProgramByHash(hash); bytes != nil {
+			if bytes := w.store.GetRawProgram(hash); bytes != nil {
 				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
 				continue transactionLoop
 			}
