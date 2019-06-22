@@ -174,12 +174,11 @@ func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
 
 func (w *Wallet) getAccountTxByTxID(txID string) (*query.AnnotatedTx, error) {
 	annotatedTx := &query.AnnotatedTx{}
-	formatKey := w.store.GetTransactionIndex(txID)
-	if formatKey == nil {
-		return nil, errAccntTxIDNotFound
+	txInfo, err := w.store.GetTransaction(txID)
+	if err != nil {
+		return nil, err
 	}
 
-	txInfo := w.store.GetTransaction(formatKey)
 	if err := json.Unmarshal(txInfo, annotatedTx); err != nil {
 		return nil, err
 	}

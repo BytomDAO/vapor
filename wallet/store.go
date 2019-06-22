@@ -23,8 +23,7 @@ type Store interface {
 	DeleteUnconfirmedTransaction(string)
 	SetGlobalTransactionIndex(string, *bc.Hash, uint64)
 	GetStandardUTXO(bc.Hash) []byte
-	GetTransactionIndex(string) []byte
-	GetTransaction([]byte) []byte
+	GetTransaction(string) ([]byte, error)
 	GetGlobalTransaction(string) []byte
 	GetTransactions() ([]*query.AnnotatedTx, error)
 	GetUnconfirmedTransactions() ([]*query.AnnotatedTx, error)
@@ -121,14 +120,14 @@ func (store *LevelDBStore) GetStandardUTXO(outid bc.Hash) []byte {
 	return store.DB.Get(account.StandardUTXOKey(outid))
 }
 
-// GetTransactionIndex get tx index by txID
-func (store *LevelDBStore) GetTransactionIndex(txID string) []byte {
-	return store.DB.Get(calcTxIndexKey(txID))
-}
-
 // GetTransaction get tx by tx index
-func (store *LevelDBStore) GetTransaction(txIndex []byte) []byte {
-	return store.DB.Get(calcAnnotatedKey(string(txIndex)))
+func (store *LevelDBStore) GetTransaction(txID string) ([]byte, error) {
+	formatKey := store.DB.Get(calcTxIndexKey(txID))
+	if formatKey == nil {
+		return nil, errAccntTxIDNotFound
+	}
+	txInfo := store.DB.Get(calcAnnotatedKey(string(formatKey)))
+	return txInfo, nil
 }
 
 // GetGlobalTransaction get global tx by txID
