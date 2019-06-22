@@ -143,7 +143,7 @@ func (m *GetHeadersMessage) GetBlockLocator() []*bc.Hash {
 }
 
 func (m *GetHeadersMessage) String() string {
-	return fmt.Sprintf("{GetHeadersMsg amount: %d, skip:%d}", m.Amount, m.Skip)
+	return fmt.Sprintf("{amount: %d, skip:%d}", m.Amount, m.Skip)
 }
 
 //GetStopHash return the stop hash of the msg
@@ -226,7 +226,7 @@ func (m *GetBlocksMessage) GetStopHash() *bc.Hash {
 }
 
 func (m *GetBlocksMessage) String() string {
-	return fmt.Sprintf("{GetBlocksMessage stop_hash: %s}", hex.EncodeToString(m.RawStopHash[:]))
+	return fmt.Sprintf("{stop_hash: %s}", hex.EncodeToString(m.RawStopHash[:]))
 }
 
 //BlocksMessage is one of the bytom msg type

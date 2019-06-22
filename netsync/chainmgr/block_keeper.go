@@ -33,8 +33,6 @@ type FastSync interface {
 	process() error
 	processBlocks(peerID string, blocks []*types.Block)
 	processHeaders(peerID string, headers []*types.BlockHeader)
-	//setSyncPeer(peer *peers.Peer)
-	stop()
 }
 
 type blockMsg struct {
@@ -59,6 +57,7 @@ type blockKeeper struct {
 
 	syncPeer       *peers.Peer
 	blockProcessCh chan *blockMsg
+	quit           chan struct{}
 }
 
 func newBlockKeeper(chain Chain, peers *peers.PeerSet) *blockKeeper {
@@ -67,6 +66,7 @@ func newBlockKeeper(chain Chain, peers *peers.PeerSet) *blockKeeper {
 		fastSync:       newFastSync(chain, peers),
 		peers:          peers,
 		blockProcessCh: make(chan *blockMsg, blockProcessChSize),
+		quit:           make(chan struct{}),
 	}
 }
 
@@ -96,13 +96,20 @@ func (bk *blockKeeper) regularBlockSync() error {
 		log.WithFields(log.Fields{"module": logModule}).Debug("can't find sync peer")
 		return nil
 	}
+
 	peerHeight := peer.Height()
-	if peerHeight >= bk.chain.BestBlockHeight()+minGapStartFastSync {
+	bestHeight := bk.chain.BestBlockHeight()
+	if peerHeight <= bestHeight {
+		return nil
+	}
+
+	if peerHeight >= bestHeight+minGapStartFastSync {
 		log.WithFields(log.Fields{"module": logModule}).Debug("Height gap meet fast synchronization condition")
 		return nil
 	}
 
-	i := bk.chain.BestBlockHeight() + 1
+	bk.syncPeer = peer
+	i := bestHeight + 1
 	for i <= peerHeight {
 		block, err := bk.requireBlock(i)
 		if err != nil {
@@ -122,6 +129,7 @@ func (bk *blockKeeper) regularBlockSync() error {
 		}
 		i = bk.chain.BestBlockHeight() + 1
 	}
+	log.WithFields(log.Fields{"module": logModule, "height": bk.chain.BestBlockHeight()}).Info("regular sync success")
 	return nil
 }
 
@@ -167,7 +175,7 @@ func (bk *blockKeeper) startSync() bool {
 }
 
 func (bk *blockKeeper) stop() {
-	bk.fastSync.stop()
+	close(bk.quit)
 }
 
 func (bk *blockKeeper) syncWorker() {
@@ -189,6 +197,8 @@ func (bk *blockKeeper) syncWorker() {
 			if err = bk.peers.BroadcastNewStatus(block); err != nil {
 				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on syncWorker broadcast new status")
 			}
+		case <-bk.quit:
+			return
 		}
 	}
 }

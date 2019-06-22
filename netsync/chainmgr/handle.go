@@ -161,9 +161,12 @@ func (m *Manager) handleGetBlocksMsg(peer *peers.Peer, msg *msgs.GetBlocksMessag
 		rawData, err := block.MarshalText()
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on handleGetBlocksMsg marshal block")
-			continue
+			return
 		}
 
+		if totalSize+len(rawData) > msgs.MaxBlockchainResponseSize/2 {
+			break
+		}
 		totalSize += len(rawData)
 		sendBlocks = append(sendBlocks, block)
 	}

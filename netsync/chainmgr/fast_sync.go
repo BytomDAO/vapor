@@ -115,7 +115,7 @@ func (fs *fastSync) process() error {
 		}
 
 		if fs.chain.BestBlockHeight() >= fs.stopHeader.Height {
-			log.WithFields(log.Fields{"module": logModule}).Info("fast sync success")
+			log.WithFields(log.Fields{"module": logModule, "height": fs.chain.BestBlockHeight()}).Info("fast sync success")
 			break
 		}
 
@@ -298,10 +298,6 @@ func (fs *fastSync) requireHeaders(peerID string, locator []*bc.Hash, amount uin
 
 func (fs *fastSync) setSyncPeer(peer *peers.Peer) {
 	fs.syncPeer = peer
-}
-
-func (fs *fastSync) stop() {
-	close(fs.quite)
 }
 
 func (fs *fastSync) verifyBlocks(blocks []*types.Block) error {
