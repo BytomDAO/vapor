@@ -113,8 +113,7 @@ func (w *Wallet) indexTransactions(b *types.Block, txStatus *bc.TransactionStatu
 			return err
 		}
 
-		w.store.SetRawTransaction(b.Height, tx.Position, rawTx)
-		w.store.SetHeightAndPostion(tx.ID.String(), b.Height, tx.Position)
+		w.store.SetTransaction(b.Height, tx.Position, tx.ID.String(), rawTx)
 		w.store.DeleteUnconfirmedTransaction(tx.ID.String())
 	}
 

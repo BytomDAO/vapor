@@ -19,8 +19,7 @@ type Store interface {
 	GetRawProgramByHash(common.Hash) []byte
 	GetAccount(string) []byte
 	DeleteTransaction(uint64)
-	SetRawTransaction(uint64, uint32, []byte)
-	SetHeightAndPostion(string, uint64, uint32)
+	SetTransaction(uint64, uint32, string, []byte)
 	DeleteUnconfirmedTransaction(string)
 	SetGlobalTransactionIndex(string, *bc.Hash, uint64)
 	GetStandardUTXO(bc.Hash) []byte
@@ -95,16 +94,10 @@ func (store *LevelDBStore) DeleteTransaction(height uint64) {
 	batch.Write()
 }
 
-// SetRawTransaction set raw transaction by block height and tx position
-func (store *LevelDBStore) SetRawTransaction(height uint64, position uint32, rawTx []byte) {
+// SetTransaction set raw transaction by block height and tx position
+func (store *LevelDBStore) SetTransaction(height uint64, position uint32, txID string, rawTx []byte) {
 	batch := store.DB.NewBatch()
 	batch.Set(calcAnnotatedKey(formatKey(height, position)), rawTx)
-	batch.Write()
-}
-
-// SetHeightAndPostion set block height and tx position according to tx ID
-func (store *LevelDBStore) SetHeightAndPostion(txID string, height uint64, position uint32) {
-	batch := store.DB.NewBatch()
 	batch.Set(calcTxIndexKey(txID), []byte(formatKey(height, position)))
 	batch.Write()
 }
