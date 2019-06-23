@@ -27,7 +27,7 @@ func TestWalletUnconfirmedTxs(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	testStore := NewStore(testDB)
+	testStore := NewWalletStore(testDB)
 	defer os.RemoveAll("temp")
 
 	accountManager := account.NewManager(testDB, nil)

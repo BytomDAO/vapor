@@ -43,40 +43,40 @@ type WalletStorer interface {
 	GetRecoveryStatus([]byte) []byte
 }
 
-// LevelDBStore store wallet using leveldb
-type LevelDBStore struct {
+// WalletStore store wallet using leveldb
+type WalletStore struct {
 	DB dbm.DB
 }
 
-// NewStore create new LevelDBStore struct
-func NewStore(db dbm.DB) *LevelDBStore {
-	return &LevelDBStore{
+// NewWalletStore create new WalletStore struct
+func NewWalletStore(db dbm.DB) *WalletStore {
+	return &WalletStore{
 		DB: db,
 	}
 }
 
 // GetAssetDefinition get asset definition by assetiD
-func (store *LevelDBStore) GetAssetDefinition(assetID *bc.AssetID) []byte {
+func (store *WalletStore) GetAssetDefinition(assetID *bc.AssetID) []byte {
 	return store.DB.Get(asset.ExtAssetKey(assetID))
 }
 
 // SetAssetDefinition set assetID and definition
-func (store *LevelDBStore) SetAssetDefinition(assetID *bc.AssetID, definition []byte) {
+func (store *WalletStore) SetAssetDefinition(assetID *bc.AssetID, definition []byte) {
 	store.DB.Set(asset.ExtAssetKey(assetID), definition)
 }
 
 // GetRawProgram get raw program by hash
-func (store *LevelDBStore) GetRawProgram(hash common.Hash) []byte {
+func (store *WalletStore) GetRawProgram(hash common.Hash) []byte {
 	return store.DB.Get(account.ContractKey(hash))
 }
 
 // GetAccount get account value by account ID
-func (store *LevelDBStore) GetAccount(accountID string) []byte {
+func (store *WalletStore) GetAccount(accountID string) []byte {
 	return store.DB.Get(account.Key(accountID))
 }
 
 // DeleteTransaction delete transactions when orphan block rollback
-func (store *LevelDBStore) DeleteTransaction(height uint64) {
+func (store *WalletStore) DeleteTransaction(height uint64) {
 	tmpTx := query.AnnotatedTx{}
 	batch := store.DB.NewBatch()
 	txIter := store.DB.IteratorPrefix(calcDeleteKey(height))
@@ -92,7 +92,7 @@ func (store *LevelDBStore) DeleteTransaction(height uint64) {
 }
 
 // SetTransaction set raw transaction by block height and tx position
-func (store *LevelDBStore) SetTransaction(height uint64, position uint32, txID string, rawTx []byte) {
+func (store *WalletStore) SetTransaction(height uint64, position uint32, txID string, rawTx []byte) {
 	batch := store.DB.NewBatch()
 	batch.Set(calcAnnotatedKey(formatKey(height, position)), rawTx)
 	batch.Set(calcTxIndexKey(txID), []byte(formatKey(height, position)))
@@ -100,22 +100,22 @@ func (store *LevelDBStore) SetTransaction(height uint64, position uint32, txID s
 }
 
 // DeleteUnconfirmedTransaction delete unconfirmed tx by txID
-func (store *LevelDBStore) DeleteUnconfirmedTransaction(txID string) {
+func (store *WalletStore) DeleteUnconfirmedTransaction(txID string) {
 	store.DB.Delete(calcUnconfirmedTxKey(txID))
 }
 
 // SetGlobalTransactionIndex set global tx index by blockhash and position
-func (store *LevelDBStore) SetGlobalTransactionIndex(globalTxID string, blockHash *bc.Hash, position uint64) {
+func (store *WalletStore) SetGlobalTransactionIndex(globalTxID string, blockHash *bc.Hash, position uint64) {
 	store.DB.Set(calcGlobalTxIndexKey(globalTxID), calcGlobalTxIndex(blockHash, position))
 }
 
 // GetStandardUTXO get standard utxo by id
-func (store *LevelDBStore) GetStandardUTXO(outid bc.Hash) []byte {
+func (store *WalletStore) GetStandardUTXO(outid bc.Hash) []byte {
 	return store.DB.Get(account.StandardUTXOKey(outid))
 }
 
 // GetTransaction get tx by tx index
-func (store *LevelDBStore) GetTransaction(txID string) ([]byte, error) {
+func (store *WalletStore) GetTransaction(txID string) ([]byte, error) {
 	formatKey := store.DB.Get(calcTxIndexKey(txID))
 	if formatKey == nil {
 		return nil, errAccntTxIDNotFound
@@ -125,12 +125,12 @@ func (store *LevelDBStore) GetTransaction(txID string) ([]byte, error) {
 }
 
 // GetGlobalTransaction get global tx by txID
-func (store *LevelDBStore) GetGlobalTransaction(txID string) []byte {
+func (store *WalletStore) GetGlobalTransaction(txID string) []byte {
 	return store.DB.Get(calcGlobalTxIndexKey(txID))
 }
 
 // GetTransactions get all walletDB transactions
-func (store *LevelDBStore) GetTransactions() ([]*query.AnnotatedTx, error) {
+func (store *WalletStore) GetTransactions() ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
 
 	txIter := store.DB.IteratorPrefix([]byte(TxPrefix))
@@ -147,7 +147,7 @@ func (store *LevelDBStore) GetTransactions() ([]*query.AnnotatedTx, error) {
 }
 
 // GetUnconfirmedTransactions get all unconfirmed txs
-func (store *LevelDBStore) GetUnconfirmedTransactions() ([]*query.AnnotatedTx, error) {
+func (store *WalletStore) GetUnconfirmedTransactions() ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
 	txIter := store.DB.IteratorPrefix([]byte(UnconfirmedTxPrefix))
 	defer txIter.Release()
@@ -163,47 +163,47 @@ func (store *LevelDBStore) GetUnconfirmedTransactions() ([]*query.AnnotatedTx, e
 }
 
 // GetUnconfirmedTransaction get unconfirmed tx by txID
-func (store *LevelDBStore) GetUnconfirmedTransaction(txID string) []byte {
+func (store *WalletStore) GetUnconfirmedTransaction(txID string) []byte {
 	return store.DB.Get(calcUnconfirmedTxKey(txID))
 }
 
 // SetUnconfirmedTransaction set unconfirmed tx by txID
-func (store *LevelDBStore) SetUnconfirmedTransaction(txID string, rawTx []byte) {
+func (store *WalletStore) SetUnconfirmedTransaction(txID string, rawTx []byte) {
 	store.DB.Set(calcUnconfirmedTxKey(txID), rawTx)
 }
 
 // DeleteStardardUTXO delete stardard utxo by outputID
-func (store *LevelDBStore) DeleteStardardUTXO(outputID bc.Hash) {
+func (store *WalletStore) DeleteStardardUTXO(outputID bc.Hash) {
 	store.DB.Delete(account.StandardUTXOKey(outputID))
 }
 
 // DeleteContractUTXO delete contract utxo by outputID
-func (store *LevelDBStore) DeleteContractUTXO(outputID bc.Hash) {
+func (store *WalletStore) DeleteContractUTXO(outputID bc.Hash) {
 	store.DB.Delete(account.ContractUTXOKey(outputID))
 }
 
 // SetStandardUTXO set standard utxo
-func (store *LevelDBStore) SetStandardUTXO(outputID bc.Hash, data []byte) {
+func (store *WalletStore) SetStandardUTXO(outputID bc.Hash, data []byte) {
 	store.DB.Set(account.StandardUTXOKey(outputID), data)
 }
 
 // SetContractUTXO set standard utxo
-func (store *LevelDBStore) SetContractUTXO(outputID bc.Hash, data []byte) {
+func (store *WalletStore) SetContractUTXO(outputID bc.Hash, data []byte) {
 	store.DB.Set(account.ContractUTXOKey(outputID), data)
 }
 
 // GetWalletInfo get wallet information
-func (store *LevelDBStore) GetWalletInfo() []byte {
+func (store *WalletStore) GetWalletInfo() []byte {
 	return store.DB.Get(walletKey)
 }
 
 // SetWalletInfo get wallet information
-func (store *LevelDBStore) SetWalletInfo(rawWallet []byte) {
+func (store *WalletStore) SetWalletInfo(rawWallet []byte) {
 	store.DB.Set(walletKey, rawWallet)
 }
 
 // DeleteWalletTransactions delete all txs in wallet
-func (store *LevelDBStore) DeleteWalletTransactions() {
+func (store *WalletStore) DeleteWalletTransactions() {
 	batch := store.DB.NewBatch()
 
 	txIter := store.DB.IteratorPrefix([]byte(TxPrefix))
@@ -224,7 +224,7 @@ func (store *LevelDBStore) DeleteWalletTransactions() {
 }
 
 // DeleteWalletUTXOs delete all txs in wallet
-func (store *LevelDBStore) DeleteWalletUTXOs() {
+func (store *WalletStore) DeleteWalletUTXOs() {
 	batch := store.DB.NewBatch()
 	ruIter := store.DB.IteratorPrefix([]byte(account.UTXOPreFix))
 	defer ruIter.Release()
@@ -241,7 +241,7 @@ func (store *LevelDBStore) DeleteWalletUTXOs() {
 }
 
 // GetAccountUTXOs get all account unspent outputs
-func (store *LevelDBStore) GetAccountUTXOs(key string) []*account.UTXO {
+func (store *WalletStore) GetAccountUTXOs(key string) []*account.UTXO {
 	accountUtxos := []*account.UTXO{}
 	accountUtxoIter := store.DB.IteratorPrefix([]byte(key))
 	defer accountUtxoIter.Release()
@@ -259,16 +259,16 @@ func (store *LevelDBStore) GetAccountUTXOs(key string) []*account.UTXO {
 }
 
 // SetRecoveryStatus set recovery status
-func (store *LevelDBStore) SetRecoveryStatus(recoveryKey, rawStatus []byte) {
+func (store *WalletStore) SetRecoveryStatus(recoveryKey, rawStatus []byte) {
 	store.DB.Set(recoveryKey, rawStatus)
 }
 
 // DeleteRecoveryStatus delete recovery status
-func (store *LevelDBStore) DeleteRecoveryStatus(recoveryKey []byte) {
+func (store *WalletStore) DeleteRecoveryStatus(recoveryKey []byte) {
 	store.DB.Delete(recoveryKey)
 }
 
 // GetRecoveryStatus delete recovery status
-func (store *LevelDBStore) GetRecoveryStatus(recoveryKey []byte) []byte {
+func (store *WalletStore) GetRecoveryStatus(recoveryKey []byte) []byte {
 	return store.DB.Get(recoveryKey)
 }

@@ -136,7 +136,7 @@ func TestXPubsRecoveryLock(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
-	testStore := NewStore(testDB)
+	testStore := NewWalletStore(testDB)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -186,7 +186,7 @@ func TestExtendScanAddresses(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
-	testStore := NewStore(testDB)
+	testStore := NewWalletStore(testDB)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -243,7 +243,7 @@ func TestRecoveryFromXPubs(t *testing.T) {
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
 	recoveryDB := dbm.NewDB("recdb", "leveldb", dirPath)
-	recoveryStore := NewStore(recoveryDB)
+	recoveryStore := NewWalletStore(recoveryDB)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -318,7 +318,7 @@ func TestRecoveryByRescanAccount(t *testing.T) {
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
 	recoveryDB := dbm.NewDB("recdb", "leveldb", dirPath)
-	recoveryStore := NewStore(recoveryDB)
+	recoveryStore := NewWalletStore(recoveryDB)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -407,7 +407,7 @@ func TestReportFound(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
-	testStore := NewStore(testDB)
+	testStore := NewWalletStore(testDB)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -495,7 +495,7 @@ func TestLoadStatusInfo(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	testStore := NewStore(testDB)
+	testStore := NewWalletStore(testDB)
 	defer os.RemoveAll("temp")
 
 	hsm, err := pseudohsm.New(dirPath)
@@ -570,7 +570,7 @@ func TestLock(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	testStore := NewStore(testDB)
+	testStore := NewWalletStore(testDB)
 	defer os.RemoveAll("temp")
 
 	acctMgr := account.NewManager(testDB, nil)
@@ -629,7 +629,7 @@ func TestContractIndexResidue(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
-	testStore := NewStore(testDB)
+	testStore := NewWalletStore(testDB)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)

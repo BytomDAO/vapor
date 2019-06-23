@@ -241,7 +241,7 @@ func (cfg *walletTestConfig) Run() error {
 		return err
 	}
 	walletDB := dbm.NewDB("wallet", "leveldb", path.Join(dirPath, "wallet_db"))
-	walletStore := w.NewStore(walletDB)
+	walletStore := w.NewWalletStore(walletDB)
 	accountManager := account.NewManager(walletDB, chain)
 	assets := asset.NewRegistry(walletDB, chain)
 	dispatcher := event.NewDispatcher()

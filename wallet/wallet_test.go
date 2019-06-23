@@ -53,7 +53,7 @@ func TestWalletVersion(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	testStore := NewStore(testDB)
+	testStore := NewWalletStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
@@ -119,7 +119,7 @@ func TestWalletUpdate(t *testing.T) {
 
 	config.CommonConfig = config.DefaultConfig()
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	testStore := NewStore(testDB)
+	testStore := NewWalletStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
@@ -217,7 +217,7 @@ func TestRescanWallet(t *testing.T) {
 
 	config.CommonConfig = config.DefaultConfig()
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	testStore := NewStore(testDB)
+	testStore := NewWalletStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
@@ -269,7 +269,7 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 	}
 	config.CommonConfig = config.DefaultConfig()
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
-	testStore := NewStore(testDB)
+	testStore := NewWalletStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll(dirPath)

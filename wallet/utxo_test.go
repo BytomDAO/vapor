@@ -18,7 +18,7 @@ import (
 
 func TestGetAccountUtxos(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	testStore := NewStore(testDB)
+	testStore := NewWalletStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
@@ -211,7 +211,7 @@ func TestGetAccountUtxos(t *testing.T) {
 
 func TestFilterAccountUtxo(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	testStore := NewStore(testDB)
+	testStore := NewWalletStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
