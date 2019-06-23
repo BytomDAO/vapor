@@ -169,7 +169,7 @@ func (rs *recoveryState) stateForScope(account *account.Account) {
 type recoveryManager struct {
 	mu sync.Mutex
 
-	store      Store
+	store      WalletStorer
 	accountMgr *account.Manager
 
 	locked int32
@@ -186,7 +186,7 @@ type recoveryManager struct {
 }
 
 // newRecoveryManager create recovery manger.
-func newRecoveryManager(store Store, accountMgr *account.Manager) *recoveryManager {
+func newRecoveryManager(store WalletStorer, accountMgr *account.Manager) *recoveryManager {
 	return &recoveryManager{
 		store:      store,
 		accountMgr: accountMgr,

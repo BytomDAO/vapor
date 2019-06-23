@@ -13,7 +13,7 @@ import (
 )
 
 // Store interface contains wallet storage functions.
-type Store interface {
+type WalletStorer interface {
 	GetAssetDefinition(*bc.AssetID) []byte
 	SetAssetDefinition(*bc.AssetID, []byte)
 	GetRawProgram(common.Hash) []byte

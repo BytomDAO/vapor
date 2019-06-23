@@ -81,7 +81,7 @@ func (w *Wallet) getAliasDefinition(assetID bc.AssetID) (string, json.RawMessage
 }
 
 // annotateTxs adds account data to transactions
-func annotateTxsAccount(txs []*query.AnnotatedTx, store Store) {
+func annotateTxsAccount(txs []*query.AnnotatedTx, store WalletStorer) {
 	for i, tx := range txs {
 		for j, input := range tx.Inputs {
 			//issue asset tx input SpentOutputID is nil
@@ -106,7 +106,7 @@ func annotateTxsAccount(txs []*query.AnnotatedTx, store Store) {
 	}
 }
 
-func getAccountFromACP(program []byte, store Store) (*account.Account, error) {
+func getAccountFromACP(program []byte, store WalletStorer) (*account.Account, error) {
 	var hash common.Hash
 	accountCP := account.CtrlProgram{}
 	localAccount := account.Account{}

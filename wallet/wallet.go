@@ -41,7 +41,7 @@ type StatusInfo struct {
 
 //Wallet is related to storing account unspent outputs
 type Wallet struct {
-	store           Store
+	store           WalletStorer
 	rw              sync.RWMutex
 	status          StatusInfo
 	TxIndexFlag     bool
@@ -57,7 +57,7 @@ type Wallet struct {
 }
 
 //NewWallet return a new wallet instance
-func NewWallet(store Store, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) (*Wallet, error) {
+func NewWallet(store WalletStorer, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) (*Wallet, error) {
 	w := &Wallet{
 		store:           store,
 		AccountMgr:      account,
