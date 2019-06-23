@@ -11,7 +11,7 @@ import (
 	"github.com/vapor/protocol/bc"
 )
 
-// Store interface contains wallet storage functions.
+// WalletStorer interface contains wallet storage functions.
 type WalletStorer interface {
 	GetAssetDefinition(*bc.AssetID) []byte
 	SetAssetDefinition(*bc.AssetID, []byte)
