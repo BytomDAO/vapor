@@ -17,7 +17,7 @@ type WalletStorer interface {
 	GetAssetDefinition(*bc.AssetID) []byte
 	SetAssetDefinition(*bc.AssetID, []byte)
 	GetRawProgram(common.Hash) []byte
-	GetAccount(string) []byte
+	GetAccountByAccountID(string) []byte
 	DeleteTransaction(uint64)
 	SetTransaction(uint64, uint32, string, []byte)
 	DeleteUnconfirmedTransaction(string)
@@ -71,7 +71,7 @@ func (store *WalletStore) GetRawProgram(hash common.Hash) []byte {
 }
 
 // GetAccount get account value by account ID
-func (store *WalletStore) GetAccount(accountID string) []byte {
+func (store *WalletStore) GetAccountByAccountID(accountID string) []byte {
 	return store.DB.Get(account.Key(accountID))
 }
 

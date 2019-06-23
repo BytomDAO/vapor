@@ -39,10 +39,10 @@ var (
 	accountIndexPrefix  = []byte("AccountIndex:")
 	accountPrefix       = []byte("Account:")
 	aliasPrefix         = []byte("AccountAlias:")
-	contractIndexPrefix = []byte("ContractIndex")
+	contractIndexPrefix = []byte("ContractIndex:")
 	contractPrefix      = []byte("Contract:")
-	miningAddressKey    = []byte("MiningAddress")
-	CoinbaseAbKey       = []byte("CoinbaseArbitrary")
+	miningAddressKey    = []byte("MiningAddress:")
+	CoinbaseAbKey       = []byte("CoinbaseArbitrary:")
 )
 
 // pre-define errors for supporting bytom errorFormatter

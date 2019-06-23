@@ -27,6 +27,7 @@ func (m *Manager) Backup() (*Image, error) {
 		Slice: []*ImageSlice{},
 	}
 
+	// GetAccounts()
 	accountIter := m.db.IteratorPrefix(accountPrefix)
 	defer accountIter.Release()
 	for accountIter.Next() {

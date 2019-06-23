@@ -613,7 +613,7 @@ func TestStateForScope(t *testing.T) {
 }
 
 func bip44ContractIndexKey(accountID string, change bool) []byte {
-	contractIndexPrefix := []byte("ContractIndex")
+	contractIndexPrefix := []byte("ContractIndex:")
 	key := append(contractIndexPrefix, accountID...)
 	if change {
 		return append(key, []byte{1}...)

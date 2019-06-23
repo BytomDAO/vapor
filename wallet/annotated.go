@@ -121,7 +121,7 @@ func getAccountFromACP(program []byte, store WalletStorer) (*account.Account, er
 		return nil, err
 	}
 
-	accountValue := store.GetAccount(accountCP.AccountID)
+	accountValue := store.GetAccountByAccountID(accountCP.AccountID)
 	if accountValue == nil {
 		return nil, fmt.Errorf("failed get account:%s ", accountCP.AccountID)
 	}
