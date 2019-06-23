@@ -26,8 +26,18 @@ func (w *Wallet) GetAccountUtxos(accountID string, id string, unconfirmed, isSma
 		accountUtxos = w.AccountMgr.ListUnconfirmedUtxo(accountID, isSmartContract)
 	}
 
-	confirmedUtxos := w.store.GetAccountUTXOs(prefix + id)
-	accountUtxos = append(accountUtxos, confirmedUtxos...)
+	rawConfirmedUTXOs := w.store.GetAccountUTXOs(prefix + id)
+	confirmedUTXOs := []*account.UTXO{}
+	for _, rawConfirmedUTXO := range rawConfirmedUTXOs {
+		confirmedUTXO := new(account.UTXO)
+		if err := json.Unmarshal(rawConfirmedUTXO, confirmedUTXO); err != nil {
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Warn("GetAccountUTXOs fail on unmarshal utxo")
+			continue
+		}
+		confirmedUTXOs = append(confirmedUTXOs, confirmedUTXO)
+	}
+	accountUtxos = append(accountUtxos, confirmedUTXOs...)
+
 	newAccountUtxos := []*account.UTXO{}
 	for _, accountUtxo := range accountUtxos {
 		if vote && accountUtxo.Vote == nil {

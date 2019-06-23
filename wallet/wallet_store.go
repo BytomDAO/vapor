@@ -3,7 +3,6 @@ package wallet
 import (
 	"encoding/json"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/vapor/account"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/query"
@@ -37,7 +36,7 @@ type WalletStorer interface {
 	SetWalletInfo([]byte)
 	DeleteWalletTransactions()
 	DeleteWalletUTXOs()
-	GetAccountUTXOs(key string) []*account.UTXO
+	GetAccountUTXOs(key string) [][]byte
 	SetRecoveryStatus([]byte, []byte)
 	DeleteRecoveryStatus([]byte)
 	GetRecoveryStatus([]byte) []byte
@@ -241,21 +240,16 @@ func (store *WalletStore) DeleteWalletUTXOs() {
 }
 
 // GetAccountUTXOs get all account unspent outputs
-func (store *WalletStore) GetAccountUTXOs(key string) []*account.UTXO {
-	accountUtxos := []*account.UTXO{}
+func (store *WalletStore) GetAccountUTXOs(key string) [][]byte {
 	accountUtxoIter := store.DB.IteratorPrefix([]byte(key))
 	defer accountUtxoIter.Release()
 
+	rawUTXOs := make([][]byte, 0)
 	for accountUtxoIter.Next() {
-		accountUtxo := &account.UTXO{}
-		if err := json.Unmarshal(accountUtxoIter.Value(), accountUtxo); err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Warn("GetAccountUTXOs fail on unmarshal utxo")
-			continue
-		}
-		accountUtxos = append(accountUtxos, accountUtxo)
-
+		utxo := accountUtxoIter.Value()
+		rawUTXOs = append(rawUTXOs, utxo)
 	}
-	return accountUtxos
+	return rawUTXOs
 }
 
 // SetRecoveryStatus set recovery status
