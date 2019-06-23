@@ -33,7 +33,7 @@ func TestEncodeDecodeGlobalTxIndex(t *testing.T) {
 		Position:  1,
 	}
 
-	globalTxIdx := calcGlobalTxIndex(&want.BlockHash, want.Position)
+	globalTxIdx := database.CalcGlobalTxIndex(&want.BlockHash, want.Position)
 	blockHashGot, positionGot := parseGlobalTxIdx(globalTxIdx)
 	if *blockHashGot != want.BlockHash {
 		t.Errorf("blockHash mismatch. Get: %v. Expect: %v", *blockHashGot, want.BlockHash)
@@ -53,7 +53,7 @@ func TestWalletVersion(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	testStore := NewWalletStore(testDB)
+	testStore := database.NewWalletStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
@@ -119,7 +119,7 @@ func TestWalletUpdate(t *testing.T) {
 
 	config.CommonConfig = config.DefaultConfig()
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	testStore := NewWalletStore(testDB)
+	testStore := database.NewWalletStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
@@ -200,7 +200,7 @@ func TestWalletUpdate(t *testing.T) {
 	for position, tx := range block.Transactions {
 		get := w.store.GetGlobalTransaction(tx.ID.String())
 		bh := block.BlockHeader.Hash()
-		expect := calcGlobalTxIndex(&bh, uint64(position))
+		expect := database.CalcGlobalTxIndex(&bh, uint64(position))
 		if !reflect.DeepEqual(get, expect) {
 			t.Fatalf("position#%d: compare retrieved globalTxIdx err", position)
 		}
@@ -217,7 +217,7 @@ func TestRescanWallet(t *testing.T) {
 
 	config.CommonConfig = config.DefaultConfig()
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	testStore := NewWalletStore(testDB)
+	testStore := database.NewWalletStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
@@ -269,7 +269,7 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 	}
 	config.CommonConfig = config.DefaultConfig()
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
-	testStore := NewWalletStore(testDB)
+	testStore := database.NewWalletStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll(dirPath)
@@ -382,7 +382,7 @@ func mockTxData(utxos []*account.UTXO, testAccount *account.Account) (*txbuilder
 	return tplBuilder.Build()
 }
 
-func mockWallet(store WalletStorer, account *account.Manager, asset *asset.Registry, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) *Wallet {
+func mockWallet(store database.WalletStorer, account *account.Manager, asset *asset.Registry, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) *Wallet {
 	wallet := &Wallet{
 		store:           store,
 		AccountMgr:      account,

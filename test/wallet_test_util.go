@@ -12,6 +12,7 @@ import (
 	"github.com/vapor/blockchain/pseudohsm"
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/crypto/ed25519/chainkd"
+	"github.com/vapor/database"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/event"
 	"github.com/vapor/protocol"
@@ -241,7 +242,7 @@ func (cfg *walletTestConfig) Run() error {
 		return err
 	}
 	walletDB := dbm.NewDB("wallet", "leveldb", path.Join(dirPath, "wallet_db"))
-	walletStore := w.NewWalletStore(walletDB)
+	walletStore := database.NewWalletStore(walletDB)
 	accountManager := account.NewManager(walletDB, chain)
 	assets := asset.NewRegistry(walletDB, chain)
 	dispatcher := event.NewDispatcher()

@@ -9,6 +9,7 @@ import (
 	"github.com/vapor/account"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/pseudohsm"
+	"github.com/vapor/database"
 	"github.com/vapor/errors"
 	"github.com/vapor/event"
 	"github.com/vapor/protocol"
@@ -24,7 +25,6 @@ const (
 
 var (
 	currentVersion = uint(1)
-	walletKey      = []byte("walletInfo")
 
 	errBestBlockNotFoundInCore = errors.New("best block not found in core")
 	errWalletVersionMismatch   = errors.New("wallet version mismatch")
@@ -41,7 +41,7 @@ type StatusInfo struct {
 
 //Wallet is related to storing account unspent outputs
 type Wallet struct {
-	store           WalletStorer
+	store           database.WalletStorer
 	rw              sync.RWMutex
 	status          StatusInfo
 	TxIndexFlag     bool
@@ -57,7 +57,7 @@ type Wallet struct {
 }
 
 //NewWallet return a new wallet instance
-func NewWallet(store WalletStorer, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) (*Wallet, error) {
+func NewWallet(store database.WalletStorer, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) (*Wallet, error) {
 	w := &Wallet{
 		store:           store,
 		AccountMgr:      account,

@@ -13,49 +13,11 @@ import (
 	"github.com/vapor/blockchain/query"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/sha3pool"
+	"github.com/vapor/database"
 	chainjson "github.com/vapor/encoding/json"
-	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
-
-const (
-	//TxPrefix is wallet database transactions prefix
-	TxPrefix = "TXS:"
-	//TxIndexPrefix is wallet database tx index prefix
-	TxIndexPrefix = "TID:"
-	//GlobalTxIndexPrefix is wallet database global tx index prefix
-	GlobalTxIndexPrefix = "GTID:"
-)
-
-var errAccntTxIDNotFound = errors.New("account TXID not found")
-
-func formatKey(blockHeight uint64, position uint32) string {
-	return fmt.Sprintf("%016x%08x", blockHeight, position)
-}
-
-func calcAnnotatedKey(formatKey string) []byte {
-	return []byte(TxPrefix + formatKey)
-}
-
-func calcDeleteKey(blockHeight uint64) []byte {
-	return []byte(fmt.Sprintf("%s%016x", TxPrefix, blockHeight))
-}
-
-func calcTxIndexKey(txID string) []byte {
-	return []byte(TxIndexPrefix + txID)
-}
-
-func calcGlobalTxIndexKey(txID string) []byte {
-	return []byte(GlobalTxIndexPrefix + txID)
-}
-
-func calcGlobalTxIndex(blockHash *bc.Hash, position uint64) []byte {
-	txIdx := make([]byte, 40)
-	copy(txIdx[:32], blockHash.Bytes())
-	binary.BigEndian.PutUint64(txIdx[32:], position)
-	return txIdx
-}
 
 func parseGlobalTxIdx(globalTxIdx []byte) (*bc.Hash, uint64) {
 	var hashBytes [32]byte
@@ -68,7 +30,7 @@ func parseGlobalTxIdx(globalTxIdx []byte) (*bc.Hash, uint64) {
 // saveExternalAssetDefinition save external and local assets definition,
 // when query ,query local first and if have no then query external
 // details see getAliasDefinition
-func saveExternalAssetDefinition(b *types.Block, store WalletStorer) {
+func saveExternalAssetDefinition(b *types.Block, store database.WalletStorer) {
 	for _, tx := range b.Transactions {
 		for _, orig := range tx.Inputs {
 			if cci, ok := orig.TypedInput.(*types.CrossChainInput); ok {

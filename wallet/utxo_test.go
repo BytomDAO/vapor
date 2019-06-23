@@ -10,6 +10,7 @@ import (
 
 	"github.com/vapor/account"
 	"github.com/vapor/consensus"
+	"github.com/vapor/database"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -18,7 +19,7 @@ import (
 
 func TestGetAccountUtxos(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	testStore := NewWalletStore(testDB)
+	testStore := database.NewWalletStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
@@ -211,7 +212,7 @@ func TestGetAccountUtxos(t *testing.T) {
 
 func TestFilterAccountUtxo(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	testStore := NewWalletStore(testDB)
+	testStore := database.NewWalletStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")

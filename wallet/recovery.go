@@ -12,6 +12,7 @@ import (
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/crypto/sha3pool"
+	"github.com/vapor/database"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -169,7 +170,7 @@ func (rs *recoveryState) stateForScope(account *account.Account) {
 type recoveryManager struct {
 	mu sync.Mutex
 
-	store      WalletStorer
+	store      database.WalletStorer
 	accountMgr *account.Manager
 
 	locked int32
@@ -186,7 +187,7 @@ type recoveryManager struct {
 }
 
 // newRecoveryManager create recovery manger.
-func newRecoveryManager(store WalletStorer, accountMgr *account.Manager) *recoveryManager {
+func newRecoveryManager(store database.WalletStorer, accountMgr *account.Manager) *recoveryManager {
 	return &recoveryManager{
 		store:      store,
 		accountMgr: accountMgr,

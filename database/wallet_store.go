@@ -1,20 +1,30 @@
-package wallet
+package database
 
 import (
+	"encoding/binary"
 	"encoding/json"
+	"fmt"
 
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/query"
 	"github.com/vapor/common"
 	dbm "github.com/vapor/database/leveldb"
+	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 )
 
+var errAccntTxIDNotFound = errors.New("account TXID not found")
+
 const (
-	UTXOPrefix     = "ACU:" //UTXOPrefix is StandardUTXOKey prefix
-	SUTXOPrefix    = "SCU:" //SUTXOPrefix is ContractUTXOKey prefix
-	contractPrefix = "Contract:"
-	accountPrefix  = "Account:"
+	UTXOPrefix          = "ACU:" //UTXOPrefix is StandardUTXOKey prefix
+	SUTXOPrefix         = "SCU:" //SUTXOPrefix is ContractUTXOKey prefix
+	contractPrefix      = "Contract:"
+	accountPrefix       = "Account:"
+	TxPrefix            = "TXS:"  //TxPrefix is wallet database transactions prefix
+	TxIndexPrefix       = "TID:"  //TxIndexPrefix is wallet database tx index prefix
+	UnconfirmedTxPrefix = "UTXS:" //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
+	GlobalTxIndexPrefix = "GTID:" //GlobalTxIndexPrefix is wallet database global tx index prefix
+	walletKey           = "walletInfo"
 )
 
 // WalletStorer interface contains wallet storage functions.
@@ -82,6 +92,37 @@ func ContractUTXOKey(id bc.Hash) []byte {
 	return []byte(SUTXOPrefix + name)
 }
 
+func calcDeleteKey(blockHeight uint64) []byte {
+	return []byte(fmt.Sprintf("%s%016x", TxPrefix, blockHeight))
+}
+
+func calcTxIndexKey(txID string) []byte {
+	return []byte(TxIndexPrefix + txID)
+}
+
+func calcAnnotatedKey(formatKey string) []byte {
+	return []byte(TxPrefix + formatKey)
+}
+
+func calcUnconfirmedTxKey(formatKey string) []byte {
+	return []byte(UnconfirmedTxPrefix + formatKey)
+}
+
+func calcGlobalTxIndexKey(txID string) []byte {
+	return []byte(GlobalTxIndexPrefix + txID)
+}
+
+func CalcGlobalTxIndex(blockHash *bc.Hash, position uint64) []byte {
+	txIdx := make([]byte, 40)
+	copy(txIdx[:32], blockHash.Bytes())
+	binary.BigEndian.PutUint64(txIdx[32:], position)
+	return txIdx
+}
+
+func formatKey(blockHeight uint64, position uint32) string {
+	return fmt.Sprintf("%016x%08x", blockHeight, position)
+}
+
 // GetAssetDefinition get asset definition by assetiD
 func (store *WalletStore) GetAssetDefinition(assetID *bc.AssetID) []byte {
 	return store.DB.Get(asset.ExtAssetKey(assetID))
@@ -133,7 +174,7 @@ func (store *WalletStore) DeleteUnconfirmedTransaction(txID string) {
 
 // SetGlobalTransactionIndex set global tx index by blockhash and position
 func (store *WalletStore) SetGlobalTransactionIndex(globalTxID string, blockHash *bc.Hash, position uint64) {
-	store.DB.Set(calcGlobalTxIndexKey(globalTxID), calcGlobalTxIndex(blockHash, position))
+	store.DB.Set(calcGlobalTxIndexKey(globalTxID), CalcGlobalTxIndex(blockHash, position))
 }
 
 // GetStandardUTXO get standard utxo by id
@@ -221,12 +262,12 @@ func (store *WalletStore) SetContractUTXO(outputID bc.Hash, data []byte) {
 
 // GetWalletInfo get wallet information
 func (store *WalletStore) GetWalletInfo() []byte {
-	return store.DB.Get(walletKey)
+	return store.DB.Get([]byte(walletKey))
 }
 
 // SetWalletInfo get wallet information
 func (store *WalletStore) SetWalletInfo(rawWallet []byte) {
-	store.DB.Set(walletKey, rawWallet)
+	store.DB.Set([]byte(walletKey), rawWallet)
 }
 
 // DeleteWalletTransactions delete all txs in wallet

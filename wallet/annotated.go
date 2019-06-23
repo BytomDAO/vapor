@@ -13,6 +13,7 @@ import (
 	"github.com/vapor/consensus"
 	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/crypto/sha3pool"
+	"github.com/vapor/database"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
@@ -81,7 +82,7 @@ func (w *Wallet) getAliasDefinition(assetID bc.AssetID) (string, json.RawMessage
 }
 
 // annotateTxs adds account data to transactions
-func annotateTxsAccount(txs []*query.AnnotatedTx, store WalletStorer) {
+func annotateTxsAccount(txs []*query.AnnotatedTx, store database.WalletStorer) {
 	for i, tx := range txs {
 		for j, input := range tx.Inputs {
 			//issue asset tx input SpentOutputID is nil
@@ -106,7 +107,7 @@ func annotateTxsAccount(txs []*query.AnnotatedTx, store WalletStorer) {
 	}
 }
 
-func getAccountFromACP(program []byte, store WalletStorer) (*account.Account, error) {
+func getAccountFromACP(program []byte, store database.WalletStorer) (*account.Account, error) {
 	var hash common.Hash
 	accountCP := account.CtrlProgram{}
 	localAccount := account.Account{}

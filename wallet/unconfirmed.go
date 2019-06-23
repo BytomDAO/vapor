@@ -21,10 +21,6 @@ const (
 	MaxUnconfirmedTxDuration = 24 * time.Hour
 )
 
-func calcUnconfirmedTxKey(formatKey string) []byte {
-	return []byte(UnconfirmedTxPrefix + formatKey)
-}
-
 // SortByTimestamp implements sort.Interface for AnnotatedTx slices
 type SortByTimestamp []*query.AnnotatedTx
 
