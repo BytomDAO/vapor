@@ -3,7 +3,6 @@ package wallet
 import (
 	"encoding/json"
 
-	"github.com/vapor/account"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/query"
 	"github.com/vapor/common"
@@ -254,13 +253,13 @@ func (store *WalletStore) DeleteWalletTransactions() {
 // DeleteWalletUTXOs delete all txs in wallet
 func (store *WalletStore) DeleteWalletUTXOs() {
 	batch := store.DB.NewBatch()
-	ruIter := store.DB.IteratorPrefix([]byte(account.UTXOPreFix))
+	ruIter := store.DB.IteratorPrefix([]byte(UTXOPrefix))
 	defer ruIter.Release()
 	for ruIter.Next() {
 		batch.Delete(ruIter.Key())
 	}
 
-	suIter := store.DB.IteratorPrefix([]byte(account.SUTXOPrefix))
+	suIter := store.DB.IteratorPrefix([]byte(SUTXOPrefix))
 	defer suIter.Release()
 	for suIter.Next() {
 		batch.Delete(suIter.Key())
