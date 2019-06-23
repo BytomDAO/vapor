@@ -11,6 +11,13 @@ import (
 	"github.com/vapor/protocol/bc"
 )
 
+const (
+	UTXOPrefix     = "ACU:" //UTXOPrefix is StandardUTXOKey prefix
+	SUTXOPrefix    = "SCU:" //SUTXOPrefix is ContractUTXOKey prefix
+	contractPrefix = "Contract:"
+	accountPrefix  = "Account:"
+)
+
 // WalletStorer interface contains wallet storage functions.
 type WalletStorer interface {
 	GetAssetDefinition(*bc.AssetID) []byte
@@ -54,6 +61,28 @@ func NewWalletStore(db dbm.DB) *WalletStore {
 	}
 }
 
+// ContractKey account control promgram store prefix
+func ContractKey(hash common.Hash) []byte {
+	return append([]byte(contractPrefix), hash[:]...)
+}
+
+// Key account store prefix
+func Key(name string) []byte {
+	return append([]byte(accountPrefix), []byte(name)...)
+}
+
+// StandardUTXOKey makes an account unspent outputs key to store
+func StandardUTXOKey(id bc.Hash) []byte {
+	name := id.String()
+	return []byte(UTXOPrefix + name)
+}
+
+// ContractUTXOKey makes a smart contract unspent outputs key to store
+func ContractUTXOKey(id bc.Hash) []byte {
+	name := id.String()
+	return []byte(SUTXOPrefix + name)
+}
+
 // GetAssetDefinition get asset definition by assetiD
 func (store *WalletStore) GetAssetDefinition(assetID *bc.AssetID) []byte {
 	return store.DB.Get(asset.ExtAssetKey(assetID))
@@ -66,12 +95,12 @@ func (store *WalletStore) SetAssetDefinition(assetID *bc.AssetID, definition []b
 
 // GetRawProgram get raw program by hash
 func (store *WalletStore) GetRawProgram(hash common.Hash) []byte {
-	return store.DB.Get(account.ContractKey(hash))
+	return store.DB.Get(ContractKey(hash))
 }
 
 // GetAccount get account value by account ID
 func (store *WalletStore) GetAccountByAccountID(accountID string) []byte {
-	return store.DB.Get(account.Key(accountID))
+	return store.DB.Get(Key(accountID))
 }
 
 // DeleteTransaction delete transactions when orphan block rollback
@@ -110,7 +139,7 @@ func (store *WalletStore) SetGlobalTransactionIndex(globalTxID string, blockHash
 
 // GetStandardUTXO get standard utxo by id
 func (store *WalletStore) GetStandardUTXO(outid bc.Hash) []byte {
-	return store.DB.Get(account.StandardUTXOKey(outid))
+	return store.DB.Get(StandardUTXOKey(outid))
 }
 
 // GetTransaction get tx by tx index
@@ -173,22 +202,22 @@ func (store *WalletStore) SetUnconfirmedTransaction(txID string, rawTx []byte) {
 
 // DeleteStardardUTXO delete stardard utxo by outputID
 func (store *WalletStore) DeleteStardardUTXO(outputID bc.Hash) {
-	store.DB.Delete(account.StandardUTXOKey(outputID))
+	store.DB.Delete(StandardUTXOKey(outputID))
 }
 
 // DeleteContractUTXO delete contract utxo by outputID
 func (store *WalletStore) DeleteContractUTXO(outputID bc.Hash) {
-	store.DB.Delete(account.ContractUTXOKey(outputID))
+	store.DB.Delete(ContractUTXOKey(outputID))
 }
 
 // SetStandardUTXO set standard utxo
 func (store *WalletStore) SetStandardUTXO(outputID bc.Hash, data []byte) {
-	store.DB.Set(account.StandardUTXOKey(outputID), data)
+	store.DB.Set(StandardUTXOKey(outputID), data)
 }
 
 // SetContractUTXO set standard utxo
 func (store *WalletStore) SetContractUTXO(outputID bc.Hash, data []byte) {
-	store.DB.Set(account.ContractUTXOKey(outputID), data)
+	store.DB.Set(ContractUTXOKey(outputID), data)
 }
 
 // GetWalletInfo get wallet information
