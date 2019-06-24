@@ -1,9 +1,11 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"reflect"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
@@ -118,6 +120,8 @@ func handleRequest(context *gin.Context, fun handlerFun) {
 		return
 	}
 
+	// TODO:
+
 	// result := callHandleFunc(fun, args...)
 	// if err := result[len(result)-1]; err != nil {
 	// 	RespondErrorResp(context, err.(error))
@@ -140,18 +144,18 @@ func handleRequest(context *gin.Context, fun handlerFun) {
 func buildHandleFuncArgs(fun handlerFun, context *gin.Context) ([]interface{}, error) {
 	args := []interface{}{context}
 
-	// req, err := createHandleReqArg(fun, context)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "createHandleReqArg")
-	// }
+	req, err := createHandleReqArg(fun, context)
+	if err != nil {
+		return nil, errors.Wrap(err, "createHandleReqArg")
+	}
 
-	// if err := checkDisplayOrder(req); err != nil {
-	// 	return nil, err
-	// }
+	if err := checkDisplayOrder(req); err != nil {
+		return nil, err
+	}
 
-	// if req != nil {
-	// 	args = append(args, req)
-	// }
+	if req != nil {
+		args = append(args, req)
+	}
 
 	ft := reflect.TypeOf(fun)
 
@@ -160,6 +164,7 @@ func buildHandleFuncArgs(fun handlerFun, context *gin.Context) ([]interface{}, e
 		return args, nil
 	}
 
+	// TODO:
 	// query, err := ParsePagination(context)
 	// if err != nil {
 	// 	return nil, errors.Wrap(err, "ParsePagination")
@@ -167,4 +172,49 @@ func buildHandleFuncArgs(fun handlerFun, context *gin.Context) ([]interface{}, e
 
 	// args = append(args, query)
 	return args, nil
+}
+
+func checkDisplayOrder(req interface{}) error {
+	if req == nil {
+		return nil
+	}
+
+	reqType := reflect.TypeOf(req).Elem()
+	reqVal := reflect.ValueOf(req).Elem()
+
+	for i := 0; i < reqType.NumField(); i++ {
+		field := reqType.Field(i)
+		if field.Type != reflect.TypeOf(Display{}) {
+			continue
+		}
+		display := reqVal.Field(i).Interface().(Display)
+
+		order := strings.Trim(display.Sorter.Order, "")
+		if order != "desc" && order != "asc" {
+			reqVal.Field(i).Set(reflect.ValueOf(Display{Filter: display.Filter, Sorter: Sorter{By: display.Sorter.By, Order: "desc"}}))
+		}
+	}
+	return nil
+}
+
+func createHandleReqArg(fun handlerFun, context *gin.Context) (interface{}, error) {
+	ft := reflect.TypeOf(fun)
+	if ft.NumIn() == 1 {
+		return nil, nil
+	}
+	argType := ft.In(1).Elem()
+
+	reqArg := reflect.New(argType).Interface()
+	if err := context.ShouldBindJSON(reqArg); err != nil {
+		return nil, errors.Wrap(err, "bind reqArg")
+	}
+
+	b, err := json.Marshal(reqArg)
+	if err != nil {
+		return nil, errors.Wrap(err, "json marshal")
+	}
+
+	context.Set(ReqBodyLabel, string(b))
+
+	return reqArg, nil
 }

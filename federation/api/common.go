@@ -7,7 +7,8 @@ import (
 )
 
 const (
-	serverLabel = "server_label"
+	serverLabel  = "server_label"
+	ReqBodyLabel = "request_body_label"
 )
 
 var (
