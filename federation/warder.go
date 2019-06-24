@@ -21,7 +21,6 @@ var collectInterval = 5 * time.Second
 
 type warder struct {
 	db            *gorm.DB
-	txCh          chan *orm.CrossTransaction
 	fedProg       []byte
 	quorum        int
 	position      uint8
@@ -35,7 +34,6 @@ func NewWarder(db *gorm.DB, cfg *config.Config) *warder {
 	local, remotes := parseWarders(cfg)
 	return &warder{
 		db:            db,
-		txCh:          make(chan *orm.CrossTransaction),
 		fedProg:       util.ParseFedProg(cfg.Warders, cfg.Quorum),
 		quorum:        cfg.Quorum,
 		position:      local.Position,
