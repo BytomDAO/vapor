@@ -20,52 +20,26 @@ import (
 var collectInterval = 5 * time.Second
 
 type warder struct {
-	cfg     *config.Config
-	db      *gorm.DB
-	fedProg []byte
-	quorum  int
-	// position      uint8
-	// xpub          chainkd.XPub
+	cfg           *config.Config
+	db            *gorm.DB
+	fedProg       []byte
+	quorum        int
 	mainchainNode *service.Node
 	sidechainNode *service.Node
-	// remotes       []*service.Warder
-	server *api.Server
+	server        *api.Server
 }
 
 func NewWarder(db *gorm.DB, cfg *config.Config) *warder {
-	// local, remotes := parseWarders(cfg)
 	return &warder{
-		cfg:     cfg,
-		db:      db,
-		fedProg: util.ParseFedProg(cfg.Warders, cfg.Quorum),
-		quorum:  cfg.Quorum,
-		// position:      local.Position,
-		// xpub:          local.XPub,
+		cfg:           cfg,
+		db:            db,
+		fedProg:       util.ParseFedProg(cfg.Warders, cfg.Quorum),
+		quorum:        cfg.Quorum,
 		mainchainNode: service.NewNode(cfg.Mainchain.Upstream),
 		sidechainNode: service.NewNode(cfg.Sidechain.Upstream),
-		// remotes:       remotes,
-		server: api.NewServer(db, cfg),
+		server:        api.NewServer(db, cfg),
 	}
 }
-
-// func parseWarders(cfg *config.Config) (*service.Warder, []*service.Warder) {
-// 	var local *service.Warder
-// 	var remotes []*service.Warder
-// 	for _, warderCfg := range cfg.Warders {
-// 		if warderCfg.IsLocal {
-// 			local = service.NewWarder(&warderCfg)
-// 		} else {
-// 			remote := service.NewWarder(&warderCfg)
-// 			remotes = append(remotes, remote)
-// 		}
-// 	}
-
-// 	if local == nil {
-// 		log.Fatal("none local warder set")
-// 	}
-
-// 	return local, remotes
-// }
 
 func (w *warder) Run() {
 	go w.server.Run()

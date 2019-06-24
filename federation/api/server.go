@@ -9,18 +9,59 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
+	log "github.com/sirupsen/logrus"
 
+	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/config"
+	"github.com/vapor/federation/service"
 )
 
 type Server struct {
-	cfg    *config.Config
-	db     *gorm.DB
-	engine *gin.Engine
+	cfg      *config.Config
+	db       *gorm.DB
+	engine   *gin.Engine
+	position uint8
+	xpub     chainkd.XPub
+	remotes  []*service.Warder
 }
 
-func setupRouter(server *Server) {
+func parseWarders(cfg *config.Config) (*service.Warder, []*service.Warder) {
+	var local *service.Warder
+	var remotes []*service.Warder
+	for _, warderCfg := range cfg.Warders {
+		if warderCfg.IsLocal {
+			local = service.NewWarder(&warderCfg)
+		} else {
+			remote := service.NewWarder(&warderCfg)
+			remotes = append(remotes, remote)
+		}
+	}
+
+	if local == nil {
+		log.Fatal("none local warder set")
+	}
+
+	return local, remotes
+}
+
+func NewServer(db *gorm.DB, cfg *config.Config) *Server {
+	local, remotes := parseWarders(cfg)
+	server := &Server{
+		cfg:      cfg,
+		db:       db,
+		position: local.Position,
+		xpub:     local.XPub,
+		remotes:  remotes,
+	}
+	if cfg.API.IsReleaseMode {
+		gin.SetMode(gin.ReleaseMode)
+	}
+	server.setupRouter()
+	return server
+}
+
+func (server *Server) setupRouter() {
 	r := gin.Default()
 	r.Use(server.middleware())
 
@@ -28,18 +69,6 @@ func setupRouter(server *Server) {
 	v1.POST("/federation/list-crosschain-txs", handlerMiddleware(server.ListCrosschainTxs))
 
 	server.engine = r
-}
-
-func NewServer(db *gorm.DB, cfg *config.Config) *Server {
-	server := &Server{
-		cfg: cfg,
-		db:  db,
-	}
-	if cfg.API.IsReleaseMode {
-		gin.SetMode(gin.ReleaseMode)
-	}
-	setupRouter(server)
-	return server
 }
 
 func (s *Server) Run() {
