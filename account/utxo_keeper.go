@@ -125,11 +125,10 @@ func (uk *utxoKeeper) Reserve(accountID string, assetID *bc.AssetID, amount uint
 	}
 
 	if optAmount+reservedAmount < amount {
-		err := ErrImmature
 		if vote != nil {
-			err = ErrVoteLock
+			return nil, ErrVoteLock
 		}
-		return nil, err
+		return nil, ErrImmature
 	}
 
 	if optAmount < amount {
