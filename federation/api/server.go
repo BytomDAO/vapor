@@ -23,7 +23,7 @@ type Server struct {
 
 func setupRouter(server *Server) {
 	r := gin.Default()
-	r.Use(server.Middleware())
+	r.Use(server.middleware())
 
 	v1 := r.Group("/api/v1")
 	v1.POST("/federation/list-crosschain-txs", handlerMiddleware(server.ListCrosschainTxs))
@@ -47,7 +47,7 @@ func (s *Server) Run() {
 	s.engine.Run(fmt.Sprintf(":%d", s.cfg.API.ListeningPort))
 }
 
-func (s *Server) Middleware() gin.HandlerFunc {
+func (s *Server) middleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// add Access-Control-Allow-Origin
 		c.Header("Access-Control-Allow-Origin", "*")
