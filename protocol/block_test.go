@@ -43,14 +43,15 @@ func TestCalcReorganizeChain(t *testing.T) {
 	}
 
 	initBlockHeader := &types.BlockHeader{
-		Height: 0,
+		Height:  0,
+		Version: 1,
 	}
 	c.store.SaveBlockHeader(initBlockHeader)
 
 	var wantAttachBlockHeaders []*types.BlockHeader
 	var wantDetachBlockHeaders []*types.BlockHeader
 	mainChainBlockHeader := initBlockHeader
-	sideChainBlockHeader := initBlockHeader
+	newChainBlockHeader := initBlockHeader
 	for i := 1; i <= 7; i++ {
 		mainChainBlockHeader = &types.BlockHeader{
 			PreviousBlockHash: mainChainBlockHeader.Hash(),
@@ -61,16 +62,16 @@ func TestCalcReorganizeChain(t *testing.T) {
 	}
 
 	for i := 1; i <= 13; i++ {
-		sideChainBlockHeader = &types.BlockHeader{
-			PreviousBlockHash: sideChainBlockHeader.Hash(),
+		newChainBlockHeader = &types.BlockHeader{
+			PreviousBlockHash: newChainBlockHeader.Hash(),
 			Height:            uint64(i),
 			Version:           1,
 		}
-		wantAttachBlockHeaders = append(wantAttachBlockHeaders, sideChainBlockHeader)
-		c.store.SaveBlockHeader(sideChainBlockHeader)
+		wantAttachBlockHeaders = append(wantAttachBlockHeaders, newChainBlockHeader)
+		c.store.SaveBlockHeader(newChainBlockHeader)
 	}
 
-	getAttachBlockHeaders, getDetachBlockHeaders, _ := c.calcReorganizeChain(sideChainBlockHeader, mainChainBlockHeader)
+	getAttachBlockHeaders, getDetachBlockHeaders, _ := c.calcReorganizeChain(newChainBlockHeader, mainChainBlockHeader)
 	if !testutil.DeepEqual(wantAttachBlockHeaders, getAttachBlockHeaders) {
 		t.Errorf("attach headers want %v but get %v", wantAttachBlockHeaders, getAttachBlockHeaders)
 	}
