@@ -49,7 +49,6 @@ func NewWarder(db *gorm.DB, assetStore *database.AssetStore, cfg *config.Config)
 		quorum:        cfg.Quorum,
 		position:      local.Position,
 		xpub:          local.XPub,
-		xprv:          string2xprv(xprvStr),
 		mainchainNode: service.NewNode(cfg.Mainchain.Upstream),
 		sidechainNode: service.NewNode(cfg.Sidechain.Upstream),
 		remotes:       remotes,
