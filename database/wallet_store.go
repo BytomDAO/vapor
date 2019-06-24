@@ -165,15 +165,17 @@ func (store *WalletStore) GetAccountByAccountID(accountID string) []byte {
 // DeleteTransactions delete transactions when orphan block rollback
 func (store *WalletStore) DeleteTransactions(height uint64) {
 	tmpTx := query.AnnotatedTx{}
+	batch := store.DB.NewBatch()
 	txIter := store.DB.IteratorPrefix(calcDeleteKey(height))
 	defer txIter.Release()
 
 	for txIter.Next() {
 		if err := json.Unmarshal(txIter.Value(), &tmpTx); err == nil {
-			store.batch.Delete(calcTxIndexKey(tmpTx.ID.String()))
+			batch.Delete(calcTxIndexKey(tmpTx.ID.String()))
 		}
-		store.batch.Delete(txIter.Key())
+		batch.Delete(txIter.Key())
 	}
+	batch.Write()
 }
 
 // SetTransaction set raw transaction by block height and tx position
