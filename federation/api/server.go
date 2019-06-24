@@ -34,7 +34,7 @@ func setupRouter(server *Server) {
 	r.Use(server.Middleware())
 	v1 := r.Group("/api/v1")
 
-	v1.POST("/federation/list-transactions", handlerMiddleware(server.ListTxs))
+	v1.POST("/federation/list-transactions", handlerMiddleware(server.ListCrosschainTxs))
 
 	server.engine = r
 }
