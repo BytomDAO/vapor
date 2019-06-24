@@ -212,29 +212,6 @@ func (c *Chain) SignBlock(block *types.Block) ([]byte, error) {
 		}
 	}
 
-	blockHeader, err := c.store.GetBlockHeader(&block.PreviousBlockHash)
-	if err != nil {
-		return nil, err
-	}
-
-	c.cond.L.Lock()
-	defer c.cond.L.Unlock()
-	// check block exist in main chain
-	for {
-		if blockHeader.Height <= c.bestIrrBlockHeader.Height {
-			return nil, errSignForkChain
-		}
-
-		if _, err := c.store.GetMainChainHash(block.Height); err != nil {
-			break
-		}
-
-		blockHeader, err = c.store.GetBlockHeader(&blockHeader.PreviousBlockHash)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	signature := block.Get(node.Order)
 	if len(signature) == 0 {
 		signature = xprv.Sign(block.Hash().Bytes())
