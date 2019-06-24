@@ -1,0 +1,16 @@
+{
+    "api" : {
+        "listening_port" : 3000,
+        "is_release_mode": false
+    },
+    "mysql" : {
+        "connection" : {
+            "host": "127.0.0.1",
+            "port": 3306,
+            "username": "root",
+            "password": "",
+            "database": "federation"
+        },
+        "log_mode" : true
+    }
+}

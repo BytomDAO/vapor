@@ -11,7 +11,7 @@ A `fed_cfg.json` would look like this:
 
 ```json
 {
-    "gin-gonic" : {
+    "api" : {
         "listening_port" : 3000,
         "is_release_mode": false
     },

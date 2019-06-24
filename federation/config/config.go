@@ -33,7 +33,7 @@ func NewConfigWithPath(path string) *Config {
 }
 
 type Config struct {
-	GinGonic    GinGonic    `json:"gin-gonic"`
+	API         API         `json:"api"`
 	MySQLConfig MySQLConfig `json:"mysql"`
 	Warders     []Warder    `json:"warders"`
 	Quorum      int         `json:"quorum"`
@@ -41,7 +41,7 @@ type Config struct {
 	Sidechain   Chain       `json:"sidechain"`
 }
 
-type GinGonic struct {
+type API struct {
 	ListeningPort uint64 `json:"listening_port"`
 	IsReleaseMode bool   `json:"is_release_mode"`
 }
