@@ -186,8 +186,10 @@ func (store *WalletStore) DeleteTransactions(height uint64) {
 // SetTransaction set raw transaction by block height and tx position
 func (store *WalletStore) SetTransaction(height uint64, position uint32, txID string, rawTx []byte) {
 	if store.batch == nil {
-		store.DB.Set(calcAnnotatedKey(formatKey(height, position)), rawTx)
-		store.DB.Set(calcTxIndexKey(txID), []byte(formatKey(height, position)))
+		batch := store.DB.NewBatch()
+		batch.Set(calcAnnotatedKey(formatKey(height, position)), rawTx)
+		batch.Set(calcTxIndexKey(txID), []byte(formatKey(height, position)))
+		batch.Write()
 	} else {
 		store.batch.Set(calcAnnotatedKey(formatKey(height, position)), rawTx)
 		store.batch.Set(calcTxIndexKey(txID), []byte(formatKey(height, position)))

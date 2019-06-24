@@ -187,6 +187,9 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 		w.RecoveryMgr.finished()
 	}
 
+	// w.store.InitBatch()
+	// defer w.store.CommitBatch()
+
 	if err := w.indexTransactions(block, txStatus); err != nil {
 		return err
 	}
@@ -198,7 +201,8 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 		w.status.BestHeight = w.status.WorkHeight
 		w.status.BestHash = w.status.WorkHash
 	}
-	return w.commitWalletInfo()
+	err = w.commitWalletInfo()
+	return err
 }
 
 // DetachBlock detach a block and rollback state
