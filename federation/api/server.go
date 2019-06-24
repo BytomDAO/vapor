@@ -54,6 +54,7 @@ func (s *Server) Middleware() gin.HandlerFunc {
 			return
 		}
 
+		c.Set(serverLabel, s)
 		c.Next()
 	}
 }
@@ -83,7 +84,6 @@ func handlerMiddleware(handleFunc interface{}) func(*gin.Context) {
 	// 		return
 	// 	}
 
-	// 	context.Set(common.CoinLabel, coin)
 	// 	common.HandleRequest(context, handleFunc)
 	// }
 }
