@@ -275,16 +275,11 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 		return errors.Wrap(err, "Marshal block transaction status")
 	}
 
-	blockHash := block.Hash()
-	binaryBlockHash, err := blockHash.MarshalText()
-	if err != nil {
-		return errors.Wrap(err, "Marshal block hash")
-	}
-
 	blockHashes := []*bc.Hash{}
 	if hashes, _ := s.GetBlockHashesByHeight(block.Height); hashes != nil {
 		blockHashes = append(blockHashes, hashes...)
 	}
+	blockHash := block.Hash()
 	blockHashes = append(blockHashes, &blockHash)
 	binaryBlockHashes, err := json.Marshal(blockHashes)
 	if err != nil {
@@ -292,7 +287,6 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 	}
 
 	batch := s.db.NewBatch()
-	batch.Set(calcMainChainIndexPrefix(block.Height), binaryBlockHash)
 	batch.Set(calcBlockHashesByHeightPrefix(block.Height), binaryBlockHashes)
 	batch.Set(calcBlockHeaderKey(&blockHash), binaryBlockHeader)
 	batch.Set(calcBlockTransactionsKey(&blockHash), binaryBlockTxs)
@@ -348,6 +342,25 @@ func (s *Store) SaveChainStatus(blockHeader, irrBlockHeader *types.BlockHeader, 
 	})
 	if err != nil {
 		return err
+	}
+
+	// save main chain hash by height
+	bh := blockHeader
+	for {
+		if _, err := s.GetMainChainHash(bh.Height); err == nil {
+			break
+		}
+
+		blockHash := bh.Hash()
+		binaryBlockHash, err := blockHash.MarshalText()
+		if err != nil {
+			return errors.Wrap(err, "Marshal block hash")
+		}
+		batch.Set(calcMainChainIndexPrefix(bh.Height), binaryBlockHash)
+
+		if bh, err = s.GetBlockHeader(&bh.PreviousBlockHash); err != nil {
+			return err
+		}
 	}
 
 	batch.Set(blockStoreKey, bytes)
