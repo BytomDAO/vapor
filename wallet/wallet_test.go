@@ -119,13 +119,13 @@ func TestWalletUpdate(t *testing.T) {
 
 	config.CommonConfig = config.DefaultConfig()
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	testStore := database.NewWalletStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
 	}()
 
 	store := database.NewStore(testDB)
+	testStore := database.NewWalletStore(testDB)
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
 

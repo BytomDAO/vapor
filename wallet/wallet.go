@@ -209,6 +209,9 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 		w.status.BestHash = w.status.WorkHash
 	}
 	err = w.commitWalletInfo()
+
+	// w.store.CommitBatch()
+
 	return err
 }
 

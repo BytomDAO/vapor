@@ -69,19 +69,27 @@ type WalletStore struct {
 // NewWalletStore create new WalletStore struct
 func NewWalletStore(db dbm.DB) *WalletStore {
 	return &WalletStore{
-		DB: db,
+		DB:    db,
+		batch: nil,
 	}
 }
 
 // InitBatch initial batch
 func (store *WalletStore) InitBatch() {
+	// if store.batch == nil {
 	store.batch = store.DB.NewBatch()
+
+	fmt.Println("InitBatch store.batch: ", store.batch)
+	// }
 }
 
 // CommitBatch commit batch
 func (store *WalletStore) CommitBatch() {
+	fmt.Println("CommitBatch...")
 	if store.batch != nil {
+		fmt.Println("CommitBatch not nil...")
 		store.batch.Write()
+		// store.batch = store.DB.NewBatch()
 	}
 }
 
@@ -146,10 +154,8 @@ func (store *WalletStore) GetAssetDefinition(assetID *bc.AssetID) []byte {
 // SetAssetDefinition set assetID and definition
 func (store *WalletStore) SetAssetDefinition(assetID *bc.AssetID, definition []byte) {
 	if store.batch == nil {
-		fmt.Println("SetAssetDefinition... nil")
 		store.DB.Set(asset.ExtAssetKey(assetID), definition)
 	} else {
-		fmt.Println("SetAssetDefinition... not nil")
 		store.batch.Set(asset.ExtAssetKey(assetID), definition)
 	}
 }
@@ -226,6 +232,7 @@ func (store *WalletStore) GetStandardUTXO(outid bc.Hash) []byte {
 
 // GetTransaction get tx by tx index
 func (store *WalletStore) GetTransaction(txID string) ([]byte, error) {
+	fmt.Println("GetTransaction... txID: ", txID)
 	formatKey := store.DB.Get(calcTxIndexKey(txID))
 	if formatKey == nil {
 		return nil, errAccntTxIDNotFound
