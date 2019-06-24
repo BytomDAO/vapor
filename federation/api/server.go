@@ -58,6 +58,7 @@ func (s *Server) Middleware() gin.HandlerFunc {
 	}
 }
 
+// TODO:
 func handlerMiddleware(handleFunc interface{}) func(*gin.Context) {
 	return nil
 	// if err := common.ValidateFuncType(handleFunc); err != nil {
