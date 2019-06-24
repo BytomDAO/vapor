@@ -7,8 +7,8 @@ import (
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
+	"github.com/vapor/federation/api"
 	"github.com/vapor/federation/common"
 	"github.com/vapor/federation/config"
 	"github.com/vapor/federation/database/orm"
@@ -20,50 +20,56 @@ import (
 var collectInterval = 5 * time.Second
 
 type warder struct {
-	db            *gorm.DB
-	fedProg       []byte
-	quorum        int
-	position      uint8
-	xpub          chainkd.XPub
+	cfg     *config.Config
+	db      *gorm.DB
+	fedProg []byte
+	quorum  int
+	// position      uint8
+	// xpub          chainkd.XPub
 	mainchainNode *service.Node
 	sidechainNode *service.Node
-	remotes       []*service.Warder
+	// remotes       []*service.Warder
+	server *api.Server
 }
 
 func NewWarder(db *gorm.DB, cfg *config.Config) *warder {
-	local, remotes := parseWarders(cfg)
+	// local, remotes := parseWarders(cfg)
 	return &warder{
-		db:            db,
-		fedProg:       util.ParseFedProg(cfg.Warders, cfg.Quorum),
-		quorum:        cfg.Quorum,
-		position:      local.Position,
-		xpub:          local.XPub,
+		cfg:     cfg,
+		db:      db,
+		fedProg: util.ParseFedProg(cfg.Warders, cfg.Quorum),
+		quorum:  cfg.Quorum,
+		// position:      local.Position,
+		// xpub:          local.XPub,
 		mainchainNode: service.NewNode(cfg.Mainchain.Upstream),
 		sidechainNode: service.NewNode(cfg.Sidechain.Upstream),
-		remotes:       remotes,
+		// remotes:       remotes,
+		server: api.NewServer(db, cfg),
 	}
 }
 
-func parseWarders(cfg *config.Config) (*service.Warder, []*service.Warder) {
-	var local *service.Warder
-	var remotes []*service.Warder
-	for _, warderCfg := range cfg.Warders {
-		if warderCfg.IsLocal {
-			local = service.NewWarder(&warderCfg)
-		} else {
-			remote := service.NewWarder(&warderCfg)
-			remotes = append(remotes, remote)
-		}
-	}
+// func parseWarders(cfg *config.Config) (*service.Warder, []*service.Warder) {
+// 	var local *service.Warder
+// 	var remotes []*service.Warder
+// 	for _, warderCfg := range cfg.Warders {
+// 		if warderCfg.IsLocal {
+// 			local = service.NewWarder(&warderCfg)
+// 		} else {
+// 			remote := service.NewWarder(&warderCfg)
+// 			remotes = append(remotes, remote)
+// 		}
+// 	}
 
-	if local == nil {
-		log.Fatal("none local warder set")
-	}
+// 	if local == nil {
+// 		log.Fatal("none local warder set")
+// 	}
 
-	return local, remotes
-}
+// 	return local, remotes
+// }
 
 func (w *warder) Run() {
+	go w.server.Run()
+
 	ticker := time.NewTicker(collectInterval)
 	for ; true; <-ticker.C {
 		txs := []*orm.CrossTransaction{}
@@ -148,7 +154,7 @@ func (w *warder) buildMainchainTx(ormTx *orm.CrossTransaction) (*btmTypes.Tx, st
 }
 
 func (w *warder) initDestTxSigns(destTx interface{}, ormTx *orm.CrossTransaction) error {
-	for i := 1; i <= len(w.remotes)+1; i++ {
+	for i := 1; i <= len(w.cfg.Warders); i++ {
 		if err := w.db.Create(&orm.CrossTransactionSign{
 			CrossTransactionID: ormTx.ID,
 			WarderID:           uint8(i),
