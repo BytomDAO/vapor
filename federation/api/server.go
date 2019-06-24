@@ -121,24 +121,22 @@ func handleRequest(context *gin.Context, fun handlerFun) {
 		return
 	}
 
-	// TODO:
-
 	result := callHandleFunc(fun, args...)
 	if err := result[len(result)-1]; err != nil {
 		respondErrorResp(context, err.(error))
 		return
 	}
 
-	// if exist := processPaginationIfPresent(fun, args, result, context); exist {
-	// 	return
-	// }
+	if exist := processPaginationIfPresent(fun, args, result, context); exist {
+		return
+	}
 
-	// if len(result) == 1 {
-	// 	RespondSuccessResp(context, nil)
-	// 	return
-	// }
+	if len(result) == 1 {
+		respondSuccessResp(context, nil)
+		return
+	}
 
-	// RespondSuccessResp(context, result[0])
+	respondSuccessResp(context, result[0])
 }
 
 // TODO:
