@@ -11,7 +11,6 @@ import (
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/common"
 	"github.com/vapor/federation/config"
-	"github.com/vapor/federation/database"
 	"github.com/vapor/federation/database/orm"
 	"github.com/vapor/federation/service"
 	"github.com/vapor/federation/util"
@@ -22,7 +21,6 @@ var collectInterval = 5 * time.Second
 
 type warder struct {
 	db            *gorm.DB
-	assetStore    *database.AssetStore
 	txCh          chan *orm.CrossTransaction
 	fedProg       []byte
 	quorum        int
@@ -33,11 +31,10 @@ type warder struct {
 	remotes       []*service.Warder
 }
 
-func NewWarder(db *gorm.DB, assetStore *database.AssetStore, cfg *config.Config) *warder {
+func NewWarder(db *gorm.DB, cfg *config.Config) *warder {
 	local, remotes := parseWarders(cfg)
 	return &warder{
 		db:            db,
-		assetStore:    assetStore,
 		txCh:          make(chan *orm.CrossTransaction),
 		fedProg:       util.ParseFedProg(cfg.Warders, cfg.Quorum),
 		quorum:        cfg.Quorum,

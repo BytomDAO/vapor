@@ -22,7 +22,7 @@ func main() {
 	assetStore := database.NewAssetStore(db)
 	go synchron.NewMainchainKeeper(db, assetStore, cfg).Run()
 	go synchron.NewSidechainKeeper(db, assetStore, cfg).Run()
-	go federation.NewWarder(db, assetStore, cfg).Run()
+	go federation.NewWarder(db, cfg).Run()
 	go api.NewServer(db, cfg).Run()
 
 	// keep the main func running in case of terminating goroutines
