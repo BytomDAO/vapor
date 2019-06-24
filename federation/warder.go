@@ -1,8 +1,6 @@
 package federation
 
 import (
-	"database/sql"
-	"encoding/hex"
 	"time"
 
 	btmTypes "github.com/bytom/protocol/bc/types"
@@ -17,7 +15,6 @@ import (
 	"github.com/vapor/federation/database/orm"
 	"github.com/vapor/federation/service"
 	"github.com/vapor/federation/util"
-	vaporBc "github.com/vapor/protocol/bc"
 	vaporTypes "github.com/vapor/protocol/bc/types"
 )
 
@@ -149,79 +146,11 @@ func (w *warder) proposeDestTx(tx *orm.CrossTransaction) (interface{}, string, e
 }
 
 func (w *warder) buildSidechainTx(ormTx *orm.CrossTransaction) (*vaporTypes.Tx, string, error) {
-	destTxData := &vaporTypes.TxData{Version: 1, TimeRange: 0}
-	muxID := &vaporBc.Hash{}
-	if err := muxID.UnmarshalText([]byte(ormTx.SourceMuxID)); err != nil {
-		return nil, "", errors.Wrap(err, "Unmarshal muxID")
-	}
-
-	for _, req := range ormTx.Reqs {
-		// getAsset from assetStore instead of preload asset, in order to save db query overload
-		asset, err := w.assetStore.GetByOrmID(req.AssetID)
-		if err != nil {
-			return nil, "", errors.Wrap(err, "get asset by ormAsset ID")
-		}
-
-		assetID := &vaporBc.AssetID{}
-		if err := assetID.UnmarshalText([]byte(asset.AssetID)); err != nil {
-			return nil, "", errors.Wrap(err, "Unmarshal muxID")
-		}
-
-		rawDefinitionByte, err := hex.DecodeString(asset.RawDefinitionByte)
-		if err != nil {
-			return nil, "", errors.Wrap(err, "decode rawDefinitionByte")
-		}
-
-		issuanceProgramByte, err := hex.DecodeString(asset.IssuanceProgram)
-		if err != nil {
-			return nil, "", errors.Wrap(err, "decode issuanceProgramByte")
-		}
-
-		input := vaporTypes.NewCrossChainInput(nil, *muxID, *assetID, req.AssetAmount, req.SourcePos, 1, rawDefinitionByte, issuanceProgramByte)
-		destTxData.Inputs = append(destTxData.Inputs, input)
-
-		controlProgram, err := hex.DecodeString(req.Script)
-		if err != nil {
-			return nil, "", errors.Wrap(err, "decode req.Script")
-		}
-
-		output := vaporTypes.NewIntraChainOutput(*assetID, req.AssetAmount, controlProgram)
-		destTxData.Outputs = append(destTxData.Outputs, output)
-	}
-
-	destTx := vaporTypes.NewTx(*destTxData)
-	w.addInputWitness(destTx)
-
-	if err := w.db.Model(&orm.CrossTransaction{}).
-		Where(&orm.CrossTransaction{ID: ormTx.ID}).
-		UpdateColumn(&orm.CrossTransaction{
-			DestTxHash: sql.NullString{destTx.ID.String(), true},
-		}).Error; err != nil {
-		return nil, "", err
-	}
-
-	return destTx, destTx.ID.String(), nil
+	return nil, "", errors.New("buildSidechainTx not implemented yet")
 }
 
 func (w *warder) buildMainchainTx(ormTx *orm.CrossTransaction) (*btmTypes.Tx, string, error) {
 	return nil, "", errors.New("buildMainchainTx not implemented yet")
-}
-
-// tx is a pointer to types.Tx, so the InputArguments can be set and be valid afterward
-func (w *warder) addInputWitness(tx interface{}) {
-	switch tx := tx.(type) {
-	case *vaporTypes.Tx:
-		args := [][]byte{w.fedProg}
-		for i := range tx.Inputs {
-			tx.SetInputArguments(uint32(i), args)
-		}
-
-	case *btmTypes.Tx:
-		args := [][]byte{util.SegWitWrap(w.fedProg)}
-		for i := range tx.Inputs {
-			tx.SetInputArguments(uint32(i), args)
-		}
-	}
 }
 
 func (w *warder) initDestTxSigns(destTx interface{}, ormTx *orm.CrossTransaction) error {
