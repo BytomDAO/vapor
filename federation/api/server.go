@@ -112,11 +112,11 @@ type handlerFun interface{}
 
 // handleRequest get a handler function to process the request by request url
 func handleRequest(context *gin.Context, fun handlerFun) {
-	// args, err := buildHandleFuncArgs(fun, context)
-	// if err != nil {
-	// 	RespondErrorResp(context, err)
-	// 	return
-	// }
+	args, err := buildHandleFuncArgs(fun, context)
+	if err != nil {
+		RespondErrorResp(context, err)
+		return
+	}
 
 	// result := callHandleFunc(fun, args...)
 	// if err := result[len(result)-1]; err != nil {
@@ -134,4 +134,37 @@ func handleRequest(context *gin.Context, fun handlerFun) {
 	// }
 
 	// RespondSuccessResp(context, result[0])
+}
+
+// TODO:
+func buildHandleFuncArgs(fun handlerFun, context *gin.Context) ([]interface{}, error) {
+	args := []interface{}{context}
+
+	// req, err := createHandleReqArg(fun, context)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "createHandleReqArg")
+	// }
+
+	// if err := checkDisplayOrder(req); err != nil {
+	// 	return nil, err
+	// }
+
+	// if req != nil {
+	// 	args = append(args, req)
+	// }
+
+	ft := reflect.TypeOf(fun)
+
+	// not exist pagination
+	if ft.NumIn() != 3 {
+		return args, nil
+	}
+
+	// query, err := ParsePagination(context)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "ParsePagination")
+	// }
+
+	// args = append(args, query)
+	return args, nil
 }
