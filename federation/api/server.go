@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 
 	"github.com/vapor/federation/config"
@@ -23,7 +24,7 @@ func NewServer(db *gorm.DB, cfg *config.Config) *Server {
 func setupRouter(server *Server) {
 	// TODO: log mode?
 	r := gin.Default()
-	r.Use(server.Middleware())
+	// r.Use(server.Middleware())
 	// r.HEAD("/api/v1", handlerMiddleware(server.Head))
 	// r.GET("/api/check-update", handlerMiddleware(server.CheckUpdate))
 
