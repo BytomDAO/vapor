@@ -56,42 +56,37 @@ func (c *Chain) GetHeaderByHeight(height uint64) (*types.BlockHeader, error) {
 	return c.store.GetBlockHeader(hash)
 }
 
-func (c *Chain) calcReorganizeNodes(blockHeader *types.BlockHeader) ([]*types.BlockHeader, []*types.BlockHeader, error) {
+func (c *Chain) calcReorganizeChain(beginAttachBlockHeader *types.BlockHeader, beginDetachBlockHeader *types.BlockHeader) ([]*types.BlockHeader, []*types.BlockHeader, error) {
+	var err error
 	var attachBlockHeaders []*types.BlockHeader
 	var detachBlockHeaders []*types.BlockHeader
-	var err error
 
-	attachBlockHeader := blockHeader
-	for {
-		getBlockHash, err := c.store.GetMainChainHash(attachBlockHeader.Height)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		if *getBlockHash == attachBlockHeader.Hash() {
-			break
-		}
-
-		attachBlockHeaders = append([]*types.BlockHeader{attachBlockHeader}, attachBlockHeaders...)
-		attachBlockHeader, err = c.store.GetBlockHeader(&attachBlockHeader.PreviousBlockHash)
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-
-	c.cond.L.Lock()
-	defer c.cond.L.Unlock()
+	attachBlockHeader := &types.BlockHeader{}
 	detachBlockHeader := &types.BlockHeader{}
-	*detachBlockHeader = *c.bestBlockHeader
-	for {
-		if detachBlockHeader.Hash() == attachBlockHeader.Hash() {
-			break
+	*attachBlockHeader = *beginAttachBlockHeader
+	*detachBlockHeader = *beginDetachBlockHeader
+	for detachBlockHeader.Hash() != attachBlockHeader.Hash() {
+		var forChainRollback, mainChainRollBack bool
+		if forChainRollback = attachBlockHeader.Height >= detachBlockHeader.Height; forChainRollback {
+			attachBlockHeaders = append([]*types.BlockHeader{attachBlockHeader}, attachBlockHeaders...)
 		}
 
-		detachBlockHeaders = append(detachBlockHeaders, detachBlockHeader)
-		detachBlockHeader, err = c.store.GetBlockHeader(&detachBlockHeader.PreviousBlockHash)
-		if err != nil {
-			return nil, nil, err
+		if mainChainRollBack = attachBlockHeader.Height <= detachBlockHeader.Height; mainChainRollBack {
+			detachBlockHeaders = append(detachBlockHeaders, detachBlockHeader)
+		}
+
+		if forChainRollback {
+			attachBlockHeader, err = c.store.GetBlockHeader(&attachBlockHeader.PreviousBlockHash)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
+
+		if mainChainRollBack {
+			detachBlockHeader, err = c.store.GetBlockHeader(&detachBlockHeader.PreviousBlockHash)
+			if err != nil {
+				return nil, nil, err
+			}
 		}
 	}
 	return attachBlockHeaders, detachBlockHeaders, nil
@@ -137,7 +132,9 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 }
 
 func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
-	attachBlockHeaders, detachBlockHeaders, err := c.calcReorganizeNodes(blockHeader)
+	c.cond.L.Lock()
+	defer c.cond.L.Unlock()
+	attachBlockHeaders, detachBlockHeaders, err := c.calcReorganizeChain(blockHeader, c.bestBlockHeader)
 	if err != nil {
 		return err
 	}

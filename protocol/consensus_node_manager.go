@@ -125,35 +125,16 @@ func (c *Chain) getVoteResult(seq uint64, blockHeader *types.BlockHeader) (*stat
 func (c *Chain) reorganizeVoteResult(voteResult *state.VoteResult, blockHeader *types.BlockHeader) error {
 	mainChainBlockHeader, err := c.store.GetBlockHeader(&voteResult.BlockHash)
 	if err != nil {
-		return errNotFoundBlockNode
+		return err
 	}
 
-	var attachBlockHeaders []*types.BlockHeader
-	var detachBlockHeaders []*types.BlockHeader
-	for forkChainBlockHeader := blockHeader; mainChainBlockHeader != forkChainBlockHeader; {
-		var forChainRollback, mainChainRollBack bool
-		if forChainRollback = forkChainBlockHeader.Height >= mainChainBlockHeader.Height; forChainRollback {
-			attachBlockHeaders = append([]*types.BlockHeader{forkChainBlockHeader}, attachBlockHeaders...)
-		}
-		if mainChainRollBack = forkChainBlockHeader.Height <= mainChainBlockHeader.Height; mainChainRollBack {
-			detachBlockHeaders = append(detachBlockHeaders, mainChainBlockHeader)
-		}
-		if forChainRollback {
-			forkChainBlockHeader, err = c.store.GetBlockHeader(&forkChainBlockHeader.PreviousBlockHash)
-			if err != nil {
-				return errNotFoundBlockNode
-			}
-		}
-		if mainChainRollBack {
-			mainChainBlockHeader, err = c.store.GetBlockHeader(&mainChainBlockHeader.PreviousBlockHash)
-			if err != nil {
-				return errNotFoundBlockNode
-			}
-		}
+	attachBlockHeaders, detachBlockHeaders, err := c.calcReorganizeChain(blockHeader, mainChainBlockHeader)
+	if err != nil {
+		return err
 	}
 
-	for _, blockHeader := range detachBlockHeaders {
-		blockHash := blockHeader.Hash()
+	for _, bh := range detachBlockHeaders {
+		blockHash := bh.Hash()
 		block, err := c.store.GetBlock(&blockHash)
 		if err != nil {
 			return err
@@ -164,8 +145,8 @@ func (c *Chain) reorganizeVoteResult(voteResult *state.VoteResult, blockHeader *
 		}
 	}
 
-	for _, blockHeader := range attachBlockHeaders {
-		blockHash := blockHeader.Hash()
+	for _, bh := range attachBlockHeaders {
+		blockHash := bh.Hash()
 		block, err := c.store.GetBlock(&blockHash)
 		if err != nil {
 			return err
