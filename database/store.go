@@ -344,26 +344,23 @@ func (s *Store) SaveChainStatus(blockHeader, irrBlockHeader *types.BlockHeader, 
 		return err
 	}
 
-	// save main chain hash by height
-	bh := blockHeader
-	for {
-		if _, err := s.GetMainChainHash(bh.Height); err == nil {
-			break
-		}
+	batch.Set(blockStoreKey, bytes)
+	batch.Write()
+	return nil
+}
 
+// SaveMainChainHash save main chain hashes by height
+func (s *Store) SaveMainChainHash(blockHeaders []*types.BlockHeader) error {
+	batch := s.db.NewBatch()
+	for _, bh := range blockHeaders {
 		blockHash := bh.Hash()
 		binaryBlockHash, err := blockHash.MarshalText()
 		if err != nil {
 			return errors.Wrap(err, "Marshal block hash")
 		}
 		batch.Set(calcMainChainIndexPrefix(bh.Height), binaryBlockHash)
-
-		if bh, err = s.GetBlockHeader(&bh.PreviousBlockHash); err != nil {
-			return err
-		}
 	}
 
-	batch.Set(blockStoreKey, bytes)
 	batch.Write()
 	return nil
 }

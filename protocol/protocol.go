@@ -91,6 +91,10 @@ func (c *Chain) initChainStatus() error {
 	}}
 
 	genesisBlockHeader := &genesisBlock.BlockHeader
+	if err := c.store.SaveMainChainHash([]*types.BlockHeader{genesisBlockHeader}); err != nil {
+		return err
+	}
+
 	return c.store.SaveChainStatus(genesisBlockHeader, genesisBlockHeader, utxoView, voteResults)
 }
 

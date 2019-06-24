@@ -34,6 +34,7 @@ func (s *mStore) SaveBlockHeader(blockHeader *types.BlockHeader) error {
 func (s *mStore) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, *state.UtxoViewpoint, []*state.VoteResult) error {
 	return nil
 }
+func (s *mStore) SaveMainChainHash([]*types.BlockHeader) error { return nil }
 
 func TestCalcReorganizeChain(t *testing.T) {
 	c := &Chain{

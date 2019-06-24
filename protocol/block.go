@@ -116,6 +116,10 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		irrBlockHeader = blockHeader
 	}
 
+	if err := c.store.SaveMainChainHash([]*types.BlockHeader{blockHeader}); err != nil {
+		return nil
+	}
+
 	if err := c.setState(blockHeader, irrBlockHeader, utxoView, []*state.VoteResult{voteResult}); err != nil {
 		return err
 	}
@@ -212,6 +216,11 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 		return errors.New("rollback block below the height of irreversible block")
 	}
 	voteResults = append(voteResults, voteResult.Fork())
+
+	// save attach block hashes into main chain
+	if err := c.store.SaveMainChainHash(attachBlockHeaders); err != nil {
+		return nil
+	}
 	return c.setState(blockHeader, irrBlockHeader, utxoView, voteResults)
 }
 
