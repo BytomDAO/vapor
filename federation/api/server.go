@@ -60,12 +60,40 @@ func (s *Server) Middleware() gin.HandlerFunc {
 
 // TODO:
 func handlerMiddleware(handleFunc interface{}) func(*gin.Context) {
-	return nil
 	// if err := common.ValidateFuncType(handleFunc); err != nil {
 	// 	panic(err)
 	// }
 
-	// return func(context *gin.Context) {
-	// 	common.HandleRequest(context, handleFunc)
+	return func(context *gin.Context) {
+		handleRequest(context, handleFunc)
+	}
+}
+
+// TODO: maybe move around
+type handlerFun interface{}
+
+// handleRequest get a handler function to process the request by request url
+func handleRequest(context *gin.Context, fun handlerFun) {
+	// args, err := buildHandleFuncArgs(fun, context)
+	// if err != nil {
+	// 	RespondErrorResp(context, err)
+	// 	return
 	// }
+
+	// result := callHandleFunc(fun, args...)
+	// if err := result[len(result)-1]; err != nil {
+	// 	RespondErrorResp(context, err.(error))
+	// 	return
+	// }
+
+	// if exist := processPaginationIfPresent(fun, args, result, context); exist {
+	// 	return
+	// }
+
+	// if len(result) == 1 {
+	// 	RespondSuccessResp(context, nil)
+	// 	return
+	// }
+
+	// RespondSuccessResp(context, result[0])
 }
