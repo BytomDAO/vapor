@@ -8,14 +8,18 @@ import (
 )
 
 type Server struct {
-	cfg *config.Config
-	db  *gorm.DB
+	cfg    *config.Config
+	db     *gorm.DB
+	engine *gin.Engine
 }
 
 func NewServer(db *gorm.DB, cfg *config.Config) *Server {
 	server := &Server{
 		cfg: cfg,
 		db:  db,
+	}
+	if cfg.API.IsReleaseMode {
+		gin.SetMode(gin.ReleaseMode)
 	}
 	setupRouter(server)
 	return server
@@ -60,7 +64,6 @@ func setupRouter(server *Server) {
 	// v1.GET("/q/explore", handlerMiddleware(server.GetExplorePage))
 
 	server.engine = r
-
 }
 
 func (s *Server) Run() {
