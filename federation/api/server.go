@@ -66,24 +66,6 @@ func handlerMiddleware(handleFunc interface{}) func(*gin.Context) {
 	// }
 
 	// return func(context *gin.Context) {
-	// 	server := context.MustGet(common.ServerLabel).(*Server)
-	// 	banned, err := server.isBannedIP(context.Request.RemoteAddr)
-	// 	if err != nil {
-	// 		common.RespondErrorResp(context, err)
-	// 		return
-	// 	}
-
-	// 	if banned {
-	// 		common.RespondErrorResp(context, types.ErrBannedIPOrWallet)
-	// 		return
-	// 	}
-
-	// 	coin, err := server.QueryCoinByName(context.Param("coin_name"))
-	// 	if err != nil {
-	// 		common.RespondErrorResp(context, err)
-	// 		return
-	// 	}
-
 	// 	common.HandleRequest(context, handleFunc)
 	// }
 }
