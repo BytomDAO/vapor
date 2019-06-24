@@ -111,7 +111,7 @@ func (w *warder) processCrossTx(ormTx *orm.CrossTransaction) error {
 		return err
 	}
 
-	destTx, destTxID, err := w.proposeDestTx(ormTx)
+	destTx, _, err := w.proposeDestTx(ormTx)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx}).Warnln("proposeDestTx")
 		return err
@@ -252,67 +252,4 @@ func (w *warder) initDestTxSigns(destTx interface{}, ormTx *orm.CrossTransaction
 		UpdateColumn(&orm.CrossTransaction{
 			Status: common.CrossTxPendingStatus,
 		}).Error
-}
-
-func (w *warder) getSignData(destTx interface{}) ([][]byte, error) {
-	var signData [][]byte
-
-	switch destTx := destTx.(type) {
-	case *vaporTypes.Tx:
-		signData = make([][]byte, len(destTx.Inputs))
-		for i := range destTx.Inputs {
-			signHash := destTx.SigHash(uint32(i))
-			signData[i] = signHash.Bytes()
-		}
-
-	case *btmTypes.Tx:
-		signData = make([][]byte, len(destTx.Inputs))
-		for i := range destTx.Inputs {
-			signHash := destTx.SigHash(uint32(i))
-			signData[i] = signHash.Bytes()
-		}
-
-	default:
-		return [][]byte{}, errUnknownTxType
-	}
-
-	return signData, nil
-}
-
-func (w *warder) getSigns(destTx interface{}, ormTx *orm.CrossTransaction) ([][]byte, error) {
-	if ormTx.Status != common.CrossTxPendingStatus || !ormTx.DestTxHash.Valid {
-		return nil, errors.New("cross-chain tx status error")
-	}
-
-	signData, err := w.getSignData(destTx)
-	if err != nil {
-		return nil, errors.New("getSignData")
-	}
-
-	var signs [][]byte
-	for _, data := range signData {
-		var b [32]byte
-		copy(b[:], data)
-		// vaporBc.Hash & btmBc.Hash are marshaled in the same way
-		msg := vaporBc.NewHash(b)
-		sign := w.xprv.Sign([]byte(msg.String()))
-		signs = append(signs, sign)
-	}
-
-	return signs, nil
-}
-
-func (w *warder) finalizeTx(destTx interface{}, signersSigns [][][]byte) error {
-	return nil
-}
-
-func (w *warder) submitTx(destTx interface{}) (string, error) {
-	switch tx := destTx.(type) {
-	case *btmTypes.Tx:
-		return w.mainchainNode.SubmitTx(tx)
-	case *vaporTypes.Tx:
-		return w.sidechainNode.SubmitTx(tx)
-	default:
-		return "", errUnknownTxType
-	}
 }
