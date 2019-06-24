@@ -5,7 +5,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/federation"
+	// "github.com/vapor/federation"
 	"github.com/vapor/federation/config"
 	"github.com/vapor/federation/database"
 	"github.com/vapor/federation/synchron"
@@ -23,7 +23,10 @@ func main() {
 	assetStore := database.NewAssetStore(db)
 	go synchron.NewMainchainKeeper(db, assetStore, cfg).Run()
 	go synchron.NewSidechainKeeper(db, assetStore, cfg).Run()
-	go federation.NewWarder(db, assetStore, cfg).Run()
+	// go federation.NewWarder(db, assetStore, cfg).Run()
+
+	// TODO:
+	// apiServer := go api.NewServer(cfg).Run()
 
 	// keep the main func running in case of terminating goroutines
 	var wg sync.WaitGroup
