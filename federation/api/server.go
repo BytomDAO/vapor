@@ -1,6 +1,8 @@
 package api
 
 import (
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 
@@ -26,8 +28,8 @@ func NewServer(db *gorm.DB, cfg *config.Config) *Server {
 }
 
 func setupRouter(server *Server) {
-	// TODO: log mode?
 	r := gin.Default()
+
 	// r.Use(server.Middleware())
 	// r.HEAD("/api/v1", handlerMiddleware(server.Head))
 	// r.GET("/api/check-update", handlerMiddleware(server.CheckUpdate))
@@ -67,5 +69,5 @@ func setupRouter(server *Server) {
 }
 
 func (s *Server) Run() {
-
+	s.engine.Run(fmt.Sprintf(":%d", s.cfg.API.ListeningPort))
 }
