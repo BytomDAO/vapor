@@ -146,8 +146,10 @@ func (store *WalletStore) GetAssetDefinition(assetID *bc.AssetID) []byte {
 // SetAssetDefinition set assetID and definition
 func (store *WalletStore) SetAssetDefinition(assetID *bc.AssetID, definition []byte) {
 	if store.batch == nil {
+		fmt.Println("SetAssetDefinition... nil")
 		store.DB.Set(asset.ExtAssetKey(assetID), definition)
 	} else {
+		fmt.Println("SetAssetDefinition... not nil")
 		store.batch.Set(asset.ExtAssetKey(assetID), definition)
 	}
 }
@@ -185,12 +187,15 @@ func (store *WalletStore) DeleteTransactions(height uint64) {
 
 // SetTransaction set raw transaction by block height and tx position
 func (store *WalletStore) SetTransaction(height uint64, position uint32, txID string, rawTx []byte) {
+	fmt.Println("SetTransaction...")
 	if store.batch == nil {
+		fmt.Println("SetTransaction ... nil")
 		batch := store.DB.NewBatch()
 		batch.Set(calcAnnotatedKey(formatKey(height, position)), rawTx)
 		batch.Set(calcTxIndexKey(txID), []byte(formatKey(height, position)))
 		batch.Write()
 	} else {
+		fmt.Println("SetTransaction ... not nil")
 		store.batch.Set(calcAnnotatedKey(formatKey(height, position)), rawTx)
 		store.batch.Set(calcTxIndexKey(txID), []byte(formatKey(height, position)))
 	}

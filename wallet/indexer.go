@@ -66,10 +66,10 @@ type TxSummary struct {
 }
 
 // indexTransactions saves all annotated transactions to the database.
-func (w *Wallet) indexTransactions(b *types.Block, txStatus *bc.TransactionStatus) error {
-	annotatedTxs := w.filterAccountTxs(b, txStatus)
-	saveExternalAssetDefinition(b, w.store)
-	annotateTxsAccount(annotatedTxs, w.store)
+func (w *Wallet) indexTransactions(b *types.Block, txStatus *bc.TransactionStatus, annotatedTxs []*query.AnnotatedTx) error {
+	// annotatedTxs := w.filterAccountTxs(b, txStatus)
+	// saveExternalAssetDefinition(b, w.store)
+	// annotateTxsAccount(annotatedTxs, w.store)
 
 	for _, tx := range annotatedTxs {
 		rawTx, err := json.Marshal(tx)

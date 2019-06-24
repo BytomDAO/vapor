@@ -187,10 +187,14 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 		w.RecoveryMgr.finished()
 	}
 
+	annotatedTxs := w.filterAccountTxs(block, txStatus)
+	saveExternalAssetDefinition(block, w.store)
+	annotateTxsAccount(annotatedTxs, w.store)
+
 	// w.store.InitBatch()
 	// defer w.store.CommitBatch()
 
-	if err := w.indexTransactions(block, txStatus); err != nil {
+	if err := w.indexTransactions(block, txStatus, annotatedTxs); err != nil {
 		return err
 	}
 
