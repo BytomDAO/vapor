@@ -140,8 +140,8 @@ func (p *Peer) GetBlocks(locator []*bc.Hash, stopHash *bc.Hash) bool {
 	return p.TrySend(msgs.BlockchainChannel, msg)
 }
 
-func (p *Peer) GetHeaders(locator []*bc.Hash, amount uint64, skip uint64) bool {
-	msg := struct{ msgs.BlockchainMessage }{msgs.NewGetHeadersMessage(locator, amount, skip)}
+func (p *Peer) GetHeaders(locator []*bc.Hash, stopHash *bc.Hash, skip uint64) bool {
+	msg := struct{ msgs.BlockchainMessage }{msgs.NewGetHeadersMessage(locator, stopHash, skip)}
 	return p.TrySend(msgs.BlockchainChannel, msg)
 }
 
@@ -466,16 +466,16 @@ func (ps *PeerSet) BroadcastMsg(bm BroadcastMsg) error {
 	return nil
 }
 
-func (ps *PeerSet) BroadcastNewStatus(bestBlock *types.Block) error {
-	msg := msgs.NewStatusMessage(&bestBlock.BlockHeader)
-	peers := ps.peersWithoutNewStatus(bestBlock.Height)
+func (ps *PeerSet) BroadcastNewStatus(header *types.BlockHeader) error {
+	msg := msgs.NewStatusMessage(header)
+	peers := ps.peersWithoutNewStatus(header.Height)
 	for _, peer := range peers {
 		if ok := peer.TrySend(msgs.BlockchainChannel, struct{ msgs.BlockchainMessage }{msg}); !ok {
 			ps.RemovePeer(peer.ID())
 			continue
 		}
 
-		peer.markNewStatus(bestBlock.Height)
+		peer.markNewStatus(header.Height)
 	}
 	return nil
 }

@@ -14,10 +14,10 @@ import (
 )
 
 const (
-	syncCycle            = 5 * time.Second
-	blockProcessChSize   = 1024
-	blocksProcessChSize  = 128
-	headersProcessChSize = 1024
+	syncCycle = 5 * time.Second
+
+	fastSyncType    = 0x01
+	regularSyncType = 0x02
 )
 
 var (
@@ -29,10 +29,16 @@ var (
 
 type FastSync interface {
 	locateBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*types.Block, error)
-	locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, amount uint64, skip uint64, maxNum uint64) ([]*types.BlockHeader, error)
+	locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, skip uint64, maxNum uint64) ([]*types.BlockHeader, error)
 	process() error
+	setSyncPeer(peer *peers.Peer)
+}
+
+type Fetcher interface {
+	processBlock(peerID string, block *types.Block)
 	processBlocks(peerID string, blocks []*types.Block)
 	processHeaders(peerID string, headers []*types.BlockHeader)
+	requireBlock(peerID string, height uint64) (*types.Block, error)
 }
 
 type blockMsg struct {
@@ -51,22 +57,23 @@ type headersMsg struct {
 }
 
 type blockKeeper struct {
-	chain    Chain
-	fastSync FastSync
-	peers    *peers.PeerSet
+	chain      Chain
+	fastSync   FastSync
+	msgFetcher Fetcher
+	peers      *peers.PeerSet
+	syncPeer   *peers.Peer
 
-	syncPeer       *peers.Peer
-	blockProcessCh chan *blockMsg
-	quit           chan struct{}
+	quit chan struct{}
 }
 
 func newBlockKeeper(chain Chain, peers *peers.PeerSet) *blockKeeper {
+	msgFetcher := newMsgFetcher(peers)
 	return &blockKeeper{
-		chain:          chain,
-		fastSync:       newFastSync(chain, peers),
-		peers:          peers,
-		blockProcessCh: make(chan *blockMsg, blockProcessChSize),
-		quit:           make(chan struct{}),
+		chain:      chain,
+		fastSync:   newFastSync(chain, msgFetcher, peers),
+		msgFetcher: msgFetcher,
+		peers:      peers,
+		quit:       make(chan struct{}),
 	}
 }
 
@@ -74,52 +81,36 @@ func (bk *blockKeeper) locateBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*t
 	return bk.fastSync.locateBlocks(locator, stopHash)
 }
 
-func (bk *blockKeeper) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, amount uint64, skip uint64, maxNum uint64) ([]*types.BlockHeader, error) {
-	return bk.fastSync.locateHeaders(locator, stopHash, amount, skip, maxNum)
+func (bk *blockKeeper) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, skip uint64, maxNum uint64) ([]*types.BlockHeader, error) {
+	return bk.fastSync.locateHeaders(locator, stopHash, skip, maxNum)
 }
 
 func (bk *blockKeeper) processBlock(peerID string, block *types.Block) {
-	bk.blockProcessCh <- &blockMsg{block: block, peerID: peerID}
+	bk.msgFetcher.processBlock(peerID, block)
 }
 
 func (bk *blockKeeper) processBlocks(peerID string, blocks []*types.Block) {
-	bk.fastSync.processBlocks(peerID, blocks)
+	bk.msgFetcher.processBlocks(peerID, blocks)
 }
 
 func (bk *blockKeeper) processHeaders(peerID string, headers []*types.BlockHeader) {
-	bk.fastSync.processHeaders(peerID, headers)
+	bk.msgFetcher.processHeaders(peerID, headers)
 }
 
 func (bk *blockKeeper) regularBlockSync() error {
-	peer := bk.peers.BestPeer(consensus.SFFullNode)
-	if peer == nil {
-		log.WithFields(log.Fields{"module": logModule}).Debug("can't find sync peer")
-		return nil
-	}
-
-	peerHeight := peer.Height()
+	peerHeight := bk.syncPeer.Height()
 	bestHeight := bk.chain.BestBlockHeight()
-	if peerHeight <= bestHeight {
-		return nil
-	}
-
-	if peerHeight >= bestHeight+minGapStartFastSync {
-		log.WithFields(log.Fields{"module": logModule}).Debug("Height gap meet fast synchronization condition")
-		return nil
-	}
-
-	bk.syncPeer = peer
 	i := bestHeight + 1
 	for i <= peerHeight {
-		block, err := bk.requireBlock(i)
+		block, err := bk.msgFetcher.requireBlock(bk.syncPeer.ID(), i)
 		if err != nil {
-			bk.peers.ErrorHandler(peer.ID(), security.LevelConnException, err)
+			bk.peers.ErrorHandler(bk.syncPeer.ID(), security.LevelConnException, err)
 			return err
 		}
 
 		isOrphan, err := bk.chain.ProcessBlock(block)
 		if err != nil {
-			bk.peers.ErrorHandler(peer.ID(), security.LevelMsgIllegal, err)
+			bk.peers.ErrorHandler(bk.syncPeer.ID(), security.LevelMsgIllegal, err)
 			return err
 		}
 
@@ -133,44 +124,58 @@ func (bk *blockKeeper) regularBlockSync() error {
 	return nil
 }
 
-func (bk *blockKeeper) requireBlock(height uint64) (*types.Block, error) {
-	if ok := bk.syncPeer.GetBlockByHeight(height); !ok {
-		return nil, errPeerDropped
-	}
-
-	timeout := time.NewTimer(syncTimeout)
-	defer timeout.Stop()
-
-	for {
-		select {
-		case msg := <-bk.blockProcessCh:
-			if msg.peerID != bk.syncPeer.ID() {
-				continue
-			}
-			if msg.block.Height != height {
-				continue
-			}
-			return msg.block, nil
-		case <-timeout.C:
-			return nil, errors.Wrap(errRequestTimeout, "requireBlock")
-		}
-	}
-}
-
 func (bk *blockKeeper) start() {
 	go bk.syncWorker()
 }
 
+func (bk *blockKeeper) checkSyncType() (bool, int) {
+	peer := bk.peers.BestPeer(consensus.SFFullNode | consensus.SFFastSync)
+	if peer == nil {
+		log.WithFields(log.Fields{"module": logModule}).Debug("can't find fast sync peer")
+		return false, 0
+	}
+
+	bestHeight := bk.chain.BestBlockHeight()
+	peerHeight := peer.Height()
+	if peerHeight >= bestHeight+minGapStartFastSync {
+		bk.fastSync.setSyncPeer(peer)
+		return true, fastSyncType
+	}
+
+	peer = bk.peers.BestPeer(consensus.SFFullNode)
+	if peer == nil {
+		log.WithFields(log.Fields{"module": logModule}).Debug("can't find sync peer")
+		return false, 0
+	}
+
+	peerHeight = peer.Height()
+	if peerHeight > bestHeight {
+		bk.syncPeer = peer
+		return true, regularSyncType
+	}
+
+	return false, 0
+}
+
 func (bk *blockKeeper) startSync() bool {
-	if err := bk.fastSync.process(); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("failed on fast sync")
+	needSync, syncType := bk.checkSyncType()
+	if !needSync {
 		return false
 	}
 
-	if err := bk.regularBlockSync(); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on regularBlockSync")
-		return false
+	switch syncType {
+	case fastSyncType:
+		if err := bk.fastSync.process(); err != nil {
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("failed on fast sync")
+			return false
+		}
+	case regularSyncType:
+		if err := bk.regularBlockSync(); err != nil {
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on regularBlockSync")
+			return false
+		}
 	}
+
 	return true
 }
 
@@ -189,12 +194,7 @@ func (bk *blockKeeper) syncWorker() {
 				continue
 			}
 
-			block, err := bk.chain.GetBlockByHeight(bk.chain.BestBlockHeight())
-			if err != nil {
-				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on syncWorker get best block")
-			}
-
-			if err = bk.peers.BroadcastNewStatus(block); err != nil {
+			if err := bk.peers.BroadcastNewStatus(bk.chain.BestBlockHeader()); err != nil {
 				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on syncWorker broadcast new status")
 			}
 		case <-bk.quit:
