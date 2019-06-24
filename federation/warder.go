@@ -20,8 +20,6 @@ import (
 
 var collectInterval = 5 * time.Second
 
-var errUnknownTxType = errors.New("unknown tx type")
-
 type warder struct {
 	db            *gorm.DB
 	assetStore    *database.AssetStore
