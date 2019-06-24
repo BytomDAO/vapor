@@ -125,17 +125,6 @@ func (w *warder) processCrossTx(ormTx *orm.CrossTransaction) error {
 	return nil
 }
 
-func getInputsCnt(tx interface{}) uint64 {
-	switch tx := tx.(type) {
-	case *btmTypes.Tx:
-		return uint64(len(tx.Inputs))
-	case *vaporTypes.Tx:
-		return uint64(len(tx.Inputs))
-	default:
-		return 0
-	}
-}
-
 func (w *warder) validateCrossTx(tx *orm.CrossTransaction) error {
 	switch tx.Status {
 	case common.CrossTxRejectedStatus:
