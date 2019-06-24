@@ -30,10 +30,9 @@ func NewServer(db *gorm.DB, cfg *config.Config) *Server {
 
 func setupRouter(server *Server) {
 	r := gin.Default()
-
 	r.Use(server.Middleware())
-	v1 := r.Group("/api/v1")
 
+	v1 := r.Group("/api/v1")
 	v1.POST("/federation/list-transactions", handlerMiddleware(server.ListCrosschainTxs))
 
 	server.engine = r
