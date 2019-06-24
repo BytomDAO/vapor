@@ -16,15 +16,11 @@ var (
 	fastSyncPivotGap     = uint64(64)
 	minGapStartFastSync  = uint64(128)
 	maxFastSyncBlocksNum = uint64(10000)
-
-	errHeadersNum          = errors.New("headers number error")
-	errExceedMaxHeadersNum = errors.New("exceed max headers number per msg")
 )
 
 type MsgFetcher interface {
 	requireBlock(peerID string, height uint64) (*types.Block, error)
 	requireBlocks(peerID string, locator []*bc.Hash, stopHash *bc.Hash) ([]*types.Block, error)
-	requireHeaders(peerID string, locator []*bc.Hash, stopHash *bc.Hash, skip uint64) ([]*types.BlockHeader, error)
 }
 
 type fastSync struct {
@@ -186,6 +182,10 @@ func (fs *fastSync) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, skip ui
 
 		headers = append(headers[:num], append([]*types.BlockHeader{header}, headers[num:]...)...)
 		num++
+	}
+
+	if uint64(len(headers)) > maxNum {
+		headers = headers[:maxNum]
 	}
 
 	return headers, nil

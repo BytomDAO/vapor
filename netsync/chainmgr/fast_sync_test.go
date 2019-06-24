@@ -91,13 +91,6 @@ func TestFastBlockSync(t *testing.T) {
 			want:        baseChain[:201],
 			err:         nil,
 		},
-		{
-			syncTimeout: 1 * time.Millisecond,
-			aBlocks:     baseChain[:100],
-			bBlocks:     baseChain[:120],
-			want:        baseChain[:100],
-			err:         nil,
-		},
 	}
 
 	for i, c := range cases {
@@ -114,6 +107,8 @@ func TestFastBlockSync(t *testing.T) {
 			go A2B.postMan()
 		}
 		a.blockKeeper.syncPeer = a.peers.GetPeer("test node B")
+		a.blockKeeper.fastSync.setSyncPeer(a.blockKeeper.syncPeer)
+
 		if err := a.blockKeeper.fastSync.process(); errors.Root(err) != c.err {
 			t.Errorf("case %d: got %v want %v", i, err, c.err)
 		}
@@ -185,7 +180,6 @@ func TestLocateHeaders(t *testing.T) {
 		chainHeight uint64
 		locator     []uint64
 		stopHash    *bc.Hash
-		amount      uint64
 		skip        uint64
 		wantHeight  []uint64
 		err         bool
@@ -194,7 +188,6 @@ func TestLocateHeaders(t *testing.T) {
 			chainHeight: 100,
 			locator:     []uint64{90},
 			stopHash:    &blocksHash[100],
-			amount:      0,
 			skip:        0,
 			wantHeight:  []uint64{90, 91, 92, 93, 94, 95, 96, 97, 98, 99},
 			err:         false,
@@ -203,7 +196,6 @@ func TestLocateHeaders(t *testing.T) {
 			chainHeight: 100,
 			locator:     []uint64{20},
 			stopHash:    &blocksHash[24],
-			amount:      0,
 			skip:        0,
 			wantHeight:  []uint64{20, 21, 22, 23, 24},
 			err:         false,
@@ -232,27 +224,24 @@ func TestLocateHeaders(t *testing.T) {
 		{
 			chainHeight: 100,
 			locator:     []uint64{15},
-			stopHash:    nil,
+			stopHash:    &blocksHash[10],
 			skip:        10,
-			amount:      10,
 			wantHeight:  []uint64{},
-			err:         true,
+			err:         false,
 		},
 		{
 			chainHeight: 100,
 			locator:     []uint64{15},
-			stopHash:    nil,
+			stopHash:    &blocksHash[80],
 			skip:        10,
-			amount:      6,
 			wantHeight:  []uint64{15, 26, 37, 48, 59, 70},
 			err:         false,
 		},
 		{
 			chainHeight: 100,
 			locator:     []uint64{0},
-			stopHash:    nil,
+			stopHash:    &blocksHash[100],
 			skip:        9,
-			amount:      11,
 			wantHeight:  []uint64{0, 10, 20, 30, 40, 50, 60, 70, 80, 90},
 			err:         false,
 		},
@@ -276,7 +265,7 @@ func TestLocateHeaders(t *testing.T) {
 			want = append(want, &blocks[i].BlockHeader)
 		}
 
-		got, err := fs.locateHeaders(locator, c.stopHash, c.amount, c.skip, maxHeadersPerMsg)
+		got, err := fs.locateHeaders(locator, c.stopHash, c.skip, maxHeadersPerMsg)
 		if err != nil != c.err {
 			t.Errorf("case %d: got %v want err = %v", i, err, c.err)
 		}

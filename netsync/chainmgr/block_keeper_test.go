@@ -51,10 +51,9 @@ func TestRegularBlockSync(t *testing.T) {
 			syncTimeout: 30 * time.Second,
 			aBlocks:     chainX[:52],
 			bBlocks:     chainZ,
-			want:        chainX[:52],
+			want:        chainZ[:201],
 			err:         nil,
 		},
-
 	}
 
 	for i, c := range cases {
@@ -132,7 +131,7 @@ func TestRequireBlock(t *testing.T) {
 
 	for i, c := range cases {
 		syncTimeout = c.syncTimeout
-		got, err := c.testNode.blockKeeper.requireBlock(c.requireHeight)
+		got, err := c.testNode.blockKeeper.msgFetcher.requireBlock(c.testNode.blockKeeper.syncPeer.ID(), c.requireHeight)
 		if !testutil.DeepEqual(got, c.want) {
 			t.Errorf("case %d: got %v want %v", i, got, c.want)
 		}
