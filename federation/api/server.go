@@ -116,17 +116,17 @@ type handlerFun interface{}
 func handleRequest(context *gin.Context, fun handlerFun) {
 	args, err := buildHandleFuncArgs(fun, context)
 	if err != nil {
-		RespondErrorResp(context, err)
+		respondErrorResp(context, err)
 		return
 	}
 
 	// TODO:
 
-	// result := callHandleFunc(fun, args...)
-	// if err := result[len(result)-1]; err != nil {
-	// 	RespondErrorResp(context, err.(error))
-	// 	return
-	// }
+	result := callHandleFunc(fun, args...)
+	if err := result[len(result)-1]; err != nil {
+		respondErrorResp(context, err.(error))
+		return
+	}
 
 	// if exist := processPaginationIfPresent(fun, args, result, context); exist {
 	// 	return
@@ -174,6 +174,28 @@ func buildHandleFuncArgs(fun handlerFun, context *gin.Context) ([]interface{}, e
 	return args, nil
 }
 
+func createHandleReqArg(fun handlerFun, context *gin.Context) (interface{}, error) {
+	ft := reflect.TypeOf(fun)
+	if ft.NumIn() == 1 {
+		return nil, nil
+	}
+	argType := ft.In(1).Elem()
+
+	reqArg := reflect.New(argType).Interface()
+	if err := context.ShouldBindJSON(reqArg); err != nil {
+		return nil, errors.Wrap(err, "bind reqArg")
+	}
+
+	b, err := json.Marshal(reqArg)
+	if err != nil {
+		return nil, errors.Wrap(err, "json marshal")
+	}
+
+	context.Set(ReqBodyLabel, string(b))
+
+	return reqArg, nil
+}
+
 func checkDisplayOrder(req interface{}) error {
 	if req == nil {
 		return nil
@@ -197,24 +219,18 @@ func checkDisplayOrder(req interface{}) error {
 	return nil
 }
 
-func createHandleReqArg(fun handlerFun, context *gin.Context) (interface{}, error) {
-	ft := reflect.TypeOf(fun)
-	if ft.NumIn() == 1 {
-		return nil, nil
-	}
-	argType := ft.In(1).Elem()
+func callHandleFunc(fun handlerFun, args ...interface{}) []interface{} {
+	fv := reflect.ValueOf(fun)
 
-	reqArg := reflect.New(argType).Interface()
-	if err := context.ShouldBindJSON(reqArg); err != nil {
-		return nil, errors.Wrap(err, "bind reqArg")
+	params := make([]reflect.Value, len(args))
+	for i, arg := range args {
+		params[i] = reflect.ValueOf(arg)
 	}
 
-	b, err := json.Marshal(reqArg)
-	if err != nil {
-		return nil, errors.Wrap(err, "json marshal")
+	rs := fv.Call(params)
+	result := make([]interface{}, len(rs))
+	for i, r := range rs {
+		result[i] = r.Interface()
 	}
-
-	context.Set(ReqBodyLabel, string(b))
-
-	return reqArg, nil
+	return result
 }

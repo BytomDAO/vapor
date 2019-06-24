@@ -6,7 +6,7 @@ import (
 )
 
 // TODO:
-func RespondErrorResp(c *gin.Context, err error) {
+func respondErrorResp(c *gin.Context, err error) {
 	log.WithFields(log.Fields{
 		"url": c.Request.URL,
 		// "request": c.Value(ReqBodyLabel),
@@ -16,7 +16,7 @@ func RespondErrorResp(c *gin.Context, err error) {
 	// c.AbortWithStatusJSON(http.StatusOK, resp)
 }
 
-func RespondSuccessResp(c *gin.Context, data interface{}) {
+func respondSuccessResp(c *gin.Context, data interface{}) {
 	// result := make(map[string]interface{})
 	// result["data"] = data
 	// c.AbortWithStatusJSON(http.StatusOK, Response{Code: 200, Result: result})
