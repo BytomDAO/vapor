@@ -126,31 +126,3 @@ func (mf *msgFetcher) requireHeaders(peerID string, locator []*bc.Hash, stopHash
 		}
 	}
 }
-
-
-func (mf *msgFetcher) requireMsg(peerID string, locator []*bc.Hash, stopHash *bc.Hash, skip uint64) ([]*types.BlockHeader, error) {
-	peer := mf.peers.GetPeer(peerID)
-	if peer == nil {
-		return nil, errPeerDropped
-	}
-
-	if ok := peer.GetHeaders(locator, stopHash, skip); !ok {
-		return nil, errPeerDropped
-	}
-
-	timeout := time.NewTimer(syncTimeout)
-	defer timeout.Stop()
-
-	for {
-		select {
-		case msg := <-mf.headersProcessCh:
-			if msg.peerID != peerID {
-				continue
-			}
-
-			return msg.headers, nil
-		case <-timeout.C:
-			return nil, errors.Wrap(errRequestTimeout, "requireHeaders")
-		}
-	}
-}

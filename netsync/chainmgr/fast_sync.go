@@ -158,7 +158,7 @@ func (fs *fastSync) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, skip ui
 		return nil, err
 	}
 
-	headers := []*types.BlockHeader{}
+	headers := make([]*types.BlockHeader, 0)
 	if !fs.chain.InMainChain(*stopHash) {
 		for height := stopHeader.Height; height >= startHeader.Height; height-- {
 			if height-startHeader.Height%(skip+1) == 0 {
@@ -184,7 +184,7 @@ func (fs *fastSync) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, skip ui
 			return nil, err
 		}
 
-		headers = append(headers[:i], append([]*types.BlockHeader{header}, headers[i:]...)...)
+		headers = append(headers[:num], append([]*types.BlockHeader{header}, headers[num:]...)...)
 		num++
 	}
 
