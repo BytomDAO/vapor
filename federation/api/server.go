@@ -139,7 +139,6 @@ func handleRequest(context *gin.Context, fun handlerFun) {
 	respondSuccessResp(context, result[0])
 }
 
-// TODO:
 func buildHandleFuncArgs(fun handlerFun, context *gin.Context) ([]interface{}, error) {
 	args := []interface{}{context}
 
@@ -158,18 +157,17 @@ func buildHandleFuncArgs(fun handlerFun, context *gin.Context) ([]interface{}, e
 
 	ft := reflect.TypeOf(fun)
 
-	// not exist pagination
+	// no pagination exists
 	if ft.NumIn() != 3 {
 		return args, nil
 	}
 
-	// TODO:
-	// query, err := ParsePagination(context)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "ParsePagination")
-	// }
+	query, err := ParsePagination(context)
+	if err != nil {
+		return nil, errors.Wrap(err, "ParsePagination")
+	}
 
-	// args = append(args, query)
+	args = append(args, query)
 	return args, nil
 }
 

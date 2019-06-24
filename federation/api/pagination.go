@@ -3,10 +3,11 @@ package api
 import (
 	"fmt"
 	"reflect"
-	// "strconv"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
-	// "github.com/vapor/errors"
+
+	"github.com/vapor/errors"
 )
 
 const (
@@ -25,31 +26,30 @@ type PaginationQuery struct {
 	Limit uint64 `json:"limit"`
 }
 
-// TODO:
 // ParsePagination request meets the standard on https://developer.atlassian.com/server/confluence/pagination-in-the-rest-api/
-// func ParsePagination(c *gin.Context) (*PaginationQuery, error) {
-// 	startStr := c.DefaultQuery("start", defaultSatrtStr)
-// 	limitStr := c.DefaultQuery("limit", defaultLimitStr)
+func ParsePagination(c *gin.Context) (*PaginationQuery, error) {
+	startStr := c.DefaultQuery("start", defaultSatrtStr)
+	limitStr := c.DefaultQuery("limit", defaultLimitStr)
 
-// 	start, err := strconv.ParseUint(startStr, 10, 64)
-// 	if err != nil {
-// 		return nil, errors.Wrap(err, errParsePaginationStart)
-// 	}
+	start, err := strconv.ParseUint(startStr, 10, 64)
+	if err != nil {
+		return nil, errors.Wrap(err, errParsePaginationStart)
+	}
 
-// 	limit, err := strconv.ParseUint(limitStr, 10, 64)
-// 	if err != nil {
-// 		return nil, errors.Wrap(err, errParsePaginationLimit)
-// 	}
+	limit, err := strconv.ParseUint(limitStr, 10, 64)
+	if err != nil {
+		return nil, errors.Wrap(err, errParsePaginationLimit)
+	}
 
-// 	if limit > maxPageLimit {
-// 		limit = maxPageLimit
-// 	}
+	if limit > maxPageLimit {
+		limit = maxPageLimit
+	}
 
-// 	return &PaginationQuery{
-// 		Start: start,
-// 		Limit: limit,
-// 	}, nil
-// }
+	return &PaginationQuery{
+		Start: start,
+		Limit: limit,
+	}, nil
+}
 
 type PaginationInfo struct {
 	Start   uint64
