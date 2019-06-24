@@ -61,11 +61,7 @@ func (c *Chain) calcReorganizeChain(beginAttachBlockHeader *types.BlockHeader, b
 	var attachBlockHeaders []*types.BlockHeader
 	var detachBlockHeaders []*types.BlockHeader
 
-	attachBlockHeader := &types.BlockHeader{}
-	detachBlockHeader := &types.BlockHeader{}
-	*attachBlockHeader = *beginAttachBlockHeader
-	*detachBlockHeader = *beginDetachBlockHeader
-	for detachBlockHeader.Hash() != attachBlockHeader.Hash() {
+	for attachBlockHeader, detachBlockHeader := beginAttachBlockHeader, beginDetachBlockHeader; detachBlockHeader.Hash() != attachBlockHeader.Hash(); {
 		var forChainRollback, mainChainRollBack bool
 		if forChainRollback = attachBlockHeader.Height >= detachBlockHeader.Height; forChainRollback {
 			attachBlockHeaders = append([]*types.BlockHeader{attachBlockHeader}, attachBlockHeaders...)
