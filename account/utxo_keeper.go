@@ -22,6 +22,7 @@ const desireUtxoCount = 5
 var (
 	ErrInsufficient = errors.New("reservation found insufficient funds")
 	ErrImmature     = errors.New("reservation found immature funds")
+	ErrVoteLock     = errors.New("Locked by the vote")
 	ErrReserved     = errors.New("reservation found outputs already reserved")
 	ErrMatchUTXO    = errors.New("can't find utxo with given hash")
 	ErrReservation  = errors.New("couldn't find reservation")
@@ -124,6 +125,9 @@ func (uk *utxoKeeper) Reserve(accountID string, assetID *bc.AssetID, amount uint
 	}
 
 	if optAmount+reservedAmount < amount {
+		if vote != nil {
+			return nil, ErrVoteLock
+		}
 		return nil, ErrImmature
 	}
 
