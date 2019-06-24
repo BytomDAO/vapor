@@ -114,8 +114,7 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
-	irrBlockHeader := &types.BlockHeader{}
-	*irrBlockHeader = *c.bestIrrBlockHeader
+	irrBlockHeader := c.bestIrrBlockHeader
 	blockHeader := &block.BlockHeader
 	if c.isIrreversible(blockHeader) && block.Height > irrBlockHeader.Height {
 		irrBlockHeader = blockHeader
@@ -175,8 +174,7 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 		log.WithFields(log.Fields{"module": logModule, "height": blockHeader.Height, "hash": blockHash.String()}).Debug("detach from mainchain")
 	}
 
-	irrBlockHeader := &types.BlockHeader{}
-	*irrBlockHeader = *c.bestIrrBlockHeader
+	irrBlockHeader := c.bestIrrBlockHeader
 	for _, attachBlockHeader := range attachBlockHeaders {
 		attachHash := attachBlockHeader.Hash()
 		b, err := c.store.GetBlock(&attachHash)
