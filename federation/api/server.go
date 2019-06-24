@@ -33,8 +33,7 @@ func setupRouter(server *Server) {
 	r.Use(server.Middleware())
 	v1 := r.Group("/api/v1")
 
-	// TODO:
-	// v1.POST("/federation/list-transactions", handlerMiddleware(server.ListTxs))
+	v1.POST("/federation/list-transactions", handlerMiddleware(server.ListTxs))
 
 	server.engine = r
 }
@@ -56,4 +55,34 @@ func (s *Server) Middleware() gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+func handlerMiddleware(handleFunc interface{}) func(*gin.Context) {
+	return nil
+	// if err := common.ValidateFuncType(handleFunc); err != nil {
+	// 	panic(err)
+	// }
+
+	// return func(context *gin.Context) {
+	// 	server := context.MustGet(common.ServerLabel).(*Server)
+	// 	banned, err := server.isBannedIP(context.Request.RemoteAddr)
+	// 	if err != nil {
+	// 		common.RespondErrorResp(context, err)
+	// 		return
+	// 	}
+
+	// 	if banned {
+	// 		common.RespondErrorResp(context, types.ErrBannedIPOrWallet)
+	// 		return
+	// 	}
+
+	// 	coin, err := server.QueryCoinByName(context.Param("coin_name"))
+	// 	if err != nil {
+	// 		common.RespondErrorResp(context, err)
+	// 		return
+	// 	}
+
+	// 	context.Set(common.CoinLabel, coin)
+	// 	common.HandleRequest(context, handleFunc)
+	// }
 }
