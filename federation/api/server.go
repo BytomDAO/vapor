@@ -14,7 +14,6 @@ import (
 	"github.com/vapor/federation/config"
 )
 
-// TODO: lower/upper case?
 type Server struct {
 	cfg    *config.Config
 	db     *gorm.DB
@@ -63,6 +62,18 @@ func (s *Server) middleware() gin.HandlerFunc {
 	}
 }
 
+type handlerFun interface{}
+
+func handlerMiddleware(handleFunc interface{}) func(*gin.Context) {
+	if err := validateFuncType(handleFunc); err != nil {
+		panic(err)
+	}
+
+	return func(context *gin.Context) {
+		handleRequest(context, handleFunc)
+	}
+}
+
 func validateFuncType(fun handlerFun) error {
 	ft := reflect.TypeOf(fun)
 	if ft.Kind() != reflect.Func || ft.IsVariadic() {
@@ -99,19 +110,6 @@ func validateFuncType(fun handlerFun) error {
 	}
 	return nil
 }
-
-func handlerMiddleware(handleFunc interface{}) func(*gin.Context) {
-	if err := validateFuncType(handleFunc); err != nil {
-		panic(err)
-	}
-
-	return func(context *gin.Context) {
-		handleRequest(context, handleFunc)
-	}
-}
-
-// TODO: maybe move around
-type handlerFun interface{}
 
 // handleRequest get a handler function to process the request by request url
 func handleRequest(context *gin.Context, fun handlerFun) {
@@ -162,7 +160,7 @@ func buildHandleFuncArgs(fun handlerFun, context *gin.Context) ([]interface{}, e
 		return args, nil
 	}
 
-	query, err := ParsePagination(context)
+	query, err := parsePagination(context)
 	if err != nil {
 		return nil, errors.Wrap(err, "ParsePagination")
 	}
@@ -188,7 +186,7 @@ func createHandleReqArg(fun handlerFun, context *gin.Context) (interface{}, erro
 		return nil, errors.Wrap(err, "json marshal")
 	}
 
-	context.Set(ReqBodyLabel, string(b))
+	context.Set(reqBodyLabel, string(b))
 
 	return reqArg, nil
 }

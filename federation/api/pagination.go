@@ -26,8 +26,8 @@ type PaginationQuery struct {
 	Limit uint64 `json:"limit"`
 }
 
-// ParsePagination request meets the standard on https://developer.atlassian.com/server/confluence/pagination-in-the-rest-api/
-func ParsePagination(c *gin.Context) (*PaginationQuery, error) {
+// parsePagination request meets the standard on https://developer.atlassian.com/server/confluence/pagination-in-the-rest-api/
+func parsePagination(c *gin.Context) (*PaginationQuery, error) {
 	startStr := c.DefaultQuery("start", defaultSatrtStr)
 	limitStr := c.DefaultQuery("limit", defaultLimitStr)
 

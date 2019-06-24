@@ -17,21 +17,20 @@ type response struct {
 	Result map[string]interface{} `json:"result,omitempty"`
 }
 
-// TODO:
 func respondErrorResp(c *gin.Context, err error) {
 	log.WithFields(log.Fields{
-		"url": c.Request.URL,
-		// "request": c.Value(ReqBodyLabel),
-		"err": err,
+		"url":     c.Request.URL,
+		"request": c.Value(reqBodyLabel),
+		"err":     err,
 	}).Error("request fail")
-	// resp := formatErrResp(err)
-	// c.AbortWithStatusJSON(http.StatusOK, resp)
+	resp := formatErrResp(err)
+	c.AbortWithStatusJSON(http.StatusOK, resp)
 }
 
 func respondSuccessResp(c *gin.Context, data interface{}) {
-	// result := make(map[string]interface{})
-	// result["data"] = data
-	// c.AbortWithStatusJSON(http.StatusOK, response{Code: 200, Result: result})
+	result := make(map[string]interface{})
+	result["data"] = data
+	c.AbortWithStatusJSON(http.StatusOK, response{Code: 200, Result: result})
 }
 
 type links struct {
