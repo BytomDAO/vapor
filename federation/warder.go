@@ -3,7 +3,6 @@ package federation
 import (
 	"database/sql"
 	"encoding/hex"
-	"encoding/json"
 	"time"
 
 	btmTypes "github.com/bytom/protocol/bc/types"
@@ -121,59 +120,6 @@ func (w *warder) processCrossTx(ormTx *orm.CrossTransaction) error {
 	if err := w.initDestTxSigns(destTx, ormTx); err != nil {
 		log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx}).Warnln("initDestTxSigns")
 		return err
-	}
-
-	approvalCnt := 0
-	signersSigns := make([][][]byte, getInputsCnt(destTx))
-	signerSigns, err := w.getSigns(destTx, ormTx)
-	if err != nil {
-		log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx}).Warnln("getSigns")
-		return err
-	}
-
-	if err := w.attachSignsForTx(ormTx, signersSigns, w.position, signerSigns); err != nil {
-		log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx}).Warnln("attachSignsForTx")
-		return err
-	}
-
-	approvalCnt += 1
-
-	for _, remote := range w.remotes {
-		signerSigns, err := remote.RequestSigns(destTx, ormTx)
-		if err != nil {
-			log.WithFields(log.Fields{"err": err, "remote": remote, "cross-chain tx": ormTx}).Warnln("RequestSign")
-			continue
-		}
-
-		if err := w.attachSignsForTx(ormTx, signersSigns, remote.Position, signerSigns); err != nil {
-			log.WithFields(log.Fields{"err": err, "remote position": remote.Position, "cross-chain tx": ormTx}).Warnln("attachSignsForTx")
-			continue
-		}
-
-		approvalCnt += 1
-	}
-
-	if approvalCnt >= w.quorum && w.isLeader() {
-		if err := w.finalizeTx(destTx, signersSigns); err != nil {
-			log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx, "dest tx": destTx}).Warnln("finalizeTx")
-			return err
-		}
-
-		submittedTxID, err := w.submitTx(destTx)
-		if err != nil {
-			log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx, "dest tx": destTx}).Warnln("submitTx")
-			return err
-		}
-
-		if submittedTxID != destTxID {
-			log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx, "builtTx ID": destTxID, "submittedTx ID": submittedTxID}).Warnln("submitTx ID mismatch")
-			return err
-		}
-
-		if err := w.updateSubmission(ormTx); err != nil {
-			log.WithFields(log.Fields{"err": err, "cross-chain tx": ormTx}).Warnln("updateSubmission")
-			return err
-		}
 	}
 
 	return nil
@@ -356,36 +302,6 @@ func (w *warder) getSigns(destTx interface{}, ormTx *orm.CrossTransaction) ([][]
 	return signs, nil
 }
 
-func (w *warder) attachSignsForTx(ormTx *orm.CrossTransaction, signersSigns [][][]byte, position uint8, signerSigns [][]byte) error {
-	// TODO: fix
-	for inpIdx := range signerSigns {
-		signerSigns[inpIdx][position] = signerSigns[inpIdx]
-	}
-
-	var signsStrs []string
-	for _, signerSign := range signerSigns {
-		signsStrs = append(signsStrs, hex.EncodeToString(signerSign))
-	}
-	b, err := json.Marshal(signsStrs)
-	if err != nil {
-		return err
-	}
-
-	return w.db.Model(&orm.CrossTransactionSign{}).
-		Where(&orm.CrossTransactionSign{
-			CrossTransactionID: ormTx.ID,
-			WarderID:           w.position,
-		}).
-		UpdateColumn(&orm.CrossTransactionSign{
-			Signatures: string(b),
-			Status:     common.CrossTxSignCompletedStatus,
-		}).Error
-}
-
-func (w *warder) isLeader() bool {
-	return w.position == 1
-}
-
 func (w *warder) finalizeTx(destTx interface{}, signersSigns [][][]byte) error {
 	return nil
 }
@@ -399,19 +315,4 @@ func (w *warder) submitTx(destTx interface{}) (string, error) {
 	default:
 		return "", errUnknownTxType
 	}
-}
-
-func (w *warder) updateSubmission(ormTx *orm.CrossTransaction) error {
-	if err := w.db.Model(&orm.CrossTransaction{}).
-		Where(&orm.CrossTransaction{ID: ormTx.ID}).
-		UpdateColumn(&orm.CrossTransaction{
-			Status: common.CrossTxSubmittedStatus,
-		}).Error; err != nil {
-		return err
-	}
-
-	for _, remote := range w.remotes {
-		remote.NotifySubmission(ormTx)
-	}
-	return nil
 }
