@@ -73,7 +73,7 @@ func (w *Wallet) attachUtxos(b *types.Block, txStatus *bc.TransactionStatus) {
 		outputUtxos := txOutToUtxos(tx, statusFail, b.Height)
 		utxos := w.filterAccountUtxo(outputUtxos)
 		if err := w.saveUtxos(utxos); err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("attachUtxos fail on batchSaveUtxos")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("attachUtxos fail on saveUtxos")
 		}
 	}
 }
