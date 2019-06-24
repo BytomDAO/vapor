@@ -28,7 +28,6 @@ type warder struct {
 	quorum        int
 	position      uint8
 	xpub          chainkd.XPub
-	xprv          chainkd.XPrv
 	mainchainNode *service.Node
 	sidechainNode *service.Node
 	remotes       []*service.Warder
@@ -143,10 +142,12 @@ func (w *warder) proposeDestTx(tx *orm.CrossTransaction) (interface{}, string, e
 	}
 }
 
+// call vapord api to build tx
 func (w *warder) buildSidechainTx(ormTx *orm.CrossTransaction) (*vaporTypes.Tx, string, error) {
 	return nil, "", errors.New("buildSidechainTx not implemented yet")
 }
 
+// call bytomd api to build tx
 func (w *warder) buildMainchainTx(ormTx *orm.CrossTransaction) (*btmTypes.Tx, string, error) {
 	return nil, "", errors.New("buildMainchainTx not implemented yet")
 }
