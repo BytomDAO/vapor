@@ -60,13 +60,26 @@ type WalletStorer interface {
 
 // WalletStore store wallet using leveldb
 type WalletStore struct {
-	DB dbm.DB
+	DB    dbm.DB
+	batch dbm.Batch
 }
 
 // NewWalletStore create new WalletStore struct
 func NewWalletStore(db dbm.DB) *WalletStore {
 	return &WalletStore{
 		DB: db,
+	}
+}
+
+func (store *WalletStore) initBatch() {
+	if store.batch == nil {
+		store.batch = store.DB.NewBatch()
+	}
+}
+
+func (store *WalletStore) commitBatch() {
+	if store.batch != nil {
+		store.batch.Write()
 	}
 }
 
