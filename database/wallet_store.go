@@ -29,11 +29,13 @@ const (
 
 // WalletStorer interface contains wallet storage functions.
 type WalletStorer interface {
+	initBatch()
+	commitBatch()
 	GetAssetDefinition(*bc.AssetID) []byte
 	SetAssetDefinition(*bc.AssetID, []byte)
 	GetRawProgram(common.Hash) []byte
 	GetAccountByAccountID(string) []byte
-	DeleteTransaction(uint64)
+	DeleteTransactions(uint64)
 	SetTransaction(uint64, uint32, string, []byte)
 	DeleteUnconfirmedTransaction(string)
 	SetGlobalTransactionIndex(string, *bc.Hash, uint64)
@@ -71,12 +73,12 @@ func NewWalletStore(db dbm.DB) *WalletStore {
 	}
 }
 
+// initBatch initial batch
 func (store *WalletStore) initBatch() {
-	if store.batch == nil {
-		store.batch = store.DB.NewBatch()
-	}
+	store.batch = store.DB.NewBatch()
 }
 
+// commitBatch commit batch
 func (store *WalletStore) commitBatch() {
 	if store.batch != nil {
 		store.batch.Write()
@@ -143,7 +145,11 @@ func (store *WalletStore) GetAssetDefinition(assetID *bc.AssetID) []byte {
 
 // SetAssetDefinition set assetID and definition
 func (store *WalletStore) SetAssetDefinition(assetID *bc.AssetID, definition []byte) {
-	store.DB.Set(asset.ExtAssetKey(assetID), definition)
+	if store.batch == nil {
+		store.DB.Set(asset.ExtAssetKey(assetID), definition)
+	} else {
+		store.batch.Set(asset.ExtAssetKey(assetID), definition)
+	}
 }
 
 // GetRawProgram get raw program by hash
@@ -156,8 +162,8 @@ func (store *WalletStore) GetAccountByAccountID(accountID string) []byte {
 	return store.DB.Get(Key(accountID))
 }
 
-// DeleteTransaction delete transactions when orphan block rollback
-func (store *WalletStore) DeleteTransaction(height uint64) {
+// DeleteTransactions delete transactions when orphan block rollback
+func (store *WalletStore) DeleteTransactions(height uint64) {
 	tmpTx := query.AnnotatedTx{}
 	batch := store.DB.NewBatch()
 	txIter := store.DB.IteratorPrefix(calcDeleteKey(height))
@@ -165,7 +171,11 @@ func (store *WalletStore) DeleteTransaction(height uint64) {
 
 	for txIter.Next() {
 		if err := json.Unmarshal(txIter.Value(), &tmpTx); err == nil {
-			batch.Delete(calcTxIndexKey(tmpTx.ID.String()))
+			if store.batch == nil {
+				batch.Delete(calcTxIndexKey(tmpTx.ID.String()))
+			} else {
+				store.batch.Delete(calcTxIndexKey(tmpTx.ID.String()))
+			}
 		}
 		batch.Delete(txIter.Key())
 	}

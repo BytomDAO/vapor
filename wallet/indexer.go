@@ -31,6 +31,7 @@ func parseGlobalTxIdx(globalTxIdx []byte) (*bc.Hash, uint64) {
 // when query ,query local first and if have no then query external
 // details see getAliasDefinition
 func saveExternalAssetDefinition(b *types.Block, store database.WalletStorer) {
+
 	for _, tx := range b.Transactions {
 		for _, orig := range tx.Inputs {
 			if cci, ok := orig.TypedInput.(*types.CrossChainInput); ok {
