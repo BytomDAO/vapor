@@ -212,6 +212,9 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 		return err
 	}
 
+	w.store.InitBatch()
+	defer w.store.CommitBatch()
+
 	w.detachUtxos(block, txStatus)
 	w.store.DeleteTransactions(w.status.BestHeight)
 
@@ -222,8 +225,9 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 		w.status.WorkHeight = w.status.BestHeight
 		w.status.WorkHash = w.status.BestHash
 	}
+	err = w.commitWalletInfo()
 
-	return w.commitWalletInfo()
+	return err
 }
 
 //WalletUpdate process every valid block and reverse every invalid block which need to rollback

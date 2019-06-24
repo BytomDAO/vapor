@@ -166,6 +166,9 @@ func (store *WalletStore) GetAccountByAccountID(accountID string) []byte {
 func (store *WalletStore) DeleteTransactions(height uint64) {
 	tmpTx := query.AnnotatedTx{}
 	batch := store.DB.NewBatch()
+	if store.batch != nil {
+		batch = store.batch
+	}
 	txIter := store.DB.IteratorPrefix(calcDeleteKey(height))
 	defer txIter.Release()
 
@@ -175,7 +178,9 @@ func (store *WalletStore) DeleteTransactions(height uint64) {
 		}
 		batch.Delete(txIter.Key())
 	}
-	batch.Write()
+	if store.batch == nil {
+		batch.Write()
+	}
 }
 
 // SetTransaction set raw transaction by block height and tx position
