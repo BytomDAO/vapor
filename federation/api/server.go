@@ -14,6 +14,7 @@ import (
 	"github.com/vapor/federation/config"
 )
 
+// TODO: lower/upper case?
 type Server struct {
 	cfg    *config.Config
 	db     *gorm.DB
