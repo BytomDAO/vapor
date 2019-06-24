@@ -1,32 +1,23 @@
 package api
 
 import (
+	"github.com/jinzhu/gorm"
+
 	"github.com/vapor/federation/config"
 )
 
 type Server struct {
-	// db         *database.DB
-	// cache      database.Cache
-	// node       Node
-	// cfgManager *service.DBConfigManager
-	// cfg        *config.Config
-	// engine     *gin.Engine
+	cfg *config.Config
+	db  *gorm.DB
 }
 
-func NewServer(cfg *config.Config) *Server {
-	//     db, err := database.NewMySQLDB(cfg.MySQL, cfg.API.MySQLConnCfg)
-	//     if err != nil {
-	//         log.WithField("err", err).Panic("initialize mysql db error")
-	//     }
-
-	//     cache, err := database.NewRedisDB(cfg.Redis)
-	//     if err != nil {
-	//         log.WithField("err", err).Panic("initialize redis error")
-	//     }
-
-	//     node := service.NewBytomNode(cfg.Coin.Btm.Upstream.URL)
-	//     return NewServerWithPersistenceAndNode(cfg, db, cache, node)
-	return nil
+func NewServer(db *gorm.DB, cfg *config.Config) *Server {
+	server := &Server{
+		cfg: cfg,
+		db:  db,
+	}
+	// setupRouter(server)
+	return server
 }
 
 func (s *Server) Run() {
