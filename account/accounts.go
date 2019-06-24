@@ -41,7 +41,7 @@ var (
 	aliasPrefix         = []byte("AccountAlias:")
 	contractIndexPrefix = []byte("ContractIndex:")
 	contractPrefix      = []byte("Contract:")
-	miningAddressKey    = []byte("MiningAddress:")
+	miningAddressKey    = []byte("MiningAddress")
 	CoinbaseAbKey       = []byte("CoinbaseArbitrary")
 )
 
