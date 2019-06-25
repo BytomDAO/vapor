@@ -32,6 +32,65 @@ func init() {
 	}
 }
 
+func TestDeleteLRU(t *testing.T) {
+	now := time.Now()
+	cases := []struct {
+		before *OrphanManage
+		after  *OrphanManage
+	}{
+		{
+			before: &OrphanManage{
+				orphan: map[bc.Hash]*orphanBlock{
+					blockHashes[0]: &orphanBlock{testBlocks[0], now},
+				},
+				prevOrphans: map[bc.Hash][]*bc.Hash{
+					bc.Hash{V0: 1}: []*bc.Hash{&blockHashes[0]},
+				},
+			},
+			after: &OrphanManage{
+				orphan:      map[bc.Hash]*orphanBlock{},
+				prevOrphans: map[bc.Hash][]*bc.Hash{},
+			},
+		},
+		{
+			before: &OrphanManage{
+				orphan:      map[bc.Hash]*orphanBlock{},
+				prevOrphans: map[bc.Hash][]*bc.Hash{},
+			},
+			after: &OrphanManage{
+				orphan:      map[bc.Hash]*orphanBlock{},
+				prevOrphans: map[bc.Hash][]*bc.Hash{},
+			},
+		},
+		{
+			before: &OrphanManage{
+				orphan: map[bc.Hash]*orphanBlock{
+					blockHashes[0]: &orphanBlock{testBlocks[0], now.Add(2)},
+					blockHashes[1]: &orphanBlock{testBlocks[1], now.Add(1)},
+				},
+				prevOrphans: map[bc.Hash][]*bc.Hash{
+					bc.Hash{V0: 1}: []*bc.Hash{&blockHashes[0], &blockHashes[1]},
+				},
+			},
+			after: &OrphanManage{
+				orphan: map[bc.Hash]*orphanBlock{
+					blockHashes[0]: &orphanBlock{testBlocks[0], now.Add(2)},
+				},
+				prevOrphans: map[bc.Hash][]*bc.Hash{
+					bc.Hash{V0: 1}: []*bc.Hash{&blockHashes[0]},
+				},
+			},
+		},
+	}
+
+	for i, c := range cases {
+		c.before.deleteLRU()
+		if !testutil.DeepEqual(c.before, c.after) {
+			t.Errorf("case %d: got %v want %v", i, c.before, c.after)
+		}
+	}
+}
+
 func TestOrphanManageAdd(t *testing.T) {
 	cases := []struct {
 		before    *OrphanManage
