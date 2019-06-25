@@ -170,23 +170,30 @@ func TestGetBlockMessage(t *testing.T) {
 type testGetHeadersMessage struct {
 	blockLocator []*bc.Hash
 	stopHash     *bc.Hash
+	skip         uint64
 }
 
 func TestGetHeadersMessage(t *testing.T) {
 	testMsg := testGetHeadersMessage{
 		blockLocator: []*bc.Hash{{V0: 0x01}, {V0: 0x02}, {V0: 0x03}},
-		stopHash:     &bc.Hash{V0: 0xaa, V2: 0x55},
+		stopHash:     &bc.Hash{V0: 0x01},
+		skip:         888,
 	}
-	getHeadersMsg := NewGetHeadersMessage(testMsg.blockLocator, testMsg.stopHash)
+	getHeadersMsg := NewGetHeadersMessage(testMsg.blockLocator, testMsg.stopHash, testMsg.skip)
 	gotBlockLocator := getHeadersMsg.GetBlockLocator()
 	gotStopHash := getHeadersMsg.GetStopHash()
+	gotSkip := getHeadersMsg.GetSkip()
 
 	if !reflect.DeepEqual(testMsg.blockLocator, gotBlockLocator) {
 		t.Errorf("get headers msg test err: got %s\nwant %s", spew.Sdump(gotBlockLocator), spew.Sdump(testMsg.blockLocator))
 	}
 
 	if !reflect.DeepEqual(testMsg.stopHash, gotStopHash) {
-		t.Errorf("get headers msg test err: got %s\nwant %s", spew.Sdump(gotStopHash), spew.Sdump(testMsg.stopHash))
+		t.Errorf("get headers msg test err: amount:got %d\nwant %d", gotStopHash, testMsg.stopHash)
+	}
+
+	if !reflect.DeepEqual(testMsg.skip, gotSkip) {
+		t.Errorf("get headers msg test err: skip:got %d\nwant %d", gotSkip, testMsg.skip)
 	}
 }
 
@@ -233,9 +240,13 @@ func TestBlocksMessage(t *testing.T) {
 }
 
 func TestStatusMessage(t *testing.T) {
-	statusResponseMsg := NewStatusMessage(&testBlock.BlockHeader)
-	gotHash := statusResponseMsg.GetHash()
-	if !reflect.DeepEqual(*gotHash, testBlock.Hash()) {
-		t.Errorf("status response msg test err: got %s\nwant %s", spew.Sdump(*gotHash), spew.Sdump(testBlock.Hash()))
+	statusResponseMsg := NewStatusMessage(&testBlock.BlockHeader, &testBlock.BlockHeader)
+	gotBestHash := statusResponseMsg.GetBestHash()
+	if !reflect.DeepEqual(*gotBestHash, testBlock.Hash()) {
+		t.Errorf("status response msg test err: got %s\nwant %s", spew.Sdump(*gotBestHash), spew.Sdump(testBlock.Hash()))
+	}
+	gotIrreversibleHash := statusResponseMsg.GetIrreversibleHash()
+	if !reflect.DeepEqual(*gotIrreversibleHash, testBlock.Hash()) {
+		t.Errorf("status response msg test err: got %s\nwant %s", spew.Sdump(*gotIrreversibleHash), spew.Sdump(testBlock.Hash()))
 	}
 }
