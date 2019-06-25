@@ -1,9 +1,7 @@
 package database
 
 import (
-	"encoding/binary"
 	"encoding/json"
-	"fmt"
 
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/query"
@@ -14,18 +12,6 @@ import (
 )
 
 var errAccntTxIDNotFound = errors.New("account TXID not found")
-
-const (
-	UTXOPrefix          = "ACU:" //UTXOPrefix is StandardUTXOKey prefix
-	SUTXOPrefix         = "SCU:" //SUTXOPrefix is ContractUTXOKey prefix
-	contractPrefix      = "Contract:"
-	accountPrefix       = "Account:"
-	TxPrefix            = "TXS:"  //TxPrefix is wallet database transactions prefix
-	TxIndexPrefix       = "TID:"  //TxIndexPrefix is wallet database tx index prefix
-	UnconfirmedTxPrefix = "UTXS:" //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
-	GlobalTxIndexPrefix = "GTID:" //GlobalTxIndexPrefix is wallet database global tx index prefix
-	walletKey           = "walletInfo"
-)
 
 // WalletStorer interface contains wallet storage functions.
 type WalletStorer interface {
@@ -89,59 +75,6 @@ func (store *WalletStore) CommitBatch() {
 	}
 }
 
-// ContractKey account control promgram store prefix
-func ContractKey(hash common.Hash) []byte {
-	return append([]byte(contractPrefix), hash[:]...)
-}
-
-// Key account store prefix
-func Key(name string) []byte {
-	return append([]byte(accountPrefix), []byte(name)...)
-}
-
-// StandardUTXOKey makes an account unspent outputs key to store
-func StandardUTXOKey(id bc.Hash) []byte {
-	name := id.String()
-	return []byte(UTXOPrefix + name)
-}
-
-// ContractUTXOKey makes a smart contract unspent outputs key to store
-func ContractUTXOKey(id bc.Hash) []byte {
-	name := id.String()
-	return []byte(SUTXOPrefix + name)
-}
-
-func calcDeleteKey(blockHeight uint64) []byte {
-	return []byte(fmt.Sprintf("%s%016x", TxPrefix, blockHeight))
-}
-
-func calcTxIndexKey(txID string) []byte {
-	return []byte(TxIndexPrefix + txID)
-}
-
-func calcAnnotatedKey(formatKey string) []byte {
-	return []byte(TxPrefix + formatKey)
-}
-
-func calcUnconfirmedTxKey(formatKey string) []byte {
-	return []byte(UnconfirmedTxPrefix + formatKey)
-}
-
-func calcGlobalTxIndexKey(txID string) []byte {
-	return []byte(GlobalTxIndexPrefix + txID)
-}
-
-func CalcGlobalTxIndex(blockHash *bc.Hash, position uint64) []byte {
-	txIdx := make([]byte, 40)
-	copy(txIdx[:32], blockHash.Bytes())
-	binary.BigEndian.PutUint64(txIdx[32:], position)
-	return txIdx
-}
-
-func formatKey(blockHeight uint64, position uint32) string {
-	return fmt.Sprintf("%016x%08x", blockHeight, position)
-}
-
 // GetAssetDefinition get asset definition by assetiD
 func (store *WalletStore) GetAssetDefinition(assetID *bc.AssetID) []byte {
 	return store.walletDB.Get(asset.ExtAssetKey(assetID))
@@ -163,7 +96,7 @@ func (store *WalletStore) GetRawProgram(hash common.Hash) []byte {
 
 // GetAccountByAccountID get account value by account ID
 func (store *WalletStore) GetAccountByAccountID(accountID string) []byte {
-	return store.walletDB.Get(Key(accountID))
+	return store.walletDB.Get(AccountIDKey(accountID))
 }
 
 // DeleteTransactions delete transactions when orphan block rollback
@@ -325,15 +258,15 @@ func (store *WalletStore) SetContractUTXO(outputID bc.Hash, data []byte) {
 
 // GetWalletInfo get wallet information
 func (store *WalletStore) GetWalletInfo() []byte {
-	return store.walletDB.Get([]byte(walletKey))
+	return store.walletDB.Get([]byte(WalletKey))
 }
 
 // SetWalletInfo get wallet information
 func (store *WalletStore) SetWalletInfo(rawWallet []byte) {
 	if store.batch == nil {
-		store.walletDB.Set([]byte(walletKey), rawWallet)
+		store.walletDB.Set([]byte(WalletKey), rawWallet)
 	} else {
-		store.batch.Set([]byte(walletKey), rawWallet)
+		store.batch.Set([]byte(WalletKey), rawWallet)
 	}
 }
 

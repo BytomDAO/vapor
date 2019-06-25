@@ -1,7 +1,6 @@
-package account
+package database
 
 import (
-	"encoding/json"
 	"strings"
 
 	"github.com/vapor/common"
@@ -23,7 +22,7 @@ type AccountStorer interface {
 	DeleteBip44ContractIndex(string)
 	DeleteContractIndex(string)
 	GetContractIndex(string) []byte
-	DeleteAccountUTXOs(string) error
+	// DeleteAccountUTXOs(string) error
 	GetCoinbaseArbitrary() []byte
 	SetCoinbaseArbitrary([]byte)
 	GetMiningAddress() []byte
@@ -56,8 +55,8 @@ func NewAccountStore(db dbm.DB) *AccountStore {
 // SetAccount set account account ID, account alias and raw account.
 func (store *AccountStore) SetAccount(accountID, accountAlias string, rawAccount []byte) {
 	batch := store.accountDB.NewBatch()
-	batch.Set(Key(accountID), rawAccount)
-	batch.Set(aliasKey(accountAlias), []byte(accountID))
+	batch.Set(AccountIDKey(accountID), rawAccount)
+	batch.Set(AccountAliasKey(accountAlias), []byte(accountID))
 	batch.Write()
 }
 
@@ -68,12 +67,12 @@ func (store *AccountStore) SetAccountIndex(xpubs []chainkd.XPub, keyIndex uint64
 
 // GetAccountByAccountAlias get account by account alias
 func (store *AccountStore) GetAccountByAccountAlias(accountAlias string) []byte {
-	return store.accountDB.Get(aliasKey(accountAlias))
+	return store.accountDB.Get(AccountAliasKey(accountAlias))
 }
 
 // GetAccountByAccountID get account by accountID
 func (store *AccountStore) GetAccountByAccountID(accountID string) []byte {
-	return store.accountDB.Get(Key(accountID))
+	return store.accountDB.Get(AccountIDKey(accountID))
 }
 
 // GetAccountIndex get account index by account xpubs
@@ -83,12 +82,12 @@ func (store *AccountStore) GetAccountIndex(xpubs []chainkd.XPub) []byte {
 
 // DeleteAccountByAccountAlias delete account by account alias
 func (store *AccountStore) DeleteAccountByAccountAlias(accountAlias string) {
-	store.accountDB.Delete(aliasKey(accountAlias))
+	store.accountDB.Delete(AccountAliasKey(accountAlias))
 }
 
 // DeleteAccountByAccountID delete account by accountID
 func (store *AccountStore) DeleteAccountByAccountID(accountID string) {
-	store.accountDB.Delete(Key(accountID))
+	store.accountDB.Delete(AccountIDKey(accountID))
 }
 
 // DeleteRawProgram delete raw control program by hash
@@ -99,56 +98,56 @@ func (store *AccountStore) DeleteRawProgram(hash common.Hash) {
 // DeleteBip44ContractIndex delete bip44 contract index by accountID
 func (store *AccountStore) DeleteBip44ContractIndex(accountID string) {
 	batch := store.accountDB.NewBatch()
-	batch.Delete(bip44ContractIndexKey(accountID, false))
-	batch.Delete(bip44ContractIndexKey(accountID, true))
+	batch.Delete(Bip44ContractIndexKey(accountID, false))
+	batch.Delete(Bip44ContractIndexKey(accountID, true))
 	batch.Write()
 }
 
 // DeleteContractIndex delete contract index by accountID
 func (store *AccountStore) DeleteContractIndex(accountID string) {
-	store.accountDB.Delete(contractIndexKey(accountID))
+	store.accountDB.Delete(ContractIndexKey(accountID))
 }
 
 // GetContractIndex get contract index
 func (store *AccountStore) GetContractIndex(accountID string) []byte {
-	return store.accountDB.Get(contractIndexKey(accountID))
+	return store.accountDB.Get(ContractIndexKey(accountID))
 }
 
-// DeleteAccountUTXOs delete account utxos by accountID
-func (store *AccountStore) DeleteAccountUTXOs(accountID string) error {
-	accountUtxoIter := store.accountDB.IteratorPrefix([]byte(UTXOPreFix))
-	defer accountUtxoIter.Release()
-	for accountUtxoIter.Next() {
-		accountUtxo := &UTXO{}
-		if err := json.Unmarshal(accountUtxoIter.Value(), accountUtxo); err != nil {
-			return err
-		}
+// // DeleteAccountUTXOs delete account utxos by accountID
+// func (store *AccountStore) DeleteAccountUTXOs(accountID string) error {
+// 	accountUtxoIter := store.accountDB.IteratorPrefix([]byte(UTXOPrefix))
+// 	defer accountUtxoIter.Release()
+// 	for accountUtxoIter.Next() {
+// 		accountUtxo := &UTXO{}
+// 		if err := json.Unmarshal(accountUtxoIter.Value(), accountUtxo); err != nil {
+// 			return err
+// 		}
 
-		if accountID == accountUtxo.AccountID {
-			store.accountDB.Delete(StandardUTXOKey(accountUtxo.OutputID))
-		}
-	}
-	return nil
-}
+// 		if accountID == accountUtxo.AccountID {
+// 			store.accountDB.Delete(StandardUTXOKey(accountUtxo.OutputID))
+// 		}
+// 	}
+// 	return nil
+// }
 
 // GetCoinbaseArbitrary get coinbase arbitrary
 func (store *AccountStore) GetCoinbaseArbitrary() []byte {
-	return store.accountDB.Get(CoinbaseAbKey)
+	return store.accountDB.Get([]byte(CoinbaseAbKey))
 }
 
 // SetCoinbaseArbitrary set coinbase arbitrary
 func (store *AccountStore) SetCoinbaseArbitrary(arbitrary []byte) {
-	store.accountDB.Set(CoinbaseAbKey, arbitrary)
+	store.accountDB.Set([]byte(CoinbaseAbKey), arbitrary)
 }
 
 // GetMiningAddress get mining address
 func (store *AccountStore) GetMiningAddress() []byte {
-	return store.accountDB.Get(miningAddressKey)
+	return store.accountDB.Get([]byte(MiningAddressKey))
 }
 
 // GetFirstAccount get first account
 func (store *AccountStore) GetFirstAccount() ([]byte, error) {
-	accountIter := store.accountDB.IteratorPrefix([]byte(accountPrefix))
+	accountIter := store.accountDB.IteratorPrefix([]byte(AccountPrefix))
 	defer accountIter.Release()
 	if !accountIter.Next() {
 		return nil, ErrFindAccount
@@ -158,12 +157,12 @@ func (store *AccountStore) GetFirstAccount() ([]byte, error) {
 
 // SetMiningAddress set mining address
 func (store *AccountStore) SetMiningAddress(rawProgram []byte) {
-	store.accountDB.Set(miningAddressKey, rawProgram)
+	store.accountDB.Set([]byte(MiningAddressKey), rawProgram)
 }
 
 // GetBip44ContractIndex get bip44 contract index
 func (store *AccountStore) GetBip44ContractIndex(accountID string, change bool) []byte {
-	return store.accountDB.Get(bip44ContractIndexKey(accountID, change))
+	return store.accountDB.Get(Bip44ContractIndexKey(accountID, change))
 }
 
 // GetRawProgram get raw control program
@@ -174,7 +173,7 @@ func (store *AccountStore) GetRawProgram(hash common.Hash) []byte {
 // GetAccounts get all accounts which name prfix is id.
 func (store *AccountStore) GetAccounts(id string) ([][]byte, error) {
 	accounts := make([][]byte, 0)
-	accountIter := store.accountDB.IteratorPrefix(Key(strings.TrimSpace(id)))
+	accountIter := store.accountDB.IteratorPrefix(AccountIDKey(strings.TrimSpace(id)))
 	defer accountIter.Release()
 
 	for accountIter.Next() {
@@ -186,7 +185,7 @@ func (store *AccountStore) GetAccounts(id string) ([][]byte, error) {
 // GetControlPrograms get all local control programs
 func (store *AccountStore) GetControlPrograms() ([][]byte, error) {
 	cps := make([][]byte, 0)
-	cpIter := store.accountDB.IteratorPrefix(contractPrefix)
+	cpIter := store.accountDB.IteratorPrefix([]byte(ContractPrefix))
 	defer cpIter.Release()
 
 	for cpIter.Next() {
@@ -202,18 +201,18 @@ func (store *AccountStore) SetRawProgram(hash common.Hash, program []byte) {
 
 // SetContractIndex set contract index
 func (store *AccountStore) SetContractIndex(accountID string, index uint64) {
-	store.accountDB.Set(contractIndexKey(accountID), common.Unit64ToBytes(index))
+	store.accountDB.Set(ContractIndexKey(accountID), common.Unit64ToBytes(index))
 }
 
 // SetBip44ContractIndex set contract index
 func (store *AccountStore) SetBip44ContractIndex(accountID string, change bool, index uint64) {
-	store.accountDB.Set(bip44ContractIndexKey(accountID, change), common.Unit64ToBytes(index))
+	store.accountDB.Set(Bip44ContractIndexKey(accountID, change), common.Unit64ToBytes(index))
 }
 
 // GetUTXOs get utxos by accountID
 func (store *AccountStore) GetUTXOs(accountID string) [][]byte {
 	utxos := make([][]byte, 0)
-	utxoIter := store.accountDB.IteratorPrefix([]byte(UTXOPreFix))
+	utxoIter := store.accountDB.IteratorPrefix([]byte(UTXOPrefix))
 	defer utxoIter.Release()
 
 	for utxoIter.Next() {

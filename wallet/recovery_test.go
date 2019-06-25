@@ -613,15 +613,6 @@ func TestStateForScope(t *testing.T) {
 	}
 }
 
-func bip44ContractIndexKey(accountID string, change bool) []byte {
-	contractIndexPrefix := []byte("ContractIndex:")
-	key := append(contractIndexPrefix, accountID...)
-	if change {
-		return append(key, []byte{1}...)
-	}
-	return append(key, []byte{0}...)
-}
-
 func TestContractIndexResidue(t *testing.T) {
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {
@@ -649,7 +640,7 @@ func TestContractIndexResidue(t *testing.T) {
 	cp1 := &account.CtrlProgram{AccountID: acct.ID, Address: "address1", KeyIndex: 10, Change: false}
 
 	setContractIndexKey := func(acctMgr *account.Manager, accountID string, change bool) {
-		testDB.Set(bip44ContractIndexKey(accountID, change), common.Unit64ToBytes(contractIndexResidue))
+		testDB.Set(database.Bip44ContractIndexKey(accountID, change), common.Unit64ToBytes(contractIndexResidue))
 	}
 
 	delAccount := func(acctMgr *account.Manager, accountID string, change bool) {

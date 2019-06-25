@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/vapor/database"
 )
 
 // ImageSlice record info of single account
@@ -28,7 +29,7 @@ func (m *Manager) Backup() (*Image, error) {
 	}
 
 	// GetAccounts()
-	accountIter := m.db.IteratorPrefix(accountPrefix)
+	accountIter := m.db.IteratorPrefix([]byte(database.AccountPrefix))
 	defer accountIter.Release()
 	for accountIter.Next() {
 		a := &Account{}
@@ -51,7 +52,7 @@ func (m *Manager) Restore(image *Image) error {
 
 	storeBatch := m.db.NewBatch()
 	for _, slice := range image.Slice {
-		if existed := m.db.Get(Key(slice.Account.ID)); existed != nil {
+		if existed := m.db.Get(database.AccountIDKey(slice.Account.ID)); existed != nil {
 			log.WithFields(log.Fields{
 				"module": logModule,
 				"alias":  slice.Account.Alias,
@@ -59,7 +60,7 @@ func (m *Manager) Restore(image *Image) error {
 			}).Warning("skip restore account due to already existed")
 			continue
 		}
-		if existed := m.db.Get(aliasKey(slice.Account.Alias)); existed != nil {
+		if existed := m.db.Get(database.AccountAliasKey(slice.Account.Alias)); existed != nil {
 			return ErrDuplicateAlias
 		}
 
@@ -68,8 +69,8 @@ func (m *Manager) Restore(image *Image) error {
 			return ErrMarshalAccount
 		}
 
-		storeBatch.Set(Key(slice.Account.ID), rawAccount)
-		storeBatch.Set(aliasKey(slice.Account.Alias), []byte(slice.Account.ID))
+		storeBatch.Set(database.AccountIDKey(slice.Account.ID), rawAccount)
+		storeBatch.Set(database.AccountAliasKey(slice.Account.Alias), []byte(slice.Account.ID))
 	}
 
 	storeBatch.Write()
