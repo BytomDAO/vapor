@@ -44,19 +44,19 @@ type AccountStorer interface {
 
 // AccountStore satisfies AccountStorer interface.
 type AccountStore struct {
-	DB dbm.DB
+	accountDB dbm.DB
 }
 
 // NewAccountStore create new AccountStore.
 func NewAccountStore(db dbm.DB) *AccountStore {
 	return &AccountStore{
-		DB: db,
+		accountDB: db,
 	}
 }
 
 // SetAccount set account account ID, account alias and raw account.
 func (store *AccountStore) SetAccount(accountID, accountAlias string, rawAccount []byte) {
-	batch := store.DB.NewBatch()
+	batch := store.accountDB.NewBatch()
 	batch.Set(Key(accountID), rawAccount)
 	batch.Set(aliasKey(accountAlias), []byte(accountID))
 	batch.Write()
@@ -64,42 +64,42 @@ func (store *AccountStore) SetAccount(accountID, accountAlias string, rawAccount
 
 // SetAccountIndex set account index
 func (store *AccountStore) SetAccountIndex(xpubs []chainkd.XPub, keyIndex uint64) {
-	store.DB.Set(GetAccountIndexKey(xpubs), common.Unit64ToBytes(keyIndex))
+	store.accountDB.Set(GetAccountIndexKey(xpubs), common.Unit64ToBytes(keyIndex))
 }
 
 // GetAccountByAccountAlias get account by account alias
 func (store *AccountStore) GetAccountByAccountAlias(accountAlias string) []byte {
-	return store.DB.Get(aliasKey(accountAlias))
+	return store.accountDB.Get(aliasKey(accountAlias))
 }
 
 // GetAccountByAccountID get account by accountID
 func (store *AccountStore) GetAccountByAccountID(accountID string) []byte {
-	return store.DB.Get(Key(accountID))
+	return store.accountDB.Get(Key(accountID))
 }
 
 // GetAccountIndex get account index by account xpubs
 func (store *AccountStore) GetAccountIndex(xpubs []chainkd.XPub) []byte {
-	return store.DB.Get(GetAccountIndexKey(xpubs))
+	return store.accountDB.Get(GetAccountIndexKey(xpubs))
 }
 
 // DeleteAccountByAccountAlias delete account by account alias
 func (store *AccountStore) DeleteAccountByAccountAlias(accountAlias string) {
-	store.DB.Delete(aliasKey(accountAlias))
+	store.accountDB.Delete(aliasKey(accountAlias))
 }
 
 // DeleteAccountByAccountID delete account by accountID
 func (store *AccountStore) DeleteAccountByAccountID(accountID string) {
-	store.DB.Delete(Key(accountID))
+	store.accountDB.Delete(Key(accountID))
 }
 
 // DeleteRawProgram delete raw control program by hash
 func (store *AccountStore) DeleteRawProgram(hash common.Hash) {
-	store.DB.Delete(ContractKey(hash))
+	store.accountDB.Delete(ContractKey(hash))
 }
 
 // DeleteBip44ContractIndex delete bip44 contract index by accountID
 func (store *AccountStore) DeleteBip44ContractIndex(accountID string) {
-	batch := store.DB.NewBatch()
+	batch := store.accountDB.NewBatch()
 	batch.Delete(bip44ContractIndexKey(accountID, false))
 	batch.Delete(bip44ContractIndexKey(accountID, true))
 	batch.Write()
@@ -107,17 +107,17 @@ func (store *AccountStore) DeleteBip44ContractIndex(accountID string) {
 
 // DeleteContractIndex delete contract index by accountID
 func (store *AccountStore) DeleteContractIndex(accountID string) {
-	store.DB.Delete(contractIndexKey(accountID))
+	store.accountDB.Delete(contractIndexKey(accountID))
 }
 
 // GetContractIndex get contract index
 func (store *AccountStore) GetContractIndex(accountID string) []byte {
-	return store.DB.Get(contractIndexKey(accountID))
+	return store.accountDB.Get(contractIndexKey(accountID))
 }
 
 // DeleteAccountUTXOs delete account utxos by accountID
 func (store *AccountStore) DeleteAccountUTXOs(accountID string) error {
-	accountUtxoIter := store.DB.IteratorPrefix([]byte(UTXOPreFix))
+	accountUtxoIter := store.accountDB.IteratorPrefix([]byte(UTXOPreFix))
 	defer accountUtxoIter.Release()
 	for accountUtxoIter.Next() {
 		accountUtxo := &UTXO{}
@@ -126,7 +126,7 @@ func (store *AccountStore) DeleteAccountUTXOs(accountID string) error {
 		}
 
 		if accountID == accountUtxo.AccountID {
-			store.DB.Delete(StandardUTXOKey(accountUtxo.OutputID))
+			store.accountDB.Delete(StandardUTXOKey(accountUtxo.OutputID))
 		}
 	}
 	return nil
@@ -134,22 +134,22 @@ func (store *AccountStore) DeleteAccountUTXOs(accountID string) error {
 
 // GetCoinbaseArbitrary get coinbase arbitrary
 func (store *AccountStore) GetCoinbaseArbitrary() []byte {
-	return store.DB.Get(CoinbaseAbKey)
+	return store.accountDB.Get(CoinbaseAbKey)
 }
 
 // SetCoinbaseArbitrary set coinbase arbitrary
 func (store *AccountStore) SetCoinbaseArbitrary(arbitrary []byte) {
-	store.DB.Set(CoinbaseAbKey, arbitrary)
+	store.accountDB.Set(CoinbaseAbKey, arbitrary)
 }
 
 // GetMiningAddress get mining address
 func (store *AccountStore) GetMiningAddress() []byte {
-	return store.DB.Get(miningAddressKey)
+	return store.accountDB.Get(miningAddressKey)
 }
 
 // GetFirstAccount get first account
 func (store *AccountStore) GetFirstAccount() (*Account, error) {
-	accountIter := store.DB.IteratorPrefix([]byte(accountPrefix))
+	accountIter := store.accountDB.IteratorPrefix([]byte(accountPrefix))
 	defer accountIter.Release()
 	if !accountIter.Next() {
 		return nil, ErrFindAccount
@@ -164,23 +164,23 @@ func (store *AccountStore) GetFirstAccount() (*Account, error) {
 
 // SetMiningAddress set mining address
 func (store *AccountStore) SetMiningAddress(rawProgram []byte) {
-	store.DB.Set(miningAddressKey, rawProgram)
+	store.accountDB.Set(miningAddressKey, rawProgram)
 }
 
 // GetBip44ContractIndex get bip44 contract index
 func (store *AccountStore) GetBip44ContractIndex(accountID string, change bool) []byte {
-	return store.DB.Get(bip44ContractIndexKey(accountID, change))
+	return store.accountDB.Get(bip44ContractIndexKey(accountID, change))
 }
 
 // GetRawProgram get raw control program
 func (store *AccountStore) GetRawProgram(hash common.Hash) []byte {
-	return store.DB.Get(ContractKey(hash))
+	return store.accountDB.Get(ContractKey(hash))
 }
 
 // GetAccounts get all accounts which name prfix is id.
 func (store *AccountStore) GetAccounts(id string) ([]*Account, error) {
 	accounts := []*Account{}
-	accountIter := store.DB.IteratorPrefix(Key(strings.TrimSpace(id)))
+	accountIter := store.accountDB.IteratorPrefix(Key(strings.TrimSpace(id)))
 	defer accountIter.Release()
 
 	for accountIter.Next() {
@@ -196,7 +196,7 @@ func (store *AccountStore) GetAccounts(id string) ([]*Account, error) {
 // GetControlPrograms get all local control programs
 func (store *AccountStore) GetControlPrograms() ([]*CtrlProgram, error) {
 	cps := []*CtrlProgram{}
-	cpIter := store.DB.IteratorPrefix(contractPrefix)
+	cpIter := store.accountDB.IteratorPrefix(contractPrefix)
 	defer cpIter.Release()
 
 	for cpIter.Next() {
@@ -211,23 +211,23 @@ func (store *AccountStore) GetControlPrograms() ([]*CtrlProgram, error) {
 
 // SetRawProgram set raw program
 func (store *AccountStore) SetRawProgram(hash common.Hash, program []byte) {
-	store.DB.Set(ContractKey(hash), program)
+	store.accountDB.Set(ContractKey(hash), program)
 }
 
 // SetContractIndex set contract index
 func (store *AccountStore) SetContractIndex(accountID string, index uint64) {
-	store.DB.Set(contractIndexKey(accountID), common.Unit64ToBytes(index))
+	store.accountDB.Set(contractIndexKey(accountID), common.Unit64ToBytes(index))
 }
 
 // SetBip44ContractIndex set contract index
 func (store *AccountStore) SetBip44ContractIndex(accountID string, change bool, index uint64) {
-	store.DB.Set(bip44ContractIndexKey(accountID, change), common.Unit64ToBytes(index))
+	store.accountDB.Set(bip44ContractIndexKey(accountID, change), common.Unit64ToBytes(index))
 }
 
 // GetUTXOs get utxos by accountID
 func (store *AccountStore) GetUTXOs(accountID string) []*UTXO {
 	utxos := []*UTXO{}
-	utxoIter := store.DB.IteratorPrefix([]byte(UTXOPreFix))
+	utxoIter := store.accountDB.IteratorPrefix([]byte(UTXOPreFix))
 	defer utxoIter.Release()
 	for utxoIter.Next() {
 		u := &UTXO{}
@@ -242,10 +242,10 @@ func (store *AccountStore) GetUTXOs(accountID string) []*UTXO {
 
 // GetStandardUTXO get standard utxo by id
 func (store *AccountStore) GetStandardUTXO(outid bc.Hash) []byte {
-	return store.DB.Get(StandardUTXOKey(outid))
+	return store.accountDB.Get(StandardUTXOKey(outid))
 }
 
 // GetContractUTXO get contract utxo
 func (store *AccountStore) GetContractUTXO(outid bc.Hash) []byte {
-	return store.DB.Get(ContractUTXOKey(outid))
+	return store.accountDB.Get(ContractUTXOKey(outid))
 }
