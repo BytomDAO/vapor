@@ -23,6 +23,6 @@ type CrossTransaction struct {
 	CreatedAt            types.Timestamp `json:"-"`
 	UpdatedAt            types.Timestamp `json:"-"`
 
-	Chain *Chain `gorm:"foreignkey:ChainID" json:"-"`
-	Reqs  []*CrossTransactionReq
+	Chain *Chain                 `gorm:"foreignkey:ChainID" json:"-"`
+	Reqs  []*CrossTransactionReq `json:"crosschain_requests"`
 }
