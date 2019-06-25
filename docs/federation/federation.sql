@@ -12,21 +12,6 @@ CREATE SCHEMA IF NOT EXISTS `federation`;
 
 USE `federation`;
 
-# Dump of table warders
-# ------------------------------------------------------------
-
-CREATE TABLE `warders` (
-  `id` tinyint(1) NOT NULL AUTO_INCREMENT,
-  `pubkey` varchar(128) NOT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `pubkey` (`pubkey`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-LOCK TABLES `warders` WRITE;
-UNLOCK TABLES;
-
 
 # Dump of table chains
 # ------------------------------------------------------------
@@ -107,26 +92,6 @@ CREATE TABLE `cross_transaction_reqs` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 LOCK TABLES `cross_transaction_reqs` WRITE;
-UNLOCK TABLES;
-
-
-# Dump of table cross_transaction_signs
-# ------------------------------------------------------------
-CREATE TABLE `cross_transaction_signs` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `cross_transaction_id` int(11) NOT NULL,
-  `warder_id` tinyint(1) NOT NULL,
-  `signatures` text NOT NULL,
-  `status` tinyint(1) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `sign_id` (`cross_transaction_id`,`warder_id`),
-  CONSTRAINT `cross_transaction_signs_ibfk_1` FOREIGN KEY (`warder_id`) REFERENCES `warders` (`id`),
-  CONSTRAINT `cross_transaction_signs_ibfk_2` FOREIGN KEY (`cross_transaction_id`) REFERENCES `cross_transactions` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-LOCK TABLES `cross_transaction_signs` WRITE;
 UNLOCK TABLES;
 
 
