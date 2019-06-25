@@ -3,12 +3,9 @@ package service
 import (
 	"encoding/json"
 
-	btmTypes "github.com/bytom/protocol/bc/types"
-
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/util"
 	"github.com/vapor/protocol/bc"
-	vaporTypes "github.com/vapor/protocol/bc/types"
 )
 
 // Node can invoke the api which provide by the full node server
@@ -59,44 +56,6 @@ func (n *Node) getRawBlock(req *getRawBlockReq) (string, *bc.TransactionStatus, 
 
 	res := &getRawBlockResp{}
 	return res.RawBlock, res.TransactionStatus, n.request(url, payload, res)
-}
-
-type submitMainchainTxReq struct {
-	Tx *btmTypes.Tx `json:"raw_transaction"`
-}
-
-type submitSidechainTxReq struct {
-	Tx *vaporTypes.Tx `json:"raw_transaction"`
-}
-
-type submitTxResp struct {
-	TxID string `json:"tx_id"`
-}
-
-func (n *Node) SubmitTx(tx interface{}) (string, error) {
-	path := "/submit-transaction"
-	var payload []byte
-	var err error
-
-	switch tx := tx.(type) {
-	case *btmTypes.Tx:
-		payload, err = json.Marshal(submitMainchainTxReq{Tx: tx})
-		if err != nil {
-			return "", errors.Wrap(err, "json marshal")
-		}
-
-	case *vaporTypes.Tx:
-		payload, err = json.Marshal(submitSidechainTxReq{Tx: tx})
-		if err != nil {
-			return "", errors.Wrap(err, "json marshal")
-		}
-
-	default:
-		return "", errors.New("unknown tx type")
-	}
-
-	res := &submitTxResp{}
-	return res.TxID, n.request(path, payload, res)
 }
 
 type response struct {

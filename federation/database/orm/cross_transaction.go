@@ -25,5 +25,4 @@ type CrossTransaction struct {
 
 	Chain *Chain `gorm:"foreignkey:ChainID"`
 	Reqs  []*CrossTransactionReq
-	Signs []*CrossTransactionSign
 }
