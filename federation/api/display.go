@@ -1,6 +1,6 @@
 package api
 
-// Display define how the data is displayed
+// Display defines how the data is displayed
 type Display struct {
 	Filter map[string]interface{} `json:"filter"`
 	Sorter Sorter                 `json:"sort"`
