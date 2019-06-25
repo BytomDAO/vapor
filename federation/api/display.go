@@ -32,6 +32,19 @@ func (d *Display) GetFilterString(filterKey string) (string, error) {
 	return "", errInvalidFilterType
 }
 
+// GetFilterNum give the filter keyword return the numeric value
+func (d *Display) GetFilterNum(filterKey string) (interface{}, error) {
+	if _, ok := d.Filter[filterKey]; !ok {
+		return 0, errMissingFilterKey
+	}
+	switch val := d.Filter[filterKey].(type) {
+	case int, int16, int32, int64, int8, uint, uint16, uint32, uint64, uint8, float32, float64:
+		return val, nil
+	}
+
+	return 0, errInvalidFilterType
+}
+
 // GetFilterBoolean give the filter keyword return the boolean value
 func (d *Display) GetFilterBoolean(filterKey string) (bool, error) {
 	if _, ok := d.Filter[filterKey]; !ok {
