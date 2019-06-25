@@ -832,53 +832,6 @@ func TestTimeRange(t *testing.T) {
 	}
 }
 
-func TestStandardTx(t *testing.T) {
-	fixture := sample(t, nil)
-	tx := types.NewTx(*fixture.tx).Tx
-
-	cases := []struct {
-		desc string
-		f    func()
-		err  error
-	}{
-		{
-			desc: "normal standard tx",
-			err:  nil,
-		},
-		{
-			desc: "not standard tx in spend input",
-			f: func() {
-				inputID := tx.GasInputIDs[0]
-				spend := tx.Entries[inputID].(*bc.Spend)
-				spentOutput, err := tx.IntraChainOutput(*spend.SpentOutputId)
-				if err != nil {
-					t.Fatal(err)
-				}
-				spentOutput.ControlProgram = &bc.Program{Code: []byte{0}}
-			},
-			err: ErrNotStandardTx,
-		},
-		{
-			desc: "not standard tx in output",
-			f: func() {
-				outputID := tx.ResultIds[0]
-				output := tx.Entries[*outputID].(*bc.IntraChainOutput)
-				output.ControlProgram = &bc.Program{Code: []byte{0}}
-			},
-			err: ErrNotStandardTx,
-		},
-	}
-
-	for i, c := range cases {
-		if c.f != nil {
-			c.f()
-		}
-		if err := checkStandardTx(tx, 0); err != c.err {
-			t.Errorf("case #%d (%s) got error %t, want %t", i, c.desc, err, c.err)
-		}
-	}
-}
-
 func TestValidateTxVersion(t *testing.T) {
 	cases := []struct {
 		desc  string

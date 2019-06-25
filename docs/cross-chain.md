@@ -23,6 +23,7 @@ To build a mainchain-to-sidechain transaction, `build-transaction` is called by 
     - `String`- *type*, type of transaction, valid types: 'cross_chain_in', 'control_address', 'control_program'.
     - `String` - *address*, (type is control_address) address of receiver, the style of address is P2PKH or P2SH.
     - `String` - *control_program*, (type is control_program) control program of receiver.
+    - `Integer` - *vm_version*, (type is cross_chain_in) asset vm_version.
     - `String` - *issuance_program*, (type is cross_chain_in) asset issuance_program hexdecimal string.
     - `String` - *raw_definition_byte*, (type is cross_chain_in) asset raw_definition_byte hexdecimal string.
     - `String` - *source_id*, (type is cross_chain_in) mainchain output mux id.
