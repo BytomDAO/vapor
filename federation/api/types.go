@@ -1,5 +1,7 @@
 package api
 
-type listCrosschainTxsReq struct{}
+type listCrosschainTxsReq struct {
+	Display
+}
 
 type crosschainTx struct{}
