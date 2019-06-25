@@ -5,12 +5,12 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/vapor/common"
 	"github.com/vapor/config"
 	"github.com/vapor/event"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
-	"github.com/vapor/common"
 )
 
 const maxProcessBlockChSize = 1024
@@ -112,7 +112,11 @@ func (c *Chain) BestBlockHash() *bc.Hash {
 	return &c.bestNode.Hash
 }
 
-// BestBlockHeader returns the chain tail block
+// BestIrreversibleHeader returns the chain best irreversible block
+func (c *Chain) BestIrreversibleHeader() *types.BlockHeader {
+	return c.bestIrreversibleNode.BlockHeader()
+}
+
 func (c *Chain) BestBlockHeader() *types.BlockHeader {
 	node := c.index.BestNode()
 	return node.BlockHeader()
