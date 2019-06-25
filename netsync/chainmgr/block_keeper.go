@@ -129,7 +129,7 @@ func (bk *blockKeeper) start() {
 }
 
 func (bk *blockKeeper) checkSyncType() (bool, int) {
-	peer := bk.peers.BestPeer(consensus.SFFullNode | consensus.SFFastSync)
+	peer := bk.peers.BestIrreversiblePeer(consensus.SFFullNode | consensus.SFFastSync)
 	if peer == nil {
 		log.WithFields(log.Fields{"module": logModule}).Debug("can't find fast sync peer")
 		return false, 0
@@ -194,7 +194,7 @@ func (bk *blockKeeper) syncWorker() {
 				continue
 			}
 
-			if err := bk.peers.BroadcastNewStatus(bk.chain.BestBlockHeader()); err != nil {
+			if err := bk.peers.BroadcastNewStatus(bk.chain.BestBlockHeader(), bk.chain.BestIrreversibleHeader()); err != nil {
 				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on syncWorker broadcast new status")
 			}
 		case <-bk.quit:

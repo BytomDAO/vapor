@@ -240,9 +240,13 @@ func TestBlocksMessage(t *testing.T) {
 }
 
 func TestStatusMessage(t *testing.T) {
-	statusResponseMsg := NewStatusMessage(&testBlock.BlockHeader)
-	gotHash := statusResponseMsg.GetHash()
-	if !reflect.DeepEqual(*gotHash, testBlock.Hash()) {
-		t.Errorf("status response msg test err: got %s\nwant %s", spew.Sdump(*gotHash), spew.Sdump(testBlock.Hash()))
+	statusResponseMsg := NewStatusMessage(&testBlock.BlockHeader, &testBlock.BlockHeader)
+	gotBestHash := statusResponseMsg.GetBestHash()
+	if !reflect.DeepEqual(*gotBestHash, testBlock.Hash()) {
+		t.Errorf("status response msg test err: got %s\nwant %s", spew.Sdump(*gotBestHash), spew.Sdump(testBlock.Hash()))
+	}
+	gotIrreversibleHash := statusResponseMsg.GetIrreversibleHash()
+	if !reflect.DeepEqual(*gotIrreversibleHash, testBlock.Hash()) {
+		t.Errorf("status response msg test err: got %s\nwant %s", spew.Sdump(*gotIrreversibleHash), spew.Sdump(testBlock.Hash()))
 	}
 }

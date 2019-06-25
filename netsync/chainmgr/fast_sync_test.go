@@ -86,9 +86,9 @@ func TestFastBlockSync(t *testing.T) {
 		},
 		{
 			syncTimeout: 30 * time.Second,
-			aBlocks:     baseChain[:1],
+			aBlocks:     baseChain[:2],
 			bBlocks:     baseChain[:300],
-			want:        baseChain[:201],
+			want:        baseChain[:202],
 			err:         nil,
 		},
 	}
@@ -115,7 +115,6 @@ func TestFastBlockSync(t *testing.T) {
 
 		got := []*types.Block{}
 		for i := uint64(0); i <= a.chain.BestBlockHeight(); i++ {
-
 			block, err := a.chain.GetBlockByHeight(i)
 			if err != nil {
 				t.Errorf("case %d got err %v", i, err)
@@ -212,7 +211,7 @@ func TestLocateHeaders(t *testing.T) {
 			locator:     []uint64{20},
 			stopHash:    &blocksHash[120],
 			wantHeight:  []uint64{},
-			err:         true,
+			err:         false,
 		},
 		{
 			chainHeight: 100,

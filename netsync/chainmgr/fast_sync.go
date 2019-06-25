@@ -16,6 +16,8 @@ var (
 	fastSyncPivotGap     = uint64(64)
 	minGapStartFastSync  = uint64(128)
 	maxFastSyncBlocksNum = uint64(10000)
+
+	errOrphanBlock = errors.New("fast sync block is orphan")
 )
 
 type MsgFetcher interface {
@@ -79,7 +81,7 @@ func (fs *fastSync) process() error {
 	}
 
 	stopHash := fs.stopHeader.Hash()
-	for {
+	for fs.chain.BestBlockHeight() < fs.stopHeader.Height {
 		blocks, err := fs.msgFetcher.requireBlocks(fs.syncPeer.ID(), fs.blockLocator(), &stopHash)
 		if err != nil {
 			fs.peers.ErrorHandler(fs.syncPeer.ID(), security.LevelConnException, err)
@@ -90,10 +92,6 @@ func (fs *fastSync) process() error {
 			fs.peers.ErrorHandler(fs.syncPeer.ID(), security.LevelMsgIllegal, err)
 			return err
 		}
-
-		if fs.chain.BestBlockHeight() >= fs.stopHeader.Height {
-			break
-		}
 	}
 
 	log.WithFields(log.Fields{"module": logModule, "height": fs.chain.BestBlockHeight()}).Info("fast sync success")
@@ -102,7 +100,11 @@ func (fs *fastSync) process() error {
 
 func (fs *fastSync) findFastSyncRange() error {
 	bestHeight := fs.chain.BestBlockHeight()
-	fs.length = fs.syncPeer.Height() - fastSyncPivotGap - bestHeight
+	fs.length = fs.syncPeer.IrreversibleHeightHeight() - fastSyncPivotGap - bestHeight
+	if fs.length == 0 {
+		return nil
+	}
+
 	if fs.length > maxFastSyncBlocksNum {
 		fs.length = maxFastSyncBlocksNum
 	}
@@ -149,28 +151,14 @@ func (fs *fastSync) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, skip ui
 		}
 	}
 
+	headers := make([]*types.BlockHeader, 0)
 	stopHeader, err := fs.chain.GetHeaderByHash(stopHash)
 	if err != nil {
-		return nil, err
+		return headers, nil
 	}
 
-	headers := make([]*types.BlockHeader, 0)
 	if !fs.chain.InMainChain(*stopHash) {
-		for height := stopHeader.Height; height >= startHeader.Height; height-- {
-			if height-startHeader.Height%(skip+1) == 0 {
-				headers = append([]*types.BlockHeader{stopHeader}, headers[:]...)
-			}
-
-			stopHash = &stopHeader.PreviousBlockHash
-			stopHeader, err = fs.chain.GetHeaderByHash(stopHash)
-			if err != nil {
-				return nil, err
-			}
-
-			if fs.chain.InMainChain(*stopHash) {
-				break
-			}
-		}
+		return headers, nil
 	}
 
 	num := uint64(0)
@@ -180,12 +168,8 @@ func (fs *fastSync) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, skip ui
 			return nil, err
 		}
 
-		headers = append(headers[:num], append([]*types.BlockHeader{header}, headers[num:]...)...)
+		headers = append(headers, header)
 		num++
-	}
-
-	if uint64(len(headers)) > maxNum {
-		headers = headers[:maxNum]
 	}
 
 	return headers, nil
@@ -203,7 +187,8 @@ func (fs *fastSync) verifyBlocks(blocks []*types.Block) error {
 		}
 
 		if isOrphan {
-			log.WithFields(log.Fields{"module": logModule, "height": block.Height, "hash": block.Hash()}).Warn("fast sync block is orphan")
+			log.WithFields(log.Fields{"module": logModule, "height": block.Height, "hash": block.Hash()}).Error("fast sync block is orphan")
+			return errOrphanBlock
 		}
 	}
 
