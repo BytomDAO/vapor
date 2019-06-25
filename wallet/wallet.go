@@ -2,7 +2,6 @@ package wallet
 
 import (
 	"encoding/json"
-	"fmt"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -182,7 +181,6 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("txStatus is:", txStatus)
 
 	if err := w.RecoveryMgr.FilterRecoveryTxs(block); err != nil {
 		log.WithField("err", err).Error("filter recovery txs")
@@ -190,12 +188,11 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 	}
 
 	annotatedTxs := w.filterAccountTxs(block, txStatus)
-	fmt.Println("len(annotatedTxs) is:", len(annotatedTxs))
 	saveExternalAssetDefinition(block, w.store)
 	annotateTxsAccount(annotatedTxs, w.store)
 
-	// w.store.InitBatch()
-	// defer w.store.CommitBatch()
+	w.store.InitBatch()
+	defer w.store.CommitBatch()
 
 	if err := w.indexTransactions(block, txStatus, annotatedTxs); err != nil {
 		return err
@@ -209,8 +206,6 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 		w.status.BestHash = w.status.WorkHash
 	}
 	err = w.commitWalletInfo()
-
-	// w.store.CommitBatch()
 
 	return err
 }
