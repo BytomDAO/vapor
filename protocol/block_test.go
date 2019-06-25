@@ -3,144 +3,80 @@ package protocol
 import (
 	"testing"
 
-	"github.com/vapor/config"
+	"github.com/vapor/database/storage"
 	"github.com/vapor/protocol/bc"
+	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
 	"github.com/vapor/testutil"
 )
 
-func TestCalcReorganizeNodes(t *testing.T) {
-	config.CommonConfig = config.DefaultConfig()
-	c := &Chain{index: state.NewBlockIndex()}
-	header := config.GenesisBlock().BlockHeader
-	initNode, err := state.NewBlockNode(&header, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	c.index.AddNode(initNode)
-	var wantAttachNodes []*state.BlockNode
-	var wantDetachNodes []*state.BlockNode
-
-	mainChainNode := initNode
-	for i := 1; i <= 7; i++ {
-		header.Height = uint64(i)
-		mainChainNode, err = state.NewBlockNode(&header, mainChainNode)
-		if err != nil {
-			t.Fatal(err)
-		}
-		wantDetachNodes = append([]*state.BlockNode{mainChainNode}, wantDetachNodes...)
-		c.index.AddNode(mainChainNode)
-	}
-	c.bestNode = mainChainNode
-	c.index.SetMainChain(mainChainNode)
-
-	sideChainNode := initNode
-	for i := 1; i <= 13; i++ {
-		header.Height = uint64(i)
-		sideChainNode, err = state.NewBlockNode(&header, sideChainNode)
-		if err != nil {
-			t.Fatal(err)
-		}
-		wantAttachNodes = append(wantAttachNodes, sideChainNode)
-		c.index.AddNode(sideChainNode)
-	}
-
-	getAttachNodes, getDetachNodes := c.calcReorganizeNodes(sideChainNode)
-	if !testutil.DeepEqual(wantAttachNodes, getAttachNodes) {
-		t.Errorf("attach nodes want %v but get %v", wantAttachNodes, getAttachNodes)
-	}
-	if !testutil.DeepEqual(wantDetachNodes, getDetachNodes) {
-		t.Errorf("detach nodes want %v but get %v", wantDetachNodes, getDetachNodes)
-	}
+type mStore struct {
+	blockHeaders map[bc.Hash]*types.BlockHeader
 }
 
-func TestEdgeCalcReorganizeNodes(t *testing.T) {
-	config.CommonConfig = config.DefaultConfig()
-	header := config.GenesisBlock().BlockHeader
-	initNode, err := state.NewBlockNode(&header, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+func (s *mStore) BlockExist(hash *bc.Hash) bool           { return false }
+func (s *mStore) GetBlock(*bc.Hash) (*types.Block, error) { return nil, nil }
+func (s *mStore) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
+	return s.blockHeaders[*hash], nil
+}
+func (s *mStore) GetStoreStatus() *BlockStoreState                             { return nil }
+func (s *mStore) GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error) { return nil, nil }
+func (s *mStore) GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error     { return nil }
+func (s *mStore) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)                 { return nil, nil }
+func (s *mStore) GetVoteResult(uint64) (*state.VoteResult, error)              { return nil, nil }
+func (s *mStore) GetMainChainHash(uint64) (*bc.Hash, error)                    { return nil, nil }
+func (s *mStore) GetBlockHashesByHeight(uint64) ([]*bc.Hash, error)            { return nil, nil }
+func (s *mStore) SaveBlock(*types.Block, *bc.TransactionStatus) error          { return nil }
+func (s *mStore) SaveBlockHeader(blockHeader *types.BlockHeader) error {
+	s.blockHeaders[blockHeader.Hash()] = blockHeader
+	return nil
+}
+func (s *mStore) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, []*state.VoteResult) error {
+	return nil
+}
 
-	testNodes := []*state.BlockNode{initNode}
-	testNewNodes := []*state.BlockNode{initNode}
-	for i := uint64(1); i <= 5; i++ {
-		node := &state.BlockNode{
-			Height: i,
-			Hash:   bc.Hash{V0: uint64(i)},
-			Parent: testNodes[i-1],
-		}
-		testNodes = append(testNodes, node)
-
-		newNode := &state.BlockNode{
-			Height: i,
-			Hash:   bc.Hash{V1: uint64(i)},
-			Parent: testNewNodes[i-1],
-		}
-		testNewNodes = append(testNewNodes, newNode)
-	}
-
-	cases := []struct {
-		mainChainNode   *state.BlockNode
-		newNode         *state.BlockNode
-		wantAttachNodes []*state.BlockNode
-		wantDetachNodes []*state.BlockNode
-	}{
-		{
-			mainChainNode:   testNodes[1],
-			newNode:         testNodes[5],
-			wantAttachNodes: testNodes[2:],
-			wantDetachNodes: []*state.BlockNode{},
-		},
-		{
-			mainChainNode:   testNodes[5],
-			newNode:         testNodes[2],
-			wantAttachNodes: []*state.BlockNode{},
-			wantDetachNodes: []*state.BlockNode{testNodes[5], testNodes[4], testNodes[3]},
-		},
-		{
-			mainChainNode:   testNodes[2],
-			newNode:         testNodes[2],
-			wantAttachNodes: []*state.BlockNode{},
-			wantDetachNodes: []*state.BlockNode{},
-		},
-		{
-			mainChainNode:   testNewNodes[3],
-			newNode:         testNodes[2],
-			wantAttachNodes: testNodes[1:3],
-			wantDetachNodes: []*state.BlockNode{testNewNodes[3], testNewNodes[2], testNewNodes[1]},
-		},
-		{
-			mainChainNode:   testNewNodes[2],
-			newNode:         testNodes[3],
-			wantAttachNodes: testNodes[1:4],
-			wantDetachNodes: []*state.BlockNode{testNewNodes[2], testNewNodes[1]},
-		},
-		{
-			mainChainNode:   testNodes[5],
-			newNode:         testNewNodes[3],
-			wantAttachNodes: testNewNodes[1:4],
-			wantDetachNodes: []*state.BlockNode{testNodes[5], testNodes[4], testNodes[3], testNodes[2], testNodes[1]},
+func TestCalcReorganizeChain(t *testing.T) {
+	c := &Chain{
+		store: &mStore{
+			blockHeaders: make(map[bc.Hash]*types.BlockHeader),
 		},
 	}
 
-	for i, c := range cases {
-		chain := &Chain{index: state.NewBlockIndex()}
-		chain.index.AddNode(initNode)
-		for i := uint64(1); i <= c.mainChainNode.Height; i++ {
-			chain.index.AddNode(testNodes[i])
-		}
-		chain.bestNode = c.mainChainNode
-		chain.index.SetMainChain(c.mainChainNode)
-		getAttachNodes, getDetachNodes := chain.calcReorganizeNodes(c.newNode)
+	initBlockHeader := &types.BlockHeader{
+		Height:  0,
+		Version: 1,
+	}
+	c.store.SaveBlockHeader(initBlockHeader)
 
-		if !testutil.DeepEqual(c.wantAttachNodes, getAttachNodes) {
-			t.Errorf("test case %d, attach nodes want %v but get %v", i, c.wantAttachNodes, getAttachNodes)
+	var wantAttachBlockHeaders []*types.BlockHeader
+	var wantDetachBlockHeaders []*types.BlockHeader
+	mainChainBlockHeader := initBlockHeader
+	newChainBlockHeader := initBlockHeader
+	for i := 1; i <= 7; i++ {
+		mainChainBlockHeader = &types.BlockHeader{
+			PreviousBlockHash: mainChainBlockHeader.Hash(),
+			Height:            uint64(i),
 		}
+		wantDetachBlockHeaders = append([]*types.BlockHeader{mainChainBlockHeader}, wantDetachBlockHeaders...)
+		c.store.SaveBlockHeader(mainChainBlockHeader)
+	}
 
-		if !testutil.DeepEqual(c.wantDetachNodes, getDetachNodes) {
-			t.Errorf("test case %d, detach nodes want %v but get %v", i, c.wantDetachNodes, getDetachNodes)
+	for i := 1; i <= 13; i++ {
+		newChainBlockHeader = &types.BlockHeader{
+			PreviousBlockHash: newChainBlockHeader.Hash(),
+			Height:            uint64(i),
+			Version:           1,
 		}
+		wantAttachBlockHeaders = append(wantAttachBlockHeaders, newChainBlockHeader)
+		c.store.SaveBlockHeader(newChainBlockHeader)
+	}
+
+	getAttachBlockHeaders, getDetachBlockHeaders, _ := c.calcReorganizeChain(newChainBlockHeader, mainChainBlockHeader)
+	if !testutil.DeepEqual(wantAttachBlockHeaders, getAttachBlockHeaders) {
+		t.Errorf("attach headers want %v but get %v", wantAttachBlockHeaders, getAttachBlockHeaders)
+	}
+
+	if !testutil.DeepEqual(wantDetachBlockHeaders, getDetachBlockHeaders) {
+		t.Errorf("detach headers want %v but get %v", wantDetachBlockHeaders, getDetachBlockHeaders)
 	}
 }

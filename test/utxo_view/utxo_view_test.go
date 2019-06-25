@@ -404,7 +404,8 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 			},
 		},
 	}
-	node := blockNode(types.MapBlock(&mockBlocks[0].Block).BlockHeader)
+
+	mockBlockHeader := &mockBlocks[0].Block.BlockHeader
 	defer os.RemoveAll("temp")
 	for index, c := range cases {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
@@ -414,7 +415,7 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 		for k, v := range c.before {
 			utxoViewpoint.Entries[k] = v
 		}
-		if err := store.SaveChainStatus(node, node, utxoViewpoint, []*state.VoteResult{}); err != nil {
+		if err := store.SaveChainStatus(mockBlockHeader, mockBlockHeader, []*types.BlockHeader{mockBlockHeader}, utxoViewpoint, []*state.VoteResult{}); err != nil {
 			t.Error(err)
 		}
 
@@ -436,7 +437,7 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 				t.Error(err)
 			}
 		}
-		if err := store.SaveChainStatus(node, node, utxoViewpoint, []*state.VoteResult{}); err != nil {
+		if err := store.SaveChainStatus(mockBlockHeader, mockBlockHeader, []*types.BlockHeader{mockBlockHeader}, utxoViewpoint, []*state.VoteResult{}); err != nil {
 			t.Error(err)
 		}
 

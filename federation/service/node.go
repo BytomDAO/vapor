@@ -6,17 +6,16 @@ import (
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/util"
 	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
 )
 
 // Node can invoke the api which provide by the full node server
 type Node struct {
-	ip string
+	hostPort string
 }
 
 // Node create a api client with target server
-func NewNode(ip string) *Node {
-	return &Node{ip: ip}
+func NewNode(hostPort string) *Node {
+	return &Node{hostPort: hostPort}
 }
 
 func (n *Node) GetBlockByHash(hash string) (string, *bc.TransactionStatus, error) {
@@ -59,19 +58,15 @@ func (n *Node) getRawBlock(req *getRawBlockReq) (string, *bc.TransactionStatus, 
 	return res.RawBlock, res.TransactionStatus, n.request(url, payload, res)
 }
 
-type submitTxReq struct {
-	Tx *types.Tx `json:"raw_transaction"`
-}
-
 type response struct {
 	Status    string          `json:"status"`
 	Data      json.RawMessage `json:"data"`
 	ErrDetail string          `json:"error_detail"`
 }
 
-func (n *Node) request(url string, payload []byte, respData interface{}) error {
+func (n *Node) request(path string, payload []byte, respData interface{}) error {
 	resp := &response{}
-	if err := util.Post(n.ip+url, payload, resp); err != nil {
+	if err := util.Post(n.hostPort+path, payload, resp); err != nil {
 		return err
 	}
 

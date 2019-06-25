@@ -11,7 +11,7 @@ A `fed_cfg.json` would look like this:
 
 ```json
 {
-    "gin-gonic" : {
+    "api" : {
         "listening_port" : 3000,
         "is_release_mode": false
     },
@@ -28,23 +28,10 @@ A `fed_cfg.json` would look like this:
     "warders" : [
         {
             "position" : 1,
-            "xpub" : "7f23aae65ee4307c38d342699e328f21834488e18191ebd66823d220b5a58303496c9d09731784372bade78d5e9a4a6249b2cfe2e3a85464e5a4017aa5611e47",
-            "host_port" : "192.168.0.2:3000",
-            "is_local" : false
-        },
-        {
-            "position" : 1,
-            "xpub" : "585e20143db413e45fbc82f03cb61f177e9916ef1df0012daa8cbf6dbb1025ce8f98e51ae319327b63505b64fdbbf6d36ef916d79e6dd67d51b0bfe76fe544c5",
-            "host_port" : "127.0.0.1:3000",
-            "is_local" : true
-        },
-        {
-            "position" : 1,
-            "xpub" : "b58170b51ca61604028ba1cb412377dfc2bc6567c0afc84c83aae1c0c297d0227ccf568561df70851f4144bbf069b525129f2434133c145e35949375b22a6c9d",
-            "host_port" : "192.168.0.3:3000",
-            "is_local" : false
+            "xpub" : "50ef22b3a3fca7bc08916187cc9ec2f4005c9c6b1353aa1decbd4be3f3bb0fbe1967589f0d9dec13a388c0412002d2c267bdf3b920864e1ddc50581be5604ce1"
         }
     ],
+    "quorum": 1,
     "mainchain" : {
         "name" : "bytom",
         "confirmations" : 10,

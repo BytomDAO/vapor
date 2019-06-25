@@ -111,18 +111,19 @@ var testTxs = []*types.Tx{
 
 type mockStore struct{}
 
-func (s *mockStore) BlockExist(hash *bc.Hash, height uint64) bool                 { return false }
-func (s *mockStore) GetBlock(*bc.Hash, uint64) (*types.Block, error)              { return nil, nil }
-func (s *mockStore) GetBlockHeader(*bc.Hash, uint64) (*types.BlockHeader, error)  { return nil, nil }
+func (s *mockStore) BlockExist(hash *bc.Hash) bool                                { return false }
+func (s *mockStore) GetBlock(*bc.Hash) (*types.Block, error)                      { return nil, nil }
+func (s *mockStore) GetBlockHeader(*bc.Hash) (*types.BlockHeader, error)          { return nil, nil }
 func (s *mockStore) GetStoreStatus() *BlockStoreState                             { return nil }
 func (s *mockStore) GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error) { return nil, nil }
 func (s *mockStore) GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error     { return nil }
 func (s *mockStore) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)                 { return nil, nil }
 func (s *mockStore) GetVoteResult(uint64) (*state.VoteResult, error)              { return nil, nil }
-func (s *mockStore) LoadBlockIndex(uint64) (*state.BlockIndex, error)             { return nil, nil }
+func (s *mockStore) GetMainChainHash(uint64) (*bc.Hash, error)                    { return nil, nil }
+func (s *mockStore) GetBlockHashesByHeight(uint64) ([]*bc.Hash, error)            { return nil, nil }
 func (s *mockStore) SaveBlock(*types.Block, *bc.TransactionStatus) error          { return nil }
 func (s *mockStore) SaveBlockHeader(*types.BlockHeader) error                     { return nil }
-func (s *mockStore) SaveChainStatus(*state.BlockNode, *state.BlockNode, *state.UtxoViewpoint, []*state.VoteResult) error {
+func (s *mockStore) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, []*state.VoteResult) error {
 	return nil
 }
 
@@ -655,9 +656,9 @@ func TestRemoveOrphan(t *testing.T) {
 
 type mockStore1 struct{}
 
-func (s *mockStore1) BlockExist(hash *bc.Hash, height uint64) bool                 { return false }
-func (s *mockStore1) GetBlock(*bc.Hash, uint64) (*types.Block, error)              { return nil, nil }
-func (s *mockStore1) GetBlockHeader(*bc.Hash, uint64) (*types.BlockHeader, error)  { return nil, nil }
+func (s *mockStore1) BlockExist(hash *bc.Hash) bool                                { return false }
+func (s *mockStore1) GetBlock(*bc.Hash) (*types.Block, error)                      { return nil, nil }
+func (s *mockStore1) GetBlockHeader(*bc.Hash) (*types.BlockHeader, error)          { return nil, nil }
 func (s *mockStore1) GetStoreStatus() *BlockStoreState                             { return nil }
 func (s *mockStore1) GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error) { return nil, nil }
 func (s *mockStore1) GetTransactionsUtxo(utxoView *state.UtxoViewpoint, tx []*bc.Tx) error {
@@ -669,10 +670,11 @@ func (s *mockStore1) GetTransactionsUtxo(utxoView *state.UtxoViewpoint, tx []*bc
 }
 func (s *mockStore1) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)        { return nil, nil }
 func (s *mockStore1) GetVoteResult(uint64) (*state.VoteResult, error)     { return nil, nil }
-func (s *mockStore1) LoadBlockIndex(uint64) (*state.BlockIndex, error)    { return nil, nil }
+func (s *mockStore1) GetMainChainHash(uint64) (*bc.Hash, error)           { return nil, nil }
+func (s *mockStore1) GetBlockHashesByHeight(uint64) ([]*bc.Hash, error)   { return nil, nil }
 func (s *mockStore1) SaveBlock(*types.Block, *bc.TransactionStatus) error { return nil }
 func (s *mockStore1) SaveBlockHeader(*types.BlockHeader) error            { return nil }
-func (s *mockStore1) SaveChainStatus(*state.BlockNode, *state.BlockNode, *state.UtxoViewpoint, []*state.VoteResult) error {
+func (s *mockStore1) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, []*state.VoteResult) error {
 	return nil
 }
 
