@@ -5,15 +5,15 @@ import (
 )
 
 type CrossTransactionReq struct {
-	ID                 uint64 `gorm:"primary_key"`
-	CrossTransactionID uint64
-	SourcePos          uint64
-	AssetID            uint64
-	AssetAmount        uint64
-	Script             string
-	CreatedAt          types.Timestamp
-	UpdatedAt          types.Timestamp
+	ID                 uint64          `gorm:"primary_key" json:"-"`
+	CrossTransactionID uint64          `json:"-"`
+	SourcePos          uint64          `json:"-"`
+	AssetID            uint64          `json:"-"`
+	AssetAmount        uint64          `json:"amount"`
+	Script             string          `json:"-"`
+	CreatedAt          types.Timestamp `json:"-"`
+	UpdatedAt          types.Timestamp `json:"-"`
 
-	CrossTransaction *CrossTransaction `gorm:"foreignkey:CrossTransactionID"`
-	Asset            *Asset            `gorm:"foreignkey:AssetID"`
+	CrossTransaction *CrossTransaction `gorm:"foreignkey:CrossTransactionID" json:"-"`
+	Asset            *Asset            `gorm:"foreignkey:ID" json:"asset"`
 }

@@ -33,14 +33,15 @@ func NewConfigWithPath(path string) *Config {
 }
 
 type Config struct {
-	GinGonic    GinGonic    `json:"gin-gonic"`
+	API         API         `json:"api"`
 	MySQLConfig MySQLConfig `json:"mysql"`
 	Warders     []Warder    `json:"warders"`
+	Quorum      int         `json:"quorum"`
 	Mainchain   Chain       `json:"mainchain"`
 	Sidechain   Chain       `json:"sidechain"`
 }
 
-type GinGonic struct {
+type API struct {
 	ListeningPort uint64 `json:"listening_port"`
 	IsReleaseMode bool   `json:"is_release_mode"`
 }
@@ -61,8 +62,6 @@ type MySQLConnection struct {
 type Warder struct {
 	Position uint8        `json:"position"`
 	XPub     chainkd.XPub `json:"xpub"`
-	HostPort string       `json:"host_port"`
-	IsLocal  bool         `json:"is_local"`
 }
 
 type Chain struct {

@@ -5,11 +5,11 @@ import (
 )
 
 type Asset struct {
-	ID                uint64 `gorm:"primary_key"`
-	AssetID           string
-	IssuanceProgram   string
-	VMVersion         uint64
-	RawDefinitionByte string
-	CreatedAt         types.Timestamp
-	UpdatedAt         types.Timestamp
+	ID                uint64          `gorm:"primary_key" json:"-"`
+	AssetID           string          `json:"asset_id"`
+	IssuanceProgram   string          `json:"-"`
+	VMVersion         uint64          `json:"-"`
+	RawDefinitionByte string          `json:"-"`
+	CreatedAt         types.Timestamp `json:"-"`
+	UpdatedAt         types.Timestamp `json:"-"`
 }

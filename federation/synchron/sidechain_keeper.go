@@ -25,16 +25,16 @@ type sidechainKeeper struct {
 	db         *gorm.DB
 	node       *service.Node
 	chainName  string
-	assetCache *database.AssetCache
+	assetStore *database.AssetStore
 }
 
-func NewSidechainKeeper(db *gorm.DB, chainCfg *config.Chain) *sidechainKeeper {
+func NewSidechainKeeper(db *gorm.DB, assetStore *database.AssetStore, cfg *config.Config) *sidechainKeeper {
 	return &sidechainKeeper{
-		cfg:        chainCfg,
+		cfg:        &cfg.Sidechain,
 		db:         db,
-		node:       service.NewNode(chainCfg.Upstream),
-		chainName:  chainCfg.Name,
-		assetCache: database.NewAssetCache(),
+		node:       service.NewNode(cfg.Sidechain.Upstream),
+		chainName:  cfg.Sidechain.Name,
+		assetStore: assetStore,
 	}
 }
 
@@ -98,13 +98,13 @@ func (s *sidechainKeeper) syncBlock() (bool, error) {
 func (s *sidechainKeeper) tryAttachBlock(chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus) error {
 	blockHash := block.Hash()
 	log.WithFields(log.Fields{"block_height": block.Height, "block_hash": blockHash.String()}).Info("start to attachBlock")
-	s.db.Begin()
+	dbTx := s.db.Begin()
 	if err := s.processBlock(chain, block, txStatus); err != nil {
-		s.db.Rollback()
+		dbTx.Rollback()
 		return err
 	}
 
-	return s.db.Commit().Error
+	return dbTx.Commit().Error
 }
 
 func (s *sidechainKeeper) processBlock(chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus) error {
@@ -148,7 +148,7 @@ func (s *sidechainKeeper) processDepositTx(chain *orm.Chain, block *types.Block,
 	stmt := s.db.Model(&orm.CrossTransaction{}).Where("chain_id != ?", chain.ID).
 		Where(&orm.CrossTransaction{
 			DestTxHash: sql.NullString{tx.ID.String(), true},
-			Status:     common.CrossTxSubmittedStatus,
+			Status:     common.CrossTxPendingStatus,
 		}).UpdateColumn(&orm.CrossTransaction{
 		DestBlockHeight: sql.NullInt64{int64(block.Height), true},
 		DestBlockHash:   sql.NullString{blockHash.String(), true},
@@ -220,9 +220,7 @@ func (s *sidechainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Blo
 }
 
 func (s *sidechainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types.Tx, statusFail bool) ([]*orm.CrossTransactionReq, error) {
-	// assume inputs are from an identical owner
-	script := hex.EncodeToString(tx.Inputs[0].ControlProgram())
-	inputs := []*orm.CrossTransactionReq{}
+	reqs := []*orm.CrossTransactionReq{}
 	for i, rawOutput := range tx.Outputs {
 		// check valid withdrawal
 		if rawOutput.OutputType() != types.CrossChainOutputType {
@@ -233,21 +231,21 @@ func (s *sidechainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types
 			continue
 		}
 
-		asset, err := s.getAsset(rawOutput.OutputCommitment().AssetAmount.AssetId.String())
+		asset, err := s.assetStore.GetByAssetID(rawOutput.OutputCommitment().AssetAmount.AssetId.String())
 		if err != nil {
 			return nil, err
 		}
 
-		input := &orm.CrossTransactionReq{
+		req := &orm.CrossTransactionReq{
 			CrossTransactionID: crossTransactionID,
 			SourcePos:          uint64(i),
 			AssetID:            asset.ID,
 			AssetAmount:        rawOutput.OutputCommitment().AssetAmount.Amount,
-			Script:             script,
+			Script:             hex.EncodeToString(rawOutput.ControlProgram()),
 		}
-		inputs = append(inputs, input)
+		reqs = append(reqs, req)
 	}
-	return inputs, nil
+	return reqs, nil
 }
 
 func (s *sidechainKeeper) processChainInfo(chain *orm.Chain, block *types.Block) error {
@@ -264,18 +262,4 @@ func (s *sidechainKeeper) processChainInfo(chain *orm.Chain, block *types.Block)
 	}
 
 	return nil
-}
-
-func (s *sidechainKeeper) getAsset(assetID string) (*orm.Asset, error) {
-	if asset := s.assetCache.Get(assetID); asset != nil {
-		return asset, nil
-	}
-
-	asset := &orm.Asset{AssetID: assetID}
-	if err := s.db.Where(asset).First(asset).Error; err != nil {
-		return nil, errors.Wrap(err, "asset not found in memory and mysql")
-	}
-
-	s.assetCache.Add(assetID, asset)
-	return asset, nil
 }
