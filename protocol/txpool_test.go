@@ -123,10 +123,9 @@ func (s *mockStore) GetMainChainHash(uint64) (*bc.Hash, error)                  
 func (s *mockStore) GetBlockHashesByHeight(uint64) ([]*bc.Hash, error)            { return nil, nil }
 func (s *mockStore) SaveBlock(*types.Block, *bc.TransactionStatus) error          { return nil }
 func (s *mockStore) SaveBlockHeader(*types.BlockHeader) error                     { return nil }
-func (s *mockStore) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, *state.UtxoViewpoint, []*state.VoteResult) error {
+func (s *mockStore) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, []*state.VoteResult) error {
 	return nil
 }
-func (s *mockStore) SaveMainChainHash([]*types.BlockHeader) error { return nil }
 
 func TestAddOrphan(t *testing.T) {
 	cases := []struct {
@@ -675,10 +674,9 @@ func (s *mockStore1) GetMainChainHash(uint64) (*bc.Hash, error)           { retu
 func (s *mockStore1) GetBlockHashesByHeight(uint64) ([]*bc.Hash, error)   { return nil, nil }
 func (s *mockStore1) SaveBlock(*types.Block, *bc.TransactionStatus) error { return nil }
 func (s *mockStore1) SaveBlockHeader(*types.BlockHeader) error            { return nil }
-func (s *mockStore1) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, *state.UtxoViewpoint, []*state.VoteResult) error {
+func (s *mockStore1) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, []*state.VoteResult) error {
 	return nil
 }
-func (s *mockStore1) SaveMainChainHash([]*types.BlockHeader) error { return nil }
 
 func TestProcessTransaction(t *testing.T) {
 	txPool := &TxPool{

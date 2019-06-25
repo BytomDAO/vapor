@@ -415,7 +415,7 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 		for k, v := range c.before {
 			utxoViewpoint.Entries[k] = v
 		}
-		if err := store.SaveChainStatus(mockBlockHeader, mockBlockHeader, utxoViewpoint, []*state.VoteResult{}); err != nil {
+		if err := store.SaveChainStatus(mockBlockHeader, mockBlockHeader, []*types.BlockHeader{mockBlockHeader}, utxoViewpoint, []*state.VoteResult{}); err != nil {
 			t.Error(err)
 		}
 
@@ -437,7 +437,7 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 				t.Error(err)
 			}
 		}
-		if err := store.SaveChainStatus(mockBlockHeader, mockBlockHeader, utxoViewpoint, []*state.VoteResult{}); err != nil {
+		if err := store.SaveChainStatus(mockBlockHeader, mockBlockHeader, []*types.BlockHeader{mockBlockHeader}, utxoViewpoint, []*state.VoteResult{}); err != nil {
 			t.Error(err)
 		}
 

@@ -164,6 +164,14 @@ func (c *cache) removeBlockHeader(blockHeader *types.BlockHeader) {
 	c.lruBlockHeaders.Remove(blockHeader.Hash())
 }
 
+func (c *cache) removeBlockHashes(height uint64) {
+	c.lruBlockHashes.Remove(height)
+}
+
+func (c *cache) removeMainChainHash(height uint64) {
+	c.lruMainChainHashes.Remove(height)
+}
+
 func (c *cache) removeVoteResult(voteResult *state.VoteResult) {
 	c.lruVoteResults.Remove(voteResult.Seq)
 }

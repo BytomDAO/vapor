@@ -18,16 +18,31 @@ import (
 	"github.com/vapor/protocol/state"
 )
 
-const logModule = "leveldb"
+const (
+	// log module
+	logModule = "leveldb"
+	// the byte of colon(:)
+	colon = byte(0x3a)
+)
+
+const (
+	blockStore byte = iota
+	blockHashes
+	blockHeader
+	blockTransactons
+	mainChainIndex
+	txStatus
+	voteResult
+)
 
 var (
-	blockStoreKey             = []byte("BS:")
-	blockHashesByHeightPrefix = []byte("BHH:")
-	blockHeaderPrefix         = []byte("BH:")
-	blockTransactonsPrefix    = []byte("BTXS:")
-	mainChainIndexPrefix      = []byte("MCI:")
-	txStatusPrefix            = []byte("BTS:")
-	voteResultPrefix          = []byte("VR:")
+	blockStoreKey          = []byte{blockStore}
+	blockHashesPrefix      = []byte{blockHashes, colon}
+	blockHeaderPrefix      = []byte{blockHeader, colon}
+	blockTransactonsPrefix = []byte{blockTransactons, colon}
+	mainChainIndexPrefix   = []byte{mainChainIndex, colon}
+	txStatusPrefix         = []byte{txStatus, colon}
+	voteResultPrefix       = []byte{voteResult, colon}
 )
 
 func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
@@ -57,10 +72,10 @@ func calcMainChainIndexPrefix(height uint64) []byte {
 	return append(mainChainIndexPrefix, buf[:]...)
 }
 
-func calcBlockHashesByHeightPrefix(height uint64) []byte {
+func calcBlockHashesPrefix(height uint64) []byte {
 	buf := [8]byte{}
 	binary.BigEndian.PutUint64(buf[:], height)
-	return append(blockHashesByHeightPrefix, buf[:]...)
+	return append(blockHashesPrefix, buf[:]...)
 }
 
 func calcBlockHeaderKey(hash *bc.Hash) []byte {
@@ -111,9 +126,9 @@ func GetBlockTransactions(db dbm.DB, hash *bc.Hash) ([]*types.Tx, error) {
 
 // GetBlockHashesByHeight return block hashes by given height
 func GetBlockHashesByHeight(db dbm.DB, height uint64) ([]*bc.Hash, error) {
-	binaryHashes := db.Get(calcBlockHashesByHeightPrefix(height))
+	binaryHashes := db.Get(calcBlockHashesPrefix(height))
 	if binaryHashes == nil {
-		return nil, fmt.Errorf("There are no block hashes with given height %d", height)
+		return nil, nil
 	}
 
 	hashes := []*bc.Hash{}
@@ -276,7 +291,9 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 	}
 
 	blockHashes := []*bc.Hash{}
-	if hashes, _ := s.GetBlockHashesByHeight(block.Height); hashes != nil {
+	if hashes, err := s.GetBlockHashesByHeight(block.Height); err != nil {
+		return err
+	} else if hashes != nil {
 		blockHashes = append(blockHashes, hashes...)
 	}
 	blockHash := block.Hash()
@@ -287,12 +304,13 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 	}
 
 	batch := s.db.NewBatch()
-	batch.Set(calcBlockHashesByHeightPrefix(block.Height), binaryBlockHashes)
+	batch.Set(calcBlockHashesPrefix(block.Height), binaryBlockHashes)
 	batch.Set(calcBlockHeaderKey(&blockHash), binaryBlockHeader)
 	batch.Set(calcBlockTransactionsKey(&blockHash), binaryBlockTxs)
 	batch.Set(calcTxStatusKey(&blockHash), binaryTxStatus)
 	batch.Write()
 
+	s.cache.removeBlockHashes(block.Height)
 	log.WithFields(log.Fields{
 		"module":   logModule,
 		"height":   block.Height,
@@ -316,7 +334,7 @@ func (s *Store) SaveBlockHeader(blockHeader *types.BlockHeader) error {
 }
 
 // SaveChainStatus save the core's newest status && delete old status
-func (s *Store) SaveChainStatus(blockHeader, irrBlockHeader *types.BlockHeader, view *state.UtxoViewpoint, voteResults []*state.VoteResult) error {
+func (s *Store) SaveChainStatus(blockHeader, irrBlockHeader *types.BlockHeader, mainBlockHeaders []*types.BlockHeader, view *state.UtxoViewpoint, voteResults []*state.VoteResult) error {
 	batch := s.db.NewBatch()
 	if err := saveUtxoView(batch, view); err != nil {
 		return err
@@ -343,24 +361,19 @@ func (s *Store) SaveChainStatus(blockHeader, irrBlockHeader *types.BlockHeader, 
 	if err != nil {
 		return err
 	}
-
 	batch.Set(blockStoreKey, bytes)
-	batch.Write()
-	return nil
-}
 
-// SaveMainChainHash save main chain hashes by height
-func (s *Store) SaveMainChainHash(blockHeaders []*types.BlockHeader) error {
-	batch := s.db.NewBatch()
-	for _, bh := range blockHeaders {
+	// save main chain blockHeaders
+	for _, bh := range mainBlockHeaders {
 		blockHash := bh.Hash()
 		binaryBlockHash, err := blockHash.MarshalText()
 		if err != nil {
 			return errors.Wrap(err, "Marshal block hash")
 		}
-		batch.Set(calcMainChainIndexPrefix(bh.Height), binaryBlockHash)
-	}
 
+		batch.Set(calcMainChainIndexPrefix(bh.Height), binaryBlockHash)
+		s.cache.removeMainChainHash(bh.Height)
+	}
 	batch.Write()
 	return nil
 }

@@ -91,11 +91,7 @@ func (c *Chain) initChainStatus() error {
 	}}
 
 	genesisBlockHeader := &genesisBlock.BlockHeader
-	if err := c.store.SaveMainChainHash([]*types.BlockHeader{genesisBlockHeader}); err != nil {
-		return err
-	}
-
-	return c.store.SaveChainStatus(genesisBlockHeader, genesisBlockHeader, utxoView, voteResults)
+	return c.store.SaveChainStatus(genesisBlockHeader, genesisBlockHeader, []*types.BlockHeader{genesisBlockHeader}, utxoView, voteResults)
 }
 
 // BestBlockHeight returns the current height of the blockchain.
@@ -129,14 +125,15 @@ func (c *Chain) InMainChain(hash bc.Hash) bool {
 
 	blockHash, err := c.store.GetMainChainHash(blockHeader.Height)
 	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "height": blockHeader.Height}).Debug("not contain block hash in main chain for specified height")
 		return false
 	}
 	return *blockHash == hash
 }
 
 // This function must be called with mu lock in above level
-func (c *Chain) setState(blockHeader, irrBlockHeader *types.BlockHeader, view *state.UtxoViewpoint, voteResults []*state.VoteResult) error {
-	if err := c.store.SaveChainStatus(blockHeader, irrBlockHeader, view, voteResults); err != nil {
+func (c *Chain) setState(blockHeader, irrBlockHeader *types.BlockHeader, mainBlockHeaders []*types.BlockHeader, view *state.UtxoViewpoint, voteResults []*state.VoteResult) error {
+	if err := c.store.SaveChainStatus(blockHeader, irrBlockHeader, mainBlockHeaders, view, voteResults); err != nil {
 		return err
 	}
 

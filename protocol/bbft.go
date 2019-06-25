@@ -152,7 +152,11 @@ func (c *Chain) checkNodeSign(bh *types.BlockHeader, consensusNode *state.Consen
 		return errInvalidSignature
 	}
 
-	blockHashes, _ := c.store.GetBlockHashesByHeight(bh.Height)
+	blockHashes, err := c.store.GetBlockHashesByHeight(bh.Height)
+	if err != nil {
+		return err
+	}
+
 	for _, blockHash := range blockHashes {
 		if *blockHash == bh.Hash() {
 			continue
@@ -191,7 +195,11 @@ func (c *Chain) SignBlock(block *types.Block) ([]byte, error) {
 	}
 
 	//check double sign in same block height
-	blockHashes, _ := c.store.GetBlockHashesByHeight(block.Height)
+	blockHashes, err := c.store.GetBlockHashesByHeight(block.Height)
+	if err != nil {
+		return nil, err
+	}
+
 	for _, hash := range blockHashes {
 		blockHeader, err := c.store.GetBlockHeader(hash)
 		if err != nil {
@@ -219,11 +227,7 @@ func (c *Chain) updateBlockSignature(blockHeader *types.BlockHeader, nodeOrder u
 	}
 
 	if c.isIrreversible(blockHeader) && blockHeader.Height > c.bestIrrBlockHeader.Height {
-		if err := c.store.SaveMainChainHash([]*types.BlockHeader{blockHeader}); err != nil {
-			return err
-		}
-
-		if err := c.store.SaveChainStatus(c.bestBlockHeader, blockHeader, state.NewUtxoViewpoint(), []*state.VoteResult{}); err != nil {
+		if err := c.store.SaveChainStatus(c.bestBlockHeader, blockHeader, []*types.BlockHeader{blockHeader}, state.NewUtxoViewpoint(), []*state.VoteResult{}); err != nil {
 			return err
 		}
 		c.bestIrrBlockHeader = blockHeader

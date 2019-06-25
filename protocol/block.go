@@ -56,29 +56,29 @@ func (c *Chain) GetHeaderByHeight(height uint64) (*types.BlockHeader, error) {
 	return c.store.GetBlockHeader(hash)
 }
 
-func (c *Chain) calcReorganizeChain(beginAttachBlockHeader *types.BlockHeader, beginDetachBlockHeader *types.BlockHeader) ([]*types.BlockHeader, []*types.BlockHeader, error) {
+func (c *Chain) calcReorganizeChain(beginAttach *types.BlockHeader, beginDetach *types.BlockHeader) ([]*types.BlockHeader, []*types.BlockHeader, error) {
 	var err error
 	var attachBlockHeaders []*types.BlockHeader
 	var detachBlockHeaders []*types.BlockHeader
 
-	for attachBlockHeader, detachBlockHeader := beginAttachBlockHeader, beginDetachBlockHeader; detachBlockHeader.Hash() != attachBlockHeader.Hash(); {
-		var forChainRollback, mainChainRollBack bool
-		if forChainRollback = attachBlockHeader.Height >= detachBlockHeader.Height; forChainRollback {
+	for attachBlockHeader, detachBlockHeader := beginAttach, beginDetach; detachBlockHeader.Hash() != attachBlockHeader.Hash(); {
+		var attachRollback, detachRollBack bool
+		if attachRollback = attachBlockHeader.Height >= detachBlockHeader.Height; attachRollback {
 			attachBlockHeaders = append([]*types.BlockHeader{attachBlockHeader}, attachBlockHeaders...)
 		}
 
-		if mainChainRollBack = attachBlockHeader.Height <= detachBlockHeader.Height; mainChainRollBack {
+		if detachRollBack = attachBlockHeader.Height <= detachBlockHeader.Height; detachRollBack {
 			detachBlockHeaders = append(detachBlockHeaders, detachBlockHeader)
 		}
 
-		if forChainRollback {
+		if attachRollback {
 			attachBlockHeader, err = c.store.GetBlockHeader(&attachBlockHeader.PreviousBlockHash)
 			if err != nil {
 				return nil, nil, err
 			}
 		}
 
-		if mainChainRollBack {
+		if detachRollBack {
 			detachBlockHeader, err = c.store.GetBlockHeader(&detachBlockHeader.PreviousBlockHash)
 			if err != nil {
 				return nil, nil, err
@@ -111,16 +111,11 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	}
 
 	irrBlockHeader := c.bestIrrBlockHeader
-	blockHeader := &block.BlockHeader
-	if c.isIrreversible(blockHeader) && block.Height > irrBlockHeader.Height {
-		irrBlockHeader = blockHeader
+	if c.isIrreversible(&block.BlockHeader) && block.Height > irrBlockHeader.Height {
+		irrBlockHeader = &block.BlockHeader
 	}
 
-	if err := c.store.SaveMainChainHash([]*types.BlockHeader{blockHeader}); err != nil {
-		return nil
-	}
-
-	if err := c.setState(blockHeader, irrBlockHeader, utxoView, []*state.VoteResult{voteResult}); err != nil {
+	if err := c.setState(&block.BlockHeader, irrBlockHeader, []*types.BlockHeader{&block.BlockHeader}, utxoView, []*state.VoteResult{voteResult}); err != nil {
 		return err
 	}
 
@@ -214,12 +209,7 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 		return errors.New("rollback block below the height of irreversible block")
 	}
 	voteResults = append(voteResults, voteResult.Fork())
-
-	// save attach block hashes into main chain
-	if err := c.store.SaveMainChainHash(attachBlockHeaders); err != nil {
-		return nil
-	}
-	return c.setState(blockHeader, irrBlockHeader, utxoView, voteResults)
+	return c.setState(blockHeader, irrBlockHeader, attachBlockHeaders, utxoView, voteResults)
 }
 
 // SaveBlock will validate and save block into storage
