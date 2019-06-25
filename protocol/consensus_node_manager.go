@@ -80,7 +80,7 @@ func (c *Chain) getConsensusNodes(prevBlockHash *bc.Hash) (map[string]*state.Con
 		return nil, errNotFoundBlockNode
 	}
 
-	bestBlockHeader := c.BestBlockHeader()
+	bestBlockHeader := c.bestBlockHeader
 	preSeq := state.CalcVoteSeq(prevBlockHeader.Height+1) - 1
 	if bestSeq := state.CalcVoteSeq(bestBlockHeader.Height); preSeq > bestSeq {
 		preSeq = bestSeq
@@ -100,7 +100,7 @@ func (c *Chain) getConsensusNodes(prevBlockHash *bc.Hash) (map[string]*state.Con
 }
 
 func (c *Chain) getBestVoteResult() (*state.VoteResult, error) {
-	bestBlockHeader := c.BestBlockHeader()
+	bestBlockHeader := c.bestBlockHeader
 	seq := state.CalcVoteSeq(bestBlockHeader.Height)
 	return c.getVoteResult(seq, bestBlockHeader)
 }

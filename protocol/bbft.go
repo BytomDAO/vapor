@@ -152,11 +152,7 @@ func (c *Chain) checkNodeSign(bh *types.BlockHeader, consensusNode *state.Consen
 		return errInvalidSignature
 	}
 
-	blockHashes, err := c.store.GetBlockHashesByHeight(bh.Height)
-	if err != nil {
-		return err
-	}
-
+	blockHashes, _ := c.store.GetBlockHashesByHeight(bh.Height)
 	for _, blockHash := range blockHashes {
 		if *blockHash == bh.Hash() {
 			continue
@@ -195,11 +191,7 @@ func (c *Chain) SignBlock(block *types.Block) ([]byte, error) {
 	}
 
 	//check double sign in same block height
-	blockHashes, err := c.store.GetBlockHashesByHeight(block.Height)
-	if err != nil {
-		return nil, err
-	}
-
+	blockHashes, _ := c.store.GetBlockHashesByHeight(block.Height)
 	for _, hash := range blockHashes {
 		blockHeader, err := c.store.GetBlockHeader(hash)
 		if err != nil {
@@ -226,8 +218,6 @@ func (c *Chain) updateBlockSignature(blockHeader *types.BlockHeader, nodeOrder u
 		return err
 	}
 
-	c.cond.L.Lock()
-	defer c.cond.L.Unlock()
 	if c.isIrreversible(blockHeader) && blockHeader.Height > c.bestIrrBlockHeader.Height {
 		if err := c.store.SaveMainChainHash([]*types.BlockHeader{blockHeader}); err != nil {
 			return err

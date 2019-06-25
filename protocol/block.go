@@ -131,8 +131,6 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 }
 
 func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
-	c.cond.L.Lock()
-	defer c.cond.L.Unlock()
 	attachBlockHeaders, detachBlockHeaders, err := c.calcReorganizeChain(blockHeader, c.bestBlockHeader)
 	if err != nil {
 		return err
