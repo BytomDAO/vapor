@@ -10,6 +10,8 @@ import (
 	"github.com/vapor/federation/database/orm"
 )
 
+type listCrosschainTxsReq struct{ Display }
+
 func (s *Server) ListCrosschainTxs(c *gin.Context, listTxsReq *listCrosschainTxsReq, query *PaginationQuery) ([]*orm.CrossTransaction, error) {
 	var ormTxs []*orm.CrossTransaction
 	txFilter := &orm.CrossTransaction{}
