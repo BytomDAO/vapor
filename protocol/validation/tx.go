@@ -250,8 +250,9 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		// check assetID
 		assetID := e.AssetDefinition.ComputeAssetID()
 		if *e.Value.AssetId != *consensus.BTMAssetID && *e.Value.AssetId != assetID {
-			return errors.New("incorrect asset_id while check CrossChainInput")
+			return errors.New("incorrect asset_id while checking CrossChainInput")
 		}
+
 		code := config.FederationProgrom(config.CommonConfig)
 		prog := &bc.Program{
 			VmVersion: e.ControlProgram.VmVersion,
