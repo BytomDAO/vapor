@@ -269,7 +269,6 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 	}
 	config.CommonConfig = config.DefaultConfig()
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
-	testStore := database.NewWalletStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll(dirPath)
@@ -325,7 +324,7 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 	//block := mockSingleBlock(tx)
 	txStatus := bc.NewTransactionStatus()
 	txStatus.SetStatus(0, false)
-	w, err := NewWallet(testStore, accountManager, reg, hsm, chain, dispatcher, false)
+	w, err := NewWallet(testDB, accountManager, reg, hsm, chain, dispatcher, false)
 	go w.memPoolTxQueryLoop()
 	w.eventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: protocol.MsgNewTx}})
 	time.Sleep(time.Millisecond * 10)
