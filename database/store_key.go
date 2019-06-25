@@ -34,7 +34,7 @@ var (
 	ErrFindAccount = errors.New("Failed to find account")
 )
 
-func GetAccountIndexKey(xpubs []chainkd.XPub) []byte {
+func AccountIndexKey(xpubs []chainkd.XPub) []byte {
 	var hash [32]byte
 	var xPubs []byte
 	cpy := append([]chainkd.XPub{}, xpubs[:]...)
