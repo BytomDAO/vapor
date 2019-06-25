@@ -9,11 +9,11 @@ type CrossTransactionReq struct {
 	CrossTransactionID uint64          `json:"-"`
 	SourcePos          uint64          `json:"-"`
 	AssetID            uint64          `json:"-"`
-	AssetAmount        uint64          `json:"-"`
+	AssetAmount        uint64          `json:"amount"`
 	Script             string          `json:"-"`
 	CreatedAt          types.Timestamp `json:"-"`
 	UpdatedAt          types.Timestamp `json:"-"`
 
 	CrossTransaction *CrossTransaction `gorm:"foreignkey:CrossTransactionID" json:"-"`
-	Asset            *Asset            `gorm:"foreignkey:AssetID" json:"-"`
+	Asset            *Asset            `gorm:"foreignkey:AssetID" json:"asset"`
 }
