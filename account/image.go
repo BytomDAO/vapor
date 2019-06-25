@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/vapor/database"
 )
 
 // ImageSlice record info of single account
@@ -29,17 +28,16 @@ func (m *Manager) Backup() (*Image, error) {
 	}
 
 	// GetAccounts()
-	accountIter := m.db.IteratorPrefix([]byte(database.AccountPrefix))
-	defer accountIter.Release()
-	for accountIter.Next() {
-		a := &Account{}
-		if err := json.Unmarshal(accountIter.Value(), a); err != nil {
+	rawAccounts := m.store.GetAccounts("")
+
+	for _, rawAccount := range rawAccounts {
+		account := new(Account)
+		if err := json.Unmarshal(rawAccount, account); err != nil {
 			return nil, err
 		}
-
 		image.Slice = append(image.Slice, &ImageSlice{
-			Account:       a,
-			ContractIndex: m.GetContractIndex(a.ID),
+			Account:       account,
+			ContractIndex: m.GetContractIndex(account.ID),
 		})
 	}
 	return image, nil
@@ -50,9 +48,11 @@ func (m *Manager) Restore(image *Image) error {
 	m.accountMu.Lock()
 	defer m.accountMu.Unlock()
 
-	storeBatch := m.db.NewBatch()
+	m.store.InitBatch()
+	defer m.store.CommitBatch()
+
 	for _, slice := range image.Slice {
-		if existed := m.db.Get(database.AccountIDKey(slice.Account.ID)); existed != nil {
+		if existed := m.store.GetAccountByAccountID(slice.Account.ID); existed != nil {
 			log.WithFields(log.Fields{
 				"module": logModule,
 				"alias":  slice.Account.Alias,
@@ -60,7 +60,7 @@ func (m *Manager) Restore(image *Image) error {
 			}).Warning("skip restore account due to already existed")
 			continue
 		}
-		if existed := m.db.Get(database.AccountAliasKey(slice.Account.Alias)); existed != nil {
+		if existed := m.store.GetAccountByAccountAlias(slice.Account.Alias); existed != nil {
 			return ErrDuplicateAlias
 		}
 
@@ -69,10 +69,8 @@ func (m *Manager) Restore(image *Image) error {
 			return ErrMarshalAccount
 		}
 
-		storeBatch.Set(database.AccountIDKey(slice.Account.ID), rawAccount)
-		storeBatch.Set(database.AccountAliasKey(slice.Account.Alias), []byte(slice.Account.ID))
+		m.store.SetAccount(slice.Account.ID, slice.Account.Alias, rawAccount)
 	}
 
-	storeBatch.Write()
 	return nil
 }

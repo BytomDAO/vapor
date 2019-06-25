@@ -42,16 +42,16 @@ func TestGetAccountUtxos(t *testing.T) {
 		},
 		{
 			dbUtxos: map[string]*account.UTXO{
-				string(account.StandardUTXOKey(bc.Hash{V0: 1})): &account.UTXO{
+				string(database.StandardUTXOKey(bc.Hash{V0: 1})): &account.UTXO{
 					OutputID: bc.Hash{V0: 1},
 				},
-				string(account.StandardUTXOKey(bc.Hash{V0: 2})): &account.UTXO{
+				string(database.StandardUTXOKey(bc.Hash{V0: 2})): &account.UTXO{
 					OutputID: bc.Hash{V0: 2},
 				},
-				string(account.StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
+				string(database.StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
 					OutputID: bc.Hash{V0: 3},
 				},
-				string(account.ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
+				string(database.ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
 					OutputID: bc.Hash{V0: 4},
 				},
 			},
@@ -66,16 +66,16 @@ func TestGetAccountUtxos(t *testing.T) {
 		},
 		{
 			dbUtxos: map[string]*account.UTXO{
-				string(account.StandardUTXOKey(bc.Hash{V0: 1})): &account.UTXO{
+				string(database.StandardUTXOKey(bc.Hash{V0: 1})): &account.UTXO{
 					OutputID: bc.Hash{V0: 1},
 				},
-				string(account.StandardUTXOKey(bc.Hash{V0: 2})): &account.UTXO{
+				string(database.StandardUTXOKey(bc.Hash{V0: 2})): &account.UTXO{
 					OutputID: bc.Hash{V0: 2},
 				},
-				string(account.StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
+				string(database.StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
 					OutputID: bc.Hash{V0: 3},
 				},
-				string(account.ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
+				string(database.ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
 					OutputID: bc.Hash{V0: 4},
 				},
 			},
@@ -94,16 +94,16 @@ func TestGetAccountUtxos(t *testing.T) {
 		},
 		{
 			dbUtxos: map[string]*account.UTXO{
-				string(account.StandardUTXOKey(bc.Hash{V0: 1})): &account.UTXO{
+				string(database.StandardUTXOKey(bc.Hash{V0: 1})): &account.UTXO{
 					OutputID: bc.Hash{V0: 1},
 				},
-				string(account.StandardUTXOKey(bc.Hash{V0: 1, V1: 2})): &account.UTXO{
+				string(database.StandardUTXOKey(bc.Hash{V0: 1, V1: 2})): &account.UTXO{
 					OutputID: bc.Hash{V0: 1, V1: 2},
 				},
-				string(account.StandardUTXOKey(bc.Hash{V0: 2})): &account.UTXO{
+				string(database.StandardUTXOKey(bc.Hash{V0: 2})): &account.UTXO{
 					OutputID: bc.Hash{V0: 2},
 				},
-				string(account.StandardUTXOKey(bc.Hash{V0: 2, V1: 2})): &account.UTXO{
+				string(database.StandardUTXOKey(bc.Hash{V0: 2, V1: 2})): &account.UTXO{
 					OutputID: bc.Hash{V0: 2, V1: 2},
 				},
 			},
@@ -123,10 +123,10 @@ func TestGetAccountUtxos(t *testing.T) {
 		},
 		{
 			dbUtxos: map[string]*account.UTXO{
-				string(account.StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
+				string(database.StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
 					OutputID: bc.Hash{V0: 3},
 				},
-				string(account.ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
+				string(database.ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
 					OutputID: bc.Hash{V0: 4},
 				},
 			},
@@ -155,10 +155,10 @@ func TestGetAccountUtxos(t *testing.T) {
 		},
 		{
 			dbUtxos: map[string]*account.UTXO{
-				string(account.StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
+				string(database.StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
 					OutputID: bc.Hash{V0: 3},
 				},
-				string(account.ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
+				string(database.ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
 					OutputID: bc.Hash{V0: 4},
 				},
 			},

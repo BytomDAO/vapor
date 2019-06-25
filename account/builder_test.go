@@ -31,7 +31,7 @@ func TestReserveBtmUtxoChain(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		m.db.Set(StandardUTXOKey(utxo.OutputID), data)
+		m.store.SetStandardUTXO(utxo.OutputID, data)
 	}
 
 	cases := []struct {

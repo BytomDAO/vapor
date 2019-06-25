@@ -9,6 +9,7 @@ import (
 	"github.com/vapor/consensus"
 	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/crypto/sha3pool"
+	"github.com/vapor/database"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -16,9 +17,9 @@ import (
 
 // GetAccountUtxos return all account unspent outputs
 func (w *Wallet) GetAccountUtxos(accountID string, id string, unconfirmed, isSmartContract bool, vote bool) []*account.UTXO {
-	prefix := account.UTXOPreFix
+	prefix := database.UTXOPrefix
 	if isSmartContract {
-		prefix = account.SUTXOPrefix
+		prefix = database.SUTXOPrefix
 	}
 
 	accountUtxos := []*account.UTXO{}
