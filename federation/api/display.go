@@ -31,3 +31,15 @@ func (d *Display) GetFilterString(filterKey string) (string, error) {
 	}
 	return "", errInvalidFilterType
 }
+
+// GetFilterBoolean give the filter keyword return the boolean value
+func (d *Display) GetFilterBoolean(filterKey string) (bool, error) {
+	if _, ok := d.Filter[filterKey]; !ok {
+		return false, errMissingFilterKey
+	}
+	switch val := d.Filter[filterKey].(type) {
+	case bool:
+		return val, nil
+	}
+	return false, errInvalidFilterType
+}
