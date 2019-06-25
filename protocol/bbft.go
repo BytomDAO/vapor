@@ -227,7 +227,7 @@ func (c *Chain) updateBlockSignature(blockHeader *types.BlockHeader, nodeOrder u
 	}
 
 	if c.isIrreversible(blockHeader) && blockHeader.Height > c.bestIrrBlockHeader.Height {
-		if err := c.store.SaveChainStatus(c.bestBlockHeader, blockHeader, []*types.BlockHeader{blockHeader}, state.NewUtxoViewpoint(), []*state.VoteResult{}); err != nil {
+		if err := c.store.SaveChainStatus(c.bestBlockHeader, blockHeader, []*types.BlockHeader{}, state.NewUtxoViewpoint(), []*state.VoteResult{}); err != nil {
 			return err
 		}
 		c.bestIrrBlockHeader = blockHeader
