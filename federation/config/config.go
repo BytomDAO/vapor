@@ -62,8 +62,6 @@ type MySQLConnection struct {
 type Warder struct {
 	Position uint8        `json:"position"`
 	XPub     chainkd.XPub `json:"xpub"`
-	HostPort string       `json:"host_port"`
-	IsLocal  bool         `json:"is_local"`
 }
 
 type Chain struct {
