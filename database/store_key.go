@@ -17,15 +17,15 @@ const (
 	UTXOPrefix          = "ACU:" //UTXOPrefix is StandardUTXOKey prefix
 	SUTXOPrefix         = "SCU:" //SUTXOPrefix is ContractUTXOKey prefix
 	ContractPrefix      = "Contract:"
-	AccountPrefix       = "Account:" // AccountPrefix is account ID prefix
-	TxPrefix            = "TXS:"     //TxPrefix is wallet database transactions prefix
-	TxIndexPrefix       = "TID:"     //TxIndexPrefix is wallet database tx index prefix
-	UnconfirmedTxPrefix = "UTXS:"    //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
-	GlobalTxIndexPrefix = "GTID:"    //GlobalTxIndexPrefix is wallet database global tx index prefix
-	WalletKey           = "walletInfo"
-	AccountAliasPrefix  = "AccountAlias:"
 	ContractIndexPrefix = "ContractIndex:"
+	AccountPrefix       = "Account:" // AccountPrefix is account ID prefix
+	AccountAliasPrefix  = "AccountAlias:"
 	AccountIndexPrefix  = "AccountIndex:"
+	TxPrefix            = "TXS:"  //TxPrefix is wallet database transactions prefix
+	TxIndexPrefix       = "TID:"  //TxIndexPrefix is wallet database tx index prefix
+	UnconfirmedTxPrefix = "UTXS:" //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
+	GlobalTxIndexPrefix = "GTID:" //GlobalTxIndexPrefix is wallet database global tx index prefix
+	WalletKey           = "walletInfo"
 	MiningAddressKey    = "MiningAddress"
 	CoinbaseAbKey       = "CoinbaseArbitrary"
 )
