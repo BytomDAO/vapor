@@ -7,11 +7,8 @@ import (
 	"github.com/vapor/blockchain/query"
 	"github.com/vapor/common"
 	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 )
-
-var errAccntTxIDNotFound = errors.New("account TXID not found")
 
 // WalletStorer interface contains wallet storage functions.
 type WalletStorer interface {

@@ -43,12 +43,14 @@ type AccountStorer interface {
 // AccountStore satisfies AccountStorer interface.
 type AccountStore struct {
 	accountDB dbm.DB
+	batch     dbm.Batch
 }
 
 // NewAccountStore create new AccountStore.
 func NewAccountStore(db dbm.DB) *AccountStore {
 	return &AccountStore{
 		accountDB: db,
+		batch:     nil,
 	}
 }
 

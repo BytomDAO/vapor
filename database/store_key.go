@@ -31,7 +31,8 @@ const (
 )
 
 var (
-	ErrFindAccount = errors.New("Failed to find account")
+	ErrFindAccount       = errors.New("Failed to find account")
+	errAccntTxIDNotFound = errors.New("account TXID not found")
 )
 
 func AccountIndexKey(xpubs []chainkd.XPub) []byte {
