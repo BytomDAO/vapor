@@ -6,7 +6,6 @@ import (
 	"github.com/vapor/consensus"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/state"
 	"github.com/vapor/testutil"
 )
 
@@ -47,22 +46,6 @@ func (t *tx) getSpentOutputID(index int) bc.Hash {
 
 func (t *tx) OutputHash(outIndex int) *bc.Hash {
 	return t.Tx.ResultIds[outIndex]
-}
-
-func blockNode(header *bc.BlockHeader) *state.BlockNode {
-	h := types.BlockHeader{
-		Version:           header.Version,
-		Height:            header.Height,
-		PreviousBlockHash: *header.PreviousBlockId,
-		Timestamp:         header.Timestamp,
-	}
-	return &state.BlockNode{
-		Parent:    nil,
-		Hash:      h.Hash(),
-		Version:   h.Version,
-		Height:    h.Height,
-		Timestamp: h.Timestamp,
-	}
 }
 
 func mustDecodeHex(str string) []byte {

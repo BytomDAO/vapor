@@ -17,19 +17,17 @@ const maxProcessBlockChSize = 1024
 
 // Chain provides functions for working with the Bytom block chain.
 type Chain struct {
-	index          *state.BlockIndex
 	orphanManage   *OrphanManage
 	txPool         *TxPool
 	store          Store
 	processBlockCh chan *processBlockMsg
 
-	consensusNodeManager *consensusNodeManager
-	signatureCache       *common.Cache
-	eventDispatcher      *event.Dispatcher
+	signatureCache  *common.Cache
+	eventDispatcher *event.Dispatcher
 
-	cond                 sync.Cond
-	bestNode             *state.BlockNode
-	bestIrreversibleNode *state.BlockNode
+	cond               sync.Cond
+	bestBlockHeader    *types.BlockHeader
+	bestIrrBlockHeader *types.BlockHeader
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
@@ -53,14 +51,15 @@ func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*
 	}
 
 	var err error
-	if c.index, err = store.LoadBlockIndex(storeStatus.Height); err != nil {
+	c.bestBlockHeader, err = c.store.GetBlockHeader(storeStatus.Hash)
+	if err != nil {
 		return nil, err
 	}
 
-	c.bestNode = c.index.GetNode(storeStatus.Hash)
-	c.bestIrreversibleNode = c.index.GetNode(storeStatus.IrreversibleHash)
-	c.consensusNodeManager = newConsensusNodeManager(store, c.index)
-	c.index.SetMainChain(c.bestNode)
+	c.bestIrrBlockHeader, err = c.store.GetBlockHeader(storeStatus.IrreversibleHash)
+	if err != nil {
+		return nil, err
+	}
 	go c.blockProcesser()
 	return c, nil
 }
@@ -90,54 +89,66 @@ func (c *Chain) initChainStatus() error {
 		BlockHash:   genesisBlock.Hash(),
 		BlockHeight: 0,
 	}}
-	node, err := state.NewBlockNode(&genesisBlock.BlockHeader, nil)
-	if err != nil {
-		return err
-	}
 
-	return c.store.SaveChainStatus(node, node, utxoView, voteResults)
+	genesisBlockHeader := &genesisBlock.BlockHeader
+	return c.store.SaveChainStatus(genesisBlockHeader, genesisBlockHeader, []*types.BlockHeader{genesisBlockHeader}, utxoView, voteResults)
 }
 
 // BestBlockHeight returns the current height of the blockchain.
 func (c *Chain) BestBlockHeight() uint64 {
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
-	return c.bestNode.Height
+	return c.bestBlockHeader.Height
 }
 
 // BestBlockHash return the hash of the chain tail block
 func (c *Chain) BestBlockHash() *bc.Hash {
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
-	return &c.bestNode.Hash
+	bestHash := c.bestBlockHeader.Hash()
+	return &bestHash
 }
 
-// BestIrreversibleHeader returns the chain best irreversible block
+// BestIrreversibleHeader returns the chain best irreversible block header
 func (c *Chain) BestIrreversibleHeader() *types.BlockHeader {
-	return c.bestIrreversibleNode.BlockHeader()
+	c.cond.L.Lock()
+	defer c.cond.L.Unlock()
+	return c.bestIrrBlockHeader
 }
 
+// BestBlockHeader returns the chain best block header
 func (c *Chain) BestBlockHeader() *types.BlockHeader {
-	node := c.index.BestNode()
-	return node.BlockHeader()
+	c.cond.L.Lock()
+	defer c.cond.L.Unlock()
+	return c.bestBlockHeader
 }
 
 // InMainChain checks wheather a block is in the main chain
 func (c *Chain) InMainChain(hash bc.Hash) bool {
-	return c.index.InMainchain(hash)
+	blockHeader, err := c.store.GetBlockHeader(&hash)
+	if err != nil {
+		return false
+	}
+
+	blockHash, err := c.store.GetMainChainHash(blockHeader.Height)
+	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "height": blockHeader.Height}).Debug("not contain block hash in main chain for specified height")
+		return false
+	}
+	return *blockHash == hash
 }
 
 // This function must be called with mu lock in above level
-func (c *Chain) setState(node, irreversibleNode *state.BlockNode, view *state.UtxoViewpoint, voteResults []*state.VoteResult) error {
-	if err := c.store.SaveChainStatus(node, irreversibleNode, view, voteResults); err != nil {
+func (c *Chain) setState(blockHeader, irrBlockHeader *types.BlockHeader, mainBlockHeaders []*types.BlockHeader, view *state.UtxoViewpoint, voteResults []*state.VoteResult) error {
+	if err := c.store.SaveChainStatus(blockHeader, irrBlockHeader, mainBlockHeaders, view, voteResults); err != nil {
 		return err
 	}
 
-	c.index.SetMainChain(node)
-	c.bestNode = node
-	c.bestIrreversibleNode = irreversibleNode
+	c.bestBlockHeader = blockHeader
+	c.bestIrrBlockHeader = irrBlockHeader
 
-	log.WithFields(log.Fields{"module": logModule, "height": c.bestNode.Height, "hash": c.bestNode.Hash.String()}).Debug("chain best status has been update")
+	blockHash := blockHeader.Hash()
+	log.WithFields(log.Fields{"module": logModule, "height": blockHeader.Height, "hash": blockHash.String()}).Debug("chain best status has been update")
 	c.cond.Broadcast()
 	return nil
 }
@@ -148,7 +159,7 @@ func (c *Chain) BlockWaiter(height uint64) <-chan struct{} {
 	go func() {
 		c.cond.L.Lock()
 		defer c.cond.L.Unlock()
-		for c.bestNode.Height < height {
+		for c.bestBlockHeader.Height < height {
 			c.cond.Wait()
 		}
 		ch <- struct{}{}

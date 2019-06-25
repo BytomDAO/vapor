@@ -18,14 +18,31 @@ import (
 	"github.com/vapor/protocol/state"
 )
 
-const logModule = "leveldb"
+const (
+	// log module
+	logModule = "leveldb"
+	// the byte of colon(:)
+	colon = byte(0x3a)
+)
+
+const (
+	blockStore byte = iota
+	blockHashes
+	blockHeader
+	blockTransactons
+	mainChainIndex
+	txStatus
+	voteResult
+)
 
 var (
-	blockStoreKey          = []byte("blockStore")
-	blockHeaderPrefix      = []byte("BH:")
-	blockTransactonsPrefix = []byte("BTXS:")
-	txStatusPrefix         = []byte("BTS:")
-	voteResultPrefix       = []byte("VR:")
+	blockStoreKey          = []byte{blockStore}
+	blockHashesPrefix      = []byte{blockHashes, colon}
+	blockHeaderPrefix      = []byte{blockHeader, colon}
+	blockTransactonsPrefix = []byte{blockTransactons, colon}
+	mainChainIndexPrefix   = []byte{mainChainIndex, colon}
+	txStatusPrefix         = []byte{txStatus, colon}
+	voteResultPrefix       = []byte{voteResult, colon}
 )
 
 func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
@@ -49,11 +66,20 @@ type Store struct {
 	cache cache
 }
 
-func calcBlockHeaderKey(height uint64, hash *bc.Hash) []byte {
+func calcMainChainIndexPrefix(height uint64) []byte {
 	buf := [8]byte{}
 	binary.BigEndian.PutUint64(buf[:], height)
-	key := append(blockHeaderPrefix, buf[:]...)
-	return append(key, hash.Bytes()...)
+	return append(mainChainIndexPrefix, buf[:]...)
+}
+
+func calcBlockHashesPrefix(height uint64) []byte {
+	buf := [8]byte{}
+	binary.BigEndian.PutUint64(buf[:], height)
+	return append(blockHashesPrefix, buf[:]...)
+}
+
+func calcBlockHeaderKey(hash *bc.Hash) []byte {
+	return append(blockHeaderPrefix, hash.Bytes()...)
 }
 
 func calcBlockTransactionsKey(hash *bc.Hash) []byte {
@@ -70,18 +96,18 @@ func calcVoteResultKey(seq uint64) []byte {
 	return append(voteResultPrefix, buf[:]...)
 }
 
-// GetBlockHeader return the block header by given hash and height
-func GetBlockHeader(db dbm.DB, hash *bc.Hash, height uint64) (*types.BlockHeader, error) {
-	binaryBlockHeader := db.Get(calcBlockHeaderKey(height, hash))
+// GetBlockHeader return the block header by given hash
+func GetBlockHeader(db dbm.DB, hash *bc.Hash) (*types.BlockHeader, error) {
+	binaryBlockHeader := db.Get(calcBlockHeaderKey(hash))
 	if binaryBlockHeader == nil {
 		return nil, fmt.Errorf("There are no blockHeader with given hash %s", hash.String())
 	}
 
-	block := &types.Block{}
-	if err := block.UnmarshalText(binaryBlockHeader); err != nil {
+	blockHeader := &types.BlockHeader{}
+	if err := blockHeader.UnmarshalText(binaryBlockHeader); err != nil {
 		return nil, err
 	}
-	return &block.BlockHeader, nil
+	return blockHeader, nil
 }
 
 // GetBlockTransactions return the block transactions by given hash
@@ -96,6 +122,34 @@ func GetBlockTransactions(db dbm.DB, hash *bc.Hash) ([]*types.Tx, error) {
 		return nil, err
 	}
 	return block.Transactions, nil
+}
+
+// GetBlockHashesByHeight return block hashes by given height
+func GetBlockHashesByHeight(db dbm.DB, height uint64) ([]*bc.Hash, error) {
+	binaryHashes := db.Get(calcBlockHashesPrefix(height))
+	if binaryHashes == nil {
+		return []*bc.Hash{}, nil
+	}
+
+	hashes := []*bc.Hash{}
+	if err := json.Unmarshal(binaryHashes, &hashes); err != nil {
+		return nil, err
+	}
+	return hashes, nil
+}
+
+// GetMainChainHash return BlockHash by given height
+func GetMainChainHash(db dbm.DB, height uint64) (*bc.Hash, error) {
+	binaryHash := db.Get(calcMainChainIndexPrefix(height))
+	if binaryHash == nil {
+		return nil, fmt.Errorf("There are no BlockHash with given height %d", height)
+	}
+
+	hash := &bc.Hash{}
+	if err := hash.UnmarshalText(binaryHash); err != nil {
+		return nil, err
+	}
+	return hash, nil
 }
 
 // GetVoteResult return the vote result by given sequence
@@ -114,31 +168,41 @@ func GetVoteResult(db dbm.DB, seq uint64) (*state.VoteResult, error) {
 
 // NewStore creates and returns a new Store object.
 func NewStore(db dbm.DB) *Store {
-	fillBlockHeaderFn := func(hash *bc.Hash, height uint64) (*types.BlockHeader, error) {
-		return GetBlockHeader(db, hash, height)
+	fillBlockHeaderFn := func(hash *bc.Hash) (*types.BlockHeader, error) {
+		return GetBlockHeader(db, hash)
 	}
 	fillBlockTxsFn := func(hash *bc.Hash) ([]*types.Tx, error) {
 		return GetBlockTransactions(db, hash)
 	}
+
+	fillBlockHashesFn := func(height uint64) ([]*bc.Hash, error) {
+		return GetBlockHashesByHeight(db, height)
+	}
+
+	fillMainChainHashFn := func(height uint64) (*bc.Hash, error) {
+		return GetMainChainHash(db, height)
+	}
+
 	fillVoteResultFn := func(seq uint64) (*state.VoteResult, error) {
 		return GetVoteResult(db, seq)
 	}
-	bc := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillVoteResultFn)
+
+	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillBlockHashesFn, fillMainChainHashFn, fillVoteResultFn)
 	return &Store{
 		db:    db,
-		cache: bc,
+		cache: cache,
 	}
 }
 
 // BlockExist check if the block is stored in disk
-func (s *Store) BlockExist(hash *bc.Hash, height uint64) bool {
-	_, err := s.cache.lookupBlockHeader(hash, height)
+func (s *Store) BlockExist(hash *bc.Hash) bool {
+	_, err := s.cache.lookupBlockHeader(hash)
 	return err == nil
 }
 
 // GetBlock return the block by given hash
-func (s *Store) GetBlock(hash *bc.Hash, height uint64) (*types.Block, error) {
-	blockHeader, err := s.GetBlockHeader(hash, height)
+func (s *Store) GetBlock(hash *bc.Hash) (*types.Block, error) {
+	blockHeader, err := s.GetBlockHeader(hash)
 	if err != nil {
 		return nil, err
 	}
@@ -155,13 +219,23 @@ func (s *Store) GetBlock(hash *bc.Hash, height uint64) (*types.Block, error) {
 }
 
 // GetBlockHeader return the BlockHeader by given hash
-func (s *Store) GetBlockHeader(hash *bc.Hash, height uint64) (*types.BlockHeader, error) {
-	return s.cache.lookupBlockHeader(hash, height)
+func (s *Store) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
+	return s.cache.lookupBlockHeader(hash)
 }
 
 // GetBlockTransactions return the Block transactions by given hash
 func (s *Store) GetBlockTransactions(hash *bc.Hash) ([]*types.Tx, error) {
 	return s.cache.lookupBlockTxs(hash)
+}
+
+// GetBlockHashesByHeight return the block hash by the specified height
+func (s *Store) GetBlockHashesByHeight(height uint64) ([]*bc.Hash, error) {
+	return s.cache.lookupBlockHashesByHeight(height)
+}
+
+// GetMainChainHash return the block hash by the specified height
+func (s *Store) GetMainChainHash(height uint64) (*bc.Hash, error) {
+	return s.cache.lookupMainChainHash(height)
 }
 
 // GetStoreStatus return the BlockStoreStateJSON
@@ -198,49 +272,6 @@ func (s *Store) GetVoteResult(seq uint64) (*state.VoteResult, error) {
 	return s.cache.lookupVoteResult(seq)
 }
 
-func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error) {
-	startTime := time.Now()
-	blockIndex := state.NewBlockIndex()
-	bhIter := s.db.IteratorPrefix(blockHeaderPrefix)
-	defer bhIter.Release()
-
-	var lastNode *state.BlockNode
-	for bhIter.Next() {
-		bh := &types.BlockHeader{}
-		if err := bh.UnmarshalText(bhIter.Value()); err != nil {
-			return nil, err
-		}
-
-		// If a block with a height greater than the best height of state is added to the index,
-		// It may cause a bug that the new block cant not be process properly.
-		if bh.Height > stateBestHeight {
-			break
-		}
-
-		var parent *state.BlockNode
-		if lastNode == nil || lastNode.Hash == bh.PreviousBlockHash {
-			parent = lastNode
-		} else {
-			parent = blockIndex.GetNode(&bh.PreviousBlockHash)
-		}
-
-		node, err := state.NewBlockNode(bh, parent)
-		if err != nil {
-			return nil, err
-		}
-
-		blockIndex.AddNode(node)
-		lastNode = node
-	}
-
-	log.WithFields(log.Fields{
-		"module":   logModule,
-		"height":   stateBestHeight,
-		"duration": time.Since(startTime),
-	}).Debug("initialize load history block index from database")
-	return blockIndex, nil
-}
-
 // SaveBlock persists a new block in the protocol.
 func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 	startTime := time.Now()
@@ -256,16 +287,30 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 
 	binaryTxStatus, err := proto.Marshal(ts)
 	if err != nil {
-		return errors.Wrap(err, "marshal block transaction status")
+		return errors.Wrap(err, "Marshal block transaction status")
 	}
 
+	blockHashes := []*bc.Hash{}
+	hashes, err := s.GetBlockHashesByHeight(block.Height)
+	if err != nil {
+		return err
+	}
+	blockHashes = append(blockHashes, hashes...)
 	blockHash := block.Hash()
+	blockHashes = append(blockHashes, &blockHash)
+	binaryBlockHashes, err := json.Marshal(blockHashes)
+	if err != nil {
+		return errors.Wrap(err, "Marshal block hashes")
+	}
+
 	batch := s.db.NewBatch()
-	batch.Set(calcBlockHeaderKey(block.Height, &blockHash), binaryBlockHeader)
+	batch.Set(calcBlockHashesPrefix(block.Height), binaryBlockHashes)
+	batch.Set(calcBlockHeaderKey(&blockHash), binaryBlockHeader)
 	batch.Set(calcBlockTransactionsKey(&blockHash), binaryBlockTxs)
 	batch.Set(calcTxStatusKey(&blockHash), binaryTxStatus)
 	batch.Write()
 
+	s.cache.removeBlockHashes(block.Height)
 	log.WithFields(log.Fields{
 		"module":   logModule,
 		"height":   block.Height,
@@ -283,13 +328,13 @@ func (s *Store) SaveBlockHeader(blockHeader *types.BlockHeader) error {
 	}
 
 	blockHash := blockHeader.Hash()
-	s.db.Set(calcBlockHeaderKey(blockHeader.Height, &blockHash), binaryBlockHeader)
+	s.db.Set(calcBlockHeaderKey(&blockHash), binaryBlockHeader)
 	s.cache.removeBlockHeader(blockHeader)
 	return nil
 }
 
 // SaveChainStatus save the core's newest status && delete old status
-func (s *Store) SaveChainStatus(node, irreversibleNode *state.BlockNode, view *state.UtxoViewpoint, voteResults []*state.VoteResult) error {
+func (s *Store) SaveChainStatus(blockHeader, irrBlockHeader *types.BlockHeader, mainBlockHeaders []*types.BlockHeader, view *state.UtxoViewpoint, voteResults []*state.VoteResult) error {
 	batch := s.db.NewBatch()
 	if err := saveUtxoView(batch, view); err != nil {
 		return err
@@ -305,17 +350,30 @@ func (s *Store) SaveChainStatus(node, irreversibleNode *state.BlockNode, view *s
 		s.cache.removeVoteResult(vote)
 	}
 
+	blockHash := blockHeader.Hash()
+	irrBlockHash := irrBlockHeader.Hash()
 	bytes, err := json.Marshal(protocol.BlockStoreState{
-		Height:             node.Height,
-		Hash:               &node.Hash,
-		IrreversibleHeight: irreversibleNode.Height,
-		IrreversibleHash:   &irreversibleNode.Hash,
+		Height:             blockHeader.Height,
+		Hash:               &blockHash,
+		IrreversibleHeight: irrBlockHeader.Height,
+		IrreversibleHash:   &irrBlockHash,
 	})
 	if err != nil {
 		return err
 	}
-
 	batch.Set(blockStoreKey, bytes)
+
+	// save main chain blockHeaders
+	for _, bh := range mainBlockHeaders {
+		blockHash := bh.Hash()
+		binaryBlockHash, err := blockHash.MarshalText()
+		if err != nil {
+			return errors.Wrap(err, "Marshal block hash")
+		}
+
+		batch.Set(calcMainChainIndexPrefix(bh.Height), binaryBlockHash)
+		s.cache.removeMainChainHash(bh.Height)
+	}
 	batch.Write()
 	return nil
 }

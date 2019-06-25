@@ -15,20 +15,21 @@ var (
 
 // Store provides storage interface for blockchain data
 type Store interface {
-	BlockExist(*bc.Hash, uint64) bool
+	BlockExist(*bc.Hash) bool
 
-	GetBlock(*bc.Hash, uint64) (*types.Block, error)
-	GetBlockHeader(*bc.Hash, uint64) (*types.BlockHeader, error)
+	GetBlock(*bc.Hash) (*types.Block, error)
+	GetBlockHeader(*bc.Hash) (*types.BlockHeader, error)
 	GetStoreStatus() *BlockStoreState
 	GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error)
 	GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error
 	GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)
 	GetVoteResult(uint64) (*state.VoteResult, error)
+	GetMainChainHash(uint64) (*bc.Hash, error)
+	GetBlockHashesByHeight(uint64) ([]*bc.Hash, error)
 
-	LoadBlockIndex(uint64) (*state.BlockIndex, error)
 	SaveBlock(*types.Block, *bc.TransactionStatus) error
 	SaveBlockHeader(*types.BlockHeader) error
-	SaveChainStatus(*state.BlockNode, *state.BlockNode, *state.UtxoViewpoint, []*state.VoteResult) error
+	SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, []*state.VoteResult) error
 }
 
 // BlockStoreState represents the core's db status

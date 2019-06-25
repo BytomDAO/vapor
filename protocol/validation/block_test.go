@@ -8,7 +8,6 @@ import (
 	"github.com/vapor/consensus"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/state"
 	"github.com/vapor/protocol/vm"
 	"github.com/vapor/protocol/vm/vmutil"
 )
@@ -45,7 +44,7 @@ func TestCheckBlockTime(t *testing.T) {
 		},
 	}
 
-	parent := &state.BlockNode{Version: 1}
+	parent := &types.BlockHeader{Version: 1}
 	block := &bc.Block{
 		BlockHeader: &bc.BlockHeader{Version: 1},
 	}
@@ -54,8 +53,9 @@ func TestCheckBlockTime(t *testing.T) {
 		parent.Timestamp = c.parentTime[0]
 		parentSuccessor := parent
 		for i := 1; i < len(c.parentTime); i++ {
-			parentSuccessor.Parent = &state.BlockNode{Version: 1, Timestamp: c.parentTime[i]}
-			parentSuccessor = parentSuccessor.Parent
+			Previous := &types.BlockHeader{Version: 1, Timestamp: c.parentTime[i]}
+			parentSuccessor.PreviousBlockHash = Previous.Hash()
+			parentSuccessor = Previous
 		}
 
 		block.Timestamp = c.blockTime
@@ -108,17 +108,24 @@ func TestCheckCoinbaseAmount(t *testing.T) {
 }
 
 func TestValidateBlockHeader(t *testing.T) {
+	parent := &types.BlockHeader{
+		Version:   1,
+		Height:    0,
+		Timestamp: 1523352600000,
+	}
+	parentHash := parent.Hash()
+
 	cases := []struct {
 		desc   string
 		block  *bc.Block
-		parent *state.BlockNode
+		parent *types.BlockHeader
 		err    error
 	}{
 		{
 			block: &bc.Block{BlockHeader: &bc.BlockHeader{
 				Version: 2,
 			}},
-			parent: &state.BlockNode{
+			parent: &types.BlockHeader{
 				Version: 1,
 			},
 			err: errVersionRegression,
@@ -128,7 +135,7 @@ func TestValidateBlockHeader(t *testing.T) {
 				Version: 1,
 				Height:  20,
 			}},
-			parent: &state.BlockNode{
+			parent: &types.BlockHeader{
 				Version: 1,
 				Height:  18,
 			},
@@ -139,12 +146,12 @@ func TestValidateBlockHeader(t *testing.T) {
 			block: &bc.Block{BlockHeader: &bc.BlockHeader{
 				Version:         1,
 				Height:          20,
-				PreviousBlockId: &bc.Hash{V0: 18},
+				PreviousBlockId: &bc.Hash{V0: 20},
 			}},
-			parent: &state.BlockNode{
-				Version: 1,
-				Height:  19,
-				Hash:    bc.Hash{V0: 19},
+			parent: &types.BlockHeader{
+				Version:           1,
+				Height:            19,
+				PreviousBlockHash: bc.Hash{V0: 19},
 			},
 			err: errMismatchedBlock,
 		},
@@ -155,16 +162,11 @@ func TestValidateBlockHeader(t *testing.T) {
 					Version:         1,
 					Height:          1,
 					Timestamp:       1523352601000,
-					PreviousBlockId: &bc.Hash{V0: 0},
+					PreviousBlockId: &parentHash,
 				},
 			},
-			parent: &state.BlockNode{
-				Version:   1,
-				Height:    0,
-				Timestamp: 1523352600000,
-				Hash:      bc.Hash{V0: 0},
-			},
-			err: nil,
+			parent: parent,
+			err:    nil,
 		},
 		{
 			desc: "version greater than 1 (blocktest#1001)",
@@ -174,7 +176,7 @@ func TestValidateBlockHeader(t *testing.T) {
 					Version: 2,
 				},
 			},
-			parent: &state.BlockNode{
+			parent: &types.BlockHeader{
 				Version: 1,
 			},
 			err: errVersionRegression,
@@ -187,7 +189,7 @@ func TestValidateBlockHeader(t *testing.T) {
 					Version: 0,
 				},
 			},
-			parent: &state.BlockNode{
+			parent: &types.BlockHeader{
 				Version: 1,
 			},
 			err: errVersionRegression,
@@ -200,7 +202,7 @@ func TestValidateBlockHeader(t *testing.T) {
 					Version: math.MaxUint64,
 				},
 			},
-			parent: &state.BlockNode{
+			parent: &types.BlockHeader{
 				Version: 1,
 			},
 			err: errVersionRegression,
@@ -217,10 +219,18 @@ func TestValidateBlockHeader(t *testing.T) {
 // TestValidateBlock test the ValidateBlock function
 func TestValidateBlock(t *testing.T) {
 	cp, _ := vmutil.DefaultCoinbaseProgram()
+	parent := &types.BlockHeader{
+		Version:           1,
+		Height:            0,
+		Timestamp:         1523352600000,
+		PreviousBlockHash: bc.Hash{V0: 0},
+	}
+	parentHash := parent.Hash()
+
 	cases := []struct {
 		desc   string
 		block  *bc.Block
-		parent *state.BlockNode
+		parent *types.BlockHeader
 		err    error
 	}{
 		{
@@ -231,7 +241,7 @@ func TestValidateBlock(t *testing.T) {
 					Version:          1,
 					Height:           1,
 					Timestamp:        1523352601000,
-					PreviousBlockId:  &bc.Hash{V0: 0},
+					PreviousBlockId:  &parentHash,
 					TransactionsRoot: &bc.Hash{V0: 1},
 				},
 				Transactions: []*bc.Tx{
@@ -243,13 +253,8 @@ func TestValidateBlock(t *testing.T) {
 					}),
 				},
 			},
-			parent: &state.BlockNode{
-				Version:   1,
-				Height:    0,
-				Timestamp: 1523352600000,
-				Hash:      bc.Hash{V0: 0},
-			},
-			err: errMismatchedMerkleRoot,
+			parent: parent,
+			err:    errMismatchedMerkleRoot,
 		},
 		{
 			desc: "The calculated transaction status merkel root hash is not equals to the hash of the block header (blocktest#1009)",
@@ -259,7 +264,7 @@ func TestValidateBlock(t *testing.T) {
 					Version:               1,
 					Height:                1,
 					Timestamp:             1523352601000,
-					PreviousBlockId:       &bc.Hash{V0: 0},
+					PreviousBlockId:       &parentHash,
 					TransactionsRoot:      &bc.Hash{V0: 6294987741126419124, V1: 12520373106916389157, V2: 5040806596198303681, V3: 1151748423853876189},
 					TransactionStatusHash: &bc.Hash{V0: 1},
 				},
@@ -272,13 +277,8 @@ func TestValidateBlock(t *testing.T) {
 					}),
 				},
 			},
-			parent: &state.BlockNode{
-				Version:   1,
-				Height:    0,
-				Timestamp: 1523352600000,
-				Hash:      bc.Hash{V0: 0},
-			},
-			err: errMismatchedMerkleRoot,
+			parent: parent,
+			err:    errMismatchedMerkleRoot,
 		},
 		{
 			desc: "the coinbase amount is less than the real coinbase amount (txtest#1014)",
@@ -288,7 +288,7 @@ func TestValidateBlock(t *testing.T) {
 					Version:         1,
 					Height:          1,
 					Timestamp:       1523352601000,
-					PreviousBlockId: &bc.Hash{V0: 0},
+					PreviousBlockId: &parentHash,
 				},
 				Transactions: []*bc.Tx{
 					types.MapTx(&types.TxData{
@@ -305,13 +305,8 @@ func TestValidateBlock(t *testing.T) {
 					}),
 				},
 			},
-			parent: &state.BlockNode{
-				Version:   1,
-				Height:    0,
-				Timestamp: 1523352600000,
-				Hash:      bc.Hash{V0: 0},
-			},
-			err: ErrWrongCoinbaseTransaction,
+			parent: parent,
+			err:    ErrWrongCoinbaseTransaction,
 		},
 	}
 
@@ -326,19 +321,21 @@ func TestValidateBlock(t *testing.T) {
 // TestGasOverBlockLimit check if the gas of the block has the max limit (blocktest#1012)
 func TestGasOverBlockLimit(t *testing.T) {
 	cp, _ := vmutil.DefaultCoinbaseProgram()
-	parent := &state.BlockNode{
-		Version:   1,
-		Height:    0,
-		Timestamp: 1523352600000,
-		Hash:      bc.Hash{V0: 0},
+	parent := &types.BlockHeader{
+		Version:           1,
+		Height:            0,
+		Timestamp:         1523352600000,
+		PreviousBlockHash: bc.Hash{V0: 0},
 	}
+	parentHash := parent.Hash()
+
 	block := &bc.Block{
 		ID: bc.Hash{V0: 1},
 		BlockHeader: &bc.BlockHeader{
 			Version:          1,
 			Height:           1,
 			Timestamp:        1523352601000,
-			PreviousBlockId:  &bc.Hash{V0: 0},
+			PreviousBlockId:  &parentHash,
 			TransactionsRoot: &bc.Hash{V0: 1},
 		},
 		Transactions: []*bc.Tx{
@@ -372,19 +369,21 @@ func TestGasOverBlockLimit(t *testing.T) {
 // TestSetTransactionStatus verify the transaction status is set correctly (blocktest#1010)
 func TestSetTransactionStatus(t *testing.T) {
 	cp, _ := vmutil.DefaultCoinbaseProgram()
-	parent := &state.BlockNode{
-		Version:   1,
-		Height:    0,
-		Timestamp: 1523352600000,
-		Hash:      bc.Hash{V0: 0},
+	parent := &types.BlockHeader{
+		Version:           1,
+		Height:            0,
+		Timestamp:         1523352600000,
+		PreviousBlockHash: bc.Hash{V0: 0},
 	}
+	parentHash := parent.Hash()
+
 	block := &bc.Block{
 		ID: bc.Hash{V0: 1},
 		BlockHeader: &bc.BlockHeader{
 			Version:               1,
 			Height:                1,
 			Timestamp:             1523352601000,
-			PreviousBlockId:       &bc.Hash{V0: 0},
+			PreviousBlockId:       &parentHash,
 			TransactionsRoot:      &bc.Hash{V0: 12212572290317752069, V1: 8979003395977198825, V2: 3978010681554327084, V3: 12322462500143540195},
 			TransactionStatusHash: &bc.Hash{V0: 8682965660674182538, V1: 8424137560837623409, V2: 6979974817894224946, V3: 4673809519342015041},
 		},
