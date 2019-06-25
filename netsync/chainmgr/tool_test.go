@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"net"
 
-	wire "github.com/tendermint/go-wire"
+	"github.com/tendermint/go-wire"
 	"github.com/tendermint/tmlibs/flowrate"
 
 	"github.com/vapor/consensus"
@@ -123,7 +123,8 @@ func (nw *NetWork) HandsShake(nodeA, nodeB *Manager) (*P2PPeer, *P2PPeer, error)
 
 	nodeA.AddPeer(&A2B)
 	nodeB.AddPeer(&B2A)
-
+	nodeA.SendStatus(B2A.srcPeer)
+	nodeB.SendStatus(A2B.srcPeer)
 	A2B.setAsync(true)
 	B2A.setAsync(true)
 	return &B2A, &A2B, nil
