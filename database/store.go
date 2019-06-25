@@ -291,11 +291,11 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 	}
 
 	blockHashes := []*bc.Hash{}
-	if hashes, err := s.GetBlockHashesByHeight(block.Height); err != nil {
+	hashes, err := s.GetBlockHashesByHeight(block.Height)
+	if err != nil {
 		return err
-	} else if len(hashes) != 0 {
-		blockHashes = append(blockHashes, hashes...)
 	}
+	blockHashes = append(blockHashes, hashes...)
 	blockHash := block.Hash()
 	blockHashes = append(blockHashes, &blockHash)
 	binaryBlockHashes, err := json.Marshal(blockHashes)
