@@ -952,7 +952,7 @@ func TestFindUtxos(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-			testDB.Set(database.StandardUTXOKey(u.OutputID), data)
+			c.uk.store.SetStandardUTXO(u.OutputID, data)
 		}
 
 		gotUtxos, immatureAmount := c.uk.findUtxos("testAccount", &bc.AssetID{}, c.useUnconfirmed, c.vote)
@@ -964,7 +964,7 @@ func TestFindUtxos(t *testing.T) {
 		}
 
 		for _, u := range c.dbUtxos {
-			testDB.Delete(database.StandardUTXOKey(u.OutputID))
+			c.uk.store.DeleteStandardUTXO(u.OutputID)
 		}
 	}
 }
@@ -1069,7 +1069,7 @@ func TestFindUtxo(t *testing.T) {
 		}
 
 		for _, u := range c.dbUtxos {
-			testDB.Delete(database.StandardUTXOKey(u.OutputID))
+			c.uk.store.DeleteStandardUTXO(u.OutputID)
 		}
 	}
 }

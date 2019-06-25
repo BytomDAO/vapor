@@ -24,9 +24,8 @@ type AccountStorer interface {
 	DeleteBip44ContractIndex(string)
 	DeleteContractIndex(string)
 	GetContractIndex(string) []byte
-	// DeleteAccountUTXOs(string) error
 	GetAccountUTXOs(string) [][]byte
-	DeleteUTXO(bc.Hash)
+	DeleteStandardUTXO(bc.Hash)
 	GetCoinbaseArbitrary() []byte
 	SetCoinbaseArbitrary([]byte)
 	GetMiningAddress() []byte
@@ -190,8 +189,8 @@ func (store *AccountStore) GetAccountUTXOs(accountID string) [][]byte {
 	return utxos
 }
 
-// DeleteUTXO delete utxo by outpu id
-func (store *AccountStore) DeleteUTXO(outputID bc.Hash) {
+// DeleteStandardUTXO delete utxo by outpu id
+func (store *AccountStore) DeleteStandardUTXO(outputID bc.Hash) {
 	if store.batch == nil {
 		store.accountDB.Delete(StandardUTXOKey(outputID))
 	} else {

@@ -299,7 +299,7 @@ func (m *Manager) deleteAccountUtxos(accountID string) error {
 			return err
 		}
 		if accountID == utxo.AccountID {
-			m.store.DeleteUTXO(utxo.OutputID)
+			m.store.DeleteStandardUTXO(utxo.OutputID)
 		}
 	}
 
