@@ -104,7 +104,7 @@ func (p *Peer) Height() uint64 {
 	return p.bestHeight
 }
 
-func (p *Peer) IrreversibleHeightHeight() uint64 {
+func (p *Peer) IrreversibleHeight() uint64 {
 	p.mtx.RLock()
 	defer p.mtx.RUnlock()
 

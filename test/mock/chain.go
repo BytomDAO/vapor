@@ -37,7 +37,7 @@ func (c *Chain) BestBlockHeight() uint64 {
 	return c.bestBlockHeader.Height
 }
 
-func (c *Chain)BestIrreversibleHeader() *types.BlockHeader{
+func (c *Chain) BestIrreversibleHeader() *types.BlockHeader {
 	return c.bestBlockHeader
 }
 

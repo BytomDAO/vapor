@@ -100,7 +100,7 @@ func (fs *fastSync) process() error {
 
 func (fs *fastSync) findFastSyncRange() error {
 	bestHeight := fs.chain.BestBlockHeight()
-	fs.length = fs.syncPeer.IrreversibleHeightHeight() - fastSyncPivotGap - bestHeight
+	fs.length = fs.syncPeer.IrreversibleHeight() - fastSyncPivotGap - bestHeight
 	if fs.length > maxFastSyncBlocksNum {
 		fs.length = maxFastSyncBlocksNum
 	}

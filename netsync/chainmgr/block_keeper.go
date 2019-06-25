@@ -16,8 +16,9 @@ import (
 const (
 	syncCycle = 5 * time.Second
 
-	fastSyncType    = 0x01
-	regularSyncType = 0x02
+	noNeedSync = iota
+	fastSyncType
+	regularSyncType
 )
 
 var (
@@ -128,42 +129,37 @@ func (bk *blockKeeper) start() {
 	go bk.syncWorker()
 }
 
-func (bk *blockKeeper) checkSyncType() (bool, int) {
+func (bk *blockKeeper) checkSyncType() int {
 	peer := bk.peers.BestIrreversiblePeer(consensus.SFFullNode | consensus.SFFastSync)
 	if peer == nil {
 		log.WithFields(log.Fields{"module": logModule}).Debug("can't find fast sync peer")
-		return false, 0
+		return noNeedSync
 	}
 
 	bestHeight := bk.chain.BestBlockHeight()
-	peerIrreversibleHeight := peer.IrreversibleHeightHeight()
-	if peerIrreversibleHeight >= bestHeight+minGapStartFastSync {
+
+	if peerIrreversibleHeight := peer.IrreversibleHeight(); peerIrreversibleHeight >= bestHeight+minGapStartFastSync {
 		bk.fastSync.setSyncPeer(peer)
-		return true, fastSyncType
+		return fastSyncType
 	}
 
 	peer = bk.peers.BestPeer(consensus.SFFullNode)
 	if peer == nil {
 		log.WithFields(log.Fields{"module": logModule}).Debug("can't find sync peer")
-		return false, 0
+		return noNeedSync
 	}
 
 	peerHeight := peer.Height()
 	if peerHeight > bestHeight {
 		bk.syncPeer = peer
-		return true, regularSyncType
+		return regularSyncType
 	}
 
-	return false, 0
+	return noNeedSync
 }
 
 func (bk *blockKeeper) startSync() bool {
-	needSync, syncType := bk.checkSyncType()
-	if !needSync {
-		return false
-	}
-
-	switch syncType {
+	switch bk.checkSyncType() {
 	case fastSyncType:
 		if err := bk.fastSync.process(); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("failed on fast sync")
