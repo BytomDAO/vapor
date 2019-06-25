@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"fmt"
 
 	"github.com/gin-gonic/gin"
@@ -15,19 +16,19 @@ type listCrosschainTxsReq struct{ Display }
 func (s *Server) ListCrosschainTxs(c *gin.Context, listTxsReq *listCrosschainTxsReq, query *PaginationQuery) ([]*orm.CrossTransaction, error) {
 	var ormTxs []*orm.CrossTransaction
 	txFilter := &orm.CrossTransaction{}
-	txQuery := s.db.Where(txFilter).Preload("Reqs")
 	if listPending, err := listTxsReq.GetFilterBoolean("list_pending"); err == nil && listPending {
-		txQuery = txQuery.Where("status = ?", common.CrossTxPendingStatus)
+		txFilter.Status = common.CrossTxPendingStatus
 	}
 	if listCompleted, err := listTxsReq.GetFilterBoolean("list_completed"); err == nil && listCompleted {
-		txQuery = txQuery.Where("status = ?", common.CrossTxCompletedStatus)
+		txFilter.Status = common.CrossTxCompletedStatus
 	}
 	if txHash, err := listTxsReq.GetFilterString("source_tx_hash"); err == nil && txHash != "" {
-		txQuery = txQuery.Where("source_tx_hash = ?", txHash)
+		txFilter.SourceTxHash = txHash
 	}
 	if txHash, err := listTxsReq.GetFilterString("dest_tx_hash"); err == nil && txHash != "" {
-		txQuery = txQuery.Where("dest_tx_hash = ?", txHash)
+		txFilter.DestTxHash = sql.NullString{txHash, true}
 	}
+	txQuery := s.db.Where(txFilter).Preload("Reqs")
 	txQuery = txQuery.Order(fmt.Sprintf("cross_transactions.source_block_height %s", listTxsReq.Sorter.Order))
 	txQuery = txQuery.Order(fmt.Sprintf("cross_transactions.source_tx_index %s", listTxsReq.Sorter.Order))
 	if err := txQuery.Offset(query.Start).Limit(query.Limit).Find(&ormTxs).Error; err != nil {
