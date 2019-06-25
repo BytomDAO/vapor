@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"reflect"
 
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/query"
@@ -66,6 +67,10 @@ type WalletStore struct {
 	batch dbm.Batch
 }
 
+type WalletBatch struct {
+	batch dbm.Batch
+}
+
 // NewWalletStore create new WalletStore struct
 func NewWalletStore(db dbm.DB) *WalletStore {
 	return &WalletStore{
@@ -76,11 +81,12 @@ func NewWalletStore(db dbm.DB) *WalletStore {
 
 // InitBatch initial batch
 func (store *WalletStore) InitBatch() {
-	// if store.batch == nil {
-	store.batch = store.DB.NewBatch()
-
-	fmt.Println("InitBatch store.batch: ", store.batch)
-	// }
+	if store.batch == nil {
+		store.batch = store.DB.NewBatch()
+		fmt.Println("InitBatch type of store.batch is:", reflect.TypeOf(store.batch))
+		fmt.Println("InitBatch value of store.batch is: ", reflect.ValueOf(store.batch))
+		fmt.Printf("InitBatch store.batch pointer is: %p\n", store.batch)
+	}
 }
 
 // CommitBatch commit batch
@@ -88,6 +94,10 @@ func (store *WalletStore) CommitBatch() {
 	fmt.Println("CommitBatch...")
 	if store.batch != nil {
 		fmt.Println("CommitBatch not nil...")
+		fmt.Println("CommitBatch type of store.batch is:", reflect.TypeOf(store.batch))
+		fmt.Println("CommitBatch value of store.batch is: ", reflect.ValueOf(store.batch))
+		fmt.Printf("CommitBatch store.batch pointer is: %p\n", store.batch)
+
 		store.batch.Write()
 		// store.batch = store.DB.NewBatch()
 	}
@@ -197,13 +207,19 @@ func (store *WalletStore) SetTransaction(height uint64, position uint32, txID st
 	if store.batch == nil {
 		fmt.Println("SetTransaction ... nil")
 		batch := store.DB.NewBatch()
+		fmt.Println("type of batch is:", reflect.TypeOf(batch))
 		batch.Set(calcAnnotatedKey(formatKey(height, position)), rawTx)
 		batch.Set(calcTxIndexKey(txID), []byte(formatKey(height, position)))
 		batch.Write()
 	} else {
 		fmt.Println("SetTransaction ... not nil")
+		// store.InitBatch()
+		// store.batch = store.DB.NewBatch()
+		fmt.Println("type of store.batch is:", reflect.TypeOf(store.batch))
 		store.batch.Set(calcAnnotatedKey(formatKey(height, position)), rawTx)
 		store.batch.Set(calcTxIndexKey(txID), []byte(formatKey(height, position)))
+		// store.CommitBatch()
+		// store.batch.Write()
 	}
 }
 
