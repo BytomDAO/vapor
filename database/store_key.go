@@ -25,7 +25,7 @@ const (
 	TxIndexPrefix       = "TID:"  //TxIndexPrefix is wallet database tx index prefix
 	UnconfirmedTxPrefix = "UTXS:" //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
 	GlobalTxIndexPrefix = "GTID:" //GlobalTxIndexPrefix is wallet database global tx index prefix
-	WalletKey           = "walletInfo"
+	WalletKey           = "WalletInfo"
 	MiningAddressKey    = "MiningAddress"
 	CoinbaseAbKey       = "CoinbaseArbitrary"
 )
