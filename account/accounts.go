@@ -4,7 +4,6 @@ package account
 import (
 	"encoding/json"
 	"reflect"
-	"sort"
 	"strings"
 	"sync"
 
@@ -125,7 +124,7 @@ func (m *Manager) saveAccount(account *Account, updateIndex bool) error {
 	storeBatch.Set(database.AccountIDKey(account.ID), rawAccount)
 	storeBatch.Set(database.AccountAliasKey(account.Alias), []byte(account.ID))
 	if updateIndex {
-		storeBatch.Set(GetAccountIndexKey(account.XPubs), common.Unit64ToBytes(account.KeyIndex))
+		storeBatch.Set(database.AccountIndexKey(account.XPubs), common.Unit64ToBytes(account.KeyIndex))
 	}
 	storeBatch.Write()
 	return nil
@@ -150,7 +149,7 @@ func (m *Manager) SaveAccount(account *Account) error {
 	}
 
 	currentIndex := uint64(0)
-	if rawIndexBytes := m.db.Get(GetAccountIndexKey(account.XPubs)); rawIndexBytes != nil {
+	if rawIndexBytes := m.db.Get(database.AccountIndexKey(account.XPubs)); rawIndexBytes != nil {
 		currentIndex = common.BytesToUnit64(rawIndexBytes)
 	}
 	return m.saveAccount(account, account.KeyIndex > currentIndex)
@@ -166,7 +165,7 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string, deriveR
 	}
 
 	acctIndex := uint64(1)
-	if rawIndexBytes := m.db.Get(GetAccountIndexKey(xpubs)); rawIndexBytes != nil {
+	if rawIndexBytes := m.db.Get(database.AccountIndexKey(xpubs)); rawIndexBytes != nil {
 		acctIndex = common.BytesToUnit64(rawIndexBytes) + 1
 	}
 	account, err := CreateAccount(xpubs, quorum, alias, acctIndex, deriveRule)
@@ -660,19 +659,6 @@ func createP2SH(account *Account, path [][]byte) (*CtrlProgram, error) {
 		Address:        address.EncodeAddress(),
 		ControlProgram: control,
 	}, nil
-}
-
-// copy to database...
-func GetAccountIndexKey(xpubs []chainkd.XPub) []byte {
-	var hash [32]byte
-	var xPubs []byte
-	cpy := append([]chainkd.XPub{}, xpubs[:]...)
-	sort.Sort(signers.SortKeys(cpy))
-	for _, xpub := range cpy {
-		xPubs = append(xPubs, xpub[:]...)
-	}
-	sha3pool.Sum256(hash[:], xPubs)
-	return append([]byte(database.AccountIndexPrefix), hash[:]...)
 }
 
 func (m *Manager) getCurrentContractIndex(account *Account, change bool) (uint64, error) {

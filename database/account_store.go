@@ -62,7 +62,7 @@ func (store *AccountStore) SetAccount(accountID, accountAlias string, rawAccount
 
 // SetAccountIndex set account index
 func (store *AccountStore) SetAccountIndex(xpubs []chainkd.XPub, keyIndex uint64) {
-	store.accountDB.Set(GetAccountIndexKey(xpubs), common.Unit64ToBytes(keyIndex))
+	store.accountDB.Set(AccountIndexKey(xpubs), common.Unit64ToBytes(keyIndex))
 }
 
 // GetAccountByAccountAlias get account by account alias
@@ -77,7 +77,7 @@ func (store *AccountStore) GetAccountByAccountID(accountID string) []byte {
 
 // GetAccountIndex get account index by account xpubs
 func (store *AccountStore) GetAccountIndex(xpubs []chainkd.XPub) []byte {
-	return store.accountDB.Get(GetAccountIndexKey(xpubs))
+	return store.accountDB.Get(AccountIndexKey(xpubs))
 }
 
 // DeleteAccountByAccountAlias delete account by account alias
