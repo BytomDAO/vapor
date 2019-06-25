@@ -25,6 +25,7 @@ const (
 // Chain is the interface for Bytom core
 type Chain interface {
 	BestBlockHeader() *types.BlockHeader
+	BestIrreversibleHeader() *types.BlockHeader
 	BestBlockHeight() uint64
 	GetBlockByHash(*bc.Hash) (*types.Block, error)
 	GetBlockByHeight(uint64) (*types.Block, error)
@@ -161,7 +162,7 @@ func (m *Manager) handleGetBlocksMsg(peer *peers.Peer, msg *msgs.GetBlocksMessag
 		rawData, err := block.MarshalText()
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on handleGetBlocksMsg marshal block")
-			continue
+			return
 		}
 
 		if totalSize+len(rawData) > msgs.MaxBlockchainResponseSize/2 {
@@ -181,7 +182,7 @@ func (m *Manager) handleGetBlocksMsg(peer *peers.Peer, msg *msgs.GetBlocksMessag
 }
 
 func (m *Manager) handleGetHeadersMsg(peer *peers.Peer, msg *msgs.GetHeadersMessage) {
-	headers, err := m.blockKeeper.locateHeaders(msg.GetBlockLocator(), msg.GetStopHash())
+	headers, err := m.blockKeeper.locateHeaders(msg.GetBlockLocator(), msg.GetStopHash(), msg.GetSkip(), maxHeadersPerMsg)
 	if err != nil || len(headers) == 0 {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Debug("fail on handleGetHeadersMsg locateHeaders")
 		return
@@ -239,8 +240,8 @@ func (m *Manager) handleHeadersMsg(peer *peers.Peer, msg *msgs.HeadersMessage) {
 
 func (m *Manager) handleStatusMsg(basePeer peers.BasePeer, msg *msgs.StatusMessage) {
 	if peer := m.peers.GetPeer(basePeer.ID()); peer != nil {
-		peer.SetStatus(msg.Height, msg.GetHash())
-		return
+		peer.SetBestStatus(msg.BestHeight, msg.GetBestHash())
+		peer.SetIrreversibleStatus(msg.IrreversibleHeight, msg.GetIrreversibleHash())
 	}
 }
 
@@ -289,7 +290,7 @@ func (m *Manager) processMsg(basePeer peers.BasePeer, msgType byte, msg msgs.Blo
 		"peer":    basePeer.Addr(),
 		"type":    reflect.TypeOf(msg),
 		"message": msg.String(),
-	}).Info("receive message from peer")
+	}).Debug("receive message from peer")
 
 	switch msg := msg.(type) {
 	case *msgs.GetBlockMessage:
@@ -350,7 +351,7 @@ func (m *Manager) SendStatus(peer peers.BasePeer) error {
 		return errors.New("invalid peer")
 	}
 
-	if err := p.SendStatus(m.chain.BestBlockHeader()); err != nil {
+	if err := p.SendStatus(m.chain.BestBlockHeader(), m.chain.BestIrreversibleHeader()); err != nil {
 		m.peers.RemovePeer(p.ID())
 		return err
 	}
@@ -363,7 +364,7 @@ func (m *Manager) Start() error {
 	if err != nil {
 		return err
 	}
-
+	m.blockKeeper.start()
 	go m.broadcastTxsLoop()
 	go m.syncMempoolLoop()
 
@@ -372,5 +373,6 @@ func (m *Manager) Start() error {
 
 //Stop stop sync manager
 func (m *Manager) Stop() {
+	m.blockKeeper.stop()
 	close(m.quit)
 }

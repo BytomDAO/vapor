@@ -194,10 +194,15 @@ func (tp *TxPool) HaveTransaction(txHash *bc.Hash) bool {
 
 func isTransactionNoBtmInput(tx *types.Tx) bool {
 	for _, input := range tx.TxData.Inputs {
+		switch input.InputType() {
+		case types.CrossChainInputType:
+			return false
+		}
 		if input.AssetID() == *consensus.BTMAssetID {
 			return false
 		}
 	}
+
 	return true
 }
 
