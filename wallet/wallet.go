@@ -205,9 +205,8 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 		w.status.BestHeight = w.status.WorkHeight
 		w.status.BestHash = w.status.WorkHash
 	}
-	err = w.commitWalletInfo()
 
-	return err
+	return w.commitWalletInfo()
 }
 
 // DetachBlock detach a block and rollback state
@@ -234,9 +233,8 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 		w.status.WorkHeight = w.status.BestHeight
 		w.status.WorkHash = w.status.BestHash
 	}
-	err = w.commitWalletInfo()
 
-	return err
+	return w.commitWalletInfo()
 }
 
 //WalletUpdate process every valid block and reverse every invalid block which need to rollback
