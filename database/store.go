@@ -128,7 +128,7 @@ func GetBlockTransactions(db dbm.DB, hash *bc.Hash) ([]*types.Tx, error) {
 func GetBlockHashesByHeight(db dbm.DB, height uint64) ([]*bc.Hash, error) {
 	binaryHashes := db.Get(calcBlockHashesPrefix(height))
 	if binaryHashes == nil {
-		return nil, nil
+		return []*bc.Hash{}, nil
 	}
 
 	hashes := []*bc.Hash{}
@@ -293,7 +293,7 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 	blockHashes := []*bc.Hash{}
 	if hashes, err := s.GetBlockHashesByHeight(block.Height); err != nil {
 		return err
-	} else if hashes != nil {
+	} else if len(hashes) != 0 {
 		blockHashes = append(blockHashes, hashes...)
 	}
 	blockHash := block.Hash()
