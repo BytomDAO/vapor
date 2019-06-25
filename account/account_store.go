@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/vapor/common"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	dbm "github.com/vapor/database/leveldb"
@@ -28,16 +27,16 @@ type AccountStorer interface {
 	GetCoinbaseArbitrary() []byte
 	SetCoinbaseArbitrary([]byte)
 	GetMiningAddress() []byte
-	GetFirstAccount() (*Account, error)
+	GetFirstAccount() ([]byte, error)
 	SetMiningAddress([]byte)
 	GetBip44ContractIndex(string, bool) []byte
 	GetRawProgram(common.Hash) []byte // duplicate in WalletStorer
-	GetAccounts(string) ([]*Account, error)
-	GetControlPrograms() ([]*CtrlProgram, error)
+	GetAccounts(string) ([][]byte, error)
+	GetControlPrograms() ([][]byte, error)
 	SetRawProgram(common.Hash, []byte)
 	SetContractIndex(string, uint64)
 	SetBip44ContractIndex(string, bool, uint64)
-	GetUTXOs(string) []*UTXO
+	GetUTXOs(string) [][]byte
 	GetStandardUTXO(bc.Hash) []byte // duplicate in WalletStorer
 	GetContractUTXO(bc.Hash) []byte
 }
@@ -148,18 +147,13 @@ func (store *AccountStore) GetMiningAddress() []byte {
 }
 
 // GetFirstAccount get first account
-func (store *AccountStore) GetFirstAccount() (*Account, error) {
+func (store *AccountStore) GetFirstAccount() ([]byte, error) {
 	accountIter := store.accountDB.IteratorPrefix([]byte(accountPrefix))
 	defer accountIter.Release()
 	if !accountIter.Next() {
 		return nil, ErrFindAccount
 	}
-
-	account := &Account{}
-	if err := json.Unmarshal(accountIter.Value(), account); err != nil {
-		return nil, err
-	}
-	return account, nil
+	return accountIter.Value(), nil
 }
 
 // SetMiningAddress set mining address
@@ -178,33 +172,25 @@ func (store *AccountStore) GetRawProgram(hash common.Hash) []byte {
 }
 
 // GetAccounts get all accounts which name prfix is id.
-func (store *AccountStore) GetAccounts(id string) ([]*Account, error) {
-	accounts := []*Account{}
+func (store *AccountStore) GetAccounts(id string) ([][]byte, error) {
+	accounts := make([][]byte, 0)
 	accountIter := store.accountDB.IteratorPrefix(Key(strings.TrimSpace(id)))
 	defer accountIter.Release()
 
 	for accountIter.Next() {
-		account := &Account{}
-		if err := json.Unmarshal(accountIter.Value(), &account); err != nil {
-			return nil, err
-		}
-		accounts = append(accounts, account)
+		accounts = append(accounts, accountIter.Value())
 	}
 	return accounts, nil
 }
 
 // GetControlPrograms get all local control programs
-func (store *AccountStore) GetControlPrograms() ([]*CtrlProgram, error) {
-	cps := []*CtrlProgram{}
+func (store *AccountStore) GetControlPrograms() ([][]byte, error) {
+	cps := make([][]byte, 0)
 	cpIter := store.accountDB.IteratorPrefix(contractPrefix)
 	defer cpIter.Release()
 
 	for cpIter.Next() {
-		cp := &CtrlProgram{}
-		if err := json.Unmarshal(cpIter.Value(), cp); err != nil {
-			return nil, err
-		}
-		cps = append(cps, cp)
+		cps = append(cps, cpIter.Value())
 	}
 	return cps, nil
 }
@@ -225,17 +211,13 @@ func (store *AccountStore) SetBip44ContractIndex(accountID string, change bool, 
 }
 
 // GetUTXOs get utxos by accountID
-func (store *AccountStore) GetUTXOs(accountID string) []*UTXO {
-	utxos := []*UTXO{}
+func (store *AccountStore) GetUTXOs(accountID string) [][]byte {
+	utxos := make([][]byte, 0)
 	utxoIter := store.accountDB.IteratorPrefix([]byte(UTXOPreFix))
 	defer utxoIter.Release()
+
 	for utxoIter.Next() {
-		u := &UTXO{}
-		if err := json.Unmarshal(utxoIter.Value(), u); err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("utxoKeeper findUtxos fail on unmarshal utxo")
-			continue
-		}
-		utxos = append(utxos, u)
+		utxos = append(utxos, utxoIter.Value())
 	}
 	return utxos
 }
