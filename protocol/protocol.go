@@ -109,7 +109,11 @@ func (c *Chain) BestBlockHash() *bc.Hash {
 	return &bestHash
 }
 
-// BestBlockHeader returns the chain tail block
+// BestIrreversibleHeader returns the chain best irreversible block
+func (c *Chain) BestIrreversibleHeader() *types.BlockHeader {
+	return c.bestIrreversibleNode.BlockHeader()
+}
+
 func (c *Chain) BestBlockHeader() *types.BlockHeader {
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()

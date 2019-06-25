@@ -117,12 +117,14 @@ func (m *BlockMessage) String() string {
 type GetHeadersMessage struct {
 	RawBlockLocator [][32]byte
 	RawStopHash     [32]byte
+	Skip            uint64
 }
 
 //NewGetHeadersMessage return a new GetHeadersMessage
-func NewGetHeadersMessage(blockLocator []*bc.Hash, stopHash *bc.Hash) *GetHeadersMessage {
+func NewGetHeadersMessage(blockLocator []*bc.Hash, stopHash *bc.Hash, skip uint64) *GetHeadersMessage {
 	msg := &GetHeadersMessage{
 		RawStopHash: stopHash.Byte32(),
+		Skip:        skip,
 	}
 	for _, hash := range blockLocator {
 		msg.RawBlockLocator = append(msg.RawBlockLocator, hash.Byte32())
@@ -141,13 +143,18 @@ func (m *GetHeadersMessage) GetBlockLocator() []*bc.Hash {
 }
 
 func (m *GetHeadersMessage) String() string {
-	return fmt.Sprintf("{stop_hash: %s}", hex.EncodeToString(m.RawStopHash[:]))
+	stopHash := bc.NewHash(m.RawStopHash)
+	return fmt.Sprintf("{skip:%d,stopHash:%s}", m.Skip, stopHash.String())
 }
 
 //GetStopHash return the stop hash of the msg
 func (m *GetHeadersMessage) GetStopHash() *bc.Hash {
 	hash := bc.NewHash(m.RawStopHash)
 	return &hash
+}
+
+func (m *GetHeadersMessage) GetSkip() uint64 {
+	return m.Skip
 }
 
 //HeadersMessage is one of the bytom msg type
@@ -263,26 +270,35 @@ func (m *BlocksMessage) String() string {
 
 //StatusResponseMessage get status response msg
 type StatusMessage struct {
-	Height  uint64
-	RawHash [32]byte
+	BestHeight         uint64
+	BestHash           [32]byte
+	IrreversibleHeight uint64
+	IrreversibleHash   [32]byte
 }
 
 //NewStatusResponseMessage construct get status response msg
-func NewStatusMessage(blockHeader *types.BlockHeader) *StatusMessage {
+func NewStatusMessage(bestHeader, irreversibleHeader *types.BlockHeader) *StatusMessage {
 	return &StatusMessage{
-		Height:  blockHeader.Height,
-		RawHash: blockHeader.Hash().Byte32(),
+		BestHeight:         bestHeader.Height,
+		BestHash:           bestHeader.Hash().Byte32(),
+		IrreversibleHeight: irreversibleHeader.Height,
+		IrreversibleHash:   irreversibleHeader.Hash().Byte32(),
 	}
 }
 
 //GetHash get hash from msg
-func (m *StatusMessage) GetHash() *bc.Hash {
-	hash := bc.NewHash(m.RawHash)
+func (m *StatusMessage) GetBestHash() *bc.Hash {
+	hash := bc.NewHash(m.BestHash)
+	return &hash
+}
+
+func (m *StatusMessage) GetIrreversibleHash() *bc.Hash {
+	hash := bc.NewHash(m.IrreversibleHash)
 	return &hash
 }
 
 func (m *StatusMessage) String() string {
-	return fmt.Sprintf("{height: %d, hash: %s}", m.Height, hex.EncodeToString(m.RawHash[:]))
+	return fmt.Sprintf("{best hash: %s, irreversible hash: %s}", hex.EncodeToString(m.BestHash[:]), hex.EncodeToString(m.IrreversibleHash[:]))
 }
 
 //TransactionMessage notify new tx msg
