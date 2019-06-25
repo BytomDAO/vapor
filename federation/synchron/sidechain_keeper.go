@@ -148,7 +148,7 @@ func (s *sidechainKeeper) processDepositTx(chain *orm.Chain, block *types.Block,
 	stmt := s.db.Model(&orm.CrossTransaction{}).Where("chain_id != ?", chain.ID).
 		Where(&orm.CrossTransaction{
 			DestTxHash: sql.NullString{tx.ID.String(), true},
-			Status:     common.CrossTxSubmittedStatus,
+			Status:     common.CrossTxPendingStatus,
 		}).UpdateColumn(&orm.CrossTransaction{
 		DestBlockHeight: sql.NullInt64{int64(block.Height), true},
 		DestBlockHash:   sql.NullString{blockHash.String(), true},
@@ -198,7 +198,7 @@ func (s *sidechainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Blo
 		DestBlockHash:        sql.NullString{Valid: false},
 		DestTxIndex:          sql.NullInt64{Valid: false},
 		DestTxHash:           sql.NullString{Valid: false},
-		Status:               common.CrossTxInitiatedStatus,
+		Status:               common.CrossTxPendingStatus,
 	}
 	if err := s.db.Create(ormTx).Error; err != nil {
 		return errors.Wrap(err, fmt.Sprintf("create sidechain WithdrawalTx %s", tx.ID.String()))
