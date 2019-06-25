@@ -15,9 +15,12 @@ func (s *Server) ListCrosschainTxs(c *gin.Context, listTxsReq *listCrosschainTxs
 	// if asset, err := listTxsReq.GetFilterString("asset_id"); err == nil && asset != "" {
 	// 	txQuery = txQuery.Joins("join assets on assets.id = address_transactions.asset_id").Where(&orm.Asset{Asset: asset})
 	// }
-	// if txHash, err := listTxsReq.GetFilterString("tx_hash"); err == nil && txHash != "" {
-	// 	txQuery = txQuery.Where("hash = ?", txHash)
-	// }
+	if txHash, err := listTxsReq.GetFilterString("source_tx_hash"); err == nil && txHash != "" {
+		txQuery = txQuery.Where("source_tx_hash = ?", txHash)
+	}
+	if txHash, err := listTxsReq.GetFilterString("dest_tx_hash"); err == nil && txHash != "" {
+		txQuery = txQuery.Where("dest_tx_hash = ?", txHash)
+	}
 	// if listTxsReq.Sorter.By == "amount" {
 	// 	txQuery = txQuery.Order(fmt.Sprintf("address_transactions.amount %s", listTxsReq.Sorter.Order))
 	// }
