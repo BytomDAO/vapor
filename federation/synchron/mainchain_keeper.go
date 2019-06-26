@@ -209,6 +209,10 @@ func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *types.Block,
 func (m *mainchainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types.Tx, statusFail bool) ([]*orm.CrossTransactionReq, error) {
 	// assume inputs are from an identical owner
 	script := hex.EncodeToString(tx.Inputs[0].ControlProgram())
+
+	fromAddress := ""
+	toAddress := ""
+
 	reqs := []*orm.CrossTransactionReq{}
 	for i, rawOutput := range tx.Outputs {
 		// check valid deposit
@@ -231,6 +235,8 @@ func (m *mainchainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types
 			AssetID:            asset.ID,
 			AssetAmount:        rawOutput.OutputCommitment.AssetAmount.Amount,
 			Script:             script,
+			FromAddress:        fromAddress,
+			ToAddress:          toAddress,
 		}
 		reqs = append(reqs, req)
 	}
