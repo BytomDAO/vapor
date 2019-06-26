@@ -10,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/consensus"
+	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/common"
 	"github.com/vapor/federation/config"
@@ -18,6 +19,7 @@ import (
 	"github.com/vapor/federation/service"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/wallet"
 )
 
 type sidechainKeeper struct {
@@ -150,10 +152,11 @@ func (s *sidechainKeeper) processDepositTx(chain *orm.Chain, block *types.Block,
 			DestTxHash: sql.NullString{tx.ID.String(), true},
 			Status:     common.CrossTxPendingStatus,
 		}).UpdateColumn(&orm.CrossTransaction{
-		DestBlockHeight: sql.NullInt64{int64(block.Height), true},
-		DestBlockHash:   sql.NullString{blockHash.String(), true},
-		DestTxIndex:     sql.NullInt64{int64(txIndex), true},
-		Status:          common.CrossTxCompletedStatus,
+		DestBlockHeight:    sql.NullInt64{int64(block.Height), true},
+		DestBlockTimestamp: sql.NullInt64{int64(block.Timestamp), true},
+		DestBlockHash:      sql.NullString{blockHash.String(), true},
+		DestTxIndex:        sql.NullInt64{int64(txIndex), true},
+		Status:             common.CrossTxCompletedStatus,
 	})
 	if stmt.Error != nil {
 		return stmt.Error
@@ -189,12 +192,14 @@ func (s *sidechainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Blo
 	ormTx := &orm.CrossTransaction{
 		ChainID:              chain.ID,
 		SourceBlockHeight:    block.Height,
+		SourceBlockTimestamp: block.Timestamp,
 		SourceBlockHash:      blockHash.String(),
 		SourceTxIndex:        txIndex,
 		SourceMuxID:          muxID.String(),
 		SourceTxHash:         tx.ID.String(),
 		SourceRawTransaction: string(rawTx),
 		DestBlockHeight:      sql.NullInt64{Valid: false},
+		DestBlockTimestamp:   sql.NullInt64{Valid: false},
 		DestBlockHash:        sql.NullString{Valid: false},
 		DestTxIndex:          sql.NullInt64{Valid: false},
 		DestTxHash:           sql.NullString{Valid: false},
@@ -220,6 +225,19 @@ func (s *sidechainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Blo
 }
 
 func (s *sidechainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types.Tx, statusFail bool) ([]*orm.CrossTransactionReq, error) {
+	var fromAddress string
+	inputCP := tx.Inputs[0].ControlProgram()
+	switch {
+	case segwit.IsP2WPKHScript(inputCP):
+		if pubHash, err := segwit.GetHashFromStandardProg(inputCP); err == nil {
+			fromAddress = wallet.BuildP2PKHAddress(pubHash, &consensus.VaporNetParams)
+		}
+	case segwit.IsP2WSHScript(inputCP):
+		if scriptHash, err := segwit.GetHashFromStandardProg(inputCP); err == nil {
+			fromAddress = wallet.BuildP2SHAddress(scriptHash, &consensus.VaporNetParams)
+		}
+	}
+
 	reqs := []*orm.CrossTransactionReq{}
 	for i, rawOutput := range tx.Outputs {
 		// check valid withdrawal
@@ -236,12 +254,27 @@ func (s *sidechainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types
 			return nil, err
 		}
 
+		var toAddress string
+		outputCP := rawOutput.ControlProgram()
+		switch {
+		case segwit.IsP2WPKHScript(outputCP):
+			if pubHash, err := segwit.GetHashFromStandardProg(outputCP); err == nil {
+				toAddress = wallet.BuildP2PKHAddress(pubHash, &consensus.MainNetParams)
+			}
+		case segwit.IsP2WSHScript(outputCP):
+			if scriptHash, err := segwit.GetHashFromStandardProg(outputCP); err == nil {
+				toAddress = wallet.BuildP2SHAddress(scriptHash, &consensus.MainNetParams)
+			}
+		}
+
 		req := &orm.CrossTransactionReq{
 			CrossTransactionID: crossTransactionID,
 			SourcePos:          uint64(i),
 			AssetID:            asset.ID,
 			AssetAmount:        rawOutput.OutputCommitment().AssetAmount.Amount,
 			Script:             hex.EncodeToString(rawOutput.ControlProgram()),
+			FromAddress:        fromAddress,
+			ToAddress:          toAddress,
 		}
 		reqs = append(reqs, req)
 	}

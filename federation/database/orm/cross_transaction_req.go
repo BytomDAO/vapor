@@ -11,6 +11,8 @@ type CrossTransactionReq struct {
 	AssetID            uint64          `json:"-"`
 	AssetAmount        uint64          `json:"amount"`
 	Script             string          `json:"-"`
+	FromAddress        string          `json:"from_address"`
+	ToAddress          string          `json:"to_address"`
 	CreatedAt          types.Timestamp `json:"-"`
 	UpdatedAt          types.Timestamp `json:"-"`
 

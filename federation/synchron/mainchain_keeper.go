@@ -7,12 +7,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bytom/consensus"
+	btmConsensus "github.com/bytom/consensus"
 	btmBc "github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 
+	vaporConsensus "github.com/vapor/consensus"
+	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/common"
 	"github.com/vapor/federation/config"
@@ -21,6 +23,7 @@ import (
 	"github.com/vapor/federation/service"
 	"github.com/vapor/federation/util"
 	"github.com/vapor/protocol/bc"
+	"github.com/vapor/wallet"
 )
 
 type mainchainKeeper struct {
@@ -174,12 +177,14 @@ func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *types.Block,
 	ormTx := &orm.CrossTransaction{
 		ChainID:              chain.ID,
 		SourceBlockHeight:    block.Height,
+		SourceBlockTimestamp: block.Timestamp,
 		SourceBlockHash:      blockHash.String(),
 		SourceTxIndex:        txIndex,
 		SourceMuxID:          muxID.String(),
 		SourceTxHash:         tx.ID.String(),
 		SourceRawTransaction: string(rawTx),
 		DestBlockHeight:      sql.NullInt64{Valid: false},
+		DestBlockTimestamp:   sql.NullInt64{Valid: false},
 		DestBlockHash:        sql.NullString{Valid: false},
 		DestTxIndex:          sql.NullInt64{Valid: false},
 		DestTxHash:           sql.NullString{Valid: false},
@@ -205,8 +210,23 @@ func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *types.Block,
 }
 
 func (m *mainchainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types.Tx, statusFail bool) ([]*orm.CrossTransactionReq, error) {
+	var fromAddress, toAddress string
 	// assume inputs are from an identical owner
-	script := hex.EncodeToString(tx.Inputs[0].ControlProgram())
+	prog := tx.Inputs[0].ControlProgram()
+	script := hex.EncodeToString(prog)
+	switch {
+	case segwit.IsP2WPKHScript(prog):
+		if pubHash, err := segwit.GetHashFromStandardProg(prog); err == nil {
+			fromAddress = wallet.BuildP2PKHAddress(pubHash, &vaporConsensus.MainNetParams)
+			toAddress = wallet.BuildP2PKHAddress(pubHash, &vaporConsensus.VaporNetParams)
+		}
+	case segwit.IsP2WSHScript(prog):
+		if scriptHash, err := segwit.GetHashFromStandardProg(prog); err == nil {
+			fromAddress = wallet.BuildP2SHAddress(scriptHash, &vaporConsensus.MainNetParams)
+			toAddress = wallet.BuildP2SHAddress(scriptHash, &vaporConsensus.VaporNetParams)
+		}
+	}
+
 	reqs := []*orm.CrossTransactionReq{}
 	for i, rawOutput := range tx.Outputs {
 		// check valid deposit
@@ -214,7 +234,7 @@ func (m *mainchainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types
 			continue
 		}
 
-		if statusFail && *rawOutput.OutputCommitment.AssetAmount.AssetId != *consensus.BTMAssetID {
+		if statusFail && *rawOutput.OutputCommitment.AssetAmount.AssetId != *btmConsensus.BTMAssetID {
 			continue
 		}
 
@@ -229,6 +249,8 @@ func (m *mainchainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types
 			AssetID:            asset.ID,
 			AssetAmount:        rawOutput.OutputCommitment.AssetAmount.Amount,
 			Script:             script,
+			FromAddress:        fromAddress,
+			ToAddress:          toAddress,
 		}
 		reqs = append(reqs, req)
 	}
@@ -242,10 +264,11 @@ func (m *mainchainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Blo
 			DestTxHash: sql.NullString{tx.ID.String(), true},
 			Status:     common.CrossTxPendingStatus,
 		}).UpdateColumn(&orm.CrossTransaction{
-		DestBlockHeight: sql.NullInt64{int64(block.Height), true},
-		DestBlockHash:   sql.NullString{blockHash.String(), true},
-		DestTxIndex:     sql.NullInt64{int64(txIndex), true},
-		Status:          common.CrossTxCompletedStatus,
+		DestBlockHeight:    sql.NullInt64{int64(block.Height), true},
+		DestBlockTimestamp: sql.NullInt64{int64(block.Timestamp), true},
+		DestBlockHash:      sql.NullString{blockHash.String(), true},
+		DestTxIndex:        sql.NullInt64{int64(txIndex), true},
+		Status:             common.CrossTxCompletedStatus,
 	})
 	if stmt.Error != nil {
 		return stmt.Error
