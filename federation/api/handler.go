@@ -16,24 +16,29 @@ type listCrosschainTxsReq struct{ Display }
 func (s *Server) ListCrosschainTxs(c *gin.Context, listTxsReq *listCrosschainTxsReq, query *PaginationQuery) ([]*orm.CrossTransaction, error) {
 	var ormTxs []*orm.CrossTransaction
 	txFilter := &orm.CrossTransaction{}
-	if listPending, err := listTxsReq.GetFilterBoolean("list_pending"); err == nil && listPending {
-		txFilter.Status = common.CrossTxPendingStatus
+
+	// filter tx status
+	if status, err := listTxsReq.GetFilterString("status"); err == nil && status != "" {
+		switch status {
+		case "pending":
+			txFilter.Status = common.CrossTxPendingStatus
+		case "completed":
+			txFilter.Status = common.CrossTxCompletedStatus
+		}
 	}
-	if listCompleted, err := listTxsReq.GetFilterBoolean("list_completed"); err == nil && listCompleted {
-		txFilter.Status = common.CrossTxCompletedStatus
-	}
+
+	// filter tx hash
 	if txHash, err := listTxsReq.GetFilterString("source_tx_hash"); err == nil && txHash != "" {
 		txFilter.SourceTxHash = txHash
 	}
 	if txHash, err := listTxsReq.GetFilterString("dest_tx_hash"); err == nil && txHash != "" {
 		txFilter.DestTxHash = sql.NullString{txHash, true}
 	}
+
 	txQuery := s.db.Preload("Chain").Preload("Reqs").Preload("Reqs.Asset").Where(txFilter)
-	if onlyFromMainchain, err := listTxsReq.GetFilterBoolean("only_from_mainchain"); err == nil && onlyFromMainchain {
-		txQuery = txQuery.Joins("join chains on chains.id = cross_transactions.chain_id").Where("chains.name = ?", common.MainchainName)
-	}
-	if onlyFromSidechain, err := listTxsReq.GetFilterBoolean("only_from_sidechain"); err == nil && onlyFromSidechain {
-		txQuery = txQuery.Joins("join chains on chains.id = cross_transactions.chain_id").Where("chains.name = ?", common.SidechainName)
+	// filter direction
+	if fromChainName, err := listTxsReq.GetFilterString("from"); err == nil && fromChainName != "" {
+		txQuery = txQuery.Joins("join chains on chains.id = cross_transactions.chain_id").Where("chains.name = ?", fromChainName)
 	}
 	txQuery = txQuery.Order(fmt.Sprintf("cross_transactions.source_block_height %s", listTxsReq.Sorter.Order))
 	txQuery = txQuery.Order(fmt.Sprintf("cross_transactions.source_tx_index %s", listTxsReq.Sorter.Order))
