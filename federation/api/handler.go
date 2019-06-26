@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -19,10 +20,10 @@ func (s *Server) ListCrosschainTxs(c *gin.Context, listTxsReq *listCrosschainTxs
 
 	// filter tx status
 	if status, err := listTxsReq.GetFilterString("status"); err == nil && status != "" {
-		switch status {
-		case "pending":
+		switch strings.ToLower(status) {
+		case common.CrossTxPendingStatusLabel:
 			txFilter.Status = common.CrossTxPendingStatus
-		case "completed":
+		case common.CrossTxCompletedStatusLabel:
 			txFilter.Status = common.CrossTxCompletedStatus
 		}
 	}
@@ -37,7 +38,7 @@ func (s *Server) ListCrosschainTxs(c *gin.Context, listTxsReq *listCrosschainTxs
 
 	txQuery := s.db.Preload("Chain").Preload("Reqs").Preload("Reqs.Asset").Where(txFilter)
 	// filter direction
-	if fromChainName, err := listTxsReq.GetFilterString("from"); err == nil && fromChainName != "" {
+	if fromChainName, err := listTxsReq.GetFilterString("from_chain"); err == nil && fromChainName != "" {
 		txQuery = txQuery.Joins("join chains on chains.id = cross_transactions.chain_id").Where("chains.name = ?", fromChainName)
 	}
 	txQuery = txQuery.Order(fmt.Sprintf("cross_transactions.source_block_height %s", listTxsReq.Sorter.Order))

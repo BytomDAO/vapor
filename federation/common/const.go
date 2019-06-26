@@ -5,3 +5,8 @@ const (
 	CrossTxPendingStatus
 	CrossTxCompletedStatus
 )
+
+const (
+	CrossTxPendingStatusLabel   = "pending"
+	CrossTxCompletedStatusLabel = "completed"
+)
