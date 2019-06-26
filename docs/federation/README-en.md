@@ -92,7 +92,7 @@ Optional:
 - `Object` - *filter*, transactions filter.
     + Optional
         * `String` - *status*, transactions status, which can be `pending` or `completed`.
-        * `String` - *from*, transactions source chain, which can be `bytom` or `vapor`.
+        * `String` - *from_chain*, transactions source chain, which can be `bytom` or `vapor`.
         * `String` - *source_tx_hash*, souce transaction hash string.
         * `String` - *dest_tx_hash*, destination transaction hash string.
 - `Object` - *sort*, transactions sorter.
