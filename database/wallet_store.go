@@ -1,14 +1,163 @@
 package database
 
 import (
+	"encoding/binary"
 	"encoding/json"
+	"fmt"
+	"sort"
 
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/query"
+	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/common"
+	"github.com/vapor/crypto/ed25519/chainkd"
+	"github.com/vapor/crypto/sha3pool"
 	dbm "github.com/vapor/database/leveldb"
+	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 )
+
+const (
+	// UTXOPrefix          = "ACU:" //UTXOPrefix is StandardUTXOKey prefix
+	// SUTXOPrefix         = "SCU:" //SUTXOPrefix is ContractUTXOKey prefix
+	ContractPrefix = "Contract:"
+
+// ContractIndexPrefix = "ContractIndex:"
+// AccountPrefix       = "Account:" // AccountPrefix is account ID prefix
+// AccountAliasPrefix  = "AccountAlias:"
+// AccountIndexPrefix  = "AccountIndex:"
+// TxPrefix            = "TXS:"  //TxPrefix is wallet database transactions prefix
+// TxIndexPrefix       = "TID:"  //TxIndexPrefix is wallet database tx index prefix
+// UnconfirmedTxPrefix = "UTXS:" //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
+// GlobalTxIndexPrefix = "GTID:" //GlobalTxIndexPrefix is wallet database global tx index prefix
+// WalletKey        = "WalletInfo"
+// MiningAddressKey = "MiningAddress"
+// CoinbaseAbKey    = "CoinbaseArbitrary"
+)
+
+const (
+	utxoPrefix  byte = iota //UTXOPrefix is StandardUTXOKey prefix
+	sUTXOPrefix             //SUTXOPrefix is ContractUTXOKey prefix
+	contractPrefix
+	contractIndexPrefix
+	accountPrefix // AccountPrefix is account ID prefix
+	accountAliasPrefix
+	accountIndexPrefix
+	txPrefix            //TxPrefix is wallet database transactions prefix
+	txIndexPrefix       //TxIndexPrefix is wallet database tx index prefix
+	unconfirmedTxPrefix //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
+	globalTxIndexPrefix //GlobalTxIndexPrefix is wallet database global tx index prefix
+	walletKey
+	miningAddressKey
+	coinbaseAbKey
+)
+
+// leveldb key prefix
+var (
+	UTXOPrefix  = []byte{utxoPrefix, colon}
+	SUTXOPrefix = []byte{sUTXOPrefix, colon}
+	// ContractPrefix      = []byte{contractPrefix, colon}
+	ContractIndexPrefix = []byte{contractIndexPrefix, colon}
+	AccountPrefix       = []byte{accountPrefix, colon} // AccountPrefix is account ID prefix
+	AccountAliasPrefix  = []byte{accountAliasPrefix, colon}
+	AccountIndexPrefix  = []byte{accountIndexPrefix, colon}
+	TxPrefix            = []byte{txPrefix, colon}            //TxPrefix is wallet database transactions prefix
+	TxIndexPrefix       = []byte{txIndexPrefix, colon}       //TxIndexPrefix is wallet database tx index prefix
+	UnconfirmedTxPrefix = []byte{unconfirmedTxPrefix, colon} //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
+	GlobalTxIndexPrefix = []byte{globalTxIndexPrefix, colon} //GlobalTxIndexPrefix is wallet database global tx index prefix
+	WalletKey           = []byte{walletKey}
+	MiningAddressKey    = []byte{miningAddressKey}
+	CoinbaseAbKey       = []byte{coinbaseAbKey}
+)
+
+// errors
+var (
+	ErrFindAccount       = errors.New("Failed to find account")
+	errAccntTxIDNotFound = errors.New("account TXID not found")
+)
+
+func accountIndexKey(xpubs []chainkd.XPub) []byte {
+	var hash [32]byte
+	var xPubs []byte
+	cpy := append([]chainkd.XPub{}, xpubs[:]...)
+	sort.Sort(signers.SortKeys(cpy))
+	for _, xpub := range cpy {
+		xPubs = append(xPubs, xpub[:]...)
+	}
+	sha3pool.Sum256(hash[:], xPubs)
+	return append([]byte(AccountIndexPrefix), hash[:]...)
+}
+
+func Bip44ContractIndexKey(accountID string, change bool) []byte {
+	key := append([]byte(ContractIndexPrefix), accountID...)
+	if change {
+		return append(key, []byte{1}...)
+	}
+	return append(key, []byte{0}...)
+}
+
+// ContractKey account control promgram store prefix
+func ContractKey(hash common.Hash) []byte {
+	// h := hash.Str()
+	// return append([]byte(ContractPrefix), []byte(h)...)
+	return append([]byte(ContractPrefix), hash[:]...)
+}
+
+// AccountIDKey account id store prefix
+func AccountIDKey(accountID string) []byte {
+	return append([]byte(AccountPrefix), []byte(accountID)...)
+}
+
+// StandardUTXOKey makes an account unspent outputs key to store
+func StandardUTXOKey(id bc.Hash) []byte {
+	name := id.String()
+	return append(UTXOPrefix, []byte(name)...)
+}
+
+// ContractUTXOKey makes a smart contract unspent outputs key to store
+func ContractUTXOKey(id bc.Hash) []byte {
+	name := id.String()
+	return append(SUTXOPrefix, []byte(name)...)
+}
+
+func calcDeleteKey(blockHeight uint64) []byte {
+	return []byte(fmt.Sprintf("%s%016x", TxPrefix, blockHeight))
+}
+
+func calcTxIndexKey(txID string) []byte {
+	return append(TxIndexPrefix, []byte(txID)...)
+}
+
+func calcAnnotatedKey(formatKey string) []byte {
+	return append(TxPrefix, []byte(formatKey)...)
+}
+
+func calcUnconfirmedTxKey(formatKey string) []byte {
+	return append(UnconfirmedTxPrefix, []byte(formatKey)...)
+}
+
+func calcGlobalTxIndexKey(txID string) []byte {
+	return append(GlobalTxIndexPrefix, []byte(txID)...)
+}
+
+func CalcGlobalTxIndex(blockHash *bc.Hash, position uint64) []byte {
+	txIdx := make([]byte, 40)
+	copy(txIdx[:32], blockHash.Bytes())
+	binary.BigEndian.PutUint64(txIdx[32:], position)
+	return txIdx
+}
+
+func formatKey(blockHeight uint64, position uint32) string {
+	return fmt.Sprintf("%016x%08x", blockHeight, position)
+}
+
+func contractIndexKey(accountID string) []byte {
+	return append([]byte(ContractIndexPrefix), []byte(accountID)...)
+}
+
+func accountAliasKey(name string) []byte {
+	return append([]byte(AccountAliasPrefix), []byte(name)...)
+}
 
 // WalletStore store wallet using leveldb
 type WalletStore struct {

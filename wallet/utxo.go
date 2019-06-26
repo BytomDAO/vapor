@@ -27,7 +27,7 @@ func (w *Wallet) GetAccountUtxos(accountID string, id string, unconfirmed, isSma
 		accountUtxos = w.AccountMgr.ListUnconfirmedUtxo(accountID, isSmartContract)
 	}
 
-	rawConfirmedUTXOs := w.store.GetAccountUTXOs(prefix + id)
+	rawConfirmedUTXOs := w.store.GetAccountUTXOs(string(prefix) + id)
 	confirmedUTXOs := []*account.UTXO{}
 	for _, rawConfirmedUTXO := range rawConfirmedUTXOs {
 		confirmedUTXO := new(account.UTXO)
