@@ -449,13 +449,16 @@ func (m *Manager) GetCoinbaseCtrlProgram() (*CtrlProgram, error) {
 		return cp, json.Unmarshal(data, cp)
 	}
 
-	fistAccount, err := m.store.GetFirstAccount()
-	if err != nil {
-		return nil, err
+	firstAccount := make([]byte, 0)
+	accounts := m.store.GetAccounts("")
+	if len(accounts) > 0 {
+		firstAccount = accounts[0]
+	} else {
+		return nil, ErrFindAccount
 	}
 
 	account := &Account{}
-	if err := json.Unmarshal(fistAccount, account); err != nil {
+	if err := json.Unmarshal(firstAccount, account); err != nil {
 		return nil, err
 	}
 

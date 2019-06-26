@@ -182,17 +182,6 @@ func (store *AccountStore) GetMiningAddress() []byte {
 	return store.accountDB.Get([]byte(MiningAddressKey))
 }
 
-// GetFirstAccount get first account
-func (store *AccountStore) GetFirstAccount() ([]byte, error) {
-	accountIter := store.accountDB.IteratorPrefix([]byte(AccountPrefix))
-	defer accountIter.Release()
-
-	if !accountIter.Next() {
-		return nil, ErrFindAccount
-	}
-	return accountIter.Value(), nil
-}
-
 // SetMiningAddress set mining address
 func (store *AccountStore) SetMiningAddress(rawProgram []byte) {
 	if store.batch == nil {
