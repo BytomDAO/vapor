@@ -20,6 +20,7 @@ import (
 const (
 	// UTXOPrefix          = "ACU:" //UTXOPrefix is StandardUTXOKey prefix
 	// SUTXOPrefix         = "SCU:" //SUTXOPrefix is ContractUTXOKey prefix
+
 	ContractPrefix = "Contract:"
 
 // ContractIndexPrefix = "ContractIndex:"
@@ -100,7 +101,7 @@ func Bip44ContractIndexKey(accountID string, change bool) []byte {
 func ContractKey(hash common.Hash) []byte {
 	// h := hash.Str()
 	// return append([]byte(ContractPrefix), []byte(h)...)
-	return append([]byte(ContractPrefix), hash[:]...)
+	return append([]byte(ContractPrefix), hash.Bytes()...)
 }
 
 // AccountIDKey account id store prefix
