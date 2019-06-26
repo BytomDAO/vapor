@@ -42,7 +42,7 @@ type StatusInfo struct {
 
 //Wallet is related to storing account unspent outputs
 type Wallet struct {
-	store           database.WalletStorer
+	store           WalletStorer
 	rw              sync.RWMutex
 	status          StatusInfo
 	TxIndexFlag     bool

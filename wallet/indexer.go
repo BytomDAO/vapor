@@ -13,7 +13,6 @@ import (
 	"github.com/vapor/blockchain/query"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/sha3pool"
-	"github.com/vapor/database"
 	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -30,7 +29,7 @@ func parseGlobalTxIdx(globalTxIdx []byte) (*bc.Hash, uint64) {
 // saveExternalAssetDefinition save external and local assets definition,
 // when query ,query local first and if have no then query external
 // details see getAliasDefinition
-func saveExternalAssetDefinition(b *types.Block, store database.WalletStorer) {
+func saveExternalAssetDefinition(b *types.Block, store WalletStorer) {
 	store.InitBatch()
 	defer store.CommitBatch()
 

@@ -67,7 +67,7 @@ type CtrlProgram struct {
 
 // Manager stores accounts and their associated control programs.
 type Manager struct {
-	store      database.AccountStorer
+	store      AccountStorer
 	chain      *protocol.Chain
 	utxoKeeper *utxoKeeper
 

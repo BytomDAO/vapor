@@ -10,39 +10,6 @@ import (
 	"github.com/vapor/protocol/bc"
 )
 
-// WalletStorer interface contains wallet storage functions.
-type WalletStorer interface {
-	InitBatch()
-	CommitBatch()
-	GetAssetDefinition(*bc.AssetID) []byte
-	SetAssetDefinition(*bc.AssetID, []byte)
-	GetRawProgram(common.Hash) []byte
-	GetAccountByAccountID(string) []byte
-	DeleteTransactions(uint64)
-	SetTransaction(uint64, uint32, string, []byte)
-	DeleteUnconfirmedTransaction(string)
-	SetGlobalTransactionIndex(string, *bc.Hash, uint64)
-	GetStandardUTXO(bc.Hash) []byte
-	GetTransaction(string) ([]byte, error)
-	GetGlobalTransaction(string) []byte
-	GetTransactions() ([]*query.AnnotatedTx, error)
-	GetUnconfirmedTransactions() ([]*query.AnnotatedTx, error)
-	GetUnconfirmedTransaction(string) []byte
-	SetUnconfirmedTransaction(string, []byte)
-	DeleteStardardUTXO(bc.Hash)
-	DeleteContractUTXO(bc.Hash)
-	SetStandardUTXO(bc.Hash, []byte)
-	SetContractUTXO(bc.Hash, []byte)
-	GetWalletInfo() []byte
-	SetWalletInfo([]byte)
-	DeleteWalletTransactions()
-	DeleteWalletUTXOs()
-	GetAccountUTXOs(key string) [][]byte
-	SetRecoveryStatus([]byte, []byte)
-	DeleteRecoveryStatus([]byte)
-	GetRecoveryStatus([]byte) []byte
-}
-
 // WalletStore store wallet using leveldb
 type WalletStore struct {
 	walletDB dbm.DB
@@ -98,7 +65,6 @@ func (store *WalletStore) GetAccountByAccountID(accountID string) []byte {
 
 // DeleteTransactions delete transactions when orphan block rollback
 func (store *WalletStore) DeleteTransactions(height uint64) {
-	tmpTx := query.AnnotatedTx{}
 	batch := store.walletDB.NewBatch()
 	if store.batch != nil {
 		batch = store.batch
@@ -106,6 +72,7 @@ func (store *WalletStore) DeleteTransactions(height uint64) {
 	txIter := store.walletDB.IteratorPrefix(calcDeleteKey(height))
 	defer txIter.Release()
 
+	tmpTx := query.AnnotatedTx{}
 	for txIter.Next() {
 		if err := json.Unmarshal(txIter.Value(), &tmpTx); err == nil {
 			batch.Delete(calcTxIndexKey(tmpTx.ID.String()))
@@ -270,6 +237,9 @@ func (store *WalletStore) SetWalletInfo(rawWallet []byte) {
 // DeleteWalletTransactions delete all txs in wallet
 func (store *WalletStore) DeleteWalletTransactions() {
 	batch := store.walletDB.NewBatch()
+	if store.batch != nil {
+		batch = store.batch
+	}
 	txIter := store.walletDB.IteratorPrefix([]byte(TxPrefix))
 	defer txIter.Release()
 
@@ -283,12 +253,17 @@ func (store *WalletStore) DeleteWalletTransactions() {
 	for txIndexIter.Next() {
 		batch.Delete(txIndexIter.Key())
 	}
-	batch.Write()
+	if store.batch == nil {
+		batch.Write()
+	}
 }
 
 // DeleteWalletUTXOs delete all txs in wallet
 func (store *WalletStore) DeleteWalletUTXOs() {
 	batch := store.walletDB.NewBatch()
+	if store.batch != nil {
+		batch = store.batch
+	}
 	ruIter := store.walletDB.IteratorPrefix([]byte(UTXOPrefix))
 	defer ruIter.Release()
 	for ruIter.Next() {
@@ -300,7 +275,9 @@ func (store *WalletStore) DeleteWalletUTXOs() {
 	for suIter.Next() {
 		batch.Delete(suIter.Key())
 	}
-	batch.Write()
+	if store.batch == nil {
+		batch.Write()
+	}
 }
 
 // GetAccountUTXOs get all account unspent outputs
