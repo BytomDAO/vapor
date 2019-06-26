@@ -92,7 +92,7 @@ Optional:
 - `Object` - *filter*, transactions filter.
     + Optional
         * `String` - *status*, transactions status, which can be `pending` or `completed`.
-        * `String` - *from_chain*, transactions source chain, which can be `bytom` or `vapor`.
+        * `String` - *source_chain_name*, transactions source chain, which can be `bytom` or `vapor`.
         * `String` - *source_tx_hash*, souce transaction hash string.
         * `String` - *dest_tx_hash*, destination transaction hash string.
 - `Object` - *sort*, transactions sorter.
@@ -105,7 +105,7 @@ Optional:
 
 `Object`:
 
-- `String` - *from_chain*, source chain name of the cross-chain transaction.
+- `String` - *source_chain_name*, source chain name of the cross-chain transaction.
 - `Integer` - *source_block_height*, block height of the cross-chain transaction on the source chain.
 - `String` - *source_block_hash*, block hash of the cross-chain transaction on the source chain.
 - `Integer` - *source_tx_index*, transaction index in the source block.
@@ -136,7 +136,7 @@ curl -X POST 127.0.0.1:3000/api/v1/federation/list-crosschain-txs -d '{}'
     },
     "data":[
       {
-        "from_chain":"bytom",
+        "source_chain_name":"bytom",
         "source_block_height":174,
         "source_block_hash":"569a3a5a43910ea634a947fd092bb3085359db451235ae59c20daab4e4b0d274",
         "source_tx_index":1,

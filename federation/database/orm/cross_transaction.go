@@ -42,7 +42,7 @@ func (c *CrossTransaction) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(&struct {
-		FromChain         string                 `json:"from_chain"`
+		SourceChainName   string                 `json:"source_chain_name"`
 		SourceBlockHeight uint64                 `json:"source_block_height"`
 		SourceBlockHash   string                 `json:"source_block_hash"`
 		SourceTxIndex     uint64                 `json:"source_tx_index"`
@@ -54,7 +54,7 @@ func (c *CrossTransaction) MarshalJSON() ([]byte, error) {
 		Status            string                 `json:"status"`
 		Reqs              []*CrossTransactionReq `json:"crosschain_requests"`
 	}{
-		FromChain:         c.Chain.Name,
+		SourceChainName:   c.Chain.Name,
 		SourceBlockHeight: c.SourceBlockHeight,
 		SourceBlockHash:   c.SourceBlockHash,
 		SourceTxIndex:     c.SourceTxIndex,
