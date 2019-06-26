@@ -1,33 +1,21 @@
 package orm
 
 import (
-	"encoding/json"
-
 	"github.com/vapor/federation/types"
 )
 
 type CrossTransactionReq struct {
-	ID                 uint64 `gorm:"primary_key"`
-	CrossTransactionID uint64
-	SourcePos          uint64
-	AssetID            uint64
-	AssetAmount        uint64
-	Script             string
-	CreatedAt          types.Timestamp
-	UpdatedAt          types.Timestamp
+	ID                 uint64          `gorm:"primary_key" json:"-"`
+	CrossTransactionID uint64          `json:"-"`
+	SourcePos          uint64          `json:"-"`
+	AssetID            uint64          `json:"-"`
+	AssetAmount        uint64          `json:"amount"`
+	Script             string          `json:"-"`
+	FromAddress        string          `json:"from_address"`
+	ToAddress          string          `json:"to_address"`
+	CreatedAt          types.Timestamp `json:"-"`
+	UpdatedAt          types.Timestamp `json:"-"`
 
-	CrossTransaction *CrossTransaction `gorm:"foreignkey:CrossTransactionID"`
-	Asset            *Asset            `gorm:"foreignkey:ID"`
-}
-
-func (c *CrossTransactionReq) MarshalJSON() ([]byte, error) {
-	return json.Marshal(&struct {
-		AssetID   string `json:"asset_id"`
-		Amount    uint64 `json:"amount"`
-		ToAddress string `json:"to_address"`
-	}{
-		Amount:    c.AssetAmount,
-		ToAddress: ",",
-		AssetID:   c.Asset.AssetID,
-	})
+	CrossTransaction *CrossTransaction `gorm:"foreignkey:CrossTransactionID" json:"-"`
+	Asset            *Asset            `gorm:"foreignkey:ID" json:"asset"`
 }
