@@ -38,8 +38,8 @@ func (s *Server) ListCrosschainTxs(c *gin.Context, listTxsReq *listCrosschainTxs
 
 	txQuery := s.db.Preload("Chain").Preload("Reqs").Preload("Reqs.Asset").Where(txFilter)
 	// filter direction
-	if fromChainName, err := listTxsReq.GetFilterString("from_chain"); err == nil && fromChainName != "" {
-		txQuery = txQuery.Joins("join chains on chains.id = cross_transactions.chain_id").Where("chains.name = ?", fromChainName)
+	if sourceChainName, err := listTxsReq.GetFilterString("source_chain_name"); err == nil && sourceChainName != "" {
+		txQuery = txQuery.Joins("join chains on chains.id = cross_transactions.chain_id").Where("chains.name = ?", sourceChainName)
 	}
 	txQuery = txQuery.Order(fmt.Sprintf("cross_transactions.source_block_height %s", listTxsReq.Sorter.Order))
 	txQuery = txQuery.Order(fmt.Sprintf("cross_transactions.source_tx_index %s", listTxsReq.Sorter.Order))
