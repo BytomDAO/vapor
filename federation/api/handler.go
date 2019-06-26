@@ -21,9 +21,9 @@ func (s *Server) ListCrosschainTxs(c *gin.Context, listTxsReq *listCrosschainTxs
 	// filter tx status
 	if status, err := listTxsReq.GetFilterString("status"); err == nil && status != "" {
 		switch strings.ToLower(status) {
-		case "pending":
+		case common.CrossTxPendingStatusLabel:
 			txFilter.Status = common.CrossTxPendingStatus
-		case "completed":
+		case common.CrossTxCompletedStatusLabel:
 			txFilter.Status = common.CrossTxCompletedStatus
 		}
 	}
