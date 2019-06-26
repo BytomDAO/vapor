@@ -49,10 +49,33 @@ A `fed_cfg.json` would look like this:
 ## API
 A federation node can function as an api server for querying cross-chain transactions.
 
-Default JSON-RPC endpoints:
-http://host:port/api/v1/federation
+The default JSON-RPC endpoint is: [http://host:port/api/v1/federation/](http://host:port/api/v1/federation/)
+
+The response contains some meta data of:
+
++ success/error status, which can be told from `code` and `msg`;
++ pagination info, which can be told from `start`, `limit` and `_links` (`_links` is used to look up the preceding and the succeeding items);
+
+and looks like:
+```
+{
+  "code":200,
+  "msg":"",
+  "result":{
+    "_links":{
+    },
+    "data":...,
+    "limit":10,
+    "start":0
+  }
+}
+```
+
+If a request succeed, `data` field contains the detailed result as an object or as an array of objects.
 
 ### Pagination
+
+Append `?start=<integer>&limit=<integer>` to the url in order to use pagination.
 
 ### Methods
 
@@ -62,64 +85,97 @@ To list cross-chain transactions and filter the transactions.
 
 ##### Parameters
 
-`Object`:
+<!--  -->
+
+Optional:
 
 - `Object` - *filter*, transactions filter.
+    + Optional
+        * `String` - *status*, transactions status, which can be `pending` or `completed`.
+        * `String` - *from*, transactions source chain, which can be `bytom` or `vapor`.
+        * `String` - *source_tx_hash*, souce transaction hash string.
+        * `String` - *dest_tx_hash*, destination transaction hash string.
 - `Object` - *sort*, transactions sorter.
-<!-- 
-Optional:
-
-- `String` - *mnemonic*, mnemonic of the key, create key by specified mnemonic.
- -->
+    + Optional
+        * `String` - *order*, transactions order sorter, which can be `asc` or `desc`.
 
 
-i##### Returns
+##### Returns
+
 
 `Object`:
 
-- `String` - *alias*, name of the key.
-- `String` - *xpub*, root pubkey of the key.
-- `String` - *file*, path to the file of key.
-
-Optional:
-
-- `String` - *mnemonic*, mnemonic of the key, exist when the request mnemonic is null.
+- `Integer` - *source_block_height*, block height of the cross-chain transaction on the source chain.
+- `String` - *source_block_hash*, block hash of the cross-chain transaction on the source chain.
+- `Integer` - *source_tx_index*, transaction index in the source block.
+- `String` - *source_tx_hash*, source transaction hash.
+- `Oject` - *dest_block_height*, block height of the cross-chain transaction on the destination chain.
+    + `Integer` - *Int64*, destination block height if cross-chain transaction completed. 
+    + `Boolean` - *Valid*, `true` if cross-chain transaction completed.
+- `Oject` - *dest_block_hash*, destination block hash of the cross-chain transaction on the destination chain.
+    + `String` - *String*, destination block hash if cross-chain transaction completed. 
+    + `Boolean` - *Valid*, `true` if cross-chain transaction completed.
+- `Oject` - *dest_tx_index*, transaction index in the destination block.
+    + `Integer` - *Int64*, destination transaction index if cross-chain transaction completed. 
+    + `Boolean` - *Valid*, `true` if cross-chain transaction completed.
+- `Oject` - *dest_tx_hash*, destination transaction hash.
+    + `Integer` - *String*, destination transaction hash if cross-chain transaction completed. 
+    + `Boolean` - *Valid*, `true` if cross-chain transaction completed.
+- `Integer` - *status*, cross-chain transaction status, `1` for `pending` and `2` for `completed`.
+- `Array of objects` - *crosschain_requests*, asset transfer details per request included in the cross-chain transaction.
+    + `Integer` - *amount*, asset transfer amount.
+    + `Object` - *asset*, asset detail.
+        * `String` - *asset_id*, asset id string.
 
 ##### Example
 
-create key by random pattern:
-
 ```js
 // Request
-curl -X POST create-key -d '{"alias": "alice", "password": "123456", "language": "en"}'
+curl -X POST 127.0.0.1:3000/api/v1/federation/list-crosschain-txs -d '{}'
 
 // Result
 {
-    "status": "success",
-    "data": {
-        "alias": "alice",
-        "xpub": "c4afb96f600dc7da388b77107ceb471f604aadf49e6d1ec745abf9ae797e69a2a1f113e2cb2541166609ba725dea4072e54376ed90bcbdd0200853191a2f560a",
-        "file": "/home/ec2-user/vapor_test/keystore/UTC--2019-06-18T11-04-34.512032731Z--66942e00-1466-45ea-b9f1-32ea30000017",
-        "mnemonic": "attend build fog oak awful make diesel episode glove mind fire sleep"
-    }
+  "code":200,
+  "msg":"",
+  "result":{
+    "_links":{
+
+    },
+    "data":[
+      {
+        "source_block_height":174,
+        "source_block_hash":"569a3a5a43910ea634a947fd092bb3085359db451235ae59c20daab4e4b0d274",
+        "source_tx_index":1,
+        "source_tx_hash":"584d1dcc4dfe741bb3ae5b193896b08db469169e6fd76098eac132af628a3183",
+        "dest_block_height":{
+          "Int64":0,
+          "Valid":false
+        },
+        "dest_block_hash":{
+          "String":"",
+          "Valid":false
+        },
+        "dest_tx_index":{
+          "Int64":0,
+          "Valid":false
+        },
+        "dest_tx_hash":{
+          "String":"",
+          "Valid":false
+        },
+        "status":1,
+        "crosschain_requests":[
+          {
+            "amount":1000000,
+            "asset":{
+              "asset_id":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+            }
+          }
+        ]
+      }
+    ],
+    "limit":10,
+    "start":0
+  }
 }
 ```
-
-create key by specified mnemonic:
-
-```js
-// Request
-curl -X POST create-key -d '{"alias":"jack", "password":"123456", "mnemonic":"please observe raw beauty blue sea believe then boat float beyond position", "language":"en"}'
-
-// Result
-{
-    "status": "success",
-    "data": {
-        "alias": "jack",
-        "xpub": "c7bcb65febd31c6d900bc84c386d95c3d5b047090628d9bf5c51a848945b6986e99ff70388018a7681fa37a240dbd8df39a994c86f9314a61e75feb33563ca72",
-        "file": "/home/ec2-user/vapor_test/keystore/UTC--2019-06-18T11-10-02.390062724Z--3e5a16a3-93bf-4c81-aec1-c4279458a605"
-    }
-}
-```
-
-----

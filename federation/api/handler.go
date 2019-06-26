@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -19,7 +20,7 @@ func (s *Server) ListCrosschainTxs(c *gin.Context, listTxsReq *listCrosschainTxs
 
 	// filter tx status
 	if status, err := listTxsReq.GetFilterString("status"); err == nil && status != "" {
-		switch status {
+		switch strings.ToLower(status) {
 		case "pending":
 			txFilter.Status = common.CrossTxPendingStatus
 		case "completed":
