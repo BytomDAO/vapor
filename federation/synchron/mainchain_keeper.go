@@ -210,8 +210,7 @@ func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *types.Block,
 }
 
 func (m *mainchainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types.Tx, statusFail bool) ([]*orm.CrossTransactionReq, error) {
-	var fromAddress string
-	var toAddress string
+	var fromAddress, toAddress string
 	// assume inputs are from an identical owner
 	prog := tx.Inputs[0].ControlProgram()
 	script := hex.EncodeToString(prog)
