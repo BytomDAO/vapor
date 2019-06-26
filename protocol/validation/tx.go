@@ -3,6 +3,7 @@ package validation
 import (
 	"fmt"
 	"math"
+	"sync"
 
 	"github.com/vapor/config"
 	"github.com/vapor/consensus"
@@ -12,7 +13,10 @@ import (
 	"github.com/vapor/protocol/vm"
 )
 
-const ruleAA = 142500
+const (
+	validateWorkerNum = 32
+	ruleAA            = 142500
+)
 
 // validate transaction error
 var (
@@ -569,4 +573,60 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
 		cache:     make(map[bc.Hash]error),
 	}
 	return vs.gasStatus, checkValid(vs, tx.TxHeader)
+}
+
+type validateTxWork struct {
+	i     int
+	tx    *bc.Tx
+	block *bc.Block
+}
+
+type validateTxResult struct {
+	i         int
+	gasStatus *GasState
+	err       error
+}
+
+func validateTxWorker(workCh chan *validateTxWork, resultCh chan *validateTxResult, closeCh chan struct{}, wg *sync.WaitGroup) {
+	for {
+		select {
+		case work := <-workCh:
+			gasStatus, err := ValidateTx(work.tx, work.block)
+			resultCh <- &validateTxResult{i: work.i, gasStatus: gasStatus, err: err}
+		case <-closeCh:
+			wg.Done()
+			return
+		}
+	}
+}
+
+func ValidateTxs(txs []*bc.Tx, block *bc.Block) []*validateTxResult {
+	txSize := len(txs)
+	//init the goroutine validate worker
+	var wg sync.WaitGroup
+	workCh := make(chan *validateTxWork, txSize)
+	resultCh := make(chan *validateTxResult, txSize)
+	closeCh := make(chan struct{})
+	for i := 0; i <= validateWorkerNum && i < txSize; i++ {
+		wg.Add(1)
+		go validateTxWorker(workCh, resultCh, closeCh, &wg)
+	}
+
+	//sent the works
+	for i, tx := range txs {
+		workCh <- &validateTxWork{i: i, tx: tx, block: block}
+	}
+
+	//collect validate results
+	results := make([]*validateTxResult, txSize)
+	for i := 0; i < txSize; i++ {
+		result := <-resultCh
+		results[result.i] = result
+	}
+
+	close(closeCh)
+	wg.Wait()
+	close(workCh)
+	close(resultCh)
+	return results
 }
