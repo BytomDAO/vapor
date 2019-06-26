@@ -38,9 +38,17 @@ func (s *Server) ListCrosschainTxs(c *gin.Context, listTxsReq *listCrosschainTxs
 
 	txQuery := s.db.Preload("Chain").Preload("Reqs").Preload("Reqs.Asset").Where(txFilter)
 	// filter direction
-	if fromChainName, err := listTxsReq.GetFilterString("from_chain"); err == nil && fromChainName != "" {
-		txQuery = txQuery.Joins("join chains on chains.id = cross_transactions.chain_id").Where("chains.name = ?", fromChainName)
+	if sourceChainName, err := listTxsReq.GetFilterString("source_chain_name"); err == nil && sourceChainName != "" {
+		txQuery = txQuery.Joins("join chains on chains.id = cross_transactions.chain_id").Where("chains.name = ?", sourceChainName)
 	}
+
+	// filter address
+	if address, err := listTxsReq.GetFilterString("address"); err == nil && address != "" {
+		txQuery = txQuery.Joins("join cross_transaction_reqs on cross_transaction_reqs.cross_transaction_id = cross_transactions.id").
+			Where("cross_transaction_reqs.from_address = ? or cross_transaction_reqs.to_address = ?", address, address)
+	}
+
+	// sorter order
 	txQuery = txQuery.Order(fmt.Sprintf("cross_transactions.source_block_height %s", listTxsReq.Sorter.Order))
 	txQuery = txQuery.Order(fmt.Sprintf("cross_transactions.source_tx_index %s", listTxsReq.Sorter.Order))
 	if err := txQuery.Offset(query.Start).Limit(query.Limit).Find(&ormTxs).Error; err != nil {
