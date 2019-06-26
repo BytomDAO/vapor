@@ -34,11 +34,11 @@ func TestAccountIndexKey(t *testing.T) {
 
 	xpubs1 := []chainkd.XPub{xpub1.XPub, xpub2.XPub}
 	xpubs2 := []chainkd.XPub{xpub2.XPub, xpub1.XPub}
-	if !reflect.DeepEqual(AccountIndexKey(xpubs1), AccountIndexKey(xpubs2)) {
-		t.Fatal("AccountIndexKey test err")
+	if !reflect.DeepEqual(accountIndexKey(xpubs1), accountIndexKey(xpubs2)) {
+		t.Fatal("accountIndexKey test err")
 	}
 
 	if reflect.DeepEqual(xpubs1, xpubs2) {
-		t.Fatal("AccountIndexKey test err")
+		t.Fatal("accountIndexKey test err")
 	}
 }

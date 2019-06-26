@@ -30,12 +30,31 @@ const (
 	CoinbaseAbKey       = "CoinbaseArbitrary"
 )
 
+// // leveldb key prefix
+// const (
+// 	UTXOPrefix  = iota //UTXOPrefix is StandardUTXOKey prefix
+// 	SUTXOPrefix        //SUTXOPrefix is ContractUTXOKey prefix
+// 	ContractPrefix
+// 	ContractIndexPrefix
+// 	AccountPrefix // AccountPrefix is account ID prefix
+// 	AccountAliasPrefix
+// 	AccountIndexPrefix
+// 	TxPrefix            //TxPrefix is wallet database transactions prefix
+// 	TxIndexPrefix       //TxIndexPrefix is wallet database tx index prefix
+// 	UnconfirmedTxPrefix //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
+// 	GlobalTxIndexPrefix //GlobalTxIndexPrefix is wallet database global tx index prefix
+// 	WalletKey
+// 	MiningAddressKey
+// 	CoinbaseAbKey
+// )
+
+// errors
 var (
 	ErrFindAccount       = errors.New("Failed to find account")
 	errAccntTxIDNotFound = errors.New("account TXID not found")
 )
 
-func AccountIndexKey(xpubs []chainkd.XPub) []byte {
+func accountIndexKey(xpubs []chainkd.XPub) []byte {
 	var hash [32]byte
 	var xPubs []byte
 	cpy := append([]chainkd.XPub{}, xpubs[:]...)
@@ -108,10 +127,10 @@ func formatKey(blockHeight uint64, position uint32) string {
 	return fmt.Sprintf("%016x%08x", blockHeight, position)
 }
 
-func ContractIndexKey(accountID string) []byte {
+func contractIndexKey(accountID string) []byte {
 	return append([]byte(ContractIndexPrefix), []byte(accountID)...)
 }
 
-func AccountAliasKey(name string) []byte {
+func accountAliasKey(name string) []byte {
 	return append([]byte(AccountAliasPrefix), []byte(name)...)
 }

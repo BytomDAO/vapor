@@ -45,7 +45,7 @@ func (store *AccountStore) SetAccount(accountID, accountAlias string, rawAccount
 		batch = store.batch
 	}
 	batch.Set(AccountIDKey(accountID), rawAccount)
-	batch.Set(AccountAliasKey(accountAlias), []byte(accountID))
+	batch.Set(accountAliasKey(accountAlias), []byte(accountID))
 	if store.batch == nil {
 		batch.Write()
 	}
@@ -58,7 +58,7 @@ func (store *AccountStore) DeleteAccount(accountID, accountAlias string) {
 		batch = store.batch
 	}
 	batch.Delete(AccountIDKey(accountID))
-	batch.Delete(AccountAliasKey(accountAlias))
+	batch.Delete(accountAliasKey(accountAlias))
 	if store.batch == nil {
 		batch.Write()
 	}
@@ -67,15 +67,15 @@ func (store *AccountStore) DeleteAccount(accountID, accountAlias string) {
 // SetAccountIndex set account index
 func (store *AccountStore) SetAccountIndex(xpubs []chainkd.XPub, keyIndex uint64) {
 	if store.batch == nil {
-		store.accountDB.Set(AccountIndexKey(xpubs), common.Unit64ToBytes(keyIndex))
+		store.accountDB.Set(accountIndexKey(xpubs), common.Unit64ToBytes(keyIndex))
 	} else {
-		store.batch.Set(AccountIndexKey(xpubs), common.Unit64ToBytes(keyIndex))
+		store.batch.Set(accountIndexKey(xpubs), common.Unit64ToBytes(keyIndex))
 	}
 }
 
 // GetAccountByAccountAlias get account by account alias
 func (store *AccountStore) GetAccountByAccountAlias(accountAlias string) []byte {
-	return store.accountDB.Get(AccountAliasKey(accountAlias))
+	return store.accountDB.Get(accountAliasKey(accountAlias))
 }
 
 // GetAccountByAccountID get account by accountID
@@ -85,15 +85,15 @@ func (store *AccountStore) GetAccountByAccountID(accountID string) []byte {
 
 // GetAccountIndex get account index by account xpubs
 func (store *AccountStore) GetAccountIndex(xpubs []chainkd.XPub) []byte {
-	return store.accountDB.Get(AccountIndexKey(xpubs))
+	return store.accountDB.Get(accountIndexKey(xpubs))
 }
 
 // DeleteAccountByAccountAlias delete account by account alias
 func (store *AccountStore) DeleteAccountByAccountAlias(accountAlias string) {
 	if store.batch == nil {
-		store.accountDB.Delete(AccountAliasKey(accountAlias))
+		store.accountDB.Delete(accountAliasKey(accountAlias))
 	} else {
-		store.batch.Delete(AccountAliasKey(accountAlias))
+		store.batch.Delete(accountAliasKey(accountAlias))
 	}
 }
 
@@ -131,15 +131,15 @@ func (store *AccountStore) DeleteBip44ContractIndex(accountID string) {
 // DeleteContractIndex delete contract index by accountID
 func (store *AccountStore) DeleteContractIndex(accountID string) {
 	if store.batch == nil {
-		store.accountDB.Delete(ContractIndexKey(accountID))
+		store.accountDB.Delete(contractIndexKey(accountID))
 	} else {
-		store.batch.Delete(ContractIndexKey(accountID))
+		store.batch.Delete(contractIndexKey(accountID))
 	}
 }
 
 // GetContractIndex get contract index
 func (store *AccountStore) GetContractIndex(accountID string) []byte {
-	return store.accountDB.Get(ContractIndexKey(accountID))
+	return store.accountDB.Get(contractIndexKey(accountID))
 }
 
 // GetAccountUTXOs get account utxos by account id
@@ -237,9 +237,9 @@ func (store *AccountStore) SetRawProgram(hash common.Hash, program []byte) {
 // SetContractIndex set contract index
 func (store *AccountStore) SetContractIndex(accountID string, index uint64) {
 	if store.batch == nil {
-		store.accountDB.Set(ContractIndexKey(accountID), common.Unit64ToBytes(index))
+		store.accountDB.Set(contractIndexKey(accountID), common.Unit64ToBytes(index))
 	} else {
-		store.batch.Set(ContractIndexKey(accountID), common.Unit64ToBytes(index))
+		store.batch.Set(contractIndexKey(accountID), common.Unit64ToBytes(index))
 	}
 }
 
