@@ -203,6 +203,20 @@ func (store *WalletStore) SetAssetDefinition(assetID *bc.AssetID, definition []b
 	}
 }
 
+// // GetRawProgram get raw program by hash
+// func (store *WalletStore) GetRawProgram(hash common.Hash) ([]byte, error) {
+// 	rawProgram := store.walletDB.Get(ContractKey(hash))
+// 	if rawProgram == nil {
+// 		return nil, fmt.Errorf("failed get account control program:%x ", hash)
+// 	}
+
+// 	accountCP := new(account.CtrlProgram)
+// 	if err := json.Unmarshal(rawProgram, &accountCP); err != nil {
+// 		return nil, err
+// 	}
+// 	return accountCP, nil
+// }
+
 // GetRawProgram get raw program by hash
 func (store *WalletStore) GetRawProgram(hash common.Hash) []byte {
 	return store.walletDB.Get(ContractKey(hash))
