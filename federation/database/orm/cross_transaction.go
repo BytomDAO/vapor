@@ -13,14 +13,14 @@ type CrossTransaction struct {
 	ID                   uint64 `gorm:"primary_key"`
 	ChainID              uint64
 	SourceBlockHeight    uint64
-	SourceBlockTimeStamp uint64
+	SourceBlockTimestamp uint64
 	SourceBlockHash      string
 	SourceTxIndex        uint64
 	SourceMuxID          string
 	SourceTxHash         string
 	SourceRawTransaction string
 	DestBlockHeight      sql.NullInt64  `sql:"default:null"`
-	DestBlockTimeStamp   sql.NullInt64  `sql:"default:null"`
+	DestBlockTimestamp   sql.NullInt64  `sql:"default:null"`
 	DestBlockHash        sql.NullString `sql:"default:null"`
 	DestTxIndex          sql.NullInt64  `sql:"default:null"`
 	DestTxHash           sql.NullString `sql:"default:null"`
@@ -46,12 +46,12 @@ func (c *CrossTransaction) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		SourceChainName      string                 `json:"source_chain_name"`
 		SourceBlockHeight    uint64                 `json:"source_block_height"`
-		SourceBlockTimeStamp uint64                 `json:"source_block_timestamp"`
+		SourceBlockTimestamp uint64                 `json:"source_block_timestamp"`
 		SourceBlockHash      string                 `json:"source_block_hash"`
 		SourceTxIndex        uint64                 `json:"source_tx_index"`
 		SourceTxHash         string                 `json:"source_tx_hash"`
 		DestBlockHeight      uint64                 `json:"dest_block_height"`
-		DestBlockTimeStamp   uint64                 `json:"dest_block_timestamp"`
+		DestBlockTimestamp   uint64                 `json:"dest_block_timestamp"`
 		DestBlockHash        string                 `json:"dest_block_hash"`
 		DestTxIndex          uint64                 `json:"dest_tx_index"`
 		DestTxHash           string                 `json:"dest_tx_hash"`
@@ -60,12 +60,12 @@ func (c *CrossTransaction) MarshalJSON() ([]byte, error) {
 	}{
 		SourceChainName:      c.Chain.Name,
 		SourceBlockHeight:    c.SourceBlockHeight,
-		SourceBlockTimeStamp: c.SourceBlockTimeStamp,
+		SourceBlockTimestamp: c.SourceBlockTimestamp,
 		SourceBlockHash:      c.SourceBlockHash,
 		SourceTxIndex:        c.SourceTxIndex,
 		SourceTxHash:         c.SourceTxHash,
 		DestBlockHeight:      uint64(c.DestBlockHeight.Int64),
-		DestBlockTimeStamp:   uint64(c.DestBlockTimeStamp.Int64),
+		DestBlockTimestamp:   uint64(c.DestBlockTimestamp.Int64),
 		DestBlockHash:        c.DestBlockHash.String,
 		DestTxIndex:          uint64(c.DestTxIndex.Int64),
 		DestTxHash:           c.DestTxHash.String,

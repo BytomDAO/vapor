@@ -174,12 +174,14 @@ func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *types.Block,
 	ormTx := &orm.CrossTransaction{
 		ChainID:              chain.ID,
 		SourceBlockHeight:    block.Height,
+		SourceBlockTimestamp: block.Timestamp,
 		SourceBlockHash:      blockHash.String(),
 		SourceTxIndex:        txIndex,
 		SourceMuxID:          muxID.String(),
 		SourceTxHash:         tx.ID.String(),
 		SourceRawTransaction: string(rawTx),
 		DestBlockHeight:      sql.NullInt64{Valid: false},
+		DestBlockTimestamp:   sql.NullInt64{Valid: false},
 		DestBlockHash:        sql.NullString{Valid: false},
 		DestTxIndex:          sql.NullInt64{Valid: false},
 		DestTxHash:           sql.NullString{Valid: false},
@@ -242,10 +244,11 @@ func (m *mainchainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Blo
 			DestTxHash: sql.NullString{tx.ID.String(), true},
 			Status:     common.CrossTxPendingStatus,
 		}).UpdateColumn(&orm.CrossTransaction{
-		DestBlockHeight: sql.NullInt64{int64(block.Height), true},
-		DestBlockHash:   sql.NullString{blockHash.String(), true},
-		DestTxIndex:     sql.NullInt64{int64(txIndex), true},
-		Status:          common.CrossTxCompletedStatus,
+		DestBlockHeight:    sql.NullInt64{int64(block.Height), true},
+		DestBlockTimestamp: sql.NullInt64{int64(block.Timestamp), true},
+		DestBlockHash:      sql.NullString{blockHash.String(), true},
+		DestTxIndex:        sql.NullInt64{int64(txIndex), true},
+		Status:             common.CrossTxCompletedStatus,
 	})
 	if stmt.Error != nil {
 		return stmt.Error
