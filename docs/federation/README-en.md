@@ -105,23 +105,16 @@ Optional:
 
 `Object`:
 
+- `String` - *from_chain*, source chain name of the cross-chain transaction.
 - `Integer` - *source_block_height*, block height of the cross-chain transaction on the source chain.
 - `String` - *source_block_hash*, block hash of the cross-chain transaction on the source chain.
 - `Integer` - *source_tx_index*, transaction index in the source block.
 - `String` - *source_tx_hash*, source transaction hash.
-- `Oject` - *dest_block_height*, block height of the cross-chain transaction on the destination chain.
-    + `Integer` - *Int64*, destination block height if cross-chain transaction completed. 
-    + `Boolean` - *Valid*, `true` if cross-chain transaction completed.
-- `Oject` - *dest_block_hash*, destination block hash of the cross-chain transaction on the destination chain.
-    + `String` - *String*, destination block hash if cross-chain transaction completed. 
-    + `Boolean` - *Valid*, `true` if cross-chain transaction completed.
-- `Oject` - *dest_tx_index*, transaction index in the destination block.
-    + `Integer` - *Int64*, destination transaction index if cross-chain transaction completed. 
-    + `Boolean` - *Valid*, `true` if cross-chain transaction completed.
-- `Oject` - *dest_tx_hash*, destination transaction hash.
-    + `Integer` - *String*, destination transaction hash if cross-chain transaction completed. 
-    + `Boolean` - *Valid*, `true` if cross-chain transaction completed.
-- `Integer` - *status*, cross-chain transaction status, `1` for `pending` and `2` for `completed`.
+- `Integer` - *dest_block_height*, block height of the cross-chain transaction on the destination chain, `0` if `status` is `pending`.
+- `String` - *dest_block_hash*, block hash of the cross-chain transaction on the destination chain, empty string if `status` is `pending`.
+- `Integer` - *dest_tx_index*, transaction index in the destination block, `0` if `status` is `pending`.
+- `String` - *dest_tx_hash*, destination transaction hash, empty string if `status` is `pending`.
+- `String` - *status*, cross-chain transaction status, can be `pending` or `completed`.
 - `Array of objects` - *crosschain_requests*, asset transfer details per request included in the cross-chain transaction.
     + `Integer` - *amount*, asset transfer amount.
     + `Object` - *asset*, asset detail.
@@ -143,27 +136,16 @@ curl -X POST 127.0.0.1:3000/api/v1/federation/list-crosschain-txs -d '{}'
     },
     "data":[
       {
+        "from_chain":"bytom",
         "source_block_height":174,
         "source_block_hash":"569a3a5a43910ea634a947fd092bb3085359db451235ae59c20daab4e4b0d274",
         "source_tx_index":1,
         "source_tx_hash":"584d1dcc4dfe741bb3ae5b193896b08db469169e6fd76098eac132af628a3183",
-        "dest_block_height":{
-          "Int64":0,
-          "Valid":false
-        },
-        "dest_block_hash":{
-          "String":"",
-          "Valid":false
-        },
-        "dest_tx_index":{
-          "Int64":0,
-          "Valid":false
-        },
-        "dest_tx_hash":{
-          "String":"",
-          "Valid":false
-        },
-        "status":1,
+        "dest_block_height":0,
+        "dest_block_hash":"",
+        "dest_tx_index":0,
+        "dest_tx_hash":"",
+        "status":"pending",
         "crosschain_requests":[
           {
             "amount":1000000,
