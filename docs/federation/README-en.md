@@ -85,8 +85,6 @@ To list cross-chain transactions and filter the transactions.
 
 ##### Parameters
 
-<!--  -->
-
 Optional:
 
 - `Object` - *filter*, transactions filter.
@@ -107,16 +105,20 @@ Optional:
 
 - `String` - *source_chain_name*, source chain name of the cross-chain transaction.
 - `Integer` - *source_block_height*, block height of the cross-chain transaction on the source chain.
+- `Integer` - *source_block_timestamp*, block timestamp of the cross-chain transaction on the source chain.
 - `String` - *source_block_hash*, block hash of the cross-chain transaction on the source chain.
 - `Integer` - *source_tx_index*, transaction index in the source block.
 - `String` - *source_tx_hash*, source transaction hash.
 - `Integer` - *dest_block_height*, block height of the cross-chain transaction on the destination chain, `0` if `status` is `pending`.
+- `Integer` - *dest_block_timestamp*, block timestamp of the cross-chain transaction on the destination chain, `0` if `status` is `pending`.
 - `String` - *dest_block_hash*, block hash of the cross-chain transaction on the destination chain, empty string if `status` is `pending`.
 - `Integer` - *dest_tx_index*, transaction index in the destination block, `0` if `status` is `pending`.
 - `String` - *dest_tx_hash*, destination transaction hash, empty string if `status` is `pending`.
 - `String` - *status*, cross-chain transaction status, can be `pending` or `completed`.
 - `Array of objects` - *crosschain_requests*, asset transfer details per request included in the cross-chain transaction.
     + `Integer` - *amount*, asset transfer amount.
+    + `String` - *from_address*, source address.
+    + `String` - *to_address*, destination address.
     + `Object` - *asset*, asset detail.
         * `String` - *asset_id*, asset id string.
 
@@ -138,10 +140,12 @@ curl -X POST 127.0.0.1:3000/api/v1/federation/list-crosschain-txs -d '{}'
       {
         "source_chain_name":"bytom",
         "source_block_height":174,
+        "source_block_timestamp":1561457348,
         "source_block_hash":"569a3a5a43910ea634a947fd092bb3085359db451235ae59c20daab4e4b0d274",
         "source_tx_index":1,
         "source_tx_hash":"584d1dcc4dfe741bb3ae5b193896b08db469169e6fd76098eac132af628a3183",
         "dest_block_height":0,
+        "dest_block_timestamp":0,
         "dest_block_hash":"",
         "dest_tx_index":0,
         "dest_tx_hash":"",
@@ -149,6 +153,8 @@ curl -X POST 127.0.0.1:3000/api/v1/federation/list-crosschain-txs -d '{}'
         "crosschain_requests":[
           {
             "amount":1000000,
+            "from_address":"bm1qf872k7nr8pwjt4afx60m2wwz5hwj2tu4jaxm9g",
+            "to_address":"vp1qf872k7nr8pwjt4afx60m2wwz5hwj2tu4eukxq7",
             "asset":{
               "asset_id":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
             }
