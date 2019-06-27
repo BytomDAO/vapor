@@ -9,8 +9,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	acc "github.com/vapor/account"
 	"github.com/vapor/protocol/bc"
 )
@@ -88,7 +86,7 @@ func (uk *UTXOKeeper) Reserve(accountID string, assetID *bc.AssetID, amount uint
 	uk.mtx.Lock()
 	defer uk.mtx.Unlock()
 
-	utxos, immatureAmount := uk.findUtxos(accountID, assetID, useUnconfirmed, vote)
+	utxos, immatureAmount := uk.FindUtxos(accountID, assetID, useUnconfirmed, vote)
 	optUtxos, optAmount, reservedAmount := uk.optUTXOs(utxos, amount)
 	if optAmount+reservedAmount+immatureAmount < amount {
 		return nil, acc.ErrInsufficient
@@ -161,7 +159,7 @@ func (uk *UTXOKeeper) FindUtxo(outHash bc.Hash, useUnconfirmed bool) (*acc.UTXO,
 	return nil, acc.ErrMatchUTXO
 }
 
-func (uk *UTXOKeeper) findUtxos(accountID string, assetID *bc.AssetID, useUnconfirmed bool, vote []byte) ([]*acc.UTXO, uint64) {
+func (uk *UTXOKeeper) FindUtxos(accountID string, assetID *bc.AssetID, useUnconfirmed bool, vote []byte) ([]*acc.UTXO, uint64) {
 	immatureAmount := uint64(0)
 	currentHeight := uk.CurrentHeight()
 	utxos := []*acc.UTXO{}
@@ -176,14 +174,9 @@ func (uk *UTXOKeeper) findUtxos(accountID string, assetID *bc.AssetID, useUnconf
 		}
 	}
 
-	rawUTXOs := uk.Store.GetUTXOs()
-	for _, rawUTXO := range rawUTXOs {
-		utxo := new(acc.UTXO)
-		if err := json.Unmarshal(rawUTXO, utxo); err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("utxoKeeper findUtxos fail on unmarshal utxo")
-			continue
-		}
-		appendUtxo(utxo)
+	UTXOs := uk.Store.GetUTXOs()
+	for _, UTXO := range UTXOs {
+		appendUtxo(UTXO)
 	}
 
 	if !useUnconfirmed {
@@ -247,39 +240,4 @@ func (uk *UTXOKeeper) optUTXOs(utxos []*acc.UTXO, amount uint64) ([]*acc.UTXO, u
 		optUtxos = append(optUtxos, e.Value.(*acc.UTXO))
 	}
 	return optUtxos, optAmount, reservedAmount
-}
-
-func (uk *UTXOKeeper) FindUtxos(accountID string, assetID *bc.AssetID, useUnconfirmed bool, vote []byte) ([]*acc.UTXO, uint64) {
-	immatureAmount := uint64(0)
-	currentHeight := uk.CurrentHeight()
-	utxos := []*acc.UTXO{}
-	appendUtxo := func(u *acc.UTXO) {
-		if u.AccountID != accountID || u.AssetID != *assetID || !bytes.Equal(u.Vote, vote) {
-			return
-		}
-		if u.ValidHeight > currentHeight {
-			immatureAmount += u.Amount
-		} else {
-			utxos = append(utxos, u)
-		}
-	}
-
-	rawUTXOs := uk.Store.GetUTXOs()
-	for _, rawUTXO := range rawUTXOs {
-		utxo := new(acc.UTXO)
-		if err := json.Unmarshal(rawUTXO, utxo); err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("utxoKeeper findUtxos fail on unmarshal utxo")
-			continue
-		}
-		appendUtxo(utxo)
-	}
-
-	if !useUnconfirmed {
-		return utxos, immatureAmount
-	}
-
-	for _, u := range uk.Unconfirmed {
-		appendUtxo(u)
-	}
-	return utxos, immatureAmount
 }

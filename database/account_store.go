@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
 	acc "github.com/vapor/account"
 	"github.com/vapor/common"
 	"github.com/vapor/crypto/ed25519/chainkd"
@@ -328,13 +329,18 @@ func (store *AccountStore) SetBip44ContractIndex(accountID string, change bool, 
 }
 
 // GetUTXOs get utxos by accountID
-func (store *AccountStore) GetUTXOs() [][]byte {
+func (store *AccountStore) GetUTXOs() []*acc.UTXO {
 	utxoIter := store.accountDB.IteratorPrefix([]byte(UTXOPrefix))
 	defer utxoIter.Release()
 
-	utxos := make([][]byte, 0)
+	utxos := []*acc.UTXO{}
 	for utxoIter.Next() {
-		utxos = append(utxos, utxoIter.Value())
+		utxo := new(acc.UTXO)
+		if err := json.Unmarshal(utxoIter.Value(), utxo); err != nil {
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("utxoKeeper findUtxos fail on unmarshal utxo")
+			continue
+		}
+		utxos = append(utxos, utxo)
 	}
 	return utxos
 }

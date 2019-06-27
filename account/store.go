@@ -33,7 +33,7 @@ type AccountStorer interface {
 	SetControlProgram(common.Hash, *CtrlProgram) error
 	SetContractIndex(string, uint64)
 	SetBip44ContractIndex(string, bool, uint64)
-	GetUTXOs() [][]byte
+	GetUTXOs() []*UTXO
 	GetStandardUTXO(bc.Hash) []byte
 	GetContractUTXO(bc.Hash) []byte
 	SetStandardUTXO(bc.Hash, []byte)
