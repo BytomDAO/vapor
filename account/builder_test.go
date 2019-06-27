@@ -64,7 +64,7 @@ func TestReserveBtmUtxoChain(t *testing.T) {
 
 	for i, c := range cases {
 		m.utxoKeeper.expireReservation(time.Unix(999999999, 0))
-		utxos, err := m.reserveBtmUtxoChain(&txbuilder.TemplateBuilder{}, "TestAccountID", c.amount, false)
+		utxos, err := m.ReserveBtmUtxoChain(&txbuilder.TemplateBuilder{}, "TestAccountID", c.amount, false)
 
 		if err != nil != c.err {
 			t.Fatalf("case %d got err %v want err = %v", i, err, c.err)
@@ -164,7 +164,7 @@ func TestBuildBtmTxChain(t *testing.T) {
 			})
 		}
 
-		tpls, gotUtxo, err := m.buildBtmTxChain(utxos, acct.Signer)
+		tpls, gotUtxo, err := m.BuildBtmTxChain(utxos, acct.Signer)
 		if err != nil {
 			t.Fatal(err)
 		}

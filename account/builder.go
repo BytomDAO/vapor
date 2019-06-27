@@ -73,7 +73,7 @@ func CalcMergeGas(num int) uint64 {
 	return gas
 }
 
-func (m *Manager) reserveBtmUtxoChain(builder *txbuilder.TemplateBuilder, accountID string, amount uint64, useUnconfirmed bool) ([]*UTXO, error) {
+func (m *Manager) ReserveBtmUtxoChain(builder *txbuilder.TemplateBuilder, accountID string, amount uint64, useUnconfirmed bool) ([]*UTXO, error) {
 	reservedAmount := uint64(0)
 	utxos := []*UTXO{}
 	for gasAmount := uint64(0); reservedAmount < gasAmount+amount; gasAmount = CalcMergeGas(len(utxos)) {
@@ -90,7 +90,7 @@ func (m *Manager) reserveBtmUtxoChain(builder *txbuilder.TemplateBuilder, accoun
 	return utxos, nil
 }
 
-func (m *Manager) buildBtmTxChain(utxos []*UTXO, signer *signers.Signer) ([]*txbuilder.Template, *UTXO, error) {
+func (m *Manager) BuildBtmTxChain(utxos []*UTXO, signer *signers.Signer) ([]*txbuilder.Template, *UTXO, error) {
 	if len(utxos) == 0 {
 		return nil, nil, errors.New("mergeSpendActionUTXO utxos num 0")
 	}
@@ -170,7 +170,7 @@ func SpendAccountChain(ctx context.Context, builder *txbuilder.TemplateBuilder, 
 		return nil, errors.New("spend chain action only support BTM")
 	}
 
-	utxos, err := act.accounts.reserveBtmUtxoChain(builder, act.AccountID, act.Amount, act.UseUnconfirmed)
+	utxos, err := act.accounts.ReserveBtmUtxoChain(builder, act.AccountID, act.Amount, act.UseUnconfirmed)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +180,7 @@ func SpendAccountChain(ctx context.Context, builder *txbuilder.TemplateBuilder, 
 		return nil, err
 	}
 
-	tpls, utxo, err := act.accounts.buildBtmTxChain(utxos, acct.Signer)
+	tpls, utxo, err := act.accounts.BuildBtmTxChain(utxos, acct.Signer)
 	if err != nil {
 		return nil, err
 	}
