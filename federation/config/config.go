@@ -42,8 +42,7 @@ type Config struct {
 }
 
 type API struct {
-	ListeningPort uint64 `json:"listening_port"`
-	IsReleaseMode bool   `json:"is_release_mode"`
+	IsReleaseMode bool `json:"is_release_mode"`
 }
 
 type MySQLConfig struct {

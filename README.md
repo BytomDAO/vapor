@@ -35,11 +35,10 @@ Firstly, you need initialize node:
 $ vapord init --chain_id=vapor --home <vapor-data-path>
 ```
 
-For example, you can store vapor data in `$HOME/bytom/vapor`:
-
-```
-$ vapord init --chain_id=vapor --home $HOME/bytom/vapor
-```
+The default vapor data path (on the host) is:
++ Mac: `~/Library/Application Support/Vapor`
++ Linux: `~/.vapor`
++ Windows: `%APPDATA%\Vapor`
 
 Then, start your node:
 
