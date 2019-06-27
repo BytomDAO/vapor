@@ -114,6 +114,7 @@ type API struct {
 	blockProposer   *blockproposer.BlockProposer
 	notificationMgr *websocket.WSNotificationManager
 	eventDispatcher *event.Dispatcher
+	fedInfo         *FedInfo
 }
 
 func (a *API) initServer(config *cfg.Config) {
@@ -187,6 +188,7 @@ func NewAPI(sync NetSync, wallet *wallet.Wallet, blockProposer *blockproposer.Bl
 		blockProposer:   blockProposer,
 		eventDispatcher: dispatcher,
 		notificationMgr: notificationMgr,
+		fedInfo:         &FedInfo{},
 	}
 	api.buildHandler()
 	api.initServer(config)

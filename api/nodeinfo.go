@@ -52,30 +52,6 @@ func (a *API) GetNodeInfo() *NetInfo {
 	return info
 }
 
-// GetFedInfo return federation information
-func (a *API) GetFedInfo() *NetInfo {
-	info := &NetInfo{
-		Listening:    a.sync.IsListening(),
-		Syncing:      !a.sync.IsCaughtUp(),
-		Mining:       a.blockProposer.IsProposing(),
-		PeerCount:    a.sync.PeerCount(),
-		CurrentBlock: a.chain.BestBlockHeight(),
-		NetWorkID:    a.sync.GetNetwork(),
-		Version: &VersionInfo{
-			Version: version.Version,
-			Update:  version.Status.VersionStatus(),
-			NewVer:  version.Status.MaxVerSeen(),
-		},
-	}
-	if bestPeer := a.sync.BestPeer(); bestPeer != nil {
-		info.HighestBlock = bestPeer.Height
-	}
-	if info.CurrentBlock > info.HighestBlock {
-		info.HighestBlock = info.CurrentBlock
-	}
-	return info
-}
-
 // return the currently connected peers with net address
 func (a *API) getPeerInfoByAddr(addr string) *peers.PeerInfo {
 	peerInfos := a.sync.GetPeerInfos()
