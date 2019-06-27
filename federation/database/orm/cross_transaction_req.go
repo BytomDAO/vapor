@@ -17,5 +17,5 @@ type CrossTransactionReq struct {
 	UpdatedAt          types.Timestamp `json:"-"`
 
 	CrossTransaction *CrossTransaction `gorm:"foreignkey:CrossTransactionID" json:"-"`
-	Asset            *Asset            `gorm:"foreignkey:ID" json:"asset"`
+	Asset            *Asset            `json:"asset"`
 }

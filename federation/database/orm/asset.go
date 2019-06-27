@@ -5,7 +5,7 @@ import (
 )
 
 type Asset struct {
-	ID                uint64          `gorm:"primary_key" json:"-"`
+	ID                uint64          `gorm:"primary_key;foreignkey:ID" json:"-"`
 	AssetID           string          `json:"asset_id"`
 	IssuanceProgram   string          `json:"-"`
 	VMVersion         uint64          `json:"-"`
