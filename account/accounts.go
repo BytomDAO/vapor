@@ -2,7 +2,6 @@
 package account
 
 import (
-	"encoding/json"
 	"reflect"
 	"strings"
 	"sync"
@@ -418,17 +417,15 @@ func (m *Manager) GetCoinbaseCtrlProgram() (*CtrlProgram, error) {
 		return cp, nil
 	}
 
-	firstAccount := make([]byte, 0)
-	accounts := m.store.GetAccounts("")
+	account := new(Account)
+	accounts, err := m.store.GetAccounts("")
+	if err != nil {
+		return nil, err
+	}
 	if len(accounts) > 0 {
-		firstAccount = accounts[0]
+		account = accounts[0]
 	} else {
 		return nil, ErrFindAccount
-	}
-
-	account := &Account{}
-	if err := json.Unmarshal(firstAccount, account); err != nil {
-		return nil, err
 	}
 
 	program, err := m.CreateAddress(account.ID, false)
@@ -491,37 +488,12 @@ func (m *Manager) IsLocalControlProgram(prog []byte) bool {
 
 // ListAccounts will return the accounts in the db
 func (m *Manager) ListAccounts(id string) ([]*Account, error) {
-	rawAccounts := m.store.GetAccounts(id)
-
-	accounts := []*Account{}
-	for _, rawAccount := range rawAccounts {
-		account := new(Account)
-		if err := json.Unmarshal(rawAccount, &account); err != nil {
-			return nil, err
-		}
-		accounts = append(accounts, account)
-	}
-
-	return accounts, nil
+	return m.store.GetAccounts(id)
 }
 
 // ListControlProgram return all the local control program
 func (m *Manager) ListControlProgram() ([]*CtrlProgram, error) {
-	rawControlPrograms, err := m.store.GetControlPrograms()
-	if err != nil {
-		return nil, err
-	}
-
-	controlPrograms := []*CtrlProgram{}
-	for _, rawControlProgram := range rawControlPrograms {
-		controlProgram := new(CtrlProgram)
-		if err := json.Unmarshal(rawControlProgram, controlProgram); err != nil {
-			return nil, err
-		}
-		controlPrograms = append(controlPrograms, controlProgram)
-	}
-
-	return controlPrograms, nil
+	return m.store.GetControlPrograms()
 }
 
 func (m *Manager) ListUnconfirmedUtxo(accountID string, isSmartContract bool) []*UTXO {
@@ -673,15 +645,12 @@ func (m *Manager) saveControlProgram(prog *CtrlProgram, updateIndex bool) error 
 		return err
 	}
 
-	accountCP, err := json.Marshal(prog)
-	if err != nil {
-		return err
-	}
-
 	m.store.InitBatch()
 	defer m.store.CommitBatch()
 
-	m.store.SetRawProgram(hash, accountCP)
+	if err := m.store.SetControlProgram(hash, prog); err != nil {
+		return nil
+	}
 	if updateIndex {
 		switch acct.DeriveRule {
 		case signers.BIP0032:
@@ -690,7 +659,6 @@ func (m *Manager) saveControlProgram(prog *CtrlProgram, updateIndex bool) error 
 			m.store.SetBip44ContractIndex(acct.ID, prog.Change, prog.KeyIndex)
 		}
 	}
-
 	return nil
 }
 

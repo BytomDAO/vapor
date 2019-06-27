@@ -2,8 +2,6 @@
 package account
 
 import (
-	"encoding/json"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -27,14 +25,12 @@ func (m *Manager) Backup() (*Image, error) {
 		Slice: []*ImageSlice{},
 	}
 
-	// GetAccounts()
-	rawAccounts := m.store.GetAccounts("")
+	accounts, err := m.store.GetAccounts("")
+	if err != nil {
+		return nil, err
+	}
 
-	for _, rawAccount := range rawAccounts {
-		account := new(Account)
-		if err := json.Unmarshal(rawAccount, account); err != nil {
-			return nil, err
-		}
+	for _, account := range accounts {
 		image.Slice = append(image.Slice, &ImageSlice{
 			Account:       account,
 			ContractIndex: m.store.GetContractIndex(account.ID),

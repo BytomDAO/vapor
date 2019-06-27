@@ -264,36 +264,49 @@ func (store *AccountStore) GetControlProgram(hash common.Hash) (*acc.CtrlProgram
 }
 
 // GetAccounts get all accounts which name prfix is id.
-func (store *AccountStore) GetAccounts(id string) [][]byte {
+func (store *AccountStore) GetAccounts(id string) ([]*acc.Account, error) {
+	accounts := []*acc.Account{}
 	accountIter := store.accountDB.IteratorPrefix(AccountIDKey(strings.TrimSpace(id)))
 	defer accountIter.Release()
 
-	accounts := make([][]byte, 0)
 	for accountIter.Next() {
-		accounts = append(accounts, accountIter.Value())
+		account := new(acc.Account)
+		if err := json.Unmarshal(accountIter.Value(), &account); err != nil {
+			return nil, err
+		}
+		accounts = append(accounts, account)
 	}
-	return accounts
+	return accounts, nil
 }
 
 // GetControlPrograms get all local control programs
-func (store *AccountStore) GetControlPrograms() ([][]byte, error) {
+func (store *AccountStore) GetControlPrograms() ([]*acc.CtrlProgram, error) {
+	cps := []*acc.CtrlProgram{}
 	cpIter := store.accountDB.IteratorPrefix([]byte(ContractPrefix))
 	defer cpIter.Release()
 
-	cps := make([][]byte, 0)
 	for cpIter.Next() {
-		cps = append(cps, cpIter.Value())
+		cp := new(acc.CtrlProgram)
+		if err := json.Unmarshal(cpIter.Value(), cp); err != nil {
+			return nil, err
+		}
+		cps = append(cps, cp)
 	}
 	return cps, nil
 }
 
-// SetRawProgram set raw program
-func (store *AccountStore) SetRawProgram(hash common.Hash, program []byte) {
-	if store.batch == nil {
-		store.accountDB.Set(ContractKey(hash), program)
-	} else {
-		store.batch.Set(ContractKey(hash), program)
+// SetControlProgram set raw program
+func (store *AccountStore) SetControlProgram(hash common.Hash, program *acc.CtrlProgram) error {
+	accountCP, err := json.Marshal(program)
+	if err != nil {
+		return err
 	}
+	if store.batch == nil {
+		store.accountDB.Set(ContractKey(hash), accountCP)
+	} else {
+		store.batch.Set(ContractKey(hash), accountCP)
+	}
+	return nil
 }
 
 // SetContractIndex set contract index
