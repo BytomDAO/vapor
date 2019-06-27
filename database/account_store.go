@@ -79,7 +79,6 @@ func (store *AccountStore) DeleteAccount(accountID, accountAlias string) {
 // GetAccountIDByAccountAlias get account ID by account alias
 func (store *AccountStore) GetAccountIDByAccountAlias(accountAlias string) string {
 	accountID := store.accountDB.Get(accountAliasKey(accountAlias))
-
 	return string(accountID)
 }
 
@@ -97,8 +96,12 @@ func (store *AccountStore) GetAccountByAccountID(accountID string) (*acc.Account
 }
 
 // GetAccountIndex get account index by account xpubs
-func (store *AccountStore) GetAccountIndex(xpubs []chainkd.XPub) []byte {
-	return store.accountDB.Get(accountIndexKey(xpubs))
+func (store *AccountStore) GetAccountIndex(xpubs []chainkd.XPub) uint64 {
+	currentIndex := uint64(0)
+	if rawIndexBytes := store.accountDB.Get(accountIndexKey(xpubs)); rawIndexBytes != nil {
+		currentIndex = common.BytesToUnit64(rawIndexBytes)
+	}
+	return currentIndex
 }
 
 // DeleteAccountByAccountAlias delete account by account alias

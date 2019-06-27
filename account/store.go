@@ -13,7 +13,7 @@ type AccountStorer interface {
 	SetAccount(*Account, bool) error
 	GetAccountIDByAccountAlias(string) string
 	GetAccountByAccountID(string) (*Account, error)
-	GetAccountIndex([]chainkd.XPub) []byte
+	GetAccountIndex([]chainkd.XPub) uint64
 	DeleteAccountByAccountAlias(string)
 	DeleteAccountByAccountID(string)
 	DeleteRawProgram(common.Hash)

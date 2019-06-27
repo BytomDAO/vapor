@@ -141,10 +141,7 @@ func (m *Manager) SaveAccount(account *Account) error {
 		return ErrDuplicateIndex
 	}
 
-	currentIndex := uint64(0)
-	if rawIndexBytes := m.store.GetAccountIndex(account.XPubs); rawIndexBytes != nil {
-		currentIndex = common.BytesToUnit64(rawIndexBytes)
-	}
+	currentIndex := m.store.GetAccountIndex(account.XPubs)
 	return m.saveAccount(account, account.KeyIndex > currentIndex)
 }
 
@@ -158,8 +155,8 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string, deriveR
 	}
 
 	acctIndex := uint64(1)
-	if rawIndexBytes := m.store.GetAccountIndex(xpubs); rawIndexBytes != nil {
-		acctIndex = common.BytesToUnit64(rawIndexBytes) + 1
+	if currentIndex := m.store.GetAccountIndex(xpubs); currentIndex != 0 {
+		acctIndex = currentIndex + 1
 	}
 	account, err := CreateAccount(xpubs, quorum, alias, acctIndex, deriveRule)
 	if err != nil {
