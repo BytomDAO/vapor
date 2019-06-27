@@ -92,11 +92,6 @@ func (a *API) getNetInfo() Response {
 	return NewSuccessResponse(a.GetNodeInfo())
 }
 
-// getFedInfo return federation information
-func (a *API) getFedInfo() Response {
-	return NewSuccessResponse(a.GetFedInfo())
-}
-
 // isMining return is in mining or not
 func (a *API) isMining() Response {
 	IsMining := map[string]bool{"is_mining": a.IsMining()}
