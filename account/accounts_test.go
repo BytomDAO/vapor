@@ -198,5 +198,4 @@ func (m *Manager) createTestAccount(t testing.TB, alias string, tags map[string]
 	}
 
 	return account
-
 }
