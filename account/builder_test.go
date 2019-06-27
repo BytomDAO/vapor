@@ -580,7 +580,7 @@ func TestCalcMergeGas(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		gas := calcMergeGas(c.utxoNum)
+		gas := CalcMergeGas(c.utxoNum)
 		if gas != c.gas {
 			t.Fatalf("case %d got %d want %d", i, gas, c.gas)
 		}
