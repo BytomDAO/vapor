@@ -345,21 +345,28 @@ func (store *AccountStore) GetUTXOs() []*acc.UTXO {
 	return utxos
 }
 
-// GetStandardUTXO get standard utxo by id
-func (store *AccountStore) GetStandardUTXO(outid bc.Hash) []byte {
-	return store.accountDB.Get(StandardUTXOKey(outid))
-}
-
-// GetContractUTXO get contract utxo
-func (store *AccountStore) GetContractUTXO(outid bc.Hash) []byte {
-	return store.accountDB.Get(ContractUTXOKey(outid))
+// GetUTXO get standard utxo by id
+func (store *AccountStore) GetUTXO(outid bc.Hash) (*acc.UTXO, error) {
+	u := new(acc.UTXO)
+	if data := store.accountDB.Get(StandardUTXOKey(outid)); data != nil {
+		return u, json.Unmarshal(data, u)
+	}
+	if data := store.accountDB.Get(ContractUTXOKey(outid)); data != nil {
+		return u, json.Unmarshal(data, u)
+	}
+	return nil, acc.ErrMatchUTXO
 }
 
 // SetStandardUTXO set standard utxo
-func (store *AccountStore) SetStandardUTXO(outputID bc.Hash, data []byte) {
+func (store *AccountStore) SetStandardUTXO(outputID bc.Hash, utxo *acc.UTXO) error {
+	data, err := json.Marshal(utxo)
+	if err != nil {
+		return err
+	}
 	if store.batch == nil {
 		store.accountDB.Set(StandardUTXOKey(outputID), data)
 	} else {
 		store.batch.Set(StandardUTXOKey(outputID), data)
 	}
+	return nil
 }

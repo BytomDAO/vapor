@@ -669,11 +669,9 @@ func TestFindUtxos(t *testing.T) {
 
 	for i, c := range cases {
 		for _, u := range c.dbUtxos {
-			data, err := json.Marshal(u)
-			if err != nil {
+			if err := c.uk.Store.SetStandardUTXO(u.OutputID, u); err != nil {
 				t.Error(err)
 			}
-			c.uk.Store.SetStandardUTXO(u.OutputID, data)
 		}
 
 		gotUtxos, immatureAmount := c.uk.FindUtxos("testAccount", &bc.AssetID{}, c.useUnconfirmed, c.vote)

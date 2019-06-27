@@ -34,7 +34,6 @@ type AccountStorer interface {
 	SetContractIndex(string, uint64)
 	SetBip44ContractIndex(string, bool, uint64)
 	GetUTXOs() []*UTXO
-	GetStandardUTXO(bc.Hash) []byte
-	GetContractUTXO(bc.Hash) []byte
-	SetStandardUTXO(bc.Hash, []byte)
+	GetUTXO(bc.Hash) (*UTXO, error)
+	SetStandardUTXO(bc.Hash, *UTXO) error
 }

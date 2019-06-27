@@ -3,7 +3,6 @@ package mock
 import (
 	"bytes"
 	"container/list"
-	"encoding/json"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -148,15 +147,7 @@ func (uk *UTXOKeeper) FindUtxo(outHash bc.Hash, useUnconfirmed bool) (*acc.UTXO,
 	if u, ok := uk.Unconfirmed[outHash]; useUnconfirmed && ok {
 		return u, nil
 	}
-
-	u := &acc.UTXO{}
-	if data := uk.Store.GetStandardUTXO(outHash); data != nil {
-		return u, json.Unmarshal(data, u)
-	}
-	if data := uk.Store.GetContractUTXO(outHash); data != nil {
-		return u, json.Unmarshal(data, u)
-	}
-	return nil, acc.ErrMatchUTXO
+	return uk.Store.GetUTXO(outHash)
 }
 
 func (uk *UTXOKeeper) FindUtxos(accountID string, assetID *bc.AssetID, useUnconfirmed bool, vote []byte) ([]*acc.UTXO, uint64) {

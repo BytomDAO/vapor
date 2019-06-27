@@ -3,7 +3,6 @@ package account
 import (
 	"bytes"
 	"container/list"
-	"encoding/json"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -239,15 +238,7 @@ func (uk *utxoKeeper) findUtxo(outHash bc.Hash, useUnconfirmed bool) (*UTXO, err
 	if u, ok := uk.unconfirmed[outHash]; useUnconfirmed && ok {
 		return u, nil
 	}
-
-	u := &UTXO{}
-	if data := uk.store.GetStandardUTXO(outHash); data != nil {
-		return u, json.Unmarshal(data, u)
-	}
-	if data := uk.store.GetContractUTXO(outHash); data != nil {
-		return u, json.Unmarshal(data, u)
-	}
-	return nil, ErrMatchUTXO
+	return uk.store.GetUTXO(outHash)
 }
 
 func (uk *utxoKeeper) optUTXOs(utxos []*UTXO, amount uint64) ([]*UTXO, uint64, uint64) {
