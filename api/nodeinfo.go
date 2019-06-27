@@ -52,16 +52,6 @@ func (a *API) GetNodeInfo() *NetInfo {
 	return info
 }
 
-type FedInfo struct {
-	IsMember bool   `json:"is_member"`
-	Port     uint64 `json:"port"`
-}
-
-// GetFedInfo return federation information
-func (a *API) GetFedInfo() *FedInfo {
-	return a.fedInfo
-}
-
 // return the currently connected peers with net address
 func (a *API) getPeerInfoByAddr(addr string) *peers.PeerInfo {
 	peerInfos := a.sync.GetPeerInfos()
