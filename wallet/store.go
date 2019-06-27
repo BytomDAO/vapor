@@ -38,3 +38,4 @@ type WalletStorer interface {
 	DeleteRecoveryStatus([]byte)
 	GetRecoveryStatus([]byte) []byte
 }
+

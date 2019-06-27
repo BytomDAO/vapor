@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/vapor/database"
-
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/testutil"
