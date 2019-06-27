@@ -86,7 +86,6 @@ var (
 // 			t.Fatalf("case %d got %d want %d", i, got, c.want)
 // 		}
 // 	}
-
 // }
 
 // func TestBuildBtmTxChain(t *testing.T) {
