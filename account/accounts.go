@@ -353,13 +353,8 @@ func (m *Manager) FindByID(id string) (*Account, error) {
 		return cachedAccount.(*Account), nil
 	}
 
-	rawAccount := m.store.GetAccountByAccountID(id)
-	if rawAccount == nil {
-		return nil, ErrFindAccount
-	}
-
-	account := &Account{}
-	if err := json.Unmarshal(rawAccount, account); err != nil {
+	account, err := m.store.GetAccountByAccountID(id)
+	if err != nil {
 		return nil, err
 	}
 
@@ -371,13 +366,12 @@ func (m *Manager) FindByID(id string) (*Account, error) {
 
 // GetAccountByProgram return Account by given CtrlProgram
 func (m *Manager) GetAccountByProgram(program *CtrlProgram) (*Account, error) {
-	rawAccount := m.store.GetAccountByAccountID(program.AccountID)
-	if rawAccount == nil {
-		return nil, ErrFindAccount
+	account, err := m.store.GetAccountByAccountID(program.AccountID)
+	if err != nil {
+		return nil, err
 	}
 
-	account := &Account{}
-	return account, json.Unmarshal(rawAccount, account)
+	return account, nil
 }
 
 // GetAccountByXPubsIndex get account by xPubs and index
@@ -397,15 +391,10 @@ func (m *Manager) GetAccountByXPubsIndex(xPubs []chainkd.XPub, index uint64) (*A
 
 // GetAliasByID return the account alias by given ID
 func (m *Manager) GetAliasByID(id string) string {
-	rawAccount := m.store.GetAccountByAccountID(id)
-	if rawAccount == nil {
+	account, err := m.store.GetAccountByAccountID(id)
+	if err != nil {
 		log.Warn("GetAliasByID fail to find account")
 		return ""
-	}
-
-	account := &Account{}
-	if err := json.Unmarshal(rawAccount, account); err != nil {
-		log.Warn(err)
 	}
 	return account.Alias
 }

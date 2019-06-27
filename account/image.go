@@ -52,7 +52,8 @@ func (m *Manager) Restore(image *Image) error {
 	defer m.store.CommitBatch()
 
 	for _, slice := range image.Slice {
-		if existed := m.store.GetAccountByAccountID(slice.Account.ID); existed != nil {
+		existed, err := m.store.GetAccountByAccountID(slice.Account.ID)
+		if err != nil || existed != nil {
 			log.WithFields(log.Fields{
 				"module": logModule,
 				"alias":  slice.Account.Alias,

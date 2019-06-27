@@ -84,8 +84,16 @@ func (store *AccountStore) GetAccountIDByAccountAlias(accountAlias string) strin
 }
 
 // GetAccountByAccountID get account by accountID
-func (store *AccountStore) GetAccountByAccountID(accountID string) []byte {
-	return store.accountDB.Get(AccountIDKey(accountID))
+func (store *AccountStore) GetAccountByAccountID(accountID string) (*acc.Account, error) {
+	account := new(acc.Account)
+	rawAccount := store.accountDB.Get(AccountIDKey(accountID))
+	if rawAccount == nil {
+		return nil, acc.ErrFindAccount
+	}
+	if err := json.Unmarshal(rawAccount, account); err != nil {
+		return nil, err
+	}
+	return account, nil
 }
 
 // GetAccountIndex get account index by account xpubs
