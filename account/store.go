@@ -26,8 +26,8 @@ type AccountStorer interface {
 	SetCoinbaseArbitrary([]byte)
 	GetMiningAddress() (*CtrlProgram, error)
 	SetMiningAddress(*CtrlProgram) error
-	GetBip44ContractIndex(string, bool) []byte
-	GetRawProgram(common.Hash) []byte
+	GetBip44ContractIndex(string, bool) uint64
+	GetControlProgram(common.Hash) (*CtrlProgram, error)
 	GetAccounts(string) [][]byte
 	GetControlPrograms() ([][]byte, error)
 	SetRawProgram(common.Hash, []byte)

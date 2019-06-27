@@ -445,11 +445,7 @@ func (m *Manager) GetCoinbaseCtrlProgram() (*CtrlProgram, error) {
 
 // GetBip44ContractIndex return the current bip44 contract index
 func (m *Manager) GetBip44ContractIndex(accountID string, change bool) uint64 {
-	index := uint64(0)
-	if rawIndexBytes := m.store.GetBip44ContractIndex(accountID, change); rawIndexBytes != nil {
-		index = common.BytesToUnit64(rawIndexBytes)
-	}
-	return index
+	return m.store.GetBip44ContractIndex(accountID, change)
 }
 
 // GetLocalCtrlProgramByAddress return CtrlProgram by given address
@@ -461,13 +457,16 @@ func (m *Manager) GetLocalCtrlProgramByAddress(address string) (*CtrlProgram, er
 
 	var hash [32]byte
 	sha3pool.Sum256(hash[:], program)
-	rawProgram := m.store.GetRawProgram(hash)
-	if rawProgram == nil {
+
+	cp, err := m.store.GetControlProgram(hash)
+	if err != nil {
+		return nil, err
+	}
+	if cp == nil {
 		return nil, ErrFindCtrlProgram
 	}
 
-	cp := &CtrlProgram{}
-	return cp, json.Unmarshal(rawProgram, cp)
+	return cp, nil
 }
 
 // GetMiningAddress will return the mining address
@@ -483,8 +482,11 @@ func (m *Manager) GetMiningAddress() (string, error) {
 func (m *Manager) IsLocalControlProgram(prog []byte) bool {
 	var hash common.Hash
 	sha3pool.Sum256(hash[:], prog)
-	bytes := m.store.GetRawProgram(hash)
-	return bytes != nil
+	cp, err := m.store.GetControlProgram(hash)
+	if err != nil || cp == nil {
+		return false
+	}
+	return true
 }
 
 // ListAccounts will return the accounts in the db
@@ -636,7 +638,7 @@ func (m *Manager) getCurrentContractIndex(account *Account, change bool) (uint64
 	case signers.BIP0032:
 		return m.store.GetContractIndex(account.ID), nil
 	case signers.BIP0044:
-		return m.GetBip44ContractIndex(account.ID, change), nil
+		return m.store.GetBip44ContractIndex(account.ID, change), nil
 	}
 	return 0, ErrDeriveRule
 }

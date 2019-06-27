@@ -241,13 +241,26 @@ func (store *AccountStore) SetMiningAddress(program *acc.CtrlProgram) error {
 }
 
 // GetBip44ContractIndex get bip44 contract index
-func (store *AccountStore) GetBip44ContractIndex(accountID string, change bool) []byte {
-	return store.accountDB.Get(Bip44ContractIndexKey(accountID, change))
+func (store *AccountStore) GetBip44ContractIndex(accountID string, change bool) uint64 {
+	index := uint64(0)
+	if rawIndexBytes := store.accountDB.Get(Bip44ContractIndexKey(accountID, change)); rawIndexBytes != nil {
+		index = common.BytesToUnit64(rawIndexBytes)
+	}
+	return index
 }
 
-// GetRawProgram get raw control program
-func (store *AccountStore) GetRawProgram(hash common.Hash) []byte {
-	return store.accountDB.Get(ContractKey(hash))
+// GetControlProgram get control program
+func (store *AccountStore) GetControlProgram(hash common.Hash) (*acc.CtrlProgram, error) {
+	rawProgram := store.accountDB.Get(ContractKey(hash))
+	if rawProgram == nil {
+		return nil, acc.ErrFindCtrlProgram
+	}
+
+	cp := new(acc.CtrlProgram)
+	if err := json.Unmarshal(rawProgram, cp); err != nil {
+		return nil, err
+	}
+	return cp, nil
 }
 
 // GetAccounts get all accounts which name prfix is id.
