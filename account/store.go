@@ -19,7 +19,7 @@ type AccountStorer interface {
 	DeleteRawProgram(common.Hash)
 	DeleteBip44ContractIndex(string)
 	DeleteContractIndex(string)
-	GetContractIndex(string) []byte
+	GetContractIndex(string) uint64
 	GetAccountUTXOs(string) [][]byte
 	DeleteStandardUTXO(bc.Hash)
 	GetCoinbaseArbitrary() []byte

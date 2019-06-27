@@ -451,15 +451,6 @@ func (m *Manager) GetCoinbaseCtrlProgram() (*CtrlProgram, error) {
 	return program, nil
 }
 
-// GetContractIndex return the current index
-func (m *Manager) GetContractIndex(accountID string) uint64 {
-	index := uint64(0)
-	if rawIndexBytes := m.store.GetContractIndex(accountID); rawIndexBytes != nil {
-		index = common.BytesToUnit64(rawIndexBytes)
-	}
-	return index
-}
-
 // GetBip44ContractIndex return the current bip44 contract index
 func (m *Manager) GetBip44ContractIndex(accountID string, change bool) uint64 {
 	index := uint64(0)
@@ -646,10 +637,14 @@ func createP2SH(account *Account, path [][]byte) (*CtrlProgram, error) {
 	}, nil
 }
 
+func (m *Manager) GetContractIndex(accountID string) uint64 {
+	return m.store.GetContractIndex(accountID)
+}
+
 func (m *Manager) getCurrentContractIndex(account *Account, change bool) (uint64, error) {
 	switch account.DeriveRule {
 	case signers.BIP0032:
-		return m.GetContractIndex(account.ID), nil
+		return m.store.GetContractIndex(account.ID), nil
 	case signers.BIP0044:
 		return m.GetBip44ContractIndex(account.ID, change), nil
 	}

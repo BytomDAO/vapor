@@ -154,8 +154,12 @@ func (store *AccountStore) DeleteContractIndex(accountID string) {
 }
 
 // GetContractIndex get contract index
-func (store *AccountStore) GetContractIndex(accountID string) []byte {
-	return store.accountDB.Get(contractIndexKey(accountID))
+func (store *AccountStore) GetContractIndex(accountID string) uint64 {
+	index := uint64(0)
+	if rawIndexBytes := store.accountDB.Get(contractIndexKey(accountID)); rawIndexBytes != nil {
+		index = common.BytesToUnit64(rawIndexBytes)
+	}
+	return index
 }
 
 // GetAccountUTXOs get account utxos by account id

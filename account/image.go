@@ -37,7 +37,7 @@ func (m *Manager) Backup() (*Image, error) {
 		}
 		image.Slice = append(image.Slice, &ImageSlice{
 			Account:       account,
-			ContractIndex: m.GetContractIndex(account.ID),
+			ContractIndex: m.store.GetContractIndex(account.ID),
 		})
 	}
 	return image, nil
