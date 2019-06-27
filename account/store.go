@@ -24,8 +24,8 @@ type AccountStorer interface {
 	DeleteStandardUTXO(bc.Hash)
 	GetCoinbaseArbitrary() []byte
 	SetCoinbaseArbitrary([]byte)
-	GetMiningAddress() []byte
-	SetMiningAddress([]byte)
+	GetMiningAddress() (*CtrlProgram, error)
+	SetMiningAddress(*CtrlProgram) error
 	GetBip44ContractIndex(string, bool) []byte
 	GetRawProgram(common.Hash) []byte
 	GetAccounts(string) [][]byte

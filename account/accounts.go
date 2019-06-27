@@ -35,16 +35,17 @@ const (
 
 // pre-define errors for supporting bytom errorFormatter
 var (
-	ErrDuplicateAlias  = errors.New("Duplicate account alias")
-	ErrDuplicateIndex  = errors.New("Duplicate account with same xPubs and index")
-	ErrFindAccount     = errors.New("Failed to find account")
-	ErrMarshalAccount  = errors.New("Failed to marshal account")
-	ErrInvalidAddress  = errors.New("Invalid address")
-	ErrFindCtrlProgram = errors.New("Failed to find account control program")
-	ErrDeriveRule      = errors.New("Invalid key derivation rule")
-	ErrContractIndex   = errors.New("Exceeded maximum addresses per account")
-	ErrAccountIndex    = errors.New("Exceeded maximum accounts per xpub")
-	ErrFindTransaction = errors.New("No transaction")
+	ErrDuplicateAlias    = errors.New("Duplicate account alias")
+	ErrDuplicateIndex    = errors.New("Duplicate account with same xPubs and index")
+	ErrFindAccount       = errors.New("Failed to find account")
+	ErrMarshalAccount    = errors.New("Failed to marshal account")
+	ErrInvalidAddress    = errors.New("Invalid address")
+	ErrFindCtrlProgram   = errors.New("Failed to find account control program")
+	ErrDeriveRule        = errors.New("Invalid key derivation rule")
+	ErrContractIndex     = errors.New("Exceeded maximum addresses per account")
+	ErrAccountIndex      = errors.New("Exceeded maximum accounts per xpub")
+	ErrFindTransaction   = errors.New("No transaction")
+	ErrFindMiningAddress = errors.New("Failed to find mining address")
 )
 
 // Account is structure of Bytom account
@@ -409,9 +410,12 @@ func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
 
 // GetCoinbaseCtrlProgram will return the coinbase CtrlProgram
 func (m *Manager) GetCoinbaseCtrlProgram() (*CtrlProgram, error) {
-	if data := m.store.GetMiningAddress(); data != nil {
-		cp := &CtrlProgram{}
-		return cp, json.Unmarshal(data, cp)
+	cp, err := m.store.GetMiningAddress()
+	if err != nil {
+		return nil, err
+	}
+	if cp != nil {
+		return cp, nil
 	}
 
 	firstAccount := make([]byte, 0)
@@ -432,12 +436,9 @@ func (m *Manager) GetCoinbaseCtrlProgram() (*CtrlProgram, error) {
 		return nil, err
 	}
 
-	rawCP, err := json.Marshal(program)
-	if err != nil {
+	if err := m.store.SetMiningAddress(program); err != nil {
 		return nil, err
 	}
-
-	m.store.SetMiningAddress(rawCP)
 
 	return program, nil
 }
@@ -548,12 +549,10 @@ func (m *Manager) SetMiningAddress(miningAddress string) (string, error) {
 		Address:        miningAddress,
 		ControlProgram: program,
 	}
-	rawCP, err := json.Marshal(cp)
-	if err != nil {
-		return "", err
-	}
 
-	m.store.SetMiningAddress(rawCP)
+	if err := m.store.SetMiningAddress(cp); err != nil {
+		return cp.Address, err
+	}
 	return m.GetMiningAddress()
 }
 

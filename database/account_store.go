@@ -212,17 +212,32 @@ func (store *AccountStore) SetCoinbaseArbitrary(arbitrary []byte) {
 }
 
 // GetMiningAddress get mining address
-func (store *AccountStore) GetMiningAddress() []byte {
-	return store.accountDB.Get([]byte(MiningAddressKey))
+func (store *AccountStore) GetMiningAddress() (*acc.CtrlProgram, error) {
+	rawCP := store.accountDB.Get([]byte(MiningAddressKey))
+	if rawCP == nil {
+		return nil, acc.ErrFindMiningAddress
+	}
+	cp := new(acc.CtrlProgram)
+	if err := json.Unmarshal(rawCP, cp); err != nil {
+		return nil, err
+	}
+
+	return cp, nil
 }
 
 // SetMiningAddress set mining address
-func (store *AccountStore) SetMiningAddress(rawProgram []byte) {
+func (store *AccountStore) SetMiningAddress(program *acc.CtrlProgram) error {
+	rawProgram, err := json.Marshal(program)
+	if err != nil {
+		return err
+	}
+
 	if store.batch == nil {
 		store.accountDB.Set([]byte(MiningAddressKey), rawProgram)
 	} else {
 		store.batch.Set([]byte(MiningAddressKey), rawProgram)
 	}
+	return nil
 }
 
 // GetBip44ContractIndex get bip44 contract index
