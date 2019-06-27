@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"reflect"
 	"strings"
@@ -43,10 +42,7 @@ func (server *Server) setupRouter() {
 }
 
 func (s *Server) Run() {
-	if s.cfg.API.ListeningPort == 0 {
-		s.cfg.API.ListeningPort = 3000
-	}
-	s.engine.Run(fmt.Sprintf(":%d", s.cfg.API.ListeningPort))
+	s.engine.Run(":9886")
 }
 
 func (s *Server) middleware() gin.HandlerFunc {

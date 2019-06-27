@@ -5,14 +5,13 @@ To run a federation node, you will need to:
 1. init a MySQL database with this [schema](./federation.sql);
 2. run a `bytomd` node;
 3. run a `vapord` node and import the federation private key;
-4. and last but not least, run a `fedd` node with a `fed_cfg.json`.
+4. and last but not least, run a `fedd` node with a `fed_cfg.json` and it will listen at 9886 port.
 
 A `fed_cfg.json` would look like this:
 
 ```json
 {
     "api" : {
-        "listening_port" : 3000,
         "is_release_mode": false
     },
     "mysql" : {
@@ -127,7 +126,7 @@ Optional:
 
 ```js
 // Request
-curl -X POST 127.0.0.1:3000/api/v1/federation/list-crosschain-txs -d '{}'
+curl -X POST 127.0.0.1:9886/api/v1/federation/list-crosschain-txs -d '{}'
 
 // Result
 {
