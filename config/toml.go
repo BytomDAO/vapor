@@ -36,7 +36,7 @@ seeds = ""
 var vaporNetConfigTmpl = `chain_id = "vapor"
 [p2p]
 laddr = "tcp://0.0.0.0:56656"
-seeds = "52.82.77.112:56656,52.82.113.219:56656,52.82.119.51:56656"
+seeds = "52.83.60.99:56656,52.82.56.221:56656,52.82.56.145:56656"
 `
 
 // Select network seeds to merge a new string.
