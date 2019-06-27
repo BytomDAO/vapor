@@ -64,12 +64,9 @@ func (m *Manager) Restore(image *Image) error {
 			return ErrDuplicateAlias
 		}
 
-		rawAccount, err := json.Marshal(slice.Account)
-		if err != nil {
-			return ErrMarshalAccount
+		if err := m.store.SetAccount(slice.Account, false); err != nil {
+			return err
 		}
-
-		m.store.SetAccount(slice.Account.ID, slice.Account.Alias, rawAccount)
 	}
 
 	return nil

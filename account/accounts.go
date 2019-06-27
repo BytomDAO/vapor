@@ -113,17 +113,11 @@ func CreateAccount(xpubs []chainkd.XPub, quorum int, alias string, acctIndex uin
 }
 
 func (m *Manager) saveAccount(account *Account, updateIndex bool) error {
-	rawAccount, err := json.Marshal(account)
-	if err != nil {
-		return ErrMarshalAccount
-	}
-
 	m.store.InitBatch()
 	defer m.store.CommitBatch()
 
-	m.store.SetAccount(account.ID, account.Alias, rawAccount)
-	if updateIndex {
-		m.store.SetAccountIndex(account.XPubs, account.KeyIndex)
+	if err := m.store.SetAccount(account, updateIndex); err != nil {
+		return err
 	}
 
 	return nil
@@ -179,7 +173,7 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string, deriveR
 	return account, nil
 }
 
-func (m *Manager) UpdateAccountAlias(accountID string, newAlias string) (err error) {
+func (m *Manager) UpdateAccountAlias(accountID string, newAlias string) error {
 	m.accountMu.Lock()
 	defer m.accountMu.Unlock()
 
@@ -199,16 +193,14 @@ func (m *Manager) UpdateAccountAlias(accountID string, newAlias string) (err err
 	m.cacheMu.Unlock()
 
 	account.Alias = normalizedAlias
-	rawAccount, err := json.Marshal(account)
-	if err != nil {
-		return ErrMarshalAccount
-	}
 
 	m.store.InitBatch()
 	defer m.store.CommitBatch()
 
 	m.store.DeleteAccountByAccountAlias(oldAlias)
-	m.store.SetAccount(accountID, normalizedAlias, rawAccount)
+	if err := m.store.SetAccount(account, false); err != nil {
+		return err
+	}
 
 	return nil
 }

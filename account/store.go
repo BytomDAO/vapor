@@ -10,8 +10,7 @@ import (
 type AccountStorer interface {
 	InitBatch()
 	CommitBatch()
-	SetAccount(string, string, []byte)
-	SetAccountIndex([]chainkd.XPub, uint64)
+	SetAccount(account *Account, updateIndex bool) error
 	GetAccountByAccountAlias(string) []byte
 	GetAccountByAccountID(string) []byte
 	GetAccountIndex([]chainkd.XPub) []byte

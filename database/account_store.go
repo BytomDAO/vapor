@@ -1,8 +1,10 @@
 package database
 
 import (
+	"encoding/json"
 	"strings"
 
+	acc "github.com/vapor/account"
 	"github.com/vapor/common"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	dbm "github.com/vapor/database/leveldb"
@@ -39,16 +41,26 @@ func (store *AccountStore) CommitBatch() {
 }
 
 // SetAccount set account account ID, account alias and raw account.
-func (store *AccountStore) SetAccount(accountID, accountAlias string, rawAccount []byte) {
+func (store *AccountStore) SetAccount(account *acc.Account, updateIndex bool) error {
+	rawAccount, err := json.Marshal(account)
+	if err != nil {
+		return acc.ErrMarshalAccount
+	}
+
 	batch := store.accountDB.NewBatch()
 	if store.batch != nil {
 		batch = store.batch
 	}
-	batch.Set(AccountIDKey(accountID), rawAccount)
-	batch.Set(accountAliasKey(accountAlias), []byte(accountID))
+	batch.Set(AccountIDKey(account.ID), rawAccount)
+	batch.Set(accountAliasKey(account.Alias), []byte(account.ID))
+	if updateIndex {
+		batch.Set(accountIndexKey(account.XPubs), common.Unit64ToBytes(account.KeyIndex))
+	}
+
 	if store.batch == nil {
 		batch.Write()
 	}
+	return nil
 }
 
 // DeleteAccount set account account ID, account alias and raw account.
@@ -61,15 +73,6 @@ func (store *AccountStore) DeleteAccount(accountID, accountAlias string) {
 	batch.Delete(accountAliasKey(accountAlias))
 	if store.batch == nil {
 		batch.Write()
-	}
-}
-
-// SetAccountIndex set account index
-func (store *AccountStore) SetAccountIndex(xpubs []chainkd.XPub, keyIndex uint64) {
-	if store.batch == nil {
-		store.accountDB.Set(accountIndexKey(xpubs), common.Unit64ToBytes(keyIndex))
-	} else {
-		store.batch.Set(accountIndexKey(xpubs), common.Unit64ToBytes(keyIndex))
 	}
 }
 
