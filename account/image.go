@@ -60,7 +60,7 @@ func (m *Manager) Restore(image *Image) error {
 			}).Warning("skip restore account due to already existed")
 			continue
 		}
-		if existed := m.store.GetAccountByAccountAlias(slice.Account.Alias); existed != nil {
+		if existed := m.store.GetAccountIDByAccountAlias(slice.Account.Alias); existed != "" {
 			return ErrDuplicateAlias
 		}
 

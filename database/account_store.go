@@ -76,9 +76,11 @@ func (store *AccountStore) DeleteAccount(accountID, accountAlias string) {
 	}
 }
 
-// GetAccountByAccountAlias get account by account alias
-func (store *AccountStore) GetAccountByAccountAlias(accountAlias string) []byte {
-	return store.accountDB.Get(accountAliasKey(accountAlias))
+// GetAccountIDByAccountAlias get account ID by account alias
+func (store *AccountStore) GetAccountIDByAccountAlias(accountAlias string) string {
+	accountID := store.accountDB.Get(accountAliasKey(accountAlias))
+
+	return string(accountID)
 }
 
 // GetAccountByAccountID get account by accountID
