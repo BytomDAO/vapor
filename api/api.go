@@ -188,7 +188,7 @@ func NewAPI(sync NetSync, wallet *wallet.Wallet, blockProposer *blockproposer.Bl
 		blockProposer:   blockProposer,
 		eventDispatcher: dispatcher,
 		notificationMgr: notificationMgr,
-		fedInfo:         &FedInfo{},
+		fedInfo:         &FedInfo{config.Federation.IsMember, config.Federation.Port},
 	}
 	api.buildHandler()
 	api.initServer(config)

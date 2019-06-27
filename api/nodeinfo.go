@@ -53,8 +53,8 @@ func (a *API) GetNodeInfo() *NetInfo {
 }
 
 type FedInfo struct {
-	Enable bool   `json:"enable"`
-	Port   uint64 `json:"port"`
+	IsMember bool   `json:"is_member"`
+	Port     uint64 `json:"port"`
 }
 
 // GetFedInfo return federation information
