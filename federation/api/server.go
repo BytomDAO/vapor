@@ -43,6 +43,9 @@ func (server *Server) setupRouter() {
 }
 
 func (s *Server) Run() {
+	if s.cfg.API.ListeningPort == 0 {
+		s.cfg.API.ListeningPort = 3000
+	}
 	s.engine.Run(fmt.Sprintf(":%d", s.cfg.API.ListeningPort))
 }
 
