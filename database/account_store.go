@@ -162,18 +162,6 @@ func (store *AccountStore) GetContractIndex(accountID string) uint64 {
 	return index
 }
 
-// GetAccountUTXOs get account utxos by account id
-func (store *AccountStore) GetAccountUTXOs(accountID string) [][]byte {
-	accountUtxoIter := store.accountDB.IteratorPrefix([]byte(UTXOPrefix))
-	defer accountUtxoIter.Release()
-
-	utxos := make([][]byte, 0)
-	for accountUtxoIter.Next() {
-		utxos = append(utxos, accountUtxoIter.Value())
-	}
-	return utxos
-}
-
 // DeleteStandardUTXO delete utxo by outpu id
 func (store *AccountStore) DeleteStandardUTXO(outputID bc.Hash) {
 	if store.batch == nil {
@@ -181,6 +169,32 @@ func (store *AccountStore) DeleteStandardUTXO(outputID bc.Hash) {
 	} else {
 		store.batch.Delete(StandardUTXOKey(outputID))
 	}
+}
+
+// DeleteAccountUTXOs delete account utxos by accountID
+func (store *AccountStore) DeleteAccountUTXOs(accountID string) error {
+	batch := store.accountDB.NewBatch()
+	if store.batch != nil {
+		batch = store.batch
+	}
+
+	accountUtxoIter := store.accountDB.IteratorPrefix([]byte(UTXOPrefix))
+	defer accountUtxoIter.Release()
+
+	for accountUtxoIter.Next() {
+		accountUtxo := &acc.UTXO{}
+		if err := json.Unmarshal(accountUtxoIter.Value(), accountUtxo); err != nil {
+			return err
+		}
+		if accountID == accountUtxo.AccountID {
+			batch.Delete(StandardUTXOKey(accountUtxo.OutputID))
+		}
+	}
+
+	if store.batch == nil {
+		batch.Write()
+	}
+	return nil
 }
 
 // GetCoinbaseArbitrary get coinbase arbitrary

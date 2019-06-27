@@ -277,18 +277,9 @@ func (m *Manager) deleteAccountControlPrograms(accountID string) error {
 
 // deleteAccountUtxos deletes utxos matching accountID
 func (m *Manager) deleteAccountUtxos(accountID string) error {
-	rawUTXOs := m.store.GetAccountUTXOs(accountID)
-
-	for _, rawUTXO := range rawUTXOs {
-		utxo := new(UTXO)
-		if err := json.Unmarshal(rawUTXO, utxo); err != nil {
-			return err
-		}
-		if accountID == utxo.AccountID {
-			m.store.DeleteStandardUTXO(utxo.OutputID)
-		}
+	if err := m.store.DeleteAccountUTXOs(accountID); err != nil {
+		return err
 	}
-
 	return nil
 }
 

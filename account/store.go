@@ -20,7 +20,7 @@ type AccountStorer interface {
 	DeleteBip44ContractIndex(string)
 	DeleteContractIndex(string)
 	GetContractIndex(string) uint64
-	GetAccountUTXOs(string) [][]byte
+	DeleteAccountUTXOs(string) error
 	DeleteStandardUTXO(bc.Hash)
 	GetCoinbaseArbitrary() []byte
 	SetCoinbaseArbitrary([]byte)
