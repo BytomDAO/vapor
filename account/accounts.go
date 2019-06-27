@@ -18,8 +18,6 @@ import (
 	"github.com/vapor/crypto"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/crypto/sha3pool"
-	"github.com/vapor/database"
-	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
@@ -83,8 +81,7 @@ type Manager struct {
 }
 
 // NewManager creates a new account manager
-func NewManager(accountdb dbm.DB, chain *protocol.Chain) *Manager {
-	store := database.NewAccountStore(accountdb)
+func NewManager(store AccountStorer, chain *protocol.Chain) *Manager {
 	return &Manager{
 		store:       store,
 		chain:       chain,

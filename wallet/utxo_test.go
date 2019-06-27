@@ -197,7 +197,8 @@ func TestGetAccountUtxos(t *testing.T) {
 			testDB.Set([]byte(k), data)
 		}
 
-		w.AccountMgr = account.NewManager(testDB, nil)
+		acccountStore := database.NewAccountStore(testDB)
+		w.AccountMgr = account.NewManager(acccountStore, nil)
 		w.AccountMgr.AddUnconfirmedUtxo(c.unconfirmedUtxos)
 		gotUtxos := w.GetAccountUtxos("", c.id, c.unconfirmed, c.isSmartContract, false)
 		if !testutil.DeepEqual(gotUtxos, c.wantUtxos) {

@@ -32,7 +32,8 @@ func TestP2PKH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	accountManager := account.NewManager(testDB, chain)
+	accountStore := database.NewAccountStore(testDB)
+	accountManager := account.NewManager(accountStore, chain)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -83,7 +84,8 @@ func TestBip0032P2PKH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	accountManager := account.NewManager(testDB, chain)
+	accountStore := database.NewAccountStore(testDB)
+	accountManager := account.NewManager(accountStore, chain)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -147,7 +149,8 @@ func TestP2SH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	accountManager := account.NewManager(testDB, chain)
+	accountStore := database.NewAccountStore(testDB)
+	accountManager := account.NewManager(accountStore, chain)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -208,7 +211,8 @@ func TestBip0032P2SH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	accountManager := account.NewManager(testDB, chain)
+	accountStore := database.NewAccountStore(testDB)
+	accountManager := account.NewManager(accountStore, chain)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -281,7 +285,8 @@ func TestMutilNodeSign(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	accountManager := account.NewManager(testDB, chain)
+	accountStore := database.NewAccountStore(testDB)
+	accountManager := account.NewManager(accountStore, chain)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -352,7 +357,8 @@ func TestBip0032MutilNodeSign(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	accountManager := account.NewManager(testDB, chain)
+	accountStore := database.NewAccountStore(testDB)
+	accountManager := account.NewManager(accountStore, chain)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)

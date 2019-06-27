@@ -180,6 +180,7 @@ func mockAccountManager(t *testing.T) *Manager {
 	testDB := dbm.NewDB("testdb", "memdb", dirPath)
 	dispatcher := event.NewDispatcher()
 	store := database.NewStore(testDB)
+	accountStore := database.NewAccountStore(testDB)
 	txPool := protocol.NewTxPool(store, dispatcher)
 	config.CommonConfig = config.DefaultConfig()
 	chain, err := protocol.NewChain(store, txPool, dispatcher)
@@ -187,7 +188,7 @@ func mockAccountManager(t *testing.T) *Manager {
 		t.Fatal(err)
 	}
 
-	return NewManager(testDB, chain)
+	return NewManager(accountStore, chain)
 }
 
 func (m *Manager) createTestAccount(t testing.TB, alias string, tags map[string]interface{}) *Account {
