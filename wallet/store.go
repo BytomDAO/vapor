@@ -29,8 +29,8 @@ type WalletStorer interface {
 	SetUnconfirmedTransaction(string, *query.AnnotatedTx) error
 	DeleteStardardUTXO(bc.Hash)
 	DeleteContractUTXO(bc.Hash)
-	SetStandardUTXO(bc.Hash, []byte)
-	SetContractUTXO(bc.Hash, []byte)
+	SetStandardUTXO(bc.Hash, *acc.UTXO) error
+	SetContractUTXO(bc.Hash, *acc.UTXO) error
 	GetWalletInfo() []byte
 	SetWalletInfo([]byte)
 	DeleteWalletTransactions()

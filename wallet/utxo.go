@@ -10,7 +10,6 @@ import (
 	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/crypto/sha3pool"
 	"github.com/vapor/database"
-	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
@@ -155,15 +154,14 @@ func (w *Wallet) filterAccountUtxo(utxos []*account.UTXO) []*account.UTXO {
 
 func (w *Wallet) saveUtxos(utxos []*account.UTXO) error {
 	for _, utxo := range utxos {
-		data, err := json.Marshal(utxo)
-		if err != nil {
-			return errors.Wrap(err, "failed marshal accountutxo")
-		}
-
 		if segwit.IsP2WScript(utxo.ControlProgram) {
-			w.store.SetStandardUTXO(utxo.OutputID, data)
+			if err := w.store.SetStandardUTXO(utxo.OutputID, utxo); err != nil {
+				return err
+			}
 		} else {
-			w.store.SetContractUTXO(utxo.OutputID, data)
+			if err := w.store.SetContractUTXO(utxo.OutputID, utxo); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

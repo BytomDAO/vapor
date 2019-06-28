@@ -416,21 +416,31 @@ func (store *WalletStore) DeleteContractUTXO(outputID bc.Hash) {
 }
 
 // SetStandardUTXO set standard utxo
-func (store *WalletStore) SetStandardUTXO(outputID bc.Hash, data []byte) {
+func (store *WalletStore) SetStandardUTXO(outputID bc.Hash, utxo *acc.UTXO) error {
+	data, err := json.Marshal(utxo)
+	if err != nil {
+		return err
+	}
 	if store.batch == nil {
 		store.walletDB.Set(StandardUTXOKey(outputID), data)
 	} else {
 		store.batch.Set(StandardUTXOKey(outputID), data)
 	}
+	return nil
 }
 
 // SetContractUTXO set standard utxo
-func (store *WalletStore) SetContractUTXO(outputID bc.Hash, data []byte) {
+func (store *WalletStore) SetContractUTXO(outputID bc.Hash, utxo *acc.UTXO) error {
+	data, err := json.Marshal(utxo)
+	if err != nil {
+		return err
+	}
 	if store.batch == nil {
 		store.walletDB.Set(ContractUTXOKey(outputID), data)
 	} else {
 		store.batch.Set(ContractUTXOKey(outputID), data)
 	}
+	return nil
 }
 
 // GetWalletInfo get wallet information
