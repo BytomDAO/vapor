@@ -14,8 +14,8 @@ type WalletStorer interface {
 	CommitBatch()
 	GetAssetDefinition(*bc.AssetID) (*asset.Asset, error)
 	SetAssetDefinition(*bc.AssetID, []byte)
-	GetControlProgram(hash common.Hash) (*acc.CtrlProgram, error)
-	GetAccountByAccountID(string) []byte
+	GetControlProgram(common.Hash) (*acc.CtrlProgram, error)
+	GetAccountByAccountID(string) (*acc.Account, error)
 	DeleteTransactions(uint64)
 	SetTransaction(uint64, uint32, string, []byte)
 	DeleteUnconfirmedTransaction(string)

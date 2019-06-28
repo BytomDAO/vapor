@@ -98,7 +98,6 @@ func annotateTxsAccount(txs []*query.AnnotatedTx, store WalletStorer) {
 
 func getAccountFromACP(program []byte, store WalletStorer) (*account.Account, error) {
 	var hash common.Hash
-	localAccount := account.Account{}
 
 	sha3pool.Sum256(hash[:], program)
 	accountCP, err := store.GetControlProgram(hash)
@@ -109,16 +108,14 @@ func getAccountFromACP(program []byte, store WalletStorer) (*account.Account, er
 		return nil, fmt.Errorf("failed get account control program:%x ", hash)
 	}
 
-	accountValue := store.GetAccountByAccountID(accountCP.AccountID)
-	if accountValue == nil {
-		return nil, fmt.Errorf("failed get account:%s ", accountCP.AccountID)
-	}
-
-	if err := json.Unmarshal(accountValue, &localAccount); err != nil {
+	account, err := store.GetAccountByAccountID(accountCP.AccountID)
+	if err != nil {
 		return nil, err
 	}
-
-	return &localAccount, nil
+	if account == nil {
+		return nil, fmt.Errorf("failed get account:%s ", accountCP.AccountID)
+	}
+	return account, nil
 }
 
 var emptyJSONObject = json.RawMessage(`{}`)
