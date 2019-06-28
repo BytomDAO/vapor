@@ -105,7 +105,12 @@ transactionLoop:
 			var hash [32]byte
 			sha3pool.Sum256(hash[:], v.ControlProgram())
 
-			if bytes := w.store.GetRawProgram(hash); bytes != nil {
+			cp, err := w.store.GetControlProgram(hash)
+			if err != nil {
+				log.WithFields(log.Fields{"module": logModule, "err": err, "hash": string(hash[:])}).Error("filterAccountTxs fail.")
+				continue
+			}
+			if cp != nil {
 				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
 				continue transactionLoop
 			}

@@ -133,14 +133,12 @@ func (w *Wallet) filterAccountUtxo(utxos []*account.UTXO) []*account.UTXO {
 
 		var hash [32]byte
 		sha3pool.Sum256(hash[:], []byte(s))
-		data := w.store.GetRawProgram(hash)
-		if data == nil {
+		cp, err := w.store.GetControlProgram(hash)
+		if err != nil {
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("filterAccountUtxo fail.")
 			continue
 		}
-
-		cp := &account.CtrlProgram{}
-		if err := json.Unmarshal(data, cp); err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("filterAccountUtxo fail on unmarshal control program")
+		if cp == nil {
 			continue
 		}
 

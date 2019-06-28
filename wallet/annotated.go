@@ -98,17 +98,15 @@ func annotateTxsAccount(txs []*query.AnnotatedTx, store WalletStorer) {
 
 func getAccountFromACP(program []byte, store WalletStorer) (*account.Account, error) {
 	var hash common.Hash
-	accountCP := account.CtrlProgram{}
 	localAccount := account.Account{}
 
 	sha3pool.Sum256(hash[:], program)
-	rawProgram := store.GetRawProgram(hash)
-	if rawProgram == nil {
-		return nil, fmt.Errorf("failed get account control program:%x ", hash)
-	}
-
-	if err := json.Unmarshal(rawProgram, &accountCP); err != nil {
+	accountCP, err := store.GetControlProgram(hash)
+	if err != nil {
 		return nil, err
+	}
+	if accountCP == nil {
+		return nil, fmt.Errorf("failed get account control program:%x ", hash)
 	}
 
 	accountValue := store.GetAccountByAccountID(accountCP.AccountID)

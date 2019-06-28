@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	acc "github.com/vapor/account"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/query"
 	"github.com/vapor/common"
@@ -13,7 +14,7 @@ type WalletStorer interface {
 	CommitBatch()
 	GetAssetDefinition(*bc.AssetID) (*asset.Asset, error)
 	SetAssetDefinition(*bc.AssetID, []byte)
-	GetRawProgram(common.Hash) []byte
+	GetControlProgram(hash common.Hash) (*acc.CtrlProgram, error)
 	GetAccountByAccountID(string) []byte
 	DeleteTransactions(uint64)
 	SetTransaction(uint64, uint32, string, []byte)
