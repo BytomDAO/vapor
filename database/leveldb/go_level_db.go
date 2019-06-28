@@ -120,10 +120,9 @@ func (db *GoLevelDB) Stats() map[string]string {
 type goLevelDBIterator struct {
 	source iterator.Iterator
 	start  []byte
-	end    []byte
 }
 
-func newGoLevelDBIterator(source iterator.Iterator, start, end []byte) *goLevelDBIterator {
+func newGoLevelDBIterator(source iterator.Iterator, start []byte) *goLevelDBIterator {
 	if start != nil {
 		source.Seek(start)
 	}
@@ -131,7 +130,6 @@ func newGoLevelDBIterator(source iterator.Iterator, start, end []byte) *goLevelD
 	return &goLevelDBIterator{
 		source: source,
 		start:  start,
-		end:    end,
 	}
 }
 
@@ -184,9 +182,9 @@ func (db *GoLevelDB) IteratorPrefix(prefix []byte) Iterator {
 	return &goLevelDBIterator{source: db.db.NewIterator(util.BytesPrefix(prefix), nil)}
 }
 
-func (db *GoLevelDB) IteratorRange(start, end []byte) Iterator {
+func (db *GoLevelDB) IteratorWithStart(start []byte) Iterator {
 	itr := db.db.NewIterator(nil, nil)
-	return newGoLevelDBIterator(itr, start, end)
+	return newGoLevelDBIterator(itr, start)
 }
 
 func (db *GoLevelDB) NewBatch() Batch {

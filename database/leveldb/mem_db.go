@@ -1,6 +1,7 @@
 package leveldb
 
 import (
+	"bytes"
 	"fmt"
 	"sort"
 	"strings"
@@ -81,7 +82,6 @@ type memDBIterator struct {
 	db   DB
 
 	start []byte
-	end   []byte
 }
 
 func newMemDBIterator() *memDBIterator {
@@ -89,12 +89,11 @@ func newMemDBIterator() *memDBIterator {
 }
 
 // Keys is expected to be in reverse order for reverse iterators.
-func newMemDBIteratorWithArgs(db DB, keys []string, start, end []byte) *memDBIterator {
+func newMemDBIteratorWithArgs(db DB, keys []string, start []byte) *memDBIterator {
 	itr := &memDBIterator{
 		db:    db,
 		keys:  keys,
 		start: start,
-		end:   end,
 		last:  -1,
 	}
 	if start != nil {
@@ -164,25 +163,25 @@ func (db *MemDB) IteratorPrefix(prefix []byte) Iterator {
 	return it
 }
 
-func (db *MemDB) IteratorRange(start, end []byte) Iterator {
+func (db *MemDB) IteratorWithStart(start []byte) Iterator {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
 
-	keys := db.getSortedKeys(start, end)
-	return newMemDBIteratorWithArgs(db, keys, start, end)
+	keys := db.getSortedKeys(start)
+	return newMemDBIteratorWithArgs(db, keys, start)
 }
 
 func (db *MemDB) NewBatch() Batch {
 	return &memDBBatch{db, nil}
 }
 
-func (db *MemDB) getSortedKeys(start, end []byte) []string {
+func (db *MemDB) getSortedKeys(start []byte) []string {
 	keys := []string{}
 	for key := range db.db {
-		inDomain := IsKeyInDomain([]byte(key), start, end)
-		if inDomain {
-			keys = append(keys, key)
+		if bytes.Compare([]byte(key), start) < 0 {
+			continue
 		}
+		keys = append(keys, key)
 	}
 	sort.Strings(keys)
 	return keys

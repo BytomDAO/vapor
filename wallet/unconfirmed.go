@@ -73,7 +73,7 @@ func (w *Wallet) GetUnconfirmedTxsRange(accountID string, txID string, count uin
 	var itr dbm.Iterator
 
 	if txID != "" {
-		itr = w.DB.IteratorRange(calcUnconfirmedTxKey(txID), nil)
+		itr = w.DB.IteratorWithStart(calcUnconfirmedTxKey(txID))
 	} else {
 		itr = w.DB.IteratorPrefix([]byte(UnconfirmedTxPrefix))
 	}

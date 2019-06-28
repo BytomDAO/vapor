@@ -320,7 +320,7 @@ func (w *Wallet) GetTransactionsRange(accountID string, txID string, count uint)
 			return nil, ErrAccntTxIDNotFound
 		}
 		startKey := calcAnnotatedKey(string(formatKey))
-		itr = w.DB.IteratorRange(startKey, nil)
+		itr = w.DB.IteratorWithStart(startKey)
 	} else {
 		itr = w.DB.IteratorPrefix([]byte(TxPrefix))
 	}

@@ -22,7 +22,7 @@ func TestDBIteratorSingleKey(t *testing.T) {
 			defer os.RemoveAll(dir)
 
 			db.Set([]byte("1"), []byte("value_1"))
-			itr := db.IteratorRange(nil, nil)
+			itr := db.IteratorWithStart(nil)
 			require.Equal(t, []byte(""), itr.Key())
 			require.Equal(t, true, itr.Next())
 			require.Equal(t, []byte("1"), itr.Key())
@@ -39,12 +39,12 @@ func TestDBIteratorTwoKeys(t *testing.T) {
 			db.SetSync([]byte("1"), []byte("value_1"))
 			db.SetSync([]byte("2"), []byte("value_1"))
 
-			itr := db.IteratorRange([]byte("1"), nil)
+			itr := db.IteratorWithStart([]byte("1"))
 
 			require.Equal(t, []byte("1"), itr.Key())
 
 			require.Equal(t, true, itr.Next())
-			itr = db.IteratorRange([]byte("2"), nil)
+			itr = db.IteratorWithStart([]byte("2"))
 
 			require.Equal(t, false, itr.Next())
 		})
