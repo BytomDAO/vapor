@@ -153,7 +153,7 @@ func (w *Wallet) getAccountTxByTxID(txID string) (*query.AnnotatedTx, error) {
 }
 
 func (w *Wallet) getGlobalTxByTxID(txID string) (*query.AnnotatedTx, error) {
-	globalTxIdx := w.store.GetGlobalTransaction(txID)
+	globalTxIdx := w.store.GetGlobalTransactionIndex(txID)
 	if globalTxIdx == nil {
 		return nil, fmt.Errorf("No transaction(tx_id=%s) ", txID)
 	}

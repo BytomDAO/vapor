@@ -199,7 +199,7 @@ func TestWalletUpdate(t *testing.T) {
 	}
 
 	for position, tx := range block.Transactions {
-		get := w.store.GetGlobalTransaction(tx.ID.String())
+		get := w.store.GetGlobalTransactionIndex(tx.ID.String())
 		bh := block.BlockHeader.Hash()
 		expect := database.CalcGlobalTxIndex(&bh, uint64(position))
 		if !reflect.DeepEqual(get, expect) {

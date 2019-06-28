@@ -332,8 +332,8 @@ func (store *WalletStore) GetTransaction(txID string) (*query.AnnotatedTx, error
 	return tx, nil
 }
 
-// GetGlobalTransaction get global tx by txID
-func (store *WalletStore) GetGlobalTransaction(txID string) []byte {
+// GetGlobalTransactionIndex get global tx by txID
+func (store *WalletStore) GetGlobalTransactionIndex(txID string) []byte {
 	return store.walletDB.Get(calcGlobalTxIndexKey(txID))
 }
 

@@ -22,7 +22,7 @@ type WalletStorer interface {
 	SetGlobalTransactionIndex(string, *bc.Hash, uint64)
 	GetStandardUTXO(bc.Hash) (*acc.UTXO, error)
 	GetTransaction(string) (*query.AnnotatedTx, error)
-	GetGlobalTransaction(string) []byte
+	GetGlobalTransactionIndex(string) []byte
 	GetTransactions() ([]*query.AnnotatedTx, error)
 	GetUnconfirmedTransactions() ([]*query.AnnotatedTx, error)
 	GetUnconfirmedTransaction(string) []byte
