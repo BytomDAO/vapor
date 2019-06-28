@@ -384,12 +384,17 @@ func (store *WalletStore) GetUnconfirmedTransaction(txID string) (*query.Annotat
 }
 
 // SetUnconfirmedTransaction set unconfirmed tx by txID
-func (store *WalletStore) SetUnconfirmedTransaction(txID string, rawTx []byte) {
+func (store *WalletStore) SetUnconfirmedTransaction(txID string, tx *query.AnnotatedTx) error {
+	rawTx, err := json.Marshal(tx)
+	if err != nil {
+		return err
+	}
 	if store.batch == nil {
 		store.walletDB.Set(calcUnconfirmedTxKey(txID), rawTx)
 	} else {
 		store.batch.Set(calcUnconfirmedTxKey(txID), rawTx)
 	}
+	return nil
 }
 
 // DeleteStardardUTXO delete stardard utxo by outputID

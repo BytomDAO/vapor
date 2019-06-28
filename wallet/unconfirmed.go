@@ -1,7 +1,6 @@
 package wallet
 
 import (
-	"encoding/json"
 	"fmt"
 	"sort"
 	"time"
@@ -143,12 +142,9 @@ func (w *Wallet) saveUnconfirmedTx(tx *types.Tx) error {
 	annotatedTxs = append(annotatedTxs, annotatedTx)
 	annotateTxsAccount(annotatedTxs, w.store)
 
-	rawTx, err := json.Marshal(annotatedTxs[0])
-	if err != nil {
+	if err := w.store.SetUnconfirmedTransaction(tx.ID.String(), annotatedTxs[0]); err != nil {
 		return err
 	}
-
-	w.store.SetUnconfirmedTransaction(tx.ID.String(), rawTx)
 	return nil
 }
 
