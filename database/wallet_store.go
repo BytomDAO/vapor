@@ -504,16 +504,19 @@ func (store *WalletStore) DeleteWalletUTXOs() {
 }
 
 // GetAccountUTXOs get all account unspent outputs
-func (store *WalletStore) GetAccountUTXOs(key string) [][]byte {
+func (store *WalletStore) GetAccountUTXOs(key string) ([]*acc.UTXO, error) {
 	accountUtxoIter := store.walletDB.IteratorPrefix([]byte(key))
 	defer accountUtxoIter.Release()
 
-	rawUTXOs := make([][]byte, 0)
+	confirmedUTXOs := []*acc.UTXO{}
 	for accountUtxoIter.Next() {
-		utxo := accountUtxoIter.Value()
-		rawUTXOs = append(rawUTXOs, utxo)
+		utxo := new(acc.UTXO)
+		if err := json.Unmarshal(accountUtxoIter.Value(), utxo); err != nil {
+			return nil, err
+		}
+		confirmedUTXOs = append(confirmedUTXOs, utxo)
 	}
-	return rawUTXOs
+	return confirmedUTXOs, nil
 }
 
 // SetRecoveryStatus set recovery status

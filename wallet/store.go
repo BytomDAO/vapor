@@ -35,7 +35,7 @@ type WalletStorer interface {
 	SetWalletInfo([]byte)
 	DeleteWalletTransactions()
 	DeleteWalletUTXOs()
-	GetAccountUTXOs(key string) [][]byte
+	GetAccountUTXOs(string) ([]*acc.UTXO, error)
 	SetRecoveryStatus([]byte, []byte)
 	DeleteRecoveryStatus([]byte)
 	GetRecoveryStatus([]byte) []byte

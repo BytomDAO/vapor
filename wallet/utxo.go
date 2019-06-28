@@ -1,8 +1,6 @@
 package wallet
 
 import (
-	"encoding/json"
-
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/account"
@@ -26,15 +24,9 @@ func (w *Wallet) GetAccountUtxos(accountID string, id string, unconfirmed, isSma
 		accountUtxos = w.AccountMgr.ListUnconfirmedUtxo(accountID, isSmartContract)
 	}
 
-	rawConfirmedUTXOs := w.store.GetAccountUTXOs(string(prefix) + id)
-	confirmedUTXOs := []*account.UTXO{}
-	for _, rawConfirmedUTXO := range rawConfirmedUTXOs {
-		confirmedUTXO := new(account.UTXO)
-		if err := json.Unmarshal(rawConfirmedUTXO, confirmedUTXO); err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Warn("GetAccountUTXOs fail on unmarshal utxo")
-			continue
-		}
-		confirmedUTXOs = append(confirmedUTXOs, confirmedUTXO)
+	confirmedUTXOs, err := w.store.GetAccountUTXOs(string(prefix) + id)
+	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("GetAccountUtxos fail.")
 	}
 	accountUtxos = append(accountUtxos, confirmedUTXOs...)
 
@@ -43,7 +35,6 @@ func (w *Wallet) GetAccountUtxos(accountID string, id string, unconfirmed, isSma
 		if vote && accountUtxo.Vote == nil {
 			continue
 		}
-
 		if accountID == accountUtxo.AccountID || accountID == "" {
 			newAccountUtxos = append(newAccountUtxos, accountUtxo)
 		}
