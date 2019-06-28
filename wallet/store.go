@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/query"
 	"github.com/vapor/common"
 	"github.com/vapor/protocol/bc"
@@ -10,7 +11,7 @@ import (
 type WalletStorer interface {
 	InitBatch()
 	CommitBatch()
-	GetAssetDefinition(*bc.AssetID) []byte
+	GetAssetDefinition(*bc.AssetID) (*asset.Asset, error)
 	SetAssetDefinition(*bc.AssetID, []byte)
 	GetRawProgram(common.Hash) []byte
 	GetAccountByAccountID(string) []byte
@@ -38,4 +39,3 @@ type WalletStorer interface {
 	DeleteRecoveryStatus([]byte)
 	GetRecoveryStatus([]byte) []byte
 }
-

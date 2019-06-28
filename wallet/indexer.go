@@ -29,7 +29,7 @@ func parseGlobalTxIdx(globalTxIdx []byte) (*bc.Hash, uint64) {
 // saveExternalAssetDefinition save external and local assets definition,
 // when query ,query local first and if have no then query external
 // details see getAliasDefinition
-func saveExternalAssetDefinition(b *types.Block, store WalletStorer) {
+func saveExternalAssetDefinition(b *types.Block, store WalletStorer) error {
 	store.InitBatch()
 	defer store.CommitBatch()
 
@@ -37,12 +37,17 @@ func saveExternalAssetDefinition(b *types.Block, store WalletStorer) {
 		for _, orig := range tx.Inputs {
 			if cci, ok := orig.TypedInput.(*types.CrossChainInput); ok {
 				assetID := cci.AssetId
-				if assetExist := store.GetAssetDefinition(assetID); assetExist == nil {
+				assetExist, err := store.GetAssetDefinition(assetID)
+				if err != nil {
+					return err
+				}
+				if assetExist == nil {
 					store.SetAssetDefinition(assetID, cci.AssetDefinition)
 				}
 			}
 		}
 	}
+	return nil
 }
 
 // Summary is the struct of transaction's input and output summary

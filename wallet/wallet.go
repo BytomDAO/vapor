@@ -187,7 +187,9 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 	}
 
 	annotatedTxs := w.filterAccountTxs(block, txStatus)
-	saveExternalAssetDefinition(block, w.store)
+	if err := saveExternalAssetDefinition(block, w.store); err != nil {
+		return err
+	}
 	annotateTxsAccount(annotatedTxs, w.store)
 
 	w.store.InitBatch()

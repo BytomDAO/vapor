@@ -32,28 +32,18 @@ func annotateTxsAsset(w *Wallet, txs []*query.AnnotatedTx) {
 }
 
 func (w *Wallet) getExternalDefinition(assetID *bc.AssetID) json.RawMessage {
-	definitionByte := w.store.GetAssetDefinition(assetID)
-	if definitionByte == nil {
+	externalAsset, err := w.store.GetAssetDefinition(assetID)
+	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on get asset definition.")
+	}
+	if externalAsset == nil {
 		return nil
 	}
 
-	definitionMap := make(map[string]interface{})
-	if err := json.Unmarshal(definitionByte, &definitionMap); err != nil {
-		return nil
+	if err := w.AssetReg.SaveAsset(externalAsset, *externalAsset.Alias); err != nil {
+		log.WithFields(log.Fields{"module": logModule, "err": err, "assetAlias": *externalAsset.Alias}).Warning("fail on save external asset to internal asset DB")
 	}
-
-	alias := assetID.String()
-	externalAsset := &asset.Asset{
-		AssetID:           *assetID,
-		Alias:             &alias,
-		DefinitionMap:     definitionMap,
-		RawDefinitionByte: definitionByte,
-	}
-
-	if err := w.AssetReg.SaveAsset(externalAsset, alias); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err, "assetID": alias}).Warning("fail on save external asset to internal asset DB")
-	}
-	return definitionByte
+	return json.RawMessage(externalAsset.RawDefinitionByte)
 }
 
 func (w *Wallet) getAliasDefinition(assetID bc.AssetID) (string, json.RawMessage) {
