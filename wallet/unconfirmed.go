@@ -61,16 +61,13 @@ func (w *Wallet) GetUnconfirmedTxs(accountID string) ([]*query.AnnotatedTx, erro
 
 // GetUnconfirmedTxByTxID get unconfirmed transaction by txID
 func (w *Wallet) GetUnconfirmedTxByTxID(txID string) (*query.AnnotatedTx, error) {
-	annotatedTx := &query.AnnotatedTx{}
-	txInfo := w.store.GetUnconfirmedTransaction(txID)
-	if txInfo == nil {
-		return nil, fmt.Errorf("No transaction(tx_id=%s) from txpool", txID)
-	}
-
-	if err := json.Unmarshal(txInfo, annotatedTx); err != nil {
+	annotatedTx, err := w.store.GetUnconfirmedTransaction(txID)
+	if err != nil {
 		return nil, err
 	}
-
+	if annotatedTx == nil {
+		return nil, fmt.Errorf("No transaction(tx_id=%s) from txpool", txID)
+	}
 	annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 	return annotatedTx, nil
 }

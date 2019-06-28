@@ -371,8 +371,16 @@ func (store *WalletStore) GetUnconfirmedTransactions() ([]*query.AnnotatedTx, er
 }
 
 // GetUnconfirmedTransaction get unconfirmed tx by txID
-func (store *WalletStore) GetUnconfirmedTransaction(txID string) []byte {
-	return store.walletDB.Get(calcUnconfirmedTxKey(txID))
+func (store *WalletStore) GetUnconfirmedTransaction(txID string) (*query.AnnotatedTx, error) {
+	rawUnconfirmedTx := store.walletDB.Get(calcUnconfirmedTxKey(txID))
+	if rawUnconfirmedTx == nil {
+		return nil, fmt.Errorf("failed get unconfirmed tx, txID: %s ", txID)
+	}
+	tx := new(query.AnnotatedTx)
+	if err := json.Unmarshal(rawUnconfirmedTx, tx); err != nil {
+		return nil, err
+	}
+	return tx, nil
 }
 
 // SetUnconfirmedTransaction set unconfirmed tx by txID
