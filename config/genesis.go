@@ -40,7 +40,7 @@ func GenesisTx() *types.Tx {
 		log.Panicf("fail on decode genesis tx output control program")
 	}
 
-	coinbaseInput := FederationPMultiSigScript(CommonConfig)
+	coinbaseInput := FederationWScript(CommonConfig)
 
 	txData := types.TxData{
 		Version: 1,
