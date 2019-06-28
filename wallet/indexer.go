@@ -30,7 +30,7 @@ const (
 	GlobalTxIndexPrefix = "GTID:"
 )
 
-var errAccntTxIDNotFound = errors.New("account TXID not found")
+var ErrAccntTxIDNotFound = errors.New("account TXID not found")
 
 func formatKey(blockHeight uint64, position uint32) string {
 	return fmt.Sprintf("%016x%08x", blockHeight, position)
@@ -198,7 +198,7 @@ func (w *Wallet) getAccountTxByTxID(txID string) (*query.AnnotatedTx, error) {
 	annotatedTx := &query.AnnotatedTx{}
 	formatKey := w.DB.Get(calcTxIndexKey(txID))
 	if formatKey == nil {
-		return nil, errAccntTxIDNotFound
+		return nil, ErrAccntTxIDNotFound
 	}
 
 	txInfo := w.DB.Get(calcAnnotatedKey(string(formatKey)))
@@ -303,6 +303,45 @@ func (w *Wallet) GetTransactions(accountID string) ([]*query.AnnotatedTx, error)
 		if accountID == "" || findTransactionsByAccount(annotatedTx, accountID) {
 			annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 			annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
+		}
+	}
+
+	return annotatedTxs, nil
+}
+
+// GetTransactionsRange get all walletDB transactions, and filter transactions by accountID and txID optional
+func (w *Wallet) GetTransactionsRange(accountID string, txID string, count uint) ([]*query.AnnotatedTx, error) {
+	annotatedTxs := []*query.AnnotatedTx{}
+	var itr dbm.Iterator
+
+	if txID != "" {
+		formatKey := w.DB.Get(calcTxIndexKey(txID))
+		if formatKey == nil {
+			return nil, ErrAccntTxIDNotFound
+		}
+		startKey := calcAnnotatedKey(string(formatKey))
+		itr = w.DB.IteratorRange(startKey, nil)
+	} else {
+		itr = w.DB.IteratorPrefix([]byte(TxPrefix))
+	}
+
+	defer itr.Release()
+
+	txNum := count
+	for itr.Next() {
+		annotatedTx := &query.AnnotatedTx{}
+		if err := json.Unmarshal(itr.Value(), &annotatedTx); err != nil {
+			return nil, err
+		}
+
+		if accountID == "" || findTransactionsByAccount(annotatedTx, accountID) {
+			annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
+			annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
+		}
+
+		txNum--
+		if txNum == 0 {
+			break
 		}
 	}
 

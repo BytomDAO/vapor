@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/vapor/wallet"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/account"
@@ -147,51 +149,54 @@ func (a *API) getTransaction(ctx context.Context, txInfo struct {
 	return NewSuccessResponse(annotatedTx)
 }
 
+func (a *API) getTransacton(ctx context.Context, filter struct {
+	ID          string `json:"id"`
+	Unconfirmed bool   `json:"unconfirmed"`
+}) Response {
+	transaction, err := a.wallet.GetTransactionByTxID(filter.ID)
+	if err != nil && filter.Unconfirmed {
+		transaction, err = a.wallet.GetUnconfirmedTxByTxID(filter.ID)
+	}
+
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(transaction)
+}
+
 // POST /list-transactions
 func (a *API) listTransactions(ctx context.Context, filter struct {
 	ID          string `json:"id"`
 	AccountID   string `json:"account_id"`
 	Detail      bool   `json:"detail"`
 	Unconfirmed bool   `json:"unconfirmed"`
-	From        uint   `json:"from"`
 	Count       uint   `json:"count"`
 }) Response {
 	transactions := []*query.AnnotatedTx{}
 	var err error
-	var transaction *query.AnnotatedTx
+	transactions, err = a.wallet.GetTransactionsRange(filter.AccountID, filter.ID, filter.Count)
+	unconfirmedCount := filter.Count - uint(len(transactions))
+	txID := ""
+	if err == wallet.ErrAccntTxIDNotFound {
+		txID = filter.ID
+	} else if err != nil {
+		return NewErrorResponse(err)
+	}
 
-	if filter.ID != "" {
-		transaction, err = a.wallet.GetTransactionByTxID(filter.ID)
-		if err != nil && filter.Unconfirmed {
-			transaction, err = a.wallet.GetUnconfirmedTxByTxID(filter.ID)
-		}
-
+	if filter.Unconfirmed && unconfirmedCount != 0 {
+		unconfirmedTxs, err := a.wallet.GetUnconfirmedTxsRange(filter.AccountID, txID, unconfirmedCount)
 		if err != nil {
 			return NewErrorResponse(err)
 		}
-		transactions = []*query.AnnotatedTx{transaction}
-	} else {
-		transactions, err = a.wallet.GetTransactions(filter.AccountID)
-		if err != nil {
-			return NewErrorResponse(err)
-		}
-
-		if filter.Unconfirmed {
-			unconfirmedTxs, err := a.wallet.GetUnconfirmedTxs(filter.AccountID)
-			if err != nil {
-				return NewErrorResponse(err)
-			}
-			transactions = append(unconfirmedTxs, transactions...)
-		}
+		transactions = append(unconfirmedTxs, transactions...)
 	}
 
 	if filter.Detail == false {
 		txSummary := a.wallet.GetTransactionsSummary(transactions)
-		start, end := getPageRange(len(txSummary), filter.From, filter.Count)
-		return NewSuccessResponse(txSummary[start:end])
+		return NewSuccessResponse(txSummary)
 	}
-	start, end := getPageRange(len(transactions), filter.From, filter.Count)
-	return NewSuccessResponse(transactions[start:end])
+
+	return NewSuccessResponse(transactions)
 }
 
 // POST /get-unconfirmed-transaction

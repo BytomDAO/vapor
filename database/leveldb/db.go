@@ -1,4 +1,4 @@
-package db
+package leveldb
 
 import . "github.com/tendermint/tmlibs/common"
 
@@ -12,6 +12,13 @@ type DB interface {
 	NewBatch() Batch
 	Iterator() Iterator
 	IteratorPrefix([]byte) Iterator
+	// Iterate over a domain of keys in ascending order. End is exclusive.
+	// Start must be less than end, or the Iterator is invalid.
+	// A nil start is interpreted as an empty byteslice.
+	// If end is nil, iterates up to the last item (inclusive).
+	// CONTRACT: No writes may happen within a domain while an iterator exists over it.
+	// CONTRACT: start, end readonly []byte
+	IteratorRange(start, end []byte) Iterator
 
 	// For debugging
 	Print()
