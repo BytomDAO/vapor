@@ -294,7 +294,7 @@ func (a *crossInAction) Build(ctx context.Context, builder *TemplateBuilder) err
 	tplIn := &SigningInstruction{}
 	fed := cfg.CommonConfig.Federation
 	tplIn.AddRawWitnessKeys(fed.Xpubs, nil, fed.Quorum)
-	tplIn.AddDataWitness(cfg.FederationP2SPMultiSigProgram(cfg.CommonConfig))
+	tplIn.AddDataWitness(cfg.FederationPMultiSigScript(cfg.CommonConfig))
 	return builder.AddInput(txin, tplIn)
 }
 

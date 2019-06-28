@@ -13,7 +13,7 @@ import (
 	"github.com/vapor/protocol/vm/vmutil"
 )
 
-func FederationP2SPMultiSigProgram(c *Config) []byte {
+func FederationPMultiSigScript(c *Config) []byte {
 	xpubs := c.Federation.Xpubs
 	program, err := vmutil.P2SPMultiSigProgram(chainkd.XPubKeys(xpubs), c.Federation.Quorum)
 	if err != nil {
@@ -23,15 +23,15 @@ func FederationP2SPMultiSigProgram(c *Config) []byte {
 	return program
 }
 
-func FederationP2WSHProgram(c *Config) []byte {
-	program := FederationP2SPMultiSigProgram(c)
-	scriptHash := crypto.Sha256(program)
-	WSHProgram, err := vmutil.P2WSHProgram(scriptHash)
+func FederationWScript(c *Config) []byte {
+	script := FederationPMultiSigScript(c)
+	scriptHash := crypto.Sha256(script)
+	wscript, err := vmutil.P2WSHProgram(scriptHash)
 	if err != nil {
 		log.Panicf("Fail converts scriptHash to witness: %v", err)
 	}
 
-	return WSHProgram
+	return wscript
 }
 
 func GenesisTx() *types.Tx {
@@ -40,7 +40,7 @@ func GenesisTx() *types.Tx {
 		log.Panicf("fail on decode genesis tx output control program")
 	}
 
-	coinbaseInput := FederationP2WSHProgram(CommonConfig)
+	coinbaseInput := FederationPMultiSigScript(CommonConfig)
 
 	txData := types.TxData{
 		Version: 1,
