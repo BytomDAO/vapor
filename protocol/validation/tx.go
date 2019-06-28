@@ -257,7 +257,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errors.New("incorrect asset_id while checking CrossChainInput")
 		}
 
-		code := config.FederationProgrom(config.CommonConfig)
+		code := config.FederationP2WSHProgram(config.CommonConfig)
 		prog := &bc.Program{
 			VmVersion: e.ControlProgram.VmVersion,
 			Code:      code,

@@ -8,7 +8,7 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/vapor/common"
-	"github.com/vapor/config"
+	cfg "github.com/vapor/config"
 	"github.com/vapor/consensus"
 	"github.com/vapor/encoding/json"
 	"github.com/vapor/protocol/bc"
@@ -292,8 +292,9 @@ func (a *crossInAction) Build(ctx context.Context, builder *TemplateBuilder) err
 	// arguments will be set when materializeWitnesses
 	txin := types.NewCrossChainInput(nil, a.SourceID, *a.AssetId, a.Amount, a.SourcePos, a.VMVersion, a.RawDefinitionByte, a.IssuanceProgram)
 	tplIn := &SigningInstruction{}
-	fed := config.CommonConfig.Federation
+	fed := cfg.CommonConfig.Federation
 	tplIn.AddRawWitnessKeys(fed.Xpubs, nil, fed.Quorum)
+	tplIn.AddDataWitness(cfg.FederationP2SPMultiSigProgram(cfg.CommonConfig))
 	return builder.AddInput(txin, tplIn)
 }
 
