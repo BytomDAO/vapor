@@ -122,7 +122,12 @@ func (w *Wallet) checkRelatedTransaction(tx *types.Tx) bool {
 		if err != nil {
 			continue
 		}
-		if bytes := w.store.GetStandardUTXO(outid); bytes != nil {
+		utxo, err := w.store.GetStandardUTXO(outid)
+		if err != nil {
+			log.WithFields(log.Fields{"module": logModule, "err": err, "outputID": outid.String()}).Error("checkRelatedTransaction fail.")
+			continue
+		}
+		if utxo != nil {
 			return true
 		}
 	}

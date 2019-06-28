@@ -115,9 +115,15 @@ transactionLoop:
 		for _, v := range tx.Inputs {
 			outid, err := v.SpentOutputID()
 			if err != nil {
+				log.WithFields(log.Fields{"module": logModule, "err": err, "outputID": outid.String()}).Error("filterAccountTxs fail.")
 				continue
 			}
-			if bytes := w.store.GetStandardUTXO(outid); bytes != nil {
+			utxo, err := w.store.GetStandardUTXO(outid)
+			if err != nil {
+				log.WithFields(log.Fields{"module": logModule, "err": err, "outputID": outid.String()}).Error("filterAccountTxs fail.")
+				continue
+			}
+			if utxo != nil {
 				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
 				continue transactionLoop
 			}

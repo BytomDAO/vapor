@@ -306,8 +306,16 @@ func (store *WalletStore) SetGlobalTransactionIndex(globalTxID string, blockHash
 }
 
 // GetStandardUTXO get standard utxo by id
-func (store *WalletStore) GetStandardUTXO(outid bc.Hash) []byte {
-	return store.walletDB.Get(StandardUTXOKey(outid))
+func (store *WalletStore) GetStandardUTXO(outid bc.Hash) (*acc.UTXO, error) {
+	rawUTXO := store.walletDB.Get(StandardUTXOKey(outid))
+	if rawUTXO == nil {
+		return nil, fmt.Errorf("failed get standard UTXO, outputID: %s ", outid.String())
+	}
+	UTXO := new(acc.UTXO)
+	if err := json.Unmarshal(rawUTXO, UTXO); err != nil {
+		return nil, err
+	}
+	return UTXO, nil
 }
 
 // GetTransaction get tx by tx index
