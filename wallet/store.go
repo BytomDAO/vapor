@@ -31,12 +31,12 @@ type WalletStorer interface {
 	DeleteContractUTXO(bc.Hash)
 	SetStandardUTXO(bc.Hash, *acc.UTXO) error
 	SetContractUTXO(bc.Hash, *acc.UTXO) error
-	GetWalletInfo() []byte
-	SetWalletInfo([]byte)
+	GetWalletInfo() []byte // need move database.NewWalletStore in wallet package
+	SetWalletInfo([]byte)  // need move database.NewWalletStore in wallet package
 	DeleteWalletTransactions()
 	DeleteWalletUTXOs()
 	GetAccountUTXOs(string) ([]*acc.UTXO, error)
-	SetRecoveryStatus([]byte, []byte)
+	SetRecoveryStatus([]byte, []byte) // recoveryManager.state isn't exported outside
 	DeleteRecoveryStatus([]byte)
-	GetRecoveryStatus([]byte) []byte
+	GetRecoveryStatus([]byte) []byte // recoveryManager.state isn't exported outside
 }
