@@ -268,18 +268,23 @@ func (store *WalletStore) DeleteTransactions(height uint64) {
 }
 
 // SetTransaction set raw transaction by block height and tx position
-func (store *WalletStore) SetTransaction(height uint64, position uint32, txID string, rawTx []byte) {
+func (store *WalletStore) SetTransaction(height uint64, tx *query.AnnotatedTx) error {
 	batch := store.walletDB.NewBatch()
 	if store.batch != nil {
 		batch = store.batch
 	}
 
-	batch.Set(calcAnnotatedKey(formatKey(height, position)), rawTx)
-	batch.Set(calcTxIndexKey(txID), []byte(formatKey(height, position)))
+	rawTx, err := json.Marshal(tx)
+	if err != nil {
+		return err
+	}
+	batch.Set(calcAnnotatedKey(formatKey(height, tx.Position)), rawTx)
+	batch.Set(calcTxIndexKey(tx.ID.String()), []byte(formatKey(height, tx.Position)))
 
 	if store.batch == nil {
 		batch.Write()
 	}
+	return nil
 }
 
 // DeleteUnconfirmedTransaction delete unconfirmed tx by txID

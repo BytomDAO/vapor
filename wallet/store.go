@@ -17,7 +17,7 @@ type WalletStorer interface {
 	GetControlProgram(common.Hash) (*acc.CtrlProgram, error)
 	GetAccountByAccountID(string) (*acc.Account, error)
 	DeleteTransactions(uint64)
-	SetTransaction(uint64, uint32, string, []byte)
+	SetTransaction(height uint64, tx *query.AnnotatedTx) error
 	DeleteUnconfirmedTransaction(string)
 	SetGlobalTransactionIndex(string, *bc.Hash, uint64)
 	GetStandardUTXO(bc.Hash) []byte

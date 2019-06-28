@@ -72,13 +72,9 @@ type TxSummary struct {
 // indexTransactions saves all annotated transactions to the database.
 func (w *Wallet) indexTransactions(b *types.Block, txStatus *bc.TransactionStatus, annotatedTxs []*query.AnnotatedTx) error {
 	for _, tx := range annotatedTxs {
-		rawTx, err := json.Marshal(tx)
-		if err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("inserting annotated_txs to db")
+		if err := w.store.SetTransaction(b.Height, tx); err != nil {
 			return err
 		}
-
-		w.store.SetTransaction(b.Height, tx.Position, tx.ID.String(), rawTx)
 		w.store.DeleteUnconfirmedTransaction(tx.ID.String())
 	}
 
