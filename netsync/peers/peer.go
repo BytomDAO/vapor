@@ -30,6 +30,7 @@ const (
 var (
 	errSendStatusMsg = errors.New("send status msg fail")
 	ErrPeerMisbehave = errors.New("peer is misbehave")
+	ErrNoValidPeer   = errors.New("Can't find valid fast sync peer")
 )
 
 //BasePeer is the interface for connection level peer
@@ -75,6 +76,7 @@ type Peer struct {
 	BasePeer
 	mtx                sync.RWMutex
 	services           consensus.ServiceFlag
+	isBusy             bool
 	bestHeight         uint64
 	bestHash           *bc.Hash
 	irreversibleHeight uint64
@@ -387,6 +389,12 @@ func (p *Peer) SetBestStatus(bestHeight uint64, bestHash *bc.Hash) {
 	p.bestHash = bestHash
 }
 
+func (p *Peer) SetIdle() {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+	p.isBusy = false
+}
+
 func (p *Peer) SetIrreversibleStatus(irreversibleHeight uint64, irreversibleHash *bc.Hash) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
@@ -556,6 +564,19 @@ func (ps *PeerSet) GetPeer(id string) *Peer {
 	return ps.peers[id]
 }
 
+func (ps *PeerSet) GetPeersByHeight(height uint64) []*Peer {
+	ps.mtx.RLock()
+	defer ps.mtx.RUnlock()
+
+	peers := []*Peer{}
+	for _, peer := range ps.peers {
+		if peer.Height() >= height {
+			peers = append(peers, peer)
+		}
+	}
+	return peers
+}
+
 func (ps *PeerSet) GetPeerInfos() []*PeerInfo {
 	ps.mtx.RLock()
 	defer ps.mtx.RUnlock()
@@ -655,4 +676,37 @@ func (ps *PeerSet) SetStatus(peerID string, height uint64, hash *bc.Hash) {
 	}
 
 	peer.SetBestStatus(height, hash)
+}
+
+func (ps *PeerSet) Size() int {
+	ps.mtx.Lock()
+	ps.mtx.Unlock()
+
+	return len(ps.peers)
+}
+
+func (ps *PeerSet) SelectPeer(syncHeight uint64) (string, error) {
+	ps.mtx.Lock()
+	ps.mtx.Unlock()
+
+	for _, peer := range ps.peers {
+		if peer.isBusy == true {
+			continue
+		}
+		if peer.bestHeight >= syncHeight {
+			peer.isBusy = true
+			return peer.ID(), nil
+		}
+	}
+
+	return "", ErrNoValidPeer
+}
+
+func (ps *PeerSet) SetIdle(peerID string) {
+	peer := ps.GetPeer(peerID)
+	if peer == nil {
+		return
+	}
+
+	peer.SetIdle()
 }
