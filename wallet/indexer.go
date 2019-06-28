@@ -3,7 +3,6 @@ package wallet
 import (
 	"encoding/binary"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"sort"
 
@@ -145,16 +144,10 @@ func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
 }
 
 func (w *Wallet) getAccountTxByTxID(txID string) (*query.AnnotatedTx, error) {
-	annotatedTx := &query.AnnotatedTx{}
-	txInfo, err := w.store.GetTransaction(txID)
+	annotatedTx, err := w.store.GetTransaction(txID)
 	if err != nil {
 		return nil, err
 	}
-
-	if err := json.Unmarshal(txInfo, annotatedTx); err != nil {
-		return nil, err
-	}
-
 	annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 	return annotatedTx, nil
 }

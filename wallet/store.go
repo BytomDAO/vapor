@@ -21,7 +21,7 @@ type WalletStorer interface {
 	DeleteUnconfirmedTransaction(string)
 	SetGlobalTransactionIndex(string, *bc.Hash, uint64)
 	GetStandardUTXO(bc.Hash) (*acc.UTXO, error)
-	GetTransaction(string) ([]byte, error)
+	GetTransaction(string) (*query.AnnotatedTx, error)
 	GetGlobalTransaction(string) []byte
 	GetTransactions() ([]*query.AnnotatedTx, error)
 	GetUnconfirmedTransactions() ([]*query.AnnotatedTx, error)

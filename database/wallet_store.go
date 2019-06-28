@@ -318,14 +318,18 @@ func (store *WalletStore) GetStandardUTXO(outid bc.Hash) (*acc.UTXO, error) {
 	return UTXO, nil
 }
 
-// GetTransaction get tx by tx index
-func (store *WalletStore) GetTransaction(txID string) ([]byte, error) {
+// GetTransaction get tx by txid
+func (store *WalletStore) GetTransaction(txID string) (*query.AnnotatedTx, error) {
 	formatKey := store.walletDB.Get(calcTxIndexKey(txID))
 	if formatKey == nil {
 		return nil, errAccntTxIDNotFound
 	}
-	txInfo := store.walletDB.Get(calcAnnotatedKey(string(formatKey)))
-	return txInfo, nil
+	rawTx := store.walletDB.Get(calcAnnotatedKey(string(formatKey)))
+	tx := new(query.AnnotatedTx)
+	if err := json.Unmarshal(rawTx, tx); err != nil {
+		return nil, err
+	}
+	return tx, nil
 }
 
 // GetGlobalTransaction get global tx by txID
