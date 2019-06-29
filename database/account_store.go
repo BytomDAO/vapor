@@ -48,6 +48,7 @@ func (store *AccountStore) CommitBatch() error {
 
 // DeleteAccount set account account ID, account alias and raw account.
 func (store *AccountStore) DeleteAccount(account *acc.Account) {
+	store.DeleteAccountUTXOs(account.ID)
 	batch := store.accountDB.NewBatch()
 	if store.batch != nil {
 		batch = store.batch
