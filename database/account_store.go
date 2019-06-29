@@ -59,15 +59,6 @@ func (store *AccountStore) DeleteAccount(account *acc.Account) {
 	}
 }
 
-// DeleteAccountByAlias delete account by account alias
-func (store *AccountStore) DeleteAccountByAlias(accountAlias string) {
-	if store.batch == nil {
-		store.accountDB.Delete(accountAliasKey(accountAlias))
-	} else {
-		store.batch.Delete(accountAliasKey(accountAlias))
-	}
-}
-
 // DeleteAccountUTXOs delete account utxos by accountID
 func (store *AccountStore) DeleteAccountUTXOs(accountID string) error {
 	batch := store.accountDB.NewBatch()

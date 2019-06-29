@@ -11,7 +11,6 @@ type AccountStorer interface {
 	InitBatch() error
 	CommitBatch() error
 	DeleteAccount(*Account)
-	DeleteAccountByAlias(string)
 	DeleteAccountUTXOs(string) error
 	DeleteBip44ContractIndex(string)
 	DeleteContractIndex(string)
