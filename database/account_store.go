@@ -46,6 +46,37 @@ func (store *AccountStore) CommitBatch() error {
 	return nil
 }
 
+// DeleteAccountByAlias delete account by account alias
+func (store *AccountStore) DeleteAccountByAlias(accountAlias string) {
+	if store.batch == nil {
+		store.accountDB.Delete(accountAliasKey(accountAlias))
+	} else {
+		store.batch.Delete(accountAliasKey(accountAlias))
+	}
+}
+
+// DeleteAccount set account account ID, account alias and raw account.
+func (store *AccountStore) DeleteAccount(account *acc.Account) {
+	batch := store.accountDB.NewBatch()
+	if store.batch != nil {
+		batch = store.batch
+	}
+	batch.Delete(AccountIDKey(account.ID))
+	batch.Delete(accountAliasKey(account.Alias))
+	if store.batch == nil {
+		batch.Write()
+	}
+}
+
+// DeleteControlProgram delete raw control program by hash
+func (store *AccountStore) DeleteControlProgram(hash common.Hash) {
+	if store.batch == nil {
+		store.accountDB.Delete(ContractKey(hash))
+	} else {
+		store.batch.Delete(ContractKey(hash))
+	}
+}
+
 // SetAccount set account account ID, account alias and raw account.
 func (store *AccountStore) SetAccount(account *acc.Account) error {
 	rawAccount, err := json.Marshal(account)
@@ -89,19 +120,6 @@ func (store *AccountStore) SetAccountIndex(account *acc.Account) error {
 	return nil
 }
 
-// DeleteAccount set account account ID, account alias and raw account.
-func (store *AccountStore) DeleteAccount(account *acc.Account) {
-	batch := store.accountDB.NewBatch()
-	if store.batch != nil {
-		batch = store.batch
-	}
-	batch.Delete(AccountIDKey(account.ID))
-	batch.Delete(accountAliasKey(account.Alias))
-	if store.batch == nil {
-		batch.Write()
-	}
-}
-
 // GetAccountIDByAlias get account ID by account alias
 func (store *AccountStore) GetAccountIDByAlias(accountAlias string) string {
 	accountID := store.accountDB.Get(accountAliasKey(accountAlias))
@@ -128,24 +146,6 @@ func (store *AccountStore) GetAccountIndex(xpubs []chainkd.XPub) uint64 {
 		currentIndex = common.BytesToUnit64(rawIndexBytes)
 	}
 	return currentIndex
-}
-
-// DeleteAccountByAlias delete account by account alias
-func (store *AccountStore) DeleteAccountByAlias(accountAlias string) {
-	if store.batch == nil {
-		store.accountDB.Delete(accountAliasKey(accountAlias))
-	} else {
-		store.batch.Delete(accountAliasKey(accountAlias))
-	}
-}
-
-// DeleteControlProgram delete raw control program by hash
-func (store *AccountStore) DeleteControlProgram(hash common.Hash) {
-	if store.batch == nil {
-		store.accountDB.Delete(ContractKey(hash))
-	} else {
-		store.batch.Delete(ContractKey(hash))
-	}
 }
 
 // DeleteBip44ContractIndex delete bip44 contract index by accountID

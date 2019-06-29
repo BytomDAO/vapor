@@ -10,31 +10,31 @@ import (
 type AccountStorer interface {
 	InitBatch() error
 	CommitBatch() error
-	SetAccount(*Account) error
-	SetAccountIndex(*Account) error
-	GetAccountIDByAlias(string) string
-	GetAccountByID(string) (*Account, error)
-	GetAccountIndex([]chainkd.XPub) uint64
-	DeleteAccountByAlias(string)
 	DeleteAccount(*Account)
-	DeleteControlProgram(common.Hash)
+	DeleteAccountByAlias(string)
+	DeleteAccountUTXOs(string) error
 	DeleteBip44ContractIndex(string)
 	DeleteContractIndex(string)
-	GetContractIndex(string) uint64
-	DeleteAccountUTXOs(string) error
+	DeleteControlProgram(common.Hash)
 	DeleteStandardUTXO(bc.Hash)
-	GetCoinbaseArbitrary() []byte
-	SetCoinbaseArbitrary([]byte)
-	GetMiningAddress() (*CtrlProgram, error)
-	SetMiningAddress(*CtrlProgram) error
+	GetAccountByID(string) (*Account, error)
+	GetAccountIDByAlias(string) string
+	GetAccountIndex([]chainkd.XPub) uint64
 	GetBip44ContractIndex(string, bool) uint64
+	GetCoinbaseArbitrary() []byte
+	GetContractIndex(string) uint64
 	GetControlProgram(common.Hash) (*CtrlProgram, error)
+	GetMiningAddress() (*CtrlProgram, error)
+	GetUTXO(bc.Hash) (*UTXO, error)
 	ListAccounts(string) ([]*Account, error)
 	ListControlPrograms() ([]*CtrlProgram, error)
-	SetControlProgram(common.Hash, *CtrlProgram) error
-	SetContractIndex(string, uint64)
-	SetBip44ContractIndex(string, bool, uint64)
 	ListUTXOs() []*UTXO
-	GetUTXO(bc.Hash) (*UTXO, error)
+	SetAccount(*Account) error
+	SetAccountIndex(*Account) error
+	SetBip44ContractIndex(string, bool, uint64)
+	SetCoinbaseArbitrary([]byte)
+	SetContractIndex(string, uint64)
+	SetControlProgram(common.Hash, *CtrlProgram) error
+	SetMiningAddress(*CtrlProgram) error
 	SetStandardUTXO(bc.Hash, *UTXO) error
 }
