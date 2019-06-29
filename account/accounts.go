@@ -273,7 +273,7 @@ func (m *Manager) deleteAccountControlPrograms(accountID string) error {
 	for _, cp := range cps {
 		if cp.AccountID == accountID {
 			sha3pool.Sum256(hash[:], cp.ControlProgram)
-			m.store.DeleteRawProgram(hash)
+			m.store.DeleteControlProgram(hash)
 		}
 	}
 

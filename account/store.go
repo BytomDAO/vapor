@@ -17,7 +17,7 @@ type AccountStorer interface {
 	GetAccountIndex([]chainkd.XPub) uint64
 	DeleteAccountByAccountAlias(string)
 	DeleteAccountByAccountID(string)
-	DeleteRawProgram(common.Hash)
+	DeleteControlProgram(common.Hash)
 	DeleteBip44ContractIndex(string)
 	DeleteContractIndex(string)
 	GetContractIndex(string) uint64

@@ -143,8 +143,8 @@ func (store *AccountStore) DeleteAccountByAccountID(accountID string) {
 	}
 }
 
-// DeleteRawProgram delete raw control program by hash
-func (store *AccountStore) DeleteRawProgram(hash common.Hash) {
+// DeleteControlProgram delete raw control program by hash
+func (store *AccountStore) DeleteControlProgram(hash common.Hash) {
 	if store.batch == nil {
 		store.accountDB.Delete(ContractKey(hash))
 	} else {
