@@ -238,7 +238,7 @@ func findTransactionsByAccount(annotatedTx *query.AnnotatedTx, accountID string)
 // GetTransactions get all walletDB transactions, and filter transactions by accountID optional
 func (w *Wallet) GetTransactions(accountID string) ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
-	annotatedTxs, err := w.store.GetTransactions()
+	annotatedTxs, err := w.store.ListTransactions()
 	if err != nil {
 		return nil, err
 	}

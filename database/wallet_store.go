@@ -343,8 +343,8 @@ func (store *WalletStore) GetGlobalTransactionIndex(txID string) []byte {
 	return store.walletDB.Get(calcGlobalTxIndexKey(txID))
 }
 
-// GetTransactions get all walletDB transactions
-func (store *WalletStore) GetTransactions() ([]*query.AnnotatedTx, error) {
+// ListTransactions get all walletDB transactions
+func (store *WalletStore) ListTransactions() ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
 
 	txIter := store.walletDB.IteratorPrefix([]byte(TxPrefix))
@@ -360,8 +360,8 @@ func (store *WalletStore) GetTransactions() ([]*query.AnnotatedTx, error) {
 	return annotatedTxs, nil
 }
 
-// GetUnconfirmedTransactions get all unconfirmed txs
-func (store *WalletStore) GetUnconfirmedTransactions() ([]*query.AnnotatedTx, error) {
+// ListUnconfirmedTransactions get all unconfirmed txs
+func (store *WalletStore) ListUnconfirmedTransactions() ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
 	txIter := store.walletDB.IteratorPrefix([]byte(UnconfirmedTxPrefix))
 	defer txIter.Release()
