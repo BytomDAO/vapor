@@ -71,12 +71,26 @@ func TestCalcReorganizeChain(t *testing.T) {
 		c.store.SaveBlockHeader(newChainBlockHeader)
 	}
 
+	// normal
 	getAttachBlockHeaders, getDetachBlockHeaders, _ := c.calcReorganizeChain(newChainBlockHeader, mainChainBlockHeader)
 	if !testutil.DeepEqual(wantAttachBlockHeaders, getAttachBlockHeaders) {
-		t.Errorf("attach headers want %v but get %v", wantAttachBlockHeaders, getAttachBlockHeaders)
+		t.Errorf("normal test: attach headers want %v but get %v", wantAttachBlockHeaders, getAttachBlockHeaders)
 	}
 
 	if !testutil.DeepEqual(wantDetachBlockHeaders, getDetachBlockHeaders) {
-		t.Errorf("detach headers want %v but get %v", wantDetachBlockHeaders, getDetachBlockHeaders)
+		t.Errorf("normal test: detach headers want %v but get %v", wantDetachBlockHeaders, getDetachBlockHeaders)
+	}
+
+	// detachBlockHeaders is empty
+	forkChainBlockHeader := wantAttachBlockHeaders[7]
+	wantAttachBlockHeaders = wantAttachBlockHeaders[8:]
+	wantDetachBlockHeaders = []*types.BlockHeader{}
+	getAttachBlockHeaders, getDetachBlockHeaders, _ = c.calcReorganizeChain(newChainBlockHeader, forkChainBlockHeader)
+	if !testutil.DeepEqual(wantAttachBlockHeaders, getAttachBlockHeaders) {
+		t.Errorf("detachBlockHeaders is empty test: attach headers want %v but get %v", wantAttachBlockHeaders, getAttachBlockHeaders)
+	}
+
+	if !testutil.DeepEqual(wantDetachBlockHeaders, getDetachBlockHeaders) {
+		t.Errorf("detachBlockHeaders is empty test: detach headers want %v but get %v", wantDetachBlockHeaders, getDetachBlockHeaders)
 	}
 }
