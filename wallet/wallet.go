@@ -193,7 +193,6 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 	annotateTxsAccount(annotatedTxs, w.store)
 
 	w.store.InitBatch()
-	defer w.store.CommitBatch()
 
 	if err := w.indexTransactions(block, txStatus, annotatedTxs); err != nil {
 		return err
@@ -207,7 +206,13 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 		w.status.BestHash = w.status.WorkHash
 	}
 
-	return w.commitWalletInfo()
+	if err := w.commitWalletInfo(); err != nil {
+		return err
+	}
+
+	w.store.CommitBatch()
+
+	return nil
 }
 
 // DetachBlock detach a block and rollback state

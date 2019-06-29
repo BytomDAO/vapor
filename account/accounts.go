@@ -114,7 +114,6 @@ func CreateAccount(xpubs []chainkd.XPub, quorum int, alias string, acctIndex uin
 
 func (m *Manager) saveAccount(account *Account, updateIndex bool) error {
 	m.store.InitBatch()
-	defer m.store.CommitBatch()
 
 	if updateIndex {
 		if err := m.store.SetAccountIndex(account); err != nil {
@@ -125,6 +124,8 @@ func (m *Manager) saveAccount(account *Account, updateIndex bool) error {
 			return err
 		}
 	}
+
+	m.store.CommitBatch()
 
 	return nil
 }
@@ -198,12 +199,13 @@ func (m *Manager) UpdateAccountAlias(accountID string, newAlias string) error {
 	account.Alias = normalizedAlias
 
 	m.store.InitBatch()
-	defer m.store.CommitBatch()
 
 	m.store.DeleteAccountByAccountAlias(oldAlias)
 	if err := m.store.SetAccount(account); err != nil {
 		return err
 	}
+
+	m.store.CommitBatch()
 
 	return nil
 }
@@ -311,10 +313,10 @@ func (m *Manager) DeleteAccount(accountID string) (err error) {
 	m.cacheMu.Unlock()
 
 	m.store.InitBatch()
-	defer m.store.CommitBatch()
-
 	m.store.DeleteAccountByAccountAlias(account.Alias)
 	m.store.DeleteAccountByAccountID(account.ID)
+	m.store.CommitBatch()
+
 	return nil
 }
 
@@ -652,8 +654,6 @@ func (m *Manager) saveControlProgram(prog *CtrlProgram, updateIndex bool) error 
 	}
 
 	m.store.InitBatch()
-	defer m.store.CommitBatch()
-
 	if err := m.store.SetControlProgram(hash, prog); err != nil {
 		return nil
 	}
@@ -665,6 +665,7 @@ func (m *Manager) saveControlProgram(prog *CtrlProgram, updateIndex bool) error 
 			m.store.SetBip44ContractIndex(acct.ID, prog.Change, prog.KeyIndex)
 		}
 	}
+	m.store.CommitBatch()
 	return nil
 }
 

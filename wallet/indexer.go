@@ -30,7 +30,6 @@ func parseGlobalTxIdx(globalTxIdx []byte) (*bc.Hash, uint64) {
 // details see getAliasDefinition
 func saveExternalAssetDefinition(b *types.Block, store WalletStorer) error {
 	store.InitBatch()
-	defer store.CommitBatch()
 
 	for _, tx := range b.Transactions {
 		for _, orig := range tx.Inputs {
@@ -46,6 +45,8 @@ func saveExternalAssetDefinition(b *types.Block, store WalletStorer) error {
 			}
 		}
 	}
+
+	store.CommitBatch()
 	return nil
 }
 
