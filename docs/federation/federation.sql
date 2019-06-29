@@ -25,7 +25,7 @@ CREATE TABLE `chains` (
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`),
-  UNIQUE KEY `block_hash` (`block_hash`)
+  UNIQUE KEY `block_hash` (`id`,`block_hash`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 LOCK TABLES `chains` WRITE;

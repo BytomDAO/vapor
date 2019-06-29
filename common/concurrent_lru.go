@@ -8,7 +8,7 @@ import (
 
 // Cache is an LRU cache. It is safe for concurrent access.
 type Cache struct {
-	cache  *lru.Cache
+	cache *lru.Cache
 	sync.RWMutex
 }
 
@@ -28,8 +28,8 @@ func (c *Cache) Add(key, value interface{}) {
 
 // Get looks up a key's value from the cache.
 func (c *Cache) Get(key interface{}) (value interface{}, ok bool) {
-	c.RLock()
-	defer c.RUnlock()
+	c.Lock()
+	defer c.Unlock()
 	return c.cache.Get(key)
 }
 

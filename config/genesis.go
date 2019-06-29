@@ -6,20 +6,32 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/consensus"
+	"github.com/vapor/crypto"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/vm/vmutil"
 )
 
-func FederationProgrom(c *Config) []byte {
+func FederationPMultiSigScript(c *Config) []byte {
 	xpubs := c.Federation.Xpubs
-	fedpegScript, err := vmutil.P2SPMultiSigProgram(chainkd.XPubKeys(xpubs), c.Federation.Quorum)
+	program, err := vmutil.P2SPMultiSigProgram(chainkd.XPubKeys(xpubs), c.Federation.Quorum)
 	if err != nil {
 		log.Panicf("fail to generate federation scirpt for federation: %v", err)
 	}
 
-	return fedpegScript
+	return program
+}
+
+func FederationWScript(c *Config) []byte {
+	script := FederationPMultiSigScript(c)
+	scriptHash := crypto.Sha256(script)
+	wscript, err := vmutil.P2WSHProgram(scriptHash)
+	if err != nil {
+		log.Panicf("Fail converts scriptHash to witness: %v", err)
+	}
+
+	return wscript
 }
 
 func GenesisTx() *types.Tx {
@@ -28,7 +40,7 @@ func GenesisTx() *types.Tx {
 		log.Panicf("fail on decode genesis tx output control program")
 	}
 
-	coinbaseInput := FederationProgrom(CommonConfig)
+	coinbaseInput := FederationWScript(CommonConfig)
 
 	txData := types.TxData{
 		Version: 1,
@@ -62,7 +74,7 @@ func mainNetGenesisBlock() *types.Block {
 		BlockHeader: types.BlockHeader{
 			Version:   1,
 			Height:    0,
-			Timestamp: 1561000000002,
+			Timestamp: 1561600800002,
 			BlockCommitment: types.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
 				TransactionStatusHash:  txStatusHash,
@@ -93,7 +105,7 @@ func testNetGenesisBlock() *types.Block {
 		BlockHeader: types.BlockHeader{
 			Version:   1,
 			Height:    0,
-			Timestamp: 1561000000001,
+			Timestamp: 1561600800001,
 			BlockCommitment: types.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
 				TransactionStatusHash:  txStatusHash,
@@ -124,7 +136,7 @@ func soloNetGenesisBlock() *types.Block {
 		BlockHeader: types.BlockHeader{
 			Version:   1,
 			Height:    0,
-			Timestamp: 1561000000000,
+			Timestamp: 1561600800000,
 			BlockCommitment: types.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
 				TransactionStatusHash:  txStatusHash,

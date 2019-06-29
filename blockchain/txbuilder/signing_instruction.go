@@ -8,6 +8,11 @@ import (
 	"github.com/vapor/errors"
 )
 
+func (si *SigningInstruction) AddDataWitness(data chainjson.HexBytes) {
+	dw := DataWitness(data)
+	si.WitnessComponents = append(si.WitnessComponents, &dw)
+}
+
 // AddWitnessKeys adds a SignatureWitness with the given quorum and
 // list of keys derived by applying the derivation path to each of the
 // xpubs.
