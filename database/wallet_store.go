@@ -197,59 +197,31 @@ func (store *WalletStore) CommitBatch() error {
 	return nil
 }
 
-// GetAssetDefinition get asset definition by assetiD
-func (store *WalletStore) GetAssetDefinition(assetID *bc.AssetID) (*asset.Asset, error) {
-	definitionByte := store.walletDB.Get(asset.ExtAssetKey(assetID))
-	if definitionByte == nil {
-		return nil, errGetAssetDefinition
-	}
-	definitionMap := make(map[string]interface{})
-	if err := json.Unmarshal(definitionByte, &definitionMap); err != nil {
-		return nil, err
-	}
-	alias := assetID.String()
-	externalAsset := &asset.Asset{
-		AssetID:           *assetID,
-		Alias:             &alias,
-		DefinitionMap:     definitionMap,
-		RawDefinitionByte: definitionByte,
-	}
-	return externalAsset, nil
-}
-
-// SetAssetDefinition set assetID and definition
-func (store *WalletStore) SetAssetDefinition(assetID *bc.AssetID, definition []byte) {
+// DeleteContractUTXO delete contract utxo by outputID
+func (store *WalletStore) DeleteContractUTXO(outputID bc.Hash) {
 	if store.batch == nil {
-		store.walletDB.Set(asset.ExtAssetKey(assetID), definition)
+		store.walletDB.Delete(ContractUTXOKey(outputID))
 	} else {
-		store.batch.Set(asset.ExtAssetKey(assetID), definition)
+		store.batch.Delete(ContractUTXOKey(outputID))
 	}
 }
 
-// GetControlProgram get raw program by hash
-func (store *WalletStore) GetControlProgram(hash common.Hash) (*acc.CtrlProgram, error) {
-	rawProgram := store.walletDB.Get(ContractKey(hash))
-	if rawProgram == nil {
-		return nil, fmt.Errorf("failed get account control program:%x ", hash)
+// DeleteRecoveryStatus delete recovery status
+func (store *WalletStore) DeleteRecoveryStatus() {
+	if store.batch == nil {
+		store.walletDB.Delete(RecoveryKey)
+	} else {
+		store.batch.Delete(RecoveryKey)
 	}
-	accountCP := new(acc.CtrlProgram)
-	if err := json.Unmarshal(rawProgram, &accountCP); err != nil {
-		return nil, err
-	}
-	return accountCP, nil
 }
 
-// GetAccountByID get account value by account ID
-func (store *WalletStore) GetAccountByID(accountID string) (*acc.Account, error) {
-	rawAccount := store.walletDB.Get(AccountIDKey(accountID))
-	if rawAccount == nil {
-		return nil, fmt.Errorf("failed get account, accountID: %s ", accountID)
+// DeleteStardardUTXO delete stardard utxo by outputID
+func (store *WalletStore) DeleteStardardUTXO(outputID bc.Hash) {
+	if store.batch == nil {
+		store.walletDB.Delete(StandardUTXOKey(outputID))
+	} else {
+		store.batch.Delete(StandardUTXOKey(outputID))
 	}
-	account := new(acc.Account)
-	if err := json.Unmarshal(rawAccount, account); err != nil {
-		return nil, err
-	}
-	return account, nil
 }
 
 // DeleteTransactions delete transactions when orphan block rollback
@@ -273,193 +245,12 @@ func (store *WalletStore) DeleteTransactions(height uint64) {
 	}
 }
 
-// SetTransaction set raw transaction by block height and tx position
-func (store *WalletStore) SetTransaction(height uint64, tx *query.AnnotatedTx) error {
-	batch := store.walletDB.NewBatch()
-	if store.batch != nil {
-		batch = store.batch
-	}
-
-	rawTx, err := json.Marshal(tx)
-	if err != nil {
-		return err
-	}
-	batch.Set(calcAnnotatedKey(formatKey(height, tx.Position)), rawTx)
-	batch.Set(calcTxIndexKey(tx.ID.String()), []byte(formatKey(height, tx.Position)))
-
-	if store.batch == nil {
-		batch.Write()
-	}
-	return nil
-}
-
 // DeleteUnconfirmedTransaction delete unconfirmed tx by txID
 func (store *WalletStore) DeleteUnconfirmedTransaction(txID string) {
 	if store.batch == nil {
 		store.walletDB.Delete(calcUnconfirmedTxKey(txID))
 	} else {
 		store.batch.Delete(calcUnconfirmedTxKey(txID))
-	}
-}
-
-// SetGlobalTransactionIndex set global tx index by blockhash and position
-func (store *WalletStore) SetGlobalTransactionIndex(globalTxID string, blockHash *bc.Hash, position uint64) {
-	if store.batch == nil {
-		store.walletDB.Set(calcGlobalTxIndexKey(globalTxID), CalcGlobalTxIndex(blockHash, position))
-	} else {
-		store.batch.Set(calcGlobalTxIndexKey(globalTxID), CalcGlobalTxIndex(blockHash, position))
-	}
-}
-
-// GetStandardUTXO get standard utxo by id
-func (store *WalletStore) GetStandardUTXO(outid bc.Hash) (*acc.UTXO, error) {
-	rawUTXO := store.walletDB.Get(StandardUTXOKey(outid))
-	if rawUTXO == nil {
-		return nil, fmt.Errorf("failed get standard UTXO, outputID: %s ", outid.String())
-	}
-	UTXO := new(acc.UTXO)
-	if err := json.Unmarshal(rawUTXO, UTXO); err != nil {
-		return nil, err
-	}
-	return UTXO, nil
-}
-
-// GetTransaction get tx by txid
-func (store *WalletStore) GetTransaction(txID string) (*query.AnnotatedTx, error) {
-	formatKey := store.walletDB.Get(calcTxIndexKey(txID))
-	if formatKey == nil {
-		return nil, errAccntTxIDNotFound
-	}
-	rawTx := store.walletDB.Get(calcAnnotatedKey(string(formatKey)))
-	tx := new(query.AnnotatedTx)
-	if err := json.Unmarshal(rawTx, tx); err != nil {
-		return nil, err
-	}
-	return tx, nil
-}
-
-// GetGlobalTransactionIndex get global tx by txID
-func (store *WalletStore) GetGlobalTransactionIndex(txID string) []byte {
-	return store.walletDB.Get(calcGlobalTxIndexKey(txID))
-}
-
-// ListTransactions get all walletDB transactions
-func (store *WalletStore) ListTransactions() ([]*query.AnnotatedTx, error) {
-	annotatedTxs := []*query.AnnotatedTx{}
-
-	txIter := store.walletDB.IteratorPrefix([]byte(TxPrefix))
-	defer txIter.Release()
-	for txIter.Next() {
-		annotatedTx := &query.AnnotatedTx{}
-		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
-			return nil, err
-		}
-		annotatedTxs = append(annotatedTxs, annotatedTx)
-	}
-
-	return annotatedTxs, nil
-}
-
-// ListUnconfirmedTransactions get all unconfirmed txs
-func (store *WalletStore) ListUnconfirmedTransactions() ([]*query.AnnotatedTx, error) {
-	annotatedTxs := []*query.AnnotatedTx{}
-	txIter := store.walletDB.IteratorPrefix([]byte(UnconfirmedTxPrefix))
-	defer txIter.Release()
-
-	for txIter.Next() {
-		annotatedTx := &query.AnnotatedTx{}
-		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
-			return nil, err
-		}
-		annotatedTxs = append(annotatedTxs, annotatedTx)
-	}
-	return annotatedTxs, nil
-}
-
-// GetUnconfirmedTransaction get unconfirmed tx by txID
-func (store *WalletStore) GetUnconfirmedTransaction(txID string) (*query.AnnotatedTx, error) {
-	rawUnconfirmedTx := store.walletDB.Get(calcUnconfirmedTxKey(txID))
-	if rawUnconfirmedTx == nil {
-		return nil, fmt.Errorf("failed get unconfirmed tx, txID: %s ", txID)
-	}
-	tx := new(query.AnnotatedTx)
-	if err := json.Unmarshal(rawUnconfirmedTx, tx); err != nil {
-		return nil, err
-	}
-	return tx, nil
-}
-
-// SetUnconfirmedTransaction set unconfirmed tx by txID
-func (store *WalletStore) SetUnconfirmedTransaction(txID string, tx *query.AnnotatedTx) error {
-	rawTx, err := json.Marshal(tx)
-	if err != nil {
-		return err
-	}
-	if store.batch == nil {
-		store.walletDB.Set(calcUnconfirmedTxKey(txID), rawTx)
-	} else {
-		store.batch.Set(calcUnconfirmedTxKey(txID), rawTx)
-	}
-	return nil
-}
-
-// DeleteStardardUTXO delete stardard utxo by outputID
-func (store *WalletStore) DeleteStardardUTXO(outputID bc.Hash) {
-	if store.batch == nil {
-		store.walletDB.Delete(StandardUTXOKey(outputID))
-	} else {
-		store.batch.Delete(StandardUTXOKey(outputID))
-	}
-}
-
-// DeleteContractUTXO delete contract utxo by outputID
-func (store *WalletStore) DeleteContractUTXO(outputID bc.Hash) {
-	if store.batch == nil {
-		store.walletDB.Delete(ContractUTXOKey(outputID))
-	} else {
-		store.batch.Delete(ContractUTXOKey(outputID))
-	}
-}
-
-// SetStandardUTXO set standard utxo
-func (store *WalletStore) SetStandardUTXO(outputID bc.Hash, utxo *acc.UTXO) error {
-	data, err := json.Marshal(utxo)
-	if err != nil {
-		return err
-	}
-	if store.batch == nil {
-		store.walletDB.Set(StandardUTXOKey(outputID), data)
-	} else {
-		store.batch.Set(StandardUTXOKey(outputID), data)
-	}
-	return nil
-}
-
-// SetContractUTXO set standard utxo
-func (store *WalletStore) SetContractUTXO(outputID bc.Hash, utxo *acc.UTXO) error {
-	data, err := json.Marshal(utxo)
-	if err != nil {
-		return err
-	}
-	if store.batch == nil {
-		store.walletDB.Set(ContractUTXOKey(outputID), data)
-	} else {
-		store.batch.Set(ContractUTXOKey(outputID), data)
-	}
-	return nil
-}
-
-// GetWalletInfo get wallet information
-func (store *WalletStore) GetWalletInfo() []byte {
-	return store.walletDB.Get([]byte(WalletKey))
-}
-
-// SetWalletInfo get wallet information
-func (store *WalletStore) SetWalletInfo(rawWallet []byte) {
-	if store.batch == nil {
-		store.walletDB.Set([]byte(WalletKey), rawWallet)
-	} else {
-		store.batch.Set([]byte(WalletKey), rawWallet)
 	}
 }
 
@@ -509,6 +300,107 @@ func (store *WalletStore) DeleteWalletUTXOs() {
 	}
 }
 
+// GetAccountByID get account value by account ID
+func (store *WalletStore) GetAccountByID(accountID string) (*acc.Account, error) {
+	rawAccount := store.walletDB.Get(AccountIDKey(accountID))
+	if rawAccount == nil {
+		return nil, fmt.Errorf("failed get account, accountID: %s ", accountID)
+	}
+	account := new(acc.Account)
+	if err := json.Unmarshal(rawAccount, account); err != nil {
+		return nil, err
+	}
+	return account, nil
+}
+
+// GetAssetDefinition get asset definition by assetiD
+func (store *WalletStore) GetAssetDefinition(assetID *bc.AssetID) (*asset.Asset, error) {
+	definitionByte := store.walletDB.Get(asset.ExtAssetKey(assetID))
+	if definitionByte == nil {
+		return nil, errGetAssetDefinition
+	}
+	definitionMap := make(map[string]interface{})
+	if err := json.Unmarshal(definitionByte, &definitionMap); err != nil {
+		return nil, err
+	}
+	alias := assetID.String()
+	externalAsset := &asset.Asset{
+		AssetID:           *assetID,
+		Alias:             &alias,
+		DefinitionMap:     definitionMap,
+		RawDefinitionByte: definitionByte,
+	}
+	return externalAsset, nil
+}
+
+// GetControlProgram get raw program by hash
+func (store *WalletStore) GetControlProgram(hash common.Hash) (*acc.CtrlProgram, error) {
+	rawProgram := store.walletDB.Get(ContractKey(hash))
+	if rawProgram == nil {
+		return nil, fmt.Errorf("failed get account control program:%x ", hash)
+	}
+	accountCP := new(acc.CtrlProgram)
+	if err := json.Unmarshal(rawProgram, &accountCP); err != nil {
+		return nil, err
+	}
+	return accountCP, nil
+}
+
+// GetGlobalTransactionIndex get global tx by txID
+func (store *WalletStore) GetGlobalTransactionIndex(txID string) []byte {
+	return store.walletDB.Get(calcGlobalTxIndexKey(txID))
+}
+
+// GetStandardUTXO get standard utxo by id
+func (store *WalletStore) GetStandardUTXO(outid bc.Hash) (*acc.UTXO, error) {
+	rawUTXO := store.walletDB.Get(StandardUTXOKey(outid))
+	if rawUTXO == nil {
+		return nil, fmt.Errorf("failed get standard UTXO, outputID: %s ", outid.String())
+	}
+	UTXO := new(acc.UTXO)
+	if err := json.Unmarshal(rawUTXO, UTXO); err != nil {
+		return nil, err
+	}
+	return UTXO, nil
+}
+
+// GetTransaction get tx by txid
+func (store *WalletStore) GetTransaction(txID string) (*query.AnnotatedTx, error) {
+	formatKey := store.walletDB.Get(calcTxIndexKey(txID))
+	if formatKey == nil {
+		return nil, errAccntTxIDNotFound
+	}
+	rawTx := store.walletDB.Get(calcAnnotatedKey(string(formatKey)))
+	tx := new(query.AnnotatedTx)
+	if err := json.Unmarshal(rawTx, tx); err != nil {
+		return nil, err
+	}
+	return tx, nil
+}
+
+// GetUnconfirmedTransaction get unconfirmed tx by txID
+func (store *WalletStore) GetUnconfirmedTransaction(txID string) (*query.AnnotatedTx, error) {
+	rawUnconfirmedTx := store.walletDB.Get(calcUnconfirmedTxKey(txID))
+	if rawUnconfirmedTx == nil {
+		return nil, fmt.Errorf("failed get unconfirmed tx, txID: %s ", txID)
+	}
+	tx := new(query.AnnotatedTx)
+	if err := json.Unmarshal(rawUnconfirmedTx, tx); err != nil {
+		return nil, err
+	}
+	return tx, nil
+}
+
+// GetRecoveryStatus delete recovery status
+func (store *WalletStore) GetRecoveryStatus(recoveryKey []byte) []byte {
+	return store.walletDB.Get(recoveryKey)
+}
+
+// GetWalletInfo get wallet information
+func (store *WalletStore) GetWalletInfo() []byte {
+	return store.walletDB.Get([]byte(WalletKey))
+}
+
 // ListAccountUTXOs get all account unspent outputs
 func (store *WalletStore) ListAccountUTXOs(key string) ([]*acc.UTXO, error) {
 	accountUtxoIter := store.walletDB.IteratorPrefix([]byte(key))
@@ -525,6 +417,71 @@ func (store *WalletStore) ListAccountUTXOs(key string) ([]*acc.UTXO, error) {
 	return confirmedUTXOs, nil
 }
 
+// ListTransactions get all walletDB transactions
+func (store *WalletStore) ListTransactions() ([]*query.AnnotatedTx, error) {
+	annotatedTxs := []*query.AnnotatedTx{}
+
+	txIter := store.walletDB.IteratorPrefix([]byte(TxPrefix))
+	defer txIter.Release()
+	for txIter.Next() {
+		annotatedTx := &query.AnnotatedTx{}
+		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
+			return nil, err
+		}
+		annotatedTxs = append(annotatedTxs, annotatedTx)
+	}
+
+	return annotatedTxs, nil
+}
+
+// ListUnconfirmedTransactions get all unconfirmed txs
+func (store *WalletStore) ListUnconfirmedTransactions() ([]*query.AnnotatedTx, error) {
+	annotatedTxs := []*query.AnnotatedTx{}
+	txIter := store.walletDB.IteratorPrefix([]byte(UnconfirmedTxPrefix))
+	defer txIter.Release()
+
+	for txIter.Next() {
+		annotatedTx := &query.AnnotatedTx{}
+		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
+			return nil, err
+		}
+		annotatedTxs = append(annotatedTxs, annotatedTx)
+	}
+	return annotatedTxs, nil
+}
+
+// SetAssetDefinition set assetID and definition
+func (store *WalletStore) SetAssetDefinition(assetID *bc.AssetID, definition []byte) {
+	if store.batch == nil {
+		store.walletDB.Set(asset.ExtAssetKey(assetID), definition)
+	} else {
+		store.batch.Set(asset.ExtAssetKey(assetID), definition)
+	}
+}
+
+// SetContractUTXO set standard utxo
+func (store *WalletStore) SetContractUTXO(outputID bc.Hash, utxo *acc.UTXO) error {
+	data, err := json.Marshal(utxo)
+	if err != nil {
+		return err
+	}
+	if store.batch == nil {
+		store.walletDB.Set(ContractUTXOKey(outputID), data)
+	} else {
+		store.batch.Set(ContractUTXOKey(outputID), data)
+	}
+	return nil
+}
+
+// SetGlobalTransactionIndex set global tx index by blockhash and position
+func (store *WalletStore) SetGlobalTransactionIndex(globalTxID string, blockHash *bc.Hash, position uint64) {
+	if store.batch == nil {
+		store.walletDB.Set(calcGlobalTxIndexKey(globalTxID), CalcGlobalTxIndex(blockHash, position))
+	} else {
+		store.batch.Set(calcGlobalTxIndexKey(globalTxID), CalcGlobalTxIndex(blockHash, position))
+	}
+}
+
 // SetRecoveryStatus set recovery status
 func (store *WalletStore) SetRecoveryStatus(recoveryKey, rawStatus []byte) {
 	if store.batch == nil {
@@ -534,16 +491,59 @@ func (store *WalletStore) SetRecoveryStatus(recoveryKey, rawStatus []byte) {
 	}
 }
 
-// DeleteRecoveryStatus delete recovery status
-func (store *WalletStore) DeleteRecoveryStatus() {
-	if store.batch == nil {
-		store.walletDB.Delete(RecoveryKey)
-	} else {
-		store.batch.Delete(RecoveryKey)
+// SetStandardUTXO set standard utxo
+func (store *WalletStore) SetStandardUTXO(outputID bc.Hash, utxo *acc.UTXO) error {
+	data, err := json.Marshal(utxo)
+	if err != nil {
+		return err
 	}
+	if store.batch == nil {
+		store.walletDB.Set(StandardUTXOKey(outputID), data)
+	} else {
+		store.batch.Set(StandardUTXOKey(outputID), data)
+	}
+	return nil
 }
 
-// GetRecoveryStatus delete recovery status
-func (store *WalletStore) GetRecoveryStatus(recoveryKey []byte) []byte {
-	return store.walletDB.Get(recoveryKey)
+// SetTransaction set raw transaction by block height and tx position
+func (store *WalletStore) SetTransaction(height uint64, tx *query.AnnotatedTx) error {
+	batch := store.walletDB.NewBatch()
+	if store.batch != nil {
+		batch = store.batch
+	}
+
+	rawTx, err := json.Marshal(tx)
+	if err != nil {
+		return err
+	}
+	batch.Set(calcAnnotatedKey(formatKey(height, tx.Position)), rawTx)
+	batch.Set(calcTxIndexKey(tx.ID.String()), []byte(formatKey(height, tx.Position)))
+
+	if store.batch == nil {
+		batch.Write()
+	}
+	return nil
+}
+
+// SetUnconfirmedTransaction set unconfirmed tx by txID
+func (store *WalletStore) SetUnconfirmedTransaction(txID string, tx *query.AnnotatedTx) error {
+	rawTx, err := json.Marshal(tx)
+	if err != nil {
+		return err
+	}
+	if store.batch == nil {
+		store.walletDB.Set(calcUnconfirmedTxKey(txID), rawTx)
+	} else {
+		store.batch.Set(calcUnconfirmedTxKey(txID), rawTx)
+	}
+	return nil
+}
+
+// SetWalletInfo get wallet information
+func (store *WalletStore) SetWalletInfo(rawWallet []byte) {
+	if store.batch == nil {
+		store.walletDB.Set([]byte(WalletKey), rawWallet)
+	} else {
+		store.batch.Set([]byte(WalletKey), rawWallet)
+	}
 }
