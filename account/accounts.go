@@ -283,14 +283,6 @@ func (m *Manager) deleteAccountControlPrograms(accountID string) error {
 	return nil
 }
 
-// deleteAccountUtxos deletes utxos matching accountID
-func (m *Manager) deleteAccountUtxos(accountID string) error {
-	if err := m.store.DeleteAccountUTXOs(accountID); err != nil {
-		return err
-	}
-	return nil
-}
-
 // DeleteAccount deletes the account's ID or alias matching account ID.
 func (m *Manager) DeleteAccount(accountID string) (err error) {
 	m.accountMu.Lock()
@@ -304,7 +296,7 @@ func (m *Manager) DeleteAccount(accountID string) (err error) {
 	if err := m.deleteAccountControlPrograms(accountID); err != nil {
 		return err
 	}
-	if err := m.deleteAccountUtxos(accountID); err != nil {
+	if err := m.store.DeleteAccountUTXOs(accountID); err != nil {
 		return err
 	}
 
