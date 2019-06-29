@@ -12,7 +12,7 @@ type AccountStorer interface {
 	CommitBatch()
 	SetAccount(*Account) error
 	SetAccountIndex(*Account) error
-	GetAccountIDByAccountAlias(string) string
+	GetAccountIDByAlias(string) string
 	GetAccountByAccountID(string) (*Account, error)
 	GetAccountIndex([]chainkd.XPub) uint64
 	DeleteAccountByAccountAlias(string)

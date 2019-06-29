@@ -134,7 +134,7 @@ func (m *Manager) SaveAccount(account *Account) error {
 	m.accountMu.Lock()
 	defer m.accountMu.Unlock()
 
-	if existed := m.store.GetAccountIDByAccountAlias(account.Alias); existed != "" {
+	if existed := m.store.GetAccountIDByAlias(account.Alias); existed != "" {
 		return ErrDuplicateAlias
 	}
 
@@ -156,7 +156,7 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string, deriveR
 	m.accountMu.Lock()
 	defer m.accountMu.Unlock()
 
-	if existed := m.store.GetAccountIDByAccountAlias(alias); existed != "" {
+	if existed := m.store.GetAccountIDByAlias(alias); existed != "" {
 		return nil, ErrDuplicateAlias
 	}
 
@@ -187,7 +187,7 @@ func (m *Manager) UpdateAccountAlias(accountID string, newAlias string) error {
 	oldAlias := account.Alias
 
 	normalizedAlias := strings.ToLower(strings.TrimSpace(newAlias))
-	if existed := m.store.GetAccountIDByAccountAlias(normalizedAlias); existed != "" {
+	if existed := m.store.GetAccountIDByAlias(normalizedAlias); existed != "" {
 		return ErrDuplicateAlias
 	}
 
@@ -327,7 +327,7 @@ func (m *Manager) FindByAlias(alias string) (*Account, error) {
 		return m.FindByID(cachedID.(string))
 	}
 
-	accountID := m.store.GetAccountIDByAccountAlias(alias)
+	accountID := m.store.GetAccountIDByAlias(alias)
 	if accountID == "" {
 		return nil, ErrFindAccount
 	}
