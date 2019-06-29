@@ -11,16 +11,6 @@ import (
 	"github.com/vapor/protocol/vm/vmutil"
 )
 
-func SegWitWrap(script []byte) []byte {
-	scriptHash := crypto.Sha256(script)
-	wscript, err := vmutil.P2WSHProgram(scriptHash)
-	if err != nil {
-		log.Panicf("Fail converts scriptHash to witness: %v", err)
-	}
-
-	return wscript
-}
-
 func ParseFedProg(warders []config.Warder, quorum int) []byte {
 	SortWarders(warders)
 
@@ -29,12 +19,18 @@ func ParseFedProg(warders []config.Warder, quorum int) []byte {
 		xpubs = append(xpubs, w.XPub)
 	}
 
-	fedScript, err := vmutil.P2SPMultiSigProgram(chainkd.XPubKeys(xpubs), quorum)
+	scirpt, err := vmutil.P2SPMultiSigProgram(chainkd.XPubKeys(xpubs), quorum)
 	if err != nil {
 		log.Panicf("fail to generate federation scirpt for federation: %v", err)
 	}
 
-	return fedScript
+	scriptHash := crypto.Sha256(scirpt)
+	wscript, err := vmutil.P2WSHProgram(scriptHash)
+	if err != nil {
+		log.Panicf("Fail converts scriptHash to witness: %v", err)
+	}
+
+	return wscript
 }
 
 type byPosition []config.Warder
