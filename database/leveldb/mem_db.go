@@ -163,7 +163,7 @@ func (db *MemDB) IteratorPrefix(prefix []byte) Iterator {
 	return it
 }
 
-func (db *MemDB) IteratorWithStart(start []byte) Iterator {
+func (db *MemDB) IteratorPrefixWithStart(Prefix, start []byte) Iterator {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
 

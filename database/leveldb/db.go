@@ -12,7 +12,7 @@ type DB interface {
 	NewBatch() Batch
 	Iterator() Iterator
 	IteratorPrefix([]byte) Iterator
-	IteratorWithStart(start []byte) Iterator
+	IteratorPrefixWithStart(Prefix, start []byte) Iterator
 
 	// For debugging
 	Print()

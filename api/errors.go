@@ -117,6 +117,9 @@ var respErrFormatter = map[error]httperror.Info{
 	pseudohsm.ErrDuplicateKeyAlias: {400, "BTM800", "Key Alias already exists"},
 	pseudohsm.ErrLoadKey:           {400, "BTM801", "Key not found or wrong password"},
 	pseudohsm.ErrDecrypt:           {400, "BTM802", "Could not decrypt key with given passphrase"},
+
+	// query error namespace (9xx)
+
 }
 
 // Map error values to standard bytom error codes. Missing entries

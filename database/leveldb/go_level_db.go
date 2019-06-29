@@ -182,8 +182,8 @@ func (db *GoLevelDB) IteratorPrefix(prefix []byte) Iterator {
 	return &goLevelDBIterator{source: db.db.NewIterator(util.BytesPrefix(prefix), nil)}
 }
 
-func (db *GoLevelDB) IteratorWithStart(start []byte) Iterator {
-	itr := db.db.NewIterator(nil, nil)
+func (db *GoLevelDB) IteratorPrefixWithStart(Prefix, start []byte) Iterator {
+	itr := db.db.NewIterator(util.BytesPrefix(Prefix), nil)
 	return newGoLevelDBIterator(itr, start)
 }
 

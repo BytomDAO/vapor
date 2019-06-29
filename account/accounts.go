@@ -57,6 +57,7 @@ var (
 	ErrContractIndex   = errors.New("Exceeded maximum addresses per account")
 	ErrAccountIndex    = errors.New("Exceeded maximum accounts per xpub")
 	ErrFindTransaction = errors.New("No transaction")
+	ErrAccountIDEmpty  = errors.New("account_id is empty")
 )
 
 // ContractKey account control promgram store prefix

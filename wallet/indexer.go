@@ -309,26 +309,23 @@ func (w *Wallet) GetTransactions(accountID string) ([]*query.AnnotatedTx, error)
 	return annotatedTxs, nil
 }
 
-// GetTransactionsRange get all walletDB transactions, and filter transactions by accountID and txID optional
-func (w *Wallet) GetTransactionsRange(accountID string, txID string, count uint) ([]*query.AnnotatedTx, error) {
+// GetTransactionsLimit get all walletDB transactions, and filter transactions by accountID and txID optional
+func (w *Wallet) GetTransactionsLimit(accountID string, txID string, count uint) ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
-	var itr dbm.Iterator
+	var startKey []byte
 
 	if txID != "" {
 		formatKey := w.DB.Get(calcTxIndexKey(txID))
 		if formatKey == nil {
 			return nil, ErrAccntTxIDNotFound
 		}
-		startKey := calcAnnotatedKey(string(formatKey))
-		itr = w.DB.IteratorWithStart(startKey)
-	} else {
-		itr = w.DB.IteratorPrefix([]byte(TxPrefix))
+		startKey = calcAnnotatedKey(string(formatKey))
 	}
 
+	itr := w.DB.IteratorPrefixWithStart([]byte(TxPrefix), startKey)
 	defer itr.Release()
 
-	txNum := count
-	for itr.Next() {
+	for txNum := count; itr.Next() && txNum > 0; txNum-- {
 		annotatedTx := &query.AnnotatedTx{}
 		if err := json.Unmarshal(itr.Value(), &annotatedTx); err != nil {
 			return nil, err
@@ -337,11 +334,6 @@ func (w *Wallet) GetTransactionsRange(accountID string, txID string, count uint)
 		if accountID == "" || findTransactionsByAccount(annotatedTx, accountID) {
 			annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 			annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
-		}
-
-		txNum--
-		if txNum == 0 {
-			break
 		}
 	}
 

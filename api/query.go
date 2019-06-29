@@ -156,9 +156,13 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 	Unconfirmed bool   `json:"unconfirmed"`
 	Count       uint   `json:"count"`
 }) Response {
+	if filter.AccountID == "" {
+		return NewErrorResponse(account.ErrAccountIDEmpty)
+	}
+
 	transactions := []*query.AnnotatedTx{}
 	var err error
-	transactions, err = a.wallet.GetTransactionsRange(filter.AccountID, filter.ID, filter.Count)
+	transactions, err = a.wallet.GetTransactionsLimit(filter.AccountID, filter.ID, filter.Count)
 	unconfirmedCount := filter.Count - uint(len(transactions))
 	txID := ""
 	if err == wallet.ErrAccntTxIDNotFound {
@@ -168,7 +172,7 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 	}
 
 	if filter.Unconfirmed && unconfirmedCount != 0 {
-		unconfirmedTxs, err := a.wallet.GetUnconfirmedTxsRange(filter.AccountID, txID, unconfirmedCount)
+		unconfirmedTxs, err := a.wallet.GetUnconfirmedTxsLimit(filter.AccountID, txID, unconfirmedCount)
 		if err != nil {
 			return NewErrorResponse(err)
 		}

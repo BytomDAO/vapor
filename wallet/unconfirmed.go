@@ -11,7 +11,6 @@ import (
 	"github.com/vapor/account"
 	"github.com/vapor/blockchain/query"
 	"github.com/vapor/crypto/sha3pool"
-	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc/types"
 )
@@ -67,20 +66,19 @@ func (w *Wallet) GetUnconfirmedTxs(accountID string) ([]*query.AnnotatedTx, erro
 	return annotatedTxs, nil
 }
 
-// GetUnconfirmedTxsRange get account unconfirmed transactions, filter transactions by accountID when accountID is not empty
-func (w *Wallet) GetUnconfirmedTxsRange(accountID string, txID string, count uint) ([]*query.AnnotatedTx, error) {
+// GetUnconfirmedTxsLimit get account unconfirmed transactions, filter transactions by accountID when accountID is not empty
+func (w *Wallet) GetUnconfirmedTxsLimit(accountID string, txID string, count uint) ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
-	var itr dbm.Iterator
+	var startKey []byte
 
 	if txID != "" {
-		itr = w.DB.IteratorWithStart(calcUnconfirmedTxKey(txID))
-	} else {
-		itr = w.DB.IteratorPrefix([]byte(UnconfirmedTxPrefix))
+		startKey = calcUnconfirmedTxKey(txID)
 	}
 
+	itr := w.DB.IteratorPrefixWithStart([]byte(UnconfirmedTxPrefix), startKey)
 	defer itr.Release()
 
-	for itr.Next() {
+	for txNum := count; itr.Next() && txNum > 0; txNum-- {
 		annotatedTx := &query.AnnotatedTx{}
 		if err := json.Unmarshal(itr.Value(), &annotatedTx); err != nil {
 			return nil, err
