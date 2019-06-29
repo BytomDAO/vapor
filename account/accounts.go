@@ -458,9 +458,6 @@ func (m *Manager) GetLocalCtrlProgramByAddress(address string) (*CtrlProgram, er
 	if err != nil {
 		return nil, err
 	}
-	if cp == nil {
-		return nil, ErrFindCtrlProgram
-	}
 
 	return cp, nil
 }
