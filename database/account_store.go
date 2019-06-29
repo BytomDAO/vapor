@@ -110,11 +110,11 @@ func (store *AccountStore) GetAccountIDByAlias(accountAlias string) string {
 
 // GetAccountByID get account by accountID
 func (store *AccountStore) GetAccountByID(accountID string) (*acc.Account, error) {
-	account := new(acc.Account)
 	rawAccount := store.accountDB.Get(AccountIDKey(accountID))
 	if rawAccount == nil {
 		return nil, acc.ErrFindAccount
 	}
+	account := new(acc.Account)
 	if err := json.Unmarshal(rawAccount, account); err != nil {
 		return nil, err
 	}
@@ -238,7 +238,6 @@ func (store *AccountStore) GetMiningAddress() (*acc.CtrlProgram, error) {
 	if err := json.Unmarshal(rawCP, cp); err != nil {
 		return nil, err
 	}
-
 	return cp, nil
 }
 
@@ -272,7 +271,6 @@ func (store *AccountStore) GetControlProgram(hash common.Hash) (*acc.CtrlProgram
 	if rawProgram == nil {
 		return nil, acc.ErrFindCtrlProgram
 	}
-
 	cp := new(acc.CtrlProgram)
 	if err := json.Unmarshal(rawProgram, cp); err != nil {
 		return nil, err
