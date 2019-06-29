@@ -134,6 +134,15 @@ func (store *AccountStore) DeleteStandardUTXO(outputID bc.Hash) {
 	}
 }
 
+// GetAccountByAlias get account by account alias
+func (store *AccountStore) GetAccountByAlias(accountAlias string) (*acc.Account, error) {
+	accountID := store.accountDB.Get(accountAliasKey(accountAlias))
+	if accountID == nil {
+		return nil, acc.ErrFindAccount
+	}
+	return store.GetAccountByID(string(accountID))
+}
+
 // GetAccountByID get account by accountID
 func (store *AccountStore) GetAccountByID(accountID string) (*acc.Account, error) {
 	rawAccount := store.accountDB.Get(AccountIDKey(accountID))
@@ -145,12 +154,6 @@ func (store *AccountStore) GetAccountByID(accountID string) (*acc.Account, error
 		return nil, err
 	}
 	return account, nil
-}
-
-// GetAccountIDByAlias get account ID by account alias
-func (store *AccountStore) GetAccountIDByAlias(accountAlias string) string {
-	accountID := store.accountDB.Get(accountAliasKey(accountAlias))
-	return string(accountID)
 }
 
 // GetAccountIndex get account index by account xpubs

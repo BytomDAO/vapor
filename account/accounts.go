@@ -139,8 +139,9 @@ func (m *Manager) SaveAccount(account *Account) error {
 	m.accountMu.Lock()
 	defer m.accountMu.Unlock()
 
-	if existed := m.store.GetAccountIDByAlias(account.Alias); existed != "" {
-		return ErrDuplicateAlias
+	a, err := m.store.GetAccountByAlias(account.Alias)
+	if a == nil && err != ErrFindAccount {
+		return err
 	}
 
 	acct, err := m.GetAccountByXPubsIndex(account.XPubs, account.KeyIndex)
@@ -161,7 +162,11 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string, deriveR
 	m.accountMu.Lock()
 	defer m.accountMu.Unlock()
 
-	if existed := m.store.GetAccountIDByAlias(alias); existed != "" {
+	a, err := m.store.GetAccountByAlias(alias)
+	if a == nil && err != ErrFindAccount {
+		return nil, err
+	}
+	if a != nil {
 		return nil, ErrDuplicateAlias
 	}
 
@@ -192,7 +197,11 @@ func (m *Manager) UpdateAccountAlias(accountID string, newAlias string) error {
 	oldAlias := account.Alias
 
 	normalizedAlias := strings.ToLower(strings.TrimSpace(newAlias))
-	if existed := m.store.GetAccountIDByAlias(normalizedAlias); existed != "" {
+	a, err := m.store.GetAccountByAlias(normalizedAlias)
+	if a == nil && err != ErrFindAccount {
+		return err
+	}
+	if a != nil {
 		return ErrDuplicateAlias
 	}
 
@@ -332,15 +341,18 @@ func (m *Manager) FindByAlias(alias string) (*Account, error) {
 		return m.FindByID(cachedID.(string))
 	}
 
-	accountID := m.store.GetAccountIDByAlias(alias)
-	if accountID == "" {
+	a, err := m.store.GetAccountByAlias(alias)
+	if err != nil {
+		return nil, err
+	}
+	if a == nil {
 		return nil, ErrFindAccount
 	}
 
 	m.cacheMu.Lock()
-	m.aliasCache.Add(alias, accountID)
+	m.aliasCache.Add(alias, a.ID)
 	m.cacheMu.Unlock()
-	return m.FindByID(accountID)
+	return m.FindByID(a.ID)
 }
 
 // FindByID returns an account's Signer record by its ID.

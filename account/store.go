@@ -17,8 +17,8 @@ type AccountStorer interface {
 	DeleteContractIndex(string)
 	DeleteControlProgram(common.Hash)
 	DeleteStandardUTXO(bc.Hash)
+	GetAccountByAlias(string) (*Account, error)
 	GetAccountByID(string) (*Account, error)
-	GetAccountIDByAlias(string) string
 	GetAccountIndex([]chainkd.XPub) uint64
 	GetBip44ContractIndex(string, bool) uint64
 	GetCoinbaseArbitrary() []byte
