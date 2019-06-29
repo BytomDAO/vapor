@@ -8,8 +8,8 @@ import (
 
 // AccountStorer interface contains account storage functions.
 type AccountStorer interface {
-	InitBatch()
-	CommitBatch()
+	InitBatch() error
+	CommitBatch() error
 	SetAccount(*Account) error
 	SetAccountIndex(*Account) error
 	GetAccountIDByAlias(string) string

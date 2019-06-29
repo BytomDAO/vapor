@@ -9,6 +9,7 @@ import (
 	"github.com/vapor/common"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	dbm "github.com/vapor/database/leveldb"
+	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 )
 
@@ -27,18 +28,22 @@ func NewAccountStore(db dbm.DB) *AccountStore {
 }
 
 // InitBatch initial batch
-func (store *AccountStore) InitBatch() {
-	if store.batch == nil {
-		store.batch = store.accountDB.NewBatch()
+func (store *AccountStore) InitBatch() error {
+	if store.batch != nil {
+		return errors.New("AccountStore initail fail, store batch is not nil.")
 	}
+	store.batch = store.accountDB.NewBatch()
+	return nil
 }
 
 // CommitBatch commit batch
-func (store *AccountStore) CommitBatch() {
-	if store.batch != nil {
-		store.batch.Write()
-		store.batch = nil
+func (store *AccountStore) CommitBatch() error {
+	if store.batch == nil {
+		return errors.New("AccountStore commit fail, store batch is nil.")
 	}
+	store.batch.Write()
+	store.batch = nil
+	return nil
 }
 
 // SetAccount set account account ID, account alias and raw account.
