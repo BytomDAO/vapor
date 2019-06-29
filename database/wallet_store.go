@@ -179,18 +179,22 @@ func NewWalletStore(db dbm.DB) *WalletStore {
 }
 
 // InitBatch initial batch
-func (store *WalletStore) InitBatch() {
-	if store.batch == nil {
-		store.batch = store.walletDB.NewBatch()
+func (store *WalletStore) InitBatch() error {
+	if store.batch != nil {
+		return errors.New("WalletStore initail fail, store batch is not nil.")
 	}
+	store.batch = store.walletDB.NewBatch()
+	return nil
 }
 
 // CommitBatch commit batch
-func (store *WalletStore) CommitBatch() {
-	if store.batch != nil {
-		store.batch.Write()
-		store.batch = nil
+func (store *WalletStore) CommitBatch() error {
+	if store.batch == nil {
+		return errors.New("WalletStore commit fail, store batch is nil.")
 	}
+	store.batch.Write()
+	store.batch = nil
+	return nil
 }
 
 // GetAssetDefinition get asset definition by assetiD

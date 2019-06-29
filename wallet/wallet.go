@@ -192,7 +192,9 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 	}
 	annotateTxsAccount(annotatedTxs, w.store)
 
-	w.store.InitBatch()
+	if err := w.store.InitBatch(); err != nil {
+		return err
+	}
 
 	if err := w.indexTransactions(block, txStatus, annotatedTxs); err != nil {
 		return err
@@ -210,7 +212,9 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 		return err
 	}
 
-	w.store.CommitBatch()
+	if err := w.store.CommitBatch(); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -226,8 +230,9 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 		return err
 	}
 
-	w.store.InitBatch()
-	defer w.store.CommitBatch()
+	if err := w.store.InitBatch(); err != nil {
+		return err
+	}
 
 	w.detachUtxos(block, txStatus)
 	w.store.DeleteTransactions(w.status.BestHeight)
@@ -239,8 +244,15 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 		w.status.WorkHeight = w.status.BestHeight
 		w.status.WorkHash = w.status.BestHash
 	}
+	if err := w.commitWalletInfo(); err != nil {
+		return err
+	}
 
-	return w.commitWalletInfo()
+	if err := w.store.CommitBatch(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 //WalletUpdate process every valid block and reverse every invalid block which need to rollback

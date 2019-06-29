@@ -10,8 +10,8 @@ import (
 
 // WalletStorer interface contains wallet storage functions.
 type WalletStorer interface {
-	InitBatch()
-	CommitBatch()
+	InitBatch() error
+	CommitBatch() error
 	GetAssetDefinition(*bc.AssetID) (*asset.Asset, error)
 	SetAssetDefinition(*bc.AssetID, []byte)
 	GetControlProgram(common.Hash) (*acc.CtrlProgram, error)
