@@ -194,7 +194,7 @@ func (m *Manager) UpdateAccountAlias(accountID string, newAlias string) error {
 	if err != nil {
 		return err
 	}
-	oldAlias := account.Alias
+	oldAccount := *account
 
 	normalizedAlias := strings.ToLower(strings.TrimSpace(newAlias))
 	a, err := m.store.GetAccountByAlias(normalizedAlias)
@@ -206,7 +206,7 @@ func (m *Manager) UpdateAccountAlias(accountID string, newAlias string) error {
 	}
 
 	m.cacheMu.Lock()
-	m.aliasCache.Remove(oldAlias)
+	m.aliasCache.Remove(oldAccount.Alias)
 	m.cacheMu.Unlock()
 
 	account.Alias = normalizedAlias
@@ -215,7 +215,7 @@ func (m *Manager) UpdateAccountAlias(accountID string, newAlias string) error {
 		return err
 	}
 
-	m.store.DeleteAccountByAlias(oldAlias)
+	m.store.DeleteAccount(&oldAccount)
 	if err := m.store.SetAccount(account); err != nil {
 		return err
 	}
