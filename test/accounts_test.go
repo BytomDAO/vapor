@@ -1,7 +1,6 @@
 package test
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -78,7 +77,6 @@ func TestCreateAccountReusedAlias(t *testing.T) {
 	m.createTestAccount(t, "test-alias", nil)
 
 	_, err := m.Manager.Create([]chainkd.XPub{testutil.TestXPub}, 1, "test-alias", signers.BIP0044)
-	fmt.Println(err)
 	if errors.Root(err) != acc.ErrDuplicateAlias {
 		t.Errorf("expected %s when reusing an alias, got %v", acc.ErrDuplicateAlias, err)
 	}
@@ -90,7 +88,6 @@ func TestUpdateAccountAlias(t *testing.T) {
 
 	m := mockAccountManager(t)
 	account := m.createTestAccount(t, oldAlias, nil)
-	fmt.Println("account id:", account.ID)
 	if err := m.Manager.UpdateAccountAlias("testID", newAlias); err == nil {
 		t.Fatal("expected error when using an invalid account id")
 	}

@@ -2,6 +2,7 @@ package database
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -242,6 +243,8 @@ func (store *AccountStore) ListControlPrograms() ([]*acc.CtrlProgram, error) {
 
 	for cpIter.Next() {
 		cp := new(acc.CtrlProgram)
+		fmt.Printf("cpiter value: %s, len: %v", cpIter.Value(), len(cpIter.Value()))
+
 		if err := json.Unmarshal(cpIter.Value(), cp); err != nil {
 			return nil, err
 		}
