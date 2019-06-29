@@ -52,6 +52,7 @@ const (
 	walletKey
 	miningAddressKey
 	coinbaseAbKey
+	recoveryKey
 )
 
 // leveldb key prefix
@@ -70,6 +71,7 @@ var (
 	WalletKey           = []byte{walletKey}
 	MiningAddressKey    = []byte{miningAddressKey}
 	CoinbaseAbKey       = []byte{coinbaseAbKey}
+	RecoveryKey         = []byte{recoveryKey}
 )
 
 // errors
@@ -529,11 +531,11 @@ func (store *WalletStore) SetRecoveryStatus(recoveryKey, rawStatus []byte) {
 }
 
 // DeleteRecoveryStatus delete recovery status
-func (store *WalletStore) DeleteRecoveryStatus(recoveryKey []byte) {
+func (store *WalletStore) DeleteRecoveryStatus() {
 	if store.batch == nil {
-		store.walletDB.Delete(recoveryKey)
+		store.walletDB.Delete(RecoveryKey)
 	} else {
-		store.batch.Delete(recoveryKey)
+		store.batch.Delete(RecoveryKey)
 	}
 }
 

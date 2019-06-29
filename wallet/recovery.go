@@ -363,7 +363,7 @@ func (m *recoveryManager) FilterRecoveryTxs(b *types.Block) error {
 }
 
 func (m *recoveryManager) finished() {
-	m.store.DeleteRecoveryStatus(recoveryKey)
+	m.store.DeleteRecoveryStatus()
 	m.started = false
 	m.addresses = make(map[bc.Hash]*account.CtrlProgram)
 	m.state = newRecoveryState()

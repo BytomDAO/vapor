@@ -37,6 +37,6 @@ type WalletStorer interface {
 	DeleteWalletUTXOs()
 	GetAccountUTXOs(string) ([]*acc.UTXO, error)
 	SetRecoveryStatus([]byte, []byte) // recoveryManager.state isn't exported outside
-	DeleteRecoveryStatus([]byte)
+	DeleteRecoveryStatus()
 	GetRecoveryStatus([]byte) []byte // recoveryManager.state isn't exported outside
 }
