@@ -15,7 +15,7 @@ type WalletStorer interface {
 	GetAssetDefinition(*bc.AssetID) (*asset.Asset, error)
 	SetAssetDefinition(*bc.AssetID, []byte)
 	GetControlProgram(common.Hash) (*acc.CtrlProgram, error)
-	GetAccountByAccountID(string) (*acc.Account, error)
+	GetAccountByID(string) (*acc.Account, error)
 	DeleteTransactions(uint64)
 	SetTransaction(uint64, *query.AnnotatedTx) error
 	DeleteUnconfirmedTransaction(string)

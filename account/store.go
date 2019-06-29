@@ -13,10 +13,10 @@ type AccountStorer interface {
 	SetAccount(*Account) error
 	SetAccountIndex(*Account) error
 	GetAccountIDByAlias(string) string
-	GetAccountByAccountID(string) (*Account, error)
+	GetAccountByID(string) (*Account, error)
 	GetAccountIndex([]chainkd.XPub) uint64
-	DeleteAccountByAccountAlias(string)
-	DeleteAccountByAccountID(string)
+	DeleteAccountByAlias(string)
+	DeleteAccountByID(string)
 	DeleteControlProgram(common.Hash)
 	DeleteBip44ContractIndex(string)
 	DeleteContractIndex(string)

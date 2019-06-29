@@ -235,8 +235,8 @@ func (store *WalletStore) GetControlProgram(hash common.Hash) (*acc.CtrlProgram,
 	return accountCP, nil
 }
 
-// GetAccountByAccountID get account value by account ID
-func (store *WalletStore) GetAccountByAccountID(accountID string) (*acc.Account, error) {
+// GetAccountByID get account value by account ID
+func (store *WalletStore) GetAccountByID(accountID string) (*acc.Account, error) {
 	rawAccount := store.walletDB.Get(AccountIDKey(accountID))
 	if rawAccount == nil {
 		return nil, fmt.Errorf("failed get account, accountID: %s ", accountID)

@@ -200,7 +200,7 @@ func (m *Manager) UpdateAccountAlias(accountID string, newAlias string) error {
 
 	m.store.InitBatch()
 
-	m.store.DeleteAccountByAccountAlias(oldAlias)
+	m.store.DeleteAccountByAlias(oldAlias)
 	if err := m.store.SetAccount(account); err != nil {
 		return err
 	}
@@ -305,8 +305,8 @@ func (m *Manager) DeleteAccount(accountID string) (err error) {
 	m.cacheMu.Unlock()
 
 	m.store.InitBatch()
-	m.store.DeleteAccountByAccountAlias(account.Alias)
-	m.store.DeleteAccountByAccountID(account.ID)
+	m.store.DeleteAccountByAlias(account.Alias)
+	m.store.DeleteAccountByID(account.ID)
 	m.store.CommitBatch()
 
 	return nil
@@ -341,7 +341,7 @@ func (m *Manager) FindByID(id string) (*Account, error) {
 		return cachedAccount.(*Account), nil
 	}
 
-	account, err := m.store.GetAccountByAccountID(id)
+	account, err := m.store.GetAccountByID(id)
 	if err != nil {
 		return nil, err
 	}
@@ -354,7 +354,7 @@ func (m *Manager) FindByID(id string) (*Account, error) {
 
 // GetAccountByProgram return Account by given CtrlProgram
 func (m *Manager) GetAccountByProgram(program *CtrlProgram) (*Account, error) {
-	account, err := m.store.GetAccountByAccountID(program.AccountID)
+	account, err := m.store.GetAccountByID(program.AccountID)
 	if err != nil {
 		return nil, err
 	}
@@ -379,7 +379,7 @@ func (m *Manager) GetAccountByXPubsIndex(xPubs []chainkd.XPub, index uint64) (*A
 
 // GetAliasByID return the account alias by given ID
 func (m *Manager) GetAliasByID(id string) string {
-	account, err := m.store.GetAccountByAccountID(id)
+	account, err := m.store.GetAccountByID(id)
 	if err != nil {
 		log.Warn("GetAliasByID fail to find account")
 		return ""

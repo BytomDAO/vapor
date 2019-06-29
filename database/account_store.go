@@ -103,8 +103,8 @@ func (store *AccountStore) GetAccountIDByAlias(accountAlias string) string {
 	return string(accountID)
 }
 
-// GetAccountByAccountID get account by accountID
-func (store *AccountStore) GetAccountByAccountID(accountID string) (*acc.Account, error) {
+// GetAccountByID get account by accountID
+func (store *AccountStore) GetAccountByID(accountID string) (*acc.Account, error) {
 	account := new(acc.Account)
 	rawAccount := store.accountDB.Get(AccountIDKey(accountID))
 	if rawAccount == nil {
@@ -125,8 +125,8 @@ func (store *AccountStore) GetAccountIndex(xpubs []chainkd.XPub) uint64 {
 	return currentIndex
 }
 
-// DeleteAccountByAccountAlias delete account by account alias
-func (store *AccountStore) DeleteAccountByAccountAlias(accountAlias string) {
+// DeleteAccountByAlias delete account by account alias
+func (store *AccountStore) DeleteAccountByAlias(accountAlias string) {
 	if store.batch == nil {
 		store.accountDB.Delete(accountAliasKey(accountAlias))
 	} else {
@@ -134,8 +134,8 @@ func (store *AccountStore) DeleteAccountByAccountAlias(accountAlias string) {
 	}
 }
 
-// DeleteAccountByAccountID delete account by accountID
-func (store *AccountStore) DeleteAccountByAccountID(accountID string) {
+// DeleteAccountByID delete account by accountID
+func (store *AccountStore) DeleteAccountByID(accountID string) {
 	if store.batch == nil {
 		store.accountDB.Delete(AccountIDKey(accountID))
 	} else {
