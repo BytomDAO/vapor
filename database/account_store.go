@@ -85,13 +85,13 @@ func (store *AccountStore) SetAccountIndex(account *acc.Account) error {
 }
 
 // DeleteAccount set account account ID, account alias and raw account.
-func (store *AccountStore) DeleteAccount(accountID, accountAlias string) {
+func (store *AccountStore) DeleteAccount(account *acc.Account) {
 	batch := store.accountDB.NewBatch()
 	if store.batch != nil {
 		batch = store.batch
 	}
-	batch.Delete(AccountIDKey(accountID))
-	batch.Delete(accountAliasKey(accountAlias))
+	batch.Delete(AccountIDKey(account.ID))
+	batch.Delete(accountAliasKey(account.Alias))
 	if store.batch == nil {
 		batch.Write()
 	}
@@ -131,15 +131,6 @@ func (store *AccountStore) DeleteAccountByAlias(accountAlias string) {
 		store.accountDB.Delete(accountAliasKey(accountAlias))
 	} else {
 		store.batch.Delete(accountAliasKey(accountAlias))
-	}
-}
-
-// DeleteAccountByID delete account by accountID
-func (store *AccountStore) DeleteAccountByID(accountID string) {
-	if store.batch == nil {
-		store.accountDB.Delete(AccountIDKey(accountID))
-	} else {
-		store.batch.Delete(AccountIDKey(accountID))
 	}
 }
 

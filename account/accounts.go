@@ -305,8 +305,7 @@ func (m *Manager) DeleteAccount(accountID string) (err error) {
 	m.cacheMu.Unlock()
 
 	m.store.InitBatch()
-	m.store.DeleteAccountByAlias(account.Alias)
-	m.store.DeleteAccountByID(account.ID)
+	m.store.DeleteAccount(account)
 	m.store.CommitBatch()
 
 	return nil
