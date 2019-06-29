@@ -61,7 +61,7 @@ func (m *Manager) Restore(image *Image) error {
 			return ErrDuplicateAlias
 		}
 
-		if err := m.store.SetAccount(slice.Account, false); err != nil {
+		if err := m.store.SetAccount(slice.Account); err != nil {
 			return err
 		}
 	}

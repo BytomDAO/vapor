@@ -116,8 +116,14 @@ func (m *Manager) saveAccount(account *Account, updateIndex bool) error {
 	m.store.InitBatch()
 	defer m.store.CommitBatch()
 
-	if err := m.store.SetAccount(account, updateIndex); err != nil {
-		return err
+	if updateIndex {
+		if err := m.store.SetAccountIndex(account); err != nil {
+			return err
+		}
+	} else {
+		if err := m.store.SetAccount(account); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -195,7 +201,7 @@ func (m *Manager) UpdateAccountAlias(accountID string, newAlias string) error {
 	defer m.store.CommitBatch()
 
 	m.store.DeleteAccountByAccountAlias(oldAlias)
-	if err := m.store.SetAccount(account, false); err != nil {
+	if err := m.store.SetAccount(account); err != nil {
 		return err
 	}
 

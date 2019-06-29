@@ -42,7 +42,7 @@ func (store *AccountStore) CommitBatch() {
 }
 
 // SetAccount set account account ID, account alias and raw account.
-func (store *AccountStore) SetAccount(account *acc.Account, updateIndex bool) error {
+func (store *AccountStore) SetAccount(account *acc.Account) error {
 	rawAccount, err := json.Marshal(account)
 	if err != nil {
 		return acc.ErrMarshalAccount
@@ -52,11 +52,31 @@ func (store *AccountStore) SetAccount(account *acc.Account, updateIndex bool) er
 	if store.batch != nil {
 		batch = store.batch
 	}
+
 	batch.Set(AccountIDKey(account.ID), rawAccount)
 	batch.Set(accountAliasKey(account.Alias), []byte(account.ID))
-	if updateIndex {
-		batch.Set(accountIndexKey(account.XPubs), common.Unit64ToBytes(account.KeyIndex))
+
+	if store.batch == nil {
+		batch.Write()
 	}
+	return nil
+}
+
+// SetAccountIndex set account account ID, account alias and raw account.
+func (store *AccountStore) SetAccountIndex(account *acc.Account) error {
+	rawAccount, err := json.Marshal(account)
+	if err != nil {
+		return acc.ErrMarshalAccount
+	}
+
+	batch := store.accountDB.NewBatch()
+	if store.batch != nil {
+		batch = store.batch
+	}
+
+	batch.Set(AccountIDKey(account.ID), rawAccount)
+	batch.Set(accountAliasKey(account.Alias), []byte(account.ID))
+	batch.Set(accountIndexKey(account.XPubs), common.Unit64ToBytes(account.KeyIndex))
 
 	if store.batch == nil {
 		batch.Write()
