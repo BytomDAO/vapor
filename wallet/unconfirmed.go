@@ -5,6 +5,8 @@ import (
 	"sort"
 	"time"
 
+	"github.com/vapor/protocol/bc"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/blockchain/query"
@@ -103,7 +105,7 @@ func (w *Wallet) checkRelatedTransaction(tx *types.Tx) bool {
 	for _, v := range tx.Outputs {
 		var hash [32]byte
 		sha3pool.Sum256(hash[:], v.ControlProgram())
-		cp, err := w.store.GetControlProgram(hash)
+		cp, err := w.store.GetControlProgram(bc.NewHash(hash))
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err, "hash": string(hash[:])}).Error("checkRelatedTransaction fail.")
 			continue

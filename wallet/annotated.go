@@ -97,10 +97,10 @@ func annotateTxsAccount(txs []*query.AnnotatedTx, store WalletStorer) {
 }
 
 func getAccountFromACP(program []byte, store WalletStorer) (*account.Account, error) {
-	var hash common.Hash
+	var hash [32]byte
 
 	sha3pool.Sum256(hash[:], program)
-	accountCP, err := store.GetControlProgram(hash)
+	accountCP, err := store.GetControlProgram(bc.NewHash(hash))
 	if err != nil {
 		return nil, err
 	}

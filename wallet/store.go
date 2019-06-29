@@ -4,7 +4,6 @@ import (
 	acc "github.com/vapor/account"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/query"
-	"github.com/vapor/common"
 	"github.com/vapor/protocol/bc"
 )
 
@@ -21,7 +20,7 @@ type WalletStorer interface {
 	DeleteWalletUTXOs()
 	GetAccountByID(string) (*acc.Account, error)
 	GetAssetDefinition(*bc.AssetID) (*asset.Asset, error)
-	GetControlProgram(common.Hash) (*acc.CtrlProgram, error)
+	GetControlProgram(bc.Hash) (*acc.CtrlProgram, error)
 	GetGlobalTransactionIndex(string) []byte
 	GetStandardUTXO(bc.Hash) (*acc.UTXO, error)
 	GetTransaction(string) (*query.AnnotatedTx, error)

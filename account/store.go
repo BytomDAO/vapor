@@ -1,7 +1,6 @@
 package account
 
 import (
-	"github.com/vapor/common"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/protocol/bc"
 )
@@ -13,7 +12,7 @@ type AccountStorer interface {
 	DeleteAccount(*Account)
 	DeleteBip44ContractIndex(string)
 	DeleteContractIndex(string)
-	DeleteControlProgram(common.Hash)
+	DeleteControlProgram(bc.Hash)
 	DeleteStandardUTXO(bc.Hash)
 	GetAccountByAlias(string) (*Account, error)
 	GetAccountByID(string) (*Account, error)
@@ -21,7 +20,7 @@ type AccountStorer interface {
 	GetBip44ContractIndex(string, bool) uint64
 	GetCoinbaseArbitrary() []byte
 	GetContractIndex(string) uint64
-	GetControlProgram(common.Hash) (*CtrlProgram, error)
+	GetControlProgram(bc.Hash) (*CtrlProgram, error)
 	GetMiningAddress() (*CtrlProgram, error)
 	GetUTXO(bc.Hash) (*UTXO, error)
 	ListAccounts(string) ([]*Account, error)
@@ -32,7 +31,7 @@ type AccountStorer interface {
 	SetBip44ContractIndex(string, bool, uint64)
 	SetCoinbaseArbitrary([]byte)
 	SetContractIndex(string, uint64)
-	SetControlProgram(common.Hash, *CtrlProgram) error
+	SetControlProgram(bc.Hash, *CtrlProgram) error
 	SetMiningAddress(*CtrlProgram) error
 	SetStandardUTXO(bc.Hash, *UTXO) error
 }

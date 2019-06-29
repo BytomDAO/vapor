@@ -286,11 +286,11 @@ func (m *Manager) deleteAccountControlPrograms(accountID string) error {
 		return err
 	}
 
-	var hash common.Hash
+	var hash [32]byte
 	for _, cp := range cps {
 		if cp.AccountID == accountID {
 			sha3pool.Sum256(hash[:], cp.ControlProgram)
-			m.store.DeleteControlProgram(hash)
+			m.store.DeleteControlProgram(bc.NewHash(hash))
 		}
 	}
 
@@ -475,7 +475,7 @@ func (m *Manager) GetLocalCtrlProgramByAddress(address string) (*CtrlProgram, er
 	var hash [32]byte
 	sha3pool.Sum256(hash[:], program)
 
-	cp, err := m.store.GetControlProgram(hash)
+	cp, err := m.store.GetControlProgram(bc.NewHash(hash))
 	if err != nil {
 		return nil, err
 	}
@@ -494,9 +494,9 @@ func (m *Manager) GetMiningAddress() (string, error) {
 
 // IsLocalControlProgram check is the input control program belong to local
 func (m *Manager) IsLocalControlProgram(prog []byte) bool {
-	var hash common.Hash
+	var hash [32]byte
 	sha3pool.Sum256(hash[:], prog)
-	cp, err := m.store.GetControlProgram(hash)
+	cp, err := m.store.GetControlProgram(bc.NewHash(hash))
 	if err != nil || cp == nil {
 		return false
 	}
@@ -654,7 +654,7 @@ func (m *Manager) getProgramByAddress(address string) ([]byte, error) {
 }
 
 func (m *Manager) saveControlProgram(prog *CtrlProgram, updateIndex bool) error {
-	var hash common.Hash
+	var hash [32]byte
 
 	sha3pool.Sum256(hash[:], prog.ControlProgram)
 	acct, err := m.GetAccountByProgram(prog)
@@ -665,7 +665,7 @@ func (m *Manager) saveControlProgram(prog *CtrlProgram, updateIndex bool) error 
 	if err := m.store.InitBatch(); err != nil {
 		return err
 	}
-	if err := m.store.SetControlProgram(hash, prog); err != nil {
+	if err := m.store.SetControlProgram(bc.NewHash(hash), prog); err != nil {
 		return nil
 	}
 	if updateIndex {

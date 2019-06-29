@@ -109,7 +109,7 @@ func (store *AccountStore) DeleteContractIndex(accountID string) {
 }
 
 // DeleteControlProgram delete raw control program by hash
-func (store *AccountStore) DeleteControlProgram(hash common.Hash) {
+func (store *AccountStore) DeleteControlProgram(hash bc.Hash) {
 	if store.batch == nil {
 		store.accountDB.Delete(ContractKey(hash))
 	} else {
@@ -181,7 +181,7 @@ func (store *AccountStore) GetContractIndex(accountID string) uint64 {
 }
 
 // GetControlProgram get control program
-func (store *AccountStore) GetControlProgram(hash common.Hash) (*acc.CtrlProgram, error) {
+func (store *AccountStore) GetControlProgram(hash bc.Hash) (*acc.CtrlProgram, error) {
 	rawProgram := store.accountDB.Get(ContractKey(hash))
 	if rawProgram == nil {
 		return nil, acc.ErrFindCtrlProgram
@@ -338,7 +338,7 @@ func (store *AccountStore) SetContractIndex(accountID string, index uint64) {
 }
 
 // SetControlProgram set raw program
-func (store *AccountStore) SetControlProgram(hash common.Hash, program *acc.CtrlProgram) error {
+func (store *AccountStore) SetControlProgram(hash bc.Hash, program *acc.CtrlProgram) error {
 	accountCP, err := json.Marshal(program)
 	if err != nil {
 		return err

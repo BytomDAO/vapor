@@ -10,7 +10,6 @@ import (
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/query"
 	"github.com/vapor/blockchain/signers"
-	"github.com/vapor/common"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/crypto/sha3pool"
 	dbm "github.com/vapor/database/leveldb"
@@ -102,9 +101,7 @@ func Bip44ContractIndexKey(accountID string, change bool) []byte {
 }
 
 // ContractKey account control promgram store prefix
-func ContractKey(hash common.Hash) []byte {
-	// h := hash.Str()
-	// return append([]byte(ContractPrefix), []byte(h)...)
+func ContractKey(hash bc.Hash) []byte {
 	return append([]byte(ContractPrefix), hash.Bytes()...)
 }
 
@@ -334,7 +331,7 @@ func (store *WalletStore) GetAssetDefinition(assetID *bc.AssetID) (*asset.Asset,
 }
 
 // GetControlProgram get raw program by hash
-func (store *WalletStore) GetControlProgram(hash common.Hash) (*acc.CtrlProgram, error) {
+func (store *WalletStore) GetControlProgram(hash bc.Hash) (*acc.CtrlProgram, error) {
 	rawProgram := store.walletDB.Get(ContractKey(hash))
 	if rawProgram == nil {
 		return nil, fmt.Errorf("failed get account control program:%x ", hash)
