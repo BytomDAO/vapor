@@ -11,10 +11,12 @@ import (
 	"github.com/vapor/math/checked"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/validation"
 )
 
 var errVotingOperationOverFlow = errors.New("voting operation result overflow")
 
+// ConsensusNode represents a consensus node
 type ConsensusNode struct {
 	XPub    chainkd.XPub
 	VoteNum uint64
@@ -29,6 +31,7 @@ func (c byVote) Less(i, j int) bool {
 }
 func (c byVote) Swap(i, j int) { c[i], c[j] = c[j], c[i] }
 
+// CalcVoteSeq calculate the vote sequence
 // seq 0 is the genesis block
 // seq 1 is the the block height 1, to block height RoundVoteBlockNums
 // seq 2 is the block height RoundVoteBlockNums + 1 to block height 2 * RoundVoteBlockNums
@@ -40,20 +43,46 @@ func CalcVoteSeq(blockHeight uint64) uint64 {
 	return (blockHeight-1)/consensus.RoundVoteBlockNums + 1
 }
 
-// VoteResult represents a snapshot of each round of DPOS voting
+// ConsensusResult represents a snapshot of each round of DPOS voting
 // Seq indicates the sequence of current votes, which start from zero
 // NumOfVote indicates the number of votes each consensus node receives, the key of map represent public key
 // Finalized indicates whether this vote is finalized
-type VoteResult struct {
-	Seq         uint64
-	NumOfVote   map[string]uint64
-	BlockHash   bc.Hash
-	BlockHeight uint64
+type ConsensusResult struct {
+	Seq              uint64
+	NumOfVote        map[string]uint64
+	RewardOfCoinbase map[string]uint64
+	BlockHash        bc.Hash
+	BlockHeight      uint64
 }
 
-func (v *VoteResult) ApplyBlock(block *types.Block) error {
-	if v.BlockHash != block.PreviousBlockHash {
+// ApplyBlock calculate the consensus result for new block
+func (c *ConsensusResult) ApplyBlock(block *types.Block) error {
+	if c.BlockHash != block.PreviousBlockHash {
 		return errors.New("block parent hash is not equals last block hash of vote result")
+	}
+
+	if len(block.Transactions[0].Outputs) == 0 {
+		return errors.New("not found the coinbase output")
+	}
+
+	output, ok := block.Transactions[0].Outputs[0].TypedOutput.(*types.IntraChainOutput)
+	if !ok {
+		return errors.New("not found the IntraChainOutput")
+	}
+
+	if amount := output.GetAmount(); amount != 0 {
+		return errors.New("the amount of the uncounted coinbase output is not equal to 0")
+	}
+
+	bcBlock := types.MapBlock(block)
+	reward, err := validation.CalCoinbaseReward(bcBlock)
+	if err != nil {
+		return err
+	}
+
+	controlProgram := hex.EncodeToString(output.ControlProgram)
+	if c.RewardOfCoinbase[controlProgram], ok = checked.AddUint64(c.RewardOfCoinbase[controlProgram], reward); !ok {
+		return errVotingOperationOverFlow
 	}
 
 	for _, tx := range block.Transactions {
@@ -64,13 +93,13 @@ func (v *VoteResult) ApplyBlock(block *types.Block) error {
 			}
 
 			pubkey := hex.EncodeToString(vetoInput.Vote)
-			v.NumOfVote[pubkey], ok = checked.SubUint64(v.NumOfVote[pubkey], vetoInput.Amount)
+			c.NumOfVote[pubkey], ok = checked.SubUint64(c.NumOfVote[pubkey], vetoInput.Amount)
 			if !ok {
 				return errVotingOperationOverFlow
 			}
 
-			if v.NumOfVote[pubkey] == 0 {
-				delete(v.NumOfVote, pubkey)
+			if c.NumOfVote[pubkey] == 0 {
+				delete(c.NumOfVote, pubkey)
 			}
 		}
 
@@ -81,21 +110,22 @@ func (v *VoteResult) ApplyBlock(block *types.Block) error {
 			}
 
 			pubkey := hex.EncodeToString(voteOutput.Vote)
-			if v.NumOfVote[pubkey], ok = checked.AddUint64(v.NumOfVote[pubkey], voteOutput.Amount); !ok {
+			if c.NumOfVote[pubkey], ok = checked.AddUint64(c.NumOfVote[pubkey], voteOutput.Amount); !ok {
 				return errVotingOperationOverFlow
 			}
 		}
 	}
 
-	v.BlockHash = block.Hash()
-	v.BlockHeight = block.Height
-	v.Seq = CalcVoteSeq(block.Height)
+	c.BlockHash = block.Hash()
+	c.BlockHeight = block.Height
+	c.Seq = CalcVoteSeq(block.Height)
 	return nil
 }
 
-func (v *VoteResult) ConsensusNodes() (map[string]*ConsensusNode, error) {
+// ConsensusNodes returns all consensus nodes
+func (c *ConsensusResult) ConsensusNodes() (map[string]*ConsensusNode, error) {
 	var nodes []*ConsensusNode
-	for pubkey, voteNum := range v.NumOfVote {
+	for pubkey, voteNum := range c.NumOfVote {
 		if voteNum >= consensus.MinConsensusNodeVoteNum {
 			var xpub chainkd.XPub
 			if err := xpub.UnmarshalText([]byte(pubkey)); err != nil {
@@ -121,16 +151,45 @@ func (v *VoteResult) ConsensusNodes() (map[string]*ConsensusNode, error) {
 }
 
 func federationNodes() map[string]*ConsensusNode {
-	voteResult := map[string]*ConsensusNode{}
+	consensusResult := map[string]*ConsensusNode{}
 	for i, xpub := range config.CommonConfig.Federation.Xpubs {
-		voteResult[xpub.String()] = &ConsensusNode{XPub: xpub, VoteNum: 0, Order: uint64(i)}
+		consensusResult[xpub.String()] = &ConsensusNode{XPub: xpub, VoteNum: 0, Order: uint64(i)}
 	}
-	return voteResult
+	return consensusResult
 }
 
-func (v *VoteResult) DetachBlock(block *types.Block) error {
-	if v.BlockHash != block.Hash() {
+// DetachBlock calculate the consensus result for detach block
+func (c *ConsensusResult) DetachBlock(block *types.Block) error {
+	if c.BlockHash != block.Hash() {
 		return errors.New("block hash is not equals last block hash of vote result")
+	}
+
+	if len(block.Transactions[0].Outputs) == 0 {
+		return errors.New("not found the coinbase output")
+	}
+
+	output, ok := block.Transactions[0].Outputs[0].TypedOutput.(*types.IntraChainOutput)
+	if !ok {
+		return errors.New("not found the IntraChainOutput")
+	}
+
+	if amount := output.GetAmount(); amount != 0 {
+		return errors.New("the amount of the uncounted coinbase output is not equal to 0")
+	}
+
+	bcBlock := types.MapBlock(block)
+	reward, err := validation.CalCoinbaseReward(bcBlock)
+	if err != nil {
+		return err
+	}
+
+	controlProgram := hex.EncodeToString(output.ControlProgram)
+	if c.RewardOfCoinbase[controlProgram], ok = checked.SubUint64(c.RewardOfCoinbase[controlProgram], reward); !ok {
+		return errVotingOperationOverFlow
+	}
+
+	if c.RewardOfCoinbase[controlProgram] == 0 {
+		delete(c.RewardOfCoinbase, controlProgram)
 	}
 
 	for i := len(block.Transactions) - 1; i >= 0; i-- {
@@ -142,7 +201,7 @@ func (v *VoteResult) DetachBlock(block *types.Block) error {
 			}
 
 			pubkey := hex.EncodeToString(vetoInput.Vote)
-			if v.NumOfVote[pubkey], ok = checked.AddUint64(v.NumOfVote[pubkey], vetoInput.Amount); !ok {
+			if c.NumOfVote[pubkey], ok = checked.AddUint64(c.NumOfVote[pubkey], vetoInput.Amount); !ok {
 				return errVotingOperationOverFlow
 			}
 		}
@@ -154,37 +213,37 @@ func (v *VoteResult) DetachBlock(block *types.Block) error {
 			}
 
 			pubkey := hex.EncodeToString(voteOutput.Vote)
-			v.NumOfVote[pubkey], ok = checked.SubUint64(v.NumOfVote[pubkey], voteOutput.Amount)
+			c.NumOfVote[pubkey], ok = checked.SubUint64(c.NumOfVote[pubkey], voteOutput.Amount)
 			if !ok {
 				return errVotingOperationOverFlow
 			}
 
-			if v.NumOfVote[pubkey] == 0 {
-				delete(v.NumOfVote, pubkey)
+			if c.NumOfVote[pubkey] == 0 {
+				delete(c.NumOfVote, pubkey)
 			}
 		}
 	}
 
-	v.BlockHash = block.PreviousBlockHash
-	v.BlockHeight = block.Height - 1
-	v.Seq = CalcVoteSeq(block.Height - 1)
+	c.BlockHash = block.PreviousBlockHash
+	c.BlockHeight = block.Height - 1
+	c.Seq = CalcVoteSeq(block.Height - 1)
 	return nil
 }
 
-func (v *VoteResult) Fork() *VoteResult {
-	f := &VoteResult{
-		Seq:         v.Seq,
+func (c *ConsensusResult) Fork() *ConsensusResult {
+	f := &ConsensusResult{
+		Seq:         c.Seq,
 		NumOfVote:   map[string]uint64{},
-		BlockHash:   v.BlockHash,
-		BlockHeight: v.BlockHeight,
+		BlockHash:   c.BlockHash,
+		BlockHeight: c.BlockHeight,
 	}
 
-	for key, value := range v.NumOfVote {
+	for key, value := range c.NumOfVote {
 		f.NumOfVote[key] = value
 	}
 	return f
 }
 
-func (v *VoteResult) IsFinalize() bool {
-	return v.BlockHeight%consensus.RoundVoteBlockNums == 0
+func (c *ConsensusResult) IsFinalize() bool {
+	return c.BlockHeight%consensus.RoundVoteBlockNums == 0
 }

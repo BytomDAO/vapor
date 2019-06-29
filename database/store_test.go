@@ -36,7 +36,7 @@ func TestSaveChainStatus(t *testing.T) {
 		},
 	}
 
-	if err := store.SaveChainStatus(blockHeader, blockHeader, []*types.BlockHeader{blockHeader}, view, []*state.VoteResult{}); err != nil {
+	if err := store.SaveChainStatus(blockHeader, blockHeader, []*types.BlockHeader{blockHeader}, view, []*state.ConsensusResult{}); err != nil {
 		t.Fatal(err)
 	}
 

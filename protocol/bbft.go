@@ -45,13 +45,13 @@ func (c *Chain) isIrreversible(blockHeader *types.BlockHeader) bool {
 	return signCount > len(consensusNodes)*2/3
 }
 
-// GetVoteResultByHash return vote result by block hash
-func (c *Chain) GetVoteResultByHash(blockHash *bc.Hash) (*state.VoteResult, error) {
+// GetConsensusResultByHash return vote result by block hash
+func (c *Chain) GetConsensusResultByHash(blockHash *bc.Hash) (*state.ConsensusResult, error) {
 	blockHeader, err := c.store.GetBlockHeader(blockHash)
 	if err != nil {
 		return nil, err
 	}
-	return c.getVoteResult(state.CalcVoteSeq(blockHeader.Height), blockHeader)
+	return c.getConsensusResult(state.CalcVoteSeq(blockHeader.Height), blockHeader)
 }
 
 // IsBlocker returns whether the consensus node is a blocker at the specified time
@@ -227,7 +227,7 @@ func (c *Chain) updateBlockSignature(blockHeader *types.BlockHeader, nodeOrder u
 	}
 
 	if c.isIrreversible(blockHeader) && blockHeader.Height > c.bestIrrBlockHeader.Height {
-		if err := c.store.SaveChainStatus(c.bestBlockHeader, blockHeader, []*types.BlockHeader{}, state.NewUtxoViewpoint(), []*state.VoteResult{}); err != nil {
+		if err := c.store.SaveChainStatus(c.bestBlockHeader, blockHeader, []*types.BlockHeader{}, state.NewUtxoViewpoint(), []*state.ConsensusResult{}); err != nil {
 			return err
 		}
 		c.bestIrrBlockHeader = blockHeader

@@ -102,11 +102,11 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
-	voteResult, err := c.getBestVoteResult()
+	consensusResult, err := c.getBestConsensusResult()
 	if err != nil {
 		return err
 	}
-	if err := voteResult.ApplyBlock(block); err != nil {
+	if err := consensusResult.ApplyBlock(block); err != nil {
 		return err
 	}
 
@@ -115,7 +115,7 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		irrBlockHeader = &block.BlockHeader
 	}
 
-	if err := c.setState(&block.BlockHeader, irrBlockHeader, []*types.BlockHeader{&block.BlockHeader}, utxoView, []*state.VoteResult{voteResult}); err != nil {
+	if err := c.setState(&block.BlockHeader, irrBlockHeader, []*types.BlockHeader{&block.BlockHeader}, utxoView, []*state.ConsensusResult{consensusResult}); err != nil {
 		return err
 	}
 
@@ -132,8 +132,8 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 	}
 
 	utxoView := state.NewUtxoViewpoint()
-	voteResults := []*state.VoteResult{}
-	voteResult, err := c.getBestVoteResult()
+	consensusResults := []*state.ConsensusResult{}
+	consensusResult, err := c.getBestConsensusResult()
 	if err != nil {
 		return err
 	}
@@ -159,7 +159,7 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 			return err
 		}
 
-		if err := voteResult.DetachBlock(b); err != nil {
+		if err := consensusResult.DetachBlock(b); err != nil {
 			return err
 		}
 
@@ -189,12 +189,12 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 			return err
 		}
 
-		if err := voteResult.ApplyBlock(b); err != nil {
+		if err := consensusResult.ApplyBlock(b); err != nil {
 			return err
 		}
 
-		if voteResult.IsFinalize() {
-			voteResults = append(voteResults, voteResult.Fork())
+		if consensusResult.IsFinalize() {
+			consensusResults = append(consensusResults, consensusResult.Fork())
 		}
 
 		if c.isIrreversible(attachBlockHeader) && attachBlockHeader.Height > irrBlockHeader.Height {
@@ -208,8 +208,8 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 	if len(detachBlockHeaders) > 0 && detachBlockHeaders[len(detachBlockHeaders)-1].Height <= c.bestIrrBlockHeader.Height && irrBlockHeader.Height <= c.bestIrrBlockHeader.Height {
 		return errors.New("rollback block below the height of irreversible block")
 	}
-	voteResults = append(voteResults, voteResult.Fork())
-	return c.setState(blockHeader, irrBlockHeader, attachBlockHeaders, utxoView, voteResults)
+	consensusResults = append(consensusResults, consensusResult.Fork())
+	return c.setState(blockHeader, irrBlockHeader, attachBlockHeaders, utxoView, consensusResults)
 }
 
 // SaveBlock will validate and save block into storage

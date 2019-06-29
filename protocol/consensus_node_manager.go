@@ -91,39 +91,39 @@ func (c *Chain) getConsensusNodes(prevBlockHash *bc.Hash) (map[string]*state.Con
 		return nil, err
 	}
 
-	voteResult, err := c.getVoteResult(preSeq, lastBlockHeader)
+	consensusResult, err := c.getConsensusResult(preSeq, lastBlockHeader)
 	if err != nil {
 		return nil, err
 	}
 
-	return voteResult.ConsensusNodes()
+	return consensusResult.ConsensusNodes()
 }
 
-func (c *Chain) getBestVoteResult() (*state.VoteResult, error) {
+func (c *Chain) getBestConsensusResult() (*state.ConsensusResult, error) {
 	bestBlockHeader := c.bestBlockHeader
 	seq := state.CalcVoteSeq(bestBlockHeader.Height)
-	return c.getVoteResult(seq, bestBlockHeader)
+	return c.getConsensusResult(seq, bestBlockHeader)
 }
 
-// getVoteResult return the vote result
+// getConsensusResult return the vote result
 // seq represent the sequence of vote
 // blockHeader represent the chain in which the result of the vote is located
 // Voting results need to be adjusted according to the chain
-func (c *Chain) getVoteResult(seq uint64, blockHeader *types.BlockHeader) (*state.VoteResult, error) {
-	voteResult, err := c.store.GetVoteResult(seq)
+func (c *Chain) getConsensusResult(seq uint64, blockHeader *types.BlockHeader) (*state.ConsensusResult, error) {
+	consensusResult, err := c.store.GetConsensusResult(seq)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := c.reorganizeVoteResult(voteResult, blockHeader); err != nil {
+	if err := c.reorganizeConsensusResult(consensusResult, blockHeader); err != nil {
 		return nil, err
 	}
 
-	return voteResult, nil
+	return consensusResult, nil
 }
 
-func (c *Chain) reorganizeVoteResult(voteResult *state.VoteResult, blockHeader *types.BlockHeader) error {
-	mainChainBlockHeader, err := c.store.GetBlockHeader(&voteResult.BlockHash)
+func (c *Chain) reorganizeConsensusResult(consensusResult *state.ConsensusResult, blockHeader *types.BlockHeader) error {
+	mainChainBlockHeader, err := c.store.GetBlockHeader(&consensusResult.BlockHash)
 	if err != nil {
 		return err
 	}
@@ -140,7 +140,7 @@ func (c *Chain) reorganizeVoteResult(voteResult *state.VoteResult, blockHeader *
 			return err
 		}
 
-		if err := voteResult.DetachBlock(block); err != nil {
+		if err := consensusResult.DetachBlock(block); err != nil {
 			return err
 		}
 	}
@@ -152,7 +152,7 @@ func (c *Chain) reorganizeVoteResult(voteResult *state.VoteResult, blockHeader *
 			return err
 		}
 
-		if err := voteResult.ApplyBlock(block); err != nil {
+		if err := consensusResult.ApplyBlock(block); err != nil {
 			return err
 		}
 	}

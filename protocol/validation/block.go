@@ -84,23 +84,9 @@ func ValidateBlock(b *bc.Block, parent *types.BlockHeader) error {
 		return err
 	}
 
-	blockGasSum := uint64(0)
-	coinbaseAmount := consensus.BlockSubsidy(b.BlockHeader.Height)
-	b.TransactionStatus = bc.NewTransactionStatus()
-
-	validateResults := ValidateTxs(b.Transactions, b)
-	for i, validateResult := range validateResults {
-		if !validateResult.gasStatus.GasValid {
-			return errors.Wrapf(validateResult.err, "validate of transaction %d of %d", i, len(b.Transactions))
-		}
-
-		if err := b.TransactionStatus.SetStatus(i, validateResult.err != nil); err != nil {
-			return err
-		}
-		coinbaseAmount += validateResult.gasStatus.BTMValue
-		if blockGasSum += uint64(validateResult.gasStatus.GasUsed); blockGasSum > consensus.MaxBlockGas {
-			return errOverBlockLimit
-		}
+	coinbaseAmount, err := CalCoinbaseReward(b)
+	if err != nil {
+		return err
 	}
 
 	if err := checkCoinbaseAmount(b, coinbaseAmount); err != nil {
@@ -130,4 +116,27 @@ func ValidateBlock(b *bc.Block, parent *types.BlockHeader) error {
 		"duration": time.Since(startTime),
 	}).Debug("finish validate block")
 	return nil
+}
+
+// CalCoinbaseReward calculate the coinbase reward for block
+func CalCoinbaseReward(b *bc.Block) (uint64, error) {
+	blockGasSum := uint64(0)
+	coinbaseAmount := consensus.BlockSubsidy(b.BlockHeader.Height)
+	b.TransactionStatus = bc.NewTransactionStatus()
+
+	validateResults := ValidateTxs(b.Transactions, b)
+	for i, validateResult := range validateResults {
+		if !validateResult.gasStatus.GasValid {
+			return 0, errors.Wrapf(validateResult.err, "validate of transaction %d of %d", i, len(b.Transactions))
+		}
+
+		if err := b.TransactionStatus.SetStatus(i, validateResult.err != nil); err != nil {
+			return 0, err
+		}
+		coinbaseAmount += validateResult.gasStatus.BTMValue
+		if blockGasSum += uint64(validateResult.gasStatus.GasUsed); blockGasSum > consensus.MaxBlockGas {
+			return 0, errOverBlockLimit
+		}
+	}
+	return coinbaseAmount, nil
 }

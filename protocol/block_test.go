@@ -23,7 +23,7 @@ func (s *mStore) GetStoreStatus() *BlockStoreState                             {
 func (s *mStore) GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error) { return nil, nil }
 func (s *mStore) GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error     { return nil }
 func (s *mStore) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)                 { return nil, nil }
-func (s *mStore) GetVoteResult(uint64) (*state.VoteResult, error)              { return nil, nil }
+func (s *mStore) GetConsensusResult(uint64) (*state.ConsensusResult, error)              { return nil, nil }
 func (s *mStore) GetMainChainHash(uint64) (*bc.Hash, error)                    { return nil, nil }
 func (s *mStore) GetBlockHashesByHeight(uint64) ([]*bc.Hash, error)            { return nil, nil }
 func (s *mStore) SaveBlock(*types.Block, *bc.TransactionStatus) error          { return nil }
@@ -31,7 +31,7 @@ func (s *mStore) SaveBlockHeader(blockHeader *types.BlockHeader) error {
 	s.blockHeaders[blockHeader.Hash()] = blockHeader
 	return nil
 }
-func (s *mStore) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, []*state.VoteResult) error {
+func (s *mStore) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, []*state.ConsensusResult) error {
 	return nil
 }
 

@@ -16,43 +16,43 @@ const (
 	maxCachedBlockTransactions = 1024
 	maxCachedBlockHashes       = 8192
 	maxCachedMainChainHashes   = 8192
-	maxCachedVoteResults       = 128
+	maxCachedConsensusResults  = 128
 )
 
 type fillBlockHeaderFn func(hash *bc.Hash) (*types.BlockHeader, error)
 type fillBlockTransactionsFn func(hash *bc.Hash) ([]*types.Tx, error)
 type fillBlockHashesFn func(height uint64) ([]*bc.Hash, error)
 type fillMainChainHashFn func(height uint64) (*bc.Hash, error)
-type fillVoteResultFn func(seq uint64) (*state.VoteResult, error)
+type fillConsensusResultFn func(seq uint64) (*state.ConsensusResult, error)
 
-func newCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransactionsFn, fillBlockHashes fillBlockHashesFn, fillMainChainHash fillMainChainHashFn, fillVoteResult fillVoteResultFn) cache {
+func newCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransactionsFn, fillBlockHashes fillBlockHashesFn, fillMainChainHash fillMainChainHashFn, fillConsensusResult fillConsensusResultFn) cache {
 	return cache{
-		lruBlockHeaders:    common.NewCache(maxCachedBlockHeaders),
-		lruBlockTxs:        common.NewCache(maxCachedBlockTransactions),
-		lruBlockHashes:     common.NewCache(maxCachedBlockHashes),
-		lruMainChainHashes: common.NewCache(maxCachedMainChainHashes),
-		lruVoteResults:     common.NewCache(maxCachedVoteResults),
+		lruBlockHeaders:     common.NewCache(maxCachedBlockHeaders),
+		lruBlockTxs:         common.NewCache(maxCachedBlockTransactions),
+		lruBlockHashes:      common.NewCache(maxCachedBlockHashes),
+		lruMainChainHashes:  common.NewCache(maxCachedMainChainHashes),
+		lruConsensusResults: common.NewCache(maxCachedConsensusResults),
 
 		fillBlockHeaderFn:      fillBlockHeader,
 		fillBlockTransactionFn: fillBlockTxs,
 		fillBlockHashesFn:      fillBlockHashes,
 		fillMainChainHashFn:    fillMainChainHash,
-		fillVoteResultFn:       fillVoteResult,
+		fillConsensusResultFn:  fillConsensusResult,
 	}
 }
 
 type cache struct {
-	lruBlockHeaders    *common.Cache
-	lruBlockTxs        *common.Cache
-	lruBlockHashes     *common.Cache
-	lruMainChainHashes *common.Cache
-	lruVoteResults     *common.Cache
+	lruBlockHeaders     *common.Cache
+	lruBlockTxs         *common.Cache
+	lruBlockHashes      *common.Cache
+	lruMainChainHashes  *common.Cache
+	lruConsensusResults *common.Cache
 
 	fillBlockHeaderFn      func(hash *bc.Hash) (*types.BlockHeader, error)
 	fillBlockTransactionFn func(hash *bc.Hash) ([]*types.Tx, error)
 	fillBlockHashesFn      func(uint64) ([]*bc.Hash, error)
 	fillMainChainHashFn    func(uint64) (*bc.Hash, error)
-	fillVoteResultFn       func(seq uint64) (*state.VoteResult, error)
+	fillConsensusResultFn  func(seq uint64) (*state.ConsensusResult, error)
 
 	sf singleflight.Group
 }
@@ -97,25 +97,25 @@ func (c *cache) lookupBlockTxs(hash *bc.Hash) ([]*types.Tx, error) {
 	return blockTxs.([]*types.Tx), nil
 }
 
-func (c *cache) lookupVoteResult(seq uint64) (*state.VoteResult, error) {
-	if data, ok := c.lruVoteResults.Get(seq); ok {
-		return data.(*state.VoteResult).Fork(), nil
+func (c *cache) lookupConsensusResult(seq uint64) (*state.ConsensusResult, error) {
+	if data, ok := c.lruConsensusResults.Get(seq); ok {
+		return data.(*state.ConsensusResult).Fork(), nil
 	}
 
 	seqStr := strconv.FormatUint(seq, 10)
-	voteResult, err := c.sf.Do("VoteResult:"+seqStr, func() (interface{}, error) {
-		voteResult, err := c.fillVoteResultFn(seq)
+	consensusResult, err := c.sf.Do("ConsensusResult:"+seqStr, func() (interface{}, error) {
+		consensusResult, err := c.fillConsensusResultFn(seq)
 		if err != nil {
 			return nil, err
 		}
 
-		c.lruVoteResults.Add(voteResult.Seq, voteResult)
-		return voteResult, nil
+		c.lruConsensusResults.Add(consensusResult.Seq, consensusResult)
+		return consensusResult, nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	return voteResult.(*state.VoteResult).Fork(), nil
+	return consensusResult.(*state.ConsensusResult).Fork(), nil
 }
 
 func (c *cache) lookupMainChainHash(height uint64) (*bc.Hash, error) {
@@ -172,6 +172,6 @@ func (c *cache) removeMainChainHash(height uint64) {
 	c.lruMainChainHashes.Remove(height)
 }
 
-func (c *cache) removeVoteResult(voteResult *state.VoteResult) {
-	c.lruVoteResults.Remove(voteResult.Seq)
+func (c *cache) removeConsensusResult(consensusResult *state.ConsensusResult) {
+	c.lruConsensusResults.Remove(consensusResult.Seq)
 }

@@ -32,7 +32,7 @@ const (
 	blockTransactons
 	mainChainIndex
 	txStatus
-	voteResult
+	consensusResult
 )
 
 var (
@@ -42,7 +42,7 @@ var (
 	blockTransactonsPrefix = []byte{blockTransactons, colon}
 	mainChainIndexPrefix   = []byte{mainChainIndex, colon}
 	txStatusPrefix         = []byte{txStatus, colon}
-	voteResultPrefix       = []byte{voteResult, colon}
+	consensusResultPrefix  = []byte{consensusResult, colon}
 )
 
 func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
@@ -90,10 +90,10 @@ func calcTxStatusKey(hash *bc.Hash) []byte {
 	return append(txStatusPrefix, hash.Bytes()...)
 }
 
-func calcVoteResultKey(seq uint64) []byte {
+func calcConsensusResultKey(seq uint64) []byte {
 	buf := [8]byte{}
 	binary.BigEndian.PutUint64(buf[:], seq)
-	return append(voteResultPrefix, buf[:]...)
+	return append(consensusResultPrefix, buf[:]...)
 }
 
 // GetBlockHeader return the block header by given hash
@@ -152,18 +152,18 @@ func GetMainChainHash(db dbm.DB, height uint64) (*bc.Hash, error) {
 	return hash, nil
 }
 
-// GetVoteResult return the vote result by given sequence
-func GetVoteResult(db dbm.DB, seq uint64) (*state.VoteResult, error) {
-	data := db.Get(calcVoteResultKey(seq))
+// GetConsensusResult return the vote result by given sequence
+func GetConsensusResult(db dbm.DB, seq uint64) (*state.ConsensusResult, error) {
+	data := db.Get(calcConsensusResultKey(seq))
 	if data == nil {
-		return nil, protocol.ErrNotFoundVoteResult
+		return nil, protocol.ErrNotFoundConsensusResult
 	}
 
-	voteResult := new(state.VoteResult)
-	if err := json.Unmarshal(data, voteResult); err != nil {
+	consensusResult := new(state.ConsensusResult)
+	if err := json.Unmarshal(data, consensusResult); err != nil {
 		return nil, errors.Wrap(err, "unmarshaling vote result")
 	}
-	return voteResult, nil
+	return consensusResult, nil
 }
 
 // NewStore creates and returns a new Store object.
@@ -183,11 +183,11 @@ func NewStore(db dbm.DB) *Store {
 		return GetMainChainHash(db, height)
 	}
 
-	fillVoteResultFn := func(seq uint64) (*state.VoteResult, error) {
-		return GetVoteResult(db, seq)
+	fillConsensusResultFn := func(seq uint64) (*state.ConsensusResult, error) {
+		return GetConsensusResult(db, seq)
 	}
 
-	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillBlockHashesFn, fillMainChainHashFn, fillVoteResultFn)
+	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillBlockHashesFn, fillMainChainHashFn, fillConsensusResultFn)
 	return &Store{
 		db:    db,
 		cache: cache,
@@ -267,9 +267,9 @@ func (s *Store) GetUtxo(hash *bc.Hash) (*storage.UtxoEntry, error) {
 	return getUtxo(s.db, hash)
 }
 
-// GetVoteResult retrive the voting result in specified vote sequence
-func (s *Store) GetVoteResult(seq uint64) (*state.VoteResult, error) {
-	return s.cache.lookupVoteResult(seq)
+// GetConsensusResult retrive the voting result in specified vote sequence
+func (s *Store) GetConsensusResult(seq uint64) (*state.ConsensusResult, error) {
+	return s.cache.lookupConsensusResult(seq)
 }
 
 // SaveBlock persists a new block in the protocol.
@@ -334,20 +334,20 @@ func (s *Store) SaveBlockHeader(blockHeader *types.BlockHeader) error {
 }
 
 // SaveChainStatus save the core's newest status && delete old status
-func (s *Store) SaveChainStatus(blockHeader, irrBlockHeader *types.BlockHeader, mainBlockHeaders []*types.BlockHeader, view *state.UtxoViewpoint, voteResults []*state.VoteResult) error {
+func (s *Store) SaveChainStatus(blockHeader, irrBlockHeader *types.BlockHeader, mainBlockHeaders []*types.BlockHeader, view *state.UtxoViewpoint, consensusResults []*state.ConsensusResult) error {
 	batch := s.db.NewBatch()
 	if err := saveUtxoView(batch, view); err != nil {
 		return err
 	}
 
-	for _, vote := range voteResults {
+	for _, vote := range consensusResults {
 		bytes, err := json.Marshal(vote)
 		if err != nil {
 			return err
 		}
 
-		batch.Set(calcVoteResultKey(vote.Seq), bytes)
-		s.cache.removeVoteResult(vote)
+		batch.Set(calcConsensusResultKey(vote.Seq), bytes)
+		s.cache.removeConsensusResult(vote)
 	}
 
 	blockHash := blockHeader.Hash()
