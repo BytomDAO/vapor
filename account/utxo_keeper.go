@@ -219,7 +219,7 @@ func (uk *utxoKeeper) findUtxos(accountID string, assetID *bc.AssetID, useUnconf
 		}
 	}
 
-	UTXOs := uk.store.GetUTXOs()
+	UTXOs := uk.store.ListUTXOs()
 	for _, UTXO := range UTXOs {
 		appendUtxo(UTXO)
 	}

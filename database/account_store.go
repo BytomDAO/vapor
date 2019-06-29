@@ -275,8 +275,8 @@ func (store *AccountStore) GetControlProgram(hash common.Hash) (*acc.CtrlProgram
 	return cp, nil
 }
 
-// GetAccounts get all accounts which name prfix is id.
-func (store *AccountStore) GetAccounts(id string) ([]*acc.Account, error) {
+// ListAccounts get all accounts which name prfix is id.
+func (store *AccountStore) ListAccounts(id string) ([]*acc.Account, error) {
 	accounts := []*acc.Account{}
 	accountIter := store.accountDB.IteratorPrefix(AccountIDKey(strings.TrimSpace(id)))
 	defer accountIter.Release()
@@ -291,8 +291,8 @@ func (store *AccountStore) GetAccounts(id string) ([]*acc.Account, error) {
 	return accounts, nil
 }
 
-// GetControlPrograms get all local control programs
-func (store *AccountStore) GetControlPrograms() ([]*acc.CtrlProgram, error) {
+// ListControlPrograms get all local control programs
+func (store *AccountStore) ListControlPrograms() ([]*acc.CtrlProgram, error) {
 	cps := []*acc.CtrlProgram{}
 	cpIter := store.accountDB.IteratorPrefix([]byte(ContractPrefix))
 	defer cpIter.Release()
@@ -339,8 +339,8 @@ func (store *AccountStore) SetBip44ContractIndex(accountID string, change bool, 
 	}
 }
 
-// GetUTXOs get utxos by accountID
-func (store *AccountStore) GetUTXOs() []*acc.UTXO {
+// ListUTXOs get utxos by accountID
+func (store *AccountStore) ListUTXOs() []*acc.UTXO {
 	utxoIter := store.accountDB.IteratorPrefix([]byte(UTXOPrefix))
 	defer utxoIter.Release()
 

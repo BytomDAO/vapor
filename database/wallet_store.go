@@ -505,8 +505,8 @@ func (store *WalletStore) DeleteWalletUTXOs() {
 	}
 }
 
-// GetAccountUTXOs get all account unspent outputs
-func (store *WalletStore) GetAccountUTXOs(key string) ([]*acc.UTXO, error) {
+// ListAccountUTXOs get all account unspent outputs
+func (store *WalletStore) ListAccountUTXOs(key string) ([]*acc.UTXO, error) {
 	accountUtxoIter := store.walletDB.IteratorPrefix([]byte(key))
 	defer accountUtxoIter.Release()
 

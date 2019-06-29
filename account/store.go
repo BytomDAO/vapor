@@ -29,12 +29,12 @@ type AccountStorer interface {
 	SetMiningAddress(*CtrlProgram) error
 	GetBip44ContractIndex(string, bool) uint64
 	GetControlProgram(common.Hash) (*CtrlProgram, error)
-	GetAccounts(string) ([]*Account, error)
-	GetControlPrograms() ([]*CtrlProgram, error)
+	ListAccounts(string) ([]*Account, error)
+	ListControlPrograms() ([]*CtrlProgram, error)
 	SetControlProgram(common.Hash, *CtrlProgram) error
 	SetContractIndex(string, uint64)
 	SetBip44ContractIndex(string, bool, uint64)
-	GetUTXOs() []*UTXO
+	ListUTXOs() []*UTXO
 	GetUTXO(bc.Hash) (*UTXO, error)
 	SetStandardUTXO(bc.Hash, *UTXO) error
 }

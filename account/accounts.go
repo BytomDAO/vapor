@@ -417,7 +417,7 @@ func (m *Manager) GetCoinbaseCtrlProgram() (*CtrlProgram, error) {
 	}
 
 	account := new(Account)
-	accounts, err := m.store.GetAccounts("")
+	accounts, err := m.store.ListAccounts("")
 	if err != nil {
 		return nil, err
 	}
@@ -484,12 +484,12 @@ func (m *Manager) IsLocalControlProgram(prog []byte) bool {
 
 // ListAccounts will return the accounts in the db
 func (m *Manager) ListAccounts(id string) ([]*Account, error) {
-	return m.store.GetAccounts(id)
+	return m.store.ListAccounts(id)
 }
 
 // ListControlProgram return all the local control program
 func (m *Manager) ListControlProgram() ([]*CtrlProgram, error) {
-	return m.store.GetControlPrograms()
+	return m.store.ListControlPrograms()
 }
 
 func (m *Manager) ListUnconfirmedUtxo(accountID string, isSmartContract bool) []*UTXO {

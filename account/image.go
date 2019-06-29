@@ -25,7 +25,7 @@ func (m *Manager) Backup() (*Image, error) {
 		Slice: []*ImageSlice{},
 	}
 
-	accounts, err := m.store.GetAccounts("")
+	accounts, err := m.store.ListAccounts("")
 	if err != nil {
 		return nil, err
 	}

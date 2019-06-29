@@ -24,7 +24,7 @@ func (w *Wallet) GetAccountUtxos(accountID string, id string, unconfirmed, isSma
 		accountUtxos = w.AccountMgr.ListUnconfirmedUtxo(accountID, isSmartContract)
 	}
 
-	confirmedUTXOs, err := w.store.GetAccountUTXOs(string(prefix) + id)
+	confirmedUTXOs, err := w.store.ListAccountUTXOs(string(prefix) + id)
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("GetAccountUtxos fail.")
 	}

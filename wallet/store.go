@@ -35,7 +35,7 @@ type WalletStorer interface {
 	SetWalletInfo([]byte)  // need move database.NewWalletStore in wallet package
 	DeleteWalletTransactions()
 	DeleteWalletUTXOs()
-	GetAccountUTXOs(string) ([]*acc.UTXO, error)
+	ListAccountUTXOs(string) ([]*acc.UTXO, error)
 	SetRecoveryStatus([]byte, []byte) // recoveryManager.state isn't exported outside
 	DeleteRecoveryStatus()
 	GetRecoveryStatus([]byte) []byte // recoveryManager.state isn't exported outside
