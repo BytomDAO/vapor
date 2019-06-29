@@ -46,15 +46,6 @@ func (store *AccountStore) CommitBatch() error {
 	return nil
 }
 
-// DeleteAccountByAlias delete account by account alias
-func (store *AccountStore) DeleteAccountByAlias(accountAlias string) {
-	if store.batch == nil {
-		store.accountDB.Delete(accountAliasKey(accountAlias))
-	} else {
-		store.batch.Delete(accountAliasKey(accountAlias))
-	}
-}
-
 // DeleteAccount set account account ID, account alias and raw account.
 func (store *AccountStore) DeleteAccount(account *acc.Account) {
 	batch := store.accountDB.NewBatch()
@@ -68,6 +59,63 @@ func (store *AccountStore) DeleteAccount(account *acc.Account) {
 	}
 }
 
+// DeleteAccountByAlias delete account by account alias
+func (store *AccountStore) DeleteAccountByAlias(accountAlias string) {
+	if store.batch == nil {
+		store.accountDB.Delete(accountAliasKey(accountAlias))
+	} else {
+		store.batch.Delete(accountAliasKey(accountAlias))
+	}
+}
+
+// DeleteAccountUTXOs delete account utxos by accountID
+func (store *AccountStore) DeleteAccountUTXOs(accountID string) error {
+	batch := store.accountDB.NewBatch()
+	if store.batch != nil {
+		batch = store.batch
+	}
+
+	accountUtxoIter := store.accountDB.IteratorPrefix([]byte(UTXOPrefix))
+	defer accountUtxoIter.Release()
+
+	for accountUtxoIter.Next() {
+		accountUtxo := &acc.UTXO{}
+		if err := json.Unmarshal(accountUtxoIter.Value(), accountUtxo); err != nil {
+			return err
+		}
+		if accountID == accountUtxo.AccountID {
+			batch.Delete(StandardUTXOKey(accountUtxo.OutputID))
+		}
+	}
+
+	if store.batch == nil {
+		batch.Write()
+	}
+	return nil
+}
+
+// DeleteBip44ContractIndex delete bip44 contract index by accountID
+func (store *AccountStore) DeleteBip44ContractIndex(accountID string) {
+	batch := store.accountDB.NewBatch()
+	if store.batch != nil {
+		batch = store.batch
+	}
+	batch.Delete(Bip44ContractIndexKey(accountID, false))
+	batch.Delete(Bip44ContractIndexKey(accountID, true))
+	if store.batch == nil {
+		batch.Write()
+	}
+}
+
+// DeleteContractIndex delete contract index by accountID
+func (store *AccountStore) DeleteContractIndex(accountID string) {
+	if store.batch == nil {
+		store.accountDB.Delete(contractIndexKey(accountID))
+	} else {
+		store.batch.Delete(contractIndexKey(accountID))
+	}
+}
+
 // DeleteControlProgram delete raw control program by hash
 func (store *AccountStore) DeleteControlProgram(hash common.Hash) {
 	if store.batch == nil {
@@ -75,6 +123,153 @@ func (store *AccountStore) DeleteControlProgram(hash common.Hash) {
 	} else {
 		store.batch.Delete(ContractKey(hash))
 	}
+}
+
+// DeleteStandardUTXO delete utxo by outpu id
+func (store *AccountStore) DeleteStandardUTXO(outputID bc.Hash) {
+	if store.batch == nil {
+		store.accountDB.Delete(StandardUTXOKey(outputID))
+	} else {
+		store.batch.Delete(StandardUTXOKey(outputID))
+	}
+}
+
+// GetAccountByID get account by accountID
+func (store *AccountStore) GetAccountByID(accountID string) (*acc.Account, error) {
+	rawAccount := store.accountDB.Get(AccountIDKey(accountID))
+	if rawAccount == nil {
+		return nil, acc.ErrFindAccount
+	}
+	account := new(acc.Account)
+	if err := json.Unmarshal(rawAccount, account); err != nil {
+		return nil, err
+	}
+	return account, nil
+}
+
+// GetAccountIDByAlias get account ID by account alias
+func (store *AccountStore) GetAccountIDByAlias(accountAlias string) string {
+	accountID := store.accountDB.Get(accountAliasKey(accountAlias))
+	return string(accountID)
+}
+
+// GetAccountIndex get account index by account xpubs
+func (store *AccountStore) GetAccountIndex(xpubs []chainkd.XPub) uint64 {
+	currentIndex := uint64(0)
+	if rawIndexBytes := store.accountDB.Get(accountIndexKey(xpubs)); rawIndexBytes != nil {
+		currentIndex = common.BytesToUnit64(rawIndexBytes)
+	}
+	return currentIndex
+}
+
+// GetBip44ContractIndex get bip44 contract index
+func (store *AccountStore) GetBip44ContractIndex(accountID string, change bool) uint64 {
+	index := uint64(0)
+	if rawIndexBytes := store.accountDB.Get(Bip44ContractIndexKey(accountID, change)); rawIndexBytes != nil {
+		index = common.BytesToUnit64(rawIndexBytes)
+	}
+	return index
+}
+
+// GetCoinbaseArbitrary get coinbase arbitrary
+func (store *AccountStore) GetCoinbaseArbitrary() []byte {
+	return store.accountDB.Get([]byte(CoinbaseAbKey))
+}
+
+// GetContractIndex get contract index
+func (store *AccountStore) GetContractIndex(accountID string) uint64 {
+	index := uint64(0)
+	if rawIndexBytes := store.accountDB.Get(contractIndexKey(accountID)); rawIndexBytes != nil {
+		index = common.BytesToUnit64(rawIndexBytes)
+	}
+	return index
+}
+
+// GetControlProgram get control program
+func (store *AccountStore) GetControlProgram(hash common.Hash) (*acc.CtrlProgram, error) {
+	rawProgram := store.accountDB.Get(ContractKey(hash))
+	if rawProgram == nil {
+		return nil, acc.ErrFindCtrlProgram
+	}
+	cp := new(acc.CtrlProgram)
+	if err := json.Unmarshal(rawProgram, cp); err != nil {
+		return nil, err
+	}
+	return cp, nil
+}
+
+// GetMiningAddress get mining address
+func (store *AccountStore) GetMiningAddress() (*acc.CtrlProgram, error) {
+	rawCP := store.accountDB.Get([]byte(MiningAddressKey))
+	if rawCP == nil {
+		return nil, acc.ErrFindMiningAddress
+	}
+	cp := new(acc.CtrlProgram)
+	if err := json.Unmarshal(rawCP, cp); err != nil {
+		return nil, err
+	}
+	return cp, nil
+}
+
+// GetUTXO get standard utxo by id
+func (store *AccountStore) GetUTXO(outid bc.Hash) (*acc.UTXO, error) {
+	u := new(acc.UTXO)
+	if data := store.accountDB.Get(StandardUTXOKey(outid)); data != nil {
+		return u, json.Unmarshal(data, u)
+	}
+	if data := store.accountDB.Get(ContractUTXOKey(outid)); data != nil {
+		return u, json.Unmarshal(data, u)
+	}
+	return nil, acc.ErrMatchUTXO
+}
+
+// ListAccounts get all accounts which name prfix is id.
+func (store *AccountStore) ListAccounts(id string) ([]*acc.Account, error) {
+	accounts := []*acc.Account{}
+	accountIter := store.accountDB.IteratorPrefix(AccountIDKey(strings.TrimSpace(id)))
+	defer accountIter.Release()
+
+	for accountIter.Next() {
+		account := new(acc.Account)
+		if err := json.Unmarshal(accountIter.Value(), &account); err != nil {
+			return nil, err
+		}
+		accounts = append(accounts, account)
+	}
+	return accounts, nil
+}
+
+// ListControlPrograms get all local control programs
+func (store *AccountStore) ListControlPrograms() ([]*acc.CtrlProgram, error) {
+	cps := []*acc.CtrlProgram{}
+	cpIter := store.accountDB.IteratorPrefix([]byte(ContractPrefix))
+	defer cpIter.Release()
+
+	for cpIter.Next() {
+		cp := new(acc.CtrlProgram)
+		if err := json.Unmarshal(cpIter.Value(), cp); err != nil {
+			return nil, err
+		}
+		cps = append(cps, cp)
+	}
+	return cps, nil
+}
+
+// ListUTXOs get utxos by accountID
+func (store *AccountStore) ListUTXOs() []*acc.UTXO {
+	utxoIter := store.accountDB.IteratorPrefix([]byte(UTXOPrefix))
+	defer utxoIter.Release()
+
+	utxos := []*acc.UTXO{}
+	for utxoIter.Next() {
+		utxo := new(acc.UTXO)
+		if err := json.Unmarshal(utxoIter.Value(), utxo); err != nil {
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("utxoKeeper findUtxos fail on unmarshal utxo")
+			continue
+		}
+		utxos = append(utxos, utxo)
+	}
+	return utxos
 }
 
 // SetAccount set account account ID, account alias and raw account.
@@ -120,103 +315,13 @@ func (store *AccountStore) SetAccountIndex(account *acc.Account) error {
 	return nil
 }
 
-// GetAccountIDByAlias get account ID by account alias
-func (store *AccountStore) GetAccountIDByAlias(accountAlias string) string {
-	accountID := store.accountDB.Get(accountAliasKey(accountAlias))
-	return string(accountID)
-}
-
-// GetAccountByID get account by accountID
-func (store *AccountStore) GetAccountByID(accountID string) (*acc.Account, error) {
-	rawAccount := store.accountDB.Get(AccountIDKey(accountID))
-	if rawAccount == nil {
-		return nil, acc.ErrFindAccount
-	}
-	account := new(acc.Account)
-	if err := json.Unmarshal(rawAccount, account); err != nil {
-		return nil, err
-	}
-	return account, nil
-}
-
-// GetAccountIndex get account index by account xpubs
-func (store *AccountStore) GetAccountIndex(xpubs []chainkd.XPub) uint64 {
-	currentIndex := uint64(0)
-	if rawIndexBytes := store.accountDB.Get(accountIndexKey(xpubs)); rawIndexBytes != nil {
-		currentIndex = common.BytesToUnit64(rawIndexBytes)
-	}
-	return currentIndex
-}
-
-// DeleteBip44ContractIndex delete bip44 contract index by accountID
-func (store *AccountStore) DeleteBip44ContractIndex(accountID string) {
-	batch := store.accountDB.NewBatch()
-	if store.batch != nil {
-		batch = store.batch
-	}
-	batch.Delete(Bip44ContractIndexKey(accountID, false))
-	batch.Delete(Bip44ContractIndexKey(accountID, true))
+// SetBip44ContractIndex set contract index
+func (store *AccountStore) SetBip44ContractIndex(accountID string, change bool, index uint64) {
 	if store.batch == nil {
-		batch.Write()
-	}
-}
-
-// DeleteContractIndex delete contract index by accountID
-func (store *AccountStore) DeleteContractIndex(accountID string) {
-	if store.batch == nil {
-		store.accountDB.Delete(contractIndexKey(accountID))
+		store.accountDB.Set(Bip44ContractIndexKey(accountID, change), common.Unit64ToBytes(index))
 	} else {
-		store.batch.Delete(contractIndexKey(accountID))
+		store.batch.Set(Bip44ContractIndexKey(accountID, change), common.Unit64ToBytes(index))
 	}
-}
-
-// GetContractIndex get contract index
-func (store *AccountStore) GetContractIndex(accountID string) uint64 {
-	index := uint64(0)
-	if rawIndexBytes := store.accountDB.Get(contractIndexKey(accountID)); rawIndexBytes != nil {
-		index = common.BytesToUnit64(rawIndexBytes)
-	}
-	return index
-}
-
-// DeleteStandardUTXO delete utxo by outpu id
-func (store *AccountStore) DeleteStandardUTXO(outputID bc.Hash) {
-	if store.batch == nil {
-		store.accountDB.Delete(StandardUTXOKey(outputID))
-	} else {
-		store.batch.Delete(StandardUTXOKey(outputID))
-	}
-}
-
-// DeleteAccountUTXOs delete account utxos by accountID
-func (store *AccountStore) DeleteAccountUTXOs(accountID string) error {
-	batch := store.accountDB.NewBatch()
-	if store.batch != nil {
-		batch = store.batch
-	}
-
-	accountUtxoIter := store.accountDB.IteratorPrefix([]byte(UTXOPrefix))
-	defer accountUtxoIter.Release()
-
-	for accountUtxoIter.Next() {
-		accountUtxo := &acc.UTXO{}
-		if err := json.Unmarshal(accountUtxoIter.Value(), accountUtxo); err != nil {
-			return err
-		}
-		if accountID == accountUtxo.AccountID {
-			batch.Delete(StandardUTXOKey(accountUtxo.OutputID))
-		}
-	}
-
-	if store.batch == nil {
-		batch.Write()
-	}
-	return nil
-}
-
-// GetCoinbaseArbitrary get coinbase arbitrary
-func (store *AccountStore) GetCoinbaseArbitrary() []byte {
-	return store.accountDB.Get([]byte(CoinbaseAbKey))
 }
 
 // SetCoinbaseArbitrary set coinbase arbitrary
@@ -228,86 +333,13 @@ func (store *AccountStore) SetCoinbaseArbitrary(arbitrary []byte) {
 	}
 }
 
-// GetMiningAddress get mining address
-func (store *AccountStore) GetMiningAddress() (*acc.CtrlProgram, error) {
-	rawCP := store.accountDB.Get([]byte(MiningAddressKey))
-	if rawCP == nil {
-		return nil, acc.ErrFindMiningAddress
-	}
-	cp := new(acc.CtrlProgram)
-	if err := json.Unmarshal(rawCP, cp); err != nil {
-		return nil, err
-	}
-	return cp, nil
-}
-
-// SetMiningAddress set mining address
-func (store *AccountStore) SetMiningAddress(program *acc.CtrlProgram) error {
-	rawProgram, err := json.Marshal(program)
-	if err != nil {
-		return err
-	}
-
+// SetContractIndex set contract index
+func (store *AccountStore) SetContractIndex(accountID string, index uint64) {
 	if store.batch == nil {
-		store.accountDB.Set([]byte(MiningAddressKey), rawProgram)
+		store.accountDB.Set(contractIndexKey(accountID), common.Unit64ToBytes(index))
 	} else {
-		store.batch.Set([]byte(MiningAddressKey), rawProgram)
+		store.batch.Set(contractIndexKey(accountID), common.Unit64ToBytes(index))
 	}
-	return nil
-}
-
-// GetBip44ContractIndex get bip44 contract index
-func (store *AccountStore) GetBip44ContractIndex(accountID string, change bool) uint64 {
-	index := uint64(0)
-	if rawIndexBytes := store.accountDB.Get(Bip44ContractIndexKey(accountID, change)); rawIndexBytes != nil {
-		index = common.BytesToUnit64(rawIndexBytes)
-	}
-	return index
-}
-
-// GetControlProgram get control program
-func (store *AccountStore) GetControlProgram(hash common.Hash) (*acc.CtrlProgram, error) {
-	rawProgram := store.accountDB.Get(ContractKey(hash))
-	if rawProgram == nil {
-		return nil, acc.ErrFindCtrlProgram
-	}
-	cp := new(acc.CtrlProgram)
-	if err := json.Unmarshal(rawProgram, cp); err != nil {
-		return nil, err
-	}
-	return cp, nil
-}
-
-// ListAccounts get all accounts which name prfix is id.
-func (store *AccountStore) ListAccounts(id string) ([]*acc.Account, error) {
-	accounts := []*acc.Account{}
-	accountIter := store.accountDB.IteratorPrefix(AccountIDKey(strings.TrimSpace(id)))
-	defer accountIter.Release()
-
-	for accountIter.Next() {
-		account := new(acc.Account)
-		if err := json.Unmarshal(accountIter.Value(), &account); err != nil {
-			return nil, err
-		}
-		accounts = append(accounts, account)
-	}
-	return accounts, nil
-}
-
-// ListControlPrograms get all local control programs
-func (store *AccountStore) ListControlPrograms() ([]*acc.CtrlProgram, error) {
-	cps := []*acc.CtrlProgram{}
-	cpIter := store.accountDB.IteratorPrefix([]byte(ContractPrefix))
-	defer cpIter.Release()
-
-	for cpIter.Next() {
-		cp := new(acc.CtrlProgram)
-		if err := json.Unmarshal(cpIter.Value(), cp); err != nil {
-			return nil, err
-		}
-		cps = append(cps, cp)
-	}
-	return cps, nil
 }
 
 // SetControlProgram set raw program
@@ -324,51 +356,19 @@ func (store *AccountStore) SetControlProgram(hash common.Hash, program *acc.Ctrl
 	return nil
 }
 
-// SetContractIndex set contract index
-func (store *AccountStore) SetContractIndex(accountID string, index uint64) {
+// SetMiningAddress set mining address
+func (store *AccountStore) SetMiningAddress(program *acc.CtrlProgram) error {
+	rawProgram, err := json.Marshal(program)
+	if err != nil {
+		return err
+	}
+
 	if store.batch == nil {
-		store.accountDB.Set(contractIndexKey(accountID), common.Unit64ToBytes(index))
+		store.accountDB.Set([]byte(MiningAddressKey), rawProgram)
 	} else {
-		store.batch.Set(contractIndexKey(accountID), common.Unit64ToBytes(index))
+		store.batch.Set([]byte(MiningAddressKey), rawProgram)
 	}
-}
-
-// SetBip44ContractIndex set contract index
-func (store *AccountStore) SetBip44ContractIndex(accountID string, change bool, index uint64) {
-	if store.batch == nil {
-		store.accountDB.Set(Bip44ContractIndexKey(accountID, change), common.Unit64ToBytes(index))
-	} else {
-		store.batch.Set(Bip44ContractIndexKey(accountID, change), common.Unit64ToBytes(index))
-	}
-}
-
-// ListUTXOs get utxos by accountID
-func (store *AccountStore) ListUTXOs() []*acc.UTXO {
-	utxoIter := store.accountDB.IteratorPrefix([]byte(UTXOPrefix))
-	defer utxoIter.Release()
-
-	utxos := []*acc.UTXO{}
-	for utxoIter.Next() {
-		utxo := new(acc.UTXO)
-		if err := json.Unmarshal(utxoIter.Value(), utxo); err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("utxoKeeper findUtxos fail on unmarshal utxo")
-			continue
-		}
-		utxos = append(utxos, utxo)
-	}
-	return utxos
-}
-
-// GetUTXO get standard utxo by id
-func (store *AccountStore) GetUTXO(outid bc.Hash) (*acc.UTXO, error) {
-	u := new(acc.UTXO)
-	if data := store.accountDB.Get(StandardUTXOKey(outid)); data != nil {
-		return u, json.Unmarshal(data, u)
-	}
-	if data := store.accountDB.Get(ContractUTXOKey(outid)); data != nil {
-		return u, json.Unmarshal(data, u)
-	}
-	return nil, acc.ErrMatchUTXO
+	return nil
 }
 
 // SetStandardUTXO set standard utxo
