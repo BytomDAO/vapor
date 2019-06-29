@@ -71,7 +71,7 @@ func NewNode(config *cfg.Config) *Node {
 		"pubkey":             config.PrivateKey().XPub(),
 		"fed_xpubs":          config.Federation.Xpubs,
 		"fed_quorum":         config.Federation.Quorum,
-		"fed_controlprogram": hex.EncodeToString(cfg.FederationProgrom(config)),
+		"fed_controlprogram": hex.EncodeToString(cfg.FederationWScript(config)),
 	}).Info()
 
 	initLogFile(config)
@@ -161,7 +161,7 @@ func NewNode(config *cfg.Config) *Node {
 
 // find whether config xpubs equal genesis block xpubs
 func checkConfig(chain *protocol.Chain, config *cfg.Config) error {
-	fedpegScript := cfg.FederationProgrom(config)
+	fedpegScript := cfg.FederationWScript(config)
 	genesisBlock, err := chain.GetBlockByHeight(0)
 	if err != nil {
 		return err

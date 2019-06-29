@@ -5,8 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/vapor/wallet"
-
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/account"
@@ -21,6 +19,7 @@ import (
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/wallet"
 )
 
 // POST /list-accounts
@@ -147,21 +146,6 @@ func (a *API) getTransaction(ctx context.Context, txInfo struct {
 	}
 
 	return NewSuccessResponse(annotatedTx)
-}
-
-func (a *API) getTransacton(ctx context.Context, filter struct {
-	ID          string `json:"id"`
-	Unconfirmed bool   `json:"unconfirmed"`
-}) Response {
-	transaction, err := a.wallet.GetTransactionByTxID(filter.ID)
-	if err != nil && filter.Unconfirmed {
-		transaction, err = a.wallet.GetUnconfirmedTxByTxID(filter.ID)
-	}
-
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-	return NewSuccessResponse(transaction)
 }
 
 // POST /list-transactions
