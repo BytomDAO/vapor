@@ -101,7 +101,6 @@ func TestUpdateAccountAlias(t *testing.T) {
 	}
 
 	if err := m.Manager.UpdateAccountAlias(account.ID, newAlias); err != nil {
-		fmt.Println(err)
 		t.Errorf("expected account %v alias should be update", account)
 	}
 
