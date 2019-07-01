@@ -18,25 +18,6 @@ import (
 )
 
 const (
-	// UTXOPrefix          = "ACU:" //UTXOPrefix is StandardUTXOKey prefix
-	// SUTXOPrefix         = "SCU:" //SUTXOPrefix is ContractUTXOKey prefix
-
-	ContractPrefix = "Contract:"
-
-// ContractIndexPrefix = "ContractIndex:"
-// AccountPrefix       = "Account:" // AccountPrefix is account ID prefix
-// AccountAliasPrefix  = "AccountAlias:"
-// AccountIndexPrefix  = "AccountIndex:"
-// TxPrefix            = "TXS:"  //TxPrefix is wallet database transactions prefix
-// TxIndexPrefix       = "TID:"  //TxIndexPrefix is wallet database tx index prefix
-// UnconfirmedTxPrefix = "UTXS:" //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
-// GlobalTxIndexPrefix = "GTID:" //GlobalTxIndexPrefix is wallet database global tx index prefix
-// WalletKey        = "WalletInfo"
-// MiningAddressKey = "MiningAddress"
-// CoinbaseAbKey    = "CoinbaseArbitrary"
-)
-
-const (
 	utxoPrefix  byte = iota //UTXOPrefix is StandardUTXOKey prefix
 	sUTXOPrefix             //SUTXOPrefix is ContractUTXOKey prefix
 	contractPrefix
@@ -58,7 +39,8 @@ const (
 var (
 	UTXOPrefix  = []byte{utxoPrefix, colon}
 	SUTXOPrefix = []byte{sUTXOPrefix, colon}
-	// ContractPrefix      = []byte{contractPrefix, colon}
+	// ContractPrefix = []byte{contractPrefix, contractPrefix, colon}
+	ContractPrefix      = "Contract:"
 	ContractIndexPrefix = []byte{contractIndexPrefix, colon}
 	AccountPrefix       = []byte{accountPrefix, colon} // AccountPrefix is account ID prefix
 	AccountAliasPrefix  = []byte{accountAliasPrefix, colon}
@@ -102,6 +84,9 @@ func Bip44ContractIndexKey(accountID string, change bool) []byte {
 
 // ContractKey account control promgram store prefix
 func ContractKey(hash bc.Hash) []byte {
+	fmt.Println("ContractKey...")
+	// h := hash.String()
+	// return append([]byte(ContractPrefix), []byte(h)...)
 	return append([]byte(ContractPrefix), hash.Bytes()...)
 }
 

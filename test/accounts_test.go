@@ -88,16 +88,18 @@ func TestUpdateAccountAlias(t *testing.T) {
 
 	m := mockAccountManager(t)
 	account := m.createTestAccount(t, oldAlias, nil)
-	if err := m.Manager.UpdateAccountAlias("testID", newAlias); err == nil {
-		t.Fatal("expected error when using an invalid account id")
+	err := m.Manager.UpdateAccountAlias("testID", newAlias)
+	if err == nil {
+		t.Errorf("expected error when using an invalid account id")
 	}
 
-	err := m.Manager.UpdateAccountAlias(account.ID, oldAlias)
+	err = m.Manager.UpdateAccountAlias(account.ID, oldAlias)
 	if errors.Root(err) != acc.ErrDuplicateAlias {
 		t.Errorf("expected %s when using a duplicate alias, got %v", acc.ErrDuplicateAlias, err)
 	}
 
-	if err := m.Manager.UpdateAccountAlias(account.ID, newAlias); err != nil {
+	err = m.Manager.UpdateAccountAlias(account.ID, newAlias)
+	if err != nil {
 		t.Errorf("expected account %v alias should be update", account)
 	}
 

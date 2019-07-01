@@ -1,6 +1,7 @@
 package database
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -58,6 +59,7 @@ func (store *AccountStore) DeleteAccount(account *acc.Account) error {
 
 	// delete account control program
 	cps, err := store.ListControlPrograms()
+	fmt.Println("len(cps):", len(cps))
 	if err != nil {
 		return err
 	}
@@ -232,12 +234,13 @@ func (store *AccountStore) ListAccounts(id string) ([]*acc.Account, error) {
 func (store *AccountStore) ListControlPrograms() ([]*acc.CtrlProgram, error) {
 	cps := []*acc.CtrlProgram{}
 	cpIter := store.accountDB.IteratorPrefix([]byte(ContractPrefix))
+	// cpIter := store.accountDB.IteratorPrefix([]byte{0x02, 0x3a})
 	defer cpIter.Release()
 
 	for cpIter.Next() {
 		cp := new(acc.CtrlProgram)
-		fmt.Printf("cpiter value: %s, len: %v", cpIter.Value(), len(cpIter.Value()))
-
+		v := hex.EncodeToString(cpIter.Value())
+		fmt.Println("v:", v)
 		if err := json.Unmarshal(cpIter.Value(), cp); err != nil {
 			return nil, err
 		}
