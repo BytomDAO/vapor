@@ -149,17 +149,27 @@ func (a *API) getTransaction(ctx context.Context, txInfo struct {
 
 // POST /list-transactions
 func (a *API) listTransactions(ctx context.Context, filter struct {
-	StartTxID   string `json:"start_tx_id"`
-	AccountID   string `json:"account_id"`
-	Detail      bool   `json:"detail"`
-	Unconfirmed bool   `json:"unconfirmed"`
-	Count       uint   `json:"count"`
+	AccountID    string `json:"account_id"`
+	AccountAlias string `json:"account_alias"`
+	StartTxID    string `json:"start_tx_id"`
+	Detail       bool   `json:"detail"`
+	Unconfirmed  bool   `json:"unconfirmed"`
+	Count        uint   `json:"count"`
 }) Response {
-	if filter.AccountID == "" {
+	accountID := filter.AccountID
+	if filter.AccountAlias != "" {
+		acc, err := a.wallet.AccountMgr.FindByAlias(filter.AccountAlias)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+		accountID = acc.ID
+	}
+
+	if accountID == "" {
 		return NewErrorResponse(account.ErrAccountIDEmpty)
 	}
 
-	transactions, err := a.wallet.GetTransactions(filter.AccountID, filter.StartTxID, filter.Count, filter.Unconfirmed)
+	transactions, err := a.wallet.GetTransactions(accountID, filter.StartTxID, filter.Count, filter.Unconfirmed)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
