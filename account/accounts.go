@@ -215,7 +215,9 @@ func (m *Manager) UpdateAccountAlias(accountID string, newAlias string) error {
 		return err
 	}
 
-	m.store.DeleteAccount(&oldAccount)
+	if err := m.store.DeleteAccount(&oldAccount); err != nil {
+		return err
+	}
 	if err := m.store.SetAccount(account); err != nil {
 		return err
 	}
@@ -310,9 +312,9 @@ func (m *Manager) DeleteAccount(accountID string) (err error) {
 		return err
 	}
 
-	if err := m.deleteAccountControlPrograms(accountID); err != nil {
-		return err
-	}
+	// if err := m.deleteAccountControlPrograms(accountID); err != nil {
+	// 	return err
+	// }
 
 	m.cacheMu.Lock()
 	m.aliasCache.Remove(account.Alias)

@@ -9,7 +9,7 @@ import (
 type AccountStorer interface {
 	InitBatch() error
 	CommitBatch() error
-	DeleteAccount(*Account)
+	DeleteAccount(*Account) error
 	DeleteBip44ContractIndex(string)
 	DeleteContractIndex(string)
 	DeleteControlProgram(bc.Hash)

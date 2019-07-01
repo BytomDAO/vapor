@@ -9,6 +9,7 @@ import (
 	acc "github.com/vapor/account"
 	"github.com/vapor/common"
 	"github.com/vapor/crypto/ed25519/chainkd"
+	"github.com/vapor/crypto/sha3pool"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
@@ -48,17 +49,41 @@ func (store *AccountStore) CommitBatch() error {
 }
 
 // DeleteAccount set account account ID, account alias and raw account.
-func (store *AccountStore) DeleteAccount(account *acc.Account) {
+func (store *AccountStore) DeleteAccount(account *acc.Account) error {
+
+	// store.DeleteBip44ContractIndex(account.ID)
+	// store.DeleteContractIndex(account.ID)
+
 	store.DeleteAccountUTXOs(account.ID)
 	batch := store.accountDB.NewBatch()
 	if store.batch != nil {
 		batch = store.batch
 	}
+	// delete account control program
+	cps, err := store.ListControlPrograms()
+	if err != nil {
+		return err
+	}
+	var hash [32]byte
+	for _, cp := range cps {
+		if cp.AccountID == account.ID {
+			sha3pool.Sum256(hash[:], cp.ControlProgram)
+			// store.DeleteControlProgram(bc.NewHash(hash))
+			batch.Delete(ContractKey(bc.NewHash(hash)))
+		}
+	}
+	// delete bip44 contract index
+	batch.Delete(Bip44ContractIndexKey(account.ID, false))
+	batch.Delete(Bip44ContractIndexKey(account.ID, true))
+	// delete contract index
+	batch.Delete(contractIndexKey(account.ID))
+
 	batch.Delete(AccountIDKey(account.ID))
 	batch.Delete(accountAliasKey(account.Alias))
 	if store.batch == nil {
 		batch.Write()
 	}
+	return nil
 }
 
 // DeleteAccountUTXOs delete account utxos by accountID
