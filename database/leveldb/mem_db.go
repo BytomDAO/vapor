@@ -1,6 +1,7 @@
-package db
+package leveldb
 
 import (
+	"bytes"
 	"fmt"
 	"sort"
 	"strings"
@@ -78,11 +79,27 @@ func (db *MemDB) Stats() map[string]string {
 type memDBIterator struct {
 	last int
 	keys []string
-	db   *MemDB
+	db   DB
+
+	start []byte
 }
 
 func newMemDBIterator() *memDBIterator {
 	return &memDBIterator{}
+}
+
+// Keys is expected to be in reverse order for reverse iterators.
+func newMemDBIteratorWithArgs(db DB, keys []string, start []byte) *memDBIterator {
+	itr := &memDBIterator{
+		db:    db,
+		keys:  keys,
+		start: start,
+		last:  -1,
+	}
+	if start != nil {
+		itr.Seek(start)
+	}
+	return itr
 }
 
 func (it *memDBIterator) Next() bool {
@@ -94,6 +111,9 @@ func (it *memDBIterator) Next() bool {
 }
 
 func (it *memDBIterator) Key() []byte {
+	if it.last < 0 {
+		return []byte("")
+	}
 	return []byte(it.keys[it.last])
 }
 
@@ -143,8 +163,28 @@ func (db *MemDB) IteratorPrefix(prefix []byte) Iterator {
 	return it
 }
 
+func (db *MemDB) IteratorPrefixWithStart(Prefix, start []byte) Iterator {
+	db.mtx.Lock()
+	defer db.mtx.Unlock()
+
+	keys := db.getSortedKeys(start)
+	return newMemDBIteratorWithArgs(db, keys, start)
+}
+
 func (db *MemDB) NewBatch() Batch {
 	return &memDBBatch{db, nil}
+}
+
+func (db *MemDB) getSortedKeys(start []byte) []string {
+	keys := []string{}
+	for key := range db.db {
+		if bytes.Compare([]byte(key), start) < 0 {
+			continue
+		}
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 //--------------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-package db
+package leveldb
 
 import (
 	"fmt"
@@ -119,6 +119,18 @@ func (db *GoLevelDB) Stats() map[string]string {
 
 type goLevelDBIterator struct {
 	source iterator.Iterator
+	start  []byte
+}
+
+func newGoLevelDBIterator(source iterator.Iterator, start []byte) *goLevelDBIterator {
+	if start != nil {
+		source.Seek(start)
+	}
+
+	return &goLevelDBIterator{
+		source: source,
+		start:  start,
+	}
 }
 
 // Key returns a copy of the current key.
@@ -148,6 +160,7 @@ func (it *goLevelDBIterator) Error() error {
 }
 
 func (it *goLevelDBIterator) Next() bool {
+	it.assertNoError()
 	return it.source.Next()
 }
 
@@ -155,12 +168,23 @@ func (it *goLevelDBIterator) Release() {
 	it.source.Release()
 }
 
+func (it *goLevelDBIterator) assertNoError() {
+	if err := it.source.Error(); err != nil {
+		panic(err)
+	}
+}
+
 func (db *GoLevelDB) Iterator() Iterator {
-	return &goLevelDBIterator{db.db.NewIterator(nil, nil)}
+	return &goLevelDBIterator{source: db.db.NewIterator(nil, nil)}
 }
 
 func (db *GoLevelDB) IteratorPrefix(prefix []byte) Iterator {
-	return &goLevelDBIterator{db.db.NewIterator(util.BytesPrefix(prefix), nil)}
+	return &goLevelDBIterator{source: db.db.NewIterator(util.BytesPrefix(prefix), nil)}
+}
+
+func (db *GoLevelDB) IteratorPrefixWithStart(Prefix, start []byte) Iterator {
+	itr := db.db.NewIterator(util.BytesPrefix(Prefix), nil)
+	return newGoLevelDBIterator(itr, start)
 }
 
 func (db *GoLevelDB) NewBatch() Batch {
