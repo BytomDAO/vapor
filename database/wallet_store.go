@@ -562,19 +562,3 @@ func (store *WalletStore) SetWalletInfo(rawWallet []byte) {
 		store.batch.Set([]byte(WalletKey), rawWallet)
 	}
 }
-
-func findTransactionsByAccount(annotatedTx *query.AnnotatedTx, accountID string) bool {
-	for _, input := range annotatedTx.Inputs {
-		if input.AccountID == accountID {
-			return true
-		}
-	}
-
-	for _, output := range annotatedTx.Outputs {
-		if output.AccountID == accountID {
-			return true
-		}
-	}
-
-	return false
-}
