@@ -235,10 +235,10 @@ func findTransactionsByAccount(annotatedTx *query.AnnotatedTx, accountID string)
 	return false
 }
 
-// GetTransactions get all walletDB transactions, and filter transactions by accountID optional
-func (w *Wallet) GetTransactions(accountID string) ([]*query.AnnotatedTx, error) {
+// GetTransactions get all walletDB transactions or unconfirmed transactions, and filter transactions by accountID and StartTxID optional
+func (w *Wallet) GetTransactions(accountID string, StartTxID string, count uint, unconfirmed bool) ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
-	annotatedTxs, err := w.store.ListTransactions()
+	annotatedTxs, err := w.store.ListTransactionsssss(accountID, StartTxID, count, unconfirmed)
 	if err != nil {
 		return nil, err
 	}
@@ -249,6 +249,10 @@ func (w *Wallet) GetTransactions(accountID string) ([]*query.AnnotatedTx, error)
 			annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 			newAnnotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, newAnnotatedTxs...)
 		}
+	}
+
+	if unconfirmed {
+		sort.Sort(SortByTimestamp(annotatedTxs))
 	}
 
 	return newAnnotatedTxs, nil

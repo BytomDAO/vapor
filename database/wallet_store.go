@@ -431,6 +431,50 @@ func (store *WalletStore) ListTransactions() ([]*query.AnnotatedTx, error) {
 	return annotatedTxs, nil
 }
 
+func (store *WalletStore) ListTransactionsssss(accountID string, StartTxID string, count uint, unconfirmed bool) ([]*query.AnnotatedTx, error) {
+	annotatedTxs := []*query.AnnotatedTx{}
+	var startKey []byte
+	preFix := TxPrefix
+
+	if StartTxID != "" {
+		if unconfirmed {
+			startKey = calcUnconfirmedTxKey(StartTxID)
+		} else {
+			formatKey := store.walletDB.Get(calcTxIndexKey(StartTxID))
+			if formatKey == nil {
+				return nil, errAccntTxIDNotFound
+			}
+			startKey = calcAnnotatedKey(string(formatKey))
+		}
+	}
+
+	if unconfirmed {
+		preFix = UnconfirmedTxPrefix
+	}
+
+	itr := store.walletDB.IteratorPrefixWithStart([]byte(preFix), startKey)
+	defer itr.Release()
+
+	for txNum := count; itr.Next() && txNum > 0; txNum-- {
+		annotatedTx := new(query.AnnotatedTx)
+		if err := json.Unmarshal(itr.Value(), &annotatedTx); err != nil {
+			return nil, err
+		}
+
+		// if accountID == "" || findTransactionsByAccount(annotatedTx, accountID) {
+		// 	annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
+		// 	annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
+		// }
+		annotatedTxs = append(annotatedTxs, annotatedTx)
+	}
+
+	// if unconfirmed {
+	// 	sort.Sort(SortByTimestamp(annotatedTxs))
+	// }
+
+	return annotatedTxs, nil
+}
+
 // ListUnconfirmedTransactions get all unconfirmed txs
 func (store *WalletStore) ListUnconfirmedTransactions() ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
@@ -543,4 +587,20 @@ func (store *WalletStore) SetWalletInfo(rawWallet []byte) {
 	} else {
 		store.batch.Set([]byte(WalletKey), rawWallet)
 	}
+}
+
+func findTransactionsByAccount(annotatedTx *query.AnnotatedTx, accountID string) bool {
+	for _, input := range annotatedTx.Inputs {
+		if input.AccountID == accountID {
+			return true
+		}
+	}
+
+	for _, output := range annotatedTx.Outputs {
+		if output.AccountID == accountID {
+			return true
+		}
+	}
+
+	return false
 }

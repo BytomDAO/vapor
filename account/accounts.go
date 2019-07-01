@@ -45,6 +45,7 @@ var (
 	ErrAccountIndex      = errors.New("Exceeded maximum accounts per xpub")
 	ErrFindTransaction   = errors.New("No transaction")
 	ErrFindMiningAddress = errors.New("Failed to find mining address")
+	ErrAccountIDEmpty    = errors.New("account_id is empty")
 )
 
 // Account is structure of Bytom account

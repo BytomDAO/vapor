@@ -29,6 +29,7 @@ type WalletStorer interface {
 	GetWalletInfo() []byte           // need move database.NewWalletStore in wallet package
 	ListAccountUTXOs(string) ([]*acc.UTXO, error)
 	ListTransactions() ([]*query.AnnotatedTx, error)
+	ListTransactionsssss(string, string, uint, bool) ([]*query.AnnotatedTx, error)
 	ListUnconfirmedTransactions() ([]*query.AnnotatedTx, error)
 	SetAssetDefinition(*bc.AssetID, []byte)
 	SetContractUTXO(bc.Hash, *acc.UTXO) error
