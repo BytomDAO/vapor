@@ -57,31 +57,18 @@ type ConsensusResult struct {
 
 // ApplyBlock calculate the consensus result for new block
 func (c *ConsensusResult) ApplyBlock(block *types.Block) error {
+	var ok bool
 	if c.BlockHash != block.PreviousBlockHash {
 		return errors.New("block parent hash is not equals last block hash of vote result")
 	}
 
-	if len(block.Transactions[0].Outputs) == 0 {
-		return errors.New("not found the coinbase output")
-	}
-
-	output, ok := block.Transactions[0].Outputs[0].TypedOutput.(*types.IntraChainOutput)
-	if !ok {
-		return errors.New("not found the IntraChainOutput")
-	}
-
-	if amount := output.GetAmount(); amount != 0 {
-		return errors.New("the amount of the uncounted coinbase output is not equal to 0")
-	}
-
-	bcBlock := types.MapBlock(block)
-	reward, err := validation.CalCoinbaseReward(bcBlock)
+	reward, err := validation.CalCoinbaseReward(types.MapBlock(block))
 	if err != nil {
 		return err
 	}
 
-	controlProgram := hex.EncodeToString(output.ControlProgram)
-	if c.RewardOfCoinbase[controlProgram], ok = checked.AddUint64(c.RewardOfCoinbase[controlProgram], reward); !ok {
+	program := hex.EncodeToString(reward.ControlProgram)
+	if c.RewardOfCoinbase[program], ok = checked.AddUint64(c.RewardOfCoinbase[program], reward.Amount); !ok {
 		return errVotingOperationOverFlow
 	}
 
@@ -160,21 +147,9 @@ func federationNodes() map[string]*ConsensusNode {
 
 // DetachBlock calculate the consensus result for detach block
 func (c *ConsensusResult) DetachBlock(block *types.Block) error {
+	var ok bool
 	if c.BlockHash != block.Hash() {
 		return errors.New("block hash is not equals last block hash of vote result")
-	}
-
-	if len(block.Transactions[0].Outputs) == 0 {
-		return errors.New("not found the coinbase output")
-	}
-
-	output, ok := block.Transactions[0].Outputs[0].TypedOutput.(*types.IntraChainOutput)
-	if !ok {
-		return errors.New("not found the IntraChainOutput")
-	}
-
-	if amount := output.GetAmount(); amount != 0 {
-		return errors.New("the amount of the uncounted coinbase output is not equal to 0")
 	}
 
 	bcBlock := types.MapBlock(block)
@@ -183,13 +158,13 @@ func (c *ConsensusResult) DetachBlock(block *types.Block) error {
 		return err
 	}
 
-	controlProgram := hex.EncodeToString(output.ControlProgram)
-	if c.RewardOfCoinbase[controlProgram], ok = checked.SubUint64(c.RewardOfCoinbase[controlProgram], reward); !ok {
+	program := hex.EncodeToString(reward.ControlProgram)
+	if c.RewardOfCoinbase[program], ok = checked.SubUint64(c.RewardOfCoinbase[program], reward.Amount); !ok {
 		return errVotingOperationOverFlow
 	}
 
-	if c.RewardOfCoinbase[controlProgram] == 0 {
-		delete(c.RewardOfCoinbase, controlProgram)
+	if c.RewardOfCoinbase[program] == 0 {
+		delete(c.RewardOfCoinbase, program)
 	}
 
 	for i := len(block.Transactions) - 1; i >= 0; i-- {

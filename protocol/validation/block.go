@@ -84,12 +84,12 @@ func ValidateBlock(b *bc.Block, parent *types.BlockHeader) error {
 		return err
 	}
 
-	coinbaseAmount, err := CalCoinbaseReward(b)
+	reward, err := CalCoinbaseReward(b)
 	if err != nil {
 		return err
 	}
 
-	if err := checkCoinbaseAmount(b, coinbaseAmount); err != nil {
+	if err := checkCoinbaseAmount(b, reward.Amount); err != nil {
 		return err
 	}
 
@@ -118,8 +118,31 @@ func ValidateBlock(b *bc.Block, parent *types.BlockHeader) error {
 	return nil
 }
 
+// CoinbaseReward contains receiver and reward
+type CoinbaseReward struct {
+	Amount         uint64
+	ControlProgram []byte
+}
+
 // CalCoinbaseReward calculate the coinbase reward for block
-func CalCoinbaseReward(b *bc.Block) (uint64, error) {
+func CalCoinbaseReward(b *bc.Block) (*CoinbaseReward, error) {
+	var coinbaseReceiver []byte
+	for _, e := range b.Transactions[0].Entries {
+		switch e := e.(type) {
+		case *bc.IntraChainOutput:
+			if e.GetSource().GetValue().Amount == 0 {
+				coinbaseReceiver = e.GetControlProgram().GetCode()
+				break
+			}
+		default:
+			continue
+		}
+	}
+
+	if coinbaseReceiver == nil {
+		return nil, errors.New("not found the zero coinbase output")
+	}
+
 	blockGasSum := uint64(0)
 	coinbaseAmount := consensus.BlockSubsidy(b.BlockHeader.Height)
 	b.TransactionStatus = bc.NewTransactionStatus()
@@ -127,16 +150,19 @@ func CalCoinbaseReward(b *bc.Block) (uint64, error) {
 	validateResults := ValidateTxs(b.Transactions, b)
 	for i, validateResult := range validateResults {
 		if !validateResult.gasStatus.GasValid {
-			return 0, errors.Wrapf(validateResult.err, "validate of transaction %d of %d", i, len(b.Transactions))
+			return nil, errors.Wrapf(validateResult.err, "validate of transaction %d of %d", i, len(b.Transactions))
 		}
 
 		if err := b.TransactionStatus.SetStatus(i, validateResult.err != nil); err != nil {
-			return 0, err
+			return nil, err
 		}
 		coinbaseAmount += validateResult.gasStatus.BTMValue
 		if blockGasSum += uint64(validateResult.gasStatus.GasUsed); blockGasSum > consensus.MaxBlockGas {
-			return 0, errOverBlockLimit
+			return nil, errOverBlockLimit
 		}
 	}
-	return coinbaseAmount, nil
+	return &CoinbaseReward{
+		Amount:         coinbaseAmount,
+		ControlProgram: coinbaseReceiver,
+	}, nil
 }
