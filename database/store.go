@@ -340,14 +340,14 @@ func (s *Store) SaveChainStatus(blockHeader, irrBlockHeader *types.BlockHeader, 
 		return err
 	}
 
-	for _, vote := range consensusResults {
-		bytes, err := json.Marshal(vote)
+	for _, result := range consensusResults {
+		bytes, err := json.Marshal(result)
 		if err != nil {
 			return err
 		}
 
-		batch.Set(calcConsensusResultKey(vote.Seq), bytes)
-		s.cache.removeConsensusResult(vote)
+		batch.Set(calcConsensusResultKey(result.Seq), bytes)
+		s.cache.removeConsensusResult(result)
 	}
 
 	blockHash := blockHeader.Hash()
