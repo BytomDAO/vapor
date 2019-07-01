@@ -2,9 +2,12 @@ package account
 
 import (
 	"testing"
+	"time"
 
 	"github.com/vapor/blockchain/txbuilder"
+	"github.com/vapor/consensus"
 	"github.com/vapor/protocol/bc"
+	"github.com/vapor/testutil"
 )
 
 func TestMergeSpendAction(t *testing.T) {
@@ -399,71 +402,66 @@ func TestCalcMergeGas(t *testing.T) {
 	}
 }
 
-// func TestReserveBtmUtxoChain(t *testing.T) {
-// 	chainTxUtxoNum = 3
-// 	utxos := []*UTXO{}
-// 	m := mockAccountManager(t)
-// 	for i := uint64(1); i <= 20; i++ {
-// 		utxo := &UTXO{
-// 			OutputID:  bc.Hash{V0: i},
-// 			AccountID: "TestAccountID",
-// 			AssetID:   *consensus.BTMAssetID,
-// 			Amount:    i * chainTxMergeGas,
-// 		}
-// 		utxos = append(utxos, utxo)
+func TestReserveBtmUtxoChain(t *testing.T) {
+	chainTxUtxoNum = 3
+	utxos := []*UTXO{}
+	m := mockAccountManager(t)
+	for i := uint64(1); i <= 20; i++ {
+		utxo := &UTXO{
+			OutputID:  bc.Hash{V0: i},
+			AccountID: "TestAccountID",
+			AssetID:   *consensus.BTMAssetID,
+			Amount:    i * chainTxMergeGas,
+		}
+		utxos = append(utxos, utxo)
 
-// 		data, err := json.Marshal(utxo)
-// 		if err != nil {
-// 			t.Fatal(err)
-// 		}
+		m.store.SetStandardUTXO(utxo.OutputID, utxo)
+	}
 
-// 		m.db.Set(StandardUTXOKey(utxo.OutputID), data)
-// 	}
+	cases := []struct {
+		amount uint64
+		want   []uint64
+		err    bool
+	}{
+		{
+			amount: 1 * chainTxMergeGas,
+			want:   []uint64{1},
+		},
+		{
+			amount: 888888 * chainTxMergeGas,
+			want:   []uint64{},
+			err:    true,
+		},
+		{
+			amount: 7 * chainTxMergeGas,
+			want:   []uint64{4, 3, 1},
+		},
+		{
+			amount: 15 * chainTxMergeGas,
+			want:   []uint64{5, 4, 3, 2, 1, 6},
+		},
+		{
+			amount: 163 * chainTxMergeGas,
+			want:   []uint64{20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 2, 1, 3},
+		},
+	}
 
-// 	cases := []struct {
-// 		amount uint64
-// 		want   []uint64
-// 		err    bool
-// 	}{
-// 		{
-// 			amount: 1 * chainTxMergeGas,
-// 			want:   []uint64{1},
-// 		},
-// 		{
-// 			amount: 888888 * chainTxMergeGas,
-// 			want:   []uint64{},
-// 			err:    true,
-// 		},
-// 		{
-// 			amount: 7 * chainTxMergeGas,
-// 			want:   []uint64{4, 3, 1},
-// 		},
-// 		{
-// 			amount: 15 * chainTxMergeGas,
-// 			want:   []uint64{5, 4, 3, 2, 1, 6},
-// 		},
-// 		{
-// 			amount: 163 * chainTxMergeGas,
-// 			want:   []uint64{20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 2, 1, 3},
-// 		},
-// 	}
+	for i, c := range cases {
+		m.utxoKeeper.expireReservation(time.Unix(999999999, 0))
+		utxos, err := m.reserveBtmUtxoChain(&txbuilder.TemplateBuilder{}, "TestAccountID", c.amount, false)
 
-// 	for i, c := range cases {
-// 		m.utxoKeeper.expireReservation(time.Unix(999999999, 0))
-// 		utxos, err := m.reserveBtmUtxoChain(&txbuilder.TemplateBuilder{}, "TestAccountID", c.amount, false)
+		if err != nil != c.err {
+			t.Fatalf("case %d got err %v want err = %v", i, err, c.err)
+		}
 
-// 		if err != nil != c.err {
-// 			t.Fatalf("case %d got err %v want err = %v", i, err, c.err)
-// 		}
+		got := []uint64{}
+		for _, utxo := range utxos {
+			got = append(got, utxo.Amount/chainTxMergeGas)
+		}
 
-// 		got := []uint64{}
-// 		for _, utxo := range utxos {
-// 			got = append(got, utxo.Amount/chainTxMergeGas)
-// 		}
+		if !testutil.DeepEqual(got, c.want) {
+			t.Fatalf("case %d got %d want %d", i, got, c.want)
+		}
+	}
 
-// 		if !testutil.DeepEqual(got, c.want) {
-// 			t.Fatalf("case %d got %d want %d", i, got, c.want)
-// 		}
-// 	}
-
-// }
+}

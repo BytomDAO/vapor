@@ -2,14 +2,21 @@ package account
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/golang/groupcache/lru"
 	log "github.com/sirupsen/logrus"
+	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	dbm "github.com/vapor/database/leveldb"
+	"github.com/vapor/database/storage"
+	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
+	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/state"
 	"github.com/vapor/testutil"
 )
 
@@ -1409,5 +1416,90 @@ func (store *mockAccountStore) SetStandardUTXO(outputID bc.Hash, utxo *UTXO) err
 	} else {
 		store.batch.Set(StandardUTXOKey(outputID), data)
 	}
+	return nil
+}
+
+func mockAccountManager(t *testing.T) *Manager {
+	dirPath, err := ioutil.TempDir(".", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dirPath)
+
+	testDB := dbm.NewDB("testdb", "memdb", dirPath)
+	accountStore := newMockAccountStore(testDB)
+
+	// dispatcher := event.NewDispatcher()
+	// // store := database.NewStore(testDB)
+	// store := newMockStore(testDB)
+	// // accountStore := database.NewAccountStore(testDB)
+	// accountStore := newMockAccountStore(testDB)
+	// txPool := protocol.NewTxPool(store, dispatcher)
+	// config.CommonConfig = config.DefaultConfig()
+	// chain, err := protocol.NewChain(store, txPool, dispatcher)
+	// if err != nil {
+	// 	t.Fatal(err)
+	// }
+
+	// return NewManager(accountStore, chain)
+
+	bestBlockHeight := func() uint64 { return 9527 }
+
+	return &Manager{
+		store:       accountStore,
+		chain:       nil,
+		utxoKeeper:  newUtxoKeeper(bestBlockHeight, accountStore),
+		cache:       lru.New(maxAccountCache),
+		aliasCache:  lru.New(maxAccountCache),
+		delayedACPs: make(map[*txbuilder.TemplateBuilder][]*CtrlProgram),
+	}
+}
+
+type mockStore struct {
+	db dbm.DB
+	// cache cache
+}
+
+// newStore creates and returns a new Store object.
+func newMockStore(db dbm.DB) *mockStore {
+	// fillBlockHeaderFn := func(hash *bc.Hash) (*types.BlockHeader, error) {
+	// 	return GetBlockHeader(db, hash)
+	// }
+	// fillBlockTxsFn := func(hash *bc.Hash) ([]*types.Tx, error) {
+	// 	return GetBlockTransactions(db, hash)
+	// }
+
+	// fillBlockHashesFn := func(height uint64) ([]*bc.Hash, error) {
+	// 	return GetBlockHashesByHeight(db, height)
+	// }
+
+	// fillMainChainHashFn := func(height uint64) (*bc.Hash, error) {
+	// 	return GetMainChainHash(db, height)
+	// }
+
+	// fillVoteResultFn := func(seq uint64) (*state.VoteResult, error) {
+	// 	return GetVoteResult(db, seq)
+	// }
+
+	// cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillBlockHashesFn, fillMainChainHashFn, fillVoteResultFn)
+	return &mockStore{
+		db: db,
+		// cache: nil,
+	}
+}
+
+func (s *mockStore) BlockExist(*bc.Hash) bool                                     { return false }
+func (s *mockStore) GetBlock(*bc.Hash) (*types.Block, error)                      { return nil, nil }
+func (s *mockStore) GetBlockHeader(*bc.Hash) (*types.BlockHeader, error)          { return nil, nil }
+func (s *mockStore) GetStoreStatus() *protocol.BlockStoreState                    { return nil }
+func (s *mockStore) GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error) { return nil, nil }
+func (s *mockStore) GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error     { return nil }
+func (s *mockStore) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)                 { return nil, nil }
+func (s *mockStore) GetVoteResult(uint64) (*state.VoteResult, error)              { return nil, nil }
+func (s *mockStore) GetMainChainHash(uint64) (*bc.Hash, error)                    { return nil, nil }
+func (s *mockStore) GetBlockHashesByHeight(uint64) ([]*bc.Hash, error)            { return nil, nil }
+func (s *mockStore) SaveBlock(*types.Block, *bc.TransactionStatus) error          { return nil }
+func (s *mockStore) SaveBlockHeader(*types.BlockHeader) error                     { return nil }
+func (s *mockStore) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, []*state.VoteResult) error {
 	return nil
 }
