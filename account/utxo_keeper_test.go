@@ -582,6 +582,142 @@ func TestReserve(t *testing.T) {
 	}
 }
 
+func TestReserveParticular(t *testing.T) {
+	currentHeight := func() uint64 { return 9527 }
+	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	defer os.RemoveAll("temp")
+
+	accountStore := newMockAccountStore(testDB)
+
+	cases := []struct {
+		before      utxoKeeper
+		after       utxoKeeper
+		err         error
+		reserveHash bc.Hash
+		exp         time.Time
+	}{
+		{
+			before: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed: map[bc.Hash]*UTXO{
+					bc.NewHash([32]byte{0x01}): &UTXO{
+						OutputID:  bc.NewHash([32]byte{0x01}),
+						AccountID: "testAccount",
+						Amount:    3,
+					},
+				},
+				reserved: map[bc.Hash]uint64{
+					bc.NewHash([32]byte{0x01}): 0,
+				},
+				reservations: map[uint64]*reservation{},
+			},
+			after: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed: map[bc.Hash]*UTXO{
+					bc.NewHash([32]byte{0x01}): &UTXO{
+						OutputID:  bc.NewHash([32]byte{0x01}),
+						AccountID: "testAccount",
+						Amount:    3,
+					},
+				},
+				reserved: map[bc.Hash]uint64{
+					bc.NewHash([32]byte{0x01}): 0,
+				},
+				reservations: map[uint64]*reservation{},
+			},
+			reserveHash: bc.NewHash([32]byte{0x01}),
+			err:         ErrReserved,
+		},
+		{
+			before: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed: map[bc.Hash]*UTXO{
+					bc.NewHash([32]byte{0x01}): &UTXO{
+						OutputID:    bc.NewHash([32]byte{0x01}),
+						AccountID:   "testAccount",
+						Amount:      3,
+						ValidHeight: 9528,
+					},
+				},
+				reserved:     map[bc.Hash]uint64{},
+				reservations: map[uint64]*reservation{},
+			},
+			after: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed: map[bc.Hash]*UTXO{
+					bc.NewHash([32]byte{0x01}): &UTXO{
+						OutputID:    bc.NewHash([32]byte{0x01}),
+						AccountID:   "testAccount",
+						Amount:      3,
+						ValidHeight: 9528,
+					},
+				},
+				reserved:     map[bc.Hash]uint64{},
+				reservations: map[uint64]*reservation{},
+			},
+			reserveHash: bc.NewHash([32]byte{0x01}),
+			err:         ErrImmature,
+		},
+		{
+			before: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed: map[bc.Hash]*UTXO{
+					bc.NewHash([32]byte{0x01}): &UTXO{
+						OutputID:  bc.NewHash([32]byte{0x01}),
+						AccountID: "testAccount",
+						Amount:    3,
+					},
+				},
+				reserved:     map[bc.Hash]uint64{},
+				reservations: map[uint64]*reservation{},
+			},
+			after: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed: map[bc.Hash]*UTXO{
+					bc.NewHash([32]byte{0x01}): &UTXO{
+						OutputID:  bc.NewHash([32]byte{0x01}),
+						AccountID: "testAccount",
+						Amount:    3,
+					},
+				},
+				reserved: map[bc.Hash]uint64{
+					bc.NewHash([32]byte{0x01}): 1,
+				},
+				reservations: map[uint64]*reservation{
+					1: &reservation{
+						id: 1,
+						utxos: []*UTXO{
+							&UTXO{
+								OutputID:  bc.NewHash([32]byte{0x01}),
+								AccountID: "testAccount",
+								Amount:    3,
+							},
+						},
+						change: 0,
+						expiry: time.Date(2016, 8, 10, 0, 0, 0, 0, time.UTC),
+					},
+				},
+			},
+			reserveHash: bc.NewHash([32]byte{0x01}),
+			err:         nil,
+			exp:         time.Date(2016, 8, 10, 0, 0, 0, 0, time.UTC),
+		},
+	}
+
+	for i, c := range cases {
+		if _, err := c.before.ReserveParticular(c.reserveHash, true, c.exp); err != c.err {
+			t.Errorf("case %d: got error %v want error %v", i, err, c.err)
+		}
+		checkUtxoKeeperEqual(t, i, &c.before, &c.after)
+	}
+}
+
 func TestExpireReservation(t *testing.T) {
 	before := &utxoKeeper{
 		reservations: map[uint64]*reservation{
