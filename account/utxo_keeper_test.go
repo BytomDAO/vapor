@@ -973,6 +973,113 @@ func TestFindUtxos(t *testing.T) {
 	}
 }
 
+func TestFindUtxo(t *testing.T) {
+	currentHeight := func() uint64 { return 9527 }
+	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	defer os.RemoveAll("temp")
+
+	accountStore := newMockAccountStore(testDB)
+
+	cases := []struct {
+		uk             utxoKeeper
+		dbUtxos        map[string]*UTXO
+		outHash        bc.Hash
+		useUnconfirmed bool
+		wantUtxo       *UTXO
+		err            error
+	}{
+		{
+			uk: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed:   map[bc.Hash]*UTXO{},
+			},
+			dbUtxos:  map[string]*UTXO{},
+			outHash:  bc.NewHash([32]byte{0x01}),
+			wantUtxo: nil,
+			err:      ErrMatchUTXO,
+		},
+		{
+			uk: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed: map[bc.Hash]*UTXO{
+					bc.NewHash([32]byte{0x01}): &UTXO{OutputID: bc.NewHash([32]byte{0x01})},
+				},
+			},
+			dbUtxos:        map[string]*UTXO{},
+			outHash:        bc.NewHash([32]byte{0x01}),
+			wantUtxo:       nil,
+			useUnconfirmed: false,
+			err:            ErrMatchUTXO,
+		},
+		{
+			uk: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed: map[bc.Hash]*UTXO{
+					bc.NewHash([32]byte{0x01}): &UTXO{OutputID: bc.NewHash([32]byte{0x01})},
+				},
+			},
+			dbUtxos:        map[string]*UTXO{},
+			outHash:        bc.NewHash([32]byte{0x01}),
+			wantUtxo:       &UTXO{OutputID: bc.NewHash([32]byte{0x01})},
+			useUnconfirmed: true,
+			err:            nil,
+		},
+		{
+			uk: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed:   map[bc.Hash]*UTXO{},
+			},
+			dbUtxos: map[string]*UTXO{
+				string(StandardUTXOKey(bc.NewHash([32]byte{0x01}))): &UTXO{OutputID: bc.NewHash([32]byte{0x01})},
+			},
+			outHash:        bc.NewHash([32]byte{0x01}),
+			wantUtxo:       &UTXO{OutputID: bc.NewHash([32]byte{0x01})},
+			useUnconfirmed: false,
+			err:            nil,
+		},
+		{
+			uk: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed:   map[bc.Hash]*UTXO{},
+			},
+			dbUtxos: map[string]*UTXO{
+				string(ContractUTXOKey(bc.NewHash([32]byte{0x01}))): &UTXO{OutputID: bc.NewHash([32]byte{0x01})},
+			},
+			outHash:        bc.NewHash([32]byte{0x01}),
+			wantUtxo:       &UTXO{OutputID: bc.NewHash([32]byte{0x01})},
+			useUnconfirmed: false,
+			err:            nil,
+		},
+	}
+
+	for i, c := range cases {
+		for k, u := range c.dbUtxos {
+			data, err := json.Marshal(u)
+			if err != nil {
+				t.Error(err)
+			}
+			testDB.Set([]byte(k), data)
+		}
+
+		gotUtxo, err := c.uk.findUtxo(c.outHash, c.useUnconfirmed)
+		if !testutil.DeepEqual(gotUtxo, c.wantUtxo) {
+			t.Errorf("case %d: got %v want %v", i, gotUtxo, c.wantUtxo)
+		}
+		if err != c.err {
+			t.Errorf("case %d: got %v want %v", i, err, c.err)
+		}
+
+		for _, u := range c.dbUtxos {
+			c.uk.store.DeleteStandardUTXO(u.OutputID)
+		}
+	}
+}
+
 func TestOptUTXOs(t *testing.T) {
 	cases := []struct {
 		uk             utxoKeeper
@@ -1216,13 +1323,20 @@ func newMockAccountStore(db dbm.DB) *mockAccountStore {
 }
 
 var (
-	UTXOPrefix = []byte{0x00, 0x3a}
+	UTXOPrefix  = []byte{0x00, 0x3a}
+	SUTXOPrefix = []byte{0x01, 0x3a}
 )
 
 // StandardUTXOKey makes an account unspent outputs key to store
 func StandardUTXOKey(id bc.Hash) []byte {
 	name := id.String()
 	return append(UTXOPrefix, []byte(name)...)
+}
+
+// ContractUTXOKey makes a smart contract unspent outputs key to store
+func ContractUTXOKey(id bc.Hash) []byte {
+	name := id.String()
+	return append(SUTXOPrefix, []byte(name)...)
 }
 
 func (store *mockAccountStore) InitBatch() error                                { return nil }
@@ -1236,7 +1350,6 @@ func (store *mockAccountStore) GetCoinbaseArbitrary() []byte                    
 func (store *mockAccountStore) GetContractIndex(string) uint64                  { return 0 }
 func (store *mockAccountStore) GetControlProgram(bc.Hash) (*CtrlProgram, error) { return nil, nil }
 func (store *mockAccountStore) GetMiningAddress() (*CtrlProgram, error)         { return nil, nil }
-func (store *mockAccountStore) GetUTXO(bc.Hash) (*UTXO, error)                  { return nil, nil }
 func (store *mockAccountStore) ListAccounts(string) ([]*Account, error)         { return nil, nil }
 func (store *mockAccountStore) ListControlPrograms() ([]*CtrlProgram, error)    { return nil, nil }
 func (store *mockAccountStore) SetAccount(*Account) error                       { return nil }
@@ -1247,20 +1360,6 @@ func (store *mockAccountStore) SetContractIndex(string, uint64)                 
 func (store *mockAccountStore) SetControlProgram(bc.Hash, *CtrlProgram) error   { return nil }
 func (store *mockAccountStore) SetMiningAddress(*CtrlProgram) error             { return nil }
 
-// SetStandardUTXO set standard utxo
-func (store *mockAccountStore) SetStandardUTXO(outputID bc.Hash, utxo *UTXO) error {
-	data, err := json.Marshal(utxo)
-	if err != nil {
-		return err
-	}
-	if store.batch == nil {
-		store.accountDB.Set(StandardUTXOKey(outputID), data)
-	} else {
-		store.batch.Set(StandardUTXOKey(outputID), data)
-	}
-	return nil
-}
-
 // DeleteStandardUTXO delete utxo by outpu id
 func (store *mockAccountStore) DeleteStandardUTXO(outputID bc.Hash) {
 	if store.batch == nil {
@@ -1268,6 +1367,18 @@ func (store *mockAccountStore) DeleteStandardUTXO(outputID bc.Hash) {
 	} else {
 		store.batch.Delete(StandardUTXOKey(outputID))
 	}
+}
+
+// GetUTXO get standard utxo by id
+func (store *mockAccountStore) GetUTXO(outid bc.Hash) (*UTXO, error) {
+	u := new(UTXO)
+	if data := store.accountDB.Get(StandardUTXOKey(outid)); data != nil {
+		return u, json.Unmarshal(data, u)
+	}
+	if data := store.accountDB.Get(ContractUTXOKey(outid)); data != nil {
+		return u, json.Unmarshal(data, u)
+	}
+	return nil, ErrMatchUTXO
 }
 
 // ListUTXOs get utxos by accountID
@@ -1285,4 +1396,18 @@ func (store *mockAccountStore) ListUTXOs() []*UTXO {
 		utxos = append(utxos, utxo)
 	}
 	return utxos
+}
+
+// SetStandardUTXO set standard utxo
+func (store *mockAccountStore) SetStandardUTXO(outputID bc.Hash, utxo *UTXO) error {
+	data, err := json.Marshal(utxo)
+	if err != nil {
+		return err
+	}
+	if store.batch == nil {
+		store.accountDB.Set(StandardUTXOKey(outputID), data)
+	} else {
+		store.batch.Set(StandardUTXOKey(outputID), data)
+	}
+	return nil
 }
