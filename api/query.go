@@ -150,7 +150,7 @@ func (a *API) getTransaction(ctx context.Context, txInfo struct {
 
 // POST /list-transactions
 func (a *API) listTransactions(ctx context.Context, filter struct {
-	ID          string `json:"id"`
+	StartTxID   string `json:"start_tx_id"`
 	AccountID   string `json:"account_id"`
 	Detail      bool   `json:"detail"`
 	Unconfirmed bool   `json:"unconfirmed"`
@@ -162,11 +162,11 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 
 	transactions := []*query.AnnotatedTx{}
 	var err error
-	transactions, err = a.wallet.GetTransactionsLimit(filter.AccountID, filter.ID, filter.Count)
+	transactions, err = a.wallet.GetTransactionsLimit(filter.AccountID, filter.StartTxID, filter.Count)
 	unconfirmedCount := filter.Count - uint(len(transactions))
 	txID := ""
 	if err == wallet.ErrAccntTxIDNotFound {
-		txID = filter.ID
+		txID = filter.StartTxID
 	} else if err != nil {
 		return NewErrorResponse(err)
 	}
