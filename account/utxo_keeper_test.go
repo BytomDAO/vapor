@@ -1,10 +1,12 @@
 package account
 
 import (
+	"encoding/json"
 	"os"
 	"testing"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol/bc"
@@ -739,6 +741,238 @@ func TestExpireReservation(t *testing.T) {
 	checkUtxoKeeperEqual(t, 0, before, after)
 }
 
+func TestFindUtxos(t *testing.T) {
+	currentHeight := func() uint64 { return 9527 }
+	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	defer func() {
+		testDB.Close()
+		os.RemoveAll("temp")
+	}()
+
+	accountStore := newMockAccountStore(testDB)
+
+	cases := []struct {
+		uk             utxoKeeper
+		dbUtxos        []*UTXO
+		useUnconfirmed bool
+		wantUtxos      []*UTXO
+		immatureAmount uint64
+		vote           []byte
+	}{
+		{
+			uk: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed:   map[bc.Hash]*UTXO{},
+			},
+			dbUtxos:        []*UTXO{},
+			useUnconfirmed: true,
+			wantUtxos:      []*UTXO{},
+			immatureAmount: 0,
+		},
+		{
+			uk: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed:   map[bc.Hash]*UTXO{},
+			},
+			dbUtxos: []*UTXO{
+				&UTXO{
+					OutputID:  bc.NewHash([32]byte{0x01}),
+					AccountID: "testAccount",
+					Amount:    3,
+				},
+				&UTXO{
+					OutputID:  bc.NewHash([32]byte{0x02}),
+					AccountID: "testAccount",
+					AssetID:   bc.AssetID{V0: 6},
+					Amount:    3,
+				},
+			},
+			useUnconfirmed: false,
+			wantUtxos: []*UTXO{
+				&UTXO{
+					OutputID:  bc.NewHash([32]byte{0x01}),
+					AccountID: "testAccount",
+					Amount:    3,
+				},
+			},
+			immatureAmount: 0,
+		},
+		{
+			uk: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed:   map[bc.Hash]*UTXO{},
+			},
+			dbUtxos: []*UTXO{
+				&UTXO{
+					OutputID:    bc.NewHash([32]byte{0x02}),
+					AccountID:   "testAccount",
+					Amount:      3,
+					ValidHeight: 9528,
+				},
+			},
+			useUnconfirmed: false,
+			wantUtxos:      []*UTXO{},
+			immatureAmount: 3,
+		},
+		{
+			uk: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed: map[bc.Hash]*UTXO{
+					bc.NewHash([32]byte{0x01}): &UTXO{
+						OutputID:  bc.NewHash([32]byte{0x01}),
+						AccountID: "testAccount",
+						Amount:    3,
+					},
+				},
+			},
+			dbUtxos: []*UTXO{
+				&UTXO{
+					OutputID:  bc.NewHash([32]byte{0x02}),
+					AccountID: "testAccount",
+					Amount:    3,
+				},
+			},
+			useUnconfirmed: false,
+			wantUtxos: []*UTXO{
+				&UTXO{
+					OutputID:  bc.NewHash([32]byte{0x02}),
+					AccountID: "testAccount",
+					Amount:    3,
+				},
+			},
+			immatureAmount: 0,
+		},
+		{
+			uk: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed: map[bc.Hash]*UTXO{
+					bc.NewHash([32]byte{0x11}): &UTXO{
+						OutputID:  bc.NewHash([32]byte{0x01}),
+						AccountID: "testAccount",
+						Amount:    3,
+					},
+				},
+			},
+			dbUtxos: []*UTXO{
+				&UTXO{
+					OutputID:  bc.NewHash([32]byte{0x02}),
+					AccountID: "testAccount",
+					Amount:    3,
+				},
+			},
+			useUnconfirmed: true,
+			wantUtxos: []*UTXO{
+				&UTXO{
+					OutputID:  bc.NewHash([32]byte{0x02}),
+					AccountID: "testAccount",
+					Amount:    3,
+				},
+				&UTXO{
+					OutputID:  bc.NewHash([32]byte{0x01}),
+					AccountID: "testAccount",
+					Amount:    3,
+				},
+			},
+			immatureAmount: 0,
+		},
+		{
+			uk: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed: map[bc.Hash]*UTXO{
+					bc.NewHash([32]byte{0x01}): &UTXO{
+						OutputID:  bc.NewHash([32]byte{0x01}),
+						AccountID: "testAccount",
+						Amount:    1,
+					},
+					bc.NewHash([32]byte{0x02}): &UTXO{
+						OutputID:  bc.NewHash([32]byte{0x02}),
+						AccountID: "notMe",
+						Amount:    2,
+					},
+				},
+			},
+			dbUtxos: []*UTXO{
+				&UTXO{
+					OutputID:  bc.NewHash([32]byte{0x03}),
+					AccountID: "testAccount",
+					Amount:    3,
+				},
+				&UTXO{
+					OutputID:  bc.NewHash([32]byte{0x04}),
+					AccountID: "notMe",
+					Amount:    4,
+				},
+			},
+			useUnconfirmed: true,
+			wantUtxos: []*UTXO{
+				&UTXO{
+					OutputID:  bc.NewHash([32]byte{0x03}),
+					AccountID: "testAccount",
+					Amount:    3,
+				},
+				&UTXO{
+					OutputID:  bc.NewHash([32]byte{0x01}),
+					AccountID: "testAccount",
+					Amount:    1,
+				},
+			},
+			immatureAmount: 0,
+		},
+		{
+			uk: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed:   map[bc.Hash]*UTXO{},
+			},
+			dbUtxos: []*UTXO{
+				&UTXO{
+					OutputID:  bc.NewHash([32]byte{0x01}),
+					AccountID: "testAccount",
+					Amount:    6,
+					Vote:      []byte("af594006a40837d9f028daabb6d589df0b9138daefad5683e5233c2646279217294a8d532e60863bcf196625a35fb8ceeffa3c09610eb92dcfb655a947f13269"),
+				},
+			},
+			useUnconfirmed: false,
+			wantUtxos: []*UTXO{
+				&UTXO{
+					OutputID:  bc.NewHash([32]byte{0x01}),
+					AccountID: "testAccount",
+					Amount:    6,
+					Vote:      []byte("af594006a40837d9f028daabb6d589df0b9138daefad5683e5233c2646279217294a8d532e60863bcf196625a35fb8ceeffa3c09610eb92dcfb655a947f13269"),
+				},
+			},
+			immatureAmount: 0,
+			vote:           []byte("af594006a40837d9f028daabb6d589df0b9138daefad5683e5233c2646279217294a8d532e60863bcf196625a35fb8ceeffa3c09610eb92dcfb655a947f13269"),
+		},
+	}
+
+	for i, c := range cases {
+		for _, u := range c.dbUtxos {
+			if err := c.uk.store.SetStandardUTXO(u.OutputID, u); err != nil {
+				t.Error(err)
+			}
+		}
+
+		gotUtxos, immatureAmount := c.uk.findUtxos("testAccount", &bc.AssetID{}, c.useUnconfirmed, c.vote)
+		if !testutil.DeepEqual(gotUtxos, c.wantUtxos) {
+			t.Errorf("case %d: got %v want %v", i, gotUtxos, c.wantUtxos)
+		}
+		if immatureAmount != c.immatureAmount {
+			t.Errorf("case %d: got %v want %v", i, immatureAmount, c.immatureAmount)
+		}
+
+		for _, u := range c.dbUtxos {
+			c.uk.store.DeleteStandardUTXO(u.OutputID)
+		}
+	}
+}
+
 func TestOptUTXOs(t *testing.T) {
 	cases := []struct {
 		uk             utxoKeeper
@@ -981,10 +1215,19 @@ func newMockAccountStore(db dbm.DB) *mockAccountStore {
 	}
 }
 
+var (
+	UTXOPrefix = []byte{0x00, 0x3a}
+)
+
+// StandardUTXOKey makes an account unspent outputs key to store
+func StandardUTXOKey(id bc.Hash) []byte {
+	name := id.String()
+	return append(UTXOPrefix, []byte(name)...)
+}
+
 func (store *mockAccountStore) InitBatch() error                                { return nil }
 func (store *mockAccountStore) CommitBatch() error                              { return nil }
 func (store *mockAccountStore) DeleteAccount(*Account) error                    { return nil }
-func (store *mockAccountStore) DeleteStandardUTXO(bc.Hash)                      { return }
 func (store *mockAccountStore) GetAccountByAlias(string) (*Account, error)      { return nil, nil }
 func (store *mockAccountStore) GetAccountByID(string) (*Account, error)         { return nil, nil }
 func (store *mockAccountStore) GetAccountIndex([]chainkd.XPub) uint64           { return 0 }
@@ -996,7 +1239,6 @@ func (store *mockAccountStore) GetMiningAddress() (*CtrlProgram, error)         
 func (store *mockAccountStore) GetUTXO(bc.Hash) (*UTXO, error)                  { return nil, nil }
 func (store *mockAccountStore) ListAccounts(string) ([]*Account, error)         { return nil, nil }
 func (store *mockAccountStore) ListControlPrograms() ([]*CtrlProgram, error)    { return nil, nil }
-func (store *mockAccountStore) ListUTXOs() []*UTXO                              { return nil }
 func (store *mockAccountStore) SetAccount(*Account) error                       { return nil }
 func (store *mockAccountStore) SetAccountIndex(*Account) error                  { return nil }
 func (store *mockAccountStore) SetBip44ContractIndex(string, bool, uint64)      { return }
@@ -1004,4 +1246,43 @@ func (store *mockAccountStore) SetCoinbaseArbitrary([]byte)                     
 func (store *mockAccountStore) SetContractIndex(string, uint64)                 { return }
 func (store *mockAccountStore) SetControlProgram(bc.Hash, *CtrlProgram) error   { return nil }
 func (store *mockAccountStore) SetMiningAddress(*CtrlProgram) error             { return nil }
-func (store *mockAccountStore) SetStandardUTXO(bc.Hash, *UTXO) error            { return nil }
+
+// SetStandardUTXO set standard utxo
+func (store *mockAccountStore) SetStandardUTXO(outputID bc.Hash, utxo *UTXO) error {
+	data, err := json.Marshal(utxo)
+	if err != nil {
+		return err
+	}
+	if store.batch == nil {
+		store.accountDB.Set(StandardUTXOKey(outputID), data)
+	} else {
+		store.batch.Set(StandardUTXOKey(outputID), data)
+	}
+	return nil
+}
+
+// DeleteStandardUTXO delete utxo by outpu id
+func (store *mockAccountStore) DeleteStandardUTXO(outputID bc.Hash) {
+	if store.batch == nil {
+		store.accountDB.Delete(StandardUTXOKey(outputID))
+	} else {
+		store.batch.Delete(StandardUTXOKey(outputID))
+	}
+}
+
+// ListUTXOs get utxos by accountID
+func (store *mockAccountStore) ListUTXOs() []*UTXO {
+	utxoIter := store.accountDB.IteratorPrefix([]byte(UTXOPrefix))
+	defer utxoIter.Release()
+
+	utxos := []*UTXO{}
+	for utxoIter.Next() {
+		utxo := new(UTXO)
+		if err := json.Unmarshal(utxoIter.Value(), utxo); err != nil {
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("utxoKeeper findUtxos fail on unmarshal utxo")
+			continue
+		}
+		utxos = append(utxos, utxo)
+	}
+	return utxos
+}
