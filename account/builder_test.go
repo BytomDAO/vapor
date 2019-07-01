@@ -463,5 +463,4 @@ func TestReserveBtmUtxoChain(t *testing.T) {
 			t.Fatalf("case %d got %d want %d", i, got, c.want)
 		}
 	}
-
 }
