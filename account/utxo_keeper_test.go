@@ -1,9 +1,12 @@
 package account
 
 import (
+	"os"
 	"testing"
 	"time"
 
+	"github.com/vapor/crypto/ed25519/chainkd"
+	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/testutil"
 )
@@ -267,6 +270,318 @@ func TestRemoveUnconfirmedUtxo(t *testing.T) {
 	}
 }
 
+func TestReserve(t *testing.T) {
+	currentHeight := func() uint64 { return 9527 }
+	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	defer func() {
+		testDB.Close()
+		os.RemoveAll("temp")
+	}()
+
+	accountStore := newMockAccountStore(testDB)
+
+	cases := []struct {
+		before        utxoKeeper
+		after         utxoKeeper
+		err           error
+		reserveAmount uint64
+		exp           time.Time
+		vote          []byte
+	}{
+		{
+			before: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				reserved:      map[bc.Hash]uint64{},
+				reservations:  map[uint64]*reservation{},
+			},
+			after: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				reserved:      map[bc.Hash]uint64{},
+				reservations:  map[uint64]*reservation{},
+			},
+			reserveAmount: 1,
+			err:           ErrInsufficient,
+		},
+		{
+			before: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed: map[bc.Hash]*UTXO{
+					bc.NewHash([32]byte{0x01}): &UTXO{
+						OutputID:  bc.NewHash([32]byte{0x01}),
+						AccountID: "testAccount",
+						Amount:    3,
+					},
+				},
+				reserved:     map[bc.Hash]uint64{},
+				reservations: map[uint64]*reservation{},
+			},
+			after: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed: map[bc.Hash]*UTXO{
+					bc.NewHash([32]byte{0x01}): &UTXO{
+						OutputID:  bc.NewHash([32]byte{0x01}),
+						AccountID: "testAccount",
+						Amount:    3,
+					},
+				},
+				reserved:     map[bc.Hash]uint64{},
+				reservations: map[uint64]*reservation{},
+			},
+			reserveAmount: 4,
+			err:           ErrInsufficient,
+		},
+		{
+			before: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed: map[bc.Hash]*UTXO{
+					bc.NewHash([32]byte{0x01}): &UTXO{
+						OutputID:    bc.NewHash([32]byte{0x01}),
+						AccountID:   "testAccount",
+						Amount:      3,
+						ValidHeight: 9528,
+					},
+				},
+				reserved:     map[bc.Hash]uint64{},
+				reservations: map[uint64]*reservation{},
+			},
+			after: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed: map[bc.Hash]*UTXO{
+					bc.NewHash([32]byte{0x01}): &UTXO{
+						OutputID:    bc.NewHash([32]byte{0x01}),
+						AccountID:   "testAccount",
+						Amount:      3,
+						ValidHeight: 9528,
+					},
+				},
+				reserved:     map[bc.Hash]uint64{},
+				reservations: map[uint64]*reservation{},
+			},
+			reserveAmount: 3,
+			err:           ErrImmature,
+		},
+		{
+			before: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed: map[bc.Hash]*UTXO{
+					bc.NewHash([32]byte{0x01}): &UTXO{
+						OutputID:  bc.NewHash([32]byte{0x01}),
+						AccountID: "testAccount",
+						Amount:    3,
+					},
+				},
+				reserved: map[bc.Hash]uint64{
+					bc.NewHash([32]byte{0x01}): 0,
+				},
+				reservations: map[uint64]*reservation{},
+			},
+			after: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed: map[bc.Hash]*UTXO{
+					bc.NewHash([32]byte{0x01}): &UTXO{
+						OutputID:  bc.NewHash([32]byte{0x01}),
+						AccountID: "testAccount",
+						Amount:    3,
+					},
+				},
+				reserved: map[bc.Hash]uint64{
+					bc.NewHash([32]byte{0x01}): 0,
+				},
+				reservations: map[uint64]*reservation{},
+			},
+			reserveAmount: 3,
+			err:           ErrReserved,
+		},
+		{
+			before: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed: map[bc.Hash]*UTXO{
+					bc.NewHash([32]byte{0x01}): &UTXO{
+						OutputID:  bc.NewHash([32]byte{0x01}),
+						AccountID: "testAccount",
+						Amount:    3,
+					},
+				},
+				reserved:     map[bc.Hash]uint64{},
+				reservations: map[uint64]*reservation{},
+			},
+			after: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed: map[bc.Hash]*UTXO{
+					bc.NewHash([32]byte{0x01}): &UTXO{
+						OutputID:  bc.NewHash([32]byte{0x01}),
+						AccountID: "testAccount",
+						Amount:    3,
+					},
+				},
+				reserved: map[bc.Hash]uint64{
+					bc.NewHash([32]byte{0x01}): 1,
+				},
+				reservations: map[uint64]*reservation{
+					1: &reservation{
+						id: 1,
+						utxos: []*UTXO{
+							&UTXO{
+								OutputID:  bc.NewHash([32]byte{0x01}),
+								AccountID: "testAccount",
+								Amount:    3,
+							},
+						},
+						change: 1,
+						expiry: time.Date(2016, 8, 10, 0, 0, 0, 0, time.UTC),
+					},
+				},
+			},
+			reserveAmount: 2,
+			err:           nil,
+			exp:           time.Date(2016, 8, 10, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			before: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				nextIndex:     1,
+				unconfirmed: map[bc.Hash]*UTXO{
+					bc.NewHash([32]byte{0x01}): &UTXO{
+						OutputID:  bc.NewHash([32]byte{0x01}),
+						AccountID: "testAccount",
+						Amount:    3,
+					},
+					bc.NewHash([32]byte{0x02}): &UTXO{
+						OutputID:  bc.NewHash([32]byte{0x02}),
+						AccountID: "testAccount",
+						Amount:    5,
+					},
+					bc.NewHash([32]byte{0x03}): &UTXO{
+						OutputID:  bc.NewHash([32]byte{0x03}),
+						AccountID: "testAccount",
+						Amount:    7,
+					},
+				},
+				reserved: map[bc.Hash]uint64{
+					bc.NewHash([32]byte{0x01}): 1,
+				},
+				reservations: map[uint64]*reservation{},
+			},
+			after: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed: map[bc.Hash]*UTXO{
+					bc.NewHash([32]byte{0x01}): &UTXO{
+						OutputID:  bc.NewHash([32]byte{0x01}),
+						AccountID: "testAccount",
+						Amount:    3,
+					},
+					bc.NewHash([32]byte{0x02}): &UTXO{
+						OutputID:  bc.NewHash([32]byte{0x02}),
+						AccountID: "testAccount",
+						Amount:    5,
+					},
+					bc.NewHash([32]byte{0x03}): &UTXO{
+						OutputID:  bc.NewHash([32]byte{0x03}),
+						AccountID: "testAccount",
+						Amount:    7,
+					},
+				},
+				reserved: map[bc.Hash]uint64{
+					bc.NewHash([32]byte{0x01}): 1,
+					bc.NewHash([32]byte{0x02}): 2,
+					bc.NewHash([32]byte{0x03}): 2,
+				},
+				reservations: map[uint64]*reservation{
+					2: &reservation{
+						id: 2,
+						utxos: []*UTXO{
+							&UTXO{
+								OutputID:  bc.NewHash([32]byte{0x03}),
+								AccountID: "testAccount",
+								Amount:    7,
+							},
+							&UTXO{
+								OutputID:  bc.NewHash([32]byte{0x02}),
+								AccountID: "testAccount",
+								Amount:    5,
+							},
+						},
+						change: 4,
+						expiry: time.Date(2016, 8, 10, 0, 0, 0, 0, time.UTC),
+					},
+				},
+			},
+			reserveAmount: 8,
+			err:           nil,
+			exp:           time.Date(2016, 8, 10, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			before: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed: map[bc.Hash]*UTXO{
+					bc.NewHash([32]byte{0x01}): &UTXO{
+						OutputID:  bc.NewHash([32]byte{0x01}),
+						AccountID: "testAccount",
+						Amount:    3,
+						Vote:      []byte("af594006a40837d9f028daabb6d589df0b9138daefad5683e5233c2646279217294a8d532e60863bcf196625a35fb8ceeffa3c09610eb92dcfb655a947f13269"),
+					},
+				},
+				reserved:     map[bc.Hash]uint64{},
+				reservations: map[uint64]*reservation{},
+			},
+			after: utxoKeeper{
+				store:         accountStore,
+				currentHeight: currentHeight,
+				unconfirmed: map[bc.Hash]*UTXO{
+					bc.NewHash([32]byte{0x01}): &UTXO{
+						OutputID:  bc.NewHash([32]byte{0x01}),
+						AccountID: "testAccount",
+						Amount:    3,
+						Vote:      []byte("af594006a40837d9f028daabb6d589df0b9138daefad5683e5233c2646279217294a8d532e60863bcf196625a35fb8ceeffa3c09610eb92dcfb655a947f13269"),
+					},
+				},
+				reserved: map[bc.Hash]uint64{
+					bc.NewHash([32]byte{0x01}): 1,
+				},
+				reservations: map[uint64]*reservation{
+					1: &reservation{
+						id: 1,
+						utxos: []*UTXO{
+							&UTXO{
+								OutputID:  bc.NewHash([32]byte{0x01}),
+								AccountID: "testAccount",
+								Amount:    3,
+								Vote:      []byte("af594006a40837d9f028daabb6d589df0b9138daefad5683e5233c2646279217294a8d532e60863bcf196625a35fb8ceeffa3c09610eb92dcfb655a947f13269"),
+							},
+						},
+						change: 1,
+						expiry: time.Date(2016, 8, 10, 0, 0, 0, 0, time.UTC),
+					},
+				},
+			},
+			reserveAmount: 2,
+			err:           nil,
+			exp:           time.Date(2016, 8, 10, 0, 0, 0, 0, time.UTC),
+			vote:          []byte("af594006a40837d9f028daabb6d589df0b9138daefad5683e5233c2646279217294a8d532e60863bcf196625a35fb8ceeffa3c09610eb92dcfb655a947f13269"),
+		},
+	}
+
+	for i, c := range cases {
+		if _, err := c.before.Reserve("testAccount", &bc.AssetID{}, c.reserveAmount, true, c.vote, c.exp); err != c.err {
+			t.Errorf("case %d: got error %v want error %v", i, err, c.err)
+		}
+		checkUtxoKeeperEqual(t, i, &c.before, &c.after)
+	}
+}
+
 func TestExpireReservation(t *testing.T) {
 	before := &utxoKeeper{
 		reservations: map[uint64]*reservation{
@@ -516,3 +831,41 @@ func checkUtxoKeeperEqual(t *testing.T, i int, a, b *utxoKeeper) {
 		t.Errorf("case %d: reservations got %v want %v", i, a.reservations, b.reservations)
 	}
 }
+
+type mockAccountStore struct {
+	accountDB dbm.DB
+	batch     dbm.Batch
+}
+
+// NewAccountStore create new AccountStore.
+func newMockAccountStore(db dbm.DB) *mockAccountStore {
+	return &mockAccountStore{
+		accountDB: db,
+		batch:     nil,
+	}
+}
+
+func (store *mockAccountStore) InitBatch() error                                { return nil }
+func (store *mockAccountStore) CommitBatch() error                              { return nil }
+func (store *mockAccountStore) DeleteAccount(*Account) error                    { return nil }
+func (store *mockAccountStore) DeleteStandardUTXO(bc.Hash)                      { return }
+func (store *mockAccountStore) GetAccountByAlias(string) (*Account, error)      { return nil, nil }
+func (store *mockAccountStore) GetAccountByID(string) (*Account, error)         { return nil, nil }
+func (store *mockAccountStore) GetAccountIndex([]chainkd.XPub) uint64           { return 0 }
+func (store *mockAccountStore) GetBip44ContractIndex(string, bool) uint64       { return 0 }
+func (store *mockAccountStore) GetCoinbaseArbitrary() []byte                    { return nil }
+func (store *mockAccountStore) GetContractIndex(string) uint64                  { return 0 }
+func (store *mockAccountStore) GetControlProgram(bc.Hash) (*CtrlProgram, error) { return nil, nil }
+func (store *mockAccountStore) GetMiningAddress() (*CtrlProgram, error)         { return nil, nil }
+func (store *mockAccountStore) GetUTXO(bc.Hash) (*UTXO, error)                  { return nil, nil }
+func (store *mockAccountStore) ListAccounts(string) ([]*Account, error)         { return nil, nil }
+func (store *mockAccountStore) ListControlPrograms() ([]*CtrlProgram, error)    { return nil, nil }
+func (store *mockAccountStore) ListUTXOs() []*UTXO                              { return nil }
+func (store *mockAccountStore) SetAccount(*Account) error                       { return nil }
+func (store *mockAccountStore) SetAccountIndex(*Account) error                  { return nil }
+func (store *mockAccountStore) SetBip44ContractIndex(string, bool, uint64)      { return }
+func (store *mockAccountStore) SetCoinbaseArbitrary([]byte)                     { return }
+func (store *mockAccountStore) SetContractIndex(string, uint64)                 { return }
+func (store *mockAccountStore) SetControlProgram(bc.Hash, *CtrlProgram) error   { return nil }
+func (store *mockAccountStore) SetMiningAddress(*CtrlProgram) error             { return nil }
+func (store *mockAccountStore) SetStandardUTXO(bc.Hash, *UTXO) error            { return nil }
