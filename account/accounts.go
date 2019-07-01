@@ -281,27 +281,6 @@ func (m *Manager) CreateBatchAddresses(accountID string, change bool, stopIndex 
 	return nil
 }
 
-// deleteAccountControlPrograms deletes control program matching accountID
-func (m *Manager) deleteAccountControlPrograms(accountID string) error {
-	cps, err := m.ListControlProgram()
-	if err != nil {
-		return err
-	}
-
-	var hash [32]byte
-	for _, cp := range cps {
-		if cp.AccountID == accountID {
-			sha3pool.Sum256(hash[:], cp.ControlProgram)
-			m.store.DeleteControlProgram(bc.NewHash(hash))
-		}
-	}
-
-	m.store.DeleteBip44ContractIndex(accountID)
-	m.store.DeleteContractIndex(accountID)
-
-	return nil
-}
-
 // DeleteAccount deletes the account's ID or alias matching account ID.
 func (m *Manager) DeleteAccount(accountID string) (err error) {
 	m.accountMu.Lock()
@@ -311,10 +290,6 @@ func (m *Manager) DeleteAccount(accountID string) (err error) {
 	if err != nil {
 		return err
 	}
-
-	// if err := m.deleteAccountControlPrograms(accountID); err != nil {
-	// 	return err
-	// }
 
 	m.cacheMu.Lock()
 	m.aliasCache.Remove(account.Alias)

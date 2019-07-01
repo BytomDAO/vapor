@@ -50,15 +50,12 @@ func (store *AccountStore) CommitBatch() error {
 
 // DeleteAccount set account account ID, account alias and raw account.
 func (store *AccountStore) DeleteAccount(account *acc.Account) error {
-
-	// store.DeleteBip44ContractIndex(account.ID)
-	// store.DeleteContractIndex(account.ID)
-
 	store.DeleteAccountUTXOs(account.ID)
 	batch := store.accountDB.NewBatch()
 	if store.batch != nil {
 		batch = store.batch
 	}
+
 	// delete account control program
 	cps, err := store.ListControlPrograms()
 	if err != nil {
@@ -72,12 +69,15 @@ func (store *AccountStore) DeleteAccount(account *acc.Account) error {
 			batch.Delete(ContractKey(bc.NewHash(hash)))
 		}
 	}
+
 	// delete bip44 contract index
 	batch.Delete(Bip44ContractIndexKey(account.ID, false))
 	batch.Delete(Bip44ContractIndexKey(account.ID, true))
+
 	// delete contract index
 	batch.Delete(contractIndexKey(account.ID))
 
+	// delete account id
 	batch.Delete(AccountIDKey(account.ID))
 	batch.Delete(accountAliasKey(account.Alias))
 	if store.batch == nil {
