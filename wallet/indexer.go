@@ -288,41 +288,29 @@ func findTransactionsByAccount(annotatedTx *query.AnnotatedTx, accountID string)
 	return false
 }
 
-// GetTransactions get all walletDB transactions, and filter transactions by accountID optional
-func (w *Wallet) GetTransactions(accountID string) ([]*query.AnnotatedTx, error) {
-	annotatedTxs := []*query.AnnotatedTx{}
-
-	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
-	defer txIter.Release()
-	for txIter.Next() {
-		annotatedTx := &query.AnnotatedTx{}
-		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
-			return nil, err
-		}
-
-		if accountID == "" || findTransactionsByAccount(annotatedTx, accountID) {
-			annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
-			annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
-		}
-	}
-
-	return annotatedTxs, nil
-}
-
-// GetTransactionsLimit get all walletDB transactions, and filter transactions by accountID and txID optional
-func (w *Wallet) GetTransactionsLimit(accountID string, txID string, count uint) ([]*query.AnnotatedTx, error) {
+// GetTransactions get all walletDB transactions or unconfirmed transactions, and filter transactions by accountID and StartTxID optional
+func (w *Wallet) GetTransactions(accountID string, StartTxID string, count uint, unconfirmed bool) ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
 	var startKey []byte
+	preFix := TxPrefix
 
-	if txID != "" {
-		formatKey := w.DB.Get(calcTxIndexKey(txID))
-		if formatKey == nil {
-			return nil, ErrAccntTxIDNotFound
+	if StartTxID != "" {
+		if unconfirmed {
+			startKey = calcUnconfirmedTxKey(StartTxID)
+		} else {
+			formatKey := w.DB.Get(calcTxIndexKey(StartTxID))
+			if formatKey == nil {
+				return nil, ErrAccntTxIDNotFound
+			}
+			startKey = calcAnnotatedKey(string(formatKey))
 		}
-		startKey = calcAnnotatedKey(string(formatKey))
 	}
 
-	itr := w.DB.IteratorPrefixWithStart([]byte(TxPrefix), startKey)
+	if unconfirmed {
+		preFix = UnconfirmedTxPrefix
+	}
+
+	itr := w.DB.IteratorPrefixWithStart([]byte(preFix), startKey)
 	defer itr.Release()
 
 	for txNum := count; itr.Next() && txNum > 0; txNum-- {
@@ -335,6 +323,10 @@ func (w *Wallet) GetTransactionsLimit(accountID string, txID string, count uint)
 			annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 			annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
 		}
+	}
+
+	if unconfirmed {
+		sort.Sort(SortByTimestamp(annotatedTxs))
 	}
 
 	return annotatedTxs, nil

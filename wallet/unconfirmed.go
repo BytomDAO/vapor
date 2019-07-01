@@ -66,34 +66,6 @@ func (w *Wallet) GetUnconfirmedTxs(accountID string) ([]*query.AnnotatedTx, erro
 	return annotatedTxs, nil
 }
 
-// GetUnconfirmedTxsLimit get account unconfirmed transactions, filter transactions by accountID when accountID is not empty
-func (w *Wallet) GetUnconfirmedTxsLimit(accountID string, txID string, count uint) ([]*query.AnnotatedTx, error) {
-	annotatedTxs := []*query.AnnotatedTx{}
-	var startKey []byte
-
-	if txID != "" {
-		startKey = calcUnconfirmedTxKey(txID)
-	}
-
-	itr := w.DB.IteratorPrefixWithStart([]byte(UnconfirmedTxPrefix), startKey)
-	defer itr.Release()
-
-	for txNum := count; itr.Next() && txNum > 0; txNum-- {
-		annotatedTx := &query.AnnotatedTx{}
-		if err := json.Unmarshal(itr.Value(), &annotatedTx); err != nil {
-			return nil, err
-		}
-
-		if accountID == "" || findTransactionsByAccount(annotatedTx, accountID) {
-			annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
-			annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
-		}
-	}
-
-	sort.Sort(SortByTimestamp(annotatedTxs))
-	return annotatedTxs, nil
-}
-
 // GetUnconfirmedTxByTxID get unconfirmed transaction by txID
 func (w *Wallet) GetUnconfirmedTxByTxID(txID string) (*query.AnnotatedTx, error) {
 	annotatedTx := &query.AnnotatedTx{}

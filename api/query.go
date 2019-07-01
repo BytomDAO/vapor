@@ -19,7 +19,6 @@ import (
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/wallet"
 )
 
 // POST /list-accounts
@@ -160,23 +159,9 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 		return NewErrorResponse(account.ErrAccountIDEmpty)
 	}
 
-	transactions := []*query.AnnotatedTx{}
-	var err error
-	transactions, err = a.wallet.GetTransactionsLimit(filter.AccountID, filter.StartTxID, filter.Count)
-	unconfirmedCount := filter.Count - uint(len(transactions))
-	txID := ""
-	if err == wallet.ErrAccntTxIDNotFound {
-		txID = filter.StartTxID
-	} else if err != nil {
+	transactions, err := a.wallet.GetTransactions(filter.AccountID, filter.StartTxID, filter.Count, filter.Unconfirmed)
+	if err != nil {
 		return NewErrorResponse(err)
-	}
-
-	if filter.Unconfirmed && unconfirmedCount != 0 {
-		unconfirmedTxs, err := a.wallet.GetUnconfirmedTxsLimit(filter.AccountID, txID, unconfirmedCount)
-		if err != nil {
-			return NewErrorResponse(err)
-		}
-		transactions = append(unconfirmedTxs, transactions...)
 	}
 
 	if filter.Detail == false {
