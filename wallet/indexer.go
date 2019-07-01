@@ -238,7 +238,7 @@ func findTransactionsByAccount(annotatedTx *query.AnnotatedTx, accountID string)
 // GetTransactions get all walletDB transactions or unconfirmed transactions, and filter transactions by accountID and StartTxID optional
 func (w *Wallet) GetTransactions(accountID string, StartTxID string, count uint, unconfirmed bool) ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
-	annotatedTxs, err := w.store.ListTransactionsssss(accountID, StartTxID, count, unconfirmed)
+	annotatedTxs, err := w.store.ListTransactions(accountID, StartTxID, count, unconfirmed)
 	if err != nil {
 		return nil, err
 	}

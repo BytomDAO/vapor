@@ -414,24 +414,7 @@ func (store *WalletStore) ListAccountUTXOs(key string) ([]*acc.UTXO, error) {
 	return confirmedUTXOs, nil
 }
 
-// ListTransactions get all walletDB transactions
-func (store *WalletStore) ListTransactions() ([]*query.AnnotatedTx, error) {
-	annotatedTxs := []*query.AnnotatedTx{}
-
-	txIter := store.walletDB.IteratorPrefix([]byte(TxPrefix))
-	defer txIter.Release()
-	for txIter.Next() {
-		annotatedTx := &query.AnnotatedTx{}
-		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
-			return nil, err
-		}
-		annotatedTxs = append(annotatedTxs, annotatedTx)
-	}
-
-	return annotatedTxs, nil
-}
-
-func (store *WalletStore) ListTransactionsssss(accountID string, StartTxID string, count uint, unconfirmed bool) ([]*query.AnnotatedTx, error) {
+func (store *WalletStore) ListTransactions(accountID string, StartTxID string, count uint, unconfirmed bool) ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
 	var startKey []byte
 	preFix := TxPrefix
@@ -460,17 +443,8 @@ func (store *WalletStore) ListTransactionsssss(accountID string, StartTxID strin
 		if err := json.Unmarshal(itr.Value(), &annotatedTx); err != nil {
 			return nil, err
 		}
-
-		// if accountID == "" || findTransactionsByAccount(annotatedTx, accountID) {
-		// 	annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
-		// 	annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
-		// }
 		annotatedTxs = append(annotatedTxs, annotatedTx)
 	}
-
-	// if unconfirmed {
-	// 	sort.Sort(SortByTimestamp(annotatedTxs))
-	// }
 
 	return annotatedTxs, nil
 }
