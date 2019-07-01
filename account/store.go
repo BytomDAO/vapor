@@ -10,9 +10,6 @@ type AccountStorer interface {
 	InitBatch() error
 	CommitBatch() error
 	DeleteAccount(*Account) error
-	DeleteBip44ContractIndex(string)
-	DeleteContractIndex(string)
-	DeleteControlProgram(bc.Hash)
 	DeleteStandardUTXO(bc.Hash)
 	GetAccountByAlias(string) (*Account, error)
 	GetAccountByID(string) (*Account, error)

@@ -65,7 +65,6 @@ func (store *AccountStore) DeleteAccount(account *acc.Account) error {
 	for _, cp := range cps {
 		if cp.AccountID == account.ID {
 			sha3pool.Sum256(hash[:], cp.ControlProgram)
-			// store.DeleteControlProgram(bc.NewHash(hash))
 			batch.Delete(ContractKey(bc.NewHash(hash)))
 		}
 	}
@@ -110,37 +109,6 @@ func (store *AccountStore) DeleteAccountUTXOs(accountID string) error {
 		batch.Write()
 	}
 	return nil
-}
-
-// DeleteBip44ContractIndex delete bip44 contract index by accountID
-func (store *AccountStore) DeleteBip44ContractIndex(accountID string) {
-	batch := store.accountDB.NewBatch()
-	if store.batch != nil {
-		batch = store.batch
-	}
-	batch.Delete(Bip44ContractIndexKey(accountID, false))
-	batch.Delete(Bip44ContractIndexKey(accountID, true))
-	if store.batch == nil {
-		batch.Write()
-	}
-}
-
-// DeleteContractIndex delete contract index by accountID
-func (store *AccountStore) DeleteContractIndex(accountID string) {
-	if store.batch == nil {
-		store.accountDB.Delete(contractIndexKey(accountID))
-	} else {
-		store.batch.Delete(contractIndexKey(accountID))
-	}
-}
-
-// DeleteControlProgram delete raw control program by hash
-func (store *AccountStore) DeleteControlProgram(hash bc.Hash) {
-	if store.batch == nil {
-		store.accountDB.Delete(ContractKey(hash))
-	} else {
-		store.batch.Delete(ContractKey(hash))
-	}
 }
 
 // DeleteStandardUTXO delete utxo by outpu id
