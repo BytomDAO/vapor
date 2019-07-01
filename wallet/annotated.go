@@ -108,7 +108,7 @@ func getAccountFromACP(program []byte, store WalletStorer) (*account.Account, er
 		return nil, fmt.Errorf("failed get account control program:%x ", hash)
 	}
 
-	account, err := store.GetAccountByID(accountCP.AccountID)
+	account, err := store.GetAccount(accountCP.AccountID)
 	if err != nil {
 		return nil, err
 	}

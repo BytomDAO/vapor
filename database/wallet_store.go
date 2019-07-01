@@ -297,8 +297,8 @@ func (store *WalletStore) DeleteWalletUTXOs() {
 	}
 }
 
-// GetAccountByID get account value by account ID
-func (store *WalletStore) GetAccountByID(accountID string) (*acc.Account, error) {
+// GetAccount get account value by account ID
+func (store *WalletStore) GetAccount(accountID string) (*acc.Account, error) {
 	rawAccount := store.walletDB.Get(AccountIDKey(accountID))
 	if rawAccount == nil {
 		return nil, fmt.Errorf("failed get account, accountID: %s ", accountID)
