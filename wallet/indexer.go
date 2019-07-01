@@ -37,7 +37,7 @@ func saveExternalAssetDefinition(b *types.Block, store WalletStorer) error {
 		for _, orig := range tx.Inputs {
 			if cci, ok := orig.TypedInput.(*types.CrossChainInput); ok {
 				assetID := cci.AssetId
-				assetExist, err := store.GetAssetDefinition(assetID)
+				assetExist, err := store.GetAsset(assetID)
 				if err != nil {
 					return err
 				}

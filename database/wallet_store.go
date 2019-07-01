@@ -76,8 +76,8 @@ var (
 // errors
 var (
 	// ErrFindAccount        = errors.New("Failed to find account")
-	errAccntTxIDNotFound  = errors.New("account TXID not found")
-	errGetAssetDefinition = errors.New("Failed to find asset definition")
+	errAccntTxIDNotFound = errors.New("account TXID not found")
+	errGetAsset          = errors.New("Failed to find asset definition")
 )
 
 func accountIndexKey(xpubs []chainkd.XPub) []byte {
@@ -310,11 +310,11 @@ func (store *WalletStore) GetAccount(accountID string) (*acc.Account, error) {
 	return account, nil
 }
 
-// GetAssetDefinition get asset definition by assetiD
-func (store *WalletStore) GetAssetDefinition(assetID *bc.AssetID) (*asset.Asset, error) {
+// GetAsset get asset by assetID
+func (store *WalletStore) GetAsset(assetID *bc.AssetID) (*asset.Asset, error) {
 	definitionByte := store.walletDB.Get(asset.ExtAssetKey(assetID))
 	if definitionByte == nil {
-		return nil, errGetAssetDefinition
+		return nil, errGetAsset
 	}
 	definitionMap := make(map[string]interface{})
 	if err := json.Unmarshal(definitionByte, &definitionMap); err != nil {

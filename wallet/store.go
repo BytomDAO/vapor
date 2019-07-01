@@ -19,7 +19,7 @@ type WalletStorer interface {
 	DeleteWalletTransactions()
 	DeleteWalletUTXOs()
 	GetAccount(string) (*acc.Account, error)
-	GetAssetDefinition(*bc.AssetID) (*asset.Asset, error)
+	GetAsset(*bc.AssetID) (*asset.Asset, error)
 	GetControlProgram(bc.Hash) (*acc.CtrlProgram, error)
 	GetGlobalTransactionIndex(string) []byte
 	GetStandardUTXO(bc.Hash) (*acc.UTXO, error)
