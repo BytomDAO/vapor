@@ -973,7 +973,7 @@ func TestFindUtxos(t *testing.T) {
 	}
 }
 
-func TestFindUtxo(t *testing.T) {
+func TestFindUTXO(t *testing.T) {
 	currentHeight := func() uint64 { return 9527 }
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
