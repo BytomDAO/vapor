@@ -8,6 +8,7 @@ import (
 
 	cfg "github.com/vapor/config"
 	"github.com/vapor/consensus"
+	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/event"
 	msgs "github.com/vapor/netsync/messages"
 	"github.com/vapor/netsync/peers"
@@ -68,12 +69,12 @@ type Manager struct {
 }
 
 //NewChainManager create a chain sync manager.
-func NewManager(config *cfg.Config, sw Switch, chain Chain, mempool Mempool, dispatcher *event.Dispatcher, peers *peers.PeerSet) (*Manager, error) {
+func NewManager(config *cfg.Config, sw Switch, chain Chain, mempool Mempool, dispatcher *event.Dispatcher, peers *peers.PeerSet, fastSyncDB dbm.DB) (*Manager, error) {
 	manager := &Manager{
 		sw:              sw,
 		mempool:         mempool,
 		chain:           chain,
-		blockKeeper:     newBlockKeeper(chain, peers),
+		blockKeeper:     newBlockKeeper(chain, peers, fastSyncDB),
 		peers:           peers,
 		txSyncCh:        make(chan *txSyncMsg),
 		quit:            make(chan struct{}),

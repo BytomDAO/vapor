@@ -122,8 +122,8 @@ func NewNode(config *cfg.Config) *Node {
 			wallet.RescanBlocks()
 		}
 	}
-
-	syncManager, err := netsync.NewSyncManager(config, chain, txPool, dispatcher)
+	fastSyncDB := dbm.NewDB("fastsync", config.DBBackend, config.DBDir())
+	syncManager, err := netsync.NewSyncManager(config, chain, txPool, dispatcher,fastSyncDB)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create sync manager: %v", err))
 	}

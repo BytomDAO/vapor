@@ -1,6 +1,7 @@
 package chainmgr
 
 import (
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/vapor/errors"
 	"github.com/vapor/netsync/peers"
+	"github.com/vapor/p2p/security"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
@@ -16,20 +18,31 @@ const (
 	blockProcessChSize   = 1024
 	blocksProcessChSize  = 128
 	headersProcessChSize = 1024
-
-	fetchDataParallelTimeout = 100 * time.Second
 )
 
-type msgFetcher struct {
-	peers *peers.PeerSet
+var (
+	requireBlockTimeout   = 20 * time.Second
+	requireHeadersTimeout = 30 * time.Second
+	requireBlocksTimeout  = 200 * time.Second
+)
 
+type MsgFetcher interface {
+	requireBlock(peerID string, height uint64) (*types.Block, error)
+	parallelFetchBlocks(taskQueue *prque.Prque, downloadedBlockCh chan *downloadedBlock, downloadResult chan bool, ProcessResult chan bool, wg *sync.WaitGroup)
+	parallelFetchHeaders(peers []*peers.Peer, locator []*bc.Hash, stopHash *bc.Hash, skip uint64) (map[string][]*types.BlockHeader, error)
+}
+
+type msgFetcher struct {
+	storage          Storage
+	peers            *peers.PeerSet
 	blockProcessCh   chan *blockMsg
 	blocksProcessCh  chan *blocksMsg
 	headersProcessCh chan *headersMsg
 }
 
-func newMsgFetcher(peers *peers.PeerSet) *msgFetcher {
+func newMsgFetcher(storage Storage, peers *peers.PeerSet) *msgFetcher {
 	return &msgFetcher{
+		storage:          storage,
 		peers:            peers,
 		blockProcessCh:   make(chan *blockMsg, blockProcessChSize),
 		blocksProcessCh:  make(chan *blocksMsg, blocksProcessChSize),
@@ -59,7 +72,7 @@ func (mf *msgFetcher) requireBlock(peerID string, height uint64) (*types.Block, 
 		return nil, errPeerDropped
 	}
 
-	timeout := time.NewTimer(syncTimeout)
+	timeout := time.NewTimer(requireBlockTimeout)
 	defer timeout.Stop()
 
 	for {
@@ -91,114 +104,121 @@ func (mf *msgFetcher) requireBlocks(peerID string, locator []*bc.Hash, stopHash 
 	return nil
 }
 
-func (mf *msgFetcher) parallelRequireBlocks(taskQueue *prque.Prque) error {
-	timeout := time.NewTimer(fetchDataParallelTimeout)
+func (mf *msgFetcher) parallelFetchBlocks(taskQueue *prque.Prque, downloadedBlockCh chan *downloadedBlock, downloadResult chan bool, ProcessResult chan bool, wg *sync.WaitGroup) {
+	wg.Add(1)
+	defer wg.Done()
+
+	timeout := time.NewTimer(requireBlocksTimeout)
 	defer timeout.Stop()
 
 	tasks := make(map[string]*task)
-	// schedule task
 	for {
+		// schedule task
+		if taskQueue.Size() == 0 && len(tasks) == 0 {
+			downloadResult <- true
+			return
+		}
+
 		for !taskQueue.Empty() {
 			piece := taskQueue.PopItem().(*piece)
 			peerID, err := mf.peers.SelectPeer(piece.stopHeader.Height + fastSyncPivotGap)
 			if err != nil {
+				if len(tasks) == 0 {
+					downloadResult <- false
+					return
+				}
 				taskQueue.Push(piece, -float32(piece.index))
-				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("failed on select valid peer")
+				log.WithFields(log.Fields{"module": logModule, "err": err}).Debug("failed on select valid peer")
 				break
 			}
-			//go fetch(resultCh, task, peerID)
+
 			startHash := piece.startHeader.Hash()
 			stopHash := piece.stopHeader.Hash()
 			if err := mf.requireBlocks(peerID, []*bc.Hash{&startHash}, &stopHash); err != nil {
 				taskQueue.Push(piece, -float32(piece.index))
 				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("failed on send require blocks msg")
+				continue
 			}
 
-			tasks[startHash.String()] = &task{piece: piece, peerID: peerID, status: progress, startTime: time.Now()}
+			tasks[peerID] = &task{piece: piece, startTime: time.Now()}
 		}
 
 		select {
 		case msg := <-mf.blocksProcessCh:
-			if len(msg.blocks) == 0 {
-				log.WithFields(log.Fields{"module": logModule}).Error("failed on get null blocks msg")
-				//todo: err handle
-				break
-			}
-
-			msgStart := msg.blocks[0]
-			startHash := msgStart.Hash()
-
-			task, ok := tasks[startHash.String()]
+			mf.peers.SetIdle(msg.peerID)
+			//check message from the requested peer.
+			task, ok := tasks[msg.peerID]
 			if !ok {
-				log.WithFields(log.Fields{"module": logModule}).Error("failed on get unsolicited blocks msg")
-				//todo: err handle
+				mf.peers.ErrorHandler(msg.peerID, security.LevelMsgIllegal, errors.New("get unsolicited blocks msg"))
 				break
 			}
 
-			if task.peerID != msg.peerID {
-				log.WithFields(log.Fields{"module": logModule, "peerID": msg.peerID}).Error("get blocks msg from wrong peer")
-				//todo: err handle
+			if len(msg.blocks) == 0 {
+				mf.peers.ErrorHandler(msg.peerID, security.LevelMsgIllegal, errors.New("null blocks msg"))
+				taskQueue.Push(task.piece, -float32(task.piece.index))
 				break
 			}
 
 			// blocks more than request
 			if uint64(len(msg.blocks)) > task.piece.stopHeader.Height-task.piece.startHeader.Height+1 {
+				mf.peers.ErrorHandler(msg.peerID, security.LevelMsgIllegal, errors.New("exceed length blocks msg"))
 				taskQueue.Push(task.piece, -float32(task.piece.index))
-				log.WithFields(log.Fields{"module": logModule}).Error("failed on get null blocks msg")
 				break
 			}
 
-			// verify blocks msg
-			if msgStart.Hash() != task.piece.startHeader.Hash() {
-				log.WithFields(log.Fields{"module": logModule, "peerID": msg.peerID}).Error("get mismatch blocks msg from peer")
-				//todo: err handle
+			// verify start block
+			if msg.blocks[0].Hash() != task.piece.startHeader.Hash() {
+				mf.peers.ErrorHandler(msg.peerID, security.LevelMsgIllegal, errors.New("get mismatch blocks msg"))
+				taskQueue.Push(task.piece, -float32(task.piece.index))
 				break
-
 			}
 
-			// verify blocks msg
+			// verify blocks continuity
 			for i := 0; i < len(msg.blocks)-1; i++ {
 				if msg.blocks[i].Hash() != msg.blocks[i+1].PreviousBlockHash {
-					//todo: peer error handle
+					mf.peers.ErrorHandler(msg.peerID, security.LevelMsgIllegal, errors.New("get discontinuous blocks msg"))
 					taskQueue.Push(task.piece, -float32(task.piece.index))
-					log.WithFields(log.Fields{"module": logModule, "peerID": msg.peerID}).Error("get discontinuous blocks msg from peer")
-
 					break
 				}
 			}
 
-			//unfinished task, continue
-			if msg.blocks[len(msg.blocks)-1].Hash() != task.piece.stopHeader.PreviousBlockHash {
-				log.WithFields(log.Fields{"module": logModule, "task": task.piece.index}).Info("task unfinished")
+			if err := mf.storage.WriteBlocks(msg.peerID, msg.blocks); err != nil {
+				log.WithFields(log.Fields{"module": logModule, "error": err}).Info("write block error")
+				downloadResult <- false
+				return
+			}
 
-				//todo: send blocks to process module
+			downloadedBlockCh <- &downloadedBlock{startHeight: msg.blocks[0].Height, stopHeight: msg.blocks[len(msg.blocks)-1].Height}
+
+			//unfinished task, continue
+			if msg.blocks[len(msg.blocks)-1].Height < task.piece.stopHeader.Height-1 {
+				log.WithFields(log.Fields{"module": logModule, "task": task.piece.index}).Info("task unfinished")
 				piece := *task.piece
 				piece.startHeader = &msg.blocks[len(msg.blocks)-1].BlockHeader
 				taskQueue.Push(task.piece, -float32(task.piece.index))
-				mf.peers.SetIdle(msg.peerID)
-				break
 			}
-
-			task.status = completion
-			mf.peers.SetIdle(msg.peerID)
 		case <-timeout.C:
-			return errRequestTimeout
+			downloadResult <- false
+			log.WithFields(log.Fields{"module": logModule, "error": errRequestTimeout}).Info("failed on fetch blocks")
+			return
+		case ok := <-ProcessResult:
+			if !ok {
+				return
+			}
 		}
-
 	}
 
-	return nil
-
+	return
 }
 
-func (mf *msgFetcher) parallelRequireHeaders(peers []*peers.Peer, locator []*bc.Hash, stopHash *bc.Hash, skip uint64) (map[string][]*types.BlockHeader, error) {
+func (mf *msgFetcher) parallelFetchHeaders(peers []*peers.Peer, locator []*bc.Hash, stopHash *bc.Hash, skip uint64) (map[string][]*types.BlockHeader, error) {
 	result := make(map[string][]*types.BlockHeader)
 
 	for _, peer := range peers {
 		go peer.GetHeaders(locator, stopHash, skip)
 	}
 
-	timeout := time.NewTimer(syncTimeout)
+	timeout := time.NewTimer(requireHeadersTimeout)
 	defer timeout.Stop()
 
 	for {
@@ -207,16 +227,15 @@ func (mf *msgFetcher) parallelRequireHeaders(peers []*peers.Peer, locator []*bc.
 			for _, peer := range peers {
 				if peer.ID() == msg.peerID {
 					result[msg.peerID] = append(result[msg.peerID], msg.headers[:]...)
-				}
-
-				if len(result) == len(peers) {
-					return result, nil
+					if len(result) == len(peers) {
+						return result, nil
+					}
+					break
 				}
 			}
-			log.WithFields(log.Fields{"module": logModule, "peerID": msg.peerID}).Warn("received unsolicited block headers information")
 
 		case <-timeout.C:
-			return nil, errors.Wrap(errRequestTimeout, "requireHeaders")
+			return nil, errors.Wrap(errRequestTimeout, "parallelFetchHeaders")
 		}
 	}
 }

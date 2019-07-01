@@ -6,6 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/consensus"
+	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 	"github.com/vapor/netsync/peers"
 	"github.com/vapor/p2p/security"
@@ -22,8 +23,6 @@ const (
 )
 
 var (
-	syncTimeout = 30 * time.Second
-
 	errRequestTimeout = errors.New("request timeout")
 	errPeerDropped    = errors.New("Peer dropped")
 )
@@ -67,11 +66,12 @@ type blockKeeper struct {
 	quit chan struct{}
 }
 
-func newBlockKeeper(chain Chain, peers *peers.PeerSet) *blockKeeper {
-	msgFetcher := newMsgFetcher(peers)
+func newBlockKeeper(chain Chain, peers *peers.PeerSet, fastSyncDB dbm.DB) *blockKeeper {
+	storage := newStorage(fastSyncDB)
+	msgFetcher := newMsgFetcher(storage, peers)
 	return &blockKeeper{
 		chain:      chain,
-		fastSync:   newFastSync(chain, msgFetcher, peers),
+		fastSync:   newFastSync(chain, msgFetcher, storage, peers),
 		msgFetcher: msgFetcher,
 		peers:      peers,
 		quit:       make(chan struct{}),

@@ -7,6 +7,7 @@ import (
 
 	"github.com/vapor/config"
 	"github.com/vapor/consensus"
+	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/event"
 	"github.com/vapor/netsync/chainmgr"
 	"github.com/vapor/netsync/consensusmgr"
@@ -55,14 +56,14 @@ type SyncManager struct {
 }
 
 // NewSyncManager create sync manager and set switch.
-func NewSyncManager(config *config.Config, chain *protocol.Chain, txPool *protocol.TxPool, dispatcher *event.Dispatcher) (*SyncManager, error) {
+func NewSyncManager(config *config.Config, chain *protocol.Chain, txPool *protocol.TxPool, dispatcher *event.Dispatcher, fastSyncDB dbm.DB) (*SyncManager, error) {
 	sw, err := p2p.NewSwitch(config)
 	if err != nil {
 		return nil, err
 	}
 	peers := peers.NewPeerSet(sw)
 
-	chainManger, err := chainmgr.NewManager(config, sw, chain, txPool, dispatcher, peers)
+	chainManger, err := chainmgr.NewManager(config, sw, chain, txPool, dispatcher, peers, fastSyncDB)
 	if err != nil {
 		return nil, err
 	}
