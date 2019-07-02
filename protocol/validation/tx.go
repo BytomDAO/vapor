@@ -587,12 +587,10 @@ type validateTxResult struct {
 	err       error
 }
 
-func (r *validateTxResult) GetIndex() int {
-	return r.i
-}
 func (r *validateTxResult) GetGasState() *GasState {
 	return r.gasStatus
 }
+
 func (r *validateTxResult) GetError() error {
 	return r.err
 }

@@ -106,16 +106,10 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	}
 
 	validateResults := validation.ValidateTxs(entriesTxs, bcBlock)
-	for _, validateResult := range validateResults {
-		index := validateResult.GetIndex()
-		txDesc := txs[index]
+	for i, validateResult := range validateResults {
+		txDesc := txs[i]
 		tx := txDesc.Tx.Tx
 		gasOnlyTx := false
-
-		if err := c.GetTransactionsUtxo(view, []*bc.Tx{tx}); err != nil {
-			blkGenSkipTxForErr(txPool, &tx.ID, err)
-			continue
-		}
 
 		gasStatus := validateResult.GetGasState()
 		if validateResult.GetError() != nil {
@@ -124,6 +118,11 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 				continue
 			}
 			gasOnlyTx = true
+		}
+
+		if err := c.GetTransactionsUtxo(view, []*bc.Tx{tx}); err != nil {
+			blkGenSkipTxForErr(txPool, &tx.ID, err)
+			continue
 		}
 
 		if gasUsed+uint64(gasStatus.GasUsed) > consensus.MaxBlockGas {
