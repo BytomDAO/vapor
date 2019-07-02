@@ -146,7 +146,7 @@ func (w *Wallet) filterAccountUtxo(utxos []*account.UTXO) []*account.UTXO {
 func (w *Wallet) saveUtxos(utxos []*account.UTXO) error {
 	for _, utxo := range utxos {
 		if segwit.IsP2WScript(utxo.ControlProgram) {
-			if err := w.store.SetStandardUTXO(utxo.OutputID, utxo); err != nil {
+			if err := w.AccountMgr.SetStandardUTXO(utxo.OutputID, utxo); err != nil {
 				return err
 			}
 		} else {

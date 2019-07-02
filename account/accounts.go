@@ -658,3 +658,7 @@ func (m *Manager) SaveControlPrograms(progs ...*CtrlProgram) error {
 	}
 	return nil
 }
+
+func (m *Manager) SetStandardUTXO(outputID bc.Hash, utxo *UTXO) error {
+	return m.store.SetStandardUTXO(outputID, utxo)
+}
