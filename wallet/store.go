@@ -7,8 +7,8 @@ import (
 	"github.com/vapor/protocol/bc"
 )
 
-// WalletStorer interface contains wallet storage functions.
-type WalletStorer interface {
+// WalletStore interface contains wallet storage functions.
+type WalletStore interface {
 	InitBatch() error
 	CommitBatch() error
 	DeleteContractUTXO(bc.Hash)

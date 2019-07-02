@@ -384,7 +384,7 @@ func mockTxData(utxos []*account.UTXO, testAccount *account.Account) (*txbuilder
 	return tplBuilder.Build()
 }
 
-func mockWallet(store WalletStorer, account *account.Manager, asset *asset.Registry, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) *Wallet {
+func mockWallet(store WalletStore, account *account.Manager, asset *asset.Registry, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) *Wallet {
 	wallet := &Wallet{
 		store:           store,
 		AccountMgr:      account,
