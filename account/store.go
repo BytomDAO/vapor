@@ -5,8 +5,8 @@ import (
 	"github.com/vapor/protocol/bc"
 )
 
-// AccountStorer interface contains account storage functions.
-type AccountStorer interface {
+// AccountStore interface contains account storage functions.
+type AccountStore interface {
 	InitBatch() error
 	CommitBatch() error
 	DeleteAccount(*Account) error

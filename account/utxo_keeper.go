@@ -52,7 +52,7 @@ type utxoKeeper struct {
 	// `sync/atomic` expects the first word in an allocated struct to be 64-bit
 	// aligned on both ARM and x86-32. See https://goo.gl/zW7dgq for more details.
 	nextIndex     uint64
-	store         AccountStorer
+	store         AccountStore
 	mtx           sync.RWMutex
 	currentHeight func() uint64
 
@@ -61,7 +61,7 @@ type utxoKeeper struct {
 	reservations map[uint64]*reservation
 }
 
-func newUtxoKeeper(f func() uint64, store AccountStorer) *utxoKeeper {
+func newUtxoKeeper(f func() uint64, store AccountStore) *utxoKeeper {
 	uk := &utxoKeeper{
 		store:         store,
 		currentHeight: f,

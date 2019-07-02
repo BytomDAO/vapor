@@ -66,7 +66,7 @@ type CtrlProgram struct {
 
 // Manager stores accounts and their associated control programs.
 type Manager struct {
-	store      AccountStorer
+	store      AccountStore
 	chain      *protocol.Chain
 	utxoKeeper *utxoKeeper
 
@@ -82,7 +82,7 @@ type Manager struct {
 }
 
 // NewManager creates a new account manager
-func NewManager(store AccountStorer, chain *protocol.Chain) *Manager {
+func NewManager(store AccountStore, chain *protocol.Chain) *Manager {
 	return &Manager{
 		store:       store,
 		chain:       chain,

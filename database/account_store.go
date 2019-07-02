@@ -16,7 +16,7 @@ import (
 	"github.com/vapor/protocol/bc"
 )
 
-// AccountStore satisfies AccountStorer interface.
+// AccountStore satisfies AccountStore interface.
 type AccountStore struct {
 	accountDB dbm.DB
 	batch     dbm.Batch
