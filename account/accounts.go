@@ -446,6 +446,10 @@ func (m *Manager) GetMiningAddress() (string, error) {
 	return cp.Address, nil
 }
 
+func (m *Manager) GetControlProgram(hash bc.Hash) (*CtrlProgram, error) {
+	return m.store.GetControlProgram(hash)
+}
+
 // IsLocalControlProgram check is the input control program belong to local
 func (m *Manager) IsLocalControlProgram(prog []byte) bool {
 	var hash [32]byte

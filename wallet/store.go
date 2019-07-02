@@ -13,8 +13,8 @@ type WalletStore interface {
 	CommitBatch() error
 	DeleteContractUTXO(bc.Hash)
 	DeleteRecoveryStatus()
-	DeleteStandardUTXO(bc.Hash)
-	DeleteTransactions(uint64)
+	DeleteStandardUTXO(bc.Hash) // delete it
+	DeleteTransactions(uint64)  
 	DeleteUnconfirmedTransaction(string)
 	DeleteWalletTransactions()
 	DeleteWalletUTXOs()
