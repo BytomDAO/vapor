@@ -164,6 +164,9 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string, deriveR
 	if err == nil {
 		return nil, ErrDuplicateAlias
 	}
+	if err != ErrFindAccount {
+		return nil, err
+	}
 
 	acctIndex := uint64(1)
 	if currentIndex := m.store.GetAccountIndex(xpubs); currentIndex != 0 {
