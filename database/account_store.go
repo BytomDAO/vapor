@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
-
 	acc "github.com/vapor/account"
 	"github.com/vapor/common"
 	"github.com/vapor/crypto/ed25519/chainkd"
@@ -248,7 +246,7 @@ func (store *AccountStore) ListControlPrograms() ([]*acc.CtrlProgram, error) {
 }
 
 // ListUTXOs get utxos by accountID
-func (store *AccountStore) ListUTXOs() []*acc.UTXO {
+func (store *AccountStore) ListUTXOs() ([]*acc.UTXO, error) {
 	utxoIter := store.accountDB.IteratorPrefix([]byte(UTXOPrefix))
 	defer utxoIter.Release()
 
@@ -256,12 +254,11 @@ func (store *AccountStore) ListUTXOs() []*acc.UTXO {
 	for utxoIter.Next() {
 		utxo := new(acc.UTXO)
 		if err := json.Unmarshal(utxoIter.Value(), utxo); err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("utxoKeeper findUtxos fail on unmarshal utxo")
-			continue
+			return nil, err
 		}
 		utxos = append(utxos, utxo)
 	}
-	return utxos
+	return utxos, nil
 }
 
 // SetAccount set account account ID, account alias and raw account.

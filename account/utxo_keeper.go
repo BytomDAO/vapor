@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 )
@@ -219,7 +220,11 @@ func (uk *utxoKeeper) findUtxos(accountID string, assetID *bc.AssetID, useUnconf
 		}
 	}
 
-	UTXOs := uk.store.ListUTXOs()
+	UTXOs, err := uk.store.ListUTXOs()
+	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("utxoKeeper findUtxos fail on unmarshal utxo")
+	}
+
 	for _, UTXO := range UTXOs {
 		appendUtxo(UTXO)
 	}

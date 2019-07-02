@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/golang/groupcache/lru"
-	log "github.com/sirupsen/logrus"
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	dbm "github.com/vapor/database/leveldb"
@@ -1385,7 +1384,7 @@ func (store *mockAccountStore) GetUTXO(outid bc.Hash) (*UTXO, error) {
 }
 
 // ListUTXOs get utxos by accountID
-func (store *mockAccountStore) ListUTXOs() []*UTXO {
+func (store *mockAccountStore) ListUTXOs() ([]*UTXO, error) {
 	utxoIter := store.accountDB.IteratorPrefix([]byte(UTXOPrefix))
 	defer utxoIter.Release()
 
@@ -1393,12 +1392,11 @@ func (store *mockAccountStore) ListUTXOs() []*UTXO {
 	for utxoIter.Next() {
 		utxo := new(UTXO)
 		if err := json.Unmarshal(utxoIter.Value(), utxo); err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("utxoKeeper findUtxos fail on unmarshal utxo")
-			continue
+			return nil, err
 		}
 		utxos = append(utxos, utxo)
 	}
-	return utxos
+	return utxos, nil
 }
 
 // SetStandardUTXO set standard utxo

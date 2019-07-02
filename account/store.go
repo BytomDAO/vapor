@@ -22,7 +22,7 @@ type AccountStore interface {
 	GetUTXO(bc.Hash) (*UTXO, error)
 	ListAccounts(string) ([]*Account, error)
 	ListControlPrograms() ([]*CtrlProgram, error)
-	ListUTXOs() []*UTXO
+	ListUTXOs() ([]*UTXO, error)
 	SetAccount(*Account) error
 	SetAccountIndex(*Account)
 	SetBip44ContractIndex(string, bool, uint64)
