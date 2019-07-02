@@ -19,7 +19,7 @@ import (
 
 const (
 	utxoPrefix  byte = iota //UTXOPrefix is StandardUTXOKey prefix
-	sUTXOPrefix             //SUTXOPrefix is ContractUTXOKey prefix
+	sutxoPrefix             //SUTXOPrefix is ContractUTXOKey prefix
 	contractPrefix
 	contractIndexPrefix
 	accountPrefix // AccountPrefix is account ID prefix
@@ -38,7 +38,7 @@ const (
 // leveldb key prefix
 var (
 	UTXOPrefix  = []byte{utxoPrefix, colon}
-	SUTXOPrefix = []byte{sUTXOPrefix, colon}
+	SUTXOPrefix = []byte{sutxoPrefix, colon}
 	// ContractPrefix = []byte{contractPrefix, contractPrefix, colon}
 	ContractPrefix      = "Contract:"
 	ContractIndexPrefix = []byte{contractIndexPrefix, colon}
