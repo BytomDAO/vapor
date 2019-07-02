@@ -396,12 +396,9 @@ func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
 
 // GetCoinbaseCtrlProgram will return the coinbase CtrlProgram
 func (m *Manager) GetCoinbaseCtrlProgram() (*CtrlProgram, error) {
-	cp, err := m.store.GetMiningAddress()
+	_, err := m.store.GetMiningAddress()
 	if err != nil {
 		return nil, err
-	}
-	if cp != nil {
-		return cp, nil
 	}
 
 	account := new(Account)
