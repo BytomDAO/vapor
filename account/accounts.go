@@ -119,13 +119,10 @@ func (m *Manager) saveAccount(account *Account, updateIndex bool) error {
 	}
 
 	if updateIndex {
-		if err := m.store.SetAccountIndex(account); err != nil {
-			return err
-		}
-	} else {
-		if err := m.store.SetAccount(account); err != nil {
-			return err
-		}
+		m.store.SetAccountIndex(account)
+	}
+	if err := m.store.SetAccount(account); err != nil {
+		return err
 	}
 
 	if err := m.store.CommitBatch(); err != nil {

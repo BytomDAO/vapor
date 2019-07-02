@@ -288,25 +288,12 @@ func (store *AccountStore) SetAccount(account *acc.Account) error {
 }
 
 // SetAccountIndex set account account ID, account alias and raw account.
-func (store *AccountStore) SetAccountIndex(account *acc.Account) error {
-	rawAccount, err := json.Marshal(account)
-	if err != nil {
-		return acc.ErrMarshalAccount
-	}
-
-	batch := store.accountDB.NewBatch()
-	if store.batch != nil {
-		batch = store.batch
-	}
-
-	batch.Set(AccountIDKey(account.ID), rawAccount)
-	batch.Set(accountAliasKey(account.Alias), []byte(account.ID))
-	batch.Set(accountIndexKey(account.XPubs), common.Unit64ToBytes(account.KeyIndex))
-
+func (store *AccountStore) SetAccountIndex(account *acc.Account) {
 	if store.batch == nil {
-		batch.Write()
+		store.accountDB.Set(accountIndexKey(account.XPubs), common.Unit64ToBytes(account.KeyIndex))
+	} else {
+		store.batch.Set(accountIndexKey(account.XPubs), common.Unit64ToBytes(account.KeyIndex))
 	}
-	return nil
 }
 
 // SetBip44ContractIndex set contract index

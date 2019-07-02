@@ -1356,7 +1356,7 @@ func (store *mockAccountStore) GetMiningAddress() (*CtrlProgram, error)         
 func (store *mockAccountStore) ListAccounts(string) ([]*Account, error)         { return nil, nil }
 func (store *mockAccountStore) ListControlPrograms() ([]*CtrlProgram, error)    { return nil, nil }
 func (store *mockAccountStore) SetAccount(*Account) error                       { return nil }
-func (store *mockAccountStore) SetAccountIndex(*Account) error                  { return nil }
+func (store *mockAccountStore) SetAccountIndex(*Account)                        { return }
 func (store *mockAccountStore) SetBip44ContractIndex(string, bool, uint64)      { return }
 func (store *mockAccountStore) SetCoinbaseArbitrary([]byte)                     { return }
 func (store *mockAccountStore) SetContractIndex(string, uint64)                 { return }

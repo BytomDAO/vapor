@@ -24,7 +24,7 @@ type AccountStore interface {
 	ListControlPrograms() ([]*CtrlProgram, error)
 	ListUTXOs() []*UTXO
 	SetAccount(*Account) error
-	SetAccountIndex(*Account) error
+	SetAccountIndex(*Account)
 	SetBip44ContractIndex(string, bool, uint64)
 	SetCoinbaseArbitrary([]byte)
 	SetContractIndex(string, uint64)
