@@ -1,6 +1,7 @@
 package proposal
 
 import (
+	"fmt"
 	"sort"
 	"strconv"
 	"time"
@@ -161,4 +162,18 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 func blkGenSkipTxForErr(txPool *protocol.TxPool, txHash *bc.Hash, err error) {
 	log.WithFields(log.Fields{"module": logModule, "error": err}).Error("mining block generation: skip tx due to")
 	txPool.RemoveTransaction(txHash)
+}
+
+func validateTxs(txDescs []*protocol.TxDesc, block *bc.Block) []*bc.Tx {
+	txs := []*bc.Tx{}
+	for _, txDesc := range txDescs {
+		txs = append(txs, txDesc.Tx.Tx)
+	}
+
+	validateResults := validation.ValidateTxs(txs, block)
+	for i, validateResult := range validateResults {
+		fmt.Println(i, validateResult)
+	}
+
+	return txs
 }
