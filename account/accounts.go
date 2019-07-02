@@ -160,11 +160,8 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string, deriveR
 	m.accountMu.Lock()
 	defer m.accountMu.Unlock()
 
-	a, err := m.store.GetAccountByAlias(alias)
-	if a == nil && err != ErrFindAccount {
-		return nil, err
-	}
-	if a != nil {
+	_, err := m.store.GetAccountByAlias(alias)
+	if err == nil {
 		return nil, ErrDuplicateAlias
 	}
 
