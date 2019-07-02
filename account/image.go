@@ -72,9 +72,5 @@ func (m *Manager) Restore(image *Image) error {
 		}
 	}
 
-	if err := m.store.CommitBatch(); err != nil {
-		return err
-	}
-
-	return nil
+	return m.store.CommitBatch()
 }
