@@ -54,7 +54,7 @@ func (w *Wallet) attachUtxos(b *types.Block, txStatus *bc.TransactionStatus) {
 		inputUtxos := txInToUtxos(tx, statusFail)
 		for _, inputUtxo := range inputUtxos {
 			if segwit.IsP2WScript(inputUtxo.ControlProgram) {
-				w.store.DeleteStardardUTXO(inputUtxo.OutputID)
+				w.store.DeleteStandardUTXO(inputUtxo.OutputID)
 			} else {
 				w.store.DeleteContractUTXO(inputUtxo.OutputID)
 			}
@@ -84,7 +84,7 @@ func (w *Wallet) detachUtxos(b *types.Block, txStatus *bc.TransactionStatus) {
 			}
 
 			if segwit.IsP2WScript(code) {
-				w.store.DeleteStardardUTXO(*tx.ResultIds[j])
+				w.store.DeleteStandardUTXO(*tx.ResultIds[j])
 			} else {
 				w.store.DeleteContractUTXO(*tx.ResultIds[j])
 			}

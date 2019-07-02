@@ -196,8 +196,8 @@ func (store *WalletStore) DeleteRecoveryStatus() {
 	}
 }
 
-// DeleteStardardUTXO delete stardard utxo by outputID
-func (store *WalletStore) DeleteStardardUTXO(outputID bc.Hash) {
+// DeleteStandardUTXO delete stardard utxo by outputID
+func (store *WalletStore) DeleteStandardUTXO(outputID bc.Hash) {
 	if store.batch == nil {
 		store.walletDB.Delete(StandardUTXOKey(outputID))
 	} else {
