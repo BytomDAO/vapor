@@ -18,7 +18,6 @@ type WalletStore interface {
 	DeleteUnconfirmedTransaction(string)
 	DeleteWalletTransactions()
 	DeleteWalletUTXOs()
-	GetAccount(string) (*acc.Account, error)
 	GetAsset(*bc.AssetID) (*asset.Asset, error)
 	GetControlProgram(bc.Hash) (*acc.CtrlProgram, error)
 	GetGlobalTransactionIndex(string) []byte

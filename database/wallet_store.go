@@ -281,19 +281,6 @@ func (store *WalletStore) DeleteWalletUTXOs() {
 	}
 }
 
-// GetAccount get account value by account ID
-func (store *WalletStore) GetAccount(accountID string) (*acc.Account, error) {
-	rawAccount := store.walletDB.Get(AccountIDKey(accountID))
-	if rawAccount == nil {
-		return nil, fmt.Errorf("failed get account, accountID: %s ", accountID)
-	}
-	account := new(acc.Account)
-	if err := json.Unmarshal(rawAccount, account); err != nil {
-		return nil, err
-	}
-	return account, nil
-}
-
 // GetAsset get asset by assetID
 func (store *WalletStore) GetAsset(assetID *bc.AssetID) (*asset.Asset, error) {
 	definitionByte := store.walletDB.Get(asset.ExtAssetKey(assetID))
