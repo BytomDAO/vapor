@@ -1,9 +1,12 @@
 package protocol
 
 import (
+	"encoding/hex"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/config"
+	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
 	"github.com/vapor/event"
 	"github.com/vapor/protocol/bc"
@@ -223,8 +226,28 @@ func (c *Chain) saveBlock(block *types.Block) error {
 		return err
 	}
 
+	rewards := []validation.CoinbaseReward{}
+	if (parent.Height+1)%consensus.RoundVoteBlockNums == 0 {
+		consensusResult, err := c.getBestConsensusResult()
+		if err != nil {
+			return err
+		}
+
+		for p, amount := range consensusResult.RewardOfCoinbase {
+			program, err := hex.DecodeString(p)
+			if err != nil {
+				return err
+			}
+
+			rewards = append(rewards, validation.CoinbaseReward{
+				Amount:         amount,
+				ControlProgram: program,
+			})
+		}
+	}
+
 	bcBlock := types.MapBlock(block)
-	if err := validation.ValidateBlock(bcBlock, parent); err != nil {
+	if err := validation.ValidateBlock(bcBlock, parent, rewards); err != nil {
 		return errors.Sub(ErrBadBlock, err)
 	}
 

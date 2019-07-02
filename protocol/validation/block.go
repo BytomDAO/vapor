@@ -1,6 +1,8 @@
 package validation
 
 import (
+	"bytes"
+	"sort"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -36,28 +38,40 @@ func checkBlockTime(b *bc.Block, parent *types.BlockHeader) error {
 	return nil
 }
 
-func checkCoinbaseAmount(b *bc.Block, amount uint64) error {
+func checkCoinbaseTx(b *bc.Block, rewards []CoinbaseReward) error {
 	if len(b.Transactions) == 0 {
 		return errors.Wrap(ErrWrongCoinbaseTransaction, "block is empty")
 	}
 
 	tx := b.Transactions[0]
-	if len(tx.TxHeader.ResultIds) != 1 {
-		return errors.Wrap(ErrWrongCoinbaseTransaction, "have more than 1 output")
+	if len(tx.TxHeader.ResultIds) != len(rewards) {
+		return errors.Wrapf(ErrWrongCoinbaseTransaction, "dismatch number of outputs, got:%d, want:%d", len(tx.TxHeader.ResultIds), len(rewards))
 	}
 
-	var SourceAmount uint64
-	switch output := tx.Entries[*tx.TxHeader.ResultIds[0]].(type) {
-	case *bc.IntraChainOutput:
-		SourceAmount = output.Source.Value.Amount
-	case *bc.VoteOutput:
-		SourceAmount = output.Source.Value.Amount
-	default:
-		return errors.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", tx.TxHeader.ResultIds[0].Bytes(), output)
-	}
+	var coinbaseAmount uint64
+	var coinbaseReceiver []byte
+	for i, output := range tx.TxHeader.ResultIds {
+		switch e := tx.Entries[*output].(type) {
+		case *bc.IntraChainOutput:
+			coinbaseAmount = e.Source.Value.Amount
+			coinbaseReceiver = e.ControlProgram.Code
+		default:
+			return errors.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", tx.TxHeader.ResultIds[0].Bytes(), output)
+		}
 
-	if SourceAmount != amount {
-		return errors.Wrap(ErrWrongCoinbaseTransaction, "dismatch output amount")
+		if i == 0 {
+			if coinbaseAmount != 0 {
+				return errors.Wrapf(ErrWrongCoinbaseTransaction, "dismatch output amount, got:%d, want:0", coinbaseAmount)
+			}
+		} else {
+			if rewards[i].Amount != coinbaseAmount {
+				return errors.Wrapf(ErrWrongCoinbaseTransaction, "dismatch output amount, got:%d, want:%d", coinbaseAmount, rewards[i].Amount)
+			}
+		}
+
+		if res := bytes.Compare(rewards[i].ControlProgram, coinbaseReceiver); res != 0 {
+			return errors.Wrapf(ErrWrongCoinbaseTransaction, "dismatch output control program, got:%v, want:%v", coinbaseReceiver, rewards[i].ControlProgram)
+		}
 	}
 	return nil
 }
@@ -78,7 +92,7 @@ func ValidateBlockHeader(b *bc.Block, parent *types.BlockHeader) error {
 }
 
 // ValidateBlock validates a block and the transactions within.
-func ValidateBlock(b *bc.Block, parent *types.BlockHeader) error {
+func ValidateBlock(b *bc.Block, parent *types.BlockHeader, rewards []CoinbaseReward) error {
 	startTime := time.Now()
 	if err := ValidateBlockHeader(b, parent); err != nil {
 		return err
@@ -88,8 +102,13 @@ func ValidateBlock(b *bc.Block, parent *types.BlockHeader) error {
 	if err != nil {
 		return err
 	}
+	rewards = append(rewards, CoinbaseReward{ControlProgram: reward.ControlProgram})
+	if b.Height%consensus.RoundVoteBlockNums == 0 {
+		rewards = append(rewards, *reward)
+		sort.Sort(SortByAmount(rewards))
+	}
 
-	if err := checkCoinbaseAmount(b, reward.Amount); err != nil {
+	if err := checkCoinbaseTx(b, rewards); err != nil {
 		return err
 	}
 
@@ -106,7 +125,7 @@ func ValidateBlock(b *bc.Block, parent *types.BlockHeader) error {
 		return errors.Wrap(err, "computing transaction status merkle root")
 	}
 	if txStatusHash != *b.TransactionStatusHash {
-		return errors.WithDetailf(errMismatchedMerkleRoot, "transaction status merkle root")
+		return errors.WithDetailf(errMismatchedMerkleRoot, "transaction status merkle root. compute: %v, given: %v", txStatusHash, *b.TransactionStatusHash)
 	}
 
 	log.WithFields(log.Fields{
@@ -124,19 +143,30 @@ type CoinbaseReward struct {
 	ControlProgram []byte
 }
 
+// SortByAmount implements sort.Interface for CoinbaseReward slices
+type SortByAmount []CoinbaseReward
+
+func (a SortByAmount) Len() int           { return len(a) }
+func (a SortByAmount) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a SortByAmount) Less(i, j int) bool { return a[i].Amount < a[j].Amount }
+
 // CalCoinbaseReward calculate the coinbase reward for block
 func CalCoinbaseReward(b *bc.Block) (*CoinbaseReward, error) {
+	if len(b.Transactions) == 0 {
+		return nil, errors.Wrap(ErrWrongCoinbaseTransaction, "block is empty")
+	}
+
+	tx := b.Transactions[0]
+	if len(tx.TxHeader.ResultIds) == 0 {
+		return nil, errors.Wrap(ErrWrongCoinbaseTransaction, "without output")
+	}
+
 	var coinbaseReceiver []byte
-	for _, e := range b.Transactions[0].Entries {
-		switch e := e.(type) {
-		case *bc.IntraChainOutput:
-			if e.GetSource().GetValue().Amount == 0 {
-				coinbaseReceiver = e.GetControlProgram().GetCode()
-				break
-			}
-		default:
-			continue
-		}
+	switch e := tx.Entries[*tx.TxHeader.ResultIds[0]].(type) {
+	case *bc.IntraChainOutput:
+		coinbaseReceiver = e.ControlProgram.Code
+	default:
+		return nil, errors.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", tx.TxHeader.ResultIds[0].Bytes(), e)
 	}
 
 	if coinbaseReceiver == nil {

@@ -10,6 +10,7 @@ import (
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/vm"
 	"github.com/vapor/protocol/vm/vmutil"
+	"github.com/vapor/testutil"
 )
 
 func TestCheckBlockTime(t *testing.T) {
@@ -25,19 +26,19 @@ func TestCheckBlockTime(t *testing.T) {
 			err:        nil,
 		},
 		{
-			desc:       "timestamp less than past median time (blocktest#1005)",
+			desc:       "timestamp less than past median time",
 			blockTime:  1520005500,
 			parentTime: []uint64{1520000000, 1520000500, 1520001000, 1520001500, 1520002000, 1520002500, 1520003000, 1520003500, 1520004000, 1520004500, 1520005000},
 			err:        nil,
 		},
 		{
-			desc:       "timestamp greater than max limit (blocktest#1006)",
+			desc:       "timestamp greater than max limit",
 			blockTime:  99999999990000,
 			parentTime: []uint64{15200000000000},
 			err:        errBadTimestamp,
 		},
 		{
-			desc:       "timestamp of the block and the parent block are both greater than max limit (blocktest#1007)",
+			desc:       "timestamp of the block and the parent block are both greater than max limit",
 			blockTime:  uint64(time.Now().UnixNano()/int64(time.Millisecond)) + consensus.MaxTimeOffsetMs + 2000,
 			parentTime: []uint64{uint64(time.Now().UnixNano()/int64(time.Millisecond)) + consensus.MaxTimeOffsetMs + 1000},
 			err:        errBadTimestamp,
@@ -65,44 +66,97 @@ func TestCheckBlockTime(t *testing.T) {
 	}
 }
 
-func TestCheckCoinbaseAmount(t *testing.T) {
+func TestCheckCoinbaseTx(t *testing.T) {
 	cases := []struct {
-		txs    []*types.Tx
-		amount uint64
-		err    error
+		desc    string
+		txs     []*types.Tx
+		rewards []CoinbaseReward
+		err     error
 	}{
 		{
+			desc: "zero coinbase amount",
 			txs: []*types.Tx{
 				types.NewTx(types.TxData{
 					Inputs:  []*types.TxInput{types.NewCoinbaseInput(nil)},
-					Outputs: []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 5000, nil)},
+					Outputs: []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 0, []byte{0x51})},
 				}),
 			},
-			amount: 5000,
-			err:    nil,
+			rewards: []CoinbaseReward{
+				CoinbaseReward{
+					Amount:         0,
+					ControlProgram: []byte{0x51},
+				},
+			},
+			err: nil,
 		},
 		{
+			desc: "zero coinbase amount and aggregate rewards",
+			txs: []*types.Tx{
+				types.NewTx(types.TxData{
+					Inputs: []*types.TxInput{types.NewCoinbaseInput(nil)},
+					Outputs: []*types.TxOutput{
+						types.NewIntraChainOutput(*consensus.BTMAssetID, 0, []byte{0x51}),
+						types.NewIntraChainOutput(*consensus.BTMAssetID, 5000, []byte{0x51}),
+					},
+				}),
+			},
+			rewards: []CoinbaseReward{
+				CoinbaseReward{
+					Amount:         0,
+					ControlProgram: []byte{0x51},
+				},
+				CoinbaseReward{
+					Amount:         5000,
+					ControlProgram: []byte{0x51},
+				},
+			},
+			err: nil,
+		},
+		{
+			desc: "dismatch coinbase control program",
 			txs: []*types.Tx{
 				types.NewTx(types.TxData{
 					Inputs:  []*types.TxInput{types.NewCoinbaseInput(nil)},
-					Outputs: []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 5000, nil)},
+					Outputs: []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 0, []byte{0x51})},
 				}),
 			},
-			amount: 6000,
-			err:    ErrWrongCoinbaseTransaction,
+			rewards: []CoinbaseReward{
+				CoinbaseReward{
+					Amount:         0,
+					ControlProgram: []byte{0x52},
+				},
+			},
+			err: ErrWrongCoinbaseTransaction,
 		},
 		{
-			txs:    []*types.Tx{},
-			amount: 5000,
-			err:    ErrWrongCoinbaseTransaction,
+			desc: "dismatch coinbase amount with the first output",
+			txs: []*types.Tx{
+				types.NewTx(types.TxData{
+					Inputs:  []*types.TxInput{types.NewCoinbaseInput(nil)},
+					Outputs: []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 5000, []byte{0x51})},
+				}),
+			},
+			rewards: []CoinbaseReward{
+				CoinbaseReward{
+					Amount:         5000,
+					ControlProgram: []byte{0x51},
+				},
+			},
+			err: ErrWrongCoinbaseTransaction,
+		},
+		{
+			desc:    "wrong coinbase transaction",
+			txs:     []*types.Tx{},
+			rewards: []CoinbaseReward{},
+			err:     ErrWrongCoinbaseTransaction,
 		},
 	}
 
 	block := new(types.Block)
 	for i, c := range cases {
 		block.Transactions = c.txs
-		if err := checkCoinbaseAmount(types.MapBlock(block), c.amount); rootErr(err) != c.err {
-			t.Errorf("case %d got error %s, want %s", i, err, c.err)
+		if err := checkCoinbaseTx(types.MapBlock(block), c.rewards); rootErr(err) != c.err {
+			t.Errorf("case %d got error %s, want %T", i, err, c.err)
 		}
 	}
 }
@@ -122,6 +176,7 @@ func TestValidateBlockHeader(t *testing.T) {
 		err    error
 	}{
 		{
+			desc: "dismatch version",
 			block: &bc.Block{BlockHeader: &bc.BlockHeader{
 				Version: 2,
 			}},
@@ -131,6 +186,7 @@ func TestValidateBlockHeader(t *testing.T) {
 			err: errVersionRegression,
 		},
 		{
+			desc: "misordered block height",
 			block: &bc.Block{BlockHeader: &bc.BlockHeader{
 				Version: 1,
 				Height:  20,
@@ -142,7 +198,7 @@ func TestValidateBlockHeader(t *testing.T) {
 			err: errMisorderedBlockHeight,
 		},
 		{
-			desc: "the prev block hash not equals to the hash of parent (blocktest#1004)",
+			desc: "the prev block hash not equals to the hash of parent",
 			block: &bc.Block{BlockHeader: &bc.BlockHeader{
 				Version:         1,
 				Height:          20,
@@ -156,6 +212,7 @@ func TestValidateBlockHeader(t *testing.T) {
 			err: errMismatchedBlock,
 		},
 		{
+			desc: "normal block",
 			block: &bc.Block{
 				ID: bc.Hash{V0: 1},
 				BlockHeader: &bc.BlockHeader{
@@ -169,7 +226,7 @@ func TestValidateBlockHeader(t *testing.T) {
 			err:    nil,
 		},
 		{
-			desc: "version greater than 1 (blocktest#1001)",
+			desc: "version greater than 1",
 			block: &bc.Block{
 				ID: bc.Hash{V0: 1},
 				BlockHeader: &bc.BlockHeader{
@@ -182,7 +239,7 @@ func TestValidateBlockHeader(t *testing.T) {
 			err: errVersionRegression,
 		},
 		{
-			desc: "version equals 0 (blocktest#1002)",
+			desc: "version equals 0",
 			block: &bc.Block{
 				ID: bc.Hash{V0: 1},
 				BlockHeader: &bc.BlockHeader{
@@ -195,7 +252,7 @@ func TestValidateBlockHeader(t *testing.T) {
 			err: errVersionRegression,
 		},
 		{
-			desc: "version equals max uint64 (blocktest#1003)",
+			desc: "version equals max uint64",
 			block: &bc.Block{
 				ID: bc.Hash{V0: 1},
 				BlockHeader: &bc.BlockHeader{
@@ -216,7 +273,6 @@ func TestValidateBlockHeader(t *testing.T) {
 	}
 }
 
-// TestValidateBlock test the ValidateBlock function
 func TestValidateBlock(t *testing.T) {
 	cp, _ := vmutil.DefaultCoinbaseProgram()
 	parent := &types.BlockHeader{
@@ -226,15 +282,18 @@ func TestValidateBlock(t *testing.T) {
 		PreviousBlockHash: bc.Hash{V0: 0},
 	}
 	parentHash := parent.Hash()
+	txsRoot := testutil.MustDecodeHash("001e21b9618c503d909c1e0b32bab9ccf80c538b35d49ac7fffcef98eb373b23")
+	txStatusHash := testutil.MustDecodeHash("6978a65b4ee5b6f4914fe5c05000459a803ecf59132604e5d334d64249c5e50a")
 
 	cases := []struct {
-		desc   string
-		block  *bc.Block
-		parent *types.BlockHeader
-		err    error
+		desc    string
+		block   *bc.Block
+		parent  *types.BlockHeader
+		rewards []CoinbaseReward
+		err     error
 	}{
 		{
-			desc: "The calculated transaction merkel root hash is not equals to the hash of the block header (blocktest#1009)",
+			desc: "The calculated transaction merkel root hash is not equals to the hash of the block header",
 			block: &bc.Block{
 				ID: bc.Hash{V0: 1},
 				BlockHeader: &bc.BlockHeader{
@@ -249,7 +308,7 @@ func TestValidateBlock(t *testing.T) {
 						Version:        1,
 						SerializedSize: 1,
 						Inputs:         []*types.TxInput{types.NewCoinbaseInput(nil)},
-						Outputs:        []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, consensus.BlockSubsidy(0), cp)},
+						Outputs:        []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 0, cp)},
 					}),
 				},
 			},
@@ -257,7 +316,7 @@ func TestValidateBlock(t *testing.T) {
 			err:    errMismatchedMerkleRoot,
 		},
 		{
-			desc: "The calculated transaction status merkel root hash is not equals to the hash of the block header (blocktest#1009)",
+			desc: "The calculated transaction status merkel root hash is not equals to the hash of the block header",
 			block: &bc.Block{
 				ID: bc.Hash{V0: 1},
 				BlockHeader: &bc.BlockHeader{
@@ -273,7 +332,7 @@ func TestValidateBlock(t *testing.T) {
 						Version:        1,
 						SerializedSize: 1,
 						Inputs:         []*types.TxInput{types.NewCoinbaseInput(nil)},
-						Outputs:        []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, consensus.BlockSubsidy(0), cp)},
+						Outputs:        []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 0, cp)},
 					}),
 				},
 			},
@@ -281,7 +340,41 @@ func TestValidateBlock(t *testing.T) {
 			err:    errMismatchedMerkleRoot,
 		},
 		{
-			desc: "the coinbase amount is less than the real coinbase amount (txtest#1014)",
+			desc: "the coinbase amount is not equal to the real coinbase amount",
+			block: &bc.Block{
+				ID: bc.Hash{V0: 1},
+				BlockHeader: &bc.BlockHeader{
+					Version:               1,
+					Height:                1,
+					Timestamp:             1523352601000,
+					PreviousBlockId:       &parentHash,
+					TransactionsRoot:      &txsRoot,
+					TransactionStatusHash: &txStatusHash,
+				},
+				Transactions: []*bc.Tx{
+					types.MapTx(&types.TxData{
+						Version:        1,
+						SerializedSize: 1,
+						Inputs:         []*types.TxInput{types.NewCoinbaseInput(nil)},
+						Outputs:        []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 41250000000, cp)},
+					}),
+					types.MapTx(&types.TxData{
+						Version:        1,
+						SerializedSize: 1,
+						Inputs:         []*types.TxInput{types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp)},
+						Outputs: []*types.TxOutput{
+							types.NewIntraChainOutput(*consensus.BTMAssetID, 0, cp),
+							types.NewIntraChainOutput(*consensus.BTMAssetID, 90000000, cp),
+						},
+					}),
+				},
+			},
+			parent:  parent,
+			rewards: []CoinbaseReward{},
+			err:     ErrWrongCoinbaseTransaction,
+		},
+		{
+			desc: "the coinbase amount is less than the real coinbase amount",
 			block: &bc.Block{
 				ID: bc.Hash{V0: 1},
 				BlockHeader: &bc.BlockHeader{
@@ -295,30 +388,32 @@ func TestValidateBlock(t *testing.T) {
 						Version:        1,
 						SerializedSize: 1,
 						Inputs:         []*types.TxInput{types.NewCoinbaseInput(nil)},
-						Outputs:        []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 41250000000, cp)},
+						Outputs:        []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 0, cp)},
 					}),
 					types.MapTx(&types.TxData{
 						Version:        1,
 						SerializedSize: 1,
 						Inputs:         []*types.TxInput{types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp)},
-						Outputs:        []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 90000000, cp)},
+						Outputs: []*types.TxOutput{
+							types.NewIntraChainOutput(*consensus.BTMAssetID, 0, cp),
+							types.NewIntraChainOutput(*consensus.BTMAssetID, 100000000, cp),
+						},
 					}),
 				},
 			},
 			parent: parent,
-			err:    ErrWrongCoinbaseTransaction,
+			err:    vm.ErrRunLimitExceeded,
 		},
 	}
 
 	for i, c := range cases {
-		err := ValidateBlock(c.block, c.parent)
+		err := ValidateBlock(c.block, c.parent, c.rewards)
 		if rootErr(err) != c.err {
 			t.Errorf("case #%d (%s) got error %s, want %s", i, c.desc, err, c.err)
 		}
 	}
 }
 
-// TestGasOverBlockLimit check if the gas of the block has the max limit (blocktest#1012)
 func TestGasOverBlockLimit(t *testing.T) {
 	cp, _ := vmutil.DefaultCoinbaseProgram()
 	parent := &types.BlockHeader{
@@ -332,18 +427,17 @@ func TestGasOverBlockLimit(t *testing.T) {
 	block := &bc.Block{
 		ID: bc.Hash{V0: 1},
 		BlockHeader: &bc.BlockHeader{
-			Version:          1,
-			Height:           1,
-			Timestamp:        1523352601000,
-			PreviousBlockId:  &parentHash,
-			TransactionsRoot: &bc.Hash{V0: 1},
+			Version:         1,
+			Height:          1,
+			Timestamp:       1523352601000,
+			PreviousBlockId: &parentHash,
 		},
 		Transactions: []*bc.Tx{
 			types.MapTx(&types.TxData{
 				Version:        1,
 				SerializedSize: 1,
 				Inputs:         []*types.TxInput{types.NewCoinbaseInput(nil)},
-				Outputs:        []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 41250000000, cp)},
+				Outputs:        []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 0, cp)},
 			}),
 		},
 	}
@@ -361,7 +455,7 @@ func TestGasOverBlockLimit(t *testing.T) {
 		}))
 	}
 
-	if err := ValidateBlock(block, parent); err != errOverBlockLimit {
+	if err := ValidateBlock(block, parent, []CoinbaseReward{}); err != errOverBlockLimit {
 		t.Errorf("got error %s, want %s", err, errOverBlockLimit)
 	}
 }
@@ -384,7 +478,7 @@ func TestSetTransactionStatus(t *testing.T) {
 			Height:                1,
 			Timestamp:             1523352601000,
 			PreviousBlockId:       &parentHash,
-			TransactionsRoot:      &bc.Hash{V0: 12212572290317752069, V1: 8979003395977198825, V2: 3978010681554327084, V3: 12322462500143540195},
+			TransactionsRoot:      &bc.Hash{V0: 8176741810667217458, V1: 14830712230021600370, V2: 8921661778795432162, V3: 3391855546006364086},
 			TransactionStatusHash: &bc.Hash{V0: 8682965660674182538, V1: 8424137560837623409, V2: 6979974817894224946, V3: 4673809519342015041},
 		},
 		Transactions: []*bc.Tx{
@@ -392,7 +486,7 @@ func TestSetTransactionStatus(t *testing.T) {
 				Version:        1,
 				SerializedSize: 1,
 				Inputs:         []*types.TxInput{types.NewCoinbaseInput(nil)},
-				Outputs:        []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 199998224, cp)},
+				Outputs:        []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 0, cp)},
 			}),
 			types.MapTx(&types.TxData{
 				Version:        1,
@@ -419,7 +513,7 @@ func TestSetTransactionStatus(t *testing.T) {
 		},
 	}
 
-	if err := ValidateBlock(block, parent); err != nil {
+	if err := ValidateBlock(block, parent, []CoinbaseReward{}); err != nil {
 		t.Fatal(err)
 	}
 

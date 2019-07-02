@@ -1,6 +1,7 @@
 package proposal
 
 import (
+	"encoding/hex"
 	"sort"
 	"strconv"
 	"time"
@@ -24,7 +25,8 @@ const logModule = "mining"
 // createCoinbaseTx returns a coinbase transaction paying an appropriate subsidy
 // based on the passed block height to the provided address.  When the address
 // is nil, the coinbase transaction will instead be redeemable by anyone.
-func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeight uint64) (tx *types.Tx, err error) {
+func createCoinbaseTx(consensusResult *state.ConsensusResult, accountManager *account.Manager, amount uint64) (tx *types.Tx, err error) {
+	blockHeight := consensusResult.BlockHeight + 1
 	amount += consensus.BlockSubsidy(blockHeight)
 	arbitrary := append([]byte{0x00}, []byte(strconv.FormatUint(blockHeight, 10))...)
 
@@ -47,9 +49,37 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 	if err = builder.AddInput(types.NewCoinbaseInput(arbitrary), &txbuilder.SigningInstruction{}); err != nil {
 		return nil, err
 	}
-	if err = builder.AddOutput(types.NewIntraChainOutput(*consensus.BTMAssetID, amount, script)); err != nil {
+	if err = builder.AddOutput(types.NewIntraChainOutput(*consensus.BTMAssetID, 0, script)); err != nil {
 		return nil, err
 	}
+
+	// add the aggregate coinbase rewards
+	var rewards []validation.CoinbaseReward
+	if blockHeight%consensus.RoundVoteBlockNums == 0 {
+		for p, a := range consensusResult.RewardOfCoinbase {
+			program, err := hex.DecodeString(p)
+			if err != nil {
+				return nil, err
+			}
+
+			rewards = append(rewards, validation.CoinbaseReward{
+				Amount:         a,
+				ControlProgram: program,
+			})
+		}
+
+		rewards = append(rewards, validation.CoinbaseReward{
+			Amount:         amount,
+			ControlProgram: script,
+		})
+		sort.Sort(validation.SortByAmount(rewards))
+		for _, r := range rewards {
+			if err = builder.AddOutput(types.NewIntraChainOutput(*consensus.BTMAssetID, r.Amount, r.ControlProgram)); err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	_, txData, err := builder.Build()
 	if err != nil {
 		return nil, err
@@ -140,8 +170,13 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 		}
 	}
 
+	consensusResult, err := c.GetConsensusResultByHash(&preBlockHash)
+	if err != nil {
+		return nil, err
+	}
+
 	// creater coinbase transaction
-	b.Transactions[0], err = createCoinbaseTx(accountManager, txFee, nextBlockHeight)
+	b.Transactions[0], err = createCoinbaseTx(consensusResult, accountManager, txFee)
 	if err != nil {
 		return nil, errors.Wrap(err, "fail on createCoinbaseTx")
 	}

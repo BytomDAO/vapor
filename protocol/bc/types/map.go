@@ -112,12 +112,18 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 		case *CoinbaseInput:
 			coinbase = bc.NewCoinbase(inp.Arbitrary)
 			coinbaseID := addEntry(coinbase)
-
-			out := tx.Outputs[0]
-			value := out.AssetAmount()
+			totalAmount := uint64(0)
+			var asset *bc.AssetID
+			for _, out := range tx.Outputs {
+				totalAmount += out.AssetAmount().Amount
+				asset = out.AssetAmount().AssetId
+			}
 			muxSources[i] = &bc.ValueSource{
-				Ref:   &coinbaseID,
-				Value: &value,
+				Ref: &coinbaseID,
+				Value: &bc.AssetAmount{
+					AssetId: asset,
+					Amount:  totalAmount,
+				},
 			}
 
 		case *VetoInput:
