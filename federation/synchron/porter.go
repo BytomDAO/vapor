@@ -8,7 +8,6 @@ import (
 )
 
 type Porter struct {
-	Inta      int
 	Callbacks [](func(p *Porter) error)
 }
 
@@ -24,5 +23,6 @@ func (p *Porter) Run() {
 	for _, f := range p.Callbacks {
 		log.Info("Running...", runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name())
 		f(p)
+		log.Info(runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name(), " done.")
 	}
 }
