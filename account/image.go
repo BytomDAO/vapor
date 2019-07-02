@@ -49,8 +49,8 @@ func (m *Manager) Restore(image *Image) error {
 	}
 
 	for _, slice := range image.Slice {
-		existed, err := m.store.GetAccountByID(slice.Account.ID)
-		if err != nil || existed != nil {
+		_, err := m.store.GetAccountByID(slice.Account.ID)
+		if err != nil {
 			log.WithFields(log.Fields{
 				"module": logModule,
 				"alias":  slice.Account.Alias,
