@@ -84,7 +84,6 @@ func Bip44ContractIndexKey(accountID string, change bool) []byte {
 
 // ContractKey account control promgram store prefix
 func ContractKey(hash bc.Hash) []byte {
-	fmt.Println("ContractKey...")
 	// h := hash.String()
 	// return append([]byte(ContractPrefix), []byte(h)...)
 	return append([]byte(ContractPrefix), hash.Bytes()...)

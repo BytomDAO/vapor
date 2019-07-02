@@ -280,7 +280,7 @@ func (m *Manager) CreateBatchAddresses(accountID string, change bool, stopIndex 
 }
 
 // DeleteAccount deletes the account's ID or alias matching account ID.
-func (m *Manager) DeleteAccount(accountID string) (err error) {
+func (m *Manager) DeleteAccount(accountID string) error {
 	m.accountMu.Lock()
 	defer m.accountMu.Unlock()
 
@@ -293,9 +293,7 @@ func (m *Manager) DeleteAccount(accountID string) (err error) {
 	m.aliasCache.Remove(account.Alias)
 	m.cacheMu.Unlock()
 
-	m.store.DeleteAccount(account)
-
-	return nil
+	return m.store.DeleteAccount(account)
 }
 
 // FindByAlias retrieves an account's Signer record by its alias
