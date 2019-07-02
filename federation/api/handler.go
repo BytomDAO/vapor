@@ -30,7 +30,9 @@ func (s *Server) ListCrosschainTxs(c *gin.Context, listTxsReq *listCrosschainTxs
 
 	// filter source block height
 	if srcBlockHeight, err := listTxsReq.GetFilterNum("source_block_height"); err == nil {
-		txFilter.SourceBlockHeight = srcBlockHeight.(uint64)
+		if height, ok := srcBlockHeight.(uint64); ok {
+			txFilter.SourceBlockHeight = height
+		}
 	}
 
 	// filter tx hash
