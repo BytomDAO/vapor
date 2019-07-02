@@ -196,15 +196,6 @@ func (store *WalletStore) DeleteRecoveryStatus() {
 	}
 }
 
-// DeleteStandardUTXO delete stardard utxo by outputID
-func (store *WalletStore) DeleteStandardUTXO(outputID bc.Hash) {
-	if store.batch == nil {
-		store.walletDB.Delete(StandardUTXOKey(outputID))
-	} else {
-		store.batch.Delete(StandardUTXOKey(outputID))
-	}
-}
-
 // DeleteTransactions delete transactions when orphan block rollback
 func (store *WalletStore) DeleteTransactions(height uint64) {
 	batch := store.walletDB.NewBatch()
