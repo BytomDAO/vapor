@@ -137,8 +137,11 @@ func (m *Manager) SaveAccount(account *Account) error {
 	m.accountMu.Lock()
 	defer m.accountMu.Unlock()
 
-	a, err := m.store.GetAccountByAlias(account.Alias)
-	if a == nil && err != ErrFindAccount {
+	_, err := m.store.GetAccountByAlias(account.Alias)
+	if err == nil {
+		return ErrDuplicateAlias
+	}
+	if err != ErrFindAccount {
 		return err
 	}
 
