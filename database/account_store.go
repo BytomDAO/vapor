@@ -52,15 +52,16 @@ func (store *AccountStore) CommitBatch() error {
 
 // DeleteAccount set account account ID, account alias and raw account.
 func (store *AccountStore) DeleteAccount(account *acc.Account) error {
-	store.deleteAccountUTXOs(account.ID)
 	batch := store.accountDB.NewBatch()
 	if store.batch != nil {
 		batch = store.batch
 	}
 
+	// delete account utxos
+	store.deleteAccountUTXOs(account.ID)
+
 	// delete account control program
 	cps, err := store.ListControlPrograms()
-	fmt.Println("len(cps):", len(cps))
 	if err != nil {
 		return err
 	}
