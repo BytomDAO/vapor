@@ -28,6 +28,11 @@ func (s *Server) ListCrosschainTxs(c *gin.Context, listTxsReq *listCrosschainTxs
 		}
 	}
 
+	// filter source block height
+	if srcBlockHeight, err := listTxsReq.GetFilterNum("source_block_height"); err == nil {
+		txFilter.SourceBlockHeight = srcBlockHeight.(uint64)
+	}
+
 	// filter tx hash
 	if txHash, err := listTxsReq.GetFilterString("source_tx_hash"); err == nil && txHash != "" {
 		txFilter.SourceTxHash = txHash
