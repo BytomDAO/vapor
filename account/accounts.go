@@ -306,18 +306,7 @@ func (m *Manager) FindByAlias(alias string) (*Account, error) {
 		return m.FindByID(cachedID.(string))
 	}
 
-	a, err := m.store.GetAccountByAlias(alias)
-	if err != nil {
-		return nil, err
-	}
-	if a == nil {
-		return nil, ErrFindAccount
-	}
-
-	m.cacheMu.Lock()
-	m.aliasCache.Add(alias, a.ID)
-	m.cacheMu.Unlock()
-	return m.FindByID(a.ID)
+	return m.store.GetAccountByAlias(alias)
 }
 
 // FindByID returns an account's Signer record by its ID.
