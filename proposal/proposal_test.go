@@ -86,10 +86,6 @@ func TestCreateCoinbaseTx(t *testing.T) {
 					ControlProgram: []byte{0x51},
 				},
 				validation.CoinbaseReward{
-					Amount:         uint64(100),
-					ControlProgram: []byte{0x51},
-				},
-				validation.CoinbaseReward{
 					Amount:         uint64(200),
 					ControlProgram: []byte{0x52},
 				},
@@ -102,7 +98,7 @@ func TestCreateCoinbaseTx(t *testing.T) {
 					ControlProgram: []byte{0x55},
 				},
 				validation.CoinbaseReward{
-					Amount:         uint64(2000),
+					Amount:         uint64(2100),
 					ControlProgram: []byte{0x51},
 				},
 			},

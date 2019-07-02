@@ -1,6 +1,7 @@
 package proposal
 
 import (
+	"bytes"
 	"encoding/hex"
 	"sort"
 	"strconv"
@@ -12,6 +13,7 @@ import (
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
+	"github.com/vapor/math/checked"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -54,24 +56,35 @@ func createCoinbaseTx(consensusResult *state.ConsensusResult, accountManager *ac
 	}
 
 	// add the aggregate coinbase rewards
-	var rewards []validation.CoinbaseReward
 	if blockHeight%consensus.RoundVoteBlockNums == 0 {
+		var rewards []validation.CoinbaseReward
+		aggregateFlag := false
 		for p, a := range consensusResult.RewardOfCoinbase {
+			coinbaseAmount := a
 			program, err := hex.DecodeString(p)
 			if err != nil {
 				return nil, err
 			}
 
+			if res := bytes.Compare(program, script); res == 0 {
+				var ok bool
+				if coinbaseAmount, ok = checked.AddUint64(coinbaseAmount, amount); !ok {
+					return nil, validation.ErrOverflow
+				}
+				aggregateFlag = true
+			}
 			rewards = append(rewards, validation.CoinbaseReward{
-				Amount:         a,
+				Amount:         coinbaseAmount,
 				ControlProgram: program,
 			})
 		}
 
-		rewards = append(rewards, validation.CoinbaseReward{
-			Amount:         amount,
-			ControlProgram: script,
-		})
+		if !aggregateFlag {
+			rewards = append(rewards, validation.CoinbaseReward{
+				Amount:         amount,
+				ControlProgram: script,
+			})
+		}
 		sort.Sort(validation.SortByAmount(rewards))
 		for _, r := range rewards {
 			if err = builder.AddOutput(types.NewIntraChainOutput(*consensus.BTMAssetID, r.Amount, r.ControlProgram)); err != nil {

@@ -7,8 +7,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/protocol/validation"
 	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
+	"github.com/vapor/math/checked"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
@@ -102,12 +104,26 @@ func ValidateBlock(b *bc.Block, parent *types.BlockHeader, rewards []CoinbaseRew
 	if err != nil {
 		return err
 	}
-	rewards = append(rewards, CoinbaseReward{ControlProgram: reward.ControlProgram})
+
 	if b.Height%consensus.RoundVoteBlockNums == 0 {
-		rewards = append(rewards, *reward)
+		aggregateFlag := false
+		for i, r := range rewards {
+			if res := bytes.Compare(r.ControlProgram, reward.ControlProgram); res == 0 {
+				var ok bool
+				if rewards[i].Amount, ok = checked.AddUint64(rewards[i].Amount, reward.Amount); !ok {
+					return validation.ErrOverflow
+				}
+				aggregateFlag = true
+				break
+			}
+		}
+
+		if !aggregateFlag {
+			rewards = append(rewards, *reward)
+		}
 		sort.Sort(SortByAmount(rewards))
 	}
-
+	rewards = append([]CoinbaseReward{CoinbaseReward{ControlProgram: reward.ControlProgram}}, rewards...)
 	if err := checkCoinbaseTx(b, rewards); err != nil {
 		return err
 	}
