@@ -110,12 +110,12 @@ func (ctx *chainTestContext) getUtxoEntries() map[string]*storage.UtxoEntry {
 	defer iter.Release()
 
 	for iter.Next() {
-		utxoEntry := storage.UtxoEntry{}
-		if err := proto.Unmarshal(iter.Value(), &utxoEntry); err != nil {
+		utxoEntry := new(storage.UtxoEntry)
+		if err := proto.Unmarshal(iter.Value(), utxoEntry); err != nil {
 			return nil
 		}
 		key := string(iter.Key())
-		utxoEntries[key] = &utxoEntry
+		utxoEntries[key] = utxoEntry
 	}
 	return utxoEntries
 }
