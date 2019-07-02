@@ -129,7 +129,7 @@ func AnnotatedTxs(txs []*types.Tx, w *Wallet) []*query.AnnotatedTx {
 		annotatedTxs = append(annotatedTxs, annotatedTx)
 	}
 
-	annotateTxsAccount(annotatedTxs, w.store)
+	w.annotateTxsAccount(annotatedTxs)
 	annotateTxsAsset(w, annotatedTxs)
 
 	return annotatedTxs

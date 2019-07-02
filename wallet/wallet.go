@@ -190,7 +190,7 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 	if err := saveExternalAssetDefinition(block, w.store); err != nil {
 		return err
 	}
-	annotateTxsAccount(annotatedTxs, w.store)
+	w.annotateTxsAccount(annotatedTxs)
 
 	if err := w.store.InitBatch(); err != nil {
 		return err

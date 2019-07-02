@@ -149,7 +149,7 @@ func (w *Wallet) saveUnconfirmedTx(tx *types.Tx) error {
 	annotatedTx := w.buildAnnotatedUnconfirmedTx(tx)
 	annotatedTxs := []*query.AnnotatedTx{}
 	annotatedTxs = append(annotatedTxs, annotatedTx)
-	annotateTxsAccount(annotatedTxs, w.store)
+	w.annotateTxsAccount(annotatedTxs)
 
 	if err := w.store.SetUnconfirmedTransaction(tx.ID.String(), annotatedTxs[0]); err != nil {
 		return err

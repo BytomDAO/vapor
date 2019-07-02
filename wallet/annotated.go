@@ -70,14 +70,14 @@ func (w *Wallet) getAliasDefinition(assetID bc.AssetID) (string, json.RawMessage
 }
 
 // annotateTxs adds account data to transactions
-func annotateTxsAccount(txs []*query.AnnotatedTx, store WalletStore) {
+func (w *Wallet) annotateTxsAccount(txs []*query.AnnotatedTx) {
 	for i, tx := range txs {
 		for j, input := range tx.Inputs {
 			//issue asset tx input SpentOutputID is nil
 			if input.SpentOutputID == nil {
 				continue
 			}
-			localAccount, err := getAccountFromACP(input.ControlProgram, store)
+			localAccount, err := w.getAccountFromACP(input.ControlProgram)
 			if localAccount == nil || err != nil {
 				continue
 			}
@@ -85,7 +85,7 @@ func annotateTxsAccount(txs []*query.AnnotatedTx, store WalletStore) {
 			txs[i].Inputs[j].AccountID = localAccount.ID
 		}
 		for j, output := range tx.Outputs {
-			localAccount, err := getAccountFromACP(output.ControlProgram, store)
+			localAccount, err := w.getAccountFromACP(output.ControlProgram)
 			if localAccount == nil || err != nil {
 				continue
 			}
@@ -95,18 +95,19 @@ func annotateTxsAccount(txs []*query.AnnotatedTx, store WalletStore) {
 	}
 }
 
-func getAccountFromACP(program []byte, store WalletStore) (*account.Account, error) {
+func (w *Wallet) getAccountFromACP(program []byte) (*account.Account, error) {
 	var hash [32]byte
 	sha3pool.Sum256(hash[:], program)
-	accountCP, err := store.GetControlProgram(bc.NewHash(hash))
+	accountCP, err := w.store.GetControlProgram(bc.NewHash(hash))
 	if err != nil {
 		return nil, err
 	}
 
-	account, err := store.GetAccount(accountCP.AccountID)
+	account, err := w.AccountMgr.FindByID(accountCP.AccountID)
 	if err != nil {
 		return nil, err
 	}
+
 	return account, nil
 }
 
