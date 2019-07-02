@@ -1,9 +1,7 @@
 package database
 
 import (
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -241,8 +239,6 @@ func (store *AccountStore) ListControlPrograms() ([]*acc.CtrlProgram, error) {
 
 	for cpIter.Next() {
 		cp := new(acc.CtrlProgram)
-		v := hex.EncodeToString(cpIter.Value())
-		fmt.Println("v:", v)
 		if err := json.Unmarshal(cpIter.Value(), cp); err != nil {
 			return nil, err
 		}
