@@ -119,6 +119,7 @@ func TestDBIteratorReverse(t *testing.T) {
 
 	itr = db.IteratorPrefixWithStart([]byte("aaa"), nil, true)
 
+	require.Equal(t, true, itr.Next())
 	require.Equal(t, []byte("aaa22"), itr.Key())
 
 	require.Equal(t, true, itr.Next())
