@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+
 	acc "github.com/vapor/account"
 	"github.com/vapor/common"
 	"github.com/vapor/crypto/ed25519/chainkd"
