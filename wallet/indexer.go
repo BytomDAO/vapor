@@ -249,6 +249,8 @@ func (w *Wallet) GetTransactions(accountID string, StartTxID string, count uint,
 
 	if unconfirmed {
 		sort.Sort(SortByTimestamp(annotatedTxs))
+	} else {
+		sort.Sort(SortByHeight(annotatedTxs))
 	}
 
 	return newAnnotatedTxs, nil

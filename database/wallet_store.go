@@ -419,7 +419,7 @@ func (store *WalletStore) ListTransactions(accountID string, StartTxID string, c
 		preFix = UnconfirmedTxPrefix
 	}
 
-	itr := store.walletDB.IteratorPrefixWithStart([]byte(preFix), startKey)
+	itr := store.walletDB.IteratorPrefixWithStart([]byte(preFix), startKey, true)
 	defer itr.Release()
 
 	for txNum := count; itr.Next() && txNum > 0; txNum-- {
