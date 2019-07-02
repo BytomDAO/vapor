@@ -293,13 +293,7 @@ func (m *Manager) DeleteAccount(accountID string) (err error) {
 	m.aliasCache.Remove(account.Alias)
 	m.cacheMu.Unlock()
 
-	if err := m.store.InitBatch(); err != nil {
-		return err
-	}
 	m.store.DeleteAccount(account)
-	if err := m.store.CommitBatch(); err != nil {
-		return err
-	}
 
 	return nil
 }
