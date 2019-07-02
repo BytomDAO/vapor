@@ -1,7 +1,6 @@
 package proposal
 
 import (
-	"fmt"
 	"sort"
 	"strconv"
 	"time"
@@ -100,7 +99,16 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 
 	txs := txPool.GetTransactions()
 	sort.Sort(byTime(txs))
+
+	entriesTxs := []*bc.Tx{}
 	for _, txDesc := range txs {
+		entriesTxs = append(entriesTxs, txDesc.Tx.Tx)
+	}
+
+	validateResults := validation.ValidateTxs(entriesTxs, bcBlock)
+	for _, validateResult := range validateResults {
+		index := validateResult.GetIndex()
+		txDesc := txs[index]
 		tx := txDesc.Tx.Tx
 		gasOnlyTx := false
 
@@ -109,8 +117,8 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			continue
 		}
 
-		gasStatus, err := validation.ValidateTx(tx, bcBlock)
-		if err != nil {
+		gasStatus := validateResult.GetGasState()
+		if validateResult.GetError() != nil {
 			if !gasStatus.GasValid {
 				blkGenSkipTxForErr(txPool, &tx.ID, err)
 				continue
@@ -139,6 +147,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 		if gasUsed == consensus.MaxBlockGas {
 			break
 		}
+
 	}
 
 	// creater coinbase transaction
@@ -162,18 +171,4 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 func blkGenSkipTxForErr(txPool *protocol.TxPool, txHash *bc.Hash, err error) {
 	log.WithFields(log.Fields{"module": logModule, "error": err}).Error("mining block generation: skip tx due to")
 	txPool.RemoveTransaction(txHash)
-}
-
-func validateTxs(txDescs []*protocol.TxDesc, block *bc.Block) []*bc.Tx {
-	txs := []*bc.Tx{}
-	for _, txDesc := range txDescs {
-		txs = append(txs, txDesc.Tx.Tx)
-	}
-
-	validateResults := validation.ValidateTxs(txs, block)
-	for i, validateResult := range validateResults {
-		fmt.Println(i, validateResult)
-	}
-
-	return txs
 }
