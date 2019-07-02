@@ -2,7 +2,6 @@ package wallet
 
 import (
 	"encoding/json"
-	"fmt"
 
 	log "github.com/sirupsen/logrus"
 
@@ -98,22 +97,15 @@ func annotateTxsAccount(txs []*query.AnnotatedTx, store WalletStorer) {
 
 func getAccountFromACP(program []byte, store WalletStorer) (*account.Account, error) {
 	var hash [32]byte
-
 	sha3pool.Sum256(hash[:], program)
 	accountCP, err := store.GetControlProgram(bc.NewHash(hash))
 	if err != nil {
 		return nil, err
 	}
-	if accountCP == nil {
-		return nil, fmt.Errorf("failed get account control program:%x ", hash)
-	}
 
 	account, err := store.GetAccount(accountCP.AccountID)
 	if err != nil {
 		return nil, err
-	}
-	if account == nil {
-		return nil, fmt.Errorf("failed get account:%s ", accountCP.AccountID)
 	}
 	return account, nil
 }
