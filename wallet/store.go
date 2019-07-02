@@ -19,7 +19,7 @@ type WalletStore interface {
 	DeleteWalletTransactions()
 	DeleteWalletUTXOs()
 	GetAsset(*bc.AssetID) (*asset.Asset, error)
-	GetControlProgram(bc.Hash) (*acc.CtrlProgram, error)
+	GetControlProgram(bc.Hash) (*acc.CtrlProgram, error) // delete it
 	GetGlobalTransactionIndex(string) []byte
 	GetStandardUTXO(bc.Hash) (*acc.UTXO, error)
 	GetTransaction(string) (*query.AnnotatedTx, error)
@@ -33,7 +33,7 @@ type WalletStore interface {
 	SetContractUTXO(bc.Hash, *acc.UTXO) error
 	SetGlobalTransactionIndex(string, *bc.Hash, uint64)
 	SetRecoveryStatus([]byte, []byte) // recoveryManager.state isn't exported outside
-	SetStandardUTXO(bc.Hash, *acc.UTXO) error
+	SetStandardUTXO(bc.Hash, *acc.UTXO) error // delete it
 	SetTransaction(uint64, *query.AnnotatedTx) error
 	SetUnconfirmedTransaction(string, *query.AnnotatedTx) error
 	SetWalletInfo([]byte) // need move database.NewWalletStore in wallet package
