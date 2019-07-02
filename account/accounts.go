@@ -198,12 +198,12 @@ func (m *Manager) UpdateAccountAlias(accountID string, newAlias string) error {
 	oldAccount := *account
 
 	normalizedAlias := strings.ToLower(strings.TrimSpace(newAlias))
-	a, err := m.store.GetAccountByAlias(normalizedAlias)
-	if a == nil && err != ErrFindAccount {
-		return err
-	}
-	if a != nil {
+	_, err = m.store.GetAccountByAlias(normalizedAlias)
+	if err == nil {
 		return ErrDuplicateAlias
+	}
+	if err != ErrFindAccount {
+		return err
 	}
 
 	m.cacheMu.Lock()
