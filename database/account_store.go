@@ -52,7 +52,7 @@ func (store *AccountStore) CommitBatch() error {
 
 // DeleteAccount set account account ID, account alias and raw account.
 func (store *AccountStore) DeleteAccount(account *acc.Account) error {
-	store.DeleteAccountUTXOs(account.ID)
+	store.deleteAccountUTXOs(account.ID)
 	batch := store.accountDB.NewBatch()
 	if store.batch != nil {
 		batch = store.batch
@@ -88,8 +88,8 @@ func (store *AccountStore) DeleteAccount(account *acc.Account) error {
 	return nil
 }
 
-// DeleteAccountUTXOs delete account utxos by accountID
-func (store *AccountStore) DeleteAccountUTXOs(accountID string) error {
+// deleteAccountUTXOs delete account utxos by accountID
+func (store *AccountStore) deleteAccountUTXOs(accountID string) error {
 	batch := store.accountDB.NewBatch()
 	if store.batch != nil {
 		batch = store.batch
