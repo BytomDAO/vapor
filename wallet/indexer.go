@@ -310,7 +310,7 @@ func (w *Wallet) GetTransactions(accountID string, StartTxID string, count uint,
 		preFix = UnconfirmedTxPrefix
 	}
 
-	itr := w.DB.IteratorPrefixWithStart([]byte(preFix), startKey)
+	itr := w.DB.IteratorPrefixWithStart([]byte(preFix), startKey, true)
 	defer itr.Release()
 
 	for txNum := count; itr.Next() && txNum > 0; txNum-- {
@@ -327,6 +327,8 @@ func (w *Wallet) GetTransactions(accountID string, StartTxID string, count uint,
 
 	if unconfirmed {
 		sort.Sort(SortByTimestamp(annotatedTxs))
+	} else {
+		sort.Sort(SortByHeight(annotatedTxs))
 	}
 
 	return annotatedTxs, nil
