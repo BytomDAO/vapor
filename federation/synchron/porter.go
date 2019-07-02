@@ -8,15 +8,21 @@ import (
 )
 
 type Porter struct {
-	MainFuncs [](func() error)
+	Inta      int
+	Callbacks [](func(p *Porter) error)
 }
 
 func NewPorter() *Porter {
 	return &Porter{}
 }
 
+func (p *Porter) AttachCallback(f func(p *Porter) error) {
+	p.Callbacks = append(p.Callbacks, f)
+}
+
 func (p *Porter) Run() {
-	for _, f := range p.MainFuncs {
-		log.Info(runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name())
+	for _, f := range p.Callbacks {
+		log.Info("Running...", runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name())
+		f(p)
 	}
 }
