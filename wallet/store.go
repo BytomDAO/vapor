@@ -14,7 +14,7 @@ type WalletStore interface {
 	DeleteContractUTXO(bc.Hash)
 	DeleteRecoveryStatus()
 	DeleteStandardUTXO(bc.Hash) // delete it
-	DeleteTransactions(uint64)  
+	DeleteTransactions(uint64)
 	DeleteUnconfirmedTransaction(string)
 	DeleteWalletTransactions()
 	DeleteWalletUTXOs()
@@ -33,7 +33,6 @@ type WalletStore interface {
 	SetContractUTXO(bc.Hash, *acc.UTXO) error
 	SetGlobalTransactionIndex(string, *bc.Hash, uint64)
 	SetRecoveryStatus([]byte, []byte) // recoveryManager.state isn't exported outside
-	SetStandardUTXO(bc.Hash, *acc.UTXO) error // delete it
 	SetTransaction(uint64, *query.AnnotatedTx) error
 	SetUnconfirmedTransaction(string, *query.AnnotatedTx) error
 	SetWalletInfo([]byte) // need move database.NewWalletStore in wallet package

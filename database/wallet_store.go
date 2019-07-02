@@ -477,20 +477,6 @@ func (store *WalletStore) SetRecoveryStatus(recoveryKey, rawStatus []byte) {
 	}
 }
 
-// SetStandardUTXO set standard utxo
-func (store *WalletStore) SetStandardUTXO(outputID bc.Hash, utxo *acc.UTXO) error {
-	data, err := json.Marshal(utxo)
-	if err != nil {
-		return err
-	}
-	if store.batch == nil {
-		store.walletDB.Set(StandardUTXOKey(outputID), data)
-	} else {
-		store.batch.Set(StandardUTXOKey(outputID), data)
-	}
-	return nil
-}
-
 // SetTransaction set raw transaction by block height and tx position
 func (store *WalletStore) SetTransaction(height uint64, tx *query.AnnotatedTx) error {
 	batch := store.walletDB.NewBatch()
