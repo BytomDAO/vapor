@@ -128,6 +128,7 @@ func newGoLevelDBIterator(source iterator.Iterator, start []byte, isReverse bool
 		valid := source.Seek(start)
 		if !valid && isReverse {
 			source.Last()
+			source.Next()
 		}
 	} else if isReverse {
 		source.Last()
