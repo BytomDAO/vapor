@@ -662,3 +662,8 @@ func (m *Manager) SaveControlPrograms(progs ...*CtrlProgram) error {
 func (m *Manager) SetStandardUTXO(outputID bc.Hash, utxo *UTXO) error {
 	return m.store.SetStandardUTXO(outputID, utxo)
 }
+
+func (m *Manager) DeleteStandardUTXO(outputID bc.Hash) {
+	m.store.DeleteStandardUTXO(outputID)
+	return
+}
