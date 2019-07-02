@@ -645,10 +645,8 @@ func (m *Manager) saveControlProgram(prog *CtrlProgram, updateIndex bool) error 
 			m.store.SetBip44ContractIndex(acct.ID, prog.Change, prog.KeyIndex)
 		}
 	}
-	if err := m.store.CommitBatch(); err != nil {
-		return err
-	}
-	return nil
+
+	return m.store.CommitBatch()
 }
 
 // SaveControlPrograms save account control programs
