@@ -19,10 +19,10 @@ const (
 )
 
 var (
-	errVotingOperationOverFlow = errors.New("voting operation result overflow")
-	errDoubleSignBlock         = errors.New("the consensus is double sign in same height of different block")
-	errInvalidSignature        = errors.New("the signature of block is invalid")
-	errSignForkChain           = errors.New("can not sign fork before the irreversible block")
+	errMathOperationOverFlow = errors.New("arithmetic operation result overflow")
+	errDoubleSignBlock       = errors.New("the consensus is double sign in same height of different block")
+	errInvalidSignature      = errors.New("the signature of block is invalid")
+	errSignForkChain         = errors.New("can not sign fork before the irreversible block")
 )
 
 func signCacheKey(blockHash, pubkey string) string {

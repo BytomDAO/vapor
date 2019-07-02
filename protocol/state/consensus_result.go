@@ -14,7 +14,7 @@ import (
 	"github.com/vapor/protocol/validation"
 )
 
-var errVotingOperationOverFlow = errors.New("voting operation result overflow")
+var errMathOperationOverFlow = errors.New("arithmetic operation result overflow")
 
 // ConsensusNode represents a consensus node
 type ConsensusNode struct {
@@ -68,8 +68,9 @@ func (c *ConsensusResult) ApplyBlock(block *types.Block) error {
 	}
 
 	program := hex.EncodeToString(reward.ControlProgram)
-	if c.RewardOfCoinbase[program], ok = checked.AddUint64(c.RewardOfCoinbase[program], reward.Amount); !ok {
-		return errVotingOperationOverFlow
+	c.RewardOfCoinbase[program], ok = checked.AddUint64(c.RewardOfCoinbase[program], reward.Amount)
+	if !ok {
+		return errMathOperationOverFlow
 	}
 
 	for _, tx := range block.Transactions {
@@ -82,7 +83,7 @@ func (c *ConsensusResult) ApplyBlock(block *types.Block) error {
 			pubkey := hex.EncodeToString(vetoInput.Vote)
 			c.NumOfVote[pubkey], ok = checked.SubUint64(c.NumOfVote[pubkey], vetoInput.Amount)
 			if !ok {
-				return errVotingOperationOverFlow
+				return errMathOperationOverFlow
 			}
 
 			if c.NumOfVote[pubkey] == 0 {
@@ -98,7 +99,7 @@ func (c *ConsensusResult) ApplyBlock(block *types.Block) error {
 
 			pubkey := hex.EncodeToString(voteOutput.Vote)
 			if c.NumOfVote[pubkey], ok = checked.AddUint64(c.NumOfVote[pubkey], voteOutput.Amount); !ok {
-				return errVotingOperationOverFlow
+				return errMathOperationOverFlow
 			}
 		}
 	}
@@ -160,7 +161,7 @@ func (c *ConsensusResult) DetachBlock(block *types.Block) error {
 
 	program := hex.EncodeToString(reward.ControlProgram)
 	if c.RewardOfCoinbase[program], ok = checked.SubUint64(c.RewardOfCoinbase[program], reward.Amount); !ok {
-		return errVotingOperationOverFlow
+		return errMathOperationOverFlow
 	}
 
 	if c.RewardOfCoinbase[program] == 0 {
@@ -177,7 +178,7 @@ func (c *ConsensusResult) DetachBlock(block *types.Block) error {
 
 			pubkey := hex.EncodeToString(vetoInput.Vote)
 			if c.NumOfVote[pubkey], ok = checked.AddUint64(c.NumOfVote[pubkey], vetoInput.Amount); !ok {
-				return errVotingOperationOverFlow
+				return errMathOperationOverFlow
 			}
 		}
 
@@ -190,7 +191,7 @@ func (c *ConsensusResult) DetachBlock(block *types.Block) error {
 			pubkey := hex.EncodeToString(voteOutput.Vote)
 			c.NumOfVote[pubkey], ok = checked.SubUint64(c.NumOfVote[pubkey], voteOutput.Amount)
 			if !ok {
-				return errVotingOperationOverFlow
+				return errMathOperationOverFlow
 			}
 
 			if c.NumOfVote[pubkey] == 0 {
@@ -207,14 +208,19 @@ func (c *ConsensusResult) DetachBlock(block *types.Block) error {
 
 func (c *ConsensusResult) Fork() *ConsensusResult {
 	f := &ConsensusResult{
-		Seq:         c.Seq,
-		NumOfVote:   map[string]uint64{},
-		BlockHash:   c.BlockHash,
-		BlockHeight: c.BlockHeight,
+		Seq:              c.Seq,
+		NumOfVote:        map[string]uint64{},
+		RewardOfCoinbase: map[string]uint64{},
+		BlockHash:        c.BlockHash,
+		BlockHeight:      c.BlockHeight,
 	}
 
 	for key, value := range c.NumOfVote {
 		f.NumOfVote[key] = value
+	}
+
+	for key, value := range c.RewardOfCoinbase {
+		f.RewardOfCoinbase[key] = value
 	}
 	return f
 }
