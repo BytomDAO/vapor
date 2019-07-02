@@ -113,14 +113,13 @@ func CreateAccount(xpubs []chainkd.XPub, quorum int, alias string, acctIndex uin
 	return &Account{Signer: signer, ID: id, Alias: strings.ToLower(strings.TrimSpace(alias))}, nil
 }
 
-func (m *Manager) saveAccount(account *Account, updateIndex bool) error {
+func (m *Manager) saveAccount(account *Account) error {
 	if err := m.store.InitBatch(); err != nil {
 		return err
 	}
 
-	if updateIndex {
-		m.store.SetAccountIndex(account)
-	}
+	// update account index
+	m.store.SetAccountIndex(account)
 	if err := m.store.SetAccount(account); err != nil {
 		return err
 	}
@@ -154,8 +153,7 @@ func (m *Manager) SaveAccount(account *Account) error {
 		return ErrDuplicateIndex
 	}
 
-	currentIndex := m.store.GetAccountIndex(account.XPubs)
-	return m.saveAccount(account, account.KeyIndex > currentIndex)
+	return m.saveAccount(account)
 }
 
 // Create creates and save a new Account.
@@ -180,7 +178,7 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string, deriveR
 		return nil, err
 	}
 
-	if err := m.saveAccount(account, true); err != nil {
+	if err := m.saveAccount(account); err != nil {
 		return nil, err
 	}
 

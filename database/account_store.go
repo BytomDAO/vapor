@@ -282,12 +282,15 @@ func (store *AccountStore) SetAccount(account *acc.Account) error {
 	return nil
 }
 
-// SetAccountIndex set account account ID, account alias and raw account.
+// SetAccountIndex update account index
 func (store *AccountStore) SetAccountIndex(account *acc.Account) {
-	if store.batch == nil {
-		store.accountDB.Set(accountIndexKey(account.XPubs), common.Unit64ToBytes(account.KeyIndex))
-	} else {
-		store.batch.Set(accountIndexKey(account.XPubs), common.Unit64ToBytes(account.KeyIndex))
+	currentIndex := store.GetAccountIndex(account.XPubs)
+	if account.KeyIndex > currentIndex {
+		if store.batch == nil {
+			store.accountDB.Set(accountIndexKey(account.XPubs), common.Unit64ToBytes(account.KeyIndex))
+		} else {
+			store.batch.Set(accountIndexKey(account.XPubs), common.Unit64ToBytes(account.KeyIndex))
+		}
 	}
 }
 
