@@ -163,11 +163,11 @@ func (db *MemDB) IteratorPrefix(prefix []byte) Iterator {
 	return it
 }
 
-func (db *MemDB) IteratorPrefixWithStart(Prefix, start []byte) Iterator {
+func (db *MemDB) IteratorPrefixWithStart(Prefix, start []byte, isReverse bool) Iterator {
 	db.mtx.Lock()
 	defer db.mtx.Unlock()
 
-	keys := db.getSortedKeys(start)
+	keys := db.getSortedKeys(start, isReverse)
 	return newMemDBIteratorWithArgs(db, keys, start)
 }
 
@@ -175,7 +175,7 @@ func (db *MemDB) NewBatch() Batch {
 	return &memDBBatch{db, nil}
 }
 
-func (db *MemDB) getSortedKeys(start []byte) []string {
+func (db *MemDB) getSortedKeys(start []byte, reverse bool) []string {
 	keys := []string{}
 	for key := range db.db {
 		if bytes.Compare([]byte(key), start) < 0 {
@@ -184,6 +184,14 @@ func (db *MemDB) getSortedKeys(start []byte) []string {
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
+	if reverse {
+		nkeys := len(keys)
+		for i := 0; i < nkeys/2; i++ {
+			temp := keys[i]
+			keys[i] = keys[nkeys-i-1]
+			keys[nkeys-i-1] = temp
+		}
+	}
 	return keys
 }
 

@@ -118,18 +118,31 @@ func (db *GoLevelDB) Stats() map[string]string {
 }
 
 type goLevelDBIterator struct {
-	source iterator.Iterator
-	start  []byte
+	source    iterator.Iterator
+	start     []byte
+	isReverse bool
 }
 
-func newGoLevelDBIterator(source iterator.Iterator, start []byte) *goLevelDBIterator {
-	if start != nil {
-		source.Seek(start)
+func newGoLevelDBIterator(source iterator.Iterator, start []byte, isReverse bool) *goLevelDBIterator {
+	if isReverse {
+		if start == nil {
+			source.Last()
+		} else {
+			valid := source.Seek(start)
+			if !valid {
+				source.Last()
+			}
+		}
+	} else {
+		if start != nil {
+			source.Seek(start)
+		}
 	}
 
 	return &goLevelDBIterator{
-		source: source,
-		start:  start,
+		source:    source,
+		start:     start,
+		isReverse: isReverse,
 	}
 }
 
@@ -161,6 +174,9 @@ func (it *goLevelDBIterator) Error() error {
 
 func (it *goLevelDBIterator) Next() bool {
 	it.assertNoError()
+	if it.isReverse {
+		return it.source.Prev()
+	}
 	return it.source.Next()
 }
 
@@ -182,9 +198,9 @@ func (db *GoLevelDB) IteratorPrefix(prefix []byte) Iterator {
 	return &goLevelDBIterator{source: db.db.NewIterator(util.BytesPrefix(prefix), nil)}
 }
 
-func (db *GoLevelDB) IteratorPrefixWithStart(Prefix, start []byte) Iterator {
+func (db *GoLevelDB) IteratorPrefixWithStart(Prefix, start []byte, isReverse bool) Iterator {
 	itr := db.db.NewIterator(util.BytesPrefix(Prefix), nil)
-	return newGoLevelDBIterator(itr, start)
+	return newGoLevelDBIterator(itr, start, isReverse)
 }
 
 func (db *GoLevelDB) NewBatch() Batch {
