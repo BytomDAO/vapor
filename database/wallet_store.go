@@ -296,7 +296,7 @@ func (store *WalletStore) GetAsset(assetID *bc.AssetID) (*asset.Asset, error) {
 func (store *WalletStore) GetControlProgram(hash bc.Hash) (*acc.CtrlProgram, error) {
 	rawProgram := store.walletDB.Get(ContractKey(hash))
 	if rawProgram == nil {
-		return nil, fmt.Errorf("failed get account control program:%x ", hash)
+		return nil, acc.ErrFindCtrlProgram
 	}
 	accountCP := new(acc.CtrlProgram)
 	if err := json.Unmarshal(rawProgram, &accountCP); err != nil {
