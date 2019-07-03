@@ -21,31 +21,12 @@ import (
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/database"
 	dbm "github.com/vapor/database/leveldb"
+	"github.com/vapor/errors"
 	"github.com/vapor/event"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
-
-func TestEncodeDecodeGlobalTxIndex(t *testing.T) {
-	want := &struct {
-		BlockHash bc.Hash
-		Position  uint64
-	}{
-		BlockHash: bc.NewHash([32]byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20}),
-		Position:  1,
-	}
-
-	globalTxIdx := CalcGlobalTxIndex(&want.BlockHash, want.Position)
-	blockHashGot, positionGot := parseGlobalTxIdx(globalTxIdx)
-	if *blockHashGot != want.BlockHash {
-		t.Errorf("blockHash mismatch. Get: %v. Expect: %v", *blockHashGot, want.BlockHash)
-	}
-
-	if positionGot != want.Position {
-		t.Errorf("position mismatch. Get: %v. Expect: %v", positionGot, want.Position)
-	}
-}
 
 func TestWalletVersion(t *testing.T) {
 	// prepare wallet
@@ -129,6 +110,7 @@ func TestWalletUpdate(t *testing.T) {
 
 	store := database.NewStore(testDB)
 	testStore := database.NewWalletStore(testDB)
+	// testStore := newMockWalletStore(testDB)
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
 
@@ -412,7 +394,9 @@ func mockSingleBlock(tx *types.Tx) *types.Block {
 }
 
 var (
-	WalletKey = []byte{0x00, 0x3a}
+	WalletKey     = []byte{0x00, 0x3a}
+	TxIndexPrefix = []byte{0x01, 0x3a}
+	TxPrefix      = []byte{0x02, 0x3a}
 )
 
 func CalcGlobalTxIndex(blockHash *bc.Hash, position uint64) []byte {
@@ -420,6 +404,14 @@ func CalcGlobalTxIndex(blockHash *bc.Hash, position uint64) []byte {
 	copy(txIdx[:32], blockHash.Bytes())
 	binary.BigEndian.PutUint64(txIdx[32:], position)
 	return txIdx
+}
+
+func calcTxIndexKey(txID string) []byte {
+	return append(TxIndexPrefix, []byte(txID)...)
+}
+
+func calcAnnotatedKey(formatKey string) []byte {
+	return append(TxPrefix, []byte(formatKey)...)
 }
 
 type mockAccountStore struct {
@@ -488,7 +480,8 @@ func (store *mockWalletStore) GetAsset(*bc.AssetID) (*asset.Asset, error)       
 func (store *mockWalletStore) GetControlProgram(bc.Hash) (*acc.CtrlProgram, error) { return nil, nil }
 func (store *mockWalletStore) GetGlobalTransactionIndex(string) []byte             { return nil }
 func (store *mockWalletStore) GetStandardUTXO(bc.Hash) (*acc.UTXO, error)          { return nil, nil }
-func (store *mockWalletStore) GetTransaction(string) (*query.AnnotatedTx, error)   { return nil, nil }
+
+// func (store *mockWalletStore) GetTransaction(string) (*query.AnnotatedTx, error)   { return nil, nil }
 func (store *mockWalletStore) GetUnconfirmedTransaction(string) (*query.AnnotatedTx, error) {
 	return nil, nil
 }
@@ -509,6 +502,25 @@ func (store *mockWalletStore) SetUnconfirmedTransaction(string, *query.Annotated
 	return nil
 }
 
+// GetTransaction get tx by txid
+func (store *mockWalletStore) GetTransaction(txID string) (*query.AnnotatedTx, error) {
+	formatKey := store.walletDB.Get(calcTxIndexKey(txID))
+	if formatKey == nil {
+		return nil, errors.New("account TXID not found")
+	}
+	rawTx := store.walletDB.Get(calcAnnotatedKey(string(formatKey)))
+	tx := new(query.AnnotatedTx)
+	if err := json.Unmarshal(rawTx, tx); err != nil {
+		return nil, err
+	}
+	return tx, nil
+}
+
+// GetWalletInfo get wallet information
+func (store *mockWalletStore) GetWalletInfo() []byte {
+	return store.walletDB.Get([]byte(WalletKey))
+}
+
 // SetWalletInfo get wallet information
 func (store *mockWalletStore) SetWalletInfo(rawWallet []byte) {
 	if store.batch == nil {
@@ -516,9 +528,4 @@ func (store *mockWalletStore) SetWalletInfo(rawWallet []byte) {
 	} else {
 		store.batch.Set([]byte(WalletKey), rawWallet)
 	}
-}
-
-// GetWalletInfo get wallet information
-func (store *mockWalletStore) GetWalletInfo() []byte {
-	return store.walletDB.Get([]byte(WalletKey))
 }
