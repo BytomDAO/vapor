@@ -365,7 +365,6 @@ func (store *MockWalletStore) GetWalletInfo() []byte {
 
 // ListAccountUTXOs get all account unspent outputs
 func (store *MockWalletStore) ListAccountUTXOs(key string) ([]*acc.UTXO, error) {
-	fmt.Println("ListAccountUTXOs []byte(key):", []byte(key))
 	accountUtxoIter := store.walletDB.IteratorPrefix([]byte(key))
 	defer accountUtxoIter.Release()
 
