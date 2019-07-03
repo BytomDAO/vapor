@@ -324,7 +324,6 @@ func TestRecoveryByRescanAccount(t *testing.T) {
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
 	recoveryDB := dbm.NewDB("recdb", "leveldb", dirPath)
-	// recoveryStore := database.NewWalletStore(recoveryDB)
 	recoveryStore := mock.NewMockWalletStore(recoveryDB)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
@@ -336,7 +335,7 @@ func TestRecoveryByRescanAccount(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	acctStore := database.NewAccountStore(testDB)
+	acctStore := mock.NewMockAccountStore(testDB)
 	acctMgr := account.NewManager(acctStore, nil)
 	txs, err := MockTxsP2PKH(acctMgr, xpub.XPub, true)
 	if err != nil {
@@ -348,7 +347,7 @@ func TestRecoveryByRescanAccount(t *testing.T) {
 		t.Fatal("recovery by rescan account err:", err)
 	}
 
-	recActStore := database.NewAccountStore(recoveryDB)
+	recActStore := mock.NewMockAccountStore(recoveryDB)
 	recAcctMgr := account.NewManager(recActStore, nil)
 	for _, acct := range allAccounts {
 		if err := recAcctMgr.SaveAccount(acct); err != nil {

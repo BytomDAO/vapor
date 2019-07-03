@@ -20,7 +20,7 @@ type MockAccountStore struct {
 }
 
 // NewAccountStore create new MockAccountStore.
-func newMockAccountStore(db dbm.DB) *MockAccountStore {
+func NewMockAccountStore(db dbm.DB) *MockAccountStore {
 	return &MockAccountStore{
 		accountDB: db,
 		batch:     nil,
