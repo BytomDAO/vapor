@@ -218,7 +218,7 @@ func TestRescanWallet(t *testing.T) {
 
 	config.CommonConfig = config.DefaultConfig()
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	testStore := database.NewWalletStore(testDB)
+	walletStore := database.NewWalletStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
@@ -241,7 +241,7 @@ func TestRescanWallet(t *testing.T) {
 		t.Fatal("save wallet info")
 	}
 
-	w := mockWallet(testStore, nil, nil, chain, dispatcher, false)
+	w := mockWallet(walletStore, nil, nil, chain, dispatcher, false)
 	w.store.SetWalletInfo(rawWallet)
 	rawWallet = w.store.GetWalletInfo()
 	if rawWallet == nil {
