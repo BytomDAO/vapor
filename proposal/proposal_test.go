@@ -5,7 +5,6 @@ import (
 
 	"github.com/vapor/consensus"
 	"github.com/vapor/protocol/state"
-	"github.com/vapor/protocol/validation"
 	"github.com/vapor/testutil"
 )
 
@@ -15,7 +14,7 @@ func TestCreateCoinbaseTx(t *testing.T) {
 		desc            string
 		consensusResult *state.ConsensusResult
 		txFee           uint64
-		wantOutputs     []validation.CoinbaseReward
+		wantOutputs     []state.CoinbaseReward
 	}{
 		{
 			desc: "the coinbase block height is reductionInterval",
@@ -23,12 +22,12 @@ func TestCreateCoinbaseTx(t *testing.T) {
 				BlockHeight: reductionInterval - 1,
 			},
 			txFee: 100000000,
-			wantOutputs: []validation.CoinbaseReward{
-				validation.CoinbaseReward{
+			wantOutputs: []state.CoinbaseReward{
+				state.CoinbaseReward{
 					Amount:         uint64(0),
 					ControlProgram: []byte{0x51},
 				},
-				validation.CoinbaseReward{
+				state.CoinbaseReward{
 					Amount:         uint64(100000000),
 					ControlProgram: []byte{0x51},
 				},
@@ -40,12 +39,12 @@ func TestCreateCoinbaseTx(t *testing.T) {
 				BlockHeight: consensus.RoundVoteBlockNums - 1,
 			},
 			txFee: 200000000,
-			wantOutputs: []validation.CoinbaseReward{
-				validation.CoinbaseReward{
+			wantOutputs: []state.CoinbaseReward{
+				state.CoinbaseReward{
 					Amount:         uint64(0),
 					ControlProgram: []byte{0x51},
 				},
-				validation.CoinbaseReward{
+				state.CoinbaseReward{
 					Amount:         uint64(200000000),
 					ControlProgram: []byte{0x51},
 				},
@@ -57,12 +56,12 @@ func TestCreateCoinbaseTx(t *testing.T) {
 				BlockHeight: 2*consensus.RoundVoteBlockNums - 1,
 			},
 			txFee: 300000000,
-			wantOutputs: []validation.CoinbaseReward{
-				validation.CoinbaseReward{
+			wantOutputs: []state.CoinbaseReward{
+				state.CoinbaseReward{
 					Amount:         uint64(0),
 					ControlProgram: []byte{0x51},
 				},
-				validation.CoinbaseReward{
+				state.CoinbaseReward{
 					Amount:         uint64(300000000),
 					ControlProgram: []byte{0x51},
 				},
@@ -80,24 +79,24 @@ func TestCreateCoinbaseTx(t *testing.T) {
 				},
 			},
 			txFee: 2000,
-			wantOutputs: []validation.CoinbaseReward{
-				validation.CoinbaseReward{
+			wantOutputs: []state.CoinbaseReward{
+				state.CoinbaseReward{
 					Amount:         uint64(0),
 					ControlProgram: []byte{0x51},
 				},
-				validation.CoinbaseReward{
+				state.CoinbaseReward{
 					Amount:         uint64(200),
 					ControlProgram: []byte{0x52},
 				},
-				validation.CoinbaseReward{
+				state.CoinbaseReward{
 					Amount:         uint64(300),
 					ControlProgram: []byte{0x53},
 				},
-				validation.CoinbaseReward{
+				state.CoinbaseReward{
 					Amount:         uint64(500),
 					ControlProgram: []byte{0x55},
 				},
-				validation.CoinbaseReward{
+				state.CoinbaseReward{
 					Amount:         uint64(2100),
 					ControlProgram: []byte{0x51},
 				},
@@ -109,8 +108,8 @@ func TestCreateCoinbaseTx(t *testing.T) {
 				BlockHeight: reductionInterval - 2,
 			},
 			txFee: 100000000,
-			wantOutputs: []validation.CoinbaseReward{
-				validation.CoinbaseReward{
+			wantOutputs: []state.CoinbaseReward{
+				state.CoinbaseReward{
 					Amount:         uint64(0),
 					ControlProgram: []byte{0x51},
 				},
@@ -122,8 +121,8 @@ func TestCreateCoinbaseTx(t *testing.T) {
 				BlockHeight: reductionInterval,
 			},
 			txFee: 0,
-			wantOutputs: []validation.CoinbaseReward{
-				validation.CoinbaseReward{
+			wantOutputs: []state.CoinbaseReward{
+				state.CoinbaseReward{
 					Amount:         uint64(0),
 					ControlProgram: []byte{0x51},
 				},
@@ -135,12 +134,12 @@ func TestCreateCoinbaseTx(t *testing.T) {
 				BlockHeight: 2*reductionInterval - 1,
 			},
 			txFee: 100000000,
-			wantOutputs: []validation.CoinbaseReward{
-				validation.CoinbaseReward{
+			wantOutputs: []state.CoinbaseReward{
+				state.CoinbaseReward{
 					Amount:         uint64(0),
 					ControlProgram: []byte{0x51},
 				},
-				validation.CoinbaseReward{
+				state.CoinbaseReward{
 					Amount:         uint64(100000000),
 					ControlProgram: []byte{0x51},
 				},
@@ -154,9 +153,9 @@ func TestCreateCoinbaseTx(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		gotOutputs := []validation.CoinbaseReward{}
+		gotOutputs := []state.CoinbaseReward{}
 		for _, output := range coinbaseTx.Outputs {
-			gotOutputs = append(gotOutputs, validation.CoinbaseReward{
+			gotOutputs = append(gotOutputs, state.CoinbaseReward{
 				Amount:         output.AssetAmount().Amount,
 				ControlProgram: output.ControlProgram(),
 			})

@@ -8,6 +8,7 @@ import (
 	"github.com/vapor/consensus"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/state"
 	"github.com/vapor/protocol/vm"
 	"github.com/vapor/protocol/vm/vmutil"
 	"github.com/vapor/testutil"
@@ -70,7 +71,7 @@ func TestCheckCoinbaseTx(t *testing.T) {
 	cases := []struct {
 		desc    string
 		txs     []*types.Tx
-		rewards []CoinbaseReward
+		rewards []state.CoinbaseReward
 		err     error
 	}{
 		{
@@ -81,8 +82,8 @@ func TestCheckCoinbaseTx(t *testing.T) {
 					Outputs: []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 0, []byte{0x51})},
 				}),
 			},
-			rewards: []CoinbaseReward{
-				CoinbaseReward{
+			rewards: []state.CoinbaseReward{
+				state.CoinbaseReward{
 					Amount:         0,
 					ControlProgram: []byte{0x51},
 				},
@@ -100,12 +101,12 @@ func TestCheckCoinbaseTx(t *testing.T) {
 					},
 				}),
 			},
-			rewards: []CoinbaseReward{
-				CoinbaseReward{
+			rewards: []state.CoinbaseReward{
+				state.CoinbaseReward{
 					Amount:         0,
 					ControlProgram: []byte{0x51},
 				},
-				CoinbaseReward{
+				state.CoinbaseReward{
 					Amount:         5000,
 					ControlProgram: []byte{0x51},
 				},
@@ -120,8 +121,8 @@ func TestCheckCoinbaseTx(t *testing.T) {
 					Outputs: []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 0, []byte{0x51})},
 				}),
 			},
-			rewards: []CoinbaseReward{
-				CoinbaseReward{
+			rewards: []state.CoinbaseReward{
+				state.CoinbaseReward{
 					Amount:         0,
 					ControlProgram: []byte{0x52},
 				},
@@ -136,8 +137,8 @@ func TestCheckCoinbaseTx(t *testing.T) {
 					Outputs: []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 5000, []byte{0x51})},
 				}),
 			},
-			rewards: []CoinbaseReward{
-				CoinbaseReward{
+			rewards: []state.CoinbaseReward{
+				state.CoinbaseReward{
 					Amount:         5000,
 					ControlProgram: []byte{0x51},
 				},
@@ -147,7 +148,7 @@ func TestCheckCoinbaseTx(t *testing.T) {
 		{
 			desc:    "wrong coinbase transaction",
 			txs:     []*types.Tx{},
-			rewards: []CoinbaseReward{},
+			rewards: []state.CoinbaseReward{},
 			err:     ErrWrongCoinbaseTransaction,
 		},
 	}
@@ -289,7 +290,7 @@ func TestValidateBlock(t *testing.T) {
 		desc    string
 		block   *bc.Block
 		parent  *types.BlockHeader
-		rewards []CoinbaseReward
+		rewards []state.CoinbaseReward
 		err     error
 	}{
 		{
@@ -313,7 +314,13 @@ func TestValidateBlock(t *testing.T) {
 				},
 			},
 			parent: parent,
-			err:    errMismatchedMerkleRoot,
+			rewards: []state.CoinbaseReward{
+				state.CoinbaseReward{
+					Amount:         0,
+					ControlProgram: cp,
+				},
+			},
+			err: errMismatchedMerkleRoot,
 		},
 		{
 			desc: "The calculated transaction status merkel root hash is not equals to the hash of the block header",
@@ -337,7 +344,13 @@ func TestValidateBlock(t *testing.T) {
 				},
 			},
 			parent: parent,
-			err:    errMismatchedMerkleRoot,
+			rewards: []state.CoinbaseReward{
+				state.CoinbaseReward{
+					Amount:         0,
+					ControlProgram: cp,
+				},
+			},
+			err: errMismatchedMerkleRoot,
 		},
 		{
 			desc: "the coinbase amount is not equal to the real coinbase amount",
@@ -370,7 +383,7 @@ func TestValidateBlock(t *testing.T) {
 				},
 			},
 			parent:  parent,
-			rewards: []CoinbaseReward{},
+			rewards: []state.CoinbaseReward{},
 			err:     ErrWrongCoinbaseTransaction,
 		},
 		{
@@ -455,7 +468,7 @@ func TestGasOverBlockLimit(t *testing.T) {
 		}))
 	}
 
-	if err := ValidateBlock(block, parent, []CoinbaseReward{}); err != errOverBlockLimit {
+	if err := ValidateBlock(block, parent, []state.CoinbaseReward{}); err != errOverBlockLimit {
 		t.Errorf("got error %s, want %s", err, errOverBlockLimit)
 	}
 }
@@ -513,7 +526,7 @@ func TestSetTransactionStatus(t *testing.T) {
 		},
 	}
 
-	if err := ValidateBlock(block, parent, []CoinbaseReward{}); err != nil {
+	if err := ValidateBlock(block, parent, []state.CoinbaseReward{state.CoinbaseReward{ControlProgram: cp}}); err != nil {
 		t.Fatal(err)
 	}
 

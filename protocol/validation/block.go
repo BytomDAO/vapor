@@ -2,17 +2,15 @@ package validation
 
 import (
 	"bytes"
-	"sort"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/protocol/validation"
 	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
-	"github.com/vapor/math/checked"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/state"
 )
 
 const logModule = "leveldb"
@@ -40,7 +38,7 @@ func checkBlockTime(b *bc.Block, parent *types.BlockHeader) error {
 	return nil
 }
 
-func checkCoinbaseTx(b *bc.Block, rewards []CoinbaseReward) error {
+func checkCoinbaseTx(b *bc.Block, rewards []state.CoinbaseReward) error {
 	if len(b.Transactions) == 0 {
 		return errors.Wrap(ErrWrongCoinbaseTransaction, "block is empty")
 	}
@@ -94,36 +92,29 @@ func ValidateBlockHeader(b *bc.Block, parent *types.BlockHeader) error {
 }
 
 // ValidateBlock validates a block and the transactions within.
-func ValidateBlock(b *bc.Block, parent *types.BlockHeader, rewards []CoinbaseReward) error {
+func ValidateBlock(b *bc.Block, parent *types.BlockHeader, rewards []state.CoinbaseReward) error {
 	startTime := time.Now()
 	if err := ValidateBlockHeader(b, parent); err != nil {
 		return err
 	}
 
-	reward, err := CalCoinbaseReward(b)
-	if err != nil {
-		return err
-	}
-
-	if b.Height%consensus.RoundVoteBlockNums == 0 {
-		aggregateFlag := false
-		for i, r := range rewards {
-			if res := bytes.Compare(r.ControlProgram, reward.ControlProgram); res == 0 {
-				var ok bool
-				if rewards[i].Amount, ok = checked.AddUint64(rewards[i].Amount, reward.Amount); !ok {
-					return validation.ErrOverflow
-				}
-				aggregateFlag = true
-				break
-			}
+	blockGasSum := uint64(0)
+	b.TransactionStatus = bc.NewTransactionStatus()
+	validateResults := ValidateTxs(b.Transactions, b)
+	for i, validateResult := range validateResults {
+		if !validateResult.gasStatus.GasValid {
+			return errors.Wrapf(validateResult.err, "validate of transaction %d of %d", i, len(b.Transactions))
 		}
 
-		if !aggregateFlag {
-			rewards = append(rewards, *reward)
+		if err := b.TransactionStatus.SetStatus(i, validateResult.err != nil); err != nil {
+			return err
 		}
-		sort.Sort(SortByAmount(rewards))
+
+		if blockGasSum += uint64(validateResult.gasStatus.GasUsed); blockGasSum > consensus.MaxBlockGas {
+			return errOverBlockLimit
+		}
 	}
-	rewards = append([]CoinbaseReward{CoinbaseReward{ControlProgram: reward.ControlProgram}}, rewards...)
+
 	if err := checkCoinbaseTx(b, rewards); err != nil {
 		return err
 	}
@@ -151,64 +142,4 @@ func ValidateBlock(b *bc.Block, parent *types.BlockHeader, rewards []CoinbaseRew
 		"duration": time.Since(startTime),
 	}).Debug("finish validate block")
 	return nil
-}
-
-// CoinbaseReward contains receiver and reward
-type CoinbaseReward struct {
-	Amount         uint64
-	ControlProgram []byte
-}
-
-// SortByAmount implements sort.Interface for CoinbaseReward slices
-type SortByAmount []CoinbaseReward
-
-func (a SortByAmount) Len() int           { return len(a) }
-func (a SortByAmount) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a SortByAmount) Less(i, j int) bool { return a[i].Amount < a[j].Amount }
-
-// CalCoinbaseReward calculate the coinbase reward for block
-func CalCoinbaseReward(b *bc.Block) (*CoinbaseReward, error) {
-	if len(b.Transactions) == 0 {
-		return nil, errors.Wrap(ErrWrongCoinbaseTransaction, "block is empty")
-	}
-
-	tx := b.Transactions[0]
-	if len(tx.TxHeader.ResultIds) == 0 {
-		return nil, errors.Wrap(ErrWrongCoinbaseTransaction, "without output")
-	}
-
-	var coinbaseReceiver []byte
-	switch e := tx.Entries[*tx.TxHeader.ResultIds[0]].(type) {
-	case *bc.IntraChainOutput:
-		coinbaseReceiver = e.ControlProgram.Code
-	default:
-		return nil, errors.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", tx.TxHeader.ResultIds[0].Bytes(), e)
-	}
-
-	if coinbaseReceiver == nil {
-		return nil, errors.New("not found the zero coinbase output")
-	}
-
-	blockGasSum := uint64(0)
-	coinbaseAmount := consensus.BlockSubsidy(b.BlockHeader.Height)
-	b.TransactionStatus = bc.NewTransactionStatus()
-
-	validateResults := ValidateTxs(b.Transactions, b)
-	for i, validateResult := range validateResults {
-		if !validateResult.gasStatus.GasValid {
-			return nil, errors.Wrapf(validateResult.err, "validate of transaction %d of %d", i, len(b.Transactions))
-		}
-
-		if err := b.TransactionStatus.SetStatus(i, validateResult.err != nil); err != nil {
-			return nil, err
-		}
-		coinbaseAmount += validateResult.gasStatus.BTMValue
-		if blockGasSum += uint64(validateResult.gasStatus.GasUsed); blockGasSum > consensus.MaxBlockGas {
-			return nil, errOverBlockLimit
-		}
-	}
-	return &CoinbaseReward{
-		Amount:         coinbaseAmount,
-		ControlProgram: coinbaseReceiver,
-	}, nil
 }

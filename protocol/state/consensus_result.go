@@ -1,6 +1,7 @@
 package state
 
 import (
+	"bytes"
 	"encoding/hex"
 	"sort"
 
@@ -11,7 +12,6 @@ import (
 	"github.com/vapor/math/checked"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/validation"
 )
 
 var errMathOperationOverFlow = errors.New("arithmetic operation result overflow")
@@ -62,7 +62,7 @@ func (c *ConsensusResult) ApplyBlock(block *types.Block) error {
 		return errors.New("block parent hash is not equals last block hash of vote result")
 	}
 
-	reward, err := validation.CalCoinbaseReward(types.MapBlock(block))
+	reward, err := CalCoinbaseReward(block)
 	if err != nil {
 		return err
 	}
@@ -157,8 +157,7 @@ func (c *ConsensusResult) DetachBlock(block *types.Block) error {
 		return errors.New("block hash is not equals last block hash of vote result")
 	}
 
-	bcBlock := types.MapBlock(block)
-	reward, err := validation.CalCoinbaseReward(bcBlock)
+	reward, err := CalCoinbaseReward(block)
 	if err != nil {
 		return err
 	}
@@ -231,4 +230,103 @@ func (c *ConsensusResult) Fork() *ConsensusResult {
 
 func (c *ConsensusResult) IsFinalize() bool {
 	return c.BlockHeight%consensus.RoundVoteBlockNums == 0
+}
+
+// CoinbaseReward contains receiver and reward
+type CoinbaseReward struct {
+	Amount         uint64
+	ControlProgram []byte
+}
+
+// SortByAmount implements sort.Interface for CoinbaseReward slices
+type SortByAmount []CoinbaseReward
+
+func (a SortByAmount) Len() int           { return len(a) }
+func (a SortByAmount) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a SortByAmount) Less(i, j int) bool { return a[i].Amount < a[j].Amount }
+
+// CalCoinbaseReward calculate the coinbase reward for block
+func CalCoinbaseReward(block *types.Block) (*CoinbaseReward, error) {
+	var coinbaseReceiver []byte
+	if len(block.Transactions) > 0 && len(block.Transactions[0].Outputs) > 0 {
+		coinbaseReceiver = block.Transactions[0].Outputs[0].ControlProgram()
+	}
+
+	if coinbaseReceiver == nil {
+		return nil, errors.New("invalid block coinbase transaction with receiver address is empty")
+	}
+
+	coinbaseAmount := consensus.BlockSubsidy(block.BlockHeader.Height)
+	for _, tx := range block.Transactions {
+		txFee, err := calTxFee(tx)
+		if err != nil {
+			return nil, err
+		}
+		coinbaseAmount += txFee
+	}
+
+	return &CoinbaseReward{
+		Amount:         coinbaseAmount,
+		ControlProgram: coinbaseReceiver,
+	}, nil
+}
+
+func calTxFee(tx *types.Tx) (uint64, error) {
+	var totalInputBTM, totalOutputBTM uint64
+	for _, input := range tx.Inputs {
+		if input.InputType() == types.CoinbaseInputType {
+			return 0, nil
+		}
+		if input.AssetID() == *consensus.BTMAssetID {
+			totalInputBTM += input.Amount()
+		}
+	}
+
+	for _, output := range tx.Outputs {
+		if *output.AssetAmount().AssetId == *consensus.BTMAssetID {
+			totalOutputBTM += output.AssetAmount().Amount
+		}
+	}
+
+	txFee, ok := checked.SubUint64(totalInputBTM, totalOutputBTM)
+	if !ok {
+		return 0, errMathOperationOverFlow
+	}
+	return txFee, nil
+}
+
+// AddCoinbaseRewards add block coinbase reward and sort rewards by amount
+func AddCoinbaseRewards(consensusResult *ConsensusResult, reward *CoinbaseReward, blockHeight uint64) ([]CoinbaseReward, error) {
+	rewards := []CoinbaseReward{}
+	if blockHeight%consensus.RoundVoteBlockNums != 0 {
+		return []CoinbaseReward{}, nil
+	}
+
+	aggregateFlag := false
+	for p, amount := range consensusResult.RewardOfCoinbase {
+		coinbaseAmount := amount
+		program, err := hex.DecodeString(p)
+		if err != nil {
+			return nil, err
+		}
+
+		if res := bytes.Compare(program, reward.ControlProgram); res == 0 {
+			var ok bool
+			if coinbaseAmount, ok = checked.AddUint64(coinbaseAmount, reward.Amount); !ok {
+				return nil, errMathOperationOverFlow
+			}
+			aggregateFlag = true
+		}
+
+		rewards = append(rewards, CoinbaseReward{
+			Amount:         coinbaseAmount,
+			ControlProgram: program,
+		})
+	}
+
+	if !aggregateFlag {
+		rewards = append(rewards, *reward)
+	}
+	sort.Sort(SortByAmount(rewards))
+	return rewards, nil
 }
