@@ -137,7 +137,7 @@ func TestXPubsRecoveryLock(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
-	testStore := database.NewWalletStore(testDB)
+	walletStore := newMockWalletStore(testDB)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -148,9 +148,9 @@ func TestXPubsRecoveryLock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	acctStore := database.NewAccountStore(testDB)
+	acctStore := newMockAccountStore(testDB)
 	acctMgr := account.NewManager(acctStore, nil)
-	recoveryMgr := newRecoveryManager(testStore, acctMgr)
+	recoveryMgr := newRecoveryManager(walletStore, acctMgr)
 	recoveryMgr.state = newRecoveryState()
 	recoveryMgr.state.XPubs = []chainkd.XPub{xpub.XPub}
 	recoveryMgr.state.XPubsStatus = newBranchRecoveryState(acctRecoveryWindow)

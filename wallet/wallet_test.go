@@ -21,11 +21,13 @@ import (
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/database"
 	dbm "github.com/vapor/database/leveldb"
+	"github.com/vapor/database/storage"
 	"github.com/vapor/errors"
 	"github.com/vapor/event"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/state"
 )
 
 func TestEncodeDecodeGlobalTxIndex(t *testing.T) {
@@ -129,6 +131,7 @@ func TestWalletUpdate(t *testing.T) {
 	}()
 
 	store := database.NewStore(testDB)
+	// store := newStore(testDB)
 	walletStore := database.NewWalletStore(testDB)
 	// walletStore := newMockWalletStore(testDB)
 	dispatcher := event.NewDispatcher()
@@ -141,6 +144,7 @@ func TestWalletUpdate(t *testing.T) {
 
 	accountStore := database.NewAccountStore(testDB)
 	accountManager := account.NewManager(accountStore, chain)
+	// accountManager := account.NewManager(accountStore, nil)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -164,6 +168,7 @@ func TestWalletUpdate(t *testing.T) {
 	controlProg.KeyIndex = 1
 
 	reg := asset.NewRegistry(testDB, chain)
+	// reg := asset.NewRegistry(testDB, nil)
 	asset := bc.AssetID{V0: 5}
 
 	utxos := []*account.UTXO{}
@@ -185,6 +190,7 @@ func TestWalletUpdate(t *testing.T) {
 	store.SaveBlock(block, txStatus)
 
 	w := mockWallet(walletStore, accountManager, reg, chain, dispatcher, true)
+	// w := mockWallet(walletStore, accountManager, reg, nil, dispatcher, true)
 	err = w.AttachBlock(block)
 	if err != nil {
 		t.Fatal(err)
@@ -505,7 +511,8 @@ func (store *mockWalletStore) GetStandardUTXO(bc.Hash) (*acc.UTXO, error)       
 func (store *mockWalletStore) GetUnconfirmedTransaction(string) (*query.AnnotatedTx, error) {
 	return nil, nil
 }
-func (store *mockWalletStore) GetRecoveryStatus([]byte) []byte              { return nil }
+
+// func (store *mockWalletStore) GetRecoveryStatus([]byte) []byte              { return nil }
 func (store *mockWalletStore) ListAccountUTXOs(string) ([]*acc.UTXO, error) { return nil, nil }
 func (store *mockWalletStore) ListTransactions(string, string, uint, bool) ([]*query.AnnotatedTx, error) {
 	return nil, nil
@@ -516,10 +523,16 @@ func (store *mockWalletStore) ListUnconfirmedTransactions() ([]*query.AnnotatedT
 func (store *mockWalletStore) SetAssetDefinition(*bc.AssetID, []byte)             { return }
 func (store *mockWalletStore) SetContractUTXO(bc.Hash, *acc.UTXO) error           { return nil }
 func (store *mockWalletStore) SetGlobalTransactionIndex(string, *bc.Hash, uint64) { return }
-func (store *mockWalletStore) SetRecoveryStatus([]byte, []byte)                   { return }
-func (store *mockWalletStore) SetTransaction(uint64, *query.AnnotatedTx) error    { return nil }
+
+// func (store *mockWalletStore) SetRecoveryStatus([]byte, []byte)                   { return }
+func (store *mockWalletStore) SetTransaction(uint64, *query.AnnotatedTx) error { return nil }
 func (store *mockWalletStore) SetUnconfirmedTransaction(string, *query.AnnotatedTx) error {
 	return nil
+}
+
+// GetRecoveryStatus delete recovery status
+func (store *mockWalletStore) GetRecoveryStatus(recoveryKey []byte) []byte {
+	return store.walletDB.Get(recoveryKey)
 }
 
 // GetTransaction get tx by txid
@@ -541,6 +554,15 @@ func (store *mockWalletStore) GetWalletInfo() []byte {
 	return store.walletDB.Get([]byte(WalletKey))
 }
 
+// SetRecoveryStatus set recovery status
+func (store *mockWalletStore) SetRecoveryStatus(recoveryKey, rawStatus []byte) {
+	if store.batch == nil {
+		store.walletDB.Set(recoveryKey, rawStatus)
+	} else {
+		store.batch.Set(recoveryKey, rawStatus)
+	}
+}
+
 // SetWalletInfo get wallet information
 func (store *mockWalletStore) SetWalletInfo(rawWallet []byte) {
 	if store.batch == nil {
@@ -548,4 +570,31 @@ func (store *mockWalletStore) SetWalletInfo(rawWallet []byte) {
 	} else {
 		store.batch.Set([]byte(WalletKey), rawWallet)
 	}
+}
+
+type mockStore struct {
+	db dbm.DB
+}
+
+// newStore creates and returns a new Store object.
+func newStore(db dbm.DB) *mockStore {
+	return &mockStore{
+		db: db,
+	}
+}
+
+func (s *mockStore) BlockExist(hash *bc.Hash) bool                                { return false }
+func (s *mockStore) GetBlock(*bc.Hash) (*types.Block, error)                      { return nil, nil }
+func (s *mockStore) GetBlockHeader(*bc.Hash) (*types.BlockHeader, error)          { return nil, nil }
+func (s *mockStore) GetStoreStatus() *protocol.BlockStoreState                    { return nil }
+func (s *mockStore) GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error) { return nil, nil }
+func (s *mockStore) GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error     { return nil }
+func (s *mockStore) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)                 { return nil, nil }
+func (s *mockStore) GetVoteResult(uint64) (*state.VoteResult, error)              { return nil, nil }
+func (s *mockStore) GetMainChainHash(uint64) (*bc.Hash, error)                    { return nil, nil }
+func (s *mockStore) GetBlockHashesByHeight(uint64) ([]*bc.Hash, error)            { return nil, nil }
+func (s *mockStore) SaveBlock(*types.Block, *bc.TransactionStatus) error          { return nil }
+func (s *mockStore) SaveBlockHeader(*types.BlockHeader) error                     { return nil }
+func (s *mockStore) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, []*state.VoteResult) error {
+	return nil
 }
