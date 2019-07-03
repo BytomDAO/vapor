@@ -10,7 +10,6 @@ import (
 
 	"github.com/vapor/account"
 	"github.com/vapor/consensus"
-	"github.com/vapor/database"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -43,16 +42,16 @@ func TestGetAccountUtxos(t *testing.T) {
 		},
 		{
 			dbUtxos: map[string]*account.UTXO{
-				string(database.StandardUTXOKey(bc.Hash{V0: 1})): &account.UTXO{
+				string(mock.StandardUTXOKey(bc.Hash{V0: 1})): &account.UTXO{
 					OutputID: bc.Hash{V0: 1},
 				},
-				string(database.StandardUTXOKey(bc.Hash{V0: 2})): &account.UTXO{
+				string(mock.StandardUTXOKey(bc.Hash{V0: 2})): &account.UTXO{
 					OutputID: bc.Hash{V0: 2},
 				},
-				string(database.StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
+				string(mock.StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
 					OutputID: bc.Hash{V0: 3},
 				},
-				string(database.ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
+				string(mock.ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
 					OutputID: bc.Hash{V0: 4},
 				},
 			},
@@ -67,16 +66,16 @@ func TestGetAccountUtxos(t *testing.T) {
 		},
 		{
 			dbUtxos: map[string]*account.UTXO{
-				string(database.StandardUTXOKey(bc.Hash{V0: 1})): &account.UTXO{
+				string(mock.StandardUTXOKey(bc.Hash{V0: 1})): &account.UTXO{
 					OutputID: bc.Hash{V0: 1},
 				},
-				string(database.StandardUTXOKey(bc.Hash{V0: 2})): &account.UTXO{
+				string(mock.StandardUTXOKey(bc.Hash{V0: 2})): &account.UTXO{
 					OutputID: bc.Hash{V0: 2},
 				},
-				string(database.StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
+				string(mock.StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
 					OutputID: bc.Hash{V0: 3},
 				},
-				string(database.ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
+				string(mock.ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
 					OutputID: bc.Hash{V0: 4},
 				},
 			},
@@ -124,10 +123,10 @@ func TestGetAccountUtxos(t *testing.T) {
 		},
 		{
 			dbUtxos: map[string]*account.UTXO{
-				string(database.StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
+				string(mock.StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
 					OutputID: bc.Hash{V0: 3},
 				},
-				string(database.ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
+				string(mock.ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
 					OutputID: bc.Hash{V0: 4},
 				},
 			},
@@ -156,10 +155,10 @@ func TestGetAccountUtxos(t *testing.T) {
 		},
 		{
 			dbUtxos: map[string]*account.UTXO{
-				string(database.StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
+				string(mock.StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
 					OutputID: bc.Hash{V0: 3},
 				},
-				string(database.ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
+				string(mock.ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
 					OutputID: bc.Hash{V0: 4},
 				},
 			},
