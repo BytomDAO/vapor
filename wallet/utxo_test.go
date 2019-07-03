@@ -14,12 +14,13 @@ import (
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/test/mock"
 	"github.com/vapor/testutil"
 )
 
 func TestGetAccountUtxos(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	testStore := database.NewWalletStore(testDB)
+	testStore := mock.NewMockWalletStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
@@ -197,7 +198,7 @@ func TestGetAccountUtxos(t *testing.T) {
 			testDB.Set([]byte(k), data)
 		}
 
-		acccountStore := database.NewAccountStore(testDB)
+		acccountStore := mock.NewMockAccountStore(testDB)
 		w.AccountMgr = account.NewManager(acccountStore, nil)
 		w.AccountMgr.AddUnconfirmedUtxo(c.unconfirmedUtxos)
 		gotUtxos := w.GetAccountUtxos("", c.id, c.unconfirmed, c.isSmartContract, false)
@@ -213,7 +214,7 @@ func TestGetAccountUtxos(t *testing.T) {
 
 func TestFilterAccountUtxo(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	testStore := database.NewWalletStore(testDB)
+	testStore := mock.NewMockWalletStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
