@@ -17,43 +17,6 @@ import (
 	"github.com/vapor/protocol/bc"
 )
 
-// const (
-// 	utxoPrefix  byte = iota //UTXOPrefix is StandardUTXOKey prefix
-// 	sutxoPrefix             //SUTXOPrefix is ContractUTXOKey prefix
-// 	contractPrefix
-// 	contractIndexPrefix
-// 	accountPrefix // AccountPrefix is account ID prefix
-// 	accountAliasPrefix
-// 	accountIndexPrefix
-// 	txPrefix            //TxPrefix is wallet database transactions prefix
-// 	txIndexPrefix       //TxIndexPrefix is wallet database tx index prefix
-// 	unconfirmedTxPrefix //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
-// 	globalTxIndexPrefix //GlobalTxIndexPrefix is wallet database global tx index prefix
-// 	walletKey
-// 	miningAddressKey
-// 	coinbaseAbKey
-// 	recoveryKey
-// )
-
-// // leveldb key prefix
-// var (
-// 	UTXOPrefix          = []byte{utxoPrefix, colon}
-// 	SUTXOPrefix         = []byte{sutxoPrefix, colon}
-// 	ContractPrefix      = []byte{contractPrefix, contractPrefix, colon}
-// 	ContractIndexPrefix = []byte{contractIndexPrefix, colon}
-// 	AccountPrefix       = []byte{accountPrefix, colon} // AccountPrefix is account ID prefix
-// 	AccountAliasPrefix  = []byte{accountAliasPrefix, colon}
-// 	AccountIndexPrefix  = []byte{accountIndexPrefix, colon}
-// 	TxPrefix            = []byte{txPrefix, colon}            //TxPrefix is wallet database transactions prefix
-// 	TxIndexPrefix       = []byte{txIndexPrefix, colon}       //TxIndexPrefix is wallet database tx index prefix
-// 	UnconfirmedTxPrefix = []byte{unconfirmedTxPrefix, colon} //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
-// 	GlobalTxIndexPrefix = []byte{globalTxIndexPrefix, colon} //GlobalTxIndexPrefix is wallet database global tx index prefix
-// 	WalletKey           = []byte{walletKey}
-// 	MiningAddressKey    = []byte{miningAddressKey}
-// 	CoinbaseAbKey       = []byte{coinbaseAbKey}
-// 	RecoveryKey         = []byte{recoveryKey}
-// )
-
 // errors
 var (
 	// ErrFindAccount        = errors.New("Failed to find account")
