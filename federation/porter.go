@@ -21,8 +21,9 @@ func (p *Porter) AttachCallback(f func() error) {
 
 func (p *Porter) Run() {
 	for _, f := range p.Callbacks {
-		log.Info("Running func: ", runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name())
+		funcName := runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name()
+		log.Info("Running func: ", funcName)
 		f()
-		log.Info("Func done: ", runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name())
+		log.Info("Func done: ", funcName)
 	}
 }
