@@ -9,20 +9,16 @@ import (
 	"github.com/vapor/consensus"
 	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/crypto/sha3pool"
+	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
 
-var (
-	UTXOPrefix  = []byte{0x00, 0x3a}
-	SUTXOPrefix = []byte{0x01, 0x3a}
-)
-
 // GetAccountUtxos return all account unspent outputs
 func (w *Wallet) GetAccountUtxos(accountID string, id string, unconfirmed, isSmartContract bool, vote bool) []*account.UTXO {
-	prefix := UTXOPrefix
+	prefix := dbm.UTXOPrefix
 	if isSmartContract {
-		prefix = SUTXOPrefix
+		prefix = dbm.SUTXOPrefix
 	}
 
 	accountUtxos := []*account.UTXO{}

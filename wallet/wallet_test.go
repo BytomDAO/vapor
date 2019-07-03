@@ -288,11 +288,6 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// c := &protocol.Chain{
-	// 	store: &mStore{
-	// 		blockHeaders: make(map[bc.Hash]*types.BlockHeader),
-	// 	},
-	// }
 
 	accountStore := mock.NewMockAccountStore(testDB)
 	accountManager := account.NewManager(accountStore, chain)

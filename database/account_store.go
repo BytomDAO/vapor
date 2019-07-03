@@ -92,7 +92,7 @@ func (store *AccountStore) deleteAccountUTXOs(accountID string) error {
 		batch = store.batch
 	}
 
-	accountUtxoIter := store.accountDB.IteratorPrefix([]byte(UTXOPrefix))
+	accountUtxoIter := store.accountDB.IteratorPrefix([]byte(dbm.UTXOPrefix))
 	defer accountUtxoIter.Release()
 
 	for accountUtxoIter.Next() {
@@ -162,7 +162,7 @@ func (store *AccountStore) GetBip44ContractIndex(accountID string, change bool) 
 
 // GetCoinbaseArbitrary get coinbase arbitrary
 func (store *AccountStore) GetCoinbaseArbitrary() []byte {
-	return store.accountDB.Get([]byte(CoinbaseAbKey))
+	return store.accountDB.Get([]byte(dbm.CoinbaseAbKey))
 }
 
 // GetContractIndex get contract index
@@ -189,7 +189,7 @@ func (store *AccountStore) GetControlProgram(hash bc.Hash) (*acc.CtrlProgram, er
 
 // GetMiningAddress get mining address
 func (store *AccountStore) GetMiningAddress() (*acc.CtrlProgram, error) {
-	rawCP := store.accountDB.Get([]byte(MiningAddressKey))
+	rawCP := store.accountDB.Get([]byte(dbm.MiningAddressKey))
 	if rawCP == nil {
 		return nil, acc.ErrFindMiningAddress
 	}
@@ -231,8 +231,7 @@ func (store *AccountStore) ListAccounts(id string) ([]*acc.Account, error) {
 // ListControlPrograms get all local control programs
 func (store *AccountStore) ListControlPrograms() ([]*acc.CtrlProgram, error) {
 	cps := []*acc.CtrlProgram{}
-	cpIter := store.accountDB.IteratorPrefix([]byte(ContractPrefix))
-	// cpIter := store.accountDB.IteratorPrefix([]byte{0x02, 0x3a})
+	cpIter := store.accountDB.IteratorPrefix([]byte(dbm.ContractPrefix))
 	defer cpIter.Release()
 
 	for cpIter.Next() {
@@ -247,7 +246,7 @@ func (store *AccountStore) ListControlPrograms() ([]*acc.CtrlProgram, error) {
 
 // ListUTXOs get utxos by accountID
 func (store *AccountStore) ListUTXOs() ([]*acc.UTXO, error) {
-	utxoIter := store.accountDB.IteratorPrefix([]byte(UTXOPrefix))
+	utxoIter := store.accountDB.IteratorPrefix([]byte(dbm.UTXOPrefix))
 	defer utxoIter.Release()
 
 	utxos := []*acc.UTXO{}
@@ -306,9 +305,9 @@ func (store *AccountStore) SetBip44ContractIndex(accountID string, change bool, 
 // SetCoinbaseArbitrary set coinbase arbitrary
 func (store *AccountStore) SetCoinbaseArbitrary(arbitrary []byte) {
 	if store.batch == nil {
-		store.accountDB.Set([]byte(CoinbaseAbKey), arbitrary)
+		store.accountDB.Set([]byte(dbm.CoinbaseAbKey), arbitrary)
 	} else {
-		store.batch.Set([]byte(CoinbaseAbKey), arbitrary)
+		store.batch.Set([]byte(dbm.CoinbaseAbKey), arbitrary)
 	}
 }
 
@@ -343,9 +342,9 @@ func (store *AccountStore) SetMiningAddress(program *acc.CtrlProgram) error {
 	}
 
 	if store.batch == nil {
-		store.accountDB.Set([]byte(MiningAddressKey), rawProgram)
+		store.accountDB.Set([]byte(dbm.MiningAddressKey), rawProgram)
 	} else {
-		store.batch.Set([]byte(MiningAddressKey), rawProgram)
+		store.batch.Set([]byte(dbm.MiningAddressKey), rawProgram)
 	}
 	return nil
 }
