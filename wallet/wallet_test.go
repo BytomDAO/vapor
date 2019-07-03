@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"io/ioutil"
 	"os"
@@ -33,7 +34,7 @@ func TestEncodeDecodeGlobalTxIndex(t *testing.T) {
 		Position:  1,
 	}
 
-	globalTxIdx := database.CalcGlobalTxIndex(&want.BlockHash, want.Position)
+	globalTxIdx := CalcGlobalTxIndex(&want.BlockHash, want.Position)
 	blockHashGot, positionGot := parseGlobalTxIdx(globalTxIdx)
 	if *blockHashGot != want.BlockHash {
 		t.Errorf("blockHash mismatch. Get: %v. Expect: %v", *blockHashGot, want.BlockHash)
@@ -201,7 +202,7 @@ func TestWalletUpdate(t *testing.T) {
 	for position, tx := range block.Transactions {
 		get := w.store.GetGlobalTransactionIndex(tx.ID.String())
 		bh := block.BlockHeader.Hash()
-		expect := database.CalcGlobalTxIndex(&bh, uint64(position))
+		expect := CalcGlobalTxIndex(&bh, uint64(position))
 		if !reflect.DeepEqual(get, expect) {
 			t.Fatalf("position#%d: compare retrieved globalTxIdx err", position)
 		}
@@ -447,3 +448,10 @@ func (store *mockAccountStore) SetContractIndex(string, uint64)                 
 func (store *mockAccountStore) SetControlProgram(bc.Hash, *account.CtrlProgram) error      { return nil }
 func (store *mockAccountStore) SetMiningAddress(*account.CtrlProgram) error                { return nil }
 func (store *mockAccountStore) SetStandardUTXO(outputID bc.Hash, utxo *account.UTXO) error { return nil }
+
+func CalcGlobalTxIndex(blockHash *bc.Hash, position uint64) []byte {
+	txIdx := make([]byte, 40)
+	copy(txIdx[:32], blockHash.Bytes())
+	binary.BigEndian.PutUint64(txIdx[32:], position)
+	return txIdx
+}
