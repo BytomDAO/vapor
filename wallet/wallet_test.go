@@ -10,8 +10,10 @@ import (
 	"time"
 
 	"github.com/vapor/account"
+	acc "github.com/vapor/account"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/pseudohsm"
+	"github.com/vapor/blockchain/query"
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/config"
@@ -455,3 +457,52 @@ func CalcGlobalTxIndex(blockHash *bc.Hash, position uint64) []byte {
 	binary.BigEndian.PutUint64(txIdx[32:], position)
 	return txIdx
 }
+
+// WalletStore store wallet using leveldb
+type mockWalletStore struct {
+	walletDB dbm.DB
+	batch    dbm.Batch
+}
+
+// NewWalletStore create new WalletStore struct
+func mockNewWalletStore(db dbm.DB) *mockWalletStore {
+	return &mockWalletStore{
+		walletDB: db,
+		batch:    nil,
+	}
+}
+
+func (store *mockWalletStore) InitBatch() error                                    { return nil }
+func (store *mockWalletStore) CommitBatch() error                                  { return nil }
+func (store *mockWalletStore) DeleteContractUTXO(bc.Hash)                          { return }
+func (store *mockWalletStore) DeleteRecoveryStatus()                               { return }
+func (store *mockWalletStore) DeleteTransactions(uint64)                           { return }
+func (store *mockWalletStore) DeleteUnconfirmedTransaction(string)                 { return }
+func (store *mockWalletStore) DeleteWalletTransactions()                           { return }
+func (store *mockWalletStore) DeleteWalletUTXOs()                                  { return }
+func (store *mockWalletStore) GetAsset(*bc.AssetID) (*asset.Asset, error)          { return nil, nil }
+func (store *mockWalletStore) GetControlProgram(bc.Hash) (*acc.CtrlProgram, error) { return nil, nil }
+func (store *mockWalletStore) GetGlobalTransactionIndex(string) []byte             { return nil }
+func (store *mockWalletStore) GetStandardUTXO(bc.Hash) (*acc.UTXO, error)          { return nil, nil }
+func (store *mockWalletStore) GetTransaction(string) (*query.AnnotatedTx, error)   { return nil, nil }
+func (store *mockWalletStore) GetUnconfirmedTransaction(string) (*query.AnnotatedTx, error) {
+	return nil, nil
+}
+func (store *mockWalletStore) GetRecoveryStatus([]byte) []byte              { return nil }
+func (store *mockWalletStore) GetWalletInfo() []byte                        { return nil }
+func (store *mockWalletStore) ListAccountUTXOs(string) ([]*acc.UTXO, error) { return nil, nil }
+func (store *mockWalletStore) ListTransactions(string, string, uint, bool) ([]*query.AnnotatedTx, error) {
+	return nil, nil
+}
+func (store *mockWalletStore) ListUnconfirmedTransactions() ([]*query.AnnotatedTx, error) {
+	return nil, nil
+}
+func (store *mockWalletStore) SetAssetDefinition(*bc.AssetID, []byte)             { return }
+func (store *mockWalletStore) SetContractUTXO(bc.Hash, *acc.UTXO) error           { return nil }
+func (store *mockWalletStore) SetGlobalTransactionIndex(string, *bc.Hash, uint64) { return }
+func (store *mockWalletStore) SetRecoveryStatus([]byte, []byte)                   { return }
+func (store *mockWalletStore) SetTransaction(uint64, *query.AnnotatedTx) error    { return nil }
+func (store *mockWalletStore) SetUnconfirmedTransaction(string, *query.AnnotatedTx) error {
+	return nil
+}
+func (store *mockWalletStore) SetWalletInfo([]byte) { return }
