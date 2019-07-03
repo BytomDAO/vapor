@@ -162,6 +162,14 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 			return err
 		}
 
+		if detachBlockHeader.Height%consensus.RoundVoteBlockNums == 0 {
+			hash := detachBlockHeader.Hash()
+			consensusResult, err = c.GetConsensusResultByHash(&hash)
+			if err != nil {
+				return err
+			}
+		}
+
 		if err := consensusResult.DetachBlock(b); err != nil {
 			return err
 		}
@@ -227,7 +235,7 @@ func (c *Chain) saveBlock(block *types.Block) error {
 	}
 
 	rewards := []validation.CoinbaseReward{}
-	if (parent.Height+1)%consensus.RoundVoteBlockNums == 0 {
+	if block.Height%consensus.RoundVoteBlockNums == 0 {
 		consensusResult, err := c.getBestConsensusResult()
 		if err != nil {
 			return err

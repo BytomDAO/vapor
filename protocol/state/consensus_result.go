@@ -67,6 +67,10 @@ func (c *ConsensusResult) ApplyBlock(block *types.Block) error {
 		return err
 	}
 
+	if c.IsFinalize() {
+		c.RewardOfCoinbase = map[string]uint64{}
+	}
+
 	program := hex.EncodeToString(reward.ControlProgram)
 	c.RewardOfCoinbase[program], ok = checked.AddUint64(c.RewardOfCoinbase[program], reward.Amount)
 	if !ok {
