@@ -199,7 +199,7 @@ func TestExtendScanAddresses(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	acctStore := database.NewAccountStore(testDB)
+	acctStore := newMockAccountStore(testDB)
 	acctMgr := account.NewManager(acctStore, nil)
 	recoveryMgr := newRecoveryManager(walletStore, acctMgr)
 	acc1 := &account.Account{ID: "testA", Alias: "test1", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub.XPub}, KeyIndex: 1, DeriveRule: signers.BIP0044}}
