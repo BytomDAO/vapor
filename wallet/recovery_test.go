@@ -21,6 +21,7 @@ import (
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/test/mock"
 )
 
 // MockBlock mock a block
@@ -323,7 +324,8 @@ func TestRecoveryByRescanAccount(t *testing.T) {
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
 	recoveryDB := dbm.NewDB("recdb", "leveldb", dirPath)
-	recoveryStore := database.NewWalletStore(recoveryDB)
+	// recoveryStore := database.NewWalletStore(recoveryDB)
+	recoveryStore := mock.NewMockWalletStore(recoveryDB)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
