@@ -129,8 +129,8 @@ func TestWalletUpdate(t *testing.T) {
 	}()
 
 	store := database.NewStore(testDB)
-	testStore := database.NewWalletStore(testDB)
-	// testStore := newMockWalletStore(testDB)
+	walletStore := database.NewWalletStore(testDB)
+	// walletStore := newMockWalletStore(testDB)
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
 
@@ -184,7 +184,7 @@ func TestWalletUpdate(t *testing.T) {
 	txStatus.SetStatus(1, false)
 	store.SaveBlock(block, txStatus)
 
-	w := mockWallet(testStore, accountManager, reg, chain, dispatcher, true)
+	w := mockWallet(walletStore, accountManager, reg, chain, dispatcher, true)
 	err = w.AttachBlock(block)
 	if err != nil {
 		t.Fatal(err)
