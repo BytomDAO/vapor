@@ -50,7 +50,7 @@ func CalcVoteSeq(blockHeight uint64) uint64 {
 type ConsensusResult struct {
 	Seq              uint64
 	NumOfVote        map[string]uint64
-	RewardOfCoinbase map[string]uint64
+	CoinbaseReward map[string]uint64
 	BlockHash        bc.Hash
 	BlockHeight      uint64
 }
@@ -68,11 +68,11 @@ func (c *ConsensusResult) ApplyBlock(block *types.Block) error {
 	}
 
 	if c.IsFinalize() {
-		c.RewardOfCoinbase = map[string]uint64{}
+		c.CoinbaseReward = map[string]uint64{}
 	}
 
 	program := hex.EncodeToString(reward.ControlProgram)
-	c.RewardOfCoinbase[program], ok = checked.AddUint64(c.RewardOfCoinbase[program], reward.Amount)
+	c.CoinbaseReward[program], ok = checked.AddUint64(c.CoinbaseReward[program], reward.Amount)
 	if !ok {
 		return errMathOperationOverFlow
 	}
@@ -163,12 +163,12 @@ func (c *ConsensusResult) DetachBlock(block *types.Block) error {
 	}
 
 	program := hex.EncodeToString(reward.ControlProgram)
-	if c.RewardOfCoinbase[program], ok = checked.SubUint64(c.RewardOfCoinbase[program], reward.Amount); !ok {
+	if c.CoinbaseReward[program], ok = checked.SubUint64(c.CoinbaseReward[program], reward.Amount); !ok {
 		return errMathOperationOverFlow
 	}
 
-	if c.RewardOfCoinbase[program] == 0 {
-		delete(c.RewardOfCoinbase, program)
+	if c.CoinbaseReward[program] == 0 {
+		delete(c.CoinbaseReward, program)
 	}
 
 	for i := len(block.Transactions) - 1; i >= 0; i-- {
@@ -213,7 +213,7 @@ func (c *ConsensusResult) Fork() *ConsensusResult {
 	f := &ConsensusResult{
 		Seq:              c.Seq,
 		NumOfVote:        map[string]uint64{},
-		RewardOfCoinbase: map[string]uint64{},
+		CoinbaseReward: map[string]uint64{},
 		BlockHash:        c.BlockHash,
 		BlockHeight:      c.BlockHeight,
 	}
@@ -222,8 +222,8 @@ func (c *ConsensusResult) Fork() *ConsensusResult {
 		f.NumOfVote[key] = value
 	}
 
-	for key, value := range c.RewardOfCoinbase {
-		f.RewardOfCoinbase[key] = value
+	for key, value := range c.CoinbaseReward {
+		f.CoinbaseReward[key] = value
 	}
 	return f
 }
@@ -303,7 +303,7 @@ func AddCoinbaseRewards(consensusResult *ConsensusResult, reward *CoinbaseReward
 	}
 
 	aggregateFlag := false
-	for p, amount := range consensusResult.RewardOfCoinbase {
+	for p, amount := range consensusResult.CoinbaseReward {
 		coinbaseAmount := amount
 		program, err := hex.DecodeString(p)
 		if err != nil {

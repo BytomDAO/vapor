@@ -84,11 +84,11 @@ func (c *Chain) initChainStatus() error {
 	}
 
 	consensusResults := []*state.ConsensusResult{&state.ConsensusResult{
-		Seq:              0,
-		NumOfVote:        make(map[string]uint64),
-		RewardOfCoinbase: make(map[string]uint64),
-		BlockHash:        genesisBlock.Hash(),
-		BlockHeight:      0,
+		Seq:            0,
+		NumOfVote:      make(map[string]uint64),
+		CoinbaseReward: make(map[string]uint64),
+		BlockHash:      genesisBlock.Hash(),
+		BlockHeight:    0,
 	}}
 
 	genesisBlockHeader := &genesisBlock.BlockHeader

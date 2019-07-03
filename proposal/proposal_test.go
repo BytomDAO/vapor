@@ -71,7 +71,7 @@ func TestCreateCoinbaseTx(t *testing.T) {
 			desc: "the coinbase block height with multi outputs",
 			consensusResult: &state.ConsensusResult{
 				BlockHeight: reductionInterval - 1,
-				RewardOfCoinbase: map[string]uint64{
+				CoinbaseReward: map[string]uint64{
 					"51": 100,
 					"52": 200,
 					"55": 500,
