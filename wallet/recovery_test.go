@@ -16,7 +16,6 @@ import (
 	"github.com/vapor/common"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/database"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
@@ -415,7 +414,7 @@ func TestReportFound(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
-	testStore := database.NewWalletStore(testDB)
+	testStore := mock.NewMockWalletStore(testDB)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -431,7 +430,7 @@ func TestReportFound(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	acctStore := database.NewAccountStore(testDB)
+	acctStore := mock.NewMockAccountStore(testDB)
 	acctMgr := account.NewManager(acctStore, nil)
 	recoveryMgr := newRecoveryManager(testStore, acctMgr)
 	acc1 := &account.Account{ID: "testA", Alias: "test1", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub1.XPub}, KeyIndex: 1, DeriveRule: signers.BIP0044}}
@@ -504,7 +503,7 @@ func TestLoadStatusInfo(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	testStore := database.NewWalletStore(testDB)
+	testStore := mock.NewMockWalletStore(testDB)
 	defer os.RemoveAll("temp")
 
 	hsm, err := pseudohsm.New(dirPath)
@@ -517,7 +516,7 @@ func TestLoadStatusInfo(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	acctStore := database.NewAccountStore(testDB)
+	acctStore := mock.NewMockAccountStore(testDB)
 	acctMgr := account.NewManager(acctStore, nil)
 	recoveryMgr := newRecoveryManager(testStore, acctMgr)
 	// StatusInit init recovery status manager.
@@ -580,10 +579,10 @@ func TestLock(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	testStore := database.NewWalletStore(testDB)
+	testStore := mock.NewMockWalletStore(testDB)
 	defer os.RemoveAll("temp")
 
-	acctStore := database.NewAccountStore(testDB)
+	acctStore := mock.NewMockAccountStore(testDB)
 	acctMgr := account.NewManager(acctStore, nil)
 	recoveryMgr := newRecoveryManager(testStore, acctMgr)
 	if !recoveryMgr.tryStartXPubsRec() {
@@ -631,7 +630,7 @@ func TestContractIndexResidue(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
-	testStore := database.NewWalletStore(testDB)
+	testStore := mock.NewMockWalletStore(testDB)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -643,7 +642,7 @@ func TestContractIndexResidue(t *testing.T) {
 	}
 
 	contractIndexResidue := uint64(5)
-	acctStore := database.NewAccountStore(testDB)
+	acctStore := mock.NewMockAccountStore(testDB)
 	acctMgr := account.NewManager(acctStore, nil)
 	recoveryMgr := newRecoveryManager(testStore, acctMgr)
 	acct := &account.Account{ID: "testA", Alias: "test1", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub1.XPub}, KeyIndex: 1, DeriveRule: signers.BIP0044}}
@@ -651,7 +650,7 @@ func TestContractIndexResidue(t *testing.T) {
 	cp1 := &account.CtrlProgram{AccountID: acct.ID, Address: "address1", KeyIndex: 10, Change: false}
 
 	setContractIndexKey := func(acctMgr *account.Manager, accountID string, change bool) {
-		testDB.Set(database.Bip44ContractIndexKey(accountID, change), common.Unit64ToBytes(contractIndexResidue))
+		testDB.Set(mock.Bip44ContractIndexKey(accountID, change), common.Unit64ToBytes(contractIndexResidue))
 	}
 
 	delAccount := func(acctMgr *account.Manager, accountID string, change bool) {
