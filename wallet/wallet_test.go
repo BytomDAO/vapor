@@ -1,7 +1,6 @@
 package wallet
 
 import (
-	"encoding/binary"
 	"encoding/json"
 	"io/ioutil"
 	"os"
@@ -10,10 +9,8 @@ import (
 	"time"
 
 	"github.com/vapor/account"
-	acc "github.com/vapor/account"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/pseudohsm"
-	"github.com/vapor/blockchain/query"
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/config"
@@ -22,7 +19,6 @@ import (
 	"github.com/vapor/database"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/database/storage"
-	"github.com/vapor/errors"
 	"github.com/vapor/event"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
@@ -209,7 +205,7 @@ func TestWalletUpdate(t *testing.T) {
 	for position, tx := range block.Transactions {
 		get := w.store.GetGlobalTransactionIndex(tx.ID.String())
 		bh := block.BlockHeader.Hash()
-		expect := CalcGlobalTxIndex(&bh, uint64(position))
+		expect := mock.CalcGlobalTxIndex(&bh, uint64(position))
 		if !reflect.DeepEqual(get, expect) {
 			t.Fatalf("position#%d: compare retrieved globalTxIdx err", position)
 		}
@@ -413,159 +409,6 @@ func mockSingleBlock(tx *types.Tx) *types.Block {
 			Height:  1,
 		},
 		Transactions: []*types.Tx{config.GenesisTx(), tx},
-	}
-}
-
-var (
-	WalletKey     = []byte{0x00, 0x3a}
-	TxIndexPrefix = []byte{0x01, 0x3a}
-	TxPrefix      = []byte{0x02, 0x3a}
-)
-
-func CalcGlobalTxIndex(blockHash *bc.Hash, position uint64) []byte {
-	txIdx := make([]byte, 40)
-	copy(txIdx[:32], blockHash.Bytes())
-	binary.BigEndian.PutUint64(txIdx[32:], position)
-	return txIdx
-}
-
-func calcTxIndexKey(txID string) []byte {
-	return append(TxIndexPrefix, []byte(txID)...)
-}
-
-func calcAnnotatedKey(formatKey string) []byte {
-	return append(TxPrefix, []byte(formatKey)...)
-}
-
-type mockAccountStore struct {
-	accountDB dbm.DB
-	batch     dbm.Batch
-}
-
-// NewAccountStore create new AccountStore.
-func newMockAccountStore(db dbm.DB) *mockAccountStore {
-	return &mockAccountStore{
-		accountDB: db,
-		batch:     nil,
-	}
-}
-
-func (store *mockAccountStore) InitBatch() error                                   { return nil }
-func (store *mockAccountStore) CommitBatch() error                                 { return nil }
-func (store *mockAccountStore) DeleteAccount(*account.Account) error               { return nil }
-func (store *mockAccountStore) DeleteStandardUTXO(outputID bc.Hash)                { return }
-func (store *mockAccountStore) GetAccountByAlias(string) (*account.Account, error) { return nil, nil }
-func (store *mockAccountStore) GetAccountByID(string) (*account.Account, error)    { return nil, nil }
-func (store *mockAccountStore) GetAccountIndex([]chainkd.XPub) uint64              { return 0 }
-func (store *mockAccountStore) GetBip44ContractIndex(string, bool) uint64          { return 0 }
-func (store *mockAccountStore) GetCoinbaseArbitrary() []byte                       { return nil }
-func (store *mockAccountStore) GetContractIndex(string) uint64                     { return 0 }
-func (store *mockAccountStore) GetControlProgram(bc.Hash) (*account.CtrlProgram, error) {
-	return nil, nil
-}
-func (store *mockAccountStore) GetUTXO(outid bc.Hash) (*account.UTXO, error)               { return nil, nil }
-func (store *mockAccountStore) GetMiningAddress() (*account.CtrlProgram, error)            { return nil, nil }
-func (store *mockAccountStore) ListAccounts(string) ([]*account.Account, error)            { return nil, nil }
-func (store *mockAccountStore) ListControlPrograms() ([]*account.CtrlProgram, error)       { return nil, nil }
-func (store *mockAccountStore) ListUTXOs() ([]*account.UTXO, error)                        { return nil, nil }
-func (store *mockAccountStore) SetAccount(*account.Account) error                          { return nil }
-func (store *mockAccountStore) SetAccountIndex(*account.Account)                           { return }
-func (store *mockAccountStore) SetBip44ContractIndex(string, bool, uint64)                 { return }
-func (store *mockAccountStore) SetCoinbaseArbitrary([]byte)                                { return }
-func (store *mockAccountStore) SetContractIndex(string, uint64)                            { return }
-func (store *mockAccountStore) SetControlProgram(bc.Hash, *account.CtrlProgram) error      { return nil }
-func (store *mockAccountStore) SetMiningAddress(*account.CtrlProgram) error                { return nil }
-func (store *mockAccountStore) SetStandardUTXO(outputID bc.Hash, utxo *account.UTXO) error { return nil }
-
-// WalletStore store wallet using leveldb
-type mockWalletStore struct {
-	walletDB dbm.DB
-	batch    dbm.Batch
-}
-
-// NewWalletStore create new WalletStore struct
-func newMockWalletStore(db dbm.DB) *mockWalletStore {
-	return &mockWalletStore{
-		walletDB: db,
-		batch:    nil,
-	}
-}
-
-func (store *mockWalletStore) InitBatch() error                                    { return nil }
-func (store *mockWalletStore) CommitBatch() error                                  { return nil }
-func (store *mockWalletStore) DeleteContractUTXO(bc.Hash)                          { return }
-func (store *mockWalletStore) DeleteRecoveryStatus()                               { return }
-func (store *mockWalletStore) DeleteTransactions(uint64)                           { return }
-func (store *mockWalletStore) DeleteUnconfirmedTransaction(string)                 { return }
-func (store *mockWalletStore) DeleteWalletTransactions()                           { return }
-func (store *mockWalletStore) DeleteWalletUTXOs()                                  { return }
-func (store *mockWalletStore) GetAsset(*bc.AssetID) (*asset.Asset, error)          { return nil, nil }
-func (store *mockWalletStore) GetControlProgram(bc.Hash) (*acc.CtrlProgram, error) { return nil, nil }
-func (store *mockWalletStore) GetGlobalTransactionIndex(string) []byte             { return nil }
-func (store *mockWalletStore) GetStandardUTXO(bc.Hash) (*acc.UTXO, error)          { return nil, nil }
-
-// func (store *mockWalletStore) GetTransaction(string) (*query.AnnotatedTx, error)   { return nil, nil }
-func (store *mockWalletStore) GetUnconfirmedTransaction(string) (*query.AnnotatedTx, error) {
-	return nil, nil
-}
-
-// func (store *mockWalletStore) GetRecoveryStatus([]byte) []byte              { return nil }
-func (store *mockWalletStore) ListAccountUTXOs(string) ([]*acc.UTXO, error) { return nil, nil }
-func (store *mockWalletStore) ListTransactions(string, string, uint, bool) ([]*query.AnnotatedTx, error) {
-	return nil, nil
-}
-func (store *mockWalletStore) ListUnconfirmedTransactions() ([]*query.AnnotatedTx, error) {
-	return nil, nil
-}
-func (store *mockWalletStore) SetAssetDefinition(*bc.AssetID, []byte)             { return }
-func (store *mockWalletStore) SetContractUTXO(bc.Hash, *acc.UTXO) error           { return nil }
-func (store *mockWalletStore) SetGlobalTransactionIndex(string, *bc.Hash, uint64) { return }
-
-// func (store *mockWalletStore) SetRecoveryStatus([]byte, []byte)                   { return }
-func (store *mockWalletStore) SetTransaction(uint64, *query.AnnotatedTx) error { return nil }
-func (store *mockWalletStore) SetUnconfirmedTransaction(string, *query.AnnotatedTx) error {
-	return nil
-}
-
-// GetRecoveryStatus delete recovery status
-func (store *mockWalletStore) GetRecoveryStatus(recoveryKey []byte) []byte {
-	return store.walletDB.Get(recoveryKey)
-}
-
-// GetTransaction get tx by txid
-func (store *mockWalletStore) GetTransaction(txID string) (*query.AnnotatedTx, error) {
-	formatKey := store.walletDB.Get(calcTxIndexKey(txID))
-	if formatKey == nil {
-		return nil, errors.New("account TXID not found")
-	}
-	rawTx := store.walletDB.Get(calcAnnotatedKey(string(formatKey)))
-	tx := new(query.AnnotatedTx)
-	if err := json.Unmarshal(rawTx, tx); err != nil {
-		return nil, err
-	}
-	return tx, nil
-}
-
-// GetWalletInfo get wallet information
-func (store *mockWalletStore) GetWalletInfo() []byte {
-	return store.walletDB.Get([]byte(WalletKey))
-}
-
-// SetRecoveryStatus set recovery status
-func (store *mockWalletStore) SetRecoveryStatus(recoveryKey, rawStatus []byte) {
-	if store.batch == nil {
-		store.walletDB.Set(recoveryKey, rawStatus)
-	} else {
-		store.batch.Set(recoveryKey, rawStatus)
-	}
-}
-
-// SetWalletInfo get wallet information
-func (store *mockWalletStore) SetWalletInfo(rawWallet []byte) {
-	if store.batch == nil {
-		store.walletDB.Set([]byte(WalletKey), rawWallet)
-	} else {
-		store.batch.Set([]byte(WalletKey), rawWallet)
 	}
 }
 
