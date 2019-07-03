@@ -142,22 +142,30 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 
 	txs := txPool.GetTransactions()
 	sort.Sort(byTime(txs))
+
+	entriesTxs := []*bc.Tx{}
 	for _, txDesc := range txs {
+		entriesTxs = append(entriesTxs, txDesc.Tx.Tx)
+	}
+
+	validateResults := validation.ValidateTxs(entriesTxs, bcBlock)
+	for i, validateResult := range validateResults {
+		txDesc := txs[i]
 		tx := txDesc.Tx.Tx
 		gasOnlyTx := false
 
-		if err := c.GetTransactionsUtxo(view, []*bc.Tx{tx}); err != nil {
-			blkGenSkipTxForErr(txPool, &tx.ID, err)
-			continue
-		}
-
-		gasStatus, err := validation.ValidateTx(tx, bcBlock)
-		if err != nil {
+		gasStatus := validateResult.GetGasState()
+		if validateResult.GetError() != nil {
 			if !gasStatus.GasValid {
 				blkGenSkipTxForErr(txPool, &tx.ID, err)
 				continue
 			}
 			gasOnlyTx = true
+		}
+
+		if err := c.GetTransactionsUtxo(view, []*bc.Tx{tx}); err != nil {
+			blkGenSkipTxForErr(txPool, &tx.ID, err)
+			continue
 		}
 
 		if gasUsed+uint64(gasStatus.GasUsed) > consensus.MaxBlockGas {
@@ -181,6 +189,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 		if gasUsed == consensus.MaxBlockGas {
 			break
 		}
+
 	}
 
 	consensusResult, err := c.GetConsensusResultByHash(&preBlockHash)
