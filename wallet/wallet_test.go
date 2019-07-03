@@ -28,6 +28,7 @@ import (
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
+	"github.com/vapor/test/mock"
 )
 
 func TestEncodeDecodeGlobalTxIndex(t *testing.T) {
@@ -39,7 +40,7 @@ func TestEncodeDecodeGlobalTxIndex(t *testing.T) {
 		Position:  1,
 	}
 
-	globalTxIdx := database.CalcGlobalTxIndex(&want.BlockHash, want.Position)
+	globalTxIdx := mock.CalcGlobalTxIndex(&want.BlockHash, want.Position)
 	blockHashGot, positionGot := parseGlobalTxIdx(globalTxIdx)
 	if *blockHashGot != want.BlockHash {
 		t.Errorf("blockHash mismatch. Get: %v. Expect: %v", *blockHashGot, want.BlockHash)
