@@ -280,6 +280,7 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 	}()
 
 	store := database.NewStore(testDB)
+	// store := newMockStore(testDB)
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
 
@@ -287,6 +288,11 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// c := &protocol.Chain{
+	// 	store: &mStore{
+	// 		blockHeaders: make(map[bc.Hash]*types.BlockHeader),
+	// 	},
+	// }
 
 	accountStore := mock.NewMockAccountStore(testDB)
 	accountManager := account.NewManager(accountStore, chain)
@@ -436,5 +442,30 @@ func (s *mockStore) GetBlockHashesByHeight(uint64) ([]*bc.Hash, error)          
 func (s *mockStore) SaveBlock(*types.Block, *bc.TransactionStatus) error          { return nil }
 func (s *mockStore) SaveBlockHeader(*types.BlockHeader) error                     { return nil }
 func (s *mockStore) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, []*state.VoteResult) error {
+	return nil
+}
+
+type mStore struct {
+	blockHeaders map[bc.Hash]*types.BlockHeader
+}
+
+func (s *mStore) BlockExist(hash *bc.Hash) bool           { return false }
+func (s *mStore) GetBlock(*bc.Hash) (*types.Block, error) { return nil, nil }
+func (s *mStore) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
+	return s.blockHeaders[*hash], nil
+}
+func (s *mStore) GetStoreStatus() *protocol.BlockStoreState                    { return nil }
+func (s *mStore) GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error) { return nil, nil }
+func (s *mStore) GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error     { return nil }
+func (s *mStore) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)                 { return nil, nil }
+func (s *mStore) GetVoteResult(uint64) (*state.VoteResult, error)              { return nil, nil }
+func (s *mStore) GetMainChainHash(uint64) (*bc.Hash, error)                    { return nil, nil }
+func (s *mStore) GetBlockHashesByHeight(uint64) ([]*bc.Hash, error)            { return nil, nil }
+func (s *mStore) SaveBlock(*types.Block, *bc.TransactionStatus) error          { return nil }
+func (s *mStore) SaveBlockHeader(blockHeader *types.BlockHeader) error {
+	s.blockHeaders[blockHeader.Hash()] = blockHeader
+	return nil
+}
+func (s *mStore) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, []*state.VoteResult) error {
 	return nil
 }
