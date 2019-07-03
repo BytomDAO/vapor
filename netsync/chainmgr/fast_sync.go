@@ -113,7 +113,6 @@ func (fs *fastSync) createFetchBlocksTasks() error {
 }
 
 func (fs *fastSync) process() error {
-
 	if err := fs.findSyncRange(); err != nil {
 		return err
 	}
@@ -121,6 +120,7 @@ func (fs *fastSync) process() error {
 	if err := fs.createFetchBlocksTasks(); err != nil {
 		return err
 	}
+
 	var wg sync.WaitGroup
 	go fs.msgFetcher.parallelFetchBlocks(fs.pieces, fs.downloadedBlockCh, fs.downloadResult, fs.processResult, &wg)
 	go fs.blockProcessor.process(fs.downloadResult, fs.processResult, &wg)
