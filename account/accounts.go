@@ -446,10 +446,6 @@ func (m *Manager) GetMiningAddress() (string, error) {
 	return cp.Address, nil
 }
 
-func (m *Manager) GetControlProgram(hash bc.Hash) (*CtrlProgram, error) {
-	return m.store.GetControlProgram(hash)
-}
-
 // IsLocalControlProgram check is the input control program belong to local
 func (m *Manager) IsLocalControlProgram(prog []byte) bool {
 	var hash [32]byte
@@ -666,4 +662,8 @@ func (m *Manager) SetStandardUTXO(outputID bc.Hash, utxo *UTXO) error {
 func (m *Manager) DeleteStandardUTXO(outputID bc.Hash) {
 	m.store.DeleteStandardUTXO(outputID)
 	return
+}
+
+func (m *Manager) GetControlProgram(hash bc.Hash) (*CtrlProgram, error) {
+	return m.store.GetControlProgram(hash)
 }
