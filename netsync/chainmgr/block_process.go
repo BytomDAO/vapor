@@ -6,12 +6,14 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 
+	"fmt"
 	"github.com/vapor/netsync/peers"
 	"github.com/vapor/p2p/security"
 )
 
 type BlockProcessor interface {
-	process(chan bool, chan bool, *sync.WaitGroup)
+	process(chan bool, chan bool, *sync.WaitGroup, int)
+	resetParameter()
 }
 
 type downloadedBlock struct {
@@ -29,15 +31,18 @@ type blockProcessor struct {
 
 func newBlockProcessor(chain Chain, storage Storage, peers *peers.PeerSet, downloadedBlockCh chan *downloadedBlock) *blockProcessor {
 	return &blockProcessor{
-		chain:             chain,
-		peers:             peers,
-		storage:           storage,
+		chain:   chain,
+		peers:   peers,
+		storage: storage,
+		queue:   prque.New(),
+
 		downloadedBlockCh: downloadedBlockCh,
 	}
 }
 
-func (bp *blockProcessor) add(download *downloadedBlock) {
+func (bp *blockProcessor) add(download *downloadedBlock, num int) {
 	for i := download.startHeight; i <= download.stopHeight; i++ {
+		fmt.Println("num:", num, "push:", bp.queue.Size(), "push:", i)
 		bp.queue.Push(i, -float32(i))
 	}
 }
@@ -57,18 +62,20 @@ func (bp *blockProcessor) insert(height uint64) error {
 	return nil
 }
 
-func (bp *blockProcessor) process(downloadResult chan bool, ProcessResult chan bool, wg *sync.WaitGroup) {
-	wg.Add(1)
+func (bp *blockProcessor) process(downloadComplete chan bool, ProcessComplete chan bool, wg *sync.WaitGroup, num int) {
+	//wg.Add(1)
+	defer fmt.Println("blockProcessor done. num:", num)
 	defer wg.Done()
 
-	bp.queue = prque.New()
-	downloadComplete := false
+	//downloadComplete := false
 	for {
-		if downloadComplete && bp.queue.Size() == 0 {
-			return
-		}
+		//if downloadComplete && bp.queue.Size() == 0 {
+		//	fmt.Println("downloadComplete process exit")
+		//	return
+		//}
 
 		for !bp.queue.Empty() {
+			fmt.Println("num:", num, "pop:", bp.queue.Size())
 			height := bp.queue.PopItem().(uint64)
 			if height > bp.chain.BestBlockHeight()+1 {
 				bp.queue.Push(height, -float32(height))
@@ -76,19 +83,23 @@ func (bp *blockProcessor) process(downloadResult chan bool, ProcessResult chan b
 			}
 
 			if err := bp.insert(height); err != nil {
-				ProcessResult <- false
+				ProcessComplete <- true
 				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("failed on process block")
 				return
 			}
 		}
 		select {
 		case blocks := <-bp.downloadedBlockCh:
-			bp.add(blocks)
-		case ok := <-downloadResult:
-			if !ok {
-				return
-			}
-			downloadComplete = true
+			bp.add(blocks, num)
+		case <-downloadComplete:
+			//if !ok {
+			return
+
+			//downloadComplete = true
 		}
 	}
+}
+
+func (bp *blockProcessor) resetParameter() {
+	bp.queue.Reset()
 }

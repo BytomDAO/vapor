@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 
+	"fmt"
 	"github.com/vapor/errors"
 	"github.com/vapor/netsync/peers"
 	"github.com/vapor/p2p/security"
@@ -24,11 +25,13 @@ var (
 	requireBlockTimeout   = 20 * time.Second
 	requireHeadersTimeout = 30 * time.Second
 	requireBlocksTimeout  = 50 * time.Second
+	fastSyncTimeout       = 200 * time.Second
 )
 
 type MsgFetcher interface {
+	resetParameter()
 	requireBlock(peerID string, height uint64) (*types.Block, error)
-	parallelFetchBlocks(taskQueue *prque.Prque, downloadedBlockCh chan *downloadedBlock, downloadResult chan bool, ProcessResult chan bool, wg *sync.WaitGroup)
+	parallelFetchBlocks(taskQueue *prque.Prque, downloadedBlockCh chan *downloadedBlock, downloadResult chan bool, ProcessResult chan bool, wg *sync.WaitGroup, num int)
 	parallelFetchHeaders(peers []*peers.Peer, locator []*bc.Hash, stopHash *bc.Hash, skip uint64) (map[string][]*types.BlockHeader, error)
 }
 
@@ -109,20 +112,23 @@ type timeoutTime struct {
 	peerID string
 }
 
-func (mf *msgFetcher) parallelFetchBlocks(taskQueue *prque.Prque, downloadedBlockCh chan *downloadedBlock, downloadResult chan bool, ProcessResult chan bool, wg *sync.WaitGroup) {
-	wg.Add(1)
+func (mf *msgFetcher) parallelFetchBlocks(taskQueue *prque.Prque, downloadedBlockCh chan *downloadedBlock, downloadComplete chan bool, ProcessComplete chan bool, wg *sync.WaitGroup, num int) {
+	//wg.Add(1)
+	defer fmt.Println("parallelFetchBlocks done. num:", num)
 	defer wg.Done()
 
 	//timeout := time.NewTimer(requireBlocksTimeout)
-	var timeout time.Timer
+	timeout := time.NewTimer(requireBlocksTimeout)
 	defer timeout.Stop()
+	fastSyncTimeout := time.NewTimer(fastSyncTimeout)
+	defer fastSyncTimeout.Stop()
 
 	tasks := make(map[string]*task)
 	stopTimers := []*timeoutTime{}
 	for {
 		// schedule task
 		if taskQueue.Size() == 0 && len(tasks) == 0 {
-			downloadResult <- true
+			downloadComplete <- true
 			return
 		}
 
@@ -131,7 +137,7 @@ func (mf *msgFetcher) parallelFetchBlocks(taskQueue *prque.Prque, downloadedBloc
 			peerID, err := mf.peers.SelectPeer(piece.stopHeader.Height + fastSyncPivotGap)
 			if err != nil {
 				if len(tasks) == 0 {
-					downloadResult <- false
+					downloadComplete <- true
 					return
 				}
 				taskQueue.Push(piece, -float32(piece.index))
@@ -209,7 +215,7 @@ func (mf *msgFetcher) parallelFetchBlocks(taskQueue *prque.Prque, downloadedBloc
 
 			if err := mf.storage.WriteBlocks(msg.peerID, msg.blocks); err != nil {
 				log.WithFields(log.Fields{"module": logModule, "error": err}).Info("write block error")
-				downloadResult <- false
+				downloadComplete <- true
 				return
 			}
 
@@ -223,6 +229,10 @@ func (mf *msgFetcher) parallelFetchBlocks(taskQueue *prque.Prque, downloadedBloc
 				taskQueue.Push(task.piece, -float32(task.piece.index))
 			}
 		case <-timeout.C:
+			if len(stopTimers) == 0 {
+				break
+			}
+
 			task, ok := tasks[stopTimers[0].peerID]
 			if !ok {
 				break
@@ -230,23 +240,22 @@ func (mf *msgFetcher) parallelFetchBlocks(taskQueue *prque.Prque, downloadedBloc
 			log.WithFields(log.Fields{"module": logModule, "error": errRequestTimeout}).Info("failed on fetch blocks")
 			mf.peers.ErrorHandler(stopTimers[0].peerID, security.LevelConnException, errors.New("require blocks timeout"))
 			taskQueue.Push(task.piece, -float32(task.piece.index))
+			stopTimers = stopTimers[1:]
 			//reset timeout
 			if len(stopTimers) > 0 {
-				stopTimers = stopTimers[1:]
 				timeout.Reset(stopTimers[0].time.Sub(time.Now()))
 			}
 
 			//downloadResult <- false
 			//log.WithFields(log.Fields{"module": logModule, "error": errRequestTimeout}).Info("failed on fetch blocks")
 			//return
-		case ok := <-ProcessResult:
-			if !ok {
-				return
-			}
+		case <-fastSyncTimeout.C:
+			downloadComplete <- true
+			return
+		case <-ProcessComplete:
+			return
 		}
 	}
-
-	return
 }
 
 func (mf *msgFetcher) parallelFetchHeaders(peers []*peers.Peer, locator []*bc.Hash, stopHash *bc.Hash, skip uint64) (map[string][]*types.BlockHeader, error) {
@@ -276,4 +285,14 @@ func (mf *msgFetcher) parallelFetchHeaders(peers []*peers.Peer, locator []*bc.Ha
 			return nil, errors.Wrap(errRequestTimeout, "parallelFetchHeaders")
 		}
 	}
+}
+
+func (mf *msgFetcher) resetParameter() {
+	for len(mf.blocksProcessCh) > 0 {
+		<-mf.blocksProcessCh
+	}
+	for len(mf.headersProcessCh) > 0 {
+		<-mf.headersProcessCh
+	}
+	mf.storage.resetParameter()
 }

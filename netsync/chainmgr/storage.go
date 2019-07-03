@@ -18,6 +18,7 @@ var (
 )
 
 type Storage interface {
+	resetParameter()
 	WriteBlocks(peerID string, blocks []*types.Block) error
 	ReadBlock(height uint64) (*blockStore, error)
 }
@@ -97,6 +98,11 @@ func (s *storage) ReadBlock(height uint64) (*blockStore, error) {
 
 	blockStore.blockMsg.block = block
 	return blockStore.blockMsg, nil
+}
+
+func (s *storage) resetParameter() {
+	s.blocks = make(map[uint64]blockStorage)
+	s.actualUsage = 0
 }
 
 type fileStore struct {

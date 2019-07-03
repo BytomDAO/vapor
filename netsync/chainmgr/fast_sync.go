@@ -1,6 +1,7 @@
 package chainmgr
 
 import (
+	"math/rand"
 	"sync"
 	"time"
 
@@ -14,8 +15,8 @@ import (
 )
 
 var (
-	maxBlocksPerMsg      = uint64(1000)
-	maxHeadersPerMsg     = uint64(1000)
+	maxBlocksPerMsg      = uint64(500)
+	maxHeadersPerMsg     = uint64(500)
 	fastSyncPivotGap     = uint64(64)
 	minGapStartFastSync  = uint64(128)
 	maxFastSyncBlocksNum = uint64(10000)
@@ -113,6 +114,10 @@ func (fs *fastSync) createFetchBlocksTasks() error {
 }
 
 func (fs *fastSync) process() error {
+	num := rand.Int()
+	log.WithFields(log.Fields{"module": logModule, "num": num, "height": fs.chain.BestBlockHeight()}).Info("fast sync start")
+
+	fs.resetParameter()
 	if err := fs.findSyncRange(); err != nil {
 		return err
 	}
@@ -122,10 +127,11 @@ func (fs *fastSync) process() error {
 	}
 
 	var wg sync.WaitGroup
-	go fs.msgFetcher.parallelFetchBlocks(fs.pieces, fs.downloadedBlockCh, fs.downloadResult, fs.processResult, &wg)
-	go fs.blockProcessor.process(fs.downloadResult, fs.processResult, &wg)
+	wg.Add(2)
+	go fs.msgFetcher.parallelFetchBlocks(fs.pieces, fs.downloadedBlockCh, fs.downloadResult, fs.processResult, &wg, num)
+	go fs.blockProcessor.process(fs.downloadResult, fs.processResult, &wg, num)
 	wg.Wait()
-	log.WithFields(log.Fields{"module": logModule, "height": fs.chain.BestBlockHeight()}).Info("fast sync complete")
+	log.WithFields(log.Fields{"module": logModule, "num": num, "height": fs.chain.BestBlockHeight()}).Info("fast sync complete")
 	return nil
 }
 
@@ -248,6 +254,23 @@ func (fs *fastSync) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, skip ui
 	}
 
 	return headers, nil
+}
+
+func (fs *fastSync) resetParameter() {
+	fs.pieces.Reset()
+	for _, ch := range []chan bool{fs.downloadResult, fs.processResult} {
+		select {
+		case <-ch:
+		default:
+		}
+	}
+
+	for len(fs.downloadedBlockCh) > 0 {
+		<-fs.downloadedBlockCh
+	}
+
+	fs.msgFetcher.resetParameter()
+	fs.blockProcessor.resetParameter()
 }
 
 func (fs *fastSync) setSyncPeer(peer *peers.Peer) {
