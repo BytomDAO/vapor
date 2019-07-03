@@ -1,4 +1,4 @@
-package synchron
+package federation
 
 import (
 	"reflect"
@@ -21,8 +21,8 @@ func (p *Porter) AttachCallback(f func(p *Porter) error) {
 
 func (p *Porter) Run() {
 	for _, f := range p.Callbacks {
-		log.Info("Running...", runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name())
+		log.Info("Running func: ", runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name())
 		f(p)
-		log.Info(runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name(), " done.")
+		log.Info("Func done: ", runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name())
 	}
 }
