@@ -55,10 +55,9 @@ func MapTx(oldTx *TxData) *bc.Tx {
 			continue
 		}
 
-		if ord >= uint64(len(oldTx.Inputs)) {
-			continue
+		if ord < uint64(len(oldTx.Inputs)) {
+			tx.InputIDs[ord] = id
 		}
-		tx.InputIDs[ord] = id
 	}
 
 	for id := range spentOutputIDs {
@@ -155,7 +154,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			assetDef := &bc.AssetDefinition{
 				Data: &assetDefHash,
 				IssuanceProgram: &bc.Program{
-					VmVersion: inp.VMVersion,
+					VmVersion: inp.IssuanceVMVersion,
 					Code:      inp.IssuanceProgram,
 				},
 			}
@@ -224,7 +223,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 
 		case out.OutputType() == VoteOutputType:
 			// non-retirement vote tx
-			voteOut, _ := out.TypedOutput.(*VoteTxOutput)
+			voteOut, _ := out.TypedOutput.(*VoteOutput)
 			prog := &bc.Program{out.VMVersion(), out.ControlProgram()}
 			o := bc.NewVoteOutput(src, prog, uint64(i), voteOut.Vote)
 			resultID = addEntry(o)

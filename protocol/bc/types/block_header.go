@@ -69,7 +69,10 @@ func (bh *BlockHeader) UnmarshalText(text []byte) error {
 
 func (bh *BlockHeader) readFrom(r *blockchain.Reader) (serflag uint8, err error) {
 	var serflags [1]byte
-	io.ReadFull(r, serflags[:])
+	if _, err := io.ReadFull(r, serflags[:]); err != nil {
+		return 0, err
+	}
+
 	serflag = serflags[0]
 	switch serflag {
 	case SerBlockHeader, SerBlockFull:
@@ -112,6 +115,10 @@ func (bh *BlockHeader) WriteTo(w io.Writer) (int64, error) {
 
 func (bh *BlockHeader) writeTo(w io.Writer, serflags uint8) (err error) {
 	w.Write([]byte{serflags})
+	if serflags == SerBlockTransactions {
+		return nil
+	}
+
 	if _, err = blockchain.WriteVarint63(w, bh.Version); err != nil {
 		return err
 	}
