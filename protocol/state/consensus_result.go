@@ -14,7 +14,10 @@ import (
 	"github.com/vapor/protocol/bc/types"
 )
 
-var errMathOperationOverFlow = errors.New("arithmetic operation result overflow")
+var (
+	errMathOperationOverFlow = errors.New("arithmetic operation result overflow")
+	errCoinbaseReward        = errors.New("bad coinbase reward")
+)
 
 // ConsensusNode represents a consensus node
 type ConsensusNode struct {
@@ -48,11 +51,11 @@ func CalcVoteSeq(blockHeight uint64) uint64 {
 // NumOfVote indicates the number of votes each consensus node receives, the key of map represent public key
 // Finalized indicates whether this vote is finalized
 type ConsensusResult struct {
-	Seq              uint64
-	NumOfVote        map[string]uint64
+	Seq            uint64
+	NumOfVote      map[string]uint64
 	CoinbaseReward map[string]uint64
-	BlockHash        bc.Hash
-	BlockHeight      uint64
+	BlockHash      bc.Hash
+	BlockHeight    uint64
 }
 
 // ApplyBlock calculate the consensus result for new block
@@ -157,6 +160,21 @@ func (c *ConsensusResult) DetachBlock(block *types.Block) error {
 		return errors.New("block hash is not equals last block hash of vote result")
 	}
 
+	if block.Height%consensus.RoundVoteBlockNums == 0 {
+		if len(c.CoinbaseReward) != 0 {
+			return errCoinbaseReward
+		}
+
+		c.CoinbaseReward = map[string]uint64{}
+		for i, output := range block.Transactions[0].Outputs {
+			if i == 0 && output.AssetAmount().Amount == 0 {
+				continue
+			}
+			program := output.ControlProgram()
+			c.CoinbaseReward[hex.EncodeToString(program)] = output.AssetAmount().Amount
+		}
+	}
+
 	reward, err := CalCoinbaseReward(block)
 	if err != nil {
 		return err
@@ -211,11 +229,11 @@ func (c *ConsensusResult) DetachBlock(block *types.Block) error {
 
 func (c *ConsensusResult) Fork() *ConsensusResult {
 	f := &ConsensusResult{
-		Seq:              c.Seq,
-		NumOfVote:        map[string]uint64{},
+		Seq:            c.Seq,
+		NumOfVote:      map[string]uint64{},
 		CoinbaseReward: map[string]uint64{},
-		BlockHash:        c.BlockHash,
-		BlockHeight:      c.BlockHeight,
+		BlockHash:      c.BlockHash,
+		BlockHeight:    c.BlockHeight,
 	}
 
 	for key, value := range c.NumOfVote {
