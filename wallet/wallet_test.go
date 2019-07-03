@@ -407,3 +407,43 @@ func mockSingleBlock(tx *types.Tx) *types.Block {
 		Transactions: []*types.Tx{config.GenesisTx(), tx},
 	}
 }
+
+type mockAccountStore struct {
+	accountDB dbm.DB
+	batch     dbm.Batch
+}
+
+// NewAccountStore create new AccountStore.
+func newMockAccountStore(db dbm.DB) *mockAccountStore {
+	return &mockAccountStore{
+		accountDB: db,
+		batch:     nil,
+	}
+}
+
+func (store *mockAccountStore) InitBatch() error                                   { return nil }
+func (store *mockAccountStore) CommitBatch() error                                 { return nil }
+func (store *mockAccountStore) DeleteAccount(*account.Account) error               { return nil }
+func (store *mockAccountStore) DeleteStandardUTXO(outputID bc.Hash)                { return }
+func (store *mockAccountStore) GetAccountByAlias(string) (*account.Account, error) { return nil, nil }
+func (store *mockAccountStore) GetAccountByID(string) (*account.Account, error)    { return nil, nil }
+func (store *mockAccountStore) GetAccountIndex([]chainkd.XPub) uint64              { return 0 }
+func (store *mockAccountStore) GetBip44ContractIndex(string, bool) uint64          { return 0 }
+func (store *mockAccountStore) GetCoinbaseArbitrary() []byte                       { return nil }
+func (store *mockAccountStore) GetContractIndex(string) uint64                     { return 0 }
+func (store *mockAccountStore) GetControlProgram(bc.Hash) (*account.CtrlProgram, error) {
+	return nil, nil
+}
+func (store *mockAccountStore) GetUTXO(outid bc.Hash) (*account.UTXO, error)               { return nil, nil }
+func (store *mockAccountStore) GetMiningAddress() (*account.CtrlProgram, error)            { return nil, nil }
+func (store *mockAccountStore) ListAccounts(string) ([]*account.Account, error)            { return nil, nil }
+func (store *mockAccountStore) ListControlPrograms() ([]*account.CtrlProgram, error)       { return nil, nil }
+func (store *mockAccountStore) ListUTXOs() ([]*account.UTXO, error)                        { return nil, nil }
+func (store *mockAccountStore) SetAccount(*account.Account) error                          { return nil }
+func (store *mockAccountStore) SetAccountIndex(*account.Account)                           { return }
+func (store *mockAccountStore) SetBip44ContractIndex(string, bool, uint64)                 { return }
+func (store *mockAccountStore) SetCoinbaseArbitrary([]byte)                                { return }
+func (store *mockAccountStore) SetContractIndex(string, uint64)                            { return }
+func (store *mockAccountStore) SetControlProgram(bc.Hash, *account.CtrlProgram) error      { return nil }
+func (store *mockAccountStore) SetMiningAddress(*account.CtrlProgram) error                { return nil }
+func (store *mockAccountStore) SetStandardUTXO(outputID bc.Hash, utxo *account.UTXO) error { return nil }
