@@ -17,7 +17,7 @@ import (
 	"github.com/vapor/protocol/bc/types"
 )
 
-func ParseGlobalTxIdx(globalTxIdx []byte) (*bc.Hash, uint64) {
+func parseGlobalTxIdx(globalTxIdx []byte) (*bc.Hash, uint64) {
 	var hashBytes [32]byte
 	copy(hashBytes[:], globalTxIdx[:32])
 	hash := bc.NewHash(hashBytes)
@@ -159,7 +159,7 @@ func (w *Wallet) getGlobalTxByTxID(txID string) (*query.AnnotatedTx, error) {
 		return nil, fmt.Errorf("No transaction(tx_id=%s) ", txID)
 	}
 
-	blockHash, pos := ParseGlobalTxIdx(globalTxIdx)
+	blockHash, pos := parseGlobalTxIdx(globalTxIdx)
 	block, err := w.chain.GetBlockByHash(blockHash)
 	if err != nil {
 		return nil, err
