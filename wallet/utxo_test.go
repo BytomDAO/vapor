@@ -95,18 +95,31 @@ func TestGetAccountUtxos(t *testing.T) {
 		},
 		{
 			dbUtxos: map[string]*account.UTXO{
-				string(database.StandardUTXOKey(bc.Hash{V0: 1})): &account.UTXO{
+				string(mock.StandardUTXOKey(bc.Hash{V0: 1})): &account.UTXO{
 					OutputID: bc.Hash{V0: 1},
 				},
-				string(database.StandardUTXOKey(bc.Hash{V0: 1, V1: 2})): &account.UTXO{
+				string(mock.StandardUTXOKey(bc.Hash{V0: 1, V1: 2})): &account.UTXO{
 					OutputID: bc.Hash{V0: 1, V1: 2},
 				},
-				string(database.StandardUTXOKey(bc.Hash{V0: 2})): &account.UTXO{
+				string(mock.StandardUTXOKey(bc.Hash{V0: 2})): &account.UTXO{
 					OutputID: bc.Hash{V0: 2},
 				},
-				string(database.StandardUTXOKey(bc.Hash{V0: 2, V1: 2})): &account.UTXO{
+				string(mock.StandardUTXOKey(bc.Hash{V0: 2, V1: 2})): &account.UTXO{
 					OutputID: bc.Hash{V0: 2, V1: 2},
 				},
+
+				// hex.EncodeToString(mock.StandardUTXOKey(bc.Hash{V0: 1})): &account.UTXO{
+				// 	OutputID: bc.Hash{V0: 1},
+				// },
+				// hex.EncodeToString(mock.StandardUTXOKey(bc.Hash{V0: 1, V1: 2})): &account.UTXO{
+				// 	OutputID: bc.Hash{V0: 1, V1: 2},
+				// },
+				// hex.EncodeToString(mock.StandardUTXOKey(bc.Hash{V0: 2})): &account.UTXO{
+				// 	OutputID: bc.Hash{V0: 2},
+				// },
+				// hex.EncodeToString(mock.StandardUTXOKey(bc.Hash{V0: 2, V1: 2})): &account.UTXO{
+				// 	OutputID: bc.Hash{V0: 2, V1: 2},
+				// },
 			},
 			unconfirmedUtxos: []*account.UTXO{
 				&account.UTXO{
@@ -195,6 +208,10 @@ func TestGetAccountUtxos(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
+			fmt.Println("k:", []byte(k))
+			// newKey, _ := hex.DecodeString(k)
+			// fmt.Println("newkey:", newKey)
+			// testDB.Set([]byte(k), data)
 			testDB.Set([]byte(k), data)
 		}
 
@@ -207,6 +224,8 @@ func TestGetAccountUtxos(t *testing.T) {
 		}
 
 		for k := range c.dbUtxos {
+			// newKey, _ := hex.DecodeString(k)
+			// testDB.Delete([]byte(k))
 			testDB.Delete([]byte(k))
 		}
 	}

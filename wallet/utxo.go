@@ -1,6 +1,8 @@
 package wallet
 
 import (
+	"encoding/hex"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/account"
@@ -23,8 +25,10 @@ func (w *Wallet) GetAccountUtxos(accountID string, id string, unconfirmed, isSma
 	if unconfirmed {
 		accountUtxos = w.AccountMgr.ListUnconfirmedUtxo(accountID, isSmartContract)
 	}
+	idBytes, _ := hex.DecodeString(id)
 
-	confirmedUTXOs, err := w.store.ListAccountUTXOs(string(prefix) + id)
+	// confirmedUTXOs, err := w.store.ListAccountUTXOs(string(prefix) + id)
+	confirmedUTXOs, err := w.store.ListAccountUTXOs(string(append(prefix, idBytes...)))
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("GetAccountUtxos fail.")
 	}

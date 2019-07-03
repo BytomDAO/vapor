@@ -18,7 +18,6 @@ import (
 )
 
 const (
-	colon            = 0x3a
 	utxoPrefix  byte = iota //UTXOPrefix is StandardUTXOKey prefix
 	sutxoPrefix             //SUTXOPrefix is ContractUTXOKey prefix
 	contractPrefix
@@ -38,8 +37,9 @@ const (
 
 // leveldb key prefix
 var (
-	UTXOPrefix  = []byte{utxoPrefix, colon}
-	SUTXOPrefix = []byte{sutxoPrefix, colon}
+	colon       byte = 0x3a
+	UTXOPrefix       = []byte{utxoPrefix, colon}
+	SUTXOPrefix      = []byte{sutxoPrefix, colon}
 	// ContractPrefix = []byte{contractPrefix, contractPrefix, colon}
 	ContractPrefix      = "Contract:"
 	ContractIndexPrefix = []byte{contractIndexPrefix, colon}
@@ -97,14 +97,16 @@ func AccountIDKey(accountID string) []byte {
 
 // StandardUTXOKey makes an account unspent outputs key to store
 func StandardUTXOKey(id bc.Hash) []byte {
-	name := id.String()
-	return append(UTXOPrefix, []byte(name)...)
+	// name := id.String()
+	// return append(UTXOPrefix, []byte(name)...)
+	return append(UTXOPrefix, id.Bytes()...)
 }
 
 // ContractUTXOKey makes a smart contract unspent outputs key to store
 func ContractUTXOKey(id bc.Hash) []byte {
-	name := id.String()
-	return append(SUTXOPrefix, []byte(name)...)
+	// 	name := id.String()
+	// 	return append(SUTXOPrefix, []byte(name)...)
+	return append(SUTXOPrefix, id.Bytes()...)
 }
 
 func calcDeleteKey(blockHeight uint64) []byte {
@@ -363,6 +365,7 @@ func (store *MockWalletStore) GetWalletInfo() []byte {
 
 // ListAccountUTXOs get all account unspent outputs
 func (store *MockWalletStore) ListAccountUTXOs(key string) ([]*acc.UTXO, error) {
+	fmt.Println("ListAccountUTXOs []byte(key):", []byte(key))
 	accountUtxoIter := store.walletDB.IteratorPrefix([]byte(key))
 	defer accountUtxoIter.Release()
 

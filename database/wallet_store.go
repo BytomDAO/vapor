@@ -96,14 +96,16 @@ func AccountIDKey(accountID string) []byte {
 
 // StandardUTXOKey makes an account unspent outputs key to store
 func StandardUTXOKey(id bc.Hash) []byte {
-	name := id.String()
-	return append(UTXOPrefix, []byte(name)...)
+	// name := id.String()
+	// return append(UTXOPrefix, []byte(name)...)
+	return append(UTXOPrefix, id.Bytes()...)
 }
 
 // ContractUTXOKey makes a smart contract unspent outputs key to store
 func ContractUTXOKey(id bc.Hash) []byte {
-	name := id.String()
-	return append(SUTXOPrefix, []byte(name)...)
+	// name := id.String()
+	// return append(SUTXOPrefix, []byte(name)...)
+	return append(SUTXOPrefix, id.Bytes()...)
 }
 
 func calcDeleteKey(blockHeight uint64) []byte {
@@ -362,6 +364,7 @@ func (store *WalletStore) GetWalletInfo() []byte {
 
 // ListAccountUTXOs get all account unspent outputs
 func (store *WalletStore) ListAccountUTXOs(key string) ([]*acc.UTXO, error) {
+	fmt.Println("ListAccountUTXOs []byte(key):", []byte(key))
 	accountUtxoIter := store.walletDB.IteratorPrefix([]byte(key))
 	defer accountUtxoIter.Release()
 
