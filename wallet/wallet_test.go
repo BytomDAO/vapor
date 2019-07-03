@@ -56,14 +56,14 @@ func TestWalletVersion(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	testStore := database.NewWalletStore(testDB)
+	walletStore := newMockWalletStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
 	}()
 
 	dispatcher := event.NewDispatcher()
-	w := mockWallet(testStore, nil, nil, nil, dispatcher, false)
+	w := mockWallet(walletStore, nil, nil, nil, dispatcher, false)
 
 	// legacy status test case
 	type legacyStatusInfo struct {
@@ -411,6 +411,17 @@ func mockSingleBlock(tx *types.Tx) *types.Block {
 	}
 }
 
+var (
+	WalletKey = []byte{0x00, 0x3a}
+)
+
+func CalcGlobalTxIndex(blockHash *bc.Hash, position uint64) []byte {
+	txIdx := make([]byte, 40)
+	copy(txIdx[:32], blockHash.Bytes())
+	binary.BigEndian.PutUint64(txIdx[32:], position)
+	return txIdx
+}
+
 type mockAccountStore struct {
 	accountDB dbm.DB
 	batch     dbm.Batch
@@ -451,13 +462,6 @@ func (store *mockAccountStore) SetControlProgram(bc.Hash, *account.CtrlProgram) 
 func (store *mockAccountStore) SetMiningAddress(*account.CtrlProgram) error                { return nil }
 func (store *mockAccountStore) SetStandardUTXO(outputID bc.Hash, utxo *account.UTXO) error { return nil }
 
-func CalcGlobalTxIndex(blockHash *bc.Hash, position uint64) []byte {
-	txIdx := make([]byte, 40)
-	copy(txIdx[:32], blockHash.Bytes())
-	binary.BigEndian.PutUint64(txIdx[32:], position)
-	return txIdx
-}
-
 // WalletStore store wallet using leveldb
 type mockWalletStore struct {
 	walletDB dbm.DB
@@ -465,7 +469,7 @@ type mockWalletStore struct {
 }
 
 // NewWalletStore create new WalletStore struct
-func mockNewWalletStore(db dbm.DB) *mockWalletStore {
+func newMockWalletStore(db dbm.DB) *mockWalletStore {
 	return &mockWalletStore{
 		walletDB: db,
 		batch:    nil,
@@ -489,7 +493,6 @@ func (store *mockWalletStore) GetUnconfirmedTransaction(string) (*query.Annotate
 	return nil, nil
 }
 func (store *mockWalletStore) GetRecoveryStatus([]byte) []byte              { return nil }
-func (store *mockWalletStore) GetWalletInfo() []byte                        { return nil }
 func (store *mockWalletStore) ListAccountUTXOs(string) ([]*acc.UTXO, error) { return nil, nil }
 func (store *mockWalletStore) ListTransactions(string, string, uint, bool) ([]*query.AnnotatedTx, error) {
 	return nil, nil
@@ -505,4 +508,17 @@ func (store *mockWalletStore) SetTransaction(uint64, *query.AnnotatedTx) error  
 func (store *mockWalletStore) SetUnconfirmedTransaction(string, *query.AnnotatedTx) error {
 	return nil
 }
-func (store *mockWalletStore) SetWalletInfo([]byte) { return }
+
+// SetWalletInfo get wallet information
+func (store *mockWalletStore) SetWalletInfo(rawWallet []byte) {
+	if store.batch == nil {
+		store.walletDB.Set([]byte(WalletKey), rawWallet)
+	} else {
+		store.batch.Set([]byte(WalletKey), rawWallet)
+	}
+}
+
+// GetWalletInfo get wallet information
+func (store *mockWalletStore) GetWalletInfo() []byte {
+	return store.walletDB.Get([]byte(WalletKey))
+}
