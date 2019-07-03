@@ -9,7 +9,6 @@ func (CrossChainInput) typ() string { return "crosschaininput1" }
 
 func (cci *CrossChainInput) writeForHash(w io.Writer) {
 	mustWriteForHash(w, cci.MainchainOutputId)
-	mustWriteForHash(w, cci.Value)
 	mustWriteForHash(w, cci.AssetDefinition)
 }
 
