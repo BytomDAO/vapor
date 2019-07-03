@@ -60,7 +60,7 @@ func TestWalletVersion(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	walletStore := newMockWalletStore(testDB)
+	walletStore := mock.NewMockWalletStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
@@ -132,9 +132,7 @@ func TestWalletUpdate(t *testing.T) {
 	}()
 
 	store := database.NewStore(testDB)
-	// store := newStore(testDB)
-	walletStore := database.NewWalletStore(testDB)
-	// walletStore := newMockWalletStore(testDB)
+	walletStore := mock.NewMockWalletStore(testDB)
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
 
@@ -143,9 +141,8 @@ func TestWalletUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	accountStore := database.NewAccountStore(testDB)
+	accountStore := mock.NewMockAccountStore(testDB)
 	accountManager := account.NewManager(accountStore, chain)
-	// accountManager := account.NewManager(accountStore, nil)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -191,7 +188,6 @@ func TestWalletUpdate(t *testing.T) {
 	store.SaveBlock(block, txStatus)
 
 	w := mockWallet(walletStore, accountManager, reg, chain, dispatcher, true)
-	// w := mockWallet(walletStore, accountManager, reg, nil, dispatcher, true)
 	err = w.AttachBlock(block)
 	if err != nil {
 		t.Fatal(err)
@@ -230,7 +226,7 @@ func TestRescanWallet(t *testing.T) {
 
 	config.CommonConfig = config.DefaultConfig()
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	walletStore := database.NewWalletStore(testDB)
+	walletStore := mock.NewMockWalletStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
@@ -296,7 +292,7 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	accountStore := database.NewAccountStore(testDB)
+	accountStore := mock.NewMockAccountStore(testDB)
 	accountManager := account.NewManager(accountStore, chain)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
@@ -338,7 +334,7 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 	//block := mockSingleBlock(tx)
 	txStatus := bc.NewTransactionStatus()
 	txStatus.SetStatus(0, false)
-	walletStore := database.NewWalletStore(testDB)
+	walletStore := mock.NewMockWalletStore(testDB)
 	w, err := NewWallet(walletStore, accountManager, reg, hsm, chain, dispatcher, false)
 	go w.memPoolTxQueryLoop()
 	w.eventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: protocol.MsgNewTx}})
