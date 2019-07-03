@@ -138,7 +138,7 @@ func TestXPubsRecoveryLock(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
-	walletStore := newMockWalletStore(testDB)
+	walletStore := mock.NewMockWalletStore(testDB)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -149,7 +149,7 @@ func TestXPubsRecoveryLock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	acctStore := newMockAccountStore(testDB)
+	acctStore := mock.NewMockAccountStore(testDB)
 	acctMgr := account.NewManager(acctStore, nil)
 	recoveryMgr := newRecoveryManager(walletStore, acctMgr)
 	recoveryMgr.state = newRecoveryState()
@@ -189,7 +189,7 @@ func TestExtendScanAddresses(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
-	walletStore := newMockWalletStore(testDB)
+	walletStore := mock.NewMockWalletStore(testDB)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -200,7 +200,7 @@ func TestExtendScanAddresses(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	acctStore := newMockAccountStore(testDB)
+	acctStore := mock.NewMockAccountStore(testDB)
 	acctMgr := account.NewManager(acctStore, nil)
 	recoveryMgr := newRecoveryManager(walletStore, acctMgr)
 	acc1 := &account.Account{ID: "testA", Alias: "test1", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub.XPub}, KeyIndex: 1, DeriveRule: signers.BIP0044}}
@@ -247,7 +247,7 @@ func TestRecoveryFromXPubs(t *testing.T) {
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
 	recoveryDB := dbm.NewDB("recdb", "leveldb", dirPath)
-	recoveryStore := newMockWalletStore(recoveryDB)
+	recoveryStore := mock.NewMockWalletStore(recoveryDB)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -258,10 +258,10 @@ func TestRecoveryFromXPubs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	acctStore := newMockAccountStore(testDB)
+	acctStore := mock.NewMockAccountStore(testDB)
 	acctMgr := account.NewManager(acctStore, nil)
 	txs, err := MockTxsP2PKH(acctMgr, xpub.XPub, false)
-	recActStore := newMockAccountStore(recoveryDB)
+	recActStore := mock.NewMockAccountStore(recoveryDB)
 	recAcctMgr := account.NewManager(recActStore, nil)
 	recoveryMgr := newRecoveryManager(recoveryStore, recAcctMgr)
 
