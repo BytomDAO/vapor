@@ -246,7 +246,7 @@ func TestRecoveryFromXPubs(t *testing.T) {
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
 	recoveryDB := dbm.NewDB("recdb", "leveldb", dirPath)
-	recoveryStore := database.NewWalletStore(recoveryDB)
+	recoveryStore := newMockWalletStore(recoveryDB)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -257,10 +257,10 @@ func TestRecoveryFromXPubs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	acctStore := database.NewAccountStore(testDB)
+	acctStore := newMockAccountStore(testDB)
 	acctMgr := account.NewManager(acctStore, nil)
 	txs, err := MockTxsP2PKH(acctMgr, xpub.XPub, false)
-	recActStore := database.NewAccountStore(recoveryDB)
+	recActStore := newMockAccountStore(recoveryDB)
 	recAcctMgr := account.NewManager(recActStore, nil)
 	recoveryMgr := newRecoveryManager(recoveryStore, recAcctMgr)
 
