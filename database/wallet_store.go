@@ -37,10 +37,10 @@ const (
 
 // leveldb key prefix
 var (
-	UTXOPrefix  = []byte{utxoPrefix, colon}
-	SUTXOPrefix = []byte{sutxoPrefix, colon}
-	// ContractPrefix = []byte{contractPrefix, contractPrefix, colon}
-	ContractPrefix      = "Contract:"
+	UTXOPrefix     = []byte{utxoPrefix, colon}
+	SUTXOPrefix    = []byte{sutxoPrefix, colon}
+	ContractPrefix = []byte{contractPrefix, contractPrefix, colon}
+	// ContractPrefix      = "Contract:"
 	ContractIndexPrefix = []byte{contractIndexPrefix, colon}
 	AccountPrefix       = []byte{accountPrefix, colon} // AccountPrefix is account ID prefix
 	AccountAliasPrefix  = []byte{accountAliasPrefix, colon}
