@@ -188,7 +188,7 @@ func TestExtendScanAddresses(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
-	testStore := database.NewWalletStore(testDB)
+	walletStore := newMockWalletStore(testDB)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -201,7 +201,7 @@ func TestExtendScanAddresses(t *testing.T) {
 
 	acctStore := database.NewAccountStore(testDB)
 	acctMgr := account.NewManager(acctStore, nil)
-	recoveryMgr := newRecoveryManager(testStore, acctMgr)
+	recoveryMgr := newRecoveryManager(walletStore, acctMgr)
 	acc1 := &account.Account{ID: "testA", Alias: "test1", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub.XPub}, KeyIndex: 1, DeriveRule: signers.BIP0044}}
 	acc2 := &account.Account{ID: "testB", Alias: "test2"}
 	acc3 := &account.Account{ID: "testC", Alias: "test3", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub.XPub}, KeyIndex: 2, DeriveRule: 3}}
