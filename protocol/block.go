@@ -4,7 +4,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/config"
-	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
 	"github.com/vapor/event"
 	"github.com/vapor/protocol/bc"
@@ -158,14 +157,6 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 
 		if err := utxoView.DetachBlock(detachBlock, txStatus); err != nil {
 			return err
-		}
-
-		if detachBlockHeader.Height%consensus.RoundVoteBlockNums == 0 {
-			hash := detachBlockHeader.Hash()
-			consensusResult, err = c.GetConsensusResultByHash(&hash)
-			if err != nil {
-				return err
-			}
 		}
 
 		if err := consensusResult.DetachBlock(b); err != nil {
