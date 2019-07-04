@@ -130,20 +130,6 @@ func (w *Wallet) checkWalletInfo() error {
 //loadWalletInfo return stored wallet info and nil,
 //if error, return initial wallet info and err
 func (w *Wallet) loadWalletInfo() error {
-	// if rawWallet := w.store.GetWalletInfo(); rawWallet != nil {
-	// 	if err := json.Unmarshal(rawWallet, &w.status); err != nil {
-	// 		return err
-	// 	}
-
-	// 	err := w.checkWalletInfo()
-	// 	if err == nil {
-	// 		return nil
-	// 	}
-
-	// 	log.WithFields(log.Fields{"module": logModule}).Warn(err.Error())
-	// 	w.store.DeleteWalletTransactions()
-	// 	w.store.DeleteWalletUTXOs()
-	// }
 	walletStatus, err := w.store.GetWalletInfo()
 	if walletStatus == nil && err != ErrGetWalletStatusInfo {
 		return err

@@ -80,13 +80,6 @@ func TestWalletVersion(t *testing.T) {
 		t.Fatal(err)
 	}
 	w.status = *status
-	// if rawWallet == nil {
-	// 	t.Fatal("fail to load wallet StatusInfo")
-	// }
-
-	// if err := json.Unmarshal(rawWallet, &w.status); err != nil {
-	// 	t.Fatal(err)
-	// }
 
 	if err := w.checkWalletInfo(); err != errWalletVersionMismatch {
 		t.Fatal("fail to detect legacy wallet version")
@@ -97,14 +90,7 @@ func TestWalletVersion(t *testing.T) {
 	if err := w.store.SetWalletInfo(&lowerVersion); err != nil {
 		t.Fatal(err)
 	}
-	// rawWallet = w.store.GetWalletInfo()
-	// if rawWallet == nil {
-	// 	t.Fatal("fail to load wallet StatusInfo")
-	// }
 
-	// if err := json.Unmarshal(rawWallet, &w.status); err != nil {
-	// 	t.Fatal(err)
-	// }
 	status, err = w.store.GetWalletInfo()
 	if err != nil {
 		t.Fatal(err)
