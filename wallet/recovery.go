@@ -248,13 +248,6 @@ func (m *recoveryManager) AcctResurrect(xPubs []chainkd.XPub) error {
 }
 
 func (m *recoveryManager) commitStatusInfo() error {
-	// rawStatus, err := json.Marshal(m.state)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// m.store.SetRecoveryStatus(recoveryKey, rawStatus)
-
 	return m.store.SetRecoveryStatus(m.state)
 }
 
