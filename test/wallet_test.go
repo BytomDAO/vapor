@@ -21,7 +21,7 @@ package test
 // 	"github.com/vapor/protocol"
 // 	"github.com/vapor/protocol/bc"
 // 	"github.com/vapor/protocol/bc/types"
-// 	"github.com/vapor/wallet"
+// 	wt "github.com/vapor/wallet"
 // )
 
 // func TestWalletUpdate(t *testing.T) {
@@ -94,17 +94,17 @@ package test
 // 	txStatus.SetStatus(1, false)
 // 	store.SaveBlock(block, txStatus)
 
-// 	w := mockWallet(walletStore, accountManager, reg, chain, dispatcher, true)
-// 	err = w.AttachBlock(block)
+// 	w := newMockWallet(walletStore, accountManager, reg, chain, dispatcher, true)
+// 	err = w.Wallet.AttachBlock(block)
 // 	if err != nil {
 // 		t.Fatal(err)
 // 	}
 
-// 	if _, err := w.GetTransactionByTxID(tx.ID.String()); err != nil {
+// 	if _, err := w.Wallet.GetTransactionByTxID(tx.ID.String()); err != nil {
 // 		t.Fatal(err)
 // 	}
 
-// 	wants, err := w.GetTransactions(testAccount.ID, "", 1, false)
+// 	wants, err := w.Wallet.GetTransactions(testAccount.ID, "", 1, false)
 // 	if len(wants) != 1 {
 // 		t.Fatal(err)
 // 	}
@@ -115,7 +115,7 @@ package test
 
 // 	for position, tx := range block.Transactions {
 // 		// get := w.store.GetGlobalTransactionIndex(tx.ID.String())
-// 		get := testDB.Get()
+// 		get := testDB.Get(database.CalcGlobalTxIndexKey(tx.ID.String()))
 // 		bh := block.BlockHeader.Hash()
 // 		expect := database.CalcGlobalTxIndex(&bh, uint64(position))
 // 		if !reflect.DeepEqual(get, expect) {
@@ -160,18 +160,26 @@ package test
 // 	return tplBuilder.Build()
 // }
 
-// func mockWallet(store wallet.WalletStore, account *account.Manager, asset *asset.Registry, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) *wallet.Wallet {
-// 	wallet := &wallet.Wallet{
-// 		store:           store,
-// 		AccountMgr:      account,
-// 		AssetReg:        asset,
-// 		chain:           chain,
-// 		RecoveryMgr:     newRecoveryManager(store, account),
-// 		eventDispatcher: dispatcher,
-// 		TxIndexFlag:     txIndexFlag,
+// type mockWallet struct {
+// 	Wallet *wt.Wallet
+// }
+
+// func newMockWallet(store wt.WalletStore, account *account.Manager, asset *asset.Registry, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) *mockWallet {
+// 	// wallet := &wallet.Wallet{
+// 	// 	store:           store,
+// 	// 	AccountMgr:      account,
+// 	// 	AssetReg:        asset,
+// 	// 	chain:           chain,
+// 	// 	RecoveryMgr:     newRecoveryManager(store, account),
+// 	// 	eventDispatcher: dispatcher,
+// 	// 	TxIndexFlag:     txIndexFlag,
+// 	// }
+// 	// wallet.txMsgSub, _ = wallet.eventDispatcher.Subscribe(protocol.TxMsgEvent{})
+// 	w, err := wt.NewWallet(store, account, asset, nil, chain, dispatcher, txIndexFlag)
+// 	if err != nil {
+// 		panic(err)
 // 	}
-// 	wallet.txMsgSub, _ = wallet.eventDispatcher.Subscribe(protocol.TxMsgEvent{})
-// 	return wallet
+// 	return &mockWallet{w}
 // }
 
 // func mockSingleBlock(tx *types.Tx) *types.Block {
