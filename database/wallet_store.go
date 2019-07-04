@@ -316,8 +316,16 @@ func (store *WalletStore) GetRecoveryStatus(recoveryKey []byte) []byte {
 }
 
 // GetWalletInfo get wallet information
-func (store *WalletStore) GetWalletInfo() []byte {
-	return store.walletDB.Get([]byte(dbm.WalletKey))
+func (store *WalletStore) GetWalletInfo() (*wallet.StatusInfo, error) {
+	rawStatus := store.walletDB.Get([]byte(dbm.WalletKey))
+	if rawStatus == nil {
+		return nil, fmt.Errorf("failed get wallet info")
+	}
+	status := new(wallet.StatusInfo)
+	if err := json.Unmarshal(rawStatus, status); err != nil {
+		return nil, err
+	}
+	return status, nil
 }
 
 // ListAccountUTXOs get all account unspent outputs

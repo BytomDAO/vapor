@@ -1,7 +1,6 @@
 package wallet
 
 import (
-	"encoding/json"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -130,20 +129,33 @@ func (w *Wallet) checkWalletInfo() error {
 //loadWalletInfo return stored wallet info and nil,
 //if error, return initial wallet info and err
 func (w *Wallet) loadWalletInfo() error {
-	if rawWallet := w.store.GetWalletInfo(); rawWallet != nil {
-		if err := json.Unmarshal(rawWallet, &w.status); err != nil {
-			return err
-		}
+	// if rawWallet := w.store.GetWalletInfo(); rawWallet != nil {
+	// 	if err := json.Unmarshal(rawWallet, &w.status); err != nil {
+	// 		return err
+	// 	}
 
-		err := w.checkWalletInfo()
-		if err == nil {
-			return nil
-		}
+	// 	err := w.checkWalletInfo()
+	// 	if err == nil {
+	// 		return nil
+	// 	}
 
-		log.WithFields(log.Fields{"module": logModule}).Warn(err.Error())
-		w.store.DeleteWalletTransactions()
-		w.store.DeleteWalletUTXOs()
+	// 	log.WithFields(log.Fields{"module": logModule}).Warn(err.Error())
+	// 	w.store.DeleteWalletTransactions()
+	// 	w.store.DeleteWalletUTXOs()
+	// }
+	walletStatus, err := w.store.GetWalletInfo()
+	if err != nil {
+		return err
 	}
+	w.status = *walletStatus
+	err = w.checkWalletInfo()
+	if err == nil {
+		return nil
+	}
+
+	log.WithFields(log.Fields{"module": logModule}).Warn(err.Error())
+	w.store.DeleteWalletTransactions()
+	w.store.DeleteWalletUTXOs()
 
 	w.status.Version = currentVersion
 	w.status.WorkHash = bc.Hash{}

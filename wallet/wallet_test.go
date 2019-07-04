@@ -75,14 +75,18 @@ func TestWalletVersion(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rawWallet := w.store.GetWalletInfo()
-	if rawWallet == nil {
-		t.Fatal("fail to load wallet StatusInfo")
-	}
-
-	if err := json.Unmarshal(rawWallet, &w.status); err != nil {
+	status, err := w.store.GetWalletInfo()
+	if err != nil {
 		t.Fatal(err)
 	}
+	w.status = *status
+	// if rawWallet == nil {
+	// 	t.Fatal("fail to load wallet StatusInfo")
+	// }
+
+	// if err := json.Unmarshal(rawWallet, &w.status); err != nil {
+	// 	t.Fatal(err)
+	// }
 
 	if err := w.checkWalletInfo(); err != errWalletVersionMismatch {
 		t.Fatal("fail to detect legacy wallet version")
@@ -93,14 +97,19 @@ func TestWalletVersion(t *testing.T) {
 	if err := w.store.SetWalletInfo(&lowerVersion); err != nil {
 		t.Fatal(err)
 	}
-	rawWallet = w.store.GetWalletInfo()
-	if rawWallet == nil {
-		t.Fatal("fail to load wallet StatusInfo")
-	}
+	// rawWallet = w.store.GetWalletInfo()
+	// if rawWallet == nil {
+	// 	t.Fatal("fail to load wallet StatusInfo")
+	// }
 
-	if err := json.Unmarshal(rawWallet, &w.status); err != nil {
+	// if err := json.Unmarshal(rawWallet, &w.status); err != nil {
+	// 	t.Fatal(err)
+	// }
+	status, err = w.store.GetWalletInfo()
+	if err != nil {
 		t.Fatal(err)
 	}
+	w.status = *status
 
 	if err := w.checkWalletInfo(); err != errWalletVersionMismatch {
 		t.Fatal("fail to detect expired wallet version")
@@ -798,8 +807,16 @@ func (store *MockWalletStore) GetRecoveryStatus(recoveryKey []byte) []byte {
 }
 
 // GetWalletInfo get wallet information
-func (store *MockWalletStore) GetWalletInfo() []byte {
-	return store.walletDB.Get([]byte(WalletKey))
+func (store *MockWalletStore) GetWalletInfo() (*StatusInfo, error) {
+	rawStatus := store.walletDB.Get([]byte(dbm.WalletKey))
+	if rawStatus == nil {
+		return nil, fmt.Errorf("failed get wallet info")
+	}
+	status := new(StatusInfo)
+	if err := json.Unmarshal(rawStatus, status); err != nil {
+		return nil, err
+	}
+	return status, nil
 }
 
 // ListAccountUTXOs get all account unspent outputs
