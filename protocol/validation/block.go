@@ -48,16 +48,13 @@ func checkCoinbaseTx(b *bc.Block, rewards []state.CoinbaseReward) error {
 		return errors.Wrapf(ErrWrongCoinbaseTransaction, "dismatch number of outputs, got:%d, want:%d", len(tx.TxHeader.ResultIds), len(rewards))
 	}
 
-	var coinbaseAmount uint64
-	var coinbaseReceiver []byte
 	for i, output := range tx.TxHeader.ResultIds {
-		switch e := tx.Entries[*output].(type) {
-		case *bc.IntraChainOutput:
-			coinbaseAmount = e.Source.Value.Amount
-			coinbaseReceiver = e.ControlProgram.Code
-		default:
-			return errors.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", tx.TxHeader.ResultIds[0].Bytes(), output)
+		e, ok := tx.Entries[*output].(*bc.IntraChainOutput)
+		if !ok {
+			return errors.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", output.Bytes(), output)
 		}
+		coinbaseAmount := e.Source.Value.Amount
+		coinbaseReceiver := e.ControlProgram.Code
 
 		if i == 0 {
 			if coinbaseAmount != 0 {
