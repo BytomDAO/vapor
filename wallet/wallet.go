@@ -26,6 +26,7 @@ var (
 
 	errBestBlockNotFoundInCore = errors.New("best block not found in core")
 	errWalletVersionMismatch   = errors.New("wallet version mismatch")
+	ErrGetWalletStatusInfo     = errors.New("failed get wallet info")
 )
 
 //StatusInfo is base valid block info to handle orphan block rollback
@@ -144,18 +145,19 @@ func (w *Wallet) loadWalletInfo() error {
 	// 	w.store.DeleteWalletUTXOs()
 	// }
 	walletStatus, err := w.store.GetWalletInfo()
-	if err != nil {
+	if walletStatus == nil && err != ErrGetWalletStatusInfo {
 		return err
 	}
-	w.status = *walletStatus
-	err = w.checkWalletInfo()
-	if err == nil {
-		return nil
+	if walletStatus != nil {
+		w.status = *walletStatus
+		err = w.checkWalletInfo()
+		if err == nil {
+			return nil
+		}
+		log.WithFields(log.Fields{"module": logModule}).Warn(err.Error())
+		w.store.DeleteWalletTransactions()
+		w.store.DeleteWalletUTXOs()
 	}
-
-	log.WithFields(log.Fields{"module": logModule}).Warn(err.Error())
-	w.store.DeleteWalletTransactions()
-	w.store.DeleteWalletUTXOs()
 
 	w.status.Version = currentVersion
 	w.status.WorkHash = bc.Hash{}

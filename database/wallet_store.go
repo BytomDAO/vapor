@@ -319,7 +319,7 @@ func (store *WalletStore) GetRecoveryStatus(recoveryKey []byte) []byte {
 func (store *WalletStore) GetWalletInfo() (*wallet.StatusInfo, error) {
 	rawStatus := store.walletDB.Get([]byte(dbm.WalletKey))
 	if rawStatus == nil {
-		return nil, fmt.Errorf("failed get wallet info")
+		return nil, wallet.ErrGetWalletStatusInfo
 	}
 	status := new(wallet.StatusInfo)
 	if err := json.Unmarshal(rawStatus, status); err != nil {
