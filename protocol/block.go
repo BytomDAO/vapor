@@ -223,7 +223,7 @@ func (c *Chain) saveBlock(block *types.Block) error {
 		return err
 	}
 
-	consensusResult, err := c.getBestConsensusResult()
+	consensusResult, err := c.GetConsensusResultByHash(&block.PreviousBlockHash)
 	if err != nil {
 		return err
 	}
