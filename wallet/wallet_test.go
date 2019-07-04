@@ -493,7 +493,6 @@ var (
 	MiningAddressKey    = []byte{miningAddressKey}
 	CoinbaseAbKey       = []byte{coinbaseAbKey}
 	RecoveryKey         = []byte{recoveryKey}
-	// RecoveryKey = recoveryKey
 )
 
 // errors
