@@ -13,13 +13,12 @@ import (
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/test/mock"
 	"github.com/vapor/testutil"
 )
 
 func TestGetAccountUtxos(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	testStore := mock.NewMockWalletStore(testDB)
+	testStore := NewMockWalletStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
@@ -42,16 +41,16 @@ func TestGetAccountUtxos(t *testing.T) {
 		},
 		{
 			dbUtxos: map[string]*account.UTXO{
-				string(mock.StandardUTXOKey(bc.Hash{V0: 1})): &account.UTXO{
+				string(StandardUTXOKey(bc.Hash{V0: 1})): &account.UTXO{
 					OutputID: bc.Hash{V0: 1},
 				},
-				string(mock.StandardUTXOKey(bc.Hash{V0: 2})): &account.UTXO{
+				string(StandardUTXOKey(bc.Hash{V0: 2})): &account.UTXO{
 					OutputID: bc.Hash{V0: 2},
 				},
-				string(mock.StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
+				string(StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
 					OutputID: bc.Hash{V0: 3},
 				},
-				string(mock.ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
+				string(ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
 					OutputID: bc.Hash{V0: 4},
 				},
 			},
@@ -66,16 +65,16 @@ func TestGetAccountUtxos(t *testing.T) {
 		},
 		{
 			dbUtxos: map[string]*account.UTXO{
-				string(mock.StandardUTXOKey(bc.Hash{V0: 1})): &account.UTXO{
+				string(StandardUTXOKey(bc.Hash{V0: 1})): &account.UTXO{
 					OutputID: bc.Hash{V0: 1},
 				},
-				string(mock.StandardUTXOKey(bc.Hash{V0: 2})): &account.UTXO{
+				string(StandardUTXOKey(bc.Hash{V0: 2})): &account.UTXO{
 					OutputID: bc.Hash{V0: 2},
 				},
-				string(mock.StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
+				string(StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
 					OutputID: bc.Hash{V0: 3},
 				},
-				string(mock.ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
+				string(ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
 					OutputID: bc.Hash{V0: 4},
 				},
 			},
@@ -94,16 +93,16 @@ func TestGetAccountUtxos(t *testing.T) {
 		},
 		{
 			dbUtxos: map[string]*account.UTXO{
-				string(mock.StandardUTXOKey(bc.Hash{V0: 1})): &account.UTXO{
+				string(StandardUTXOKey(bc.Hash{V0: 1})): &account.UTXO{
 					OutputID: bc.Hash{V0: 1},
 				},
-				string(mock.StandardUTXOKey(bc.Hash{V0: 1, V1: 2})): &account.UTXO{
+				string(StandardUTXOKey(bc.Hash{V0: 1, V1: 2})): &account.UTXO{
 					OutputID: bc.Hash{V0: 1, V1: 2},
 				},
-				string(mock.StandardUTXOKey(bc.Hash{V0: 2})): &account.UTXO{
+				string(StandardUTXOKey(bc.Hash{V0: 2})): &account.UTXO{
 					OutputID: bc.Hash{V0: 2},
 				},
-				string(mock.StandardUTXOKey(bc.Hash{V0: 2, V1: 2})): &account.UTXO{
+				string(StandardUTXOKey(bc.Hash{V0: 2, V1: 2})): &account.UTXO{
 					OutputID: bc.Hash{V0: 2, V1: 2},
 				},
 			},
@@ -123,10 +122,10 @@ func TestGetAccountUtxos(t *testing.T) {
 		},
 		{
 			dbUtxos: map[string]*account.UTXO{
-				string(mock.StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
+				string(StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
 					OutputID: bc.Hash{V0: 3},
 				},
-				string(mock.ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
+				string(ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
 					OutputID: bc.Hash{V0: 4},
 				},
 			},
@@ -155,10 +154,10 @@ func TestGetAccountUtxos(t *testing.T) {
 		},
 		{
 			dbUtxos: map[string]*account.UTXO{
-				string(mock.StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
+				string(StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
 					OutputID: bc.Hash{V0: 3},
 				},
-				string(mock.ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
+				string(ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
 					OutputID: bc.Hash{V0: 4},
 				},
 			},
@@ -197,7 +196,7 @@ func TestGetAccountUtxos(t *testing.T) {
 			testDB.Set([]byte(k), data)
 		}
 
-		acccountStore := mock.NewMockAccountStore(testDB)
+		acccountStore := NewMockAccountStore(testDB)
 		w.AccountMgr = account.NewManager(acccountStore, nil)
 		w.AccountMgr.AddUnconfirmedUtxo(c.unconfirmedUtxos)
 		gotUtxos := w.GetAccountUtxos("", c.id, c.unconfirmed, c.isSmartContract, false)
@@ -213,7 +212,7 @@ func TestGetAccountUtxos(t *testing.T) {
 
 func TestFilterAccountUtxo(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	testStore := mock.NewMockWalletStore(testDB)
+	testStore := NewMockWalletStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
