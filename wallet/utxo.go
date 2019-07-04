@@ -82,10 +82,10 @@ func (w *Wallet) detachUtxos(batch dbm.Batch, b *types.Block, txStatus *bc.Trans
 			code := []byte{}
 			switch resOut := tx.Entries[*tx.ResultIds[j]].(type) {
 			case *bc.IntraChainOutput:
-				code = resOut.ControlProgram.Code
 				if resOut.Source.Value.Amount == uint64(0) {
 					continue
 				}
+				code = resOut.ControlProgram.Code
 			case *bc.VoteOutput:
 				code = resOut.ControlProgram.Code
 			default:
