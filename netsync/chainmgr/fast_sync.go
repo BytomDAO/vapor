@@ -24,7 +24,7 @@ var (
 	errNoSyncPeer  = errors.New("can't find sync peer")
 )
 
-type piece struct {
+type taskPiece struct {
 	index                   int
 	startHeader, stopHeader *types.BlockHeader
 }
@@ -37,7 +37,7 @@ type fastSync struct {
 	syncPeer          *peers.Peer
 	stopHeader        *types.BlockHeader
 	length            uint64
-	pieces            *prque.Prque
+	blockFetchTasks   *prque.Prque
 	downloadedBlockCh chan *downloadedBlock
 	downloadResult    chan bool
 	processResult     chan bool
@@ -52,7 +52,7 @@ func newFastSync(chain Chain, msgFether MsgFetcher, storage Storage, peers *peer
 		blockProcessor:    newBlockProcessor(chain, storage, peers, downloadedBlockCh),
 		msgFetcher:        msgFether,
 		peers:             peers,
-		pieces:            prque.New(),
+		blockFetchTasks:   prque.New(),
 		downloadedBlockCh: downloadedBlockCh,
 		downloadResult:    make(chan bool, 1),
 		processResult:     make(chan bool, 1),
@@ -100,7 +100,7 @@ func (fs *fastSync) createFetchBlocksTasks() ([]string, error) {
 
 	// low height block has high download priority
 	for i := 0; i < len(skeleton)-1; i++ {
-		fs.pieces.Push(&piece{index: i, startHeader: skeleton[i], stopHeader: skeleton[i+1]}, -float32(i))
+		fs.blockFetchTasks.Push(&taskPiece{index: i, startHeader: skeleton[i], stopHeader: skeleton[i+1]}, -float32(i))
 	}
 
 	return syncPeers, nil
@@ -121,7 +121,7 @@ func (fs *fastSync) process() error {
 
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go fs.msgFetcher.parallelFetchBlocks(syncPeers, fs.pieces, fs.downloadedBlockCh, fs.downloadResult, fs.processResult, &wg, num)
+	go fs.msgFetcher.parallelFetchBlocks(syncPeers, fs.blockFetchTasks, fs.downloadedBlockCh, fs.downloadResult, fs.processResult, &wg, num)
 	go fs.blockProcessor.process(fs.downloadResult, fs.processResult, &wg, num)
 	wg.Wait()
 	log.WithFields(log.Fields{"module": logModule, "num": num, "height": fs.chain.BestBlockHeight()}).Info("fast sync complete")
@@ -143,7 +143,6 @@ func (fs *fastSync) createSkeleton() ([]string, []*types.BlockHeader, error) {
 		return nil, nil, err
 	}
 
-	// skeleton 2/3 peer consistent verification.
 	mainSkeleton, ok := skeletonMap[fs.syncPeer.ID()]
 	if !ok || len(mainSkeleton) == 0 {
 		return nil, nil, errors.New("No main skeleton found")
@@ -246,7 +245,7 @@ func (fs *fastSync) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, skip ui
 }
 
 func (fs *fastSync) resetParameter() {
-	fs.pieces.Reset()
+	fs.blockFetchTasks.Reset()
 	for _, ch := range []chan bool{fs.downloadResult, fs.processResult} {
 		select {
 		case <-ch:

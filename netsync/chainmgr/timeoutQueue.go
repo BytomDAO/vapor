@@ -62,24 +62,6 @@ func (tq *timeoutQueue) getNextTimeoutDuration() *time.Duration {
 	return duration
 }
 
-/*
-	if len(stopTimers) == 0 {
-		break
-	}
-
-	task, ok := tasks[stopTimers[0].peerID]
-	if !ok {
-		break
-	}
-	log.WithFields(log.Fields{"module": logModule, "error": errRequestTimeout}).Info("failed on fetch blocks")
-	mf.peers.ErrorHandler(stopTimers[0].peerID, security.LevelConnException, errors.New("require blocks timeout"))
-	taskQueue.Push(task.piece, -float32(task.piece.index))
-	stopTimers = stopTimers[1:]
-	//reset timeout
-	if len(stopTimers) > 0 {
-		timeout.Reset(stopTimers[0].time.Sub(time.Now()))
-	}
-*/
 func (tq *timeoutQueue) getFirstTimeoutID() *string {
 	tq.mu.Lock()
 	tq.mu.Unlock()

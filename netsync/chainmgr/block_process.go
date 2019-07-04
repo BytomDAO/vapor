@@ -6,7 +6,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 
-	"fmt"
 	"github.com/vapor/netsync/peers"
 	"github.com/vapor/p2p/security"
 )
@@ -42,7 +41,6 @@ func newBlockProcessor(chain Chain, storage Storage, peers *peers.PeerSet, downl
 
 func (bp *blockProcessor) add(download *downloadedBlock, num int) {
 	for i := download.startHeight; i <= download.stopHeight; i++ {
-		fmt.Println("num:", num, "push:", bp.queue.Size(), "push:", i)
 		bp.queue.Push(i, -float32(i))
 	}
 }
@@ -63,12 +61,10 @@ func (bp *blockProcessor) insert(height uint64) error {
 }
 
 func (bp *blockProcessor) process(downloadComplete chan bool, ProcessComplete chan bool, wg *sync.WaitGroup, num int) {
-	defer fmt.Println("blockProcessor done. num:", num)
 	defer wg.Done()
 
 	for {
 		for !bp.queue.Empty() {
-			fmt.Println("num:", num, "pop:", bp.queue.Size())
 			height := bp.queue.PopItem().(uint64)
 			if height > bp.chain.BestBlockHeight()+1 {
 				bp.queue.Push(height, -float32(height))
