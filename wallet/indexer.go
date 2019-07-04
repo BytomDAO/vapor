@@ -105,7 +105,7 @@ transactionLoop:
 			var hash [32]byte
 			sha3pool.Sum256(hash[:], v.ControlProgram())
 
-			_, err := w.AccountMgr.GetControlProgram(bc.NewHash(hash))
+			_, err := w.store.GetControlProgram(bc.NewHash(hash))
 			if err != nil {
 				log.WithFields(log.Fields{"module": logModule, "err": err, "hash": string(hash[:])}).Error("filterAccountTxs fail.")
 				continue

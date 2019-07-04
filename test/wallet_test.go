@@ -123,70 +123,69 @@ func TestWalletUpdate(t *testing.T) {
 	}
 }
 
-// func TestRescanWallet(t *testing.T) {
-// 	// prepare wallet & db
-// 	dirPath, err := ioutil.TempDir(".", "")
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	defer os.RemoveAll(dirPath)
+func TestRescanWallet(t *testing.T) {
+	// prepare wallet & db
+	dirPath, err := ioutil.TempDir(".", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dirPath)
 
-// 	config.CommonConfig = config.DefaultConfig()
-// 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-// 	walletStore := database.NewWalletStore(testDB)
-// 	defer func() {
-// 		testDB.Close()
-// 		os.RemoveAll("temp")
-// 	}()
+	config.CommonConfig = config.DefaultConfig()
+	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	walletStore := database.NewWalletStore(testDB)
+	defer func() {
+		testDB.Close()
+		os.RemoveAll("temp")
+	}()
 
-// 	store := database.NewStore(testDB)
-// 	dispatcher := event.NewDispatcher()
-// 	txPool := protocol.NewTxPool(store, dispatcher)
-// 	chain, err := protocol.NewChain(store, txPool, dispatcher)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
+	store := database.NewStore(testDB)
+	dispatcher := event.NewDispatcher()
+	txPool := protocol.NewTxPool(store, dispatcher)
+	chain, err := protocol.NewChain(store, txPool, dispatcher)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-// 	statusInfo := wt.StatusInfo{
-// 		Version:  uint(1),
-// 		WorkHash: bc.Hash{V0: 0xff},
-// 	}
-// 	if err := walletStore.SetWalletInfo(&statusInfo); err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	walletInfo, err := walletStore.GetWalletInfo()
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	// w.status =
+	statusInfo := wt.StatusInfo{
+		Version:  uint(1),
+		WorkHash: bc.Hash{V0: 0xff},
+	}
+	if err := walletStore.SetWalletInfo(&statusInfo); err != nil {
+		t.Fatal(err)
+	}
+	walletInfo, err := walletStore.GetWalletInfo()
+	if err != nil {
+		t.Fatal(err)
+	}
 
-// 	// rawWallet, err := json.Marshal(statusInfo)
-// 	// if err != nil {
-// 	// 	t.Fatal("save wallet info")
-// 	// }
+	// rawWallet, err := json.Marshal(statusInfo)
+	// if err != nil {
+	// 	t.Fatal("save wallet info")
+	// }
 
-// 	w := newMockWallet(walletStore, nil, nil, chain, dispatcher, false)
+	w := newMockWallet(walletStore, nil, nil, chain, dispatcher, false)
+	w.Wallet.Status = *walletInfo
+	// w.store.SetWalletInfo(rawWallet)
+	// rawWallet = w.store.GetWalletInfo()
+	// if rawWallet == nil {
+	// 	t.Fatal("fail to load wallet StatusInfo")
+	// }
 
-// 	// w.store.SetWalletInfo(rawWallet)
-// 	// rawWallet = w.store.GetWalletInfo()
-// 	// if rawWallet == nil {
-// 	// 	t.Fatal("fail to load wallet StatusInfo")
-// 	// }
+	// if err := json.Unmarshal(rawWallet, &w.Wallet.Status); err != nil {
+	// 	t.Fatal(err)
+	// }
 
-// 	if err := json.Unmarshal(rawWallet, &w.status); err != nil {
-// 		t.Fatal(err)
-// 	}
+	// rescan wallet
+	if err := w.Wallet.LoadWalletInfo(); err != nil {
+		t.Fatal(err)
+	}
 
-// 	// rescan wallet
-// 	if err := w.LoadWalletInfo(); err != nil {
-// 		t.Fatal(err)
-// 	}
-
-// 	block := config.GenesisBlock()
-// 	if w.status.WorkHash != block.Hash() {
-// 		t.Fatal("reattach from genesis block")
-// 	}
-// }
+	block := config.GenesisBlock()
+	if w.Wallet.Status.WorkHash != block.Hash() {
+		t.Fatal("reattach from genesis block")
+	}
+}
 
 func mockUTXO(controlProg *account.CtrlProgram, assetID *bc.AssetID) *account.UTXO {
 	utxo := &account.UTXO{}
