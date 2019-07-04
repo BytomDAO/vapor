@@ -1,7 +1,6 @@
 package wallet
 
 import (
-	"fmt"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -167,9 +166,6 @@ func (w *Wallet) commitWalletInfo() error {
 func (w *Wallet) AttachBlock(block *types.Block) error {
 	w.rw.Lock()
 	defer w.rw.Unlock()
-
-	fmt.Println("block.PreviousBlockHash:", block.PreviousBlockHash)
-	fmt.Println("w.status.WorkHash:", w.status.WorkHash)
 
 	if block.PreviousBlockHash != w.status.WorkHash {
 		log.Warn("wallet skip attachBlock due to status hash not equal to previous hash")
