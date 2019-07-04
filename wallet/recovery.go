@@ -36,6 +36,7 @@ var (
 	// ErrInvalidAcctID can not find account by account id
 	ErrInvalidAcctID     = errors.New("invalid account id")
 	ErrGetRecoveryStatus = errors.New("failed to get recovery status.")
+	ErrRecoveryStatus    = errors.New("recovery status is nil.")
 )
 
 // branchRecoveryState maintains the required state in-order to properly
@@ -368,6 +369,9 @@ func (m *recoveryManager) LoadStatusInfo() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	if m.state == nil {
+		return ErrRecoveryStatus
+	}
 	status, err := m.store.GetRecoveryStatus()
 	if err == ErrGetRecoveryStatus {
 		return nil
