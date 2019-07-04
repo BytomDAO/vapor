@@ -63,7 +63,7 @@ func TestWalletVersion(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	walletStore := mock.NewMockWalletStore(testDB)
+	walletStore := NewMockWalletStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
@@ -135,7 +135,7 @@ func TestWalletUpdate(t *testing.T) {
 	}()
 
 	store := database.NewStore(testDB)
-	walletStore := mock.NewMockWalletStore(testDB)
+	walletStore := NewMockWalletStore(testDB)
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
 
@@ -229,7 +229,7 @@ func TestRescanWallet(t *testing.T) {
 
 	config.CommonConfig = config.DefaultConfig()
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	walletStore := mock.NewMockWalletStore(testDB)
+	walletStore := NewMockWalletStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
@@ -338,7 +338,7 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 	//block := mockSingleBlock(tx)
 	txStatus := bc.NewTransactionStatus()
 	txStatus.SetStatus(0, false)
-	walletStore := mock.NewMockWalletStore(testDB)
+	walletStore := NewMockWalletStore(testDB)
 	w, err := NewWallet(walletStore, accountManager, reg, hsm, chain, dispatcher, false)
 	go w.memPoolTxQueryLoop()
 	w.eventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: protocol.MsgNewTx}})
