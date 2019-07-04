@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/vapor/wallet"
+
 	acc "github.com/vapor/account"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/query"
@@ -461,10 +463,16 @@ func (store *WalletStore) SetUnconfirmedTransaction(txID string, tx *query.Annot
 }
 
 // SetWalletInfo get wallet information
-func (store *WalletStore) SetWalletInfo(rawWallet []byte) {
+func (store *WalletStore) SetWalletInfo(status *wallet.StatusInfo) error {
+	rawWallet, err := json.Marshal(status)
+	if err != nil {
+		return err
+	}
+
 	if store.batch == nil {
 		store.walletDB.Set([]byte(dbm.WalletKey), rawWallet)
 	} else {
 		store.batch.Set([]byte(dbm.WalletKey), rawWallet)
 	}
+	return nil
 }

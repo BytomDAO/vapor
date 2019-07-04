@@ -155,13 +155,10 @@ func (w *Wallet) loadWalletInfo() error {
 }
 
 func (w *Wallet) commitWalletInfo() error {
-	rawWallet, err := json.Marshal(w.status)
-	if err != nil {
+	if err := w.store.SetWalletInfo(&w.status); err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("save wallet info")
 		return err
 	}
-
-	w.store.SetWalletInfo(rawWallet)
 	return nil
 }
 

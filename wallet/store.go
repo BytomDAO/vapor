@@ -34,5 +34,5 @@ type WalletStore interface {
 	SetRecoveryStatus([]byte, []byte) // recoveryManager.state isn't exported outside
 	SetTransaction(uint64, *query.AnnotatedTx) error
 	SetUnconfirmedTransaction(string, *query.AnnotatedTx) error
-	SetWalletInfo([]byte) // need move database.NewWalletStore in wallet package
+	SetWalletInfo(*StatusInfo) error // need move database.NewWalletStore in wallet package
 }

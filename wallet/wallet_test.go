@@ -70,20 +70,24 @@ func TestWalletVersion(t *testing.T) {
 	dispatcher := event.NewDispatcher()
 	w := mockWallet(walletStore, nil, nil, nil, dispatcher, false)
 
-	// legacy status test case
-	type legacyStatusInfo struct {
-		WorkHeight uint64
-		WorkHash   bc.Hash
-		BestHeight uint64
-		BestHash   bc.Hash
-	}
-	rawWallet, err := json.Marshal(legacyStatusInfo{})
-	if err != nil {
-		t.Fatal("Marshal legacyStatusInfo")
-	}
+	// // legacy status test case
+	// type legacyStatusInfo struct {
+	// 	WorkHeight uint64
+	// 	WorkHash   bc.Hash
+	// 	BestHeight uint64
+	// 	BestHash   bc.Hash
+	// }
 
-	w.store.SetWalletInfo(rawWallet)
-	rawWallet = w.store.GetWalletInfo()
+	// rawWallet, err := json.Marshal(legacyStatusInfo{})
+	// if err != nil {
+	// 	t.Fatal("Marshal legacyStatusInfo")
+	// }
+	walletStatus := new(StatusInfo)
+
+	if err := w.store.SetWalletInfo(walletStatus); err != nil {
+		t.Fatal(err)
+	}
+	rawWallet := w.store.GetWalletInfo()
 	if rawWallet == nil {
 		t.Fatal("fail to load wallet StatusInfo")
 	}
@@ -98,12 +102,14 @@ func TestWalletVersion(t *testing.T) {
 
 	// lower wallet version test case
 	lowerVersion := StatusInfo{Version: currentVersion - 1}
-	rawWallet, err = json.Marshal(lowerVersion)
-	if err != nil {
-		t.Fatal("save wallet info")
-	}
+	// rawWallet, err = json.Marshal(lowerVersion)
+	// if err != nil {
+	// 	t.Fatal("save wallet info")
+	// }
 
-	w.store.SetWalletInfo(rawWallet)
+	if err := w.store.SetWalletInfo(&lowerVersion); err != nil {
+		t.Fatal(err)
+	}
 	rawWallet = w.store.GetWalletInfo()
 	if rawWallet == nil {
 		t.Fatal("fail to load wallet StatusInfo")
@@ -956,12 +962,18 @@ func (store *MockWalletStore) SetUnconfirmedTransaction(txID string, tx *query.A
 }
 
 // SetWalletInfo get wallet information
-func (store *MockWalletStore) SetWalletInfo(rawWallet []byte) {
-	if store.batch == nil {
-		store.walletDB.Set([]byte(WalletKey), rawWallet)
-	} else {
-		store.batch.Set([]byte(WalletKey), rawWallet)
+func (store *MockWalletStore) SetWalletInfo(status *StatusInfo) error {
+	rawWallet, err := json.Marshal(status)
+	if err != nil {
+		return err
 	}
+
+	if store.batch == nil {
+		store.walletDB.Set([]byte(dbm.WalletKey), rawWallet)
+	} else {
+		store.batch.Set([]byte(dbm.WalletKey), rawWallet)
+	}
+	return nil
 }
 
 //-------------
