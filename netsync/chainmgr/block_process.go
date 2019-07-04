@@ -81,9 +81,14 @@ func (bp *blockProcessor) process(downloadComplete chan bool, ProcessComplete ch
 				return
 			}
 		}
+
 		select {
 		case blocks := <-bp.downloadedBlockCh:
 			bp.add(blocks, num)
+			for len(bp.downloadedBlockCh) > 0 {
+				bp.add(<-bp.downloadedBlockCh, num)
+			}
+
 		case <-downloadComplete:
 			return
 		}

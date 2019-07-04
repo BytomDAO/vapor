@@ -120,12 +120,11 @@ func (mf *msgFetcher) parallelFetchBlocks(taskQueue *prque.Prque, downloadedBloc
 	tasks := make(map[string]*task)
 	timeoutQueue := newTimeoutQueue()
 	for {
-		// schedule task
 		if taskQueue.Size() == 0 && len(tasks) == 0 {
 			downloadComplete <- true
 			return
 		}
-
+		// schedule task
 		for !taskQueue.Empty() && len(tasks) <= maxParallelTasksNum {
 			piece := taskQueue.PopItem().(*piece)
 			peerID, err := mf.peers.SelectPeer(piece.stopHeader.Height + fastSyncPivotGap)
@@ -170,33 +169,10 @@ func (mf *msgFetcher) parallelFetchBlocks(taskQueue *prque.Prque, downloadedBloc
 				timeout.Reset(*d)
 			}
 
-			if len(msg.blocks) == 0 {
-				mf.peers.ErrorHandler(msg.peerID, security.LevelMsgIllegal, errors.New("null blocks msg"))
+			if err := mf.verifyBlocksMsg(msg, task.piece.startHeader, task.piece.stopHeader); err != nil {
+				mf.peers.ErrorHandler(msg.peerID, security.LevelMsgIllegal, err)
 				taskQueue.Push(task.piece, -float32(task.piece.index))
 				break
-			}
-
-			// blocks more than request
-			if uint64(len(msg.blocks)) > task.piece.stopHeader.Height-task.piece.startHeader.Height+1 {
-				mf.peers.ErrorHandler(msg.peerID, security.LevelMsgIllegal, errors.New("exceed length blocks msg"))
-				taskQueue.Push(task.piece, -float32(task.piece.index))
-				break
-			}
-
-			// verify start block
-			if msg.blocks[0].Hash() != task.piece.startHeader.Hash() {
-				mf.peers.ErrorHandler(msg.peerID, security.LevelMsgIllegal, errors.New("get mismatch blocks msg"))
-				taskQueue.Push(task.piece, -float32(task.piece.index))
-				break
-			}
-
-			// verify blocks continuity
-			for i := 0; i < len(msg.blocks)-1; i++ {
-				if msg.blocks[i].Hash() != msg.blocks[i+1].PreviousBlockHash {
-					mf.peers.ErrorHandler(msg.peerID, security.LevelMsgIllegal, errors.New("get discontinuous blocks msg"))
-					taskQueue.Push(task.piece, -float32(task.piece.index))
-					break
-				}
 			}
 
 			if err := mf.storage.WriteBlocks(msg.peerID, msg.blocks); err != nil {
@@ -280,4 +256,30 @@ func (mf *msgFetcher) resetParameter() {
 		<-mf.headersProcessCh
 	}
 	mf.storage.ResetParameter()
+}
+
+func (mf *msgFetcher) verifyBlocksMsg(msg *blocksMsg, startHeader, stopHeader *types.BlockHeader) error {
+	// null blocks
+	if len(msg.blocks) == 0 {
+		return errors.New("null blocks msg")
+	}
+
+	// blocks more than request
+	if uint64(len(msg.blocks)) > stopHeader.Height-startHeader.Height+1 {
+		return errors.New("exceed length blocks msg")
+	}
+
+	// verify start block
+	if msg.blocks[0].Hash() != startHeader.Hash() {
+		return errors.New("get mismatch blocks msg")
+	}
+
+	// verify blocks continuity
+	for i := 0; i < len(msg.blocks)-1; i++ {
+		if msg.blocks[i].Hash() != msg.blocks[i+1].PreviousBlockHash {
+			return errors.New("get discontinuous blocks msg")
+		}
+	}
+
+	return nil
 }
