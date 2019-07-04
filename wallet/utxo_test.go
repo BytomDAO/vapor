@@ -367,7 +367,6 @@ func TestFilterAccountUtxo(t *testing.T) {
 			testDB.Set(key, data)
 		}
 
-		fmt.Println("len(c.input):", len(c.input))
 		gotUtxos := w.filterAccountUtxo(c.input)
 		sort.Slice(gotUtxos[:], func(i, j int) bool {
 			return gotUtxos[i].Amount < gotUtxos[j].Amount
