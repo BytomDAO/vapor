@@ -126,8 +126,8 @@ func newAddressRecoveryState(recoveryWindow uint64, account *account.Account) *a
 	}
 }
 
-// recoveryState used to record the status of a recovery process.
-type recoveryState struct {
+// RecoveryState used to record the status of a recovery process.
+type RecoveryState struct {
 	// XPubs recovery account xPubs
 	XPubs []chainkd.XPub
 
@@ -144,8 +144,8 @@ type recoveryState struct {
 	AccountsStatus map[string]*addressRecoveryState
 }
 
-func newRecoveryState() *recoveryState {
-	return &recoveryState{
+func newRecoveryState() *RecoveryState {
+	return &RecoveryState{
 		AccountsStatus: make(map[string]*addressRecoveryState),
 		StartTime:      time.Now(),
 	}
@@ -154,7 +154,7 @@ func newRecoveryState() *recoveryState {
 // stateForScope returns a ScopeRecoveryState for the provided key scope. If one
 // does not already exist, a new one will be generated with the RecoveryState's
 // recoveryWindow.
-func (rs *recoveryState) stateForScope(account *account.Account) {
+func (rs *RecoveryState) stateForScope(account *account.Account) {
 	// If the account recovery state already exists, return it.
 	if _, ok := rs.AccountsStatus[account.ID]; ok {
 		return
@@ -178,7 +178,7 @@ type recoveryManager struct {
 
 	// state encapsulates and allocates the necessary recovery state for all
 	// key scopes and subsidiary derivation paths.
-	state *recoveryState
+	state *RecoveryState
 
 	//addresses all addresses derivation lookahead used when
 	// attempting to recover the set of used addresses.

@@ -312,6 +312,7 @@ func (store *WalletStore) GetUnconfirmedTransaction(txID string) (*query.Annotat
 
 // GetRecoveryStatus delete recovery status
 func (store *WalletStore) GetRecoveryStatus(recoveryKey []byte) []byte {
+
 	return store.walletDB.Get(recoveryKey)
 }
 
