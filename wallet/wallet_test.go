@@ -70,23 +70,11 @@ func TestWalletVersion(t *testing.T) {
 	dispatcher := event.NewDispatcher()
 	w := mockWallet(walletStore, nil, nil, nil, dispatcher, false)
 
-	// // legacy status test case
-	// type legacyStatusInfo struct {
-	// 	WorkHeight uint64
-	// 	WorkHash   bc.Hash
-	// 	BestHeight uint64
-	// 	BestHash   bc.Hash
-	// }
-
-	// rawWallet, err := json.Marshal(legacyStatusInfo{})
-	// if err != nil {
-	// 	t.Fatal("Marshal legacyStatusInfo")
-	// }
 	walletStatus := new(StatusInfo)
-
 	if err := w.store.SetWalletInfo(walletStatus); err != nil {
 		t.Fatal(err)
 	}
+
 	rawWallet := w.store.GetWalletInfo()
 	if rawWallet == nil {
 		t.Fatal("fail to load wallet StatusInfo")
@@ -102,11 +90,6 @@ func TestWalletVersion(t *testing.T) {
 
 	// lower wallet version test case
 	lowerVersion := StatusInfo{Version: currentVersion - 1}
-	// rawWallet, err = json.Marshal(lowerVersion)
-	// if err != nil {
-	// 	t.Fatal("save wallet info")
-	// }
-
 	if err := w.store.SetWalletInfo(&lowerVersion); err != nil {
 		t.Fatal(err)
 	}
