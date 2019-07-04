@@ -11,13 +11,13 @@ type BlockWitness struct {
 	Witness [][]byte
 }
 
-func (bw *BlockWitness) writeTo(w io.Writer) error {
-	_, err := blockchain.WriteVarstrList(w, bw.Witness)
+func (bw *BlockWitness) readFrom(r *blockchain.Reader) (err error) {
+	bw.Witness, err = blockchain.ReadVarstrList(r)
 	return err
 }
 
-func (bw *BlockWitness) readFrom(r *blockchain.Reader) (err error) {
-	bw.Witness, err = blockchain.ReadVarstrList(r)
+func (bw *BlockWitness) writeTo(w io.Writer) error {
+	_, err := blockchain.WriteVarstrList(w, bw.Witness)
 	return err
 }
 
