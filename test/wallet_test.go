@@ -165,16 +165,6 @@ type mockWallet struct {
 }
 
 func newMockWallet(store wt.WalletStore, account *account.Manager, asset *asset.Registry, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) *mockWallet {
-	// wallet := &wallet.Wallet{
-	// 	store:           store,
-	// 	AccountMgr:      account,
-	// 	AssetReg:        asset,
-	// 	chain:           chain,
-	// 	RecoveryMgr:     newRecoveryManager(store, account),
-	// 	eventDispatcher: dispatcher,
-	// 	TxIndexFlag:     txIndexFlag,
-	// }
-	// wallet.txMsgSub, _ = wallet.eventDispatcher.Subscribe(protocol.TxMsgEvent{})
 	w, err := wt.NewWallet(store, account, asset, nil, chain, dispatcher, txIndexFlag)
 	if err != nil {
 		panic(err)
@@ -187,6 +177,12 @@ func mockSingleBlock(tx *types.Tx) *types.Block {
 		BlockHeader: types.BlockHeader{
 			Version: 1,
 			Height:  1,
+			PreviousBlockHash: bc.Hash{
+				V0: uint64(14952355164967094643),
+				V1: uint64(2960316323621296529),
+				V2: uint64(4202730371317372163),
+				V3: uint64(7569611631634777133),
+			},
 		},
 		Transactions: []*types.Tx{config.GenesisTx(), tx},
 	}
