@@ -16,8 +16,6 @@ import (
 )
 
 const (
-	//UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
-	UnconfirmedTxPrefix      = "UTXS:"
 	UnconfirmedTxCheckPeriod = 30 * time.Minute
 	MaxUnconfirmedTxDuration = 24 * time.Hour
 )
