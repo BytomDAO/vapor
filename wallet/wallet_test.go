@@ -788,8 +788,16 @@ func (store *MockWalletStore) GetUnconfirmedTransaction(txID string) (*query.Ann
 }
 
 // GetRecoveryStatus delete recovery status
-func (store *MockWalletStore) GetRecoveryStatus(recoveryKey []byte) []byte {
-	return store.walletDB.Get(recoveryKey)
+func (store *MockWalletStore) GetRecoveryStatus() (*RecoveryState, error) {
+	rawStatus := store.walletDB.Get(dbm.RecoveryKey)
+	if rawStatus == nil {
+		return nil, ErrGetRecoveryStatus
+	}
+	state := new(RecoveryState)
+	if err := json.Unmarshal(rawStatus, state); err != nil {
+		return nil, err
+	}
+	return state, nil
 }
 
 // GetWalletInfo get wallet information

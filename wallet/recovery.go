@@ -1,7 +1,6 @@
 package wallet
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"sync"
@@ -35,7 +34,8 @@ var (
 	ErrRecoveryBusy = errors.New("another recovery in progress")
 
 	// ErrInvalidAcctID can not find account by account id
-	ErrInvalidAcctID = errors.New("invalid account id")
+	ErrInvalidAcctID     = errors.New("invalid account id")
+	ErrGetRecoveryStatus = errors.New("failed to get recovery status.")
 )
 
 // branchRecoveryState maintains the required state in-order to properly
@@ -368,14 +368,14 @@ func (m *recoveryManager) LoadStatusInfo() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	rawStatus := m.store.GetRecoveryStatus(recoveryKey)
-	if rawStatus == nil {
+	status, err := m.store.GetRecoveryStatus()
+	if err == ErrGetRecoveryStatus {
 		return nil
 	}
-
-	if err := json.Unmarshal(rawStatus, m.state); err != nil {
+	if err != nil {
 		return err
 	}
+	m.state = status
 
 	if m.state.XPubs != nil && !m.tryStartXPubsRec() {
 		return ErrRecoveryBusy

@@ -311,9 +311,16 @@ func (store *WalletStore) GetUnconfirmedTransaction(txID string) (*query.Annotat
 }
 
 // GetRecoveryStatus delete recovery status
-func (store *WalletStore) GetRecoveryStatus(recoveryKey []byte) []byte {
-
-	return store.walletDB.Get(recoveryKey)
+func (store *WalletStore) GetRecoveryStatus() (*wallet.RecoveryState, error) {
+	rawStatus := store.walletDB.Get(dbm.RecoveryKey)
+	if rawStatus == nil {
+		return nil, wallet.ErrGetRecoveryStatus
+	}
+	state := new(wallet.RecoveryState)
+	if err := json.Unmarshal(rawStatus, state); err != nil {
+		return nil, err
+	}
+	return state, nil
 }
 
 // GetWalletInfo get wallet information
