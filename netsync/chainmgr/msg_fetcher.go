@@ -119,12 +119,13 @@ func (mf *msgFetcher) parallelFetchBlocks(taskQueue *prque.Prque, downloadedBloc
 
 	//timeout := time.NewTimer(requireBlocksTimeout)
 	timeout := time.NewTimer(requireBlocksTimeout)
+	//var timeout time.Timer
 	defer timeout.Stop()
 	fastSyncTimeout := time.NewTimer(fastSyncTimeout)
 	defer fastSyncTimeout.Stop()
 
 	tasks := make(map[string]*task)
-	stopTimers := []*timeoutTime{}
+	timeoutQueue := newTimeoutQueue()
 	for {
 		// schedule task
 		if taskQueue.Size() == 0 && len(tasks) == 0 {
@@ -154,9 +155,13 @@ func (mf *msgFetcher) parallelFetchBlocks(taskQueue *prque.Prque, downloadedBloc
 			}
 
 			tasks[peerID] = &task{piece: piece, startTime: time.Now()}
-			stopTimers = append(stopTimers, &timeoutTime{time: time.Now().Add(requireBlocksTimeout), peerID: peerID})
-			if len(tasks) == 1 {
-				timeout.Reset(requireBlocksTimeout)
+			//stopTimers = append(stopTimers, &timeoutTime{time: time.Now().Add(requireBlocksTimeout), peerID: peerID})
+			timeoutQueue.addTimer(peerID)
+			//if len(tasks) == 1 {
+			//	timeout.Reset(requireBlocksTimeout)
+			//}
+			if d := timeoutQueue.getNextTimeoutDuration(); d != nil {
+				timeout.Reset(*d)
 			}
 		}
 
@@ -172,16 +177,9 @@ func (mf *msgFetcher) parallelFetchBlocks(taskQueue *prque.Prque, downloadedBloc
 			}
 
 			//reset timeout
-			for i, stopTimer := range stopTimers {
-				if stopTimer.peerID == msg.peerID {
-					stopTimers = append(stopTimers[:i], stopTimers[i+1:]...)
-					if i == 0 {
-						if len(stopTimers) > 0 {
-							timeout.Reset(stopTimers[0].time.Sub(time.Now()))
-						}
-					}
-					break
-				}
+			timeoutQueue.delTimer(msg.peerID)
+			if d := timeoutQueue.getNextTimeoutDuration(); d != nil {
+				timeout.Reset(*d)
 			}
 
 			if len(msg.blocks) == 0 {
@@ -229,22 +227,26 @@ func (mf *msgFetcher) parallelFetchBlocks(taskQueue *prque.Prque, downloadedBloc
 				taskQueue.Push(task.piece, -float32(task.piece.index))
 			}
 		case <-timeout.C:
-			if len(stopTimers) == 0 {
+			peerID := timeoutQueue.getFirstTimeoutID()
+			if peerID == nil {
 				break
 			}
 
-			task, ok := tasks[stopTimers[0].peerID]
+			task, ok := tasks[*peerID]
 			if !ok {
 				break
 			}
-			log.WithFields(log.Fields{"module": logModule, "error": errRequestTimeout}).Info("failed on fetch blocks")
-			mf.peers.ErrorHandler(stopTimers[0].peerID, security.LevelConnException, errors.New("require blocks timeout"))
-			taskQueue.Push(task.piece, -float32(task.piece.index))
-			stopTimers = stopTimers[1:]
-			//reset timeout
-			if len(stopTimers) > 0 {
-				timeout.Reset(stopTimers[0].time.Sub(time.Now()))
+			timeoutQueue.delTimer(*peerID)
+			if d := timeoutQueue.getNextTimeoutDuration(); d != nil {
+				timeout.Reset(*d)
 			}
+			log.WithFields(log.Fields{"module": logModule, "peerID": peerID, "error": errRequestTimeout}).Info("failed on fetch blocks")
+			mf.peers.ErrorHandler(*peerID, security.LevelConnException, errors.New("require blocks timeout"))
+			taskQueue.Push(task.piece, -float32(task.piece.index))
+			//reset timeout
+			//if len(stopTimers) > 0 {
+			//	timeout.Reset(stopTimers[0].time.Sub(time.Now()))
+			//}
 
 			//downloadResult <- false
 			//log.WithFields(log.Fields{"module": logModule, "error": errRequestTimeout}).Info("failed on fetch blocks")
