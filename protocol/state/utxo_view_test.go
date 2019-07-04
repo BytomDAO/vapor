@@ -19,6 +19,24 @@ var defaultEntry = map[bc.Hash]bc.Entry{
 	},
 }
 
+var coinbaseEntry = map[bc.Hash]bc.Entry{
+	bc.Hash{V0: 0}: &bc.IntraChainOutput{
+		Source: &bc.ValueSource{
+			Value: &bc.AssetAmount{
+				AssetId: consensus.BTMAssetID,
+			},
+		},
+	},
+	bc.Hash{V0: 1}: &bc.IntraChainOutput{
+		Source: &bc.ValueSource{
+			Value: &bc.AssetAmount{
+				AssetId: consensus.BTMAssetID,
+				Amount:  uint64(100),
+			},
+		},
+	},
+}
+
 var voteEntry = map[bc.Hash]bc.Entry{
 	bc.Hash{V0: 0}: &bc.VoteOutput{
 		Source: &bc.ValueSource{
@@ -216,17 +234,18 @@ func TestApplyBlock(t *testing.T) {
 						TxHeader: &bc.TxHeader{
 							ResultIds: []*bc.Hash{
 								&bc.Hash{V0: 0},
+								&bc.Hash{V0: 1},
 							},
 						},
 						SpentOutputIDs: []bc.Hash{},
-						Entries:        defaultEntry,
+						Entries:        coinbaseEntry,
 					},
 				},
 			},
 			inputView: NewUtxoViewpoint(),
 			fetchView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.CoinbaseUTXOType, 0, false),
+					bc.Hash{V0: 1}: storage.NewUtxoEntry(storage.CoinbaseUTXOType, 0, false),
 				},
 			},
 			err: false,
@@ -285,11 +304,7 @@ func TestApplyBlock(t *testing.T) {
 				},
 			},
 			inputView: NewUtxoViewpoint(),
-			fetchView: &UtxoViewpoint{
-				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V1: 0}: storage.NewUtxoEntry(storage.CoinbaseUTXOType, 0, false),
-				},
-			},
+			fetchView: NewUtxoViewpoint(),
 			gasOnlyTx: true,
 			err:       false,
 		},
@@ -411,17 +426,22 @@ func TestDetachBlock(t *testing.T) {
 						TxHeader: &bc.TxHeader{
 							ResultIds: []*bc.Hash{
 								&bc.Hash{V0: 0},
+								&bc.Hash{V0: 1},
 							},
 						},
 						SpentOutputIDs: []bc.Hash{},
-						Entries:        defaultEntry,
+						Entries:        coinbaseEntry,
 					},
 				},
 			},
-			inputView: NewUtxoViewpoint(),
+			inputView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 1}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, false),
+				},
+			},
 			fetchView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, true),
+					bc.Hash{V0: 1}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, true),
 				},
 			},
 			err: false,
@@ -531,11 +551,7 @@ func TestDetachBlock(t *testing.T) {
 				},
 			},
 			inputView: NewUtxoViewpoint(),
-			fetchView: &UtxoViewpoint{
-				Entries: map[bc.Hash]*storage.UtxoEntry{
-					bc.Hash{V1: 0}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, true),
-				},
-			},
+			fetchView: NewUtxoViewpoint(),
 			gasOnlyTx: true,
 			err:       false,
 		},
