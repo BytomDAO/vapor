@@ -75,7 +75,7 @@ func (v *VoteResult) ApplyBlock(block *types.Block) error {
 		}
 
 		for _, output := range tx.Outputs {
-			voteOutput, ok := output.TypedOutput.(*types.VoteTxOutput)
+			voteOutput, ok := output.TypedOutput.(*types.VoteOutput)
 			if !ok {
 				continue
 			}
@@ -148,7 +148,7 @@ func (v *VoteResult) DetachBlock(block *types.Block) error {
 		}
 
 		for _, output := range tx.Outputs {
-			voteOutput, ok := output.TypedOutput.(*types.VoteTxOutput)
+			voteOutput, ok := output.TypedOutput.(*types.VoteOutput)
 			if !ok {
 				continue
 			}
