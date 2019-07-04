@@ -147,7 +147,7 @@ func TestWalletVersion(t *testing.T) {
 // 	}
 
 // 	// rescan wallet
-// 	if err := w.loadWalletInfo(); err != nil {
+// 	if err := w.LoadWalletInfo(); err != nil {
 // 		t.Fatal(err)
 // 	}
 

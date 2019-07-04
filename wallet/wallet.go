@@ -69,7 +69,7 @@ func NewWallet(store WalletStore, account *account.Manager, asset *asset.Registr
 		TxIndexFlag:     txIndexFlag,
 	}
 
-	if err := w.loadWalletInfo(); err != nil {
+	if err := w.LoadWalletInfo(); err != nil {
 		return nil, err
 	}
 
@@ -127,9 +127,9 @@ func (w *Wallet) checkWalletInfo() error {
 	return nil
 }
 
-//loadWalletInfo return stored wallet info and nil,
+//LoadWalletInfo return stored wallet info and nil,
 //if error, return initial wallet info and err
-func (w *Wallet) loadWalletInfo() error {
+func (w *Wallet) LoadWalletInfo() error {
 	walletStatus, err := w.store.GetWalletInfo()
 	if walletStatus == nil && err != ErrGetWalletStatusInfo {
 		return err
