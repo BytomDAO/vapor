@@ -23,7 +23,7 @@ type WalletStore interface {
 	GetStandardUTXO(bc.Hash) (*acc.UTXO, error)
 	GetTransaction(string) (*query.AnnotatedTx, error)
 	GetUnconfirmedTransaction(string) (*query.AnnotatedTx, error)
-	GetRecoveryStatus([]byte) []byte     // recoveryManager.state isn't exported outside
+	GetRecoveryStatus([]byte) []byte
 	GetWalletInfo() (*StatusInfo, error) // need move database.NewWalletStore in wallet package
 	ListAccountUTXOs(string) ([]*acc.UTXO, error)
 	ListTransactions(string, string, uint, bool) ([]*query.AnnotatedTx, error)
@@ -34,5 +34,5 @@ type WalletStore interface {
 	SetRecoveryStatus([]byte, []byte) // recoveryManager.state isn't exported outside
 	SetTransaction(uint64, *query.AnnotatedTx) error
 	SetUnconfirmedTransaction(string, *query.AnnotatedTx) error
-	SetWalletInfo(*StatusInfo) error // need move database.NewWalletStore in wallet package
+	SetWalletInfo(*StatusInfo) error
 }
