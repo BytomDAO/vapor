@@ -148,7 +148,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			}
 
 			prevout := bc.NewIntraChainOutput(src, prog, 0) // ordinal doesn't matter
-			outputID := bc.EntryID(prevout)
+			mainchainOutputID := addEntry(prevout)
 
 			assetDefHash := bc.NewHash(sha3.Sum256(inp.AssetDefinition))
 			assetDef := &bc.AssetDefinition{
@@ -159,7 +159,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 				},
 			}
 
-			crossIn := bc.NewCrossChainInput(&outputID, &inp.AssetAmount, prog, uint64(i), assetDef)
+			crossIn := bc.NewCrossChainInput(&mainchainOutputID, prog, uint64(i), assetDef)
 			crossIn.WitnessArguments = inp.Arguments
 			crossInID := addEntry(crossIn)
 			muxSources[i] = &bc.ValueSource{
@@ -185,7 +185,8 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 	}
 
 	for _, crossIn := range crossIns {
-		crossIn.SetDestination(&muxID, crossIn.Value, crossIn.Ordinal)
+		mainchainOutput := entryMap[*crossIn.MainchainOutputId].(*bc.IntraChainOutput)
+		crossIn.SetDestination(&muxID, mainchainOutput.Source.Value, crossIn.Ordinal)
 	}
 
 	if coinbase != nil {
