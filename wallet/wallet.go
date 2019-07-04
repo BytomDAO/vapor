@@ -42,7 +42,7 @@ type StatusInfo struct {
 type Wallet struct {
 	store           WalletStore
 	rw              sync.RWMutex
-	status          StatusInfo
+	Status          StatusInfo
 	TxIndexFlag     bool
 	AccountMgr      *account.Manager
 	AssetReg        *asset.Registry
@@ -118,9 +118,9 @@ func (w *Wallet) memPoolTxQueryLoop() {
 }
 
 func (w *Wallet) checkWalletInfo() error {
-	if w.status.Version != currentVersion {
+	if w.Status.Version != currentVersion {
 		return errWalletVersionMismatch
-	} else if !w.chain.BlockExist(&w.status.BestHash) {
+	} else if !w.chain.BlockExist(&w.Status.BestHash) {
 		return errBestBlockNotFoundInCore
 	}
 
@@ -135,7 +135,7 @@ func (w *Wallet) LoadWalletInfo() error {
 		return err
 	}
 	if walletStatus != nil {
-		w.status = *walletStatus
+		w.Status = *walletStatus
 		err = w.checkWalletInfo()
 		if err == nil {
 			return nil
@@ -145,8 +145,8 @@ func (w *Wallet) LoadWalletInfo() error {
 		w.store.DeleteWalletUTXOs()
 	}
 
-	w.status.Version = currentVersion
-	w.status.WorkHash = bc.Hash{}
+	w.Status.Version = currentVersion
+	w.Status.WorkHash = bc.Hash{}
 	block, err := w.chain.GetBlockByHeight(0)
 	if err != nil {
 		return err
@@ -155,7 +155,7 @@ func (w *Wallet) LoadWalletInfo() error {
 }
 
 func (w *Wallet) commitWalletInfo() error {
-	if err := w.store.SetWalletInfo(&w.status); err != nil {
+	if err := w.store.SetWalletInfo(&w.Status); err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("save wallet info")
 		return err
 	}
@@ -167,7 +167,7 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 	w.rw.Lock()
 	defer w.rw.Unlock()
 
-	if block.PreviousBlockHash != w.status.WorkHash {
+	if block.PreviousBlockHash != w.Status.WorkHash {
 		log.Warn("wallet skip attachBlock due to status hash not equal to previous hash")
 		return nil
 	}
@@ -198,11 +198,11 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 	}
 
 	w.attachUtxos(block, txStatus)
-	w.status.WorkHeight = block.Height
-	w.status.WorkHash = block.Hash()
-	if w.status.WorkHeight >= w.status.BestHeight {
-		w.status.BestHeight = w.status.WorkHeight
-		w.status.BestHash = w.status.WorkHash
+	w.Status.WorkHeight = block.Height
+	w.Status.WorkHash = block.Hash()
+	if w.Status.WorkHeight >= w.Status.BestHeight {
+		w.Status.BestHeight = w.Status.WorkHeight
+		w.Status.BestHash = w.Status.WorkHash
 	}
 
 	if err := w.commitWalletInfo(); err != nil {
@@ -232,14 +232,14 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 	}
 
 	w.detachUtxos(block, txStatus)
-	w.store.DeleteTransactions(w.status.BestHeight)
+	w.store.DeleteTransactions(w.Status.BestHeight)
 
-	w.status.BestHeight = block.Height - 1
-	w.status.BestHash = block.PreviousBlockHash
+	w.Status.BestHeight = block.Height - 1
+	w.Status.BestHash = block.PreviousBlockHash
 
-	if w.status.WorkHeight > w.status.BestHeight {
-		w.status.WorkHeight = w.status.BestHeight
-		w.status.WorkHash = w.status.BestHash
+	if w.Status.WorkHeight > w.Status.BestHeight {
+		w.Status.WorkHeight = w.Status.BestHeight
+		w.Status.WorkHash = w.Status.BestHash
 	}
 	if err := w.commitWalletInfo(); err != nil {
 		return err
@@ -256,8 +256,8 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 func (w *Wallet) walletUpdater() {
 	for {
 		w.getRescanNotification()
-		for !w.chain.InMainChain(w.status.BestHash) {
-			block, err := w.chain.GetBlockByHash(&w.status.BestHash)
+		for !w.chain.InMainChain(w.Status.BestHash) {
+			block, err := w.chain.GetBlockByHash(&w.Status.BestHash)
 			if err != nil {
 				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("walletUpdater GetBlockByHash")
 				return
@@ -269,7 +269,7 @@ func (w *Wallet) walletUpdater() {
 			}
 		}
 
-		block, _ := w.chain.GetBlockByHeight(w.status.WorkHeight + 1)
+		block, _ := w.chain.GetBlockByHeight(w.Status.WorkHeight + 1)
 		if block == nil {
 			w.walletBlockWaiter()
 			continue
@@ -329,13 +329,13 @@ func (w *Wallet) getRescanNotification() {
 
 func (w *Wallet) setRescanStatus() {
 	block, _ := w.chain.GetBlockByHeight(0)
-	w.status.WorkHash = bc.Hash{}
+	w.Status.WorkHash = bc.Hash{}
 	w.AttachBlock(block)
 }
 
 func (w *Wallet) walletBlockWaiter() {
 	select {
-	case <-w.chain.BlockWaiter(w.status.WorkHeight + 1):
+	case <-w.chain.BlockWaiter(w.Status.WorkHeight + 1):
 	case <-w.rescanCh:
 		w.setRescanStatus()
 	}
@@ -346,5 +346,5 @@ func (w *Wallet) GetWalletStatusInfo() StatusInfo {
 	w.rw.RLock()
 	defer w.rw.RUnlock()
 
-	return w.status
+	return w.Status
 }

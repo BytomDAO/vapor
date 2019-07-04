@@ -79,7 +79,7 @@ func TestWalletVersion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	w.status = *status
+	w.Status = *status
 
 	if err := w.checkWalletInfo(); err != errWalletVersionMismatch {
 		t.Fatal("fail to detect legacy wallet version")
@@ -95,7 +95,7 @@ func TestWalletVersion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	w.status = *status
+	w.Status = *status
 
 	if err := w.checkWalletInfo(); err != errWalletVersionMismatch {
 		t.Fatal("fail to detect expired wallet version")
@@ -142,7 +142,7 @@ func TestWalletVersion(t *testing.T) {
 // 		t.Fatal("fail to load wallet StatusInfo")
 // 	}
 
-// 	if err := json.Unmarshal(rawWallet, &w.status); err != nil {
+// 	if err := json.Unmarshal(rawWallet, &w.Status); err != nil {
 // 		t.Fatal(err)
 // 	}
 
@@ -152,7 +152,7 @@ func TestWalletVersion(t *testing.T) {
 // 	}
 
 // 	block := config.GenesisBlock()
-// 	if w.status.WorkHash != block.Hash() {
+// 	if w.Status.WorkHash != block.Hash() {
 // 		t.Fatal("reattach from genesis block")
 // 	}
 // }
