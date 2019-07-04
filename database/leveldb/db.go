@@ -53,7 +53,7 @@ const (
 	walletKey
 	miningAddressKey
 	coinbaseAbKey
-	// recoveryKey
+	recoveryKey
 )
 
 // leveldb key prefix
@@ -73,8 +73,8 @@ var (
 	WalletKey                = []byte{walletKey}
 	MiningAddressKey         = []byte{miningAddressKey}
 	CoinbaseAbKey            = []byte{coinbaseAbKey}
-	// RecoveryKey              = []byte{recoveryKey}
-	RecoveryKey = []byte("RecoveryInfo")
+	RecoveryKey              = []byte{recoveryKey}
+	// RecoveryKey = []byte("RecoveryInfo")
 )
 
 const (

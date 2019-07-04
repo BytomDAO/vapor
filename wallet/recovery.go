@@ -28,7 +28,7 @@ const (
 
 //recoveryKey key for db store recovery info.
 var (
-	recoveryKey = []byte("RecoveryInfo")
+	// recoveryKey = []byte("RecoveryInfo")
 
 	// ErrRecoveryBusy another recovery in progress, can not get recovery manager lock
 	ErrRecoveryBusy = errors.New("another recovery in progress")
