@@ -215,6 +215,13 @@ func (p *Peer) isSPVNode() bool {
 	return !p.services.IsEnable(consensus.SFFullNode)
 }
 
+func (p *Peer) busy() bool {
+	p.mtx.RLock()
+	defer p.mtx.RUnlock()
+
+	return p.isBusy
+}
+
 func (p *Peer) MarkBlock(hash *bc.Hash) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
@@ -381,6 +388,13 @@ func (p *Peer) SendStatus(bestHeader, irreversibleHeader *types.BlockHeader) err
 	return nil
 }
 
+func (p *Peer) SetBusy() {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+
+	p.isBusy = true
+}
+
 func (p *Peer) SetBestStatus(bestHeight uint64, bestHash *bc.Hash) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
@@ -392,6 +406,7 @@ func (p *Peer) SetBestStatus(bestHeight uint64, bestHash *bc.Hash) {
 func (p *Peer) SetIdle() {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
+
 	p.isBusy = false
 }
 
@@ -679,22 +694,23 @@ func (ps *PeerSet) SetStatus(peerID string, height uint64, hash *bc.Hash) {
 }
 
 func (ps *PeerSet) Size() int {
-	ps.mtx.Lock()
-	ps.mtx.Unlock()
+	ps.mtx.RLock()
+	ps.mtx.RUnlock()
 
 	return len(ps.peers)
 }
 
 func (ps *PeerSet) SelectPeer(syncHeight uint64) (string, error) {
-	ps.mtx.Lock()
-	ps.mtx.Unlock()
+	ps.mtx.RLock()
+	ps.mtx.RUnlock()
 
 	for _, peer := range ps.peers {
-		if peer.isBusy == true {
+		if peer.busy() {
 			continue
 		}
-		if peer.bestHeight >= syncHeight {
-			peer.isBusy = true
+
+		if peer.Height() >= syncHeight {
+			peer.SetBusy()
 			return peer.ID(), nil
 		}
 	}

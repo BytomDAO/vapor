@@ -16,6 +16,7 @@ import (
 )
 
 const (
+	maxParallelTasksNum  = 7
 	blockProcessChSize   = 1024
 	blocksProcessChSize  = 128
 	headersProcessChSize = 1024
@@ -107,19 +108,11 @@ func (mf *msgFetcher) requireBlocks(peerID string, locator []*bc.Hash, stopHash 
 	return nil
 }
 
-type timeoutTime struct {
-	time   time.Time
-	peerID string
-}
-
 func (mf *msgFetcher) parallelFetchBlocks(taskQueue *prque.Prque, downloadedBlockCh chan *downloadedBlock, downloadComplete chan bool, ProcessComplete chan bool, wg *sync.WaitGroup, num int) {
-	//wg.Add(1)
 	defer fmt.Println("parallelFetchBlocks done. num:", num)
 	defer wg.Done()
 
-	//timeout := time.NewTimer(requireBlocksTimeout)
 	timeout := time.NewTimer(requireBlocksTimeout)
-	//var timeout time.Timer
 	defer timeout.Stop()
 	fastSyncTimeout := time.NewTimer(fastSyncTimeout)
 	defer fastSyncTimeout.Stop()
@@ -133,7 +126,7 @@ func (mf *msgFetcher) parallelFetchBlocks(taskQueue *prque.Prque, downloadedBloc
 			return
 		}
 
-		for !taskQueue.Empty() {
+		for !taskQueue.Empty() && len(tasks) <= maxParallelTasksNum {
 			piece := taskQueue.PopItem().(*piece)
 			peerID, err := mf.peers.SelectPeer(piece.stopHeader.Height + fastSyncPivotGap)
 			if err != nil {
@@ -155,11 +148,7 @@ func (mf *msgFetcher) parallelFetchBlocks(taskQueue *prque.Prque, downloadedBloc
 			}
 
 			tasks[peerID] = &task{piece: piece, startTime: time.Now()}
-			//stopTimers = append(stopTimers, &timeoutTime{time: time.Now().Add(requireBlocksTimeout), peerID: peerID})
 			timeoutQueue.addTimer(peerID)
-			//if len(tasks) == 1 {
-			//	timeout.Reset(requireBlocksTimeout)
-			//}
 			if d := timeoutQueue.getNextTimeoutDuration(); d != nil {
 				timeout.Reset(*d)
 			}
@@ -168,7 +157,6 @@ func (mf *msgFetcher) parallelFetchBlocks(taskQueue *prque.Prque, downloadedBloc
 		select {
 		case msg := <-mf.blocksProcessCh:
 			mf.peers.SetIdle(msg.peerID)
-
 			//check message from the requested peer.
 			task, ok := tasks[msg.peerID]
 			if !ok {
@@ -237,20 +225,14 @@ func (mf *msgFetcher) parallelFetchBlocks(taskQueue *prque.Prque, downloadedBloc
 				break
 			}
 			timeoutQueue.delTimer(*peerID)
+			//reset timeout
 			if d := timeoutQueue.getNextTimeoutDuration(); d != nil {
 				timeout.Reset(*d)
 			}
 			log.WithFields(log.Fields{"module": logModule, "peerID": peerID, "error": errRequestTimeout}).Info("failed on fetch blocks")
 			mf.peers.ErrorHandler(*peerID, security.LevelConnException, errors.New("require blocks timeout"))
 			taskQueue.Push(task.piece, -float32(task.piece.index))
-			//reset timeout
-			//if len(stopTimers) > 0 {
-			//	timeout.Reset(stopTimers[0].time.Sub(time.Now()))
-			//}
-
-			//downloadResult <- false
-			//log.WithFields(log.Fields{"module": logModule, "error": errRequestTimeout}).Info("failed on fetch blocks")
-			//return
+			delete(tasks, *peerID)
 		case <-fastSyncTimeout.C:
 			downloadComplete <- true
 			return
@@ -264,7 +246,7 @@ func (mf *msgFetcher) parallelFetchHeaders(peers []*peers.Peer, locator []*bc.Ha
 	result := make(map[string][]*types.BlockHeader)
 
 	for _, peer := range peers {
-		go peer.GetHeaders(locator, stopHash, skip)
+		peer.GetHeaders(locator, stopHash, skip)
 	}
 
 	timeout := time.NewTimer(requireHeadersTimeout)
@@ -293,8 +275,9 @@ func (mf *msgFetcher) resetParameter() {
 	for len(mf.blocksProcessCh) > 0 {
 		<-mf.blocksProcessCh
 	}
+
 	for len(mf.headersProcessCh) > 0 {
 		<-mf.headersProcessCh
 	}
-	mf.storage.resetParameter()
+	mf.storage.ResetParameter()
 }

@@ -63,17 +63,10 @@ func (bp *blockProcessor) insert(height uint64) error {
 }
 
 func (bp *blockProcessor) process(downloadComplete chan bool, ProcessComplete chan bool, wg *sync.WaitGroup, num int) {
-	//wg.Add(1)
 	defer fmt.Println("blockProcessor done. num:", num)
 	defer wg.Done()
 
-	//downloadComplete := false
 	for {
-		//if downloadComplete && bp.queue.Size() == 0 {
-		//	fmt.Println("downloadComplete process exit")
-		//	return
-		//}
-
 		for !bp.queue.Empty() {
 			fmt.Println("num:", num, "pop:", bp.queue.Size())
 			height := bp.queue.PopItem().(uint64)
@@ -92,10 +85,7 @@ func (bp *blockProcessor) process(downloadComplete chan bool, ProcessComplete ch
 		case blocks := <-bp.downloadedBlockCh:
 			bp.add(blocks, num)
 		case <-downloadComplete:
-			//if !ok {
 			return
-
-			//downloadComplete = true
 		}
 	}
 }

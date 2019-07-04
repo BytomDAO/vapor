@@ -116,7 +116,6 @@ func (fs *fastSync) createFetchBlocksTasks() error {
 func (fs *fastSync) process() error {
 	num := rand.Int()
 	log.WithFields(log.Fields{"module": logModule, "num": num, "height": fs.chain.BestBlockHeight()}).Info("fast sync start")
-
 	fs.resetParameter()
 	if err := fs.findSyncRange(); err != nil {
 		return err
