@@ -523,7 +523,7 @@ func calcUnconfirmedTxKey(formatKey string) []byte {
 	return append(dbm.UnconfirmedTxPrefix, []byte(formatKey)...)
 }
 
-func calcGlobalTxIndexKey(txID string) []byte {
+func CalcGlobalTxIndexKey(txID string) []byte {
 	return append(dbm.GlobalTxIndexPrefix, []byte(txID)...)
 }
 
@@ -708,7 +708,7 @@ func (store *MockWalletStore) GetControlProgram(hash bc.Hash) (*acc.CtrlProgram,
 
 // GetGlobalTransactionIndex get global tx by txID
 func (store *MockWalletStore) GetGlobalTransactionIndex(txID string) []byte {
-	return store.walletDB.Get(calcGlobalTxIndexKey(txID))
+	return store.walletDB.Get(CalcGlobalTxIndexKey(txID))
 }
 
 // GetStandardUTXO get standard utxo by id
@@ -870,9 +870,9 @@ func (store *MockWalletStore) SetContractUTXO(outputID bc.Hash, utxo *acc.UTXO) 
 // SetGlobalTransactionIndex set global tx index by blockhash and position
 func (store *MockWalletStore) SetGlobalTransactionIndex(globalTxID string, blockHash *bc.Hash, position uint64) {
 	if store.batch == nil {
-		store.walletDB.Set(calcGlobalTxIndexKey(globalTxID), CalcGlobalTxIndex(blockHash, position))
+		store.walletDB.Set(CalcGlobalTxIndexKey(globalTxID), CalcGlobalTxIndex(blockHash, position))
 	} else {
-		store.batch.Set(calcGlobalTxIndexKey(globalTxID), CalcGlobalTxIndex(blockHash, position))
+		store.batch.Set(CalcGlobalTxIndexKey(globalTxID), CalcGlobalTxIndex(blockHash, position))
 	}
 }
 
