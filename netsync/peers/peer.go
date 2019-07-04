@@ -700,11 +700,16 @@ func (ps *PeerSet) Size() int {
 	return len(ps.peers)
 }
 
-func (ps *PeerSet) SelectPeer(syncHeight uint64) (string, error) {
+func (ps *PeerSet) SelectPeer(targetPeers []string, syncHeight uint64) (string, error) {
 	ps.mtx.RLock()
 	ps.mtx.RUnlock()
 
-	for _, peer := range ps.peers {
+	for _, peerID := range targetPeers {
+		peer := ps.GetPeer(peerID)
+		if peer == nil {
+			continue
+		}
+
 		if peer.busy() {
 			continue
 		}
@@ -713,8 +718,8 @@ func (ps *PeerSet) SelectPeer(syncHeight uint64) (string, error) {
 			peer.SetBusy()
 			return peer.ID(), nil
 		}
-	}
 
+	}
 	return "", ErrNoValidPeer
 }
 

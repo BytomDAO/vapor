@@ -33,7 +33,7 @@ var (
 type MsgFetcher interface {
 	resetParameter()
 	requireBlock(peerID string, height uint64) (*types.Block, error)
-	parallelFetchBlocks(taskQueue *prque.Prque, downloadedBlockCh chan *downloadedBlock, downloadResult chan bool, ProcessResult chan bool, wg *sync.WaitGroup, num int)
+	parallelFetchBlocks(syncPeers []string, taskQueue *prque.Prque, downloadedBlockCh chan *downloadedBlock, downloadResult chan bool, ProcessResult chan bool, wg *sync.WaitGroup, num int)
 	parallelFetchHeaders(peers []*peers.Peer, locator []*bc.Hash, stopHash *bc.Hash, skip uint64) (map[string][]*types.BlockHeader, error)
 }
 
@@ -128,7 +128,7 @@ func (mf *msgFetcher) requireHeaders(peerID string, locator []*bc.Hash, stopHash
 	return nil
 }
 
-func (mf *msgFetcher) parallelFetchBlocks(taskQueue *prque.Prque, downloadedBlockCh chan *downloadedBlock, downloadComplete chan bool, ProcessComplete chan bool, wg *sync.WaitGroup, num int) {
+func (mf *msgFetcher) parallelFetchBlocks(syncPeers []string, taskQueue *prque.Prque, downloadedBlockCh chan *downloadedBlock, downloadComplete chan bool, ProcessComplete chan bool, wg *sync.WaitGroup, num int) {
 	defer fmt.Println("parallelFetchBlocks done. num:", num)
 	defer wg.Done()
 
@@ -147,7 +147,7 @@ func (mf *msgFetcher) parallelFetchBlocks(taskQueue *prque.Prque, downloadedBloc
 		// schedule task
 		for !taskQueue.Empty() && len(tasks) <= maxParallelTasksNum {
 			piece := taskQueue.PopItem().(*piece)
-			peerID, err := mf.peers.SelectPeer(piece.stopHeader.Height + fastSyncPivotGap)
+			peerID, err := mf.peers.SelectPeer(syncPeers, piece.stopHeader.Height+fastSyncPivotGap)
 			if err != nil {
 				if len(tasks) == 0 {
 					downloadComplete <- true
