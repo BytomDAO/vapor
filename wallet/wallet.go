@@ -49,7 +49,7 @@ type Wallet struct {
 	Hsm             *pseudohsm.HSM
 	chain           *protocol.Chain
 	RecoveryMgr     *recoveryManager
-	eventDispatcher *event.Dispatcher
+	EventDispatcher *event.Dispatcher
 	txMsgSub        *event.Subscription
 
 	rescanCh chan struct{}
@@ -64,7 +64,7 @@ func NewWallet(store WalletStore, account *account.Manager, asset *asset.Registr
 		chain:           chain,
 		Hsm:             hsm,
 		RecoveryMgr:     newRecoveryManager(store, account),
-		eventDispatcher: dispatcher,
+		EventDispatcher: dispatcher,
 		rescanCh:        make(chan struct{}, 1),
 		TxIndexFlag:     txIndexFlag,
 	}
@@ -78,19 +78,19 @@ func NewWallet(store WalletStore, account *account.Manager, asset *asset.Registr
 	}
 
 	var err error
-	w.txMsgSub, err = w.eventDispatcher.Subscribe(protocol.TxMsgEvent{})
+	w.txMsgSub, err = w.EventDispatcher.Subscribe(protocol.TxMsgEvent{})
 	if err != nil {
 		return nil, err
 	}
 
 	go w.walletUpdater()
 	go w.delUnconfirmedTx()
-	go w.memPoolTxQueryLoop()
+	go w.MemPoolTxQueryLoop()
 	return w, nil
 }
 
-// memPoolTxQueryLoop constantly pass a transaction accepted by mempool to the wallet.
-func (w *Wallet) memPoolTxQueryLoop() {
+// MemPoolTxQueryLoop constantly pass a transaction accepted by mempool to the wallet.
+func (w *Wallet) MemPoolTxQueryLoop() {
 	for {
 		select {
 		case obj, ok := <-w.txMsgSub.Chan():

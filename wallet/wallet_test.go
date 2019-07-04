@@ -223,13 +223,13 @@ func TestWalletVersion(t *testing.T) {
 // 	txStatus.SetStatus(0, false)
 // 	walletStore := NewMockWalletStore(testDB)
 // 	w, err := NewWallet(walletStore, accountManager, reg, hsm, chain, dispatcher, false)
-// 	go w.memPoolTxQueryLoop()
-// 	w.eventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: protocol.MsgNewTx}})
+// 	go w.MemPoolTxQueryLoop()
+// 	w.EventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: protocol.MsgNewTx}})
 // 	time.Sleep(time.Millisecond * 10)
 // 	if _, err := w.GetUnconfirmedTxByTxID(tx.ID.String()); err != nil {
 // 		t.Fatal("dispatch new tx msg error:", err)
 // 	}
-// 	w.eventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: protocol.MsgRemoveTx}})
+// 	w.EventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: protocol.MsgRemoveTx}})
 // 	time.Sleep(time.Millisecond * 10)
 // 	txs, err := w.GetUnconfirmedTxs(testAccount.ID)
 // 	if err != nil {
@@ -240,7 +240,7 @@ func TestWalletVersion(t *testing.T) {
 // 		t.Fatal("dispatch remove tx msg error")
 // 	}
 
-// 	w.eventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: 2}})
+// 	w.EventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: 2}})
 // }
 
 func mockUTXO(controlProg *account.CtrlProgram, assetID *bc.AssetID) *account.UTXO {
@@ -286,10 +286,10 @@ func mockWallet(store WalletStore, account *account.Manager, asset *asset.Regist
 		AssetReg:        asset,
 		chain:           chain,
 		RecoveryMgr:     newRecoveryManager(store, account),
-		eventDispatcher: dispatcher,
+		EventDispatcher: dispatcher,
 		TxIndexFlag:     txIndexFlag,
 	}
-	wallet.txMsgSub, _ = wallet.eventDispatcher.Subscribe(protocol.TxMsgEvent{})
+	wallet.txMsgSub, _ = wallet.EventDispatcher.Subscribe(protocol.TxMsgEvent{})
 	return wallet
 }
 
