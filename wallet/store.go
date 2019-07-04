@@ -31,7 +31,7 @@ type WalletStore interface {
 	SetAssetDefinition(*bc.AssetID, []byte)
 	SetContractUTXO(bc.Hash, *acc.UTXO) error
 	SetGlobalTransactionIndex(string, *bc.Hash, uint64)
-	SetRecoveryStatus([]byte, []byte) // recoveryManager.state isn't exported outside
+	SetRecoveryStatus(*RecoveryState) error // recoveryManager.state isn't exported outside
 	SetTransaction(uint64, *query.AnnotatedTx) error
 	SetUnconfirmedTransaction(string, *query.AnnotatedTx) error
 	SetWalletInfo(*StatusInfo) error

@@ -905,12 +905,17 @@ func (store *MockWalletStore) SetGlobalTransactionIndex(globalTxID string, block
 }
 
 // SetRecoveryStatus set recovery status
-func (store *MockWalletStore) SetRecoveryStatus(recoveryKey, rawStatus []byte) {
-	if store.batch == nil {
-		store.walletDB.Set(recoveryKey, rawStatus)
-	} else {
-		store.batch.Set(recoveryKey, rawStatus)
+func (store *MockWalletStore) SetRecoveryStatus(recoveryState *RecoveryState) error {
+	rawStatus, err := json.Marshal(recoveryState)
+	if err != nil {
+		return err
 	}
+	if store.batch == nil {
+		store.walletDB.Set(dbm.RecoveryKey, rawStatus)
+	} else {
+		store.batch.Set(dbm.RecoveryKey, rawStatus)
+	}
+	return nil
 }
 
 // SetTransaction set raw transaction by block height and tx position
