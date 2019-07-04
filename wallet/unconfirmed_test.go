@@ -16,7 +16,6 @@ import (
 	"github.com/vapor/event"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/test/mock"
 	"github.com/vapor/testutil"
 )
 
@@ -28,10 +27,10 @@ func TestWalletUnconfirmedTxs(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	testStore := mock.NewMockWalletStore(testDB)
+	testStore := NewMockWalletStore(testDB)
 	defer os.RemoveAll("temp")
 
-	accountStore := mock.NewMockAccountStore(testDB)
+	accountStore := NewMockAccountStore(testDB)
 	accountManager := account.NewManager(accountStore, nil)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
