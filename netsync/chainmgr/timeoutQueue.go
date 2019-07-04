@@ -6,15 +6,17 @@ import (
 )
 
 type timeoutQueue struct {
-	times   []*time.Time
-	timeMap map[string]*time.Time
-	mu      sync.Mutex
+	times    []*time.Time
+	timeMap  map[string]*time.Time
+	duration time.Duration
+	mu       sync.Mutex
 }
 
-func newTimeoutQueue() *timeoutQueue {
+func newTimeoutQueue(duration time.Duration) *timeoutQueue {
 	return &timeoutQueue{
-		times:   []*time.Time{},
-		timeMap: make(map[string]*time.Time),
+		times:    []*time.Time{},
+		timeMap:  make(map[string]*time.Time),
+		duration: duration,
 	}
 }
 
@@ -22,7 +24,7 @@ func (tq *timeoutQueue) addTimer(id string) {
 	tq.mu.Lock()
 	tq.mu.Unlock()
 
-	time := time.Now().Add(requireBlocksTimeout)
+	time := time.Now().Add(tq.duration)
 	tq.timeMap[id] = &time
 	tq.times = append(tq.times, &time)
 }
@@ -61,22 +63,22 @@ func (tq *timeoutQueue) getNextTimeoutDuration() *time.Duration {
 }
 
 /*
-			if len(stopTimers) == 0 {
-				break
-			}
+	if len(stopTimers) == 0 {
+		break
+	}
 
-			task, ok := tasks[stopTimers[0].peerID]
-			if !ok {
-				break
-			}
-			log.WithFields(log.Fields{"module": logModule, "error": errRequestTimeout}).Info("failed on fetch blocks")
-			mf.peers.ErrorHandler(stopTimers[0].peerID, security.LevelConnException, errors.New("require blocks timeout"))
-			taskQueue.Push(task.piece, -float32(task.piece.index))
-			stopTimers = stopTimers[1:]
-			//reset timeout
-			if len(stopTimers) > 0 {
-				timeout.Reset(stopTimers[0].time.Sub(time.Now()))
-			}
+	task, ok := tasks[stopTimers[0].peerID]
+	if !ok {
+		break
+	}
+	log.WithFields(log.Fields{"module": logModule, "error": errRequestTimeout}).Info("failed on fetch blocks")
+	mf.peers.ErrorHandler(stopTimers[0].peerID, security.LevelConnException, errors.New("require blocks timeout"))
+	taskQueue.Push(task.piece, -float32(task.piece.index))
+	stopTimers = stopTimers[1:]
+	//reset timeout
+	if len(stopTimers) > 0 {
+		timeout.Reset(stopTimers[0].time.Sub(time.Now()))
+	}
 */
 func (tq *timeoutQueue) getFirstTimeoutID() *string {
 	tq.mu.Lock()
@@ -87,8 +89,8 @@ func (tq *timeoutQueue) getFirstTimeoutID() *string {
 	}
 
 	timeoutTime := tq.times[0]
-	for id,time:=range tq.timeMap{
-		if time == timeoutTime{
+	for id, time := range tq.timeMap {
+		if time == timeoutTime {
 			return &id
 		}
 	}

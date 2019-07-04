@@ -3,7 +3,6 @@ package chainmgr
 import (
 	"math/rand"
 	"sync"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
@@ -28,12 +27,6 @@ var (
 type piece struct {
 	index                   int
 	startHeader, stopHeader *types.BlockHeader
-}
-
-type task struct {
-	piece         *piece
-	startTime     time.Time
-	requestNumber uint64
 }
 
 type fastSync struct {
