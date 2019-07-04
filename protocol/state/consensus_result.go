@@ -1,7 +1,6 @@
 package state
 
 import (
-	"bytes"
 	"encoding/hex"
 	"sort"
 
@@ -60,24 +59,12 @@ type ConsensusResult struct {
 
 // ApplyBlock calculate the consensus result for new block
 func (c *ConsensusResult) ApplyBlock(block *types.Block) error {
-	var ok bool
 	if c.BlockHash != block.PreviousBlockHash {
 		return errors.New("block parent hash is not equals last block hash of vote result")
 	}
 
-	reward, err := CalCoinbaseReward(block)
-	if err != nil {
+	if _, err := c.AttachCoinbaseReward(block); err != nil {
 		return err
-	}
-
-	if c.IsFinalize() {
-		c.CoinbaseReward = map[string]uint64{}
-	}
-
-	program := hex.EncodeToString(reward.ControlProgram)
-	c.CoinbaseReward[program], ok = checked.AddUint64(c.CoinbaseReward[program], reward.Amount)
-	if !ok {
-		return errMathOperationOverFlow
 	}
 
 	for _, tx := range block.Transactions {
@@ -155,38 +142,12 @@ func federationNodes() map[string]*ConsensusNode {
 
 // DetachBlock calculate the consensus result for detach block
 func (c *ConsensusResult) DetachBlock(block *types.Block) error {
-	var ok bool
 	if c.BlockHash != block.Hash() {
 		return errors.New("block hash is not equals last block hash of vote result")
 	}
 
-	if block.Height%consensus.RoundVoteBlockNums == 0 {
-		if len(c.CoinbaseReward) != 0 {
-			return errCoinbaseReward
-		}
-
-		c.CoinbaseReward = map[string]uint64{}
-		for i, output := range block.Transactions[0].Outputs {
-			if i == 0 && output.AssetAmount().Amount == 0 {
-				continue
-			}
-			program := output.ControlProgram()
-			c.CoinbaseReward[hex.EncodeToString(program)] = output.AssetAmount().Amount
-		}
-	}
-
-	reward, err := CalCoinbaseReward(block)
-	if err != nil {
+	if err := c.DetachCoinbaseReward(block); err != nil {
 		return err
-	}
-
-	program := hex.EncodeToString(reward.ControlProgram)
-	if c.CoinbaseReward[program], ok = checked.SubUint64(c.CoinbaseReward[program], reward.Amount); !ok {
-		return errMathOperationOverFlow
-	}
-
-	if c.CoinbaseReward[program] == 0 {
-		delete(c.CoinbaseReward, program)
 	}
 
 	for i := len(block.Transactions) - 1; i >= 0; i-- {
@@ -263,22 +224,79 @@ func (a SortByAmount) Len() int           { return len(a) }
 func (a SortByAmount) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a SortByAmount) Less(i, j int) bool { return a[i].Amount < a[j].Amount }
 
+// AttachCoinbaseReward attach coinbase reward
+func (c *ConsensusResult) AttachCoinbaseReward(block *types.Block) ([]byte, error) {
+	reward, err := CalCoinbaseReward(block)
+	if err != nil {
+		return nil, err
+	}
+
+	if (block.Height-1)%consensus.RoundVoteBlockNums == 0 {
+		c.CoinbaseReward = map[string]uint64{}
+	}
+
+	var ok bool
+	program := hex.EncodeToString(reward.ControlProgram)
+	c.CoinbaseReward[program], ok = checked.AddUint64(c.CoinbaseReward[program], reward.Amount)
+	if !ok {
+		return nil, errMathOperationOverFlow
+	}
+	return reward.ControlProgram, nil
+}
+
+// DetachCoinbaseReward detach coinbase reward
+func (c *ConsensusResult) DetachCoinbaseReward(block *types.Block) error {
+	if block.Height%consensus.RoundVoteBlockNums == 0 {
+		if len(c.CoinbaseReward) != 0 {
+			return errCoinbaseReward
+		}
+
+		c.CoinbaseReward = map[string]uint64{}
+		for i, output := range block.Transactions[0].Outputs {
+			if i == 0 && output.AssetAmount().Amount == 0 {
+				continue
+			}
+			program := output.ControlProgram()
+			c.CoinbaseReward[hex.EncodeToString(program)] = output.AssetAmount().Amount
+		}
+	}
+
+	reward, err := CalCoinbaseReward(block)
+	if err != nil {
+		return err
+	}
+
+	var ok bool
+	program := hex.EncodeToString(reward.ControlProgram)
+	if c.CoinbaseReward[program], ok = checked.SubUint64(c.CoinbaseReward[program], reward.Amount); !ok {
+		return errMathOperationOverFlow
+	}
+
+	if c.CoinbaseReward[program] == 0 {
+		delete(c.CoinbaseReward, program)
+	}
+	return nil
+}
+
 // CalCoinbaseReward calculate the coinbase reward for block
 func CalCoinbaseReward(block *types.Block) (*CoinbaseReward, error) {
 	var coinbaseReceiver []byte
-	if len(block.Transactions) > 0 && len(block.Transactions[0].Outputs) > 0 {
-		coinbaseReceiver = block.Transactions[0].Outputs[0].ControlProgram()
+	coinbaseTx := block.Transactions[0]
+	if len(block.Transactions) > 0 && len(coinbaseTx.InputIDs) > 0 && len(coinbaseTx.Outputs) > 0 {
+		if _, ok := coinbaseTx.Entries[coinbaseTx.InputIDs[0]].(*bc.Coinbase); ok {
+			coinbaseReceiver = coinbaseTx.Outputs[0].ControlProgram()
+		}
 	}
 
 	if coinbaseReceiver == nil {
-		return nil, errors.New("invalid block coinbase transaction with receiver address is empty")
+		return nil, errors.New("not found coinbase receiver")
 	}
 
 	coinbaseAmount := consensus.BlockSubsidy(block.BlockHeader.Height)
 	for _, tx := range block.Transactions {
-		txFee, err := calTxFee(tx)
-		if err != nil {
-			return nil, err
+		txFee := CalculateTxFee(tx)
+		if txFee < 0 {
+			return nil, errors.Wrap(errMathOperationOverFlow, "calculate transaction fee")
 		}
 		coinbaseAmount += txFee
 	}
@@ -289,11 +307,12 @@ func CalCoinbaseReward(block *types.Block) (*CoinbaseReward, error) {
 	}, nil
 }
 
-func calTxFee(tx *types.Tx) (uint64, error) {
+// CalculateTxFee calculate transaction fee
+func CalculateTxFee(tx *types.Tx) uint64 {
 	var totalInputBTM, totalOutputBTM uint64
 	for _, input := range tx.Inputs {
 		if input.InputType() == types.CoinbaseInputType {
-			return 0, nil
+			return 0
 		}
 		if input.AssetID() == *consensus.BTMAssetID {
 			totalInputBTM += input.Amount()
@@ -305,45 +324,27 @@ func calTxFee(tx *types.Tx) (uint64, error) {
 			totalOutputBTM += output.AssetAmount().Amount
 		}
 	}
-
-	txFee, ok := checked.SubUint64(totalInputBTM, totalOutputBTM)
-	if !ok {
-		return 0, errMathOperationOverFlow
-	}
-	return txFee, nil
+	return totalInputBTM - totalOutputBTM
 }
 
-// AddCoinbaseRewards add block coinbase reward and sort rewards by amount
-func AddCoinbaseRewards(consensusResult *ConsensusResult, reward *CoinbaseReward, blockHeight uint64) ([]CoinbaseReward, error) {
+// GetCoinbaseRewards convert into CoinbaseReward array and sort it by amount
+func (c *ConsensusResult) GetCoinbaseRewards(blockHeight uint64) ([]CoinbaseReward, error) {
 	rewards := []CoinbaseReward{}
 	if blockHeight%consensus.RoundVoteBlockNums != 0 {
 		return []CoinbaseReward{}, nil
 	}
 
-	aggregateFlag := false
-	for p, amount := range consensusResult.CoinbaseReward {
+	for p, amount := range c.CoinbaseReward {
 		coinbaseAmount := amount
 		program, err := hex.DecodeString(p)
 		if err != nil {
 			return nil, err
 		}
 
-		if res := bytes.Compare(program, reward.ControlProgram); res == 0 {
-			var ok bool
-			if coinbaseAmount, ok = checked.AddUint64(coinbaseAmount, reward.Amount); !ok {
-				return nil, errMathOperationOverFlow
-			}
-			aggregateFlag = true
-		}
-
 		rewards = append(rewards, CoinbaseReward{
 			Amount:         coinbaseAmount,
 			ControlProgram: program,
 		})
-	}
-
-	if !aggregateFlag {
-		rewards = append(rewards, *reward)
 	}
 	sort.Sort(SortByAmount(rewards))
 	return rewards, nil

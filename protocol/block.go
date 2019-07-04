@@ -228,16 +228,16 @@ func (c *Chain) saveBlock(block *types.Block) error {
 		return err
 	}
 
-	coinbaseReward, err := state.CalCoinbaseReward(block)
+	coinbaseReceiver, err := consensusResult.AttachCoinbaseReward(block)
 	if err != nil {
 		return err
 	}
 
-	rewards, err := state.AddCoinbaseRewards(consensusResult, coinbaseReward, block.Height)
+	rewards, err := consensusResult.GetCoinbaseRewards(block.Height)
 	if err != nil {
 		return err
 	}
-	rewards = append([]state.CoinbaseReward{state.CoinbaseReward{ControlProgram: coinbaseReward.ControlProgram}}, rewards...)
+	rewards = append([]state.CoinbaseReward{state.CoinbaseReward{ControlProgram: coinbaseReceiver}}, rewards...)
 
 	bcBlock := types.MapBlock(block)
 	if err := validation.ValidateBlock(bcBlock, parent, rewards); err != nil {

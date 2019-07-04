@@ -11,7 +11,6 @@ import (
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/query"
 	"github.com/vapor/blockchain/signers"
-	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/crypto/ed25519/chainkd"
@@ -19,6 +18,7 @@ import (
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/state"
 )
 
 // POST /list-accounts
@@ -279,7 +279,7 @@ func (a *API) decodeRawTransaction(ctx context.Context, ins struct {
 		tx.Outputs = append(tx.Outputs, a.wallet.BuildAnnotatedOutput(&ins.Tx, i))
 	}
 
-	tx.Fee = txbuilder.CalculateTxFee(&ins.Tx)
+	tx.Fee = state.CalculateTxFee(&ins.Tx)
 	return NewSuccessResponse(tx)
 }
 

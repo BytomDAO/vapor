@@ -8,7 +8,7 @@ import (
 	"github.com/vapor/testutil"
 )
 
-func TestCreateCoinbaseTx(t *testing.T) {
+func TestRestructCoinbaseTx(t *testing.T) {
 	reductionInterval := uint64(840000)
 	cases := []struct {
 		desc            string

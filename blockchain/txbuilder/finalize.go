@@ -5,10 +5,10 @@ import (
 	"context"
 
 	cfg "github.com/vapor/config"
-	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/state"
 	"github.com/vapor/protocol/vm"
 )
 
@@ -31,7 +31,7 @@ var (
 // assembles a fully signed tx, and stores the effects of
 // its changes on the UTXO set.
 func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *types.Tx) error {
-	if fee := CalculateTxFee(tx); fee > cfg.CommonConfig.Wallet.MaxTxFee {
+	if fee := state.CalculateTxFee(tx); fee > cfg.CommonConfig.Wallet.MaxTxFee {
 		return ErrExtTxFee
 	}
 
@@ -126,30 +126,6 @@ func checkTxSighashCommitment(tx *types.Tx) error {
 	}
 
 	return lastError
-}
-
-// CalculateTxFee calculate transaction fee
-func CalculateTxFee(tx *types.Tx) (fee uint64) {
-	totalInputBTM := uint64(0)
-	totalOutputBTM := uint64(0)
-
-	for _, input := range tx.Inputs {
-		if input.InputType() == types.CoinbaseInputType {
-			return 0
-		}
-		if input.AssetID() == *consensus.BTMAssetID {
-			totalInputBTM += input.Amount()
-		}
-	}
-
-	for _, output := range tx.Outputs {
-		if *output.AssetAmount().AssetId == *consensus.BTMAssetID {
-			totalOutputBTM += output.AssetAmount().Amount
-		}
-	}
-
-	fee = totalInputBTM - totalOutputBTM
-	return
 }
 
 func checkGasInputIDs(tx *types.Tx) error {
