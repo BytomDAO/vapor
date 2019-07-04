@@ -1,168 +1,48 @@
 package proposal
 
 import (
+	"bytes"
 	"testing"
 
-	"github.com/vapor/consensus"
-	"github.com/vapor/protocol/state"
-	"github.com/vapor/testutil"
+	"github.com/vapor/protocol/bc"
 )
 
-func TestRestructCoinbaseTx(t *testing.T) {
-	reductionInterval := uint64(840000)
+func TestCreateCoinbaseTx(t *testing.T) {
 	cases := []struct {
-		desc            string
-		consensusResult *state.ConsensusResult
-		txFee           uint64
-		wantOutputs     []state.CoinbaseReward
+		desc          string
+		blockHeight   uint64
+		wantArbitrary []byte
+		wantAmount    uint64
 	}{
 		{
-			desc: "the coinbase block height is reductionInterval",
-			consensusResult: &state.ConsensusResult{
-				BlockHeight: reductionInterval - 1,
-			},
-			txFee: 100000000,
-			wantOutputs: []state.CoinbaseReward{
-				state.CoinbaseReward{
-					Amount:         uint64(0),
-					ControlProgram: []byte{0x51},
-				},
-				state.CoinbaseReward{
-					Amount:         uint64(100000000),
-					ControlProgram: []byte{0x51},
-				},
-			},
+			desc:          "the coinbase block height is reductionInterval",
+			blockHeight:   1,
+			wantArbitrary: []byte{0x00, 0x31},
+			wantAmount:    0,
 		},
 		{
-			desc: "the coinbase block height is consensus.RoundVoteBlockNums",
-			consensusResult: &state.ConsensusResult{
-				BlockHeight: consensus.RoundVoteBlockNums - 1,
-			},
-			txFee: 200000000,
-			wantOutputs: []state.CoinbaseReward{
-				state.CoinbaseReward{
-					Amount:         uint64(0),
-					ControlProgram: []byte{0x51},
-				},
-				state.CoinbaseReward{
-					Amount:         uint64(200000000),
-					ControlProgram: []byte{0x51},
-				},
-			},
-		},
-		{
-			desc: "the coinbase block height is 2*consensus.RoundVoteBlockNums",
-			consensusResult: &state.ConsensusResult{
-				BlockHeight: 2*consensus.RoundVoteBlockNums - 1,
-			},
-			txFee: 300000000,
-			wantOutputs: []state.CoinbaseReward{
-				state.CoinbaseReward{
-					Amount:         uint64(0),
-					ControlProgram: []byte{0x51},
-				},
-				state.CoinbaseReward{
-					Amount:         uint64(300000000),
-					ControlProgram: []byte{0x51},
-				},
-			},
-		},
-		{
-			desc: "the coinbase block height with multi outputs",
-			consensusResult: &state.ConsensusResult{
-				BlockHeight: reductionInterval - 1,
-				CoinbaseReward: map[string]uint64{
-					"51": 100,
-					"52": 200,
-					"55": 500,
-					"53": 300,
-				},
-			},
-			txFee: 2000,
-			wantOutputs: []state.CoinbaseReward{
-				state.CoinbaseReward{
-					Amount:         uint64(0),
-					ControlProgram: []byte{0x51},
-				},
-				state.CoinbaseReward{
-					Amount:         uint64(200),
-					ControlProgram: []byte{0x52},
-				},
-				state.CoinbaseReward{
-					Amount:         uint64(300),
-					ControlProgram: []byte{0x53},
-				},
-				state.CoinbaseReward{
-					Amount:         uint64(500),
-					ControlProgram: []byte{0x55},
-				},
-				state.CoinbaseReward{
-					Amount:         uint64(2100),
-					ControlProgram: []byte{0x51},
-				},
-			},
-		},
-		{
-			desc: "the coinbase block height is reductionInterval - 1",
-			consensusResult: &state.ConsensusResult{
-				BlockHeight: reductionInterval - 2,
-			},
-			txFee: 100000000,
-			wantOutputs: []state.CoinbaseReward{
-				state.CoinbaseReward{
-					Amount:         uint64(0),
-					ControlProgram: []byte{0x51},
-				},
-			},
-		},
-		{
-			desc: "the coinbase block height is reductionInterval + 1",
-			consensusResult: &state.ConsensusResult{
-				BlockHeight: reductionInterval,
-			},
-			txFee: 0,
-			wantOutputs: []state.CoinbaseReward{
-				state.CoinbaseReward{
-					Amount:         uint64(0),
-					ControlProgram: []byte{0x51},
-				},
-			},
-		},
-		{
-			desc: "the coinbase block height is reductionInterval * 2",
-			consensusResult: &state.ConsensusResult{
-				BlockHeight: 2*reductionInterval - 1,
-			},
-			txFee: 100000000,
-			wantOutputs: []state.CoinbaseReward{
-				state.CoinbaseReward{
-					Amount:         uint64(0),
-					ControlProgram: []byte{0x51},
-				},
-				state.CoinbaseReward{
-					Amount:         uint64(100000000),
-					ControlProgram: []byte{0x51},
-				},
-			},
+			desc:          "the coinbase block height is reductionInterval",
+			blockHeight:   100,
+			wantArbitrary: []byte{0x00, 0x31, 0x30, 0x30},
+			wantAmount:    0,
 		},
 	}
 
 	for i, c := range cases {
-		coinbaseTx, err := createCoinbaseTx(c.consensusResult, nil, c.txFee)
+		coinbaseTx, err := createCoinbaseTx(nil, c.blockHeight)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		gotOutputs := []state.CoinbaseReward{}
-		for _, output := range coinbaseTx.Outputs {
-			gotOutputs = append(gotOutputs, state.CoinbaseReward{
-				Amount:         output.AssetAmount().Amount,
-				ControlProgram: output.ControlProgram(),
-			})
+		input, _ := coinbaseTx.Entries[coinbaseTx.Tx.InputIDs[0]].(*bc.Coinbase)
+		gotArbitrary := input.Arbitrary
+		if res := bytes.Compare(gotArbitrary, c.wantArbitrary); res != 0 {
+			t.Fatalf("coinbase tx arbitrary dismatch, case: %d, got: %d, want: %d", i, gotArbitrary, c.wantArbitrary)
 		}
 
-		if ok := testutil.DeepEqual(gotOutputs, c.wantOutputs); !ok {
-			t.Fatalf("coinbase tx reward dismatch, case: %d, got: %d, want: %d", i, gotOutputs, c.wantOutputs)
+		gotAmount := coinbaseTx.Outputs[0].AssetAmount().Amount
+		if gotAmount != c.wantAmount {
+			t.Fatalf("coinbase tx output amount dismatch, case: %d, got: %d, want: %d", i, gotAmount, c.wantAmount)
 		}
 	}
 }
