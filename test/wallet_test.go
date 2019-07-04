@@ -186,7 +186,6 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 	}()
 
 	store := database.NewStore(testDB)
-	// store := newMockStore(testDB)
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
 
@@ -234,11 +233,9 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 	}
 
 	tx := types.NewTx(*txData)
-	//block := mockSingleBlock(tx)
 	txStatus := bc.NewTransactionStatus()
 	txStatus.SetStatus(0, false)
 	walletStore := database.NewWalletStore(testDB)
-	// w, err := NewWallet(walletStore, accountManager, reg, hsm, chain, dispatcher, false)
 	w := newMockWallet(walletStore, accountManager, reg, chain, dispatcher, false)
 	go w.Wallet.MemPoolTxQueryLoop()
 	w.Wallet.EventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: protocol.MsgNewTx}})
