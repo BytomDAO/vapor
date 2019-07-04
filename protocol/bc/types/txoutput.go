@@ -40,7 +40,7 @@ func (to *TxOutput) OutputCommitment() OutputCommitment {
 	case *CrossChainOutput:
 		return outp.OutputCommitment
 
-	case *VoteTxOutput:
+	case *VoteOutput:
 		return outp.OutputCommitment
 
 	default:
@@ -57,7 +57,7 @@ func (to *TxOutput) AssetAmount() bc.AssetAmount {
 	case *CrossChainOutput:
 		return outp.AssetAmount
 
-	case *VoteTxOutput:
+	case *VoteOutput:
 		return outp.AssetAmount
 
 	default:
@@ -74,7 +74,7 @@ func (to *TxOutput) ControlProgram() []byte {
 	case *CrossChainOutput:
 		return outp.ControlProgram
 
-	case *VoteTxOutput:
+	case *VoteOutput:
 		return outp.ControlProgram
 
 	default:
@@ -91,7 +91,7 @@ func (to *TxOutput) VMVersion() uint64 {
 	case *CrossChainOutput:
 		return outp.VMVersion
 
-	case *VoteTxOutput:
+	case *VoteOutput:
 		return outp.VMVersion
 
 	default:
@@ -130,7 +130,7 @@ func (to *TxOutput) readFrom(r *blockchain.Reader) (err error) {
 			}
 
 		case VoteOutputType:
-			out := new(VoteTxOutput)
+			out := new(VoteOutput)
 			to.TypedOutput = out
 			if out.Vote, err = blockchain.ReadVarstr31(r); err != nil {
 				return errors.Wrap(err, "reading vote output vote")
@@ -190,7 +190,7 @@ func (to *TxOutput) writeOutputCommitment(w io.Writer) error {
 		}
 		return outp.OutputCommitment.writeExtensibleString(w, outp.CommitmentSuffix, to.AssetVersion)
 
-	case *VoteTxOutput:
+	case *VoteOutput:
 		if _, err := w.Write([]byte{VoteOutputType}); err != nil {
 			return err
 		}

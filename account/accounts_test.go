@@ -61,7 +61,7 @@ func TestCreateAccount(t *testing.T) {
 	m := mockAccountManager(t)
 	account, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, "test-alias", signers.BIP0044)
 	if err != nil {
-		testutil.FatalErr(t, err)
+		t.Fatal(err)
 	}
 
 	found, err := m.FindByID(account.ID)
@@ -121,12 +121,12 @@ func TestDeleteAccount(t *testing.T) {
 
 	account1, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, "test-alias1", signers.BIP0044)
 	if err != nil {
-		testutil.FatalErr(t, err)
+		t.Fatal(err)
 	}
 
 	account2, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, "test-alias2", signers.BIP0044)
 	if err != nil {
-		testutil.FatalErr(t, err)
+		t.Fatal(err)
 	}
 
 	found, err := m.FindByID(account1.ID)
@@ -135,7 +135,7 @@ func TestDeleteAccount(t *testing.T) {
 	}
 
 	if err = m.DeleteAccount(account2.ID); err != nil {
-		testutil.FatalErr(t, err)
+		t.Fatal(err)
 	}
 
 	found, err = m.FindByID(account2.ID)
@@ -150,7 +150,7 @@ func TestFindByID(t *testing.T) {
 
 	found, err := m.FindByID(account.ID)
 	if err != nil {
-		testutil.FatalErr(t, err)
+		t.Fatal(err)
 	}
 
 	if !testutil.DeepEqual(account, found) {
@@ -164,7 +164,7 @@ func TestFindByAlias(t *testing.T) {
 
 	found, err := m.FindByAlias("some-alias")
 	if err != nil {
-		testutil.FatalErr(t, err)
+		t.Fatal(err)
 	}
 
 	if !testutil.DeepEqual(account, found) {
@@ -228,7 +228,7 @@ func mockAccountManager(t *testing.T) *Manager {
 func (m *Manager) createTestAccount(t testing.TB, alias string, tags map[string]interface{}) *Account {
 	account, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, alias, signers.BIP0044)
 	if err != nil {
-		testutil.FatalErr(t, err)
+		t.Fatal(err)
 	}
 
 	return account

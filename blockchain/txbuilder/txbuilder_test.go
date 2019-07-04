@@ -59,7 +59,7 @@ func TestBuildIntra(t *testing.T) {
 	expiryTime := time.Now().Add(time.Minute)
 	got, err := Build(ctx, nil, actions, expiryTime, 0)
 	if err != nil {
-		testutil.FatalErr(t, err)
+		t.Fatal(err)
 	}
 
 	want := &Template{
@@ -115,7 +115,7 @@ func TestBuildCrossOut(t *testing.T) {
 	expiryTime := time.Now().Add(time.Minute)
 	got, err := Build(ctx, nil, actions, expiryTime, 0)
 	if err != nil {
-		testutil.FatalErr(t, err)
+		t.Fatal(err)
 	}
 
 	want := &Template{
