@@ -72,7 +72,6 @@ func (cs *CredentialStore) Create(id, typ string) (*Token, error) {
 
 	hashedSecret := make([]byte, tokenSize)
 	sha3pool.Sum256(hashedSecret, secret)
-
 	token := &Token{
 		ID:      id,
 		Token:   fmt.Sprintf("%s:%x", id, hashedSecret),
@@ -84,8 +83,8 @@ func (cs *CredentialStore) Create(id, typ string) (*Token, error) {
 	if err != nil {
 		return nil, err
 	}
-	cs.DB.Set(key, value)
 
+	cs.DB.Set(key, value)
 	return token, nil
 }
 
@@ -95,12 +94,12 @@ func (cs *CredentialStore) Check(id string, secret string) error {
 		return errors.WithDetailf(ErrBadID, "invalid id %q", id)
 	}
 
-	var value []byte
-	token := &Token{}
-
-	if value = cs.DB.Get([]byte(id)); value == nil {
+	value := cs.DB.Get([]byte(id))
+	if value == nil {
 		return errors.WithDetailf(ErrNoMatchID, "check id %q nonexisting", id)
 	}
+
+	token := &Token{}
 	if err := json.Unmarshal(value, token); err != nil {
 		return err
 	}

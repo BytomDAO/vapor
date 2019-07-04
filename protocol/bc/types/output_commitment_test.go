@@ -47,8 +47,7 @@ func TestReadWriteOutputCommitment(t *testing.T) {
 		}
 
 		oc := &OutputCommitment{}
-		_, err := oc.readFrom(blockchain.NewReader(buffer.Bytes()), 1)
-		if err != nil {
+		if _, err := oc.readFrom(blockchain.NewReader(buffer.Bytes()), 1); err != nil {
 			t.Fatal(err)
 		}
 

@@ -26,10 +26,13 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 
 	switch e := entry.(type) {
 	case *bc.CrossChainInput:
-		a1 := e.Value.AssetId.Bytes()
+		mainchainOutput := tx.Entries[*e.MainchainOutputId].(*bc.IntraChainOutput)
+		a1 := mainchainOutput.Source.Value.AssetId.Bytes()
 		assetID = &a1
-		amount = &e.Value.Amount
+		amount = &mainchainOutput.Source.Value.Amount
 		destPos = &e.WitnessDestination.Position
+		s := e.MainchainOutputId.Bytes()
+		spentOutputID = &s
 
 	case *bc.Spend:
 		spentOutput := tx.Entries[*e.SpentOutputId].(*bc.IntraChainOutput)
