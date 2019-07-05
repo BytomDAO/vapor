@@ -281,8 +281,8 @@ func (c *ConsensusResult) DetachCoinbaseReward(block *types.Block) error {
 // CalCoinbaseReward calculate the coinbase reward for block
 func CalCoinbaseReward(block *types.Block) (*CoinbaseReward, error) {
 	var coinbaseReceiver []byte
-	coinbaseTx := block.Transactions[0]
-	if len(block.Transactions) > 0 && len(coinbaseTx.InputIDs) > 0 && len(coinbaseTx.Outputs) > 0 {
+	if len(block.Transactions) > 0 && len(block.Transactions[0].InputIDs) > 0 && len(block.Transactions[0].Outputs) > 0 {
+		coinbaseTx := block.Transactions[0]
 		if _, ok := coinbaseTx.Entries[coinbaseTx.InputIDs[0]].(*bc.Coinbase); ok {
 			coinbaseReceiver = coinbaseTx.Outputs[0].ControlProgram()
 		}
@@ -331,7 +331,7 @@ func CalculateTxFee(tx *types.Tx) uint64 {
 func (c *ConsensusResult) GetCoinbaseRewards(blockHeight uint64) ([]CoinbaseReward, error) {
 	rewards := []CoinbaseReward{}
 	if blockHeight%consensus.RoundVoteBlockNums != 0 {
-		return []CoinbaseReward{}, nil
+		return rewards, nil
 	}
 
 	for p, amount := range c.CoinbaseReward {

@@ -112,14 +112,13 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			coinbase = bc.NewCoinbase(inp.Arbitrary)
 			coinbaseID := addEntry(coinbase)
 			totalAmount := uint64(0)
-			asset := consensus.BTMAssetID
 			for _, out := range tx.Outputs {
 				totalAmount += out.AssetAmount().Amount
 			}
 			muxSources[i] = &bc.ValueSource{
 				Ref: &coinbaseID,
 				Value: &bc.AssetAmount{
-					AssetId: asset,
+					AssetId: consensus.BTMAssetID,
 					Amount:  totalAmount,
 				},
 			}
