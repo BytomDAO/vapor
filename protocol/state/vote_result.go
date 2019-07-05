@@ -58,6 +58,48 @@ type ConsensusResult struct {
 	BlockHeight    uint64
 }
 
+// CoinbaseReward contains receiver and reward
+type CoinbaseReward struct {
+	Amount         uint64
+	ControlProgram []byte
+}
+
+// SortByAmount implements sort.Interface for CoinbaseReward slices
+type SortByAmount []CoinbaseReward
+
+func (a SortByAmount) Len() int           { return len(a) }
+func (a SortByAmount) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a SortByAmount) Less(i, j int) bool { return a[i].Amount < a[j].Amount }
+
+// CalCoinbaseReward calculate the coinbase reward for block
+func CalCoinbaseReward(block *types.Block) (*CoinbaseReward, error) {
+	var coinbaseReceiver []byte
+	if len(block.Transactions) > 0 && len(block.Transactions[0].InputIDs) > 0 && len(block.Transactions[0].Outputs) > 0 {
+		coinbaseTx := block.Transactions[0]
+		if _, ok := coinbaseTx.Entries[coinbaseTx.InputIDs[0]].(*bc.Coinbase); ok {
+			coinbaseReceiver = coinbaseTx.Outputs[0].ControlProgram()
+		}
+	}
+
+	if coinbaseReceiver == nil {
+		return nil, errors.New("not found coinbase receiver")
+	}
+
+	coinbaseAmount := consensus.BlockSubsidy(block.BlockHeader.Height)
+	for _, tx := range block.Transactions {
+		txFee := compute.CalculateTxFee(tx)
+		if txFee < 0 {
+			return nil, errors.Wrap(errMathOperationOverFlow, "calculate transaction fee")
+		}
+		coinbaseAmount += txFee
+	}
+
+	return &CoinbaseReward{
+		Amount:         coinbaseAmount,
+		ControlProgram: coinbaseReceiver,
+	}, nil
+}
+
 // ApplyBlock calculate the consensus result for new block
 func (c *ConsensusResult) ApplyBlock(block *types.Block) error {
 	if c.BlockHash != block.PreviousBlockHash {
@@ -212,19 +254,6 @@ func (c *ConsensusResult) IsFinalize() bool {
 	return c.BlockHeight%consensus.RoundVoteBlockNums == 0
 }
 
-// CoinbaseReward contains receiver and reward
-type CoinbaseReward struct {
-	Amount         uint64
-	ControlProgram []byte
-}
-
-// SortByAmount implements sort.Interface for CoinbaseReward slices
-type SortByAmount []CoinbaseReward
-
-func (a SortByAmount) Len() int           { return len(a) }
-func (a SortByAmount) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a SortByAmount) Less(i, j int) bool { return a[i].Amount < a[j].Amount }
-
 // AttachCoinbaseReward attach coinbase reward
 func (c *ConsensusResult) AttachCoinbaseReward(block *types.Block) ([]byte, error) {
 	reward, err := CalCoinbaseReward(block)
@@ -277,35 +306,6 @@ func (c *ConsensusResult) DetachCoinbaseReward(block *types.Block) error {
 		delete(c.CoinbaseReward, program)
 	}
 	return nil
-}
-
-// CalCoinbaseReward calculate the coinbase reward for block
-func CalCoinbaseReward(block *types.Block) (*CoinbaseReward, error) {
-	var coinbaseReceiver []byte
-	if len(block.Transactions) > 0 && len(block.Transactions[0].InputIDs) > 0 && len(block.Transactions[0].Outputs) > 0 {
-		coinbaseTx := block.Transactions[0]
-		if _, ok := coinbaseTx.Entries[coinbaseTx.InputIDs[0]].(*bc.Coinbase); ok {
-			coinbaseReceiver = coinbaseTx.Outputs[0].ControlProgram()
-		}
-	}
-
-	if coinbaseReceiver == nil {
-		return nil, errors.New("not found coinbase receiver")
-	}
-
-	coinbaseAmount := consensus.BlockSubsidy(block.BlockHeader.Height)
-	for _, tx := range block.Transactions {
-		txFee := compute.CalculateTxFee(tx)
-		if txFee < 0 {
-			return nil, errors.Wrap(errMathOperationOverFlow, "calculate transaction fee")
-		}
-		coinbaseAmount += txFee
-	}
-
-	return &CoinbaseReward{
-		Amount:         coinbaseAmount,
-		ControlProgram: coinbaseReceiver,
-	}, nil
 }
 
 // GetCoinbaseRewards convert into CoinbaseReward array and sort it by amount
