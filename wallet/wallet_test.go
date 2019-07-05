@@ -249,7 +249,7 @@ func Bip44ContractIndexKey(accountID string, change bool) []byte {
 
 // ContractKey account control promgram store prefix
 func ContractKey(hash bc.Hash) []byte {
-	return append([]byte(ContractPrefix), hash.Bytes()...)
+	return append([]byte(dbm.ContractPrefix), hash.Bytes()...)
 }
 
 // AccountIDKey account id store prefix
@@ -918,7 +918,7 @@ func (store *MockAccountStore) ListAccounts(id string) ([]*acc.Account, error) {
 // ListControlPrograms get all local control programs
 func (store *MockAccountStore) ListControlPrograms() ([]*acc.CtrlProgram, error) {
 	cps := []*acc.CtrlProgram{}
-	cpIter := store.accountDB.IteratorPrefix([]byte(ContractPrefix))
+	cpIter := store.accountDB.IteratorPrefix([]byte(dbm.ContractPrefix))
 	defer cpIter.Release()
 
 	for cpIter.Next() {

@@ -230,7 +230,7 @@ func TestFilterAccountUtxo(t *testing.T) {
 		},
 		{
 			dbPrograms: map[string]*account.CtrlProgram{
-				"436f6e74726163743a2a37a64a4e15a772ab43bf3f5956d0d1f353946496788e7f40d0ff1796286a6f": &account.CtrlProgram{
+				"02023a2a37a64a4e15a772ab43bf3f5956d0d1f353946496788e7f40d0ff1796286a6f": &account.CtrlProgram{
 					AccountID: "testAccount",
 					Address:   "testAddress",
 					KeyIndex:  53,
@@ -290,13 +290,13 @@ func TestFilterAccountUtxo(t *testing.T) {
 		},
 		{
 			dbPrograms: map[string]*account.CtrlProgram{
-				"436f6e74726163743a2a37a64a4e15a772ab43bf3f5956d0d1f353946496788e7f40d0ff1796286a6f": &account.CtrlProgram{
+				"02023a2a37a64a4e15a772ab43bf3f5956d0d1f353946496788e7f40d0ff1796286a6f": &account.CtrlProgram{
 					AccountID: "testAccount",
 					Address:   "testAddress",
 					KeyIndex:  53,
 					Change:    true,
 				},
-				"436f6e74726163743adb4d86262c12ba70d50b3ca3ae102d5682436243bd1e8c79569603f75675036a": &account.CtrlProgram{
+				"02023adb4d86262c12ba70d50b3ca3ae102d5682436243bd1e8c79569603f75675036a": &account.CtrlProgram{
 					AccountID: "testAccount2",
 					Address:   "testAddress2",
 					KeyIndex:  72,

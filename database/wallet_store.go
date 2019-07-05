@@ -254,6 +254,7 @@ func (store *WalletStore) GetAsset(assetID *bc.AssetID) (*asset.Asset, error) {
 
 // GetControlProgram get raw program by hash
 func (store *WalletStore) GetControlProgram(hash bc.Hash) (*acc.CtrlProgram, error) {
+	fmt.Println("GetControlProgram: ContractKey(hash):", ContractKey(hash))
 	rawProgram := store.walletDB.Get(ContractKey(hash))
 	if rawProgram == nil {
 		return nil, acc.ErrFindCtrlProgram
