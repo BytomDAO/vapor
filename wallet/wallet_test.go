@@ -216,13 +216,8 @@ func (s *mStore) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*type
 
 //---------------------
 
-var (
-	ContractPrefix = "Contract:"
-)
-
 // errors
 var (
-	// ErrFindAccount        = errors.New("Failed to find account")
 	errAccntTxIDNotFound = errors.New("account TXID not found")
 	errGetAsset          = errors.New("Failed to find asset definition")
 )
