@@ -110,7 +110,7 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
-	irrBlockHeader := c.bestIrrBlockHeader
+	irrBlockHeader := c.lastIrrBlockHeader
 	if c.isIrreversible(&block.BlockHeader) && block.Height > irrBlockHeader.Height {
 		irrBlockHeader = &block.BlockHeader
 	}
@@ -167,7 +167,7 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 		log.WithFields(log.Fields{"module": logModule, "height": blockHeader.Height, "hash": blockHash.String()}).Debug("detach from mainchain")
 	}
 
-	irrBlockHeader := c.bestIrrBlockHeader
+	irrBlockHeader := c.lastIrrBlockHeader
 	for _, attachBlockHeader := range attachBlockHeaders {
 		attachHash := attachBlockHeader.Hash()
 		b, err := c.store.GetBlock(&attachHash)
@@ -205,7 +205,9 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 		log.WithFields(log.Fields{"module": logModule, "height": blockHeader.Height, "hash": blockHash.String()}).Debug("attach from mainchain")
 	}
 
-	if len(detachBlockHeaders) > 0 && detachBlockHeaders[len(detachBlockHeaders)-1].Height <= c.bestIrrBlockHeader.Height && irrBlockHeader.Height <= c.bestIrrBlockHeader.Height {
+	if len(detachBlockHeaders) > 0 &&
+		detachBlockHeaders[len(detachBlockHeaders)-1].Height <= c.lastIrrBlockHeader.Height &&
+		irrBlockHeader.Height <= c.lastIrrBlockHeader.Height {
 		return errors.New("rollback block below the height of irreversible block")
 	}
 	consensusResults = append(consensusResults, consensusResult.Fork())

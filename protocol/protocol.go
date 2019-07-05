@@ -26,8 +26,8 @@ type Chain struct {
 	eventDispatcher *event.Dispatcher
 
 	cond               sync.Cond
-	bestBlockHeader    *types.BlockHeader
-	bestIrrBlockHeader *types.BlockHeader
+	bestBlockHeader    *types.BlockHeader // the last block on current main chain
+	lastIrrBlockHeader *types.BlockHeader // the last irreversible block
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
@@ -56,7 +56,7 @@ func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*
 		return nil, err
 	}
 
-	c.bestIrrBlockHeader, err = c.store.GetBlockHeader(storeStatus.IrreversibleHash)
+	c.lastIrrBlockHeader, err = c.store.GetBlockHeader(storeStatus.IrreversibleHash)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ func (c *Chain) BestBlockHeight() uint64 {
 	return c.bestBlockHeader.Height
 }
 
-// BestBlockHash return the hash of the chain tail block
+// BestBlockHash return the hash of the main chain tail block
 func (c *Chain) BestBlockHash() *bc.Hash {
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
@@ -110,11 +110,11 @@ func (c *Chain) BestBlockHash() *bc.Hash {
 	return &bestHash
 }
 
-// BestIrreversibleHeader returns the chain best irreversible block header
-func (c *Chain) BestIrreversibleHeader() *types.BlockHeader {
+// LastIrreversibleHeader returns the chain last irreversible block header
+func (c *Chain) LastIrreversibleHeader() *types.BlockHeader {
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
-	return c.bestIrrBlockHeader
+	return c.lastIrrBlockHeader
 }
 
 // BestBlockHeader returns the chain best block header
@@ -139,6 +139,33 @@ func (c *Chain) InMainChain(hash bc.Hash) bool {
 	return *blockHash == hash
 }
 
+// trace back to the tail of the chain from the given block header
+func (c *Chain) traceLongestChainTail(blockHeader *types.BlockHeader) (*types.BlockHeader, error) {
+	longestTail, workQueue := blockHeader, []*types.BlockHeader{blockHeader}
+
+	for len(workQueue) > 0 {
+		currentHeader := workQueue[0]
+		currentHash := currentHeader.Hash()
+		workQueue = workQueue[1:]
+		hashes, err := c.store.GetBlockHashesByHeight(currentHeader.Height + 1)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, h := range hashes {
+			if header, err := c.store.GetBlockHeader(h); err != nil {
+				return nil, err
+			} else if header.PreviousBlockHash == currentHash {
+				if longestTail.Height < header.Height {
+					longestTail = header
+				}
+				workQueue = append(workQueue, header)
+			}
+		}
+	}
+	return longestTail, nil
+}
+
 // This function must be called with mu lock in above level
 func (c *Chain) setState(blockHeader, irrBlockHeader *types.BlockHeader, mainBlockHeaders []*types.BlockHeader, view *state.UtxoViewpoint, consensusResults []*state.ConsensusResult) error {
 	if err := c.store.SaveChainStatus(blockHeader, irrBlockHeader, mainBlockHeaders, view, consensusResults); err != nil {
@@ -146,7 +173,7 @@ func (c *Chain) setState(blockHeader, irrBlockHeader *types.BlockHeader, mainBlo
 	}
 
 	c.bestBlockHeader = blockHeader
-	c.bestIrrBlockHeader = irrBlockHeader
+	c.lastIrrBlockHeader = irrBlockHeader
 
 	blockHash := blockHeader.Hash()
 	log.WithFields(log.Fields{"module": logModule, "height": blockHeader.Height, "hash": blockHash.String()}).Debug("chain best status has been update")
