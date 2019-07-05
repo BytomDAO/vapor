@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/vapor/common/compute"
 	cfg "github.com/vapor/config"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/state"
 	"github.com/vapor/protocol/vm"
 )
 
@@ -31,7 +31,7 @@ var (
 // assembles a fully signed tx, and stores the effects of
 // its changes on the UTXO set.
 func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *types.Tx) error {
-	if fee := state.CalculateTxFee(tx); fee > cfg.CommonConfig.Wallet.MaxTxFee {
+	if fee := compute.CalculateTxFee(tx); fee > cfg.CommonConfig.Wallet.MaxTxFee {
 		return ErrExtTxFee
 	}
 

@@ -4,9 +4,9 @@ import (
 	"math"
 	"time"
 
+	"github.com/vapor/common/compute"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/state"
 )
 
 // NewBuilder return new TemplateBuilder instance
@@ -133,6 +133,6 @@ func (b *TemplateBuilder) Build() (*Template, *types.TxData, error) {
 	}
 
 	tpl.Transaction = types.NewTx(*tx)
-	tpl.Fee = state.CalculateTxFee(tpl.Transaction)
+	tpl.Fee = compute.CalculateTxFee(tpl.Transaction)
 	return tpl, tx, nil
 }

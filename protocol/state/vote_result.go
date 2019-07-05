@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"sort"
 
+	"github.com/vapor/common/compute"
 	"github.com/vapor/config"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
@@ -294,7 +295,7 @@ func CalCoinbaseReward(block *types.Block) (*CoinbaseReward, error) {
 
 	coinbaseAmount := consensus.BlockSubsidy(block.BlockHeader.Height)
 	for _, tx := range block.Transactions {
-		txFee := CalculateTxFee(tx)
+		txFee := compute.CalculateTxFee(tx)
 		if txFee < 0 {
 			return nil, errors.Wrap(errMathOperationOverFlow, "calculate transaction fee")
 		}
@@ -305,26 +306,6 @@ func CalCoinbaseReward(block *types.Block) (*CoinbaseReward, error) {
 		Amount:         coinbaseAmount,
 		ControlProgram: coinbaseReceiver,
 	}, nil
-}
-
-// CalculateTxFee calculate transaction fee
-func CalculateTxFee(tx *types.Tx) uint64 {
-	var totalInputBTM, totalOutputBTM uint64
-	for _, input := range tx.Inputs {
-		if input.InputType() == types.CoinbaseInputType {
-			return 0
-		}
-		if input.AssetID() == *consensus.BTMAssetID {
-			totalInputBTM += input.Amount()
-		}
-	}
-
-	for _, output := range tx.Outputs {
-		if *output.AssetAmount().AssetId == *consensus.BTMAssetID {
-			totalOutputBTM += output.AssetAmount().Amount
-		}
-	}
-	return totalInputBTM - totalOutputBTM
 }
 
 // GetCoinbaseRewards convert into CoinbaseReward array and sort it by amount
