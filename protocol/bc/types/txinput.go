@@ -131,16 +131,12 @@ func (t *TxInput) SpentOutputID() (o bc.Hash, err error) {
 	switch inp := t.TypedInput.(type) {
 	case *SpendInput:
 		o, err = ComputeOutputID(&inp.SpendCommitment, SpendInputType, nil)
-		return
 
 	case *VetoInput:
 		o, err = ComputeOutputID(&inp.SpendCommitment, VetoInputType, inp.Vote)
-		return
-
-	default:
-		return o, fmt.Errorf("output don't have spend output ID")
 	}
 
+	return o, err
 }
 
 func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
