@@ -130,22 +130,6 @@ func TestCheckCoinbaseTx(t *testing.T) {
 			err: ErrWrongCoinbaseTransaction,
 		},
 		{
-			desc: "dismatch coinbase amount with the first output",
-			txs: []*types.Tx{
-				types.NewTx(types.TxData{
-					Inputs:  []*types.TxInput{types.NewCoinbaseInput(nil)},
-					Outputs: []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 5000, []byte{0x51})},
-				}),
-			},
-			rewards: []state.CoinbaseReward{
-				state.CoinbaseReward{
-					Amount:         5000,
-					ControlProgram: []byte{0x51},
-				},
-			},
-			err: ErrWrongCoinbaseTransaction,
-		},
-		{
 			desc:    "wrong coinbase transaction",
 			txs:     []*types.Tx{},
 			rewards: []state.CoinbaseReward{},
