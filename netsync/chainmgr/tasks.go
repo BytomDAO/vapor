@@ -1,6 +1,10 @@
 package chainmgr
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/vapor/protocol/bc/types"
+)
 
 const (
 	unstart  = 0
@@ -85,4 +89,49 @@ func (ht *headersTasks) setStatus(id string, status int) {
 		return
 	}
 	task.setStatus(status)
+}
+
+type blocksTask struct {
+	index                   int
+	startHeader, stopHeader *types.BlockHeader
+}
+
+type blocksTasks struct {
+	tasks map[string]*blocksTask
+	mtx   sync.RWMutex
+}
+
+func newBlocksTasks() *blocksTasks {
+	return &blocksTasks{
+		tasks: make(map[string]*blocksTask),
+	}
+}
+
+func (bt *blocksTasks) addTask(id string, task *blocksTask) {
+	bt.mtx.RLock()
+	defer bt.mtx.RUnlock()
+
+	bt.tasks[id] = task
+}
+
+func (bt *blocksTasks) delTask(id string) {
+	bt.mtx.RLock()
+	defer bt.mtx.RUnlock()
+
+	delete(bt.tasks, id)
+}
+
+func (bt *blocksTasks) getTask(id string) (*blocksTask, bool) {
+	bt.mtx.RLock()
+	defer bt.mtx.RUnlock()
+
+	task, ok := bt.tasks[id]
+	return task, ok
+}
+
+func (bt *blocksTasks) size() int {
+	bt.mtx.RLock()
+	defer bt.mtx.RUnlock()
+
+	return len(bt.tasks)
 }

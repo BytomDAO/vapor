@@ -24,11 +24,6 @@ var (
 	errNoSyncPeer  = errors.New("can't find sync peer")
 )
 
-type taskPiece struct {
-	index                   int
-	startHeader, stopHeader *types.BlockHeader
-}
-
 type fastSync struct {
 	chain             Chain
 	msgFetcher        MsgFetcher
@@ -100,7 +95,7 @@ func (fs *fastSync) createFetchBlocksTasks() ([]string, error) {
 
 	// low height block has high download priority
 	for i := 0; i < len(skeleton)-1; i++ {
-		fs.blockFetchTasks.Push(&taskPiece{index: i, startHeader: skeleton[i], stopHeader: skeleton[i+1]}, -float32(i))
+		fs.blockFetchTasks.Push(&blocksTask{index: i, startHeader: skeleton[i], stopHeader: skeleton[i+1]}, -float32(i))
 	}
 
 	return syncPeers, nil
