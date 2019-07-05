@@ -56,14 +56,8 @@ func checkCoinbaseTx(b *bc.Block, rewards []state.CoinbaseReward) error {
 		coinbaseAmount := e.Source.Value.Amount
 		coinbaseReceiver := e.ControlProgram.Code
 
-		if i == 0 {
-			if coinbaseAmount != 0 {
-				return errors.Wrapf(ErrWrongCoinbaseTransaction, "dismatch output amount, got:%d, want:0", coinbaseAmount)
-			}
-		} else {
-			if rewards[i].Amount != coinbaseAmount {
-				return errors.Wrapf(ErrWrongCoinbaseTransaction, "dismatch output amount, got:%d, want:%d", coinbaseAmount, rewards[i].Amount)
-			}
+		if rewards[i].Amount != coinbaseAmount {
+			return errors.Wrapf(ErrWrongCoinbaseTransaction, "dismatch output amount, got:%d, want:%d", coinbaseAmount, rewards[i].Amount)
 		}
 
 		if res := bytes.Compare(rewards[i].ControlProgram, coinbaseReceiver); res != 0 {
