@@ -261,7 +261,7 @@ func (c *ConsensusResult) AttachCoinbaseReward(block *types.Block) ([]byte, erro
 		return nil, err
 	}
 
-	if (block.Height-1)%consensus.RoundVoteBlockNums == 0 {
+	if block.Height%consensus.RoundVoteBlockNums == 1 {
 		c.CoinbaseReward = map[string]uint64{}
 	}
 
