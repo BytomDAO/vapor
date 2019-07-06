@@ -251,9 +251,17 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		}
 
 	case *bc.CrossChainInput:
-		// check assetID
+		if e.MainchainOutputId == nil {
+			return errors.Wrap(ErrMissingField, "crosschain input without mainchain output ID")
+		}
+
+		mainchainOutput, err := vs.tx.IntraChainOutput(*e.MainchainOutputId)
+		if err != nil {
+			return errors.Wrap(err, "getting mainchain output")
+		}
+
 		assetID := e.AssetDefinition.ComputeAssetID()
-		if *e.Value.AssetId != *consensus.BTMAssetID && *e.Value.AssetId != assetID {
+		if *mainchainOutput.Source.Value.AssetId != *consensus.BTMAssetID && *mainchainOutput.Source.Value.AssetId != assetID {
 			return errors.New("incorrect asset_id while checking CrossChainInput")
 		}
 
@@ -262,8 +270,8 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			VmVersion: e.ControlProgram.VmVersion,
 			Code:      code,
 		}
-		_, err := vm.Verify(NewTxVMContext(vs, e, prog, e.WitnessArguments), consensus.DefaultGasCredit)
-		if err != nil {
+
+		if _, err := vm.Verify(NewTxVMContext(vs, e, prog, e.WitnessArguments), consensus.DefaultGasCredit); err != nil {
 			return errors.Wrap(err, "checking cross-chain input control program")
 		}
 

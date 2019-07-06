@@ -96,6 +96,9 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFa
 
 		switch output := entryOutput.(type) {
 		case *bc.IntraChainOutput:
+			if output.Source.Value.Amount == uint64(0) {
+				continue
+			}
 			assetID = *output.Source.Value.AssetId
 		case *bc.VoteOutput:
 			assetID = *output.Source.Value.AssetId
@@ -202,6 +205,9 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 		utxoType := storage.NormalUTXOType
 		switch output := entryOutput.(type) {
 		case *bc.IntraChainOutput:
+			if output.Source.Value.Amount == uint64(0) {
+				continue
+			}
 			assetID = *output.Source.Value.AssetId
 		case *bc.VoteOutput:
 			assetID = *output.Source.Value.AssetId

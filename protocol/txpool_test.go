@@ -118,12 +118,12 @@ func (s *mockStore) GetStoreStatus() *BlockStoreState                           
 func (s *mockStore) GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error) { return nil, nil }
 func (s *mockStore) GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error     { return nil }
 func (s *mockStore) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)                 { return nil, nil }
-func (s *mockStore) GetVoteResult(uint64) (*state.VoteResult, error)              { return nil, nil }
+func (s *mockStore) GetConsensusResult(uint64) (*state.ConsensusResult, error)              { return nil, nil }
 func (s *mockStore) GetMainChainHash(uint64) (*bc.Hash, error)                    { return nil, nil }
 func (s *mockStore) GetBlockHashesByHeight(uint64) ([]*bc.Hash, error)            { return nil, nil }
 func (s *mockStore) SaveBlock(*types.Block, *bc.TransactionStatus) error          { return nil }
 func (s *mockStore) SaveBlockHeader(*types.BlockHeader) error                     { return nil }
-func (s *mockStore) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, []*state.VoteResult) error {
+func (s *mockStore) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, []*state.ConsensusResult) error {
 	return nil
 }
 
@@ -669,12 +669,12 @@ func (s *mockStore1) GetTransactionsUtxo(utxoView *state.UtxoViewpoint, tx []*bc
 	return nil
 }
 func (s *mockStore1) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)        { return nil, nil }
-func (s *mockStore1) GetVoteResult(uint64) (*state.VoteResult, error)     { return nil, nil }
+func (s *mockStore1) GetConsensusResult(uint64) (*state.ConsensusResult, error)     { return nil, nil }
 func (s *mockStore1) GetMainChainHash(uint64) (*bc.Hash, error)           { return nil, nil }
 func (s *mockStore1) GetBlockHashesByHeight(uint64) ([]*bc.Hash, error)   { return nil, nil }
 func (s *mockStore1) SaveBlock(*types.Block, *bc.TransactionStatus) error { return nil }
 func (s *mockStore1) SaveBlockHeader(*types.BlockHeader) error            { return nil }
-func (s *mockStore1) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, []*state.VoteResult) error {
+func (s *mockStore1) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, []*state.ConsensusResult) error {
 	return nil
 }
 

@@ -55,10 +55,9 @@ func MapTx(oldTx *TxData) *bc.Tx {
 			continue
 		}
 
-		if ord >= uint64(len(oldTx.Inputs)) {
-			continue
+		if ord < uint64(len(oldTx.Inputs)) {
+			tx.InputIDs[ord] = id
 		}
-		tx.InputIDs[ord] = id
 	}
 
 	for id := range spentOutputIDs {
@@ -112,12 +111,16 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 		case *CoinbaseInput:
 			coinbase = bc.NewCoinbase(inp.Arbitrary)
 			coinbaseID := addEntry(coinbase)
-
-			out := tx.Outputs[0]
-			value := out.AssetAmount()
+			totalAmount := uint64(0)
+			for _, out := range tx.Outputs {
+				totalAmount += out.AssetAmount().Amount
+			}
 			muxSources[i] = &bc.ValueSource{
-				Ref:   &coinbaseID,
-				Value: &value,
+				Ref: &coinbaseID,
+				Value: &bc.AssetAmount{
+					AssetId: consensus.BTMAssetID,
+					Amount:  totalAmount,
+				},
 			}
 
 		case *VetoInput:
@@ -149,18 +152,18 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			}
 
 			prevout := bc.NewIntraChainOutput(src, prog, 0) // ordinal doesn't matter
-			outputID := bc.EntryID(prevout)
+			mainchainOutputID := addEntry(prevout)
 
 			assetDefHash := bc.NewHash(sha3.Sum256(inp.AssetDefinition))
 			assetDef := &bc.AssetDefinition{
 				Data: &assetDefHash,
 				IssuanceProgram: &bc.Program{
-					VmVersion: inp.VMVersion,
+					VmVersion: inp.IssuanceVMVersion,
 					Code:      inp.IssuanceProgram,
 				},
 			}
 
-			crossIn := bc.NewCrossChainInput(&outputID, &inp.AssetAmount, prog, uint64(i), assetDef)
+			crossIn := bc.NewCrossChainInput(&mainchainOutputID, prog, uint64(i), assetDef)
 			crossIn.WitnessArguments = inp.Arguments
 			crossInID := addEntry(crossIn)
 			muxSources[i] = &bc.ValueSource{
@@ -186,7 +189,8 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 	}
 
 	for _, crossIn := range crossIns {
-		crossIn.SetDestination(&muxID, crossIn.Value, crossIn.Ordinal)
+		mainchainOutput := entryMap[*crossIn.MainchainOutputId].(*bc.IntraChainOutput)
+		crossIn.SetDestination(&muxID, mainchainOutput.Source.Value, crossIn.Ordinal)
 	}
 
 	if coinbase != nil {
@@ -224,7 +228,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 
 		case out.OutputType() == VoteOutputType:
 			// non-retirement vote tx
-			voteOut, _ := out.TypedOutput.(*VoteTxOutput)
+			voteOut, _ := out.TypedOutput.(*VoteOutput)
 			prog := &bc.Program{out.VMVersion(), out.ControlProgram()}
 			o := bc.NewVoteOutput(src, prog, uint64(i), voteOut.Vote)
 			resultID = addEntry(o)
