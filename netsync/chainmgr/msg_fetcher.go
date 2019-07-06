@@ -8,6 +8,7 @@ import (
 
 	"github.com/vapor/errors"
 	"github.com/vapor/netsync/peers"
+	"github.com/vapor/p2p/security"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
@@ -100,10 +101,12 @@ func (mf *msgFetcher) fetchBlocks(work *fetchBlocksWork, peerID string) ([]*type
 	stopHash := work.stopHeader.Hash()
 	blocks, err := mf.requireBlocks(peerID, []*bc.Hash{&startHash}, &stopHash)
 	if err != nil {
+		mf.peers.ErrorHandler(peerID, security.LevelConnException, err)
 		return nil, err
 	}
 
 	if err := mf.verifyBlocksMsg(blocks, work.startHeader, work.stopHeader); err != nil {
+		mf.peers.ErrorHandler(peerID, security.LevelConnException, err)
 		return nil, err
 	}
 
