@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"sort"
 
-	"github.com/vapor/common/compute"
+	"github.com/vapor/common/arithmetic"
 	"github.com/vapor/config"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
@@ -12,11 +12,6 @@ import (
 	"github.com/vapor/math/checked"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
-)
-
-var (
-	errMathOperationOverFlow = errors.New("arithmetic operation result overflow")
-	errCoinbaseReward        = errors.New("bad coinbase reward")
 )
 
 // ConsensusNode represents a consensus node
@@ -87,9 +82,9 @@ func CalCoinbaseReward(block *types.Block) (*CoinbaseReward, error) {
 
 	coinbaseAmount := consensus.BlockSubsidy(block.BlockHeader.Height)
 	for _, tx := range block.Transactions {
-		txFee := compute.CalculateTxFee(tx)
-		if txFee < 0 {
-			return nil, errors.Wrap(errMathOperationOverFlow, "calculate transaction fee")
+		txFee, err := arithmetic.CalculateTxFee(tx)
+		if err != nil {
+			return nil, errors.Wrap(checked.ErrOverflow, "calculate transaction fee")
 		}
 		coinbaseAmount += txFee
 	}
@@ -120,7 +115,7 @@ func (c *ConsensusResult) ApplyBlock(block *types.Block) error {
 			pubkey := hex.EncodeToString(vetoInput.Vote)
 			c.NumOfVote[pubkey], ok = checked.SubUint64(c.NumOfVote[pubkey], vetoInput.Amount)
 			if !ok {
-				return errMathOperationOverFlow
+				return checked.ErrOverflow
 			}
 
 			if c.NumOfVote[pubkey] == 0 {
@@ -136,7 +131,7 @@ func (c *ConsensusResult) ApplyBlock(block *types.Block) error {
 
 			pubkey := hex.EncodeToString(voteOutput.Vote)
 			if c.NumOfVote[pubkey], ok = checked.AddUint64(c.NumOfVote[pubkey], voteOutput.Amount); !ok {
-				return errMathOperationOverFlow
+				return checked.ErrOverflow
 			}
 		}
 	}
@@ -203,7 +198,7 @@ func (c *ConsensusResult) DetachBlock(block *types.Block) error {
 
 			pubkey := hex.EncodeToString(vetoInput.Vote)
 			if c.NumOfVote[pubkey], ok = checked.AddUint64(c.NumOfVote[pubkey], vetoInput.Amount); !ok {
-				return errMathOperationOverFlow
+				return checked.ErrOverflow
 			}
 		}
 
@@ -216,7 +211,7 @@ func (c *ConsensusResult) DetachBlock(block *types.Block) error {
 			pubkey := hex.EncodeToString(voteOutput.Vote)
 			c.NumOfVote[pubkey], ok = checked.SubUint64(c.NumOfVote[pubkey], voteOutput.Amount)
 			if !ok {
-				return errMathOperationOverFlow
+				return checked.ErrOverflow
 			}
 
 			if c.NumOfVote[pubkey] == 0 {
@@ -269,7 +264,7 @@ func (c *ConsensusResult) AttachCoinbaseReward(block *types.Block) ([]byte, erro
 	program := hex.EncodeToString(reward.ControlProgram)
 	c.CoinbaseReward[program], ok = checked.AddUint64(c.CoinbaseReward[program], reward.Amount)
 	if !ok {
-		return nil, errMathOperationOverFlow
+		return nil, checked.ErrOverflow
 	}
 	return reward.ControlProgram, nil
 }
@@ -277,10 +272,6 @@ func (c *ConsensusResult) AttachCoinbaseReward(block *types.Block) ([]byte, erro
 // DetachCoinbaseReward detach coinbase reward
 func (c *ConsensusResult) DetachCoinbaseReward(block *types.Block) error {
 	if block.Height%consensus.RoundVoteBlockNums == 0 {
-		if len(c.CoinbaseReward) != 0 {
-			return errCoinbaseReward
-		}
-
 		c.CoinbaseReward = map[string]uint64{}
 		for i, output := range block.Transactions[0].Outputs {
 			if i == 0 && output.AssetAmount().Amount == 0 {
@@ -299,7 +290,7 @@ func (c *ConsensusResult) DetachCoinbaseReward(block *types.Block) error {
 	var ok bool
 	program := hex.EncodeToString(reward.ControlProgram)
 	if c.CoinbaseReward[program], ok = checked.SubUint64(c.CoinbaseReward[program], reward.Amount); !ok {
-		return errMathOperationOverFlow
+		return checked.ErrOverflow
 	}
 
 	if c.CoinbaseReward[program] == 0 {

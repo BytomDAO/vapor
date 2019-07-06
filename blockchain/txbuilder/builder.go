@@ -4,7 +4,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/vapor/common/compute"
+	"github.com/vapor/common/arithmetic"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc/types"
 )
@@ -132,7 +132,10 @@ func (b *TemplateBuilder) Build() (*Template, *types.TxData, error) {
 		tx.Inputs = append(tx.Inputs, in)
 	}
 
+	var err error
 	tpl.Transaction = types.NewTx(*tx)
-	tpl.Fee = compute.CalculateTxFee(tpl.Transaction)
+	if tpl.Fee, err = arithmetic.CalculateTxFee(tpl.Transaction); err != nil {
+		return nil, nil, err
+	}
 	return tpl, tx, nil
 }
