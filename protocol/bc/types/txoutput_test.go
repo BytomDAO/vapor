@@ -99,7 +99,7 @@ func TestSerializationCrossChainTxOutput(t *testing.T) {
 	}
 }
 
-func TestSerializationVoteTxOutput(t *testing.T) {
+func TestSerializationVoteOutput(t *testing.T) {
 	assetID := testutil.MustDecodeAsset("81756fdab39a17163b0ce582ee4ee256fb4d1e156c692b997d608a42ecb38d47")
 	voteTxOutput := NewVoteOutput(assetID, 1000, []byte("TestSerializationTxOutput"), []byte("af594006a40837d9f028daabb6d589df0b9138daefad5683e5233c2646279217294a8d532e60863bcf196625a35fb8ceeffa3c09610eb92dcfb655a947f13269"))
 

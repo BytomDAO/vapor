@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/vapor/crypto/sha3pool"
 	"github.com/vapor/encoding/blockchain"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
@@ -60,13 +59,4 @@ func (oc *OutputCommitment) readFrom(r *blockchain.Reader, assetVersion uint64) 
 		}
 		return nil
 	})
-}
-
-// Hash convert suffix && assetVersion to bc.Hash
-func (oc *OutputCommitment) Hash(suffix []byte, assetVersion uint64) (outputhash bc.Hash) {
-	h := sha3pool.Get256()
-	defer sha3pool.Put256(h)
-	oc.writeExtensibleString(h, suffix, assetVersion)
-	outputhash.ReadFrom(h)
-	return outputhash
 }

@@ -32,8 +32,6 @@ type (
 	}
 )
 
-var errBadAssetID = errors.New("asset ID does not match other issuance parameters")
-
 // AssetAmount return the asset id and amount of the txinput.
 func (t *TxInput) AssetAmount() bc.AssetAmount {
 	switch inp := t.TypedInput.(type) {
@@ -177,11 +175,26 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 				return err
 			}
 
+			if ci.IssuanceVMVersion, err = blockchain.ReadVarint63(r); err != nil {
+				return err
+			}
+
+			if ci.AssetDefinition, err = blockchain.ReadVarstr31(r); err != nil {
+				return err
+			}
+
+			if ci.IssuanceProgram, err = blockchain.ReadVarstr31(r); err != nil {
+				return err
+			}
+
 		case VetoInputType:
 			ui := new(VetoInput)
 			t.TypedInput = ui
 			if ui.VetoCommitmentSuffix, err = ui.SpendCommitment.readFrom(r, 1); err != nil {
+				return err
+			}
 
+			if ui.Vote, err = blockchain.ReadVarstr31(r); err != nil {
 				return err
 			}
 
@@ -199,45 +212,21 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 			return nil
 		}
 
+		var err error
 		switch inp := t.TypedInput.(type) {
 		case *SpendInput:
-			if inp.Arguments, err = blockchain.ReadVarstrList(r); err != nil {
-				return err
-			}
+			inp.Arguments, err = blockchain.ReadVarstrList(r)
 
 		case *CrossChainInput:
-			if inp.Arguments, err = blockchain.ReadVarstrList(r); err != nil {
-				return err
-			}
-
-			if inp.VMVersion, err = blockchain.ReadVarint63(r); err != nil {
-				return err
-			}
-
-			if inp.AssetDefinition, err = blockchain.ReadVarstr31(r); err != nil {
-				return err
-			}
-
-			if inp.IssuanceProgram, err = blockchain.ReadVarstr31(r); err != nil {
-				return err
-			}
+			inp.Arguments, err = blockchain.ReadVarstrList(r)
 
 		case *VetoInput:
-			if inp.Arguments, err = blockchain.ReadVarstrList(r); err != nil {
-				return err
-			}
-			if inp.Vote, err = blockchain.ReadVarstr31(r); err != nil {
-				return err
-			}
-
+			inp.Arguments, err = blockchain.ReadVarstrList(r)
 		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
 
-	return nil
+		return err
+	})
+	return err
 }
 
 func (t *TxInput) writeTo(w io.Writer) error {
@@ -266,19 +255,36 @@ func (t *TxInput) writeInputCommitment(w io.Writer) (err error) {
 		if _, err = w.Write([]byte{SpendInputType}); err != nil {
 			return err
 		}
+
 		return inp.SpendCommitment.writeExtensibleString(w, inp.SpendCommitmentSuffix, t.AssetVersion)
 
 	case *CrossChainInput:
 		if _, err = w.Write([]byte{CrossChainInputType}); err != nil {
 			return err
 		}
-		return inp.SpendCommitment.writeExtensibleString(w, inp.SpendCommitmentSuffix, t.AssetVersion)
 
-	case *CoinbaseInput:
-		if _, err = w.Write([]byte{CoinbaseInputType}); err != nil {
+		if err := inp.SpendCommitment.writeExtensibleString(w, inp.SpendCommitmentSuffix, t.AssetVersion); err != nil {
 			return err
 		}
-		if _, err = blockchain.WriteVarstr31(w, inp.Arbitrary); err != nil {
+
+		if _, err := blockchain.WriteVarint63(w, inp.IssuanceVMVersion); err != nil {
+			return err
+		}
+
+		if _, err := blockchain.WriteVarstr31(w, inp.AssetDefinition); err != nil {
+			return err
+		}
+
+		if _, err := blockchain.WriteVarstr31(w, inp.IssuanceProgram); err != nil {
+			return err
+		}
+
+	case *CoinbaseInput:
+		if _, err := w.Write([]byte{CoinbaseInputType}); err != nil {
+			return err
+		}
+
+		if _, err := blockchain.WriteVarstr31(w, inp.Arbitrary); err != nil {
 			return errors.Wrap(err, "writing coinbase arbitrary")
 		}
 
@@ -286,7 +292,13 @@ func (t *TxInput) writeInputCommitment(w io.Writer) (err error) {
 		if _, err = w.Write([]byte{VetoInputType}); err != nil {
 			return err
 		}
-		return inp.SpendCommitment.writeExtensibleString(w, inp.VetoCommitmentSuffix, t.AssetVersion)
+
+		if err := inp.SpendCommitment.writeExtensibleString(w, inp.VetoCommitmentSuffix, t.AssetVersion); err != nil {
+			return err
+		}
+
+		_, err := blockchain.WriteVarstr31(w, inp.Vote)
+		return err
 	}
 	return nil
 }
@@ -296,33 +308,16 @@ func (t *TxInput) writeInputWitness(w io.Writer) error {
 		return nil
 	}
 
+	var err error
 	switch inp := t.TypedInput.(type) {
 	case *SpendInput:
-		_, err := blockchain.WriteVarstrList(w, inp.Arguments)
-		return err
+		_, err = blockchain.WriteVarstrList(w, inp.Arguments)
 
 	case *CrossChainInput:
-		if _, err := blockchain.WriteVarstrList(w, inp.Arguments); err != nil {
-			return err
-		}
+		_, err = blockchain.WriteVarstrList(w, inp.Arguments)
 
-		if _, err := blockchain.WriteVarint63(w, inp.VMVersion); err != nil {
-			return err
-		}
-
-		if _, err := blockchain.WriteVarstr31(w, inp.AssetDefinition); err != nil {
-			return err
-		}
-
-		_, err := blockchain.WriteVarstr31(w, inp.IssuanceProgram)
-
-		return err
 	case *VetoInput:
-		if _, err := blockchain.WriteVarstrList(w, inp.Arguments); err != nil {
-			return err
-		}
-		_, err := blockchain.WriteVarstr31(w, inp.Vote)
-		return err
+		_, err = blockchain.WriteVarstrList(w, inp.Arguments)
 	}
-	return nil
+	return err
 }
