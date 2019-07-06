@@ -252,19 +252,6 @@ func (store *WalletStore) GetAsset(assetID *bc.AssetID) (*asset.Asset, error) {
 	return externalAsset, nil
 }
 
-// // GetControlProgram get raw program by hash
-// func (store *WalletStore) GetControlProgram(hash bc.Hash) (*acc.CtrlProgram, error) {
-// 	rawProgram := store.walletDB.Get(ContractKey(hash))
-// 	if rawProgram == nil {
-// 		return nil, acc.ErrFindCtrlProgram
-// 	}
-// 	accountCP := new(acc.CtrlProgram)
-// 	if err := json.Unmarshal(rawProgram, &accountCP); err != nil {
-// 		return nil, err
-// 	}
-// 	return accountCP, nil
-// }
-
 // GetGlobalTransactionIndex get global tx by txID
 func (store *WalletStore) GetGlobalTransactionIndex(txID string) []byte {
 	return store.walletDB.Get(CalcGlobalTxIndexKey(txID))
