@@ -665,13 +665,14 @@ func (store *MockAccountStore) DeleteAccount(account *acc.Account) error {
 	}
 
 	// delete account utxos
-	store.deleteAccountUTXOs(account.ID)
+	store.deleteAccountUTXOs(account.ID, batch)
 
 	// delete account control program
 	cps, err := store.ListControlPrograms()
 	if err != nil {
 		return err
 	}
+
 	var hash [32]byte
 	for _, cp := range cps {
 		if cp.AccountID == account.ID {
@@ -697,28 +698,21 @@ func (store *MockAccountStore) DeleteAccount(account *acc.Account) error {
 }
 
 // deleteAccountUTXOs delete account utxos by accountID
-func (store *MockAccountStore) deleteAccountUTXOs(accountID string) error {
-	batch := store.db.NewBatch()
-	if store.batch != nil {
-		batch = store.batch
-	}
-
+func (store *MockAccountStore) deleteAccountUTXOs(accountID string, batch dbm.Batch) error {
 	accountUtxoIter := store.db.IteratorPrefix([]byte(dbm.UTXOPrefix))
 	defer accountUtxoIter.Release()
 
 	for accountUtxoIter.Next() {
-		accountUtxo := &acc.UTXO{}
+		accountUtxo := new(acc.UTXO)
 		if err := json.Unmarshal(accountUtxoIter.Value(), accountUtxo); err != nil {
 			return err
 		}
+
 		if accountID == accountUtxo.AccountID {
 			batch.Delete(StandardUTXOKey(accountUtxo.OutputID))
 		}
 	}
 
-	if store.batch == nil {
-		batch.Write()
-	}
 	return nil
 }
 

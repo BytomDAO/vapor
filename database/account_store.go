@@ -54,7 +54,7 @@ func (store *AccountStore) DeleteAccount(account *acc.Account) error {
 	}
 
 	// delete account utxos
-	store.deleteAccountUTXOs(account.ID)
+	store.deleteAccountUTXOs(account.ID, batch)
 
 	// delete account control program
 	cps, err := store.ListControlPrograms()
@@ -87,17 +87,12 @@ func (store *AccountStore) DeleteAccount(account *acc.Account) error {
 }
 
 // deleteAccountUTXOs delete account utxos by accountID
-func (store *AccountStore) deleteAccountUTXOs(accountID string) error {
-	batch := store.db.NewBatch()
-	if store.batch != nil {
-		batch = store.batch
-	}
-
+func (store *AccountStore) deleteAccountUTXOs(accountID string, batch dbm.Batch) error {
 	accountUtxoIter := store.db.IteratorPrefix([]byte(dbm.UTXOPrefix))
 	defer accountUtxoIter.Release()
 
 	for accountUtxoIter.Next() {
-		accountUtxo := &acc.UTXO{}
+		accountUtxo := new(acc.UTXO)
 		if err := json.Unmarshal(accountUtxoIter.Value(), accountUtxo); err != nil {
 			return err
 		}
@@ -107,9 +102,6 @@ func (store *AccountStore) deleteAccountUTXOs(accountID string) error {
 		}
 	}
 
-	if store.batch == nil {
-		batch.Write()
-	}
 	return nil
 }
 
