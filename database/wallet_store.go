@@ -123,6 +123,7 @@ func (store *WalletStore) InitBatch() error {
 	if store.batch != nil {
 		return errors.New("WalletStore initail fail, store batch is not nil.")
 	}
+
 	store.batch = store.db.NewBatch()
 	return nil
 }
@@ -132,6 +133,7 @@ func (store *WalletStore) CommitBatch() error {
 	if store.batch == nil {
 		return errors.New("WalletStore commit fail, store batch is nil.")
 	}
+
 	store.batch.Write()
 	store.batch = nil
 	return nil
@@ -215,14 +217,17 @@ func (store *WalletStore) DeleteWalletUTXOs() {
 	if store.batch != nil {
 		batch = store.batch
 	}
+
 	ruIter := store.db.IteratorPrefix([]byte(dbm.UTXOPrefix))
 	defer ruIter.Release()
+
 	for ruIter.Next() {
 		batch.Delete(ruIter.Key())
 	}
 
 	suIter := store.db.IteratorPrefix([]byte(dbm.SUTXOPrefix))
 	defer suIter.Release()
+
 	for suIter.Next() {
 		batch.Delete(suIter.Key())
 	}
@@ -237,10 +242,12 @@ func (store *WalletStore) GetAsset(assetID *bc.AssetID) (*asset.Asset, error) {
 	if definitionByte == nil {
 		return nil, errGetAsset
 	}
+
 	definitionMap := make(map[string]interface{})
 	if err := json.Unmarshal(definitionByte, &definitionMap); err != nil {
 		return nil, err
 	}
+
 	alias := assetID.String()
 	externalAsset := &asset.Asset{
 		AssetID:           *assetID,
@@ -262,10 +269,12 @@ func (store *WalletStore) GetStandardUTXO(outid bc.Hash) (*acc.UTXO, error) {
 	if rawUTXO == nil {
 		return nil, fmt.Errorf("failed get standard UTXO, outputID: %s ", outid.String())
 	}
+
 	UTXO := new(acc.UTXO)
 	if err := json.Unmarshal(rawUTXO, UTXO); err != nil {
 		return nil, err
 	}
+
 	return UTXO, nil
 }
 
@@ -275,11 +284,13 @@ func (store *WalletStore) GetTransaction(txID string) (*query.AnnotatedTx, error
 	if formatKey == nil {
 		return nil, errAccntTxIDNotFound
 	}
+
 	rawTx := store.db.Get(calcAnnotatedKey(string(formatKey)))
 	tx := new(query.AnnotatedTx)
 	if err := json.Unmarshal(rawTx, tx); err != nil {
 		return nil, err
 	}
+
 	return tx, nil
 }
 
@@ -289,10 +300,12 @@ func (store *WalletStore) GetUnconfirmedTransaction(txID string) (*query.Annotat
 	if rawUnconfirmedTx == nil {
 		return nil, fmt.Errorf("failed get unconfirmed tx, txID: %s ", txID)
 	}
+
 	tx := new(query.AnnotatedTx)
 	if err := json.Unmarshal(rawUnconfirmedTx, tx); err != nil {
 		return nil, err
 	}
+
 	return tx, nil
 }
 
@@ -302,10 +315,12 @@ func (store *WalletStore) GetRecoveryStatus() (*wallet.RecoveryState, error) {
 	if rawStatus == nil {
 		return nil, wallet.ErrGetRecoveryStatus
 	}
+
 	state := new(wallet.RecoveryState)
 	if err := json.Unmarshal(rawStatus, state); err != nil {
 		return nil, err
 	}
+
 	return state, nil
 }
 
@@ -315,10 +330,12 @@ func (store *WalletStore) GetWalletInfo() (*wallet.StatusInfo, error) {
 	if rawStatus == nil {
 		return nil, wallet.ErrGetWalletStatusInfo
 	}
+
 	status := new(wallet.StatusInfo)
 	if err := json.Unmarshal(rawStatus, status); err != nil {
 		return nil, err
 	}
+
 	return status, nil
 }
 
@@ -333,6 +350,7 @@ func (store *WalletStore) ListAccountUTXOs(key string) ([]*acc.UTXO, error) {
 		if err := json.Unmarshal(accountUtxoIter.Value(), utxo); err != nil {
 			return nil, err
 		}
+
 		confirmedUTXOs = append(confirmedUTXOs, utxo)
 	}
 	return confirmedUTXOs, nil
@@ -351,6 +369,7 @@ func (store *WalletStore) ListTransactions(accountID string, StartTxID string, c
 			if formatKey == nil {
 				return nil, errAccntTxIDNotFound
 			}
+
 			startKey = calcAnnotatedKey(string(formatKey))
 		}
 	}
@@ -367,6 +386,7 @@ func (store *WalletStore) ListTransactions(accountID string, StartTxID string, c
 		if err := json.Unmarshal(itr.Value(), &annotatedTx); err != nil {
 			return nil, err
 		}
+
 		annotatedTxs = append(annotatedTxs, annotatedTx)
 	}
 
@@ -384,6 +404,7 @@ func (store *WalletStore) ListUnconfirmedTransactions() ([]*query.AnnotatedTx, e
 		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
 			return nil, err
 		}
+
 		annotatedTxs = append(annotatedTxs, annotatedTx)
 	}
 	return annotatedTxs, nil
@@ -404,6 +425,7 @@ func (store *WalletStore) SetContractUTXO(outputID bc.Hash, utxo *acc.UTXO) erro
 	if err != nil {
 		return err
 	}
+
 	if store.batch == nil {
 		store.db.Set(ContractUTXOKey(outputID), data)
 	} else {
@@ -427,6 +449,7 @@ func (store *WalletStore) SetRecoveryStatus(recoveryState *wallet.RecoveryState)
 	if err != nil {
 		return err
 	}
+
 	if store.batch == nil {
 		store.db.Set(dbm.RecoveryKey, rawStatus)
 	} else {
@@ -446,6 +469,7 @@ func (store *WalletStore) SetTransaction(height uint64, tx *query.AnnotatedTx) e
 	if err != nil {
 		return err
 	}
+
 	batch.Set(calcAnnotatedKey(formatKey(height, tx.Position)), rawTx)
 	batch.Set(calcTxIndexKey(tx.ID.String()), []byte(formatKey(height, tx.Position)))
 
@@ -461,6 +485,7 @@ func (store *WalletStore) SetUnconfirmedTransaction(txID string, tx *query.Annot
 	if err != nil {
 		return err
 	}
+
 	if store.batch == nil {
 		store.db.Set(calcUnconfirmedTxKey(txID), rawTx)
 	} else {
