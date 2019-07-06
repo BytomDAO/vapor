@@ -134,12 +134,14 @@ func (w *Wallet) LoadWalletInfo() error {
 	if walletStatus == nil && err != ErrGetWalletStatusInfo {
 		return err
 	}
+
 	if walletStatus != nil {
 		w.Status = *walletStatus
 		err = w.checkWalletInfo()
 		if err == nil {
 			return nil
 		}
+
 		log.WithFields(log.Fields{"module": logModule}).Warn(err.Error())
 		w.store.DeleteWalletTransactions()
 		w.store.DeleteWalletUTXOs()
@@ -151,6 +153,7 @@ func (w *Wallet) LoadWalletInfo() error {
 	if err != nil {
 		return err
 	}
+
 	return w.AttachBlock(block)
 }
 
@@ -187,6 +190,7 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 	if err := saveExternalAssetDefinition(block, w.store); err != nil {
 		return err
 	}
+
 	w.annotateTxsAccount(annotatedTxs)
 
 	if err := w.store.InitBatch(); err != nil {
