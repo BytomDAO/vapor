@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	ErrNotFoundVoteResult = errors.New("can't find the vote result by given sequence")
+	ErrNotFoundConsensusResult = errors.New("can't find the vote result by given sequence")
 )
 
 // Store provides storage interface for blockchain data
@@ -23,13 +23,13 @@ type Store interface {
 	GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error)
 	GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error
 	GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)
-	GetVoteResult(uint64) (*state.VoteResult, error)
+	GetConsensusResult(uint64) (*state.ConsensusResult, error)
 	GetMainChainHash(uint64) (*bc.Hash, error)
 	GetBlockHashesByHeight(uint64) ([]*bc.Hash, error)
 
 	SaveBlock(*types.Block, *bc.TransactionStatus) error
 	SaveBlockHeader(*types.BlockHeader) error
-	SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, []*state.VoteResult) error
+	SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, []*state.ConsensusResult) error
 }
 
 // BlockStoreState represents the core's db status

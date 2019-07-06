@@ -83,7 +83,7 @@ func TestTransaction(t *testing.T) {
 				"66616c7365", // output 1: control program
 				"00",         // output 1: witness length
 			}, ""),
-			hash: testutil.MustDecodeHash("2ef0831a69f4da1188af94a87ed6fd234500b979947aa706d47eb2d76359ad78"),
+			hash: testutil.MustDecodeHash("2591a2af0d3690107215c2a47ab60c4e8d7547f04154ecd5ccab1db0d31e66b4"),
 		},
 	}
 	for i, test := range cases {

@@ -17,8 +17,8 @@ func TestBlockCache(t *testing.T) {
 		}
 	}
 
-	newVoteResult := func(seq uint64) *state.VoteResult {
-		return &state.VoteResult{
+	newConsensusResult := func(seq uint64) *state.ConsensusResult {
+		return &state.ConsensusResult{
 			Seq: seq,
 		}
 	}
@@ -34,10 +34,10 @@ func TestBlockCache(t *testing.T) {
 		blockIndexHashes[block.Height] = append(blockIndexHashes[block.Height], &hash)
 	}
 
-	voteResults := make(map[uint64]*state.VoteResult)
-	for i := 0; i < maxCachedVoteResults+10; i++ {
-		voteResult := newVoteResult(uint64(i))
-		voteResults[voteResult.Seq] = voteResult
+	consensusResults := make(map[uint64]*state.ConsensusResult)
+	for i := 0; i < maxCachedConsensusResults+10; i++ {
+		consensusResult := newConsensusResult(uint64(i))
+		consensusResults[consensusResult.Seq] = consensusResult
 	}
 
 	fillBlockHeaderFn := func(hash *bc.Hash) (*types.BlockHeader, error) {
@@ -56,11 +56,11 @@ func TestBlockCache(t *testing.T) {
 		return blockHashes[height], nil
 	}
 
-	fillVoteResultFn := func(seq uint64) (*state.VoteResult, error) {
-		return voteResults[seq], nil
+	fillConsensusResultFn := func(seq uint64) (*state.ConsensusResult, error) {
+		return consensusResults[seq], nil
 	}
 
-	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillBlockHashesFn, fillMainChainHashFn, fillVoteResultFn)
+	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillBlockHashesFn, fillMainChainHashFn, fillConsensusResultFn)
 	for i := 0; i < maxCachedBlockHeaders+10; i++ {
 		block := newBlock(uint64(i))
 		hash := block.Hash()
@@ -143,21 +143,21 @@ func TestBlockCache(t *testing.T) {
 		}
 	}
 
-	for i := 0; i < maxCachedVoteResults+10; i++ {
-		voteResult := newVoteResult(uint64(i))
-		cache.lookupVoteResult(voteResult.Seq)
+	for i := 0; i < maxCachedConsensusResults+10; i++ {
+		consensusResult := newConsensusResult(uint64(i))
+		cache.lookupConsensusResult(consensusResult.Seq)
 	}
 
 	for i := 0; i < 10; i++ {
-		voteResult := newVoteResult(uint64(i))
-		if _, ok := cache.lruVoteResults.Get(voteResult.Seq); ok {
+		consensusResult := newConsensusResult(uint64(i))
+		if _, ok := cache.lruConsensusResults.Get(consensusResult.Seq); ok {
 			t.Fatalf("find old vote result")
 		}
 	}
 
-	for i := 10; i < maxCachedVoteResults+10; i++ {
-		voteResult := newVoteResult(uint64(i))
-		if _, ok := cache.lruVoteResults.Get(voteResult.Seq); !ok {
+	for i := 10; i < maxCachedConsensusResults+10; i++ {
+		consensusResult := newConsensusResult(uint64(i))
+		if _, ok := cache.lruConsensusResults.Get(consensusResult.Seq); !ok {
 			t.Fatalf("can't find new vote result")
 		}
 	}

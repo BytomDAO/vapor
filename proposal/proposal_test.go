@@ -1,57 +1,48 @@
 package proposal
 
 import (
+	"bytes"
 	"testing"
 
-	"github.com/vapor/consensus"
+	"github.com/vapor/protocol/bc"
 )
 
 func TestCreateCoinbaseTx(t *testing.T) {
-	consensus.ActiveNetParams = consensus.Params{
-		ProducerSubsidys: []consensus.ProducerSubsidy{
-			{BeginBlock: 0, EndBlock: 0, Subsidy: 24},
-			{BeginBlock: 1, EndBlock: 840000, Subsidy: 24},
-			{BeginBlock: 840001, EndBlock: 1680000, Subsidy: 12},
-			{BeginBlock: 1680001, EndBlock: 3360000, Subsidy: 6},
-		},
-	}
-	reductionInterval := uint64(840000)
 	cases := []struct {
-		height  uint64
-		txFee   uint64
-		subsidy uint64
+		desc          string
+		blockHeight   uint64
+		wantArbitrary []byte
+		wantAmount    uint64
 	}{
 		{
-			height:  reductionInterval - 1,
-			txFee:   100000000,
-			subsidy: 24 + 100000000,
+			desc:          "the coinbase block height is reductionInterval",
+			blockHeight:   1,
+			wantArbitrary: []byte{0x00, 0x31},
+			wantAmount:    0,
 		},
 		{
-			height:  reductionInterval,
-			txFee:   2000000000,
-			subsidy: 24 + 2000000000,
-		},
-		{
-			height:  reductionInterval + 1,
-			txFee:   0,
-			subsidy: 12,
-		},
-		{
-			height:  reductionInterval * 2,
-			txFee:   100000000,
-			subsidy: 12 + 100000000,
+			desc:          "the coinbase block height is reductionInterval",
+			blockHeight:   100,
+			wantArbitrary: []byte{0x00, 0x31, 0x30, 0x30},
+			wantAmount:    0,
 		},
 	}
 
-	for index, c := range cases {
-		coinbaseTx, err := createCoinbaseTx(nil, c.txFee, c.height)
+	for i, c := range cases {
+		coinbaseTx, err := createCoinbaseTx(nil, c.blockHeight)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		outputAmount := coinbaseTx.Outputs[0].OutputCommitment().Amount
-		if outputAmount != c.subsidy {
-			t.Fatalf("index:%d,coinbase tx reward dismatch, expected: %d, have: %d", index, c.subsidy, outputAmount)
+		input, _ := coinbaseTx.Entries[coinbaseTx.Tx.InputIDs[0]].(*bc.Coinbase)
+		gotArbitrary := input.Arbitrary
+		if res := bytes.Compare(gotArbitrary, c.wantArbitrary); res != 0 {
+			t.Fatalf("coinbase tx arbitrary dismatch, case: %d, got: %d, want: %d", i, gotArbitrary, c.wantArbitrary)
+		}
+
+		gotAmount := coinbaseTx.Outputs[0].AssetAmount().Amount
+		if gotAmount != c.wantAmount {
+			t.Fatalf("coinbase tx output amount dismatch, case: %d, got: %d, want: %d", i, gotAmount, c.wantAmount)
 		}
 	}
 }
