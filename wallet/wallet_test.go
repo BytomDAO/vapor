@@ -625,8 +625,6 @@ func (store *MockWalletStore) SetWalletInfo(status *StatusInfo) error {
 	return nil
 }
 
-//-------------
-
 type MockAccountStore struct {
 	db    dbm.DB
 	batch dbm.Batch
