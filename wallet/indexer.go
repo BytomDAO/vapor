@@ -41,16 +41,17 @@ func saveExternalAssetDefinition(b *types.Block, store WalletStore) error {
 				if err != nil {
 					return err
 				}
+
 				if assetExist == nil {
 					store.SetAssetDefinition(assetID, cci.AssetDefinition)
 				}
 			}
 		}
 	}
-
 	if err := store.CommitBatch(); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -79,6 +80,7 @@ func (w *Wallet) indexTransactions(b *types.Block, txStatus *bc.TransactionStatu
 		if err := w.store.SetTransaction(b.Height, tx); err != nil {
 			return err
 		}
+
 		w.store.DeleteUnconfirmedTransaction(tx.ID.String())
 	}
 
@@ -104,7 +106,6 @@ transactionLoop:
 		for _, v := range tx.Outputs {
 			var hash [32]byte
 			sha3pool.Sum256(hash[:], v.ControlProgram())
-
 			_, err := w.AccountMgr.GetControlProgram(bc.NewHash(hash))
 			if err != nil {
 				log.WithFields(log.Fields{"module": logModule, "err": err, "hash": string(hash[:])}).Error("filterAccountTxs fail.")
@@ -149,6 +150,7 @@ func (w *Wallet) getAccountTxByTxID(txID string) (*query.AnnotatedTx, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 	return annotatedTx, nil
 }
