@@ -22,6 +22,7 @@ type Storage interface {
 	ResetParameter()
 	WriteBlocks(peerID string, blocks []*types.Block) error
 	ReadBlock(height uint64) (*blockStore, error)
+	DeleteBlock(height uint64)
 }
 
 type LocalStore interface {
@@ -33,6 +34,7 @@ type LocalStore interface {
 type blockStore struct {
 	block  *types.Block
 	peerID string
+	size   int
 	isRam  bool
 }
 
@@ -61,7 +63,7 @@ func (s *storage) WriteBlocks(peerID string, blocks []*types.Block) error {
 		}
 
 		if len(binaryBlock)+s.actualUsage < maxRamFastSync {
-			s.blocks[block.Height] = &blockStore{block: block, peerID: peerID, isRam: true}
+			s.blocks[block.Height] = &blockStore{block: block, peerID: peerID, size: len(binaryBlock), isRam: true}
 			s.actualUsage += len(binaryBlock)
 			continue
 		}
@@ -96,6 +98,22 @@ func (s *storage) ReadBlock(height uint64) (*blockStore, error) {
 
 	blockStore.block = block
 	return blockStore, nil
+}
+
+// DeleteBlock delete blocks in memory
+func (s *storage) DeleteBlock(height uint64) {
+	s.mux.RLock()
+	defer s.mux.RUnlock()
+
+	blockStore, ok := s.blocks[height]
+	if !ok {
+		return
+	}
+
+	if blockStore.isRam {
+		s.actualUsage -= blockStore.size
+		delete(s.blocks, height)
+	}
 }
 
 func (s *storage) ResetParameter() {

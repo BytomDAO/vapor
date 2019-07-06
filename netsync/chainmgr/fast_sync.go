@@ -1,7 +1,6 @@
 package chainmgr
 
 import (
-	"math/rand"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -27,7 +26,7 @@ type fastSync struct {
 	msgFetcher        MsgFetcher
 	blockProcessor    BlockProcessor
 	peers             *peers.PeerSet
-	syncPeer          *peers.Peer
+	mainSyncPeer      *peers.Peer
 	stopHeader        *types.BlockHeader
 	length            uint64
 	blockFetchTasks   []*fetchBlocksWork
@@ -37,13 +36,13 @@ type fastSync struct {
 	quite             chan struct{}
 }
 
-func newFastSync(chain Chain, msgFether MsgFetcher, storage Storage, peers *peers.PeerSet) *fastSync {
+func newFastSync(chain Chain, msgFetcher MsgFetcher, storage Storage, peers *peers.PeerSet) *fastSync {
 	downloadedBlockCh := make(chan *downloadedBlock, maxFastSyncBlocksNum)
 
 	return &fastSync{
 		chain:             chain,
 		blockProcessor:    newBlockProcessor(chain, storage, peers, downloadedBlockCh),
-		msgFetcher:        msgFether,
+		msgFetcher:        msgFetcher,
 		peers:             peers,
 		blockFetchTasks:   make([]*fetchBlocksWork, 0),
 		downloadedBlockCh: downloadedBlockCh,
@@ -84,11 +83,11 @@ func (fs *fastSync) blockLocator() []*bc.Hash {
 }
 
 // createFetchBlocksTasks get the skeleton and assign tasks according to the skeleton.
-func (fs *fastSync) createFetchBlocksTasks() ([]string, error) {
+func (fs *fastSync) createFetchBlocksTasks() error {
 	// skeleton is a batch of block headers separated by maxBlocksPerMsg distance.
-	syncPeers, skeleton, err := fs.createSkeleton()
+	skeleton, err := fs.createSkeleton()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// low height block has high download priority
@@ -96,53 +95,50 @@ func (fs *fastSync) createFetchBlocksTasks() ([]string, error) {
 		fs.blockFetchTasks = append(fs.blockFetchTasks, &fetchBlocksWork{index: i, startHeader: skeleton[i], stopHeader: skeleton[i+1]})
 	}
 
-	return syncPeers, nil
+	return nil
 }
 
 func (fs *fastSync) process() error {
-	num := rand.Int()
-	log.WithFields(log.Fields{"module": logModule, "num": num, "height": fs.chain.BestBlockHeight()}).Info("fast sync start")
-	fs.resetParameter()
 	if err := fs.findSyncRange(); err != nil {
 		return err
 	}
 
-	syncPeers, err := fs.createFetchBlocksTasks()
-	if err != nil {
+	if err := fs.createFetchBlocksTasks(); err != nil {
 		return err
 	}
 
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go fs.msgFetcher.parallelFetchBlocks(syncPeers, fs.blockFetchTasks, fs.downloadedBlockCh, fs.downloadResult, fs.processResult, &wg, num)
-	go fs.blockProcessor.process(fs.downloadResult, fs.processResult, &wg, num)
+	go fs.msgFetcher.parallelFetchBlocks(fs.blockFetchTasks, fs.downloadedBlockCh, fs.downloadResult, fs.processResult, &wg)
+	go fs.blockProcessor.process(fs.downloadResult, fs.processResult, &wg)
 	wg.Wait()
-	log.WithFields(log.Fields{"module": logModule, "num": num, "height": fs.chain.BestBlockHeight()}).Info("fast sync complete")
+	log.WithFields(log.Fields{"module": logModule, "height": fs.chain.BestBlockHeight()}).Info("fast sync complete")
+	fs.resetParameter()
 	return nil
 }
 
 // createSkeleton
-func (fs *fastSync) createSkeleton() ([]string, []*types.BlockHeader, error) {
+func (fs *fastSync) createSkeleton() ([]*types.BlockHeader, error) {
 	// Find peers that meet the height requirements.
 	peers := fs.peers.GetPeersByHeight(fs.stopHeader.Height + fastSyncPivotGap)
 	if len(peers) == 0 {
-		return nil, nil, errNoSyncPeer
+		return nil, errNoSyncPeer
 	}
 
 	// parallel fetch the skeleton from peers.
 	stopHash := fs.stopHeader.Hash()
 	skeletonMap, err := fs.msgFetcher.parallelFetchHeaders(peers, fs.blockLocator(), &stopHash, maxBlocksPerMsg-1)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	mainSkeleton, ok := skeletonMap[fs.syncPeer.ID()]
+	mainSkeleton, ok := skeletonMap[fs.mainSyncPeer.ID()]
 	if !ok || len(mainSkeleton) == 0 {
-		return nil, nil, errors.New("No main skeleton found")
+		return nil, errors.New("No main skeleton found")
 	}
 
-	syncPeers := []string{fs.syncPeer.ID()}
-	delete(skeletonMap, fs.syncPeer.ID())
+	fs.msgFetcher.addSyncPeer(fs.mainSyncPeer.ID())
+	delete(skeletonMap, fs.mainSyncPeer.ID())
 	for peerID, skeleton := range skeletonMap {
 		if len(skeleton) != len(mainSkeleton) {
 			log.WithFields(log.Fields{"module": logModule, "main skeleton": len(mainSkeleton), "got skeleton": len(skeleton)}).Warn("different skeleton length")
@@ -155,23 +151,22 @@ func (fs *fastSync) createSkeleton() ([]string, []*types.BlockHeader, error) {
 				continue
 			}
 		}
-
-		syncPeers = append(syncPeers, peerID)
+		fs.msgFetcher.addSyncPeer(peerID)
 	}
 
-	return syncPeers, mainSkeleton, nil
+	return mainSkeleton, nil
 }
 
 // findSyncRange find the start and end of this sync.
 // sync length cannot be greater than maxFastSyncBlocksNum.
 func (fs *fastSync) findSyncRange() error {
 	bestHeight := fs.chain.BestBlockHeight()
-	fs.length = fs.syncPeer.IrreversibleHeight() - fastSyncPivotGap - bestHeight
+	fs.length = fs.mainSyncPeer.IrreversibleHeight() - fastSyncPivotGap - bestHeight
 	if fs.length > maxFastSyncBlocksNum {
 		fs.length = maxFastSyncBlocksNum
 	}
 
-	stopBlock, err := fs.msgFetcher.requireBlock(fs.syncPeer.ID(), bestHeight+fs.length)
+	stopBlock, err := fs.msgFetcher.requireBlock(fs.mainSyncPeer.ID(), bestHeight+fs.length)
 	if err != nil {
 		return err
 	}
@@ -238,6 +233,7 @@ func (fs *fastSync) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, skip ui
 }
 
 func (fs *fastSync) resetParameter() {
+	//fs.syncPeers = newFastSyncPeers()
 	fs.blockFetchTasks = make([]*fetchBlocksWork, 0)
 	for _, ch := range []chan bool{fs.downloadResult, fs.processResult} {
 		select {
@@ -255,7 +251,7 @@ func (fs *fastSync) resetParameter() {
 }
 
 func (fs *fastSync) setSyncPeer(peer *peers.Peer) {
-	fs.syncPeer = peer
+	fs.mainSyncPeer = peer
 }
 
 func (fs *fastSync) verifyBlocks(blocks []*types.Block) error {

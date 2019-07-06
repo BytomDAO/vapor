@@ -11,7 +11,7 @@ import (
 )
 
 type BlockProcessor interface {
-	process(chan bool, chan bool, *sync.WaitGroup, int)
+	process(chan bool, chan bool, *sync.WaitGroup)
 	resetParameter()
 }
 
@@ -39,7 +39,7 @@ func newBlockProcessor(chain Chain, storage Storage, peers *peers.PeerSet, downl
 	}
 }
 
-func (bp *blockProcessor) add(download *downloadedBlock, num int) {
+func (bp *blockProcessor) add(download *downloadedBlock) {
 	for i := download.startHeight; i <= download.stopHeight; i++ {
 		bp.queue.Push(i, -float32(i))
 	}
@@ -57,10 +57,11 @@ func (bp *blockProcessor) insert(height uint64) error {
 		return err
 	}
 
+	bp.storage.DeleteBlock(height)
 	return nil
 }
 
-func (bp *blockProcessor) process(downloadComplete chan bool, ProcessComplete chan bool, wg *sync.WaitGroup, num int) {
+func (bp *blockProcessor) process(downloadComplete chan bool, ProcessComplete chan bool, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	for {
@@ -80,9 +81,9 @@ func (bp *blockProcessor) process(downloadComplete chan bool, ProcessComplete ch
 
 		select {
 		case blocks := <-bp.downloadedBlockCh:
-			bp.add(blocks, num)
+			bp.add(blocks)
 			for len(bp.downloadedBlockCh) > 0 {
-				bp.add(<-bp.downloadedBlockCh, num)
+				bp.add(<-bp.downloadedBlockCh)
 			}
 
 		case <-downloadComplete:

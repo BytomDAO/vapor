@@ -76,7 +76,6 @@ type Peer struct {
 	BasePeer
 	mtx                sync.RWMutex
 	services           consensus.ServiceFlag
-	isBusy             bool
 	bestHeight         uint64
 	bestHash           *bc.Hash
 	irreversibleHeight uint64
@@ -213,13 +212,6 @@ func (p *Peer) isRelatedTx(tx *types.Tx) bool {
 
 func (p *Peer) isSPVNode() bool {
 	return !p.services.IsEnable(consensus.SFFullNode)
-}
-
-func (p *Peer) busy() bool {
-	p.mtx.RLock()
-	defer p.mtx.RUnlock()
-
-	return p.isBusy
 }
 
 func (p *Peer) MarkBlock(hash *bc.Hash) {
@@ -388,26 +380,12 @@ func (p *Peer) SendStatus(bestHeader, irreversibleHeader *types.BlockHeader) err
 	return nil
 }
 
-func (p *Peer) SetBusy() {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-
-	p.isBusy = true
-}
-
 func (p *Peer) SetBestStatus(bestHeight uint64, bestHash *bc.Hash) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
 	p.bestHeight = bestHeight
 	p.bestHash = bestHash
-}
-
-func (p *Peer) SetIdle() {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-
-	p.isBusy = false
 }
 
 func (p *Peer) SetIrreversibleStatus(irreversibleHeight uint64, irreversibleHash *bc.Hash) {
@@ -698,36 +676,4 @@ func (ps *PeerSet) Size() int {
 	ps.mtx.RUnlock()
 
 	return len(ps.peers)
-}
-
-func (ps *PeerSet) SelectPeer(targetPeers []string, syncHeight uint64) (string, error) {
-	ps.mtx.RLock()
-	ps.mtx.RUnlock()
-
-	for _, peerID := range targetPeers {
-		peer := ps.GetPeer(peerID)
-		if peer == nil {
-			continue
-		}
-
-		if peer.busy() {
-			continue
-		}
-
-		if peer.Height() >= syncHeight {
-			peer.SetBusy()
-			return peer.ID(), nil
-		}
-
-	}
-	return "", ErrNoValidPeer
-}
-
-func (ps *PeerSet) SetIdle(peerID string) {
-	peer := ps.GetPeer(peerID)
-	if peer == nil {
-		return
-	}
-
-	peer.SetIdle()
 }
