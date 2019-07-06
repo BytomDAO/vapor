@@ -57,17 +57,8 @@ func (store *AccountStore) DeleteAccount(account *acc.Account) error {
 	store.deleteAccountUTXOs(account.ID, batch)
 
 	// delete account control program
-	cps, err := store.ListControlPrograms()
-	if err != nil {
+	if err := store.deleteAccountControlPrograms(account.ID, batch); err != nil {
 		return err
-	}
-
-	var hash [32]byte
-	for _, cp := range cps {
-		if cp.AccountID == account.ID {
-			sha3pool.Sum256(hash[:], cp.ControlProgram)
-			batch.Delete(ContractKey(bc.NewHash(hash)))
-		}
 	}
 
 	// delete bip44 contract index
@@ -102,6 +93,23 @@ func (store *AccountStore) deleteAccountUTXOs(accountID string, batch dbm.Batch)
 		}
 	}
 
+	return nil
+}
+
+// deleteAccountControlPrograms deletes account control program
+func (store *AccountStore) deleteAccountControlPrograms(accountID string, batch dbm.Batch) error {
+	cps, err := store.ListControlPrograms()
+	if err != nil {
+		return err
+	}
+
+	var hash [32]byte
+	for _, cp := range cps {
+		if cp.AccountID == accountID {
+			sha3pool.Sum256(hash[:], cp.ControlProgram)
+			batch.Delete(ContractKey(bc.NewHash(hash)))
+		}
+	}
 	return nil
 }
 
