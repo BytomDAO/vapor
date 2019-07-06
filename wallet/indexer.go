@@ -120,8 +120,7 @@ transactionLoop:
 				log.WithFields(log.Fields{"module": logModule, "err": err, "outputID": outid.String()}).Error("filterAccountTxs fail.")
 				continue
 			}
-			_, err = w.store.GetStandardUTXO(outid)
-			if err != nil {
+			if _, err = w.store.GetStandardUTXO(outid); err != nil {
 				log.WithFields(log.Fields{"module": logModule, "err": err, "outputID": outid.String()}).Error("filterAccountTxs fail.")
 				continue
 			}
