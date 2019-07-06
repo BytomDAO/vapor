@@ -2,6 +2,7 @@ package database
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -339,8 +340,18 @@ func (store *WalletStore) GetWalletInfo() (*wallet.StatusInfo, error) {
 }
 
 // ListAccountUTXOs get all account unspent outputs
-func (store *WalletStore) ListAccountUTXOs(key string) ([]*acc.UTXO, error) {
-	accountUtxoIter := store.db.IteratorPrefix([]byte(key))
+func (store *WalletStore) ListAccountUTXOs(id string, isSmartContract bool) ([]*acc.UTXO, error) {
+	prefix := dbm.UTXOPrefix
+	if isSmartContract {
+		prefix = dbm.SUTXOPrefix
+	}
+
+	idBytes, err := hex.DecodeString(id)
+	if err != nil {
+		return nil, err
+	}
+
+	accountUtxoIter := store.db.IteratorPrefix(append(prefix, idBytes...))
 	defer accountUtxoIter.Release()
 
 	confirmedUTXOs := []*acc.UTXO{}

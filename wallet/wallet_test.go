@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -464,8 +465,18 @@ func (store *MockWalletStore) GetWalletInfo() (*StatusInfo, error) {
 }
 
 // ListAccountUTXOs get all account unspent outputs
-func (store *MockWalletStore) ListAccountUTXOs(key string) ([]*acc.UTXO, error) {
-	accountUtxoIter := store.db.IteratorPrefix([]byte(key))
+func (store *MockWalletStore) ListAccountUTXOs(id string, isSmartContract bool) ([]*acc.UTXO, error) {
+	prefix := dbm.UTXOPrefix
+	if isSmartContract {
+		prefix = dbm.SUTXOPrefix
+	}
+
+	idBytes, err := hex.DecodeString(id)
+	if err != nil {
+		return nil, err
+	}
+
+	accountUtxoIter := store.db.IteratorPrefix(append(prefix, idBytes...))
 	defer accountUtxoIter.Release()
 
 	confirmedUTXOs := []*acc.UTXO{}
@@ -474,6 +485,7 @@ func (store *MockWalletStore) ListAccountUTXOs(key string) ([]*acc.UTXO, error) 
 		if err := json.Unmarshal(accountUtxoIter.Value(), utxo); err != nil {
 			return nil, err
 		}
+
 		confirmedUTXOs = append(confirmedUTXOs, utxo)
 	}
 	return confirmedUTXOs, nil

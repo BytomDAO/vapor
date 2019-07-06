@@ -1,36 +1,24 @@
 package wallet
 
 import (
-	"encoding/hex"
-
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/account"
 	"github.com/vapor/consensus"
 	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/crypto/sha3pool"
-	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
 
 // GetAccountUtxos return all account unspent outputs
 func (w *Wallet) GetAccountUtxos(accountID string, id string, unconfirmed, isSmartContract bool, vote bool) []*account.UTXO {
-	prefix := dbm.UTXOPrefix
-	if isSmartContract {
-		prefix = dbm.SUTXOPrefix
-	}
-
 	accountUtxos := []*account.UTXO{}
 	if unconfirmed {
 		accountUtxos = w.AccountMgr.ListUnconfirmedUtxo(accountID, isSmartContract)
 	}
-	idBytes, err := hex.DecodeString(id)
-	if err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("GetAccountUtxos fail.")
-	}
 
-	confirmedUTXOs, err := w.store.ListAccountUTXOs(string(append(prefix, idBytes...)))
+	confirmedUTXOs, err := w.store.ListAccountUTXOs(id, isSmartContract)
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("GetAccountUtxos fail.")
 	}

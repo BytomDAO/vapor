@@ -24,7 +24,7 @@ type WalletStore interface {
 	GetUnconfirmedTransaction(string) (*query.AnnotatedTx, error)
 	GetRecoveryStatus() (*RecoveryState, error)
 	GetWalletInfo() (*StatusInfo, error)
-	ListAccountUTXOs(string) ([]*acc.UTXO, error)
+	ListAccountUTXOs(string, bool) ([]*acc.UTXO, error)
 	ListTransactions(string, string, uint, bool) ([]*query.AnnotatedTx, error)
 	ListUnconfirmedTransactions() ([]*query.AnnotatedTx, error)
 	SetAssetDefinition(*bc.AssetID, []byte)
