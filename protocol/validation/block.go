@@ -49,14 +49,13 @@ func checkCoinbaseTx(b *bc.Block, rewards []state.CoinbaseReward) error {
 
 	rewards = append([]state.CoinbaseReward{state.CoinbaseReward{Amount: uint64(0)}}, rewards...)
 	for i, output := range tx.TxHeader.ResultIds {
-		e, ok := tx.Entries[*output].(*bc.IntraChainOutput)
-		if !ok {
-			return errors.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", output.Bytes(), output)
+		out, err := tx.IntraChainOutput(*output)
+		if err != nil {
+			return err
 		}
-		coinbaseAmount := e.Source.Value.Amount
 
-		if rewards[i].Amount != coinbaseAmount {
-			return errors.Wrapf(ErrWrongCoinbaseTransaction, "dismatch output amount, got:%d, want:%d", coinbaseAmount, rewards[i].Amount)
+		if rewards[i].Amount != out.Source.Value.Amount {
+			return errors.Wrapf(ErrWrongCoinbaseTransaction, "dismatch output amount, got:%d, want:%d", out.Source.Value.Amount, rewards[i].Amount)
 		}
 	}
 	return nil

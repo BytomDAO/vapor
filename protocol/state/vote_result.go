@@ -70,9 +70,8 @@ func (a SortByAmount) Less(i, j int) bool { return a[i].Amount < a[j].Amount }
 func CalCoinbaseReward(block *types.Block) (*CoinbaseReward, error) {
 	var coinbaseReceiver []byte
 	if len(block.Transactions) > 0 && len(block.Transactions[0].InputIDs) > 0 && len(block.Transactions[0].Outputs) > 0 {
-		coinbaseTx := block.Transactions[0]
-		if _, ok := coinbaseTx.Entries[coinbaseTx.InputIDs[0]].(*bc.Coinbase); ok {
-			coinbaseReceiver = coinbaseTx.Outputs[0].ControlProgram()
+		if block.Transactions[0].Inputs[0].InputType() == types.CoinbaseInputType {
+			coinbaseReceiver = block.Transactions[0].Outputs[0].ControlProgram()
 		}
 	}
 
