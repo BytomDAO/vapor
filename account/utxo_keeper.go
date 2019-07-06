@@ -213,6 +213,7 @@ func (uk *utxoKeeper) findUtxos(accountID string, assetID *bc.AssetID, useUnconf
 		if u.AccountID != accountID || u.AssetID != *assetID || !bytes.Equal(u.Vote, vote) {
 			return
 		}
+
 		if u.ValidHeight > currentHeight {
 			immatureAmount += u.Amount
 		} else {

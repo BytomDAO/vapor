@@ -173,6 +173,7 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string, deriveR
 	if currentIndex := m.store.GetAccountIndex(xpubs); currentIndex != 0 {
 		acctIndex = currentIndex + 1
 	}
+
 	account, err := CreateAccount(xpubs, quorum, alias, acctIndex, deriveRule)
 	if err != nil {
 		return nil, err
@@ -217,6 +218,7 @@ func (m *Manager) UpdateAccountAlias(accountID string, newAlias string) error {
 	if err := m.store.DeleteAccount(&oldAccount); err != nil {
 		return err
 	}
+
 	if err := m.store.SetAccount(account); err != nil {
 		return err
 	}
@@ -443,6 +445,7 @@ func (m *Manager) GetMiningAddress() (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return cp.Address, nil
 }
 
@@ -494,10 +497,10 @@ func (m *Manager) SetMiningAddress(miningAddress string) (string, error) {
 		Address:        miningAddress,
 		ControlProgram: program,
 	}
-
 	if err := m.store.SetMiningAddress(cp); err != nil {
 		return cp.Address, err
 	}
+
 	return m.GetMiningAddress()
 }
 
@@ -517,9 +520,11 @@ func CreateCtrlProgram(account *Account, addrIdx uint64, change bool) (cp *CtrlP
 	} else {
 		cp, err = createP2SH(account, path)
 	}
+
 	if err != nil {
 		return nil, err
 	}
+
 	cp.KeyIndex, cp.Change = addrIdx, change
 	return cp, nil
 }
@@ -553,8 +558,8 @@ func createP2SH(account *Account, path [][]byte) (*CtrlProgram, error) {
 	if err != nil {
 		return nil, err
 	}
-	scriptHash := crypto.Sha256(signScript)
 
+	scriptHash := crypto.Sha256(signScript)
 	address, err := common.NewAddressWitnessScriptHash(scriptHash, &consensus.ActiveNetParams)
 	if err != nil {
 		return nil, err
@@ -591,6 +596,7 @@ func (m *Manager) getProgramByAddress(address string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	redeemContract := addr.ScriptAddress()
 	program := []byte{}
 	switch addr.(type) {
@@ -604,6 +610,7 @@ func (m *Manager) getProgramByAddress(address string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return program, nil
 }
 
@@ -619,9 +626,11 @@ func (m *Manager) saveControlProgram(prog *CtrlProgram, updateIndex bool) error 
 	if err := m.store.InitBatch(); err != nil {
 		return err
 	}
+
 	if err := m.store.SetControlProgram(bc.NewHash(hash), prog); err != nil {
 		return nil
 	}
+
 	if updateIndex {
 		switch acct.DeriveRule {
 		case signers.BIP0032:

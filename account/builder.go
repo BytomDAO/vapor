@@ -166,6 +166,7 @@ func SpendAccountChain(ctx context.Context, builder *txbuilder.TemplateBuilder, 
 	if !ok {
 		return nil, errors.New("fail to convert the spend action")
 	}
+
 	if *act.AssetId != *consensus.BTMAssetID {
 		return nil, errors.New("spend chain action only support BTM")
 	}
@@ -324,6 +325,7 @@ func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.S
 	if err != nil {
 		return nil, nil, err
 	}
+
 	if u.Address == "" {
 		sigInst.AddWitnessKeys(signer.XPubs, path, signer.Quorum)
 		return txInput, sigInst, nil
