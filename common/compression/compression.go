@@ -1,5 +1,7 @@
 package compression
 
+import "fmt"
+
 // Compression is intterface
 type Compression interface {
 	CompressBytes(data []byte) []byte
@@ -23,5 +25,10 @@ func registerCompressionCreator(backend string, creator compressionCreator, forc
 }
 
 func NewCompression(backend string) Compression {
-	return backends[backend]()
+	compression, ok := backends[backend]
+	if !ok {
+		panic(fmt.Sprintf("Cannot find compression algorithm:[%s]", backend))
+
+	}
+	return compression()
 }

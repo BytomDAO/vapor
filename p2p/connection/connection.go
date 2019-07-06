@@ -196,9 +196,9 @@ func (c *MConnection) Send(chID byte, msg interface{}) bool {
 		return false
 	}
 
-	decode := c.compression.CompressBytes(wire.BinaryBytes(msg))
+	compressData := c.compression.CompressBytes(wire.BinaryBytes(msg))
 
-	if !channel.sendBytes(decode) {
+	if !channel.sendBytes(compressData) {
 		log.WithFields(log.Fields{"module": logModule, "chID": chID, "conn": c, "msg": msg}).Error("MConnection send failed")
 		return false
 	}
