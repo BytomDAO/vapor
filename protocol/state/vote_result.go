@@ -69,10 +69,8 @@ func (a SortByAmount) Less(i, j int) bool { return a[i].Amount < a[j].Amount }
 // CalCoinbaseReward calculate the coinbase reward for block
 func CalCoinbaseReward(block *types.Block) (*CoinbaseReward, error) {
 	var coinbaseReceiver []byte
-	if len(block.Transactions) > 0 && len(block.Transactions[0].InputIDs) > 0 && len(block.Transactions[0].Outputs) > 0 {
-		if block.Transactions[0].Inputs[0].InputType() == types.CoinbaseInputType {
-			coinbaseReceiver = block.Transactions[0].Outputs[0].ControlProgram()
-		}
+	if len(block.Transactions) > 0 && len(block.Transactions[0].Outputs) > 0 {
+		coinbaseReceiver = block.Transactions[0].Outputs[0].ControlProgram()
 	}
 
 	if coinbaseReceiver == nil {
@@ -271,9 +269,8 @@ func (c *ConsensusResult) AttachCoinbaseReward(block *types.Block) error {
 // DetachCoinbaseReward detach coinbase reward
 func (c *ConsensusResult) DetachCoinbaseReward(block *types.Block) error {
 	if block.Height%consensus.RoundVoteBlockNums == 0 {
-		c.CoinbaseReward = map[string]uint64{}
 		for i, output := range block.Transactions[0].Outputs {
-			if i == 0 && output.AssetAmount().Amount == 0 {
+			if i == 0 {
 				continue
 			}
 			program := output.ControlProgram()
