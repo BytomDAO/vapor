@@ -23,13 +23,11 @@ import (
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/crypto/sha3pool"
 	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/database/storage"
 	"github.com/vapor/errors"
 	"github.com/vapor/event"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/state"
 )
 
 func TestEncodeDecodeGlobalTxIndex(t *testing.T) {
@@ -160,58 +158,6 @@ func mockSingleBlock(tx *types.Tx) *types.Block {
 		},
 		Transactions: []*types.Tx{config.GenesisTx(), tx},
 	}
-}
-
-type mockStore struct {
-	db dbm.DB
-	// cache cache
-}
-
-func newMockStore(db dbm.DB) *mockStore {
-	return &mockStore{
-		db: db,
-	}
-}
-
-func (s *mockStore) BlockExist(hash *bc.Hash) bool                                { return false }
-func (s *mockStore) GetBlock(*bc.Hash) (*types.Block, error)                      { return nil, nil }
-func (s *mockStore) GetBlockHeader(*bc.Hash) (*types.BlockHeader, error)          { return nil, nil }
-func (s *mockStore) GetStoreStatus() *protocol.BlockStoreState                    { return nil }
-func (s *mockStore) GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error) { return nil, nil }
-func (s *mockStore) GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error     { return nil }
-func (s *mockStore) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)                 { return nil, nil }
-func (s *mockStore) GetVoteResult(uint64) (*state.VoteResult, error)              { return nil, nil }
-func (s *mockStore) GetMainChainHash(uint64) (*bc.Hash, error)                    { return nil, nil }
-func (s *mockStore) GetBlockHashesByHeight(uint64) ([]*bc.Hash, error)            { return nil, nil }
-func (s *mockStore) SaveBlock(*types.Block, *bc.TransactionStatus) error          { return nil }
-func (s *mockStore) SaveBlockHeader(*types.BlockHeader) error                     { return nil }
-func (s *mockStore) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, []*state.VoteResult) error {
-	return nil
-}
-
-type mStore struct {
-	blockHeaders map[bc.Hash]*types.BlockHeader
-}
-
-func (s *mStore) BlockExist(hash *bc.Hash) bool           { return false }
-func (s *mStore) GetBlock(*bc.Hash) (*types.Block, error) { return nil, nil }
-func (s *mStore) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
-	return s.blockHeaders[*hash], nil
-}
-func (s *mStore) GetStoreStatus() *protocol.BlockStoreState                    { return nil }
-func (s *mStore) GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error) { return nil, nil }
-func (s *mStore) GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error     { return nil }
-func (s *mStore) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)                 { return nil, nil }
-func (s *mStore) GetVoteResult(uint64) (*state.VoteResult, error)              { return nil, nil }
-func (s *mStore) GetMainChainHash(uint64) (*bc.Hash, error)                    { return nil, nil }
-func (s *mStore) GetBlockHashesByHeight(uint64) ([]*bc.Hash, error)            { return nil, nil }
-func (s *mStore) SaveBlock(*types.Block, *bc.TransactionStatus) error          { return nil }
-func (s *mStore) SaveBlockHeader(blockHeader *types.BlockHeader) error {
-	s.blockHeaders[blockHeader.Hash()] = blockHeader
-	return nil
-}
-func (s *mStore) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, []*state.VoteResult) error {
-	return nil
 }
 
 //---------------------
