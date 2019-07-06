@@ -630,15 +630,15 @@ func (store *MockWalletStore) SetWalletInfo(status *StatusInfo) error {
 //-------------
 
 type MockAccountStore struct {
-	accountDB dbm.DB
-	batch     dbm.Batch
+	db    dbm.DB
+	batch dbm.Batch
 }
 
 // NewAccountStore create new MockAccountStore.
 func NewMockAccountStore(db dbm.DB) *MockAccountStore {
 	return &MockAccountStore{
-		accountDB: db,
-		batch:     nil,
+		db:    db,
+		batch: nil,
 	}
 }
 
@@ -647,7 +647,7 @@ func (store *MockAccountStore) InitBatch() error {
 	if store.batch != nil {
 		return errors.New("MockAccountStore initail fail, store batch is not nil.")
 	}
-	store.batch = store.accountDB.NewBatch()
+	store.batch = store.db.NewBatch()
 	return nil
 }
 
@@ -663,7 +663,7 @@ func (store *MockAccountStore) CommitBatch() error {
 
 // DeleteAccount set account account ID, account alias and raw account.
 func (store *MockAccountStore) DeleteAccount(account *acc.Account) error {
-	batch := store.accountDB.NewBatch()
+	batch := store.db.NewBatch()
 	if store.batch != nil {
 		batch = store.batch
 	}
@@ -702,12 +702,12 @@ func (store *MockAccountStore) DeleteAccount(account *acc.Account) error {
 
 // deleteAccountUTXOs delete account utxos by accountID
 func (store *MockAccountStore) deleteAccountUTXOs(accountID string) error {
-	batch := store.accountDB.NewBatch()
+	batch := store.db.NewBatch()
 	if store.batch != nil {
 		batch = store.batch
 	}
 
-	accountUtxoIter := store.accountDB.IteratorPrefix([]byte(dbm.UTXOPrefix))
+	accountUtxoIter := store.db.IteratorPrefix([]byte(dbm.UTXOPrefix))
 	defer accountUtxoIter.Release()
 
 	for accountUtxoIter.Next() {
@@ -729,7 +729,7 @@ func (store *MockAccountStore) deleteAccountUTXOs(accountID string) error {
 // DeleteStandardUTXO delete utxo by outpu id
 func (store *MockAccountStore) DeleteStandardUTXO(outputID bc.Hash) {
 	if store.batch == nil {
-		store.accountDB.Delete(StandardUTXOKey(outputID))
+		store.db.Delete(StandardUTXOKey(outputID))
 	} else {
 		store.batch.Delete(StandardUTXOKey(outputID))
 	}
@@ -737,7 +737,7 @@ func (store *MockAccountStore) DeleteStandardUTXO(outputID bc.Hash) {
 
 // GetAccountByAlias get account by account alias
 func (store *MockAccountStore) GetAccountByAlias(accountAlias string) (*acc.Account, error) {
-	accountID := store.accountDB.Get(accountAliasKey(accountAlias))
+	accountID := store.db.Get(accountAliasKey(accountAlias))
 	if accountID == nil {
 		return nil, acc.ErrFindAccount
 	}
@@ -746,7 +746,7 @@ func (store *MockAccountStore) GetAccountByAlias(accountAlias string) (*acc.Acco
 
 // GetAccountByID get account by accountID
 func (store *MockAccountStore) GetAccountByID(accountID string) (*acc.Account, error) {
-	rawAccount := store.accountDB.Get(AccountIDKey(accountID))
+	rawAccount := store.db.Get(AccountIDKey(accountID))
 	if rawAccount == nil {
 		return nil, acc.ErrFindAccount
 	}
@@ -760,7 +760,7 @@ func (store *MockAccountStore) GetAccountByID(accountID string) (*acc.Account, e
 // GetAccountIndex get account index by account xpubs
 func (store *MockAccountStore) GetAccountIndex(xpubs []chainkd.XPub) uint64 {
 	currentIndex := uint64(0)
-	if rawIndexBytes := store.accountDB.Get(accountIndexKey(xpubs)); rawIndexBytes != nil {
+	if rawIndexBytes := store.db.Get(accountIndexKey(xpubs)); rawIndexBytes != nil {
 		currentIndex = common.BytesToUnit64(rawIndexBytes)
 	}
 	return currentIndex
@@ -769,7 +769,7 @@ func (store *MockAccountStore) GetAccountIndex(xpubs []chainkd.XPub) uint64 {
 // GetBip44ContractIndex get bip44 contract index
 func (store *MockAccountStore) GetBip44ContractIndex(accountID string, change bool) uint64 {
 	index := uint64(0)
-	if rawIndexBytes := store.accountDB.Get(Bip44ContractIndexKey(accountID, change)); rawIndexBytes != nil {
+	if rawIndexBytes := store.db.Get(Bip44ContractIndexKey(accountID, change)); rawIndexBytes != nil {
 		index = common.BytesToUnit64(rawIndexBytes)
 	}
 	return index
@@ -777,13 +777,13 @@ func (store *MockAccountStore) GetBip44ContractIndex(accountID string, change bo
 
 // GetCoinbaseArbitrary get coinbase arbitrary
 func (store *MockAccountStore) GetCoinbaseArbitrary() []byte {
-	return store.accountDB.Get([]byte(dbm.CoinbaseAbKey))
+	return store.db.Get([]byte(dbm.CoinbaseAbKey))
 }
 
 // GetContractIndex get contract index
 func (store *MockAccountStore) GetContractIndex(accountID string) uint64 {
 	index := uint64(0)
-	if rawIndexBytes := store.accountDB.Get(contractIndexKey(accountID)); rawIndexBytes != nil {
+	if rawIndexBytes := store.db.Get(contractIndexKey(accountID)); rawIndexBytes != nil {
 		index = common.BytesToUnit64(rawIndexBytes)
 	}
 	return index
@@ -791,7 +791,7 @@ func (store *MockAccountStore) GetContractIndex(accountID string) uint64 {
 
 // GetControlProgram get control program
 func (store *MockAccountStore) GetControlProgram(hash bc.Hash) (*acc.CtrlProgram, error) {
-	rawProgram := store.accountDB.Get(ContractKey(hash))
+	rawProgram := store.db.Get(ContractKey(hash))
 	if rawProgram == nil {
 		return nil, acc.ErrFindCtrlProgram
 	}
@@ -804,7 +804,7 @@ func (store *MockAccountStore) GetControlProgram(hash bc.Hash) (*acc.CtrlProgram
 
 // GetMiningAddress get mining address
 func (store *MockAccountStore) GetMiningAddress() (*acc.CtrlProgram, error) {
-	rawCP := store.accountDB.Get([]byte(dbm.MiningAddressKey))
+	rawCP := store.db.Get([]byte(dbm.MiningAddressKey))
 	if rawCP == nil {
 		return nil, acc.ErrFindMiningAddress
 	}
@@ -818,10 +818,10 @@ func (store *MockAccountStore) GetMiningAddress() (*acc.CtrlProgram, error) {
 // GetUTXO get standard utxo by id
 func (store *MockAccountStore) GetUTXO(outid bc.Hash) (*acc.UTXO, error) {
 	u := new(acc.UTXO)
-	if data := store.accountDB.Get(StandardUTXOKey(outid)); data != nil {
+	if data := store.db.Get(StandardUTXOKey(outid)); data != nil {
 		return u, json.Unmarshal(data, u)
 	}
-	if data := store.accountDB.Get(ContractUTXOKey(outid)); data != nil {
+	if data := store.db.Get(ContractUTXOKey(outid)); data != nil {
 		return u, json.Unmarshal(data, u)
 	}
 	return nil, acc.ErrMatchUTXO
@@ -830,7 +830,7 @@ func (store *MockAccountStore) GetUTXO(outid bc.Hash) (*acc.UTXO, error) {
 // ListAccounts get all accounts which name prfix is id.
 func (store *MockAccountStore) ListAccounts(id string) ([]*acc.Account, error) {
 	accounts := []*acc.Account{}
-	accountIter := store.accountDB.IteratorPrefix(AccountIDKey(strings.TrimSpace(id)))
+	accountIter := store.db.IteratorPrefix(AccountIDKey(strings.TrimSpace(id)))
 	defer accountIter.Release()
 
 	for accountIter.Next() {
@@ -846,7 +846,7 @@ func (store *MockAccountStore) ListAccounts(id string) ([]*acc.Account, error) {
 // ListControlPrograms get all local control programs
 func (store *MockAccountStore) ListControlPrograms() ([]*acc.CtrlProgram, error) {
 	cps := []*acc.CtrlProgram{}
-	cpIter := store.accountDB.IteratorPrefix([]byte(dbm.ContractPrefix))
+	cpIter := store.db.IteratorPrefix([]byte(dbm.ContractPrefix))
 	defer cpIter.Release()
 
 	for cpIter.Next() {
@@ -861,7 +861,7 @@ func (store *MockAccountStore) ListControlPrograms() ([]*acc.CtrlProgram, error)
 
 // ListUTXOs get utxos by accountID
 func (store *MockAccountStore) ListUTXOs() ([]*acc.UTXO, error) {
-	utxoIter := store.accountDB.IteratorPrefix([]byte(dbm.UTXOPrefix))
+	utxoIter := store.db.IteratorPrefix([]byte(dbm.UTXOPrefix))
 	defer utxoIter.Release()
 
 	utxos := []*acc.UTXO{}
@@ -882,7 +882,7 @@ func (store *MockAccountStore) SetAccount(account *acc.Account) error {
 		return acc.ErrMarshalAccount
 	}
 
-	batch := store.accountDB.NewBatch()
+	batch := store.db.NewBatch()
 	if store.batch != nil {
 		batch = store.batch
 	}
@@ -901,7 +901,7 @@ func (store *MockAccountStore) SetAccountIndex(account *acc.Account) {
 	currentIndex := store.GetAccountIndex(account.XPubs)
 	if account.KeyIndex > currentIndex {
 		if store.batch == nil {
-			store.accountDB.Set(accountIndexKey(account.XPubs), common.Unit64ToBytes(account.KeyIndex))
+			store.db.Set(accountIndexKey(account.XPubs), common.Unit64ToBytes(account.KeyIndex))
 		} else {
 			store.batch.Set(accountIndexKey(account.XPubs), common.Unit64ToBytes(account.KeyIndex))
 		}
@@ -911,7 +911,7 @@ func (store *MockAccountStore) SetAccountIndex(account *acc.Account) {
 // SetBip44ContractIndex set contract index
 func (store *MockAccountStore) SetBip44ContractIndex(accountID string, change bool, index uint64) {
 	if store.batch == nil {
-		store.accountDB.Set(Bip44ContractIndexKey(accountID, change), common.Unit64ToBytes(index))
+		store.db.Set(Bip44ContractIndexKey(accountID, change), common.Unit64ToBytes(index))
 	} else {
 		store.batch.Set(Bip44ContractIndexKey(accountID, change), common.Unit64ToBytes(index))
 	}
@@ -920,7 +920,7 @@ func (store *MockAccountStore) SetBip44ContractIndex(accountID string, change bo
 // SetCoinbaseArbitrary set coinbase arbitrary
 func (store *MockAccountStore) SetCoinbaseArbitrary(arbitrary []byte) {
 	if store.batch == nil {
-		store.accountDB.Set([]byte(dbm.CoinbaseAbKey), arbitrary)
+		store.db.Set([]byte(dbm.CoinbaseAbKey), arbitrary)
 	} else {
 		store.batch.Set([]byte(dbm.CoinbaseAbKey), arbitrary)
 	}
@@ -929,7 +929,7 @@ func (store *MockAccountStore) SetCoinbaseArbitrary(arbitrary []byte) {
 // SetContractIndex set contract index
 func (store *MockAccountStore) SetContractIndex(accountID string, index uint64) {
 	if store.batch == nil {
-		store.accountDB.Set(contractIndexKey(accountID), common.Unit64ToBytes(index))
+		store.db.Set(contractIndexKey(accountID), common.Unit64ToBytes(index))
 	} else {
 		store.batch.Set(contractIndexKey(accountID), common.Unit64ToBytes(index))
 	}
@@ -942,7 +942,7 @@ func (store *MockAccountStore) SetControlProgram(hash bc.Hash, program *acc.Ctrl
 		return err
 	}
 	if store.batch == nil {
-		store.accountDB.Set(ContractKey(hash), accountCP)
+		store.db.Set(ContractKey(hash), accountCP)
 	} else {
 		store.batch.Set(ContractKey(hash), accountCP)
 	}
@@ -957,7 +957,7 @@ func (store *MockAccountStore) SetMiningAddress(program *acc.CtrlProgram) error 
 	}
 
 	if store.batch == nil {
-		store.accountDB.Set([]byte(dbm.MiningAddressKey), rawProgram)
+		store.db.Set([]byte(dbm.MiningAddressKey), rawProgram)
 	} else {
 		store.batch.Set([]byte(dbm.MiningAddressKey), rawProgram)
 	}
@@ -971,7 +971,7 @@ func (store *MockAccountStore) SetStandardUTXO(outputID bc.Hash, utxo *acc.UTXO)
 		return err
 	}
 	if store.batch == nil {
-		store.accountDB.Set(StandardUTXOKey(outputID), data)
+		store.db.Set(StandardUTXOKey(outputID), data)
 	} else {
 		store.batch.Set(StandardUTXOKey(outputID), data)
 	}

@@ -1312,15 +1312,15 @@ func checkUtxoKeeperEqual(t *testing.T, i int, a, b *utxoKeeper) {
 }
 
 type mockAccountStore struct {
-	accountDB dbm.DB
-	batch     dbm.Batch
+	db    dbm.DB
+	batch dbm.Batch
 }
 
 // NewAccountStore create new AccountStore.
 func newMockAccountStore(db dbm.DB) *mockAccountStore {
 	return &mockAccountStore{
-		accountDB: db,
-		batch:     nil,
+		db:    db,
+		batch: nil,
 	}
 }
 
@@ -1363,7 +1363,7 @@ func (store *mockAccountStore) SetMiningAddress(*CtrlProgram) error             
 // DeleteStandardUTXO delete utxo by outpu id
 func (store *mockAccountStore) DeleteStandardUTXO(outputID bc.Hash) {
 	if store.batch == nil {
-		store.accountDB.Delete(StandardUTXOKey(outputID))
+		store.db.Delete(StandardUTXOKey(outputID))
 	} else {
 		store.batch.Delete(StandardUTXOKey(outputID))
 	}
@@ -1372,10 +1372,10 @@ func (store *mockAccountStore) DeleteStandardUTXO(outputID bc.Hash) {
 // GetUTXO get standard utxo by id
 func (store *mockAccountStore) GetUTXO(outid bc.Hash) (*UTXO, error) {
 	u := new(UTXO)
-	if data := store.accountDB.Get(StandardUTXOKey(outid)); data != nil {
+	if data := store.db.Get(StandardUTXOKey(outid)); data != nil {
 		return u, json.Unmarshal(data, u)
 	}
-	if data := store.accountDB.Get(ContractUTXOKey(outid)); data != nil {
+	if data := store.db.Get(ContractUTXOKey(outid)); data != nil {
 		return u, json.Unmarshal(data, u)
 	}
 	return nil, ErrMatchUTXO
@@ -1383,7 +1383,7 @@ func (store *mockAccountStore) GetUTXO(outid bc.Hash) (*UTXO, error) {
 
 // ListUTXOs get utxos by accountID
 func (store *mockAccountStore) ListUTXOs() ([]*UTXO, error) {
-	utxoIter := store.accountDB.IteratorPrefix([]byte(UTXOPrefix))
+	utxoIter := store.db.IteratorPrefix([]byte(UTXOPrefix))
 	defer utxoIter.Release()
 
 	utxos := []*UTXO{}
@@ -1404,7 +1404,7 @@ func (store *mockAccountStore) SetStandardUTXO(outputID bc.Hash, utxo *UTXO) err
 		return err
 	}
 	if store.batch == nil {
-		store.accountDB.Set(StandardUTXOKey(outputID), data)
+		store.db.Set(StandardUTXOKey(outputID), data)
 	} else {
 		store.batch.Set(StandardUTXOKey(outputID), data)
 	}
