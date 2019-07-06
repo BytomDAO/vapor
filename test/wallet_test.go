@@ -162,6 +162,7 @@ func TestRescanWallet(t *testing.T) {
 	accountStore := database.NewAccountStore(testDB)
 	accountManager := account.NewManager(accountStore, chain)
 	w := newMockWallet(walletStore, accountManager, nil, chain, dispatcher, false)
+	// w := newMockWallet(walletStore, nil, nil, chain, dispatcher, false)
 	w.Wallet.Status = *walletInfo
 
 	// rescan wallet.
