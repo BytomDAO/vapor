@@ -61,6 +61,7 @@ func (store *AccountStore) DeleteAccount(account *acc.Account) error {
 	if err != nil {
 		return err
 	}
+
 	var hash [32]byte
 	for _, cp := range cps {
 		if cp.AccountID == account.ID {
@@ -100,6 +101,7 @@ func (store *AccountStore) deleteAccountUTXOs(accountID string) error {
 		if err := json.Unmarshal(accountUtxoIter.Value(), accountUtxo); err != nil {
 			return err
 		}
+
 		if accountID == accountUtxo.AccountID {
 			batch.Delete(StandardUTXOKey(accountUtxo.OutputID))
 		}
@@ -135,10 +137,12 @@ func (store *AccountStore) GetAccountByID(accountID string) (*acc.Account, error
 	if rawAccount == nil {
 		return nil, acc.ErrFindAccount
 	}
+
 	account := new(acc.Account)
 	if err := json.Unmarshal(rawAccount, account); err != nil {
 		return nil, err
 	}
+
 	return account, nil
 }
 
@@ -180,10 +184,12 @@ func (store *AccountStore) GetControlProgram(hash bc.Hash) (*acc.CtrlProgram, er
 	if rawProgram == nil {
 		return nil, acc.ErrFindCtrlProgram
 	}
+
 	cp := new(acc.CtrlProgram)
 	if err := json.Unmarshal(rawProgram, cp); err != nil {
 		return nil, err
 	}
+
 	return cp, nil
 }
 
@@ -193,10 +199,12 @@ func (store *AccountStore) GetMiningAddress() (*acc.CtrlProgram, error) {
 	if rawCP == nil {
 		return nil, acc.ErrFindMiningAddress
 	}
+
 	cp := new(acc.CtrlProgram)
 	if err := json.Unmarshal(rawCP, cp); err != nil {
 		return nil, err
 	}
+
 	return cp, nil
 }
 
@@ -206,9 +214,11 @@ func (store *AccountStore) GetUTXO(outid bc.Hash) (*acc.UTXO, error) {
 	if data := store.accountDB.Get(StandardUTXOKey(outid)); data != nil {
 		return u, json.Unmarshal(data, u)
 	}
+
 	if data := store.accountDB.Get(ContractUTXOKey(outid)); data != nil {
 		return u, json.Unmarshal(data, u)
 	}
+
 	return nil, acc.ErrMatchUTXO
 }
 
@@ -223,6 +233,7 @@ func (store *AccountStore) ListAccounts(id string) ([]*acc.Account, error) {
 		if err := json.Unmarshal(accountIter.Value(), &account); err != nil {
 			return nil, err
 		}
+
 		accounts = append(accounts, account)
 	}
 	return accounts, nil
@@ -239,6 +250,7 @@ func (store *AccountStore) ListControlPrograms() ([]*acc.CtrlProgram, error) {
 		if err := json.Unmarshal(cpIter.Value(), cp); err != nil {
 			return nil, err
 		}
+
 		cps = append(cps, cp)
 	}
 	return cps, nil
@@ -255,6 +267,7 @@ func (store *AccountStore) ListUTXOs() ([]*acc.UTXO, error) {
 		if err := json.Unmarshal(utxoIter.Value(), utxo); err != nil {
 			return nil, err
 		}
+
 		utxos = append(utxos, utxo)
 	}
 	return utxos, nil
@@ -355,6 +368,7 @@ func (store *AccountStore) SetStandardUTXO(outputID bc.Hash, utxo *acc.UTXO) err
 	if err != nil {
 		return err
 	}
+
 	if store.batch == nil {
 		store.accountDB.Set(StandardUTXOKey(outputID), data)
 	} else {
