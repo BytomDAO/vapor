@@ -249,15 +249,15 @@ func accountAliasKey(name string) []byte {
 
 // MockWalletStore store wallet using leveldb
 type MockWalletStore struct {
-	walletDB dbm.DB
-	batch    dbm.Batch
+	db    dbm.DB
+	batch dbm.Batch
 }
 
 // NewMockWalletStore create new MockWalletStore struct
 func NewMockWalletStore(db dbm.DB) *MockWalletStore {
 	return &MockWalletStore{
-		walletDB: db,
-		batch:    nil,
+		db:    db,
+		batch: nil,
 	}
 }
 
@@ -266,7 +266,7 @@ func (store *MockWalletStore) InitBatch() error {
 	if store.batch != nil {
 		return errors.New("MockWalletStore initail fail, store batch is not nil.")
 	}
-	store.batch = store.walletDB.NewBatch()
+	store.batch = store.db.NewBatch()
 	return nil
 }
 
@@ -283,7 +283,7 @@ func (store *MockWalletStore) CommitBatch() error {
 // DeleteContractUTXO delete contract utxo by outputID
 func (store *MockWalletStore) DeleteContractUTXO(outputID bc.Hash) {
 	if store.batch == nil {
-		store.walletDB.Delete(ContractUTXOKey(outputID))
+		store.db.Delete(ContractUTXOKey(outputID))
 	} else {
 		store.batch.Delete(ContractUTXOKey(outputID))
 	}
@@ -292,7 +292,7 @@ func (store *MockWalletStore) DeleteContractUTXO(outputID bc.Hash) {
 // DeleteRecoveryStatus delete recovery status
 func (store *MockWalletStore) DeleteRecoveryStatus() {
 	if store.batch == nil {
-		store.walletDB.Delete(dbm.RecoveryKey)
+		store.db.Delete(dbm.RecoveryKey)
 	} else {
 		store.batch.Delete(dbm.RecoveryKey)
 	}
@@ -300,11 +300,11 @@ func (store *MockWalletStore) DeleteRecoveryStatus() {
 
 // DeleteTransactions delete transactions when orphan block rollback
 func (store *MockWalletStore) DeleteTransactions(height uint64) {
-	batch := store.walletDB.NewBatch()
+	batch := store.db.NewBatch()
 	if store.batch != nil {
 		batch = store.batch
 	}
-	txIter := store.walletDB.IteratorPrefix(calcDeleteKey(height))
+	txIter := store.db.IteratorPrefix(calcDeleteKey(height))
 	defer txIter.Release()
 
 	tmpTx := query.AnnotatedTx{}
@@ -322,7 +322,7 @@ func (store *MockWalletStore) DeleteTransactions(height uint64) {
 // DeleteUnconfirmedTransaction delete unconfirmed tx by txID
 func (store *MockWalletStore) DeleteUnconfirmedTransaction(txID string) {
 	if store.batch == nil {
-		store.walletDB.Delete(calcUnconfirmedTxKey(txID))
+		store.db.Delete(calcUnconfirmedTxKey(txID))
 	} else {
 		store.batch.Delete(calcUnconfirmedTxKey(txID))
 	}
@@ -330,18 +330,18 @@ func (store *MockWalletStore) DeleteUnconfirmedTransaction(txID string) {
 
 // DeleteWalletTransactions delete all txs in wallet
 func (store *MockWalletStore) DeleteWalletTransactions() {
-	batch := store.walletDB.NewBatch()
+	batch := store.db.NewBatch()
 	if store.batch != nil {
 		batch = store.batch
 	}
-	txIter := store.walletDB.IteratorPrefix([]byte(dbm.TxPrefix))
+	txIter := store.db.IteratorPrefix([]byte(dbm.TxPrefix))
 	defer txIter.Release()
 
 	for txIter.Next() {
 		batch.Delete(txIter.Key())
 	}
 
-	txIndexIter := store.walletDB.IteratorPrefix([]byte(dbm.TxIndexPrefix))
+	txIndexIter := store.db.IteratorPrefix([]byte(dbm.TxIndexPrefix))
 	defer txIndexIter.Release()
 
 	for txIndexIter.Next() {
@@ -354,17 +354,17 @@ func (store *MockWalletStore) DeleteWalletTransactions() {
 
 // DeleteWalletUTXOs delete all txs in wallet
 func (store *MockWalletStore) DeleteWalletUTXOs() {
-	batch := store.walletDB.NewBatch()
+	batch := store.db.NewBatch()
 	if store.batch != nil {
 		batch = store.batch
 	}
-	ruIter := store.walletDB.IteratorPrefix([]byte(dbm.UTXOPrefix))
+	ruIter := store.db.IteratorPrefix([]byte(dbm.UTXOPrefix))
 	defer ruIter.Release()
 	for ruIter.Next() {
 		batch.Delete(ruIter.Key())
 	}
 
-	suIter := store.walletDB.IteratorPrefix([]byte(dbm.SUTXOPrefix))
+	suIter := store.db.IteratorPrefix([]byte(dbm.SUTXOPrefix))
 	defer suIter.Release()
 	for suIter.Next() {
 		batch.Delete(suIter.Key())
@@ -376,7 +376,7 @@ func (store *MockWalletStore) DeleteWalletUTXOs() {
 
 // GetAsset get asset by assetID
 func (store *MockWalletStore) GetAsset(assetID *bc.AssetID) (*asset.Asset, error) {
-	definitionByte := store.walletDB.Get(asset.ExtAssetKey(assetID))
+	definitionByte := store.db.Get(asset.ExtAssetKey(assetID))
 	if definitionByte == nil {
 		return nil, errGetAsset
 	}
@@ -396,12 +396,12 @@ func (store *MockWalletStore) GetAsset(assetID *bc.AssetID) (*asset.Asset, error
 
 // GetGlobalTransactionIndex get global tx by txID
 func (store *MockWalletStore) GetGlobalTransactionIndex(txID string) []byte {
-	return store.walletDB.Get(CalcGlobalTxIndexKey(txID))
+	return store.db.Get(CalcGlobalTxIndexKey(txID))
 }
 
 // GetStandardUTXO get standard utxo by id
 func (store *MockWalletStore) GetStandardUTXO(outid bc.Hash) (*acc.UTXO, error) {
-	rawUTXO := store.walletDB.Get(StandardUTXOKey(outid))
+	rawUTXO := store.db.Get(StandardUTXOKey(outid))
 	if rawUTXO == nil {
 		return nil, fmt.Errorf("failed get standard UTXO, outputID: %s ", outid.String())
 	}
@@ -414,11 +414,11 @@ func (store *MockWalletStore) GetStandardUTXO(outid bc.Hash) (*acc.UTXO, error) 
 
 // GetTransaction get tx by txid
 func (store *MockWalletStore) GetTransaction(txID string) (*query.AnnotatedTx, error) {
-	formatKey := store.walletDB.Get(calcTxIndexKey(txID))
+	formatKey := store.db.Get(calcTxIndexKey(txID))
 	if formatKey == nil {
 		return nil, errAccntTxIDNotFound
 	}
-	rawTx := store.walletDB.Get(calcAnnotatedKey(string(formatKey)))
+	rawTx := store.db.Get(calcAnnotatedKey(string(formatKey)))
 	tx := new(query.AnnotatedTx)
 	if err := json.Unmarshal(rawTx, tx); err != nil {
 		return nil, err
@@ -428,7 +428,7 @@ func (store *MockWalletStore) GetTransaction(txID string) (*query.AnnotatedTx, e
 
 // GetUnconfirmedTransaction get unconfirmed tx by txID
 func (store *MockWalletStore) GetUnconfirmedTransaction(txID string) (*query.AnnotatedTx, error) {
-	rawUnconfirmedTx := store.walletDB.Get(calcUnconfirmedTxKey(txID))
+	rawUnconfirmedTx := store.db.Get(calcUnconfirmedTxKey(txID))
 	if rawUnconfirmedTx == nil {
 		return nil, fmt.Errorf("failed get unconfirmed tx, txID: %s ", txID)
 	}
@@ -441,7 +441,7 @@ func (store *MockWalletStore) GetUnconfirmedTransaction(txID string) (*query.Ann
 
 // GetRecoveryStatus delete recovery status
 func (store *MockWalletStore) GetRecoveryStatus() (*RecoveryState, error) {
-	rawStatus := store.walletDB.Get(dbm.RecoveryKey)
+	rawStatus := store.db.Get(dbm.RecoveryKey)
 	if rawStatus == nil {
 		return nil, ErrGetRecoveryStatus
 	}
@@ -454,7 +454,7 @@ func (store *MockWalletStore) GetRecoveryStatus() (*RecoveryState, error) {
 
 // GetWalletInfo get wallet information
 func (store *MockWalletStore) GetWalletInfo() (*StatusInfo, error) {
-	rawStatus := store.walletDB.Get([]byte(dbm.WalletKey))
+	rawStatus := store.db.Get([]byte(dbm.WalletKey))
 	if rawStatus == nil {
 		return nil, fmt.Errorf("failed get wallet info")
 	}
@@ -467,7 +467,7 @@ func (store *MockWalletStore) GetWalletInfo() (*StatusInfo, error) {
 
 // ListAccountUTXOs get all account unspent outputs
 func (store *MockWalletStore) ListAccountUTXOs(key string) ([]*acc.UTXO, error) {
-	accountUtxoIter := store.walletDB.IteratorPrefix([]byte(key))
+	accountUtxoIter := store.db.IteratorPrefix([]byte(key))
 	defer accountUtxoIter.Release()
 
 	confirmedUTXOs := []*acc.UTXO{}
@@ -490,7 +490,7 @@ func (store *MockWalletStore) ListTransactions(accountID string, StartTxID strin
 		if unconfirmed {
 			startKey = calcUnconfirmedTxKey(StartTxID)
 		} else {
-			formatKey := store.walletDB.Get(calcTxIndexKey(StartTxID))
+			formatKey := store.db.Get(calcTxIndexKey(StartTxID))
 			if formatKey == nil {
 				return nil, errAccntTxIDNotFound
 			}
@@ -502,7 +502,7 @@ func (store *MockWalletStore) ListTransactions(accountID string, StartTxID strin
 		preFix = dbm.UnconfirmedTxPrefix
 	}
 
-	itr := store.walletDB.IteratorPrefixWithStart([]byte(preFix), startKey, true)
+	itr := store.db.IteratorPrefixWithStart([]byte(preFix), startKey, true)
 	defer itr.Release()
 
 	for txNum := count; itr.Next() && txNum > 0; txNum-- {
@@ -519,7 +519,7 @@ func (store *MockWalletStore) ListTransactions(accountID string, StartTxID strin
 // ListUnconfirmedTransactions get all unconfirmed txs
 func (store *MockWalletStore) ListUnconfirmedTransactions() ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
-	txIter := store.walletDB.IteratorPrefix([]byte(dbm.UnconfirmedTxPrefix))
+	txIter := store.db.IteratorPrefix([]byte(dbm.UnconfirmedTxPrefix))
 	defer txIter.Release()
 
 	for txIter.Next() {
@@ -535,7 +535,7 @@ func (store *MockWalletStore) ListUnconfirmedTransactions() ([]*query.AnnotatedT
 // SetAssetDefinition set assetID and definition
 func (store *MockWalletStore) SetAssetDefinition(assetID *bc.AssetID, definition []byte) {
 	if store.batch == nil {
-		store.walletDB.Set(asset.ExtAssetKey(assetID), definition)
+		store.db.Set(asset.ExtAssetKey(assetID), definition)
 	} else {
 		store.batch.Set(asset.ExtAssetKey(assetID), definition)
 	}
@@ -548,7 +548,7 @@ func (store *MockWalletStore) SetContractUTXO(outputID bc.Hash, utxo *acc.UTXO) 
 		return err
 	}
 	if store.batch == nil {
-		store.walletDB.Set(ContractUTXOKey(outputID), data)
+		store.db.Set(ContractUTXOKey(outputID), data)
 	} else {
 		store.batch.Set(ContractUTXOKey(outputID), data)
 	}
@@ -558,7 +558,7 @@ func (store *MockWalletStore) SetContractUTXO(outputID bc.Hash, utxo *acc.UTXO) 
 // SetGlobalTransactionIndex set global tx index by blockhash and position
 func (store *MockWalletStore) SetGlobalTransactionIndex(globalTxID string, blockHash *bc.Hash, position uint64) {
 	if store.batch == nil {
-		store.walletDB.Set(CalcGlobalTxIndexKey(globalTxID), CalcGlobalTxIndex(blockHash, position))
+		store.db.Set(CalcGlobalTxIndexKey(globalTxID), CalcGlobalTxIndex(blockHash, position))
 	} else {
 		store.batch.Set(CalcGlobalTxIndexKey(globalTxID), CalcGlobalTxIndex(blockHash, position))
 	}
@@ -571,7 +571,7 @@ func (store *MockWalletStore) SetRecoveryStatus(recoveryState *RecoveryState) er
 		return err
 	}
 	if store.batch == nil {
-		store.walletDB.Set(dbm.RecoveryKey, rawStatus)
+		store.db.Set(dbm.RecoveryKey, rawStatus)
 	} else {
 		store.batch.Set(dbm.RecoveryKey, rawStatus)
 	}
@@ -580,7 +580,7 @@ func (store *MockWalletStore) SetRecoveryStatus(recoveryState *RecoveryState) er
 
 // SetTransaction set raw transaction by block height and tx position
 func (store *MockWalletStore) SetTransaction(height uint64, tx *query.AnnotatedTx) error {
-	batch := store.walletDB.NewBatch()
+	batch := store.db.NewBatch()
 	if store.batch != nil {
 		batch = store.batch
 	}
@@ -605,7 +605,7 @@ func (store *MockWalletStore) SetUnconfirmedTransaction(txID string, tx *query.A
 		return err
 	}
 	if store.batch == nil {
-		store.walletDB.Set(calcUnconfirmedTxKey(txID), rawTx)
+		store.db.Set(calcUnconfirmedTxKey(txID), rawTx)
 	} else {
 		store.batch.Set(calcUnconfirmedTxKey(txID), rawTx)
 	}
@@ -620,7 +620,7 @@ func (store *MockWalletStore) SetWalletInfo(status *StatusInfo) error {
 	}
 
 	if store.batch == nil {
-		store.walletDB.Set([]byte(dbm.WalletKey), rawWallet)
+		store.db.Set([]byte(dbm.WalletKey), rawWallet)
 	} else {
 		store.batch.Set([]byte(dbm.WalletKey), rawWallet)
 	}
