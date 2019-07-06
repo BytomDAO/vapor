@@ -20,7 +20,7 @@ func createMConnection(conn net.Conn) *MConnection {
 
 func createMConnectionWithCallbacks(conn net.Conn, onReceive func(chID byte, msgBytes []byte), onError func(r interface{})) *MConnection {
 	chDescs := []*ChannelDescriptor{&ChannelDescriptor{ID: 0x01, Priority: 1, SendQueueCapacity: 1}}
-	c := NewMConnectionWithConfig(conn, chDescs, onReceive, onError, DefaultMConnConfig())
+	c := NewMConnectionWithConfig(conn, chDescs, onReceive, onError, DefaultMConnConfig("snappy"))
 	return c
 }
 
