@@ -228,8 +228,7 @@ func (c *Chain) saveBlock(block *types.Block) error {
 		return err
 	}
 
-	coinbaseReceiver, err := consensusResult.AttachCoinbaseReward(block)
-	if err != nil {
+	if err := consensusResult.AttachCoinbaseReward(block); err != nil {
 		return err
 	}
 
@@ -237,7 +236,6 @@ func (c *Chain) saveBlock(block *types.Block) error {
 	if err != nil {
 		return err
 	}
-	rewards = append([]state.CoinbaseReward{state.CoinbaseReward{ControlProgram: coinbaseReceiver}}, rewards...)
 
 	bcBlock := types.MapBlock(block)
 	if err := validation.ValidateBlock(bcBlock, parent, rewards); err != nil {

@@ -69,6 +69,10 @@ func createCoinbaseTx(accountManager *account.Manager, blockHeight uint64) (tx *
 
 // restructCoinbaseTx build coinbase transaction with aggregate outputs when it achieved the specified block height
 func restructCoinbaseTx(tx *types.Tx, rewards []state.CoinbaseReward) error {
+	if len(rewards) == 0 {
+		return nil
+	}
+
 	for _, r := range rewards {
 		tx.Outputs = append(tx.Outputs, types.NewIntraChainOutput(*consensus.BTMAssetID, r.Amount, r.ControlProgram))
 	}
@@ -172,7 +176,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 		return nil, err
 	}
 
-	if _, err := consensusResult.AttachCoinbaseReward(b); err != nil {
+	if err := consensusResult.AttachCoinbaseReward(b); err != nil {
 		return nil, err
 	}
 
@@ -182,10 +186,8 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	}
 
 	// restruct coinbase transaction
-	if len(rewards) > 0 {
-		if err = restructCoinbaseTx(b.Transactions[0], rewards); err != nil {
-			return nil, errors.Wrap(err, "fail on createCoinbaseTx")
-		}
+	if err = restructCoinbaseTx(b.Transactions[0], rewards); err != nil {
+		return nil, errors.Wrap(err, "fail on createCoinbaseTx")
 	}
 
 	txEntries[0] = b.Transactions[0].Tx

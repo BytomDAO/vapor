@@ -101,7 +101,7 @@ func (c *ConsensusResult) ApplyBlock(block *types.Block) error {
 		return errors.New("block parent hash is not equals last block hash of vote result")
 	}
 
-	if _, err := c.AttachCoinbaseReward(block); err != nil {
+	if err := c.AttachCoinbaseReward(block); err != nil {
 		return err
 	}
 
@@ -250,10 +250,10 @@ func (c *ConsensusResult) IsFinalize() bool {
 }
 
 // AttachCoinbaseReward attach coinbase reward
-func (c *ConsensusResult) AttachCoinbaseReward(block *types.Block) ([]byte, error) {
+func (c *ConsensusResult) AttachCoinbaseReward(block *types.Block) error {
 	reward, err := CalCoinbaseReward(block)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if block.Height%consensus.RoundVoteBlockNums == 1 {
@@ -264,9 +264,9 @@ func (c *ConsensusResult) AttachCoinbaseReward(block *types.Block) ([]byte, erro
 	program := hex.EncodeToString(reward.ControlProgram)
 	c.CoinbaseReward[program], ok = checked.AddUint64(c.CoinbaseReward[program], reward.Amount)
 	if !ok {
-		return nil, checked.ErrOverflow
+		return checked.ErrOverflow
 	}
-	return reward.ControlProgram, nil
+	return nil
 }
 
 // DetachCoinbaseReward detach coinbase reward

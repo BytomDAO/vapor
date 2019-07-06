@@ -82,13 +82,8 @@ func TestCheckCoinbaseTx(t *testing.T) {
 					Outputs: []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 0, []byte{0x51})},
 				}),
 			},
-			rewards: []state.CoinbaseReward{
-				state.CoinbaseReward{
-					Amount:         0,
-					ControlProgram: []byte{0x51},
-				},
-			},
-			err: nil,
+			rewards: []state.CoinbaseReward{},
+			err:     nil,
 		},
 		{
 			desc: "zero coinbase amount and aggregate rewards",
@@ -103,31 +98,11 @@ func TestCheckCoinbaseTx(t *testing.T) {
 			},
 			rewards: []state.CoinbaseReward{
 				state.CoinbaseReward{
-					Amount:         0,
-					ControlProgram: []byte{0x51},
-				},
-				state.CoinbaseReward{
 					Amount:         5000,
 					ControlProgram: []byte{0x51},
 				},
 			},
 			err: nil,
-		},
-		{
-			desc: "dismatch coinbase control program",
-			txs: []*types.Tx{
-				types.NewTx(types.TxData{
-					Inputs:  []*types.TxInput{types.NewCoinbaseInput(nil)},
-					Outputs: []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 0, []byte{0x51})},
-				}),
-			},
-			rewards: []state.CoinbaseReward{
-				state.CoinbaseReward{
-					Amount:         0,
-					ControlProgram: []byte{0x52},
-				},
-			},
-			err: ErrWrongCoinbaseTransaction,
 		},
 		{
 			desc:    "wrong coinbase transaction",
@@ -298,13 +273,7 @@ func TestValidateBlock(t *testing.T) {
 				},
 			},
 			parent: parent,
-			rewards: []state.CoinbaseReward{
-				state.CoinbaseReward{
-					Amount:         0,
-					ControlProgram: cp,
-				},
-			},
-			err: errMismatchedMerkleRoot,
+			err:    errMismatchedMerkleRoot,
 		},
 		{
 			desc: "The calculated transaction status merkel root hash is not equals to the hash of the block header",
@@ -328,13 +297,7 @@ func TestValidateBlock(t *testing.T) {
 				},
 			},
 			parent: parent,
-			rewards: []state.CoinbaseReward{
-				state.CoinbaseReward{
-					Amount:         0,
-					ControlProgram: cp,
-				},
-			},
-			err: errMismatchedMerkleRoot,
+			err:    errMismatchedMerkleRoot,
 		},
 		{
 			desc: "the coinbase amount is not equal to the real coinbase amount",
@@ -510,7 +473,7 @@ func TestSetTransactionStatus(t *testing.T) {
 		},
 	}
 
-	if err := ValidateBlock(block, parent, []state.CoinbaseReward{state.CoinbaseReward{ControlProgram: cp}}); err != nil {
+	if err := ValidateBlock(block, parent, []state.CoinbaseReward{}); err != nil {
 		t.Fatal(err)
 	}
 

@@ -1,7 +1,6 @@
 package validation
 
 import (
-	"bytes"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -44,24 +43,20 @@ func checkCoinbaseTx(b *bc.Block, rewards []state.CoinbaseReward) error {
 	}
 
 	tx := b.Transactions[0]
-	if len(tx.TxHeader.ResultIds) != len(rewards) {
+	if len(tx.TxHeader.ResultIds) != len(rewards)+1 {
 		return errors.Wrapf(ErrWrongCoinbaseTransaction, "dismatch number of outputs, got:%d, want:%d", len(tx.TxHeader.ResultIds), len(rewards))
 	}
 
+	rewards = append([]state.CoinbaseReward{state.CoinbaseReward{Amount: uint64(0)}}, rewards...)
 	for i, output := range tx.TxHeader.ResultIds {
 		e, ok := tx.Entries[*output].(*bc.IntraChainOutput)
 		if !ok {
 			return errors.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", output.Bytes(), output)
 		}
 		coinbaseAmount := e.Source.Value.Amount
-		coinbaseReceiver := e.ControlProgram.Code
 
 		if rewards[i].Amount != coinbaseAmount {
 			return errors.Wrapf(ErrWrongCoinbaseTransaction, "dismatch output amount, got:%d, want:%d", coinbaseAmount, rewards[i].Amount)
-		}
-
-		if res := bytes.Compare(rewards[i].ControlProgram, coinbaseReceiver); res != 0 {
-			return errors.Wrapf(ErrWrongCoinbaseTransaction, "dismatch output control program, got:%v, want:%v", coinbaseReceiver, rewards[i].ControlProgram)
 		}
 	}
 	return nil
