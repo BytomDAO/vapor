@@ -302,12 +302,8 @@ func newMockWallet(store wt.WalletStore, account *account.Manager, asset *asset.
 	if err != nil {
 		panic(err)
 	}
-	w.Status.WorkHash = bc.Hash{
-		V0: uint64(0),
-		V1: uint64(0),
-		V2: uint64(0),
-		V3: uint64(0),
-	}
+	var hash [32]byte
+	w.Status.WorkHash = bc.NewHash(hash)
 	return &mockWallet{w}
 }
 
@@ -316,12 +312,6 @@ func mockSingleBlock(tx *types.Tx) *types.Block {
 		BlockHeader: types.BlockHeader{
 			Version: 1,
 			Height:  1,
-			// PreviousBlockHash: bc.Hash{
-			// 	V0: uint64(14952355164967094643),
-			// 	V1: uint64(2960316323621296529),
-			// 	V2: uint64(4202730371317372163),
-			// 	V3: uint64(7569611631634777133),
-			// },
 		},
 		Transactions: []*types.Tx{config.GenesisTx(), tx},
 	}
