@@ -394,18 +394,18 @@ func (store *MockWalletStore) GetAsset(assetID *bc.AssetID) (*asset.Asset, error
 	return externalAsset, nil
 }
 
-// GetControlProgram get raw program by hash
-func (store *MockWalletStore) GetControlProgram(hash bc.Hash) (*acc.CtrlProgram, error) {
-	rawProgram := store.walletDB.Get(ContractKey(hash))
-	if rawProgram == nil {
-		return nil, acc.ErrFindCtrlProgram
-	}
-	accountCP := new(acc.CtrlProgram)
-	if err := json.Unmarshal(rawProgram, &accountCP); err != nil {
-		return nil, err
-	}
-	return accountCP, nil
-}
+// // GetControlProgram get raw program by hash
+// func (store *MockWalletStore) GetControlProgram(hash bc.Hash) (*acc.CtrlProgram, error) {
+// 	rawProgram := store.walletDB.Get(ContractKey(hash))
+// 	if rawProgram == nil {
+// 		return nil, acc.ErrFindCtrlProgram
+// 	}
+// 	accountCP := new(acc.CtrlProgram)
+// 	if err := json.Unmarshal(rawProgram, &accountCP); err != nil {
+// 		return nil, err
+// 	}
+// 	return accountCP, nil
+// }
 
 // GetGlobalTransactionIndex get global tx by txID
 func (store *MockWalletStore) GetGlobalTransactionIndex(txID string) []byte {
