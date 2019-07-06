@@ -160,8 +160,6 @@ func mockSingleBlock(tx *types.Tx) *types.Block {
 	}
 }
 
-//---------------------
-
 // errors
 var (
 	errAccntTxIDNotFound = errors.New("account TXID not found")
