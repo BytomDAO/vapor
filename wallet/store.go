@@ -18,7 +18,6 @@ type WalletStore interface {
 	DeleteWalletTransactions()
 	DeleteWalletUTXOs()
 	GetAsset(*bc.AssetID) (*asset.Asset, error)
-	GetControlProgram(bc.Hash) (*acc.CtrlProgram, error) // delete it
 	GetGlobalTransactionIndex(string) []byte
 	GetStandardUTXO(bc.Hash) (*acc.UTXO, error)
 	GetTransaction(string) (*query.AnnotatedTx, error)

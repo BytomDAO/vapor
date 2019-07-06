@@ -124,7 +124,7 @@ func TestWalletUpdate(t *testing.T) {
 }
 
 // func TestRescanWallet(t *testing.T) {
-// 	// prepare wallet & db
+// 	// prepare wallet & db.
 // 	dirPath, err := ioutil.TempDir(".", "")
 // 	if err != nil {
 // 		t.Fatal(err)
@@ -159,10 +159,13 @@ func TestWalletUpdate(t *testing.T) {
 // 		t.Fatal(err)
 // 	}
 
-// 	w := newMockWallet(walletStore, nil, nil, chain, dispatcher, false)
+// 	accountStore := database.NewAccountStore(testDB)
+// 	accountManager := account.NewManager(accountStore, chain)
+// 	w := newMockWallet(walletStore, accountManager, nil, chain, dispatcher, false)
+// 	// w := newMockWallet(walletStore, nil, nil, chain, dispatcher, false)
 // 	w.Wallet.Status = *walletInfo
 
-// 	// rescan wallet
+// 	// rescan wallet.
 // 	if err := w.Wallet.LoadWalletInfo(); err != nil {
 // 		t.Fatal(err)
 // 	}
