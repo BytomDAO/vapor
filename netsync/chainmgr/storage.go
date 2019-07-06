@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	maxRamFastSync = 800 * 1024 * 1024 //100MB
+	maxRAMFastSync = 800 * 1024 * 1024 //100MB
 )
 
 var (
@@ -19,10 +19,10 @@ var (
 )
 
 type Storage interface {
-	ResetParameter()
-	WriteBlocks(peerID string, blocks []*types.Block) error
-	ReadBlock(height uint64) (*blockStore, error)
-	DeleteBlock(height uint64)
+	resetParameter()
+	writeBlocks(peerID string, blocks []*types.Block) error
+	readBlock(height uint64) (*blockStore, error)
+	deleteBlock(height uint64)
 }
 
 type LocalStore interface {
@@ -35,7 +35,7 @@ type blockStore struct {
 	block  *types.Block
 	peerID string
 	size   int
-	isRam  bool
+	isRAM  bool
 }
 
 type storage struct {
@@ -52,7 +52,7 @@ func newStorage(db dbm.DB) *storage {
 	}
 }
 
-func (s *storage) WriteBlocks(peerID string, blocks []*types.Block) error {
+func (s *storage) writeBlocks(peerID string, blocks []*types.Block) error {
 	s.mux.Lock()
 	defer s.mux.Unlock()
 
@@ -62,8 +62,8 @@ func (s *storage) WriteBlocks(peerID string, blocks []*types.Block) error {
 			return errors.Wrap(err, "Marshal block header")
 		}
 
-		if len(binaryBlock)+s.actualUsage < maxRamFastSync {
-			s.blocks[block.Height] = &blockStore{block: block, peerID: peerID, size: len(binaryBlock), isRam: true}
+		if len(binaryBlock)+s.actualUsage < maxRAMFastSync {
+			s.blocks[block.Height] = &blockStore{block: block, peerID: peerID, size: len(binaryBlock), isRAM: true}
 			s.actualUsage += len(binaryBlock)
 			continue
 		}
@@ -72,13 +72,13 @@ func (s *storage) WriteBlocks(peerID string, blocks []*types.Block) error {
 			return err
 		}
 
-		s.blocks[block.Height] = &blockStore{peerID: peerID, isRam: false}
+		s.blocks[block.Height] = &blockStore{peerID: peerID, isRAM: false}
 	}
 
 	return nil
 }
 
-func (s *storage) ReadBlock(height uint64) (*blockStore, error) {
+func (s *storage) readBlock(height uint64) (*blockStore, error) {
 	s.mux.RLock()
 	defer s.mux.RUnlock()
 
@@ -87,7 +87,7 @@ func (s *storage) ReadBlock(height uint64) (*blockStore, error) {
 		return nil, errStorageFindBlock
 	}
 
-	if blockStore.isRam {
+	if blockStore.isRAM {
 		return blockStore, nil
 	}
 
@@ -100,8 +100,8 @@ func (s *storage) ReadBlock(height uint64) (*blockStore, error) {
 	return blockStore, nil
 }
 
-// DeleteBlock delete blocks in memory
-func (s *storage) DeleteBlock(height uint64) {
+// deleteBlock delete blocks in memory
+func (s *storage) deleteBlock(height uint64) {
 	s.mux.RLock()
 	defer s.mux.RUnlock()
 
@@ -110,13 +110,13 @@ func (s *storage) DeleteBlock(height uint64) {
 		return
 	}
 
-	if blockStore.isRam {
+	if blockStore.isRAM {
 		s.actualUsage -= blockStore.size
 		delete(s.blocks, height)
 	}
 }
 
-func (s *storage) ResetParameter() {
+func (s *storage) resetParameter() {
 	s.mux.Lock()
 	defer s.mux.Unlock()
 

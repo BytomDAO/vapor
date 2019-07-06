@@ -67,7 +67,6 @@ func TestRegularBlockSync(t *testing.T) {
 	testDBB := dbm.NewDB("testdbb", "leveldb", "tmpDir")
 
 	for i, c := range cases {
-		//syncTimeout = c.syncTimeout
 		a := mockSync(c.aBlocks, nil, testDBA)
 		b := mockSync(c.bBlocks, nil, testDBB)
 		netWork := NewNetWork()
@@ -147,7 +146,6 @@ func TestRequireBlock(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		//syncTimeout = c.syncTimeout
 		got, err := c.testNode.blockKeeper.msgFetcher.requireBlock(c.testNode.blockKeeper.syncPeer.ID(), c.requireHeight)
 		if !testutil.DeepEqual(got, c.want) {
 			t.Errorf("case %d: got %v want %v", i, got, c.want)

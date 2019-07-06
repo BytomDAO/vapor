@@ -46,7 +46,7 @@ func (bp *blockProcessor) add(download *downloadedBlock) {
 }
 
 func (bp *blockProcessor) insert(height uint64) error {
-	blockStore, err := bp.storage.ReadBlock(height)
+	blockStore, err := bp.storage.readBlock(height)
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func (bp *blockProcessor) insert(height uint64) error {
 		return err
 	}
 
-	bp.storage.DeleteBlock(height)
+	bp.storage.deleteBlock(height)
 	return nil
 }
 

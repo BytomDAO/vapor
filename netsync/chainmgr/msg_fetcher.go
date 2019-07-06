@@ -17,18 +17,15 @@ const (
 	blockProcessChSize          = 1024
 	blocksProcessChSize         = 128
 	headersProcessChSize        = 1024
-	MaxNumOfFastSyncPeers       = 128
+	maxNumOfFastSyncPeers       = 128
 )
 
 var (
-	requireBlockTimeout         = 20 * time.Second
-	requireHeadersTimeout       = 30 * time.Second
-	requireBlocksTimeout        = 50 * time.Second
-	parallelFetchHeadersTimeout = 50 * time.Second
-	parallelFetchBlocksTimeout  = 200 * time.Second
+	requireBlockTimeout   = 20 * time.Second
+	requireHeadersTimeout = 30 * time.Second
+	requireBlocksTimeout  = 50 * time.Second
 
 	errRequestBlocksTimeout = errors.New("request blocks timeout")
-	errRequestBlocks        = errors.New("request blocks err")
 )
 
 type MsgFetcher interface {
@@ -124,7 +121,7 @@ func (mf *msgFetcher) fetchBlocksProcess(work *fetchBlocksWork, peerCh chan stri
 					break
 				}
 
-				if err := mf.storage.WriteBlocks(peerID, blocks); err != nil {
+				if err := mf.storage.writeBlocks(peerID, blocks); err != nil {
 					log.WithFields(log.Fields{"module": logModule, "error": err}).Info("write block error")
 				}
 
@@ -143,8 +140,6 @@ func (mf *msgFetcher) fetchBlocksProcess(work *fetchBlocksWork, peerCh chan stri
 			return nil
 		}
 	}
-
-	return errRequestBlocks
 }
 
 func (mf *msgFetcher) fetchBlocksWorker(workCh chan *fetchBlocksWork, peerCh chan string, resultCh chan *fetchBlocksResult, closeCh chan struct{}, downloadedBlockCh chan *downloadedBlock, wg *sync.WaitGroup) {
@@ -164,7 +159,7 @@ func (mf *msgFetcher) parallelFetchBlocks(works []*fetchBlocksWork, downloadedBl
 	defer wg.Done()
 	workSize := len(works)
 	workCh := make(chan *fetchBlocksWork, workSize)
-	peerCh := make(chan string, MaxNumOfFastSyncPeers)
+	peerCh := make(chan string, maxNumOfFastSyncPeers)
 	resultCh := make(chan *fetchBlocksResult, workSize)
 	closeCh := make(chan struct{})
 
@@ -179,7 +174,7 @@ func (mf *msgFetcher) parallelFetchBlocks(works []*fetchBlocksWork, downloadedBl
 	}
 
 	syncPeers := mf.syncPeers.selectIdlePeers()
-	for i := 0; i < len(syncPeers) && i < MaxNumOfFastSyncPeers; i++ {
+	for i := 0; i < len(syncPeers) && i < maxNumOfFastSyncPeers; i++ {
 		peerCh <- syncPeers[i]
 	}
 
@@ -289,19 +284,6 @@ func (mf *msgFetcher) requireBlocks(peerID string, locator []*bc.Hash, stopHash 
 	}
 }
 
-func (mf *msgFetcher) requireHeaders(peerID string, locator []*bc.Hash, stopHash *bc.Hash, skip uint64) error {
-	peer := mf.peers.GetPeer(peerID)
-	if peer == nil {
-		return errPeerDropped
-	}
-
-	if ok := peer.GetHeaders(locator, stopHash, skip); !ok {
-		return errPeerDropped
-	}
-
-	return nil
-}
-
 func (mf *msgFetcher) resetParameter() {
 	for len(mf.blocksProcessCh) > 0 {
 		<-mf.blocksProcessCh
@@ -312,7 +294,7 @@ func (mf *msgFetcher) resetParameter() {
 	}
 
 	mf.syncPeers = newFastSyncPeers()
-	mf.storage.ResetParameter()
+	mf.storage.resetParameter()
 }
 
 func (mf *msgFetcher) verifyBlocksMsg(blocks []*types.Block, startHeader, stopHeader *types.BlockHeader) error {

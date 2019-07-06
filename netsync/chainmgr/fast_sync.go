@@ -17,8 +17,7 @@ var (
 	minGapStartFastSync  = uint64(128)
 	maxFastSyncBlocksNum = uint64(10000)
 
-	errOrphanBlock = errors.New("orphan block found during fast sync")
-	errNoSyncPeer  = errors.New("can't find sync peer")
+	errNoSyncPeer = errors.New("can't find sync peer")
 )
 
 type fastSync struct {
@@ -252,20 +251,4 @@ func (fs *fastSync) resetParameter() {
 
 func (fs *fastSync) setSyncPeer(peer *peers.Peer) {
 	fs.mainSyncPeer = peer
-}
-
-func (fs *fastSync) verifyBlocks(blocks []*types.Block) error {
-	for _, block := range blocks {
-		isOrphan, err := fs.chain.ProcessBlock(block)
-		if err != nil {
-			return err
-		}
-
-		if isOrphan {
-			log.WithFields(log.Fields{"module": logModule, "height": block.Height, "hash": block.Hash()}).Error("fast sync block is orphan")
-			return errOrphanBlock
-		}
-	}
-
-	return nil
 }

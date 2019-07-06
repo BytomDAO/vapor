@@ -105,7 +105,6 @@ func TestFastBlockSync(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		//syncTimeout = c.syncTimeout
 		a := mockSync(c.aBlocks, nil, testDBA)
 		b := mockSync(c.bBlocks, nil, testDBB)
 		netWork := NewNetWork()

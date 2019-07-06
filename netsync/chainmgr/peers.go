@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-var ErrNoValidFastSyncPeer = errors.New("no valid fast sync peer")
+var errNoValidFastSyncPeer = errors.New("no valid fast sync peer")
 
 type fastSyncPeers struct {
 	peers map[string]bool
@@ -55,7 +55,7 @@ func (fs *fastSyncPeers) selectIdlePeer() (string, error) {
 		return peerID, nil
 	}
 
-	return "", ErrNoValidFastSyncPeer
+	return "", errNoValidFastSyncPeer
 }
 
 func (fs *fastSyncPeers) setIdle(peerID string) {
