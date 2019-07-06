@@ -68,13 +68,20 @@ func TestBlockLocator(t *testing.T) {
 }
 
 func TestFastBlockSync(t *testing.T) {
-	tmpDir, err := ioutil.TempDir(".", "")
+	tmpDirA, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatalf("failed to create temporary data folder: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
-	testDBA := dbm.NewDB("testdba", "leveldb", "tmpDir")
-	testDBB := dbm.NewDB("testdbb", "leveldb", "tmpDir")
+	tmpDirB, err := ioutil.TempDir(".", "")
+	if err != nil {
+		t.Fatalf("failed to create temporary data folder: %v", err)
+	}
+	testDBA := dbm.NewDB("testdba", "leveldb", "tmpDirA")
+	testDBB := dbm.NewDB("testdbb", "leveldb", "tmpDirB")
+	defer testDBA.Close()
+	defer testDBB.Close()
+	defer os.RemoveAll(tmpDirA)
+	defer os.RemoveAll(tmpDirB)
 
 	maxBlocksPerMsg = 10
 	maxHeadersPerMsg = 10
