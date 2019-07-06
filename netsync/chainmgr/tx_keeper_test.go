@@ -1,6 +1,8 @@
 package chainmgr
 
 import (
+	"io/ioutil"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -8,6 +10,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 
 	"github.com/vapor/consensus"
+	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -44,9 +47,17 @@ func getTransactions() []*types.Tx {
 }
 
 func TestSyncMempool(t *testing.T) {
+	tmpDir, err := ioutil.TempDir(".", "")
+	if err != nil {
+		t.Fatalf("failed to create temporary data folder: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+	testDBA := dbm.NewDB("testdba", "leveldb", "tmpDir")
+	testDBB := dbm.NewDB("testdbb", "leveldb", "tmpDir")
+
 	blocks := mockBlocks(nil, 5)
-	a := mockSync(blocks, &mock.Mempool{})
-	b := mockSync(blocks, &mock.Mempool{})
+	a := mockSync(blocks, &mock.Mempool{}, testDBA)
+	b := mockSync(blocks, &mock.Mempool{}, testDBB)
 
 	netWork := NewNetWork()
 	netWork.Register(a, "192.168.0.1", "test node A", consensus.SFFullNode)

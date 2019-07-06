@@ -1,10 +1,13 @@
 package chainmgr
 
 import (
+	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/vapor/consensus"
+	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -65,6 +68,14 @@ func TestBlockLocator(t *testing.T) {
 }
 
 func TestFastBlockSync(t *testing.T) {
+	tmpDir, err := ioutil.TempDir(".", "")
+	if err != nil {
+		t.Fatalf("failed to create temporary data folder: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+	testDBA := dbm.NewDB("testdba", "leveldb", "tmpDir")
+	testDBB := dbm.NewDB("testdbb", "leveldb", "tmpDir")
+
 	maxBlocksPerMsg = 10
 	maxHeadersPerMsg = 10
 	maxFastSyncBlocksNum = 200
@@ -81,22 +92,22 @@ func TestFastBlockSync(t *testing.T) {
 			syncTimeout: 30 * time.Second,
 			aBlocks:     baseChain[:50],
 			bBlocks:     baseChain[:301],
-			want:        baseChain[:237],
+			want:        baseChain[:139],
 			err:         nil,
 		},
 		{
 			syncTimeout: 30 * time.Second,
 			aBlocks:     baseChain[:2],
 			bBlocks:     baseChain[:300],
-			want:        baseChain[:202],
+			want:        baseChain[:91],
 			err:         nil,
 		},
 	}
 
 	for i, c := range cases {
-		syncTimeout = c.syncTimeout
-		a := mockSync(c.aBlocks, nil)
-		b := mockSync(c.bBlocks, nil)
+		//syncTimeout = c.syncTimeout
+		a := mockSync(c.aBlocks, nil, testDBA)
+		b := mockSync(c.bBlocks, nil, testDBB)
 		netWork := NewNetWork()
 		netWork.Register(a, "192.168.0.1", "test node A", consensus.SFFullNode|consensus.SFFastSync)
 		netWork.Register(b, "192.168.0.2", "test node B", consensus.SFFullNode|consensus.SFFastSync)

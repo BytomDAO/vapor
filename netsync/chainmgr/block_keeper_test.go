@@ -2,10 +2,13 @@ package chainmgr
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/vapor/consensus"
+	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 	msgs "github.com/vapor/netsync/messages"
 	"github.com/vapor/protocol/bc"
@@ -55,11 +58,18 @@ func TestRegularBlockSync(t *testing.T) {
 			err:         nil,
 		},
 	}
+	tmpDir, err := ioutil.TempDir(".", "")
+	if err != nil {
+		t.Fatalf("failed to create temporary data folder: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+	testDBA := dbm.NewDB("testdba", "leveldb", "tmpDir")
+	testDBB := dbm.NewDB("testdbb", "leveldb", "tmpDir")
 
 	for i, c := range cases {
-		syncTimeout = c.syncTimeout
-		a := mockSync(c.aBlocks, nil)
-		b := mockSync(c.bBlocks, nil)
+		//syncTimeout = c.syncTimeout
+		a := mockSync(c.aBlocks, nil, testDBA)
+		b := mockSync(c.bBlocks, nil, testDBB)
 		netWork := NewNetWork()
 		netWork.Register(a, "192.168.0.1", "test node A", consensus.SFFullNode)
 		netWork.Register(b, "192.168.0.2", "test node B", consensus.SFFullNode)
@@ -91,9 +101,16 @@ func TestRegularBlockSync(t *testing.T) {
 }
 
 func TestRequireBlock(t *testing.T) {
+	tmpDir, err := ioutil.TempDir(".", "")
+	if err != nil {
+		t.Fatalf("failed to create temporary data folder: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+	testDBA := dbm.NewDB("testdba", "leveldb", "tmpDir")
+	testDBB := dbm.NewDB("testdbb", "leveldb", "tmpDir")
 	blocks := mockBlocks(nil, 5)
-	a := mockSync(blocks[:1], nil)
-	b := mockSync(blocks[:5], nil)
+	a := mockSync(blocks[:1], nil, testDBA)
+	b := mockSync(blocks[:5], nil, testDBB)
 	netWork := NewNetWork()
 	netWork.Register(a, "192.168.0.1", "test node A", consensus.SFFullNode)
 	netWork.Register(b, "192.168.0.2", "test node B", consensus.SFFullNode)
@@ -130,7 +147,7 @@ func TestRequireBlock(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		syncTimeout = c.syncTimeout
+		//syncTimeout = c.syncTimeout
 		got, err := c.testNode.blockKeeper.msgFetcher.requireBlock(c.testNode.blockKeeper.syncPeer.ID(), c.requireHeight)
 		if !testutil.DeepEqual(got, c.want) {
 			t.Errorf("case %d: got %v want %v", i, got, c.want)
@@ -142,6 +159,14 @@ func TestRequireBlock(t *testing.T) {
 }
 
 func TestSendMerkleBlock(t *testing.T) {
+	tmpDir, err := ioutil.TempDir(".", "")
+	if err != nil {
+		t.Fatalf("failed to create temporary data folder: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+	testDBA := dbm.NewDB("testdba", "leveldb", "tmpDir")
+	testDBB := dbm.NewDB("testdbb", "leveldb", "tmpDir")
+
 	cases := []struct {
 		txCount        int
 		relatedTxIndex []int
@@ -179,7 +204,7 @@ func TestSendMerkleBlock(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		spvNode := mockSync(blocks, nil)
+		spvNode := mockSync(blocks, nil, testDBA)
 		blockHash := targetBlock.Hash()
 		var statusResult *bc.TransactionStatus
 		if statusResult, err = spvNode.chain.GetTransactionStatus(&blockHash); err != nil {
@@ -190,7 +215,7 @@ func TestSendMerkleBlock(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		fullNode := mockSync(blocks, nil)
+		fullNode := mockSync(blocks, nil, testDBB)
 		netWork := NewNetWork()
 		netWork.Register(spvNode, "192.168.0.1", "spv_node", consensus.SFFastSync)
 		netWork.Register(fullNode, "192.168.0.2", "full_node", consensus.DefaultServices)
