@@ -164,6 +164,7 @@ type P2PConfig struct {
 	ProxyUsername    string `mapstructure:"proxy_username"`
 	ProxyPassword    string `mapstructure:"proxy_password"`
 	KeepDial         string `mapstructure:"keep_dial"`
+	Compression      string `mapstructure:"compression_backend"`
 }
 
 // Default configurable p2p parameters.
@@ -178,6 +179,7 @@ func DefaultP2PConfig() *P2PConfig {
 		ProxyAddress:     "",
 		ProxyUsername:    "",
 		ProxyPassword:    "",
+		Compression:      "snappy",
 	}
 }
 

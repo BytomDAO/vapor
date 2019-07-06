@@ -44,7 +44,7 @@ func DefaultPeerConfig(config *cfg.P2PConfig) *PeerConfig {
 		ProxyAddress:     config.ProxyAddress,
 		ProxyUsername:    config.ProxyUsername,
 		ProxyPassword:    config.ProxyPassword,
-		MConfig:          connection.DefaultMConnConfig(),
+		MConfig:          connection.DefaultMConnConfig(config.Compression),
 	}
 }
 
