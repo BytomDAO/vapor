@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/vapor/wallet"
-
 	acc "github.com/vapor/account"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/query"
@@ -17,6 +15,7 @@ import (
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
+	"github.com/vapor/wallet"
 )
 
 // errors
