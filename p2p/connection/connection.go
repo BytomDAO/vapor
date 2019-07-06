@@ -229,9 +229,9 @@ func (c *MConnection) TrySend(chID byte, msg interface{}) bool {
 		return false
 	}
 
-	decode := c.compression.CompressBytes(wire.BinaryBytes(msg))
+	compressData := c.compression.CompressBytes(wire.BinaryBytes(msg))
 
-	ok = channel.trySendBytes(decode)
+	ok = channel.trySendBytes(compressData)
 	if ok {
 		select {
 		case c.send <- struct{}{}:
