@@ -5,8 +5,6 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
-
 	"github.com/vapor/errors"
 	"github.com/vapor/netsync/peers"
 	"github.com/vapor/protocol/bc"
@@ -14,8 +12,8 @@ import (
 )
 
 var (
-	maxBlocksPerMsg      = uint64(500)
-	maxHeadersPerMsg     = uint64(500)
+	maxBlocksPerMsg      = uint64(1000)
+	maxHeadersPerMsg     = uint64(1000)
 	fastSyncPivotGap     = uint64(64)
 	minGapStartFastSync  = uint64(128)
 	maxFastSyncBlocksNum = uint64(10000)
@@ -32,7 +30,7 @@ type fastSync struct {
 	syncPeer          *peers.Peer
 	stopHeader        *types.BlockHeader
 	length            uint64
-	blockFetchTasks   *prque.Prque
+	blockFetchTasks   []*fetchBlocksWork
 	downloadedBlockCh chan *downloadedBlock
 	downloadResult    chan bool
 	processResult     chan bool
@@ -47,7 +45,7 @@ func newFastSync(chain Chain, msgFether MsgFetcher, storage Storage, peers *peer
 		blockProcessor:    newBlockProcessor(chain, storage, peers, downloadedBlockCh),
 		msgFetcher:        msgFether,
 		peers:             peers,
-		blockFetchTasks:   prque.New(),
+		blockFetchTasks:   make([]*fetchBlocksWork, 0),
 		downloadedBlockCh: downloadedBlockCh,
 		downloadResult:    make(chan bool, 1),
 		processResult:     make(chan bool, 1),
@@ -95,7 +93,7 @@ func (fs *fastSync) createFetchBlocksTasks() ([]string, error) {
 
 	// low height block has high download priority
 	for i := 0; i < len(skeleton)-1; i++ {
-		fs.blockFetchTasks.Push(&blocksTask{index: i, startHeader: skeleton[i], stopHeader: skeleton[i+1]}, -float32(i))
+		fs.blockFetchTasks = append(fs.blockFetchTasks, &fetchBlocksWork{index: i, startHeader: skeleton[i], stopHeader: skeleton[i+1]})
 	}
 
 	return syncPeers, nil
@@ -240,7 +238,7 @@ func (fs *fastSync) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, skip ui
 }
 
 func (fs *fastSync) resetParameter() {
-	fs.blockFetchTasks.Reset()
+	fs.blockFetchTasks = make([]*fetchBlocksWork, 0)
 	for _, ch := range []chan bool{fs.downloadResult, fs.processResult} {
 		select {
 		case <-ch:
