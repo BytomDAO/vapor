@@ -140,6 +140,7 @@ func (m *Manager) SaveAccount(account *Account) error {
 	if err == nil {
 		return ErrDuplicateAlias
 	}
+
 	if err != ErrFindAccount {
 		return err
 	}
@@ -165,6 +166,7 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string, deriveR
 	if err == nil {
 		return nil, ErrDuplicateAlias
 	}
+
 	if err != ErrFindAccount {
 		return nil, err
 	}
@@ -670,7 +672,6 @@ func (m *Manager) SetStandardUTXO(outputID bc.Hash, utxo *UTXO) error {
 
 func (m *Manager) DeleteStandardUTXO(outputID bc.Hash) {
 	m.store.DeleteStandardUTXO(outputID)
-	return
 }
 
 func (m *Manager) GetControlProgram(hash bc.Hash) (*CtrlProgram, error) {
