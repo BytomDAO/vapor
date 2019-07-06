@@ -71,6 +71,7 @@ func (w *Wallet) GetUnconfirmedTxByTxID(txID string) (*query.AnnotatedTx, error)
 	if err != nil {
 		return nil, err
 	}
+
 	if annotatedTx == nil {
 		return nil, fmt.Errorf("No transaction(tx_id=%s) from txpool", txID)
 	}
@@ -83,6 +84,7 @@ func (w *Wallet) RemoveUnconfirmedTx(txD *protocol.TxDesc) {
 	if !w.checkRelatedTransaction(txD.Tx) {
 		return
 	}
+
 	w.store.DeleteUnconfirmedTransaction(txD.Tx.ID.String())
 	w.AccountMgr.RemoveUnconfirmedUtxo(txD.Tx.ResultIds)
 }
@@ -160,6 +162,7 @@ func (w *Wallet) delExpiredTxs() error {
 	if err != nil {
 		return err
 	}
+
 	for _, tx := range AnnotatedTx {
 		if time.Now().After(time.Unix(int64(tx.Timestamp), 0).Add(MaxUnconfirmedTxDuration)) {
 			w.store.DeleteUnconfirmedTransaction(tx.ID.String())
@@ -174,8 +177,10 @@ func (w *Wallet) delUnconfirmedTx() {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("wallet fail on delUnconfirmedTx")
 		return
 	}
+
 	ticker := time.NewTicker(UnconfirmedTxCheckPeriod)
 	defer ticker.Stop()
+
 	for {
 		<-ticker.C
 		if err := w.delExpiredTxs(); err != nil {
