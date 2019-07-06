@@ -25,8 +25,6 @@ const (
 	dataMaxSize     = 1024
 	totalFrameSize  = dataMaxSize + dataLenSize
 	sealedFrameSize = totalFrameSize + secretbox.Overhead
-
-	SerSnappyCompression = 1
 )
 
 type authSigMessage struct {
