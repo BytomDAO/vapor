@@ -352,7 +352,12 @@ func TestFilterAccountUtxo(t *testing.T) {
 		},
 	}
 
-	w := &Wallet{store: testStore}
+	accountStore := NewMockAccountStore(testDB)
+	accountManager := account.NewManager(accountStore, nil)
+	w := &Wallet{
+		store:      testStore,
+		AccountMgr: accountManager,
+	}
 	for i, c := range cases {
 		for s, p := range c.dbPrograms {
 			data, err := json.Marshal(p)
