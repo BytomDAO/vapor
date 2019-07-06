@@ -54,12 +54,6 @@ func createCoinbaseTx(accountManager *account.Manager, blockHeight uint64) (tx *
 		return nil, err
 	}
 
-	byteData, err := txData.MarshalText()
-	if err != nil {
-		return nil, err
-	}
-	txData.SerializedSize = uint64(len(byteData))
-
 	tx = &types.Tx{
 		TxData: *txData,
 		Tx:     types.MapTx(txData),
@@ -69,10 +63,6 @@ func createCoinbaseTx(accountManager *account.Manager, blockHeight uint64) (tx *
 
 // restructCoinbaseTx build coinbase transaction with aggregate outputs when it achieved the specified block height
 func restructCoinbaseTx(tx *types.Tx, rewards []state.CoinbaseReward) error {
-	if len(rewards) == 0 {
-		return nil
-	}
-
 	for _, r := range rewards {
 		tx.Outputs = append(tx.Outputs, types.NewIntraChainOutput(*consensus.BTMAssetID, r.Amount, r.ControlProgram))
 	}
