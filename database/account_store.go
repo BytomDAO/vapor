@@ -2,9 +2,11 @@ package database
 
 import (
 	"encoding/json"
+	"sort"
 	"strings"
 
 	acc "github.com/vapor/account"
+	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/common"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/crypto/sha3pool"
@@ -12,6 +14,18 @@ import (
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 )
+
+func accountIndexKey(xpubs []chainkd.XPub) []byte {
+	var hash [32]byte
+	var xPubs []byte
+	cpy := append([]chainkd.XPub{}, xpubs[:]...)
+	sort.Sort(signers.SortKeys(cpy))
+	for _, xpub := range cpy {
+		xPubs = append(xPubs, xpub[:]...)
+	}
+	sha3pool.Sum256(hash[:], xPubs)
+	return append(AccountIndexPrefix, hash[:]...)
+}
 
 // AccountStore satisfies AccountStore interface.
 type AccountStore struct {

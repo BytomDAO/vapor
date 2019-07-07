@@ -5,14 +5,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"sort"
 
 	acc "github.com/vapor/account"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/query"
-	"github.com/vapor/blockchain/signers"
-	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/crypto/sha3pool"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
@@ -62,18 +58,6 @@ var (
 	errAccntTxIDNotFound = errors.New("account TXID not found")
 	errGetAsset          = errors.New("Failed to find asset definition")
 )
-
-func accountIndexKey(xpubs []chainkd.XPub) []byte {
-	var hash [32]byte
-	var xPubs []byte
-	cpy := append([]chainkd.XPub{}, xpubs[:]...)
-	sort.Sort(signers.SortKeys(cpy))
-	for _, xpub := range cpy {
-		xPubs = append(xPubs, xpub[:]...)
-	}
-	sha3pool.Sum256(hash[:], xPubs)
-	return append(AccountIndexPrefix, hash[:]...)
-}
 
 func Bip44ContractIndexKey(accountID string, change bool) []byte {
 	key := append(ContractIndexPrefix, []byte(accountID)...)
