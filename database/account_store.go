@@ -79,7 +79,7 @@ func (store *AccountStore) DeleteAccount(account *acc.Account) error {
 
 // deleteAccountUTXOs delete account utxos by accountID
 func (store *AccountStore) deleteAccountUTXOs(accountID string, batch dbm.Batch) error {
-	accountUtxoIter := store.db.IteratorPrefix([]byte(dbm.UTXOPrefix))
+	accountUtxoIter := store.db.IteratorPrefix(dbm.UTXOPrefix)
 	defer accountUtxoIter.Release()
 
 	for accountUtxoIter.Next() {
@@ -166,7 +166,7 @@ func (store *AccountStore) GetBip44ContractIndex(accountID string, change bool) 
 
 // GetCoinbaseArbitrary get coinbase arbitrary
 func (store *AccountStore) GetCoinbaseArbitrary() []byte {
-	return store.db.Get([]byte(dbm.CoinbaseAbKey))
+	return store.db.Get(dbm.CoinbaseAbKey)
 }
 
 // GetContractIndex get contract index
@@ -195,7 +195,7 @@ func (store *AccountStore) GetControlProgram(hash bc.Hash) (*acc.CtrlProgram, er
 
 // GetMiningAddress get mining address
 func (store *AccountStore) GetMiningAddress() (*acc.CtrlProgram, error) {
-	rawCP := store.db.Get([]byte(dbm.MiningAddressKey))
+	rawCP := store.db.Get(dbm.MiningAddressKey)
 	if rawCP == nil {
 		return nil, acc.ErrFindMiningAddress
 	}
@@ -242,7 +242,7 @@ func (store *AccountStore) ListAccounts(id string) ([]*acc.Account, error) {
 // ListControlPrograms get all local control programs
 func (store *AccountStore) ListControlPrograms() ([]*acc.CtrlProgram, error) {
 	cps := []*acc.CtrlProgram{}
-	cpIter := store.db.IteratorPrefix([]byte(dbm.ContractPrefix))
+	cpIter := store.db.IteratorPrefix(dbm.ContractPrefix)
 	defer cpIter.Release()
 
 	for cpIter.Next() {
@@ -258,7 +258,7 @@ func (store *AccountStore) ListControlPrograms() ([]*acc.CtrlProgram, error) {
 
 // ListUTXOs get utxos by accountID
 func (store *AccountStore) ListUTXOs() ([]*acc.UTXO, error) {
-	utxoIter := store.db.IteratorPrefix([]byte(dbm.UTXOPrefix))
+	utxoIter := store.db.IteratorPrefix(dbm.UTXOPrefix)
 	defer utxoIter.Release()
 
 	utxos := []*acc.UTXO{}
@@ -318,9 +318,9 @@ func (store *AccountStore) SetBip44ContractIndex(accountID string, change bool, 
 // SetCoinbaseArbitrary set coinbase arbitrary
 func (store *AccountStore) SetCoinbaseArbitrary(arbitrary []byte) {
 	if store.batch == nil {
-		store.db.Set([]byte(dbm.CoinbaseAbKey), arbitrary)
+		store.db.Set(dbm.CoinbaseAbKey, arbitrary)
 	} else {
-		store.batch.Set([]byte(dbm.CoinbaseAbKey), arbitrary)
+		store.batch.Set(dbm.CoinbaseAbKey, arbitrary)
 	}
 }
 
@@ -355,9 +355,9 @@ func (store *AccountStore) SetMiningAddress(program *acc.CtrlProgram) error {
 	}
 
 	if store.batch == nil {
-		store.db.Set([]byte(dbm.MiningAddressKey), rawProgram)
+		store.db.Set(dbm.MiningAddressKey, rawProgram)
 	} else {
-		store.batch.Set([]byte(dbm.MiningAddressKey), rawProgram)
+		store.batch.Set(dbm.MiningAddressKey, rawProgram)
 	}
 	return nil
 }

@@ -34,11 +34,11 @@ func accountIndexKey(xpubs []chainkd.XPub) []byte {
 		xPubs = append(xPubs, xpub[:]...)
 	}
 	sha3pool.Sum256(hash[:], xPubs)
-	return append([]byte(dbm.AccountIndexPrefix), hash[:]...)
+	return append(dbm.AccountIndexPrefix, hash[:]...)
 }
 
 func Bip44ContractIndexKey(accountID string, change bool) []byte {
-	key := append([]byte(dbm.ContractIndexPrefix), accountID...)
+	key := append(dbm.ContractIndexPrefix, accountID...)
 	if change {
 		return append(key, []byte{1}...)
 	}
@@ -47,12 +47,12 @@ func Bip44ContractIndexKey(accountID string, change bool) []byte {
 
 // ContractKey account control promgram store prefix
 func ContractKey(hash bc.Hash) []byte {
-	return append([]byte(dbm.ContractPrefix), hash.Bytes()...)
+	return append(dbm.ContractPrefix, hash.Bytes()...)
 }
 
 // AccountIDKey account id store prefix
 func AccountIDKey(accountID string) []byte {
-	return append([]byte(dbm.AccountPrefix), []byte(accountID)...)
+	return append(dbm.AccountPrefix, []byte(accountID)...)
 }
 
 // StandardUTXOKey makes an account unspent outputs key to store
@@ -97,11 +97,11 @@ func formatKey(blockHeight uint64, position uint32) string {
 }
 
 func contractIndexKey(accountID string) []byte {
-	return append([]byte(dbm.ContractIndexPrefix), []byte(accountID)...)
+	return append(dbm.ContractIndexPrefix, []byte(accountID)...)
 }
 
 func accountAliasKey(name string) []byte {
-	return append([]byte(dbm.AccountAliasPrefix), []byte(name)...)
+	return append(dbm.AccountAliasPrefix, []byte(name)...)
 }
 
 // WalletStore store wallet using leveldb
@@ -193,14 +193,14 @@ func (store *WalletStore) DeleteWalletTransactions() {
 	if store.batch != nil {
 		batch = store.batch
 	}
-	txIter := store.db.IteratorPrefix([]byte(dbm.TxPrefix))
+	txIter := store.db.IteratorPrefix(dbm.TxPrefix)
 	defer txIter.Release()
 
 	for txIter.Next() {
 		batch.Delete(txIter.Key())
 	}
 
-	txIndexIter := store.db.IteratorPrefix([]byte(dbm.TxIndexPrefix))
+	txIndexIter := store.db.IteratorPrefix(dbm.TxIndexPrefix)
 	defer txIndexIter.Release()
 
 	for txIndexIter.Next() {
@@ -218,14 +218,14 @@ func (store *WalletStore) DeleteWalletUTXOs() {
 		batch = store.batch
 	}
 
-	ruIter := store.db.IteratorPrefix([]byte(dbm.UTXOPrefix))
+	ruIter := store.db.IteratorPrefix(dbm.UTXOPrefix)
 	defer ruIter.Release()
 
 	for ruIter.Next() {
 		batch.Delete(ruIter.Key())
 	}
 
-	suIter := store.db.IteratorPrefix([]byte(dbm.SUTXOPrefix))
+	suIter := store.db.IteratorPrefix(dbm.SUTXOPrefix)
 	defer suIter.Release()
 
 	for suIter.Next() {
@@ -326,7 +326,7 @@ func (store *WalletStore) GetRecoveryStatus() (*wallet.RecoveryState, error) {
 
 // GetWalletInfo get wallet information
 func (store *WalletStore) GetWalletInfo() (*wallet.StatusInfo, error) {
-	rawStatus := store.db.Get([]byte(dbm.WalletKey))
+	rawStatus := store.db.Get(dbm.WalletKey)
 	if rawStatus == nil {
 		return nil, wallet.ErrGetWalletStatusInfo
 	}
@@ -388,7 +388,7 @@ func (store *WalletStore) ListTransactions(accountID string, StartTxID string, c
 		preFix = dbm.UnconfirmedTxPrefix
 	}
 
-	itr := store.db.IteratorPrefixWithStart([]byte(preFix), startKey, true)
+	itr := store.db.IteratorPrefixWithStart(preFix, startKey, true)
 	defer itr.Release()
 
 	for txNum := count; itr.Next() && txNum > 0; txNum-- {
@@ -406,7 +406,7 @@ func (store *WalletStore) ListTransactions(accountID string, StartTxID string, c
 // ListUnconfirmedTransactions get all unconfirmed txs
 func (store *WalletStore) ListUnconfirmedTransactions() ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
-	txIter := store.db.IteratorPrefix([]byte(dbm.UnconfirmedTxPrefix))
+	txIter := store.db.IteratorPrefix(dbm.UnconfirmedTxPrefix)
 	defer txIter.Release()
 
 	for txIter.Next() {
@@ -512,9 +512,9 @@ func (store *WalletStore) SetWalletInfo(status *wallet.StatusInfo) error {
 	}
 
 	if store.batch == nil {
-		store.db.Set([]byte(dbm.WalletKey), rawWallet)
+		store.db.Set(dbm.WalletKey, rawWallet)
 	} else {
-		store.batch.Set([]byte(dbm.WalletKey), rawWallet)
+		store.batch.Set(dbm.WalletKey, rawWallet)
 	}
 	return nil
 }
