@@ -7,7 +7,6 @@ import (
 
 	"github.com/vapor/consensus"
 	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/errors"
 	"github.com/vapor/netsync/peers"
 	"github.com/vapor/p2p/security"
 	"github.com/vapor/protocol/bc"
@@ -20,11 +19,6 @@ const (
 	noNeedSync = iota
 	fastSyncType
 	regularSyncType
-)
-
-var (
-	errRequestTimeout = errors.New("request timeout")
-	errPeerDropped    = errors.New("Peer dropped")
 )
 
 type FastSync interface {

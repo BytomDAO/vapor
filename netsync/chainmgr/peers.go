@@ -19,15 +19,26 @@ func newFastSyncPeers() *fastSyncPeers {
 }
 
 func (fs *fastSyncPeers) add(peerID string) {
-	fs.mtx.RLock()
-	defer fs.mtx.RUnlock()
+	fs.mtx.Lock()
+	defer fs.mtx.Unlock()
+
+	if _, ok := fs.peers[peerID]; ok {
+		return
+	}
 
 	fs.peers[peerID] = false
 }
 
+func (fs *fastSyncPeers) delete(peerID string) {
+	fs.mtx.Lock()
+	defer fs.mtx.Unlock()
+
+	delete(fs.peers, peerID)
+}
+
 func (fs *fastSyncPeers) selectIdlePeers() []string {
-	fs.mtx.RLock()
-	defer fs.mtx.RUnlock()
+	fs.mtx.Lock()
+	defer fs.mtx.Unlock()
 
 	peers := make([]string, 0)
 	for peerID, isBusy := range fs.peers {
@@ -43,8 +54,8 @@ func (fs *fastSyncPeers) selectIdlePeers() []string {
 }
 
 func (fs *fastSyncPeers) selectIdlePeer() (string, error) {
-	fs.mtx.RLock()
-	defer fs.mtx.RUnlock()
+	fs.mtx.Lock()
+	defer fs.mtx.Unlock()
 
 	for peerID, isBusy := range fs.peers {
 		if isBusy {
@@ -59,11 +70,10 @@ func (fs *fastSyncPeers) selectIdlePeer() (string, error) {
 }
 
 func (fs *fastSyncPeers) setIdle(peerID string) {
-	fs.mtx.RLock()
-	defer fs.mtx.RUnlock()
+	fs.mtx.Lock()
+	defer fs.mtx.Unlock()
 
-	_, ok := fs.peers[peerID]
-	if !ok {
+	if _, ok := fs.peers[peerID]; !ok {
 		return
 	}
 

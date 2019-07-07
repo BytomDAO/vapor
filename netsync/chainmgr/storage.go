@@ -46,9 +46,11 @@ type storage struct {
 }
 
 func newStorage(db dbm.DB) *storage {
+	DBStorage := newDBStore(db)
+	DBStorage.clearData()
 	return &storage{
 		blocks:     make(map[uint64]*blockStore),
-		localStore: newDBStore(db),
+		localStore: DBStorage,
 	}
 }
 
@@ -125,26 +127,26 @@ func (s *storage) resetParameter() {
 	s.localStore.clearData()
 }
 
-type levelDBStore struct {
+type levelDBStorage struct {
 	db dbm.DB
 }
 
-func newDBStore(db dbm.DB) *levelDBStore {
-	return &levelDBStore{
+func newDBStore(db dbm.DB) *levelDBStorage {
+	return &levelDBStorage{
 		db: db,
 	}
 }
 
-func (fs *levelDBStore) clearData() {
-	iter := fs.db.Iterator()
+func (ls *levelDBStorage) clearData() {
+	iter := ls.db.Iterator()
 	defer iter.Release()
 
 	for iter.Next() {
-		fs.db.Delete(iter.Key())
+		ls.db.Delete(iter.Key())
 	}
 }
 
-func (fs *levelDBStore) writeBlock(block *types.Block) error {
+func (ls *levelDBStorage) writeBlock(block *types.Block) error {
 	binaryBlock, err := block.MarshalText()
 	if err != nil {
 		return err
@@ -152,14 +154,14 @@ func (fs *levelDBStore) writeBlock(block *types.Block) error {
 
 	key := make([]byte, 8)
 	binary.BigEndian.PutUint64(key, block.Height)
-	fs.db.Set(key, binaryBlock)
+	ls.db.Set(key, binaryBlock)
 	return nil
 }
 
-func (fs *levelDBStore) readBlock(height uint64) (*types.Block, error) {
+func (ls *levelDBStorage) readBlock(height uint64) (*types.Block, error) {
 	key := make([]byte, 8)
 	binary.BigEndian.PutUint64(key, height)
-	binaryBlock := fs.db.Get(key)
+	binaryBlock := ls.db.Get(key)
 	if binaryBlock == nil {
 		return nil, errDBFindBlock
 	}

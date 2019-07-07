@@ -27,6 +27,9 @@ var (
 	requireBlocksTimeout  = 50 * time.Second
 
 	errRequestBlocksTimeout = errors.New("request blocks timeout")
+	errRequestTimeout       = errors.New("request timeout")
+	errPeerDropped          = errors.New("Peer dropped")
+	errSendMsg              = errors.New("send message error")
 )
 
 type MsgFetcher interface {
@@ -240,7 +243,7 @@ func (mf *msgFetcher) requireBlock(peerID string, height uint64) (*types.Block, 
 	}
 
 	if ok := peer.GetBlockByHeight(height); !ok {
-		return nil, errPeerDropped
+		return nil, errSendMsg
 	}
 
 	timeout := time.NewTimer(requireBlockTimeout)
@@ -265,6 +268,7 @@ func (mf *msgFetcher) requireBlock(peerID string, height uint64) (*types.Block, 
 func (mf *msgFetcher) requireBlocks(peerID string, locator []*bc.Hash, stopHash *bc.Hash) ([]*types.Block, error) {
 	peer := mf.peers.GetPeer(peerID)
 	if peer == nil {
+		mf.syncPeers.delete(peerID)
 		return nil, errPeerDropped
 	}
 
@@ -274,7 +278,7 @@ func (mf *msgFetcher) requireBlocks(peerID string, locator []*bc.Hash, stopHash 
 	mf.mux.Unlock()
 
 	if ok := peer.GetBlocks(locator, stopHash); !ok {
-		return nil, errPeerDropped
+		return nil, errSendMsg
 	}
 
 	timeout := time.NewTimer(requireBlocksTimeout)
