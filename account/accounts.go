@@ -335,12 +335,7 @@ func (m *Manager) FindByID(id string) (*Account, error) {
 
 // GetAccountByProgram return Account by given CtrlProgram
 func (m *Manager) GetAccountByProgram(program *CtrlProgram) (*Account, error) {
-	account, err := m.store.GetAccountByID(program.AccountID)
-	if err != nil {
-		return nil, err
-	}
-
-	return account, nil
+	return m.store.GetAccountByID(program.AccountID)
 }
 
 // GetAccountByXPubsIndex get account by xPubs and index
