@@ -70,6 +70,9 @@ func (w *Wallet) detachUtxos(b *types.Block, txStatus *bc.TransactionStatus) {
 			code := []byte{}
 			switch resOut := tx.Entries[*tx.ResultIds[j]].(type) {
 			case *bc.IntraChainOutput:
+				if resOut.Source.Value.Amount == uint64(0) {
+					continue
+				}
 				code = resOut.ControlProgram.Code
 			case *bc.VoteOutput:
 				code = resOut.ControlProgram.Code
@@ -222,7 +225,7 @@ func txOutToUtxos(tx *types.Tx, statusFail bool, blockHeight uint64) []*account.
 		utxo := &account.UTXO{}
 		switch bcOut := entryOutput.(type) {
 		case *bc.IntraChainOutput:
-			if statusFail && *out.AssetAmount().AssetId != *consensus.BTMAssetID {
+			if (statusFail && *out.AssetAmount().AssetId != *consensus.BTMAssetID) || out.AssetAmount().Amount == uint64(0) {
 				continue
 			}
 			utxo = &account.UTXO{

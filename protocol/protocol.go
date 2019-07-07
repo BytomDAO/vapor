@@ -83,15 +83,16 @@ func (c *Chain) initChainStatus() error {
 		return err
 	}
 
-	voteResults := []*state.VoteResult{&state.VoteResult{
-		Seq:         0,
-		NumOfVote:   map[string]uint64{},
-		BlockHash:   genesisBlock.Hash(),
-		BlockHeight: 0,
+	consensusResults := []*state.ConsensusResult{&state.ConsensusResult{
+		Seq:            0,
+		NumOfVote:      make(map[string]uint64),
+		CoinbaseReward: make(map[string]uint64),
+		BlockHash:      genesisBlock.Hash(),
+		BlockHeight:    0,
 	}}
 
 	genesisBlockHeader := &genesisBlock.BlockHeader
-	return c.store.SaveChainStatus(genesisBlockHeader, genesisBlockHeader, []*types.BlockHeader{genesisBlockHeader}, utxoView, voteResults)
+	return c.store.SaveChainStatus(genesisBlockHeader, genesisBlockHeader, []*types.BlockHeader{genesisBlockHeader}, utxoView, consensusResults)
 }
 
 // BestBlockHeight returns the current height of the blockchain.
@@ -139,8 +140,8 @@ func (c *Chain) InMainChain(hash bc.Hash) bool {
 }
 
 // This function must be called with mu lock in above level
-func (c *Chain) setState(blockHeader, irrBlockHeader *types.BlockHeader, mainBlockHeaders []*types.BlockHeader, view *state.UtxoViewpoint, voteResults []*state.VoteResult) error {
-	if err := c.store.SaveChainStatus(blockHeader, irrBlockHeader, mainBlockHeaders, view, voteResults); err != nil {
+func (c *Chain) setState(blockHeader, irrBlockHeader *types.BlockHeader, mainBlockHeaders []*types.BlockHeader, view *state.UtxoViewpoint, consensusResults []*state.ConsensusResult) error {
+	if err := c.store.SaveChainStatus(blockHeader, irrBlockHeader, mainBlockHeaders, view, consensusResults); err != nil {
 		return err
 	}
 
