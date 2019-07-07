@@ -38,7 +38,7 @@ func accountIndexKey(xpubs []chainkd.XPub) []byte {
 }
 
 func Bip44ContractIndexKey(accountID string, change bool) []byte {
-	key := append(dbm.ContractIndexPrefix, accountID...)
+	key := append(dbm.ContractIndexPrefix, []byte(accountID)...)
 	if change {
 		return append(key, []byte{1}...)
 	}
