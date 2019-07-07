@@ -230,7 +230,7 @@ func (store *AccountStore) ListAccounts(id string) ([]*acc.Account, error) {
 
 	for accountIter.Next() {
 		account := new(acc.Account)
-		if err := json.Unmarshal(accountIter.Value(), &account); err != nil {
+		if err := json.Unmarshal(accountIter.Value(), account); err != nil {
 			return nil, err
 		}
 
