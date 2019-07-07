@@ -59,29 +59,6 @@ var (
 	errGetAsset          = errors.New("Failed to find asset definition")
 )
 
-func Bip44ContractIndexKey(accountID string, change bool) []byte {
-	key := append(ContractIndexPrefix, []byte(accountID)...)
-	if change {
-		return append(key, []byte{1}...)
-	}
-	return append(key, []byte{0}...)
-}
-
-// ContractKey account control promgram store prefix
-func ContractKey(hash bc.Hash) []byte {
-	return append(ContractPrefix, hash.Bytes()...)
-}
-
-// AccountIDKey account id store prefix
-func AccountIDKey(accountID string) []byte {
-	return append(AccountPrefix, []byte(accountID)...)
-}
-
-// StandardUTXOKey makes an account unspent outputs key to store
-func StandardUTXOKey(id bc.Hash) []byte {
-	return append(UTXOPrefix, id.Bytes()...)
-}
-
 // ContractUTXOKey makes a smart contract unspent outputs key to store
 func ContractUTXOKey(id bc.Hash) []byte {
 	return append(SUTXOPrefix, id.Bytes()...)
