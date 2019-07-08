@@ -138,11 +138,18 @@ func (m *mainchainKeeper) processBlock(chain *orm.Chain, block *types.Block, txS
 }
 
 func (m *mainchainKeeper) isDepositTx(tx *types.Tx) bool {
+	for _, input := range tx.Inputs {
+		if bytes.Equal(input.ControlProgram(), m.fedProg) {
+			return false
+		}
+	}
+
 	for _, output := range tx.Outputs {
 		if bytes.Equal(output.OutputCommitment.ControlProgram, m.fedProg) {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -307,10 +314,10 @@ func (m *mainchainKeeper) processIssuing(txs []*types.Tx) error {
 				}
 
 				m.assetStore.Add(&orm.Asset{
-					AssetID:           assetID.String(),
-					IssuanceProgram:   hex.EncodeToString(inp.IssuanceProgram),
-					VMVersion:         inp.VMVersion,
-					RawDefinitionByte: hex.EncodeToString(inp.AssetDefinition),
+					AssetID:         assetID.String(),
+					IssuanceProgram: hex.EncodeToString(inp.IssuanceProgram),
+					VMVersion:       inp.VMVersion,
+					Definition:      string(inp.AssetDefinition),
 				})
 			}
 		}
