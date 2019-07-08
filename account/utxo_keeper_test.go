@@ -1381,7 +1381,7 @@ func ContractUTXOKey(id bc.Hash) []byte {
 }
 
 func (store *mockAccountStore) InitStore() AccountStore                         { return nil }
-func (store *mockAccountStore) CommitBatch() error                              { return nil }
+func (store *mockAccountStore) CommitStore() error                              { return nil }
 func (store *mockAccountStore) DeleteAccount(*Account) error                    { return nil }
 func (store *mockAccountStore) GetAccountByAlias(string) (*Account, error)      { return nil, nil }
 func (store *mockAccountStore) GetAccountByID(string) (*Account, error)         { return nil, nil }

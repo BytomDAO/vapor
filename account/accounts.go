@@ -123,7 +123,7 @@ func (m *Manager) saveAccount(account *Account) error {
 		return err
 	}
 
-	if err := newStore.CommitBatch(); err != nil {
+	if err := newStore.CommitStore(); err != nil {
 		return err
 	}
 
@@ -222,7 +222,7 @@ func (m *Manager) UpdateAccountAlias(accountID string, newAlias string) error {
 		return err
 	}
 
-	if err := newStore.CommitBatch(); err != nil {
+	if err := newStore.CommitStore(); err != nil {
 		return err
 	}
 
@@ -632,7 +632,7 @@ func (m *Manager) saveControlProgram(prog *CtrlProgram, updateIndex bool) error 
 		}
 	}
 
-	return newStore.CommitBatch()
+	return newStore.CommitStore()
 }
 
 // SaveControlPrograms save account control programs
