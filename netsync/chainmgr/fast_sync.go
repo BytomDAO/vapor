@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
+
 	"github.com/vapor/errors"
 	"github.com/vapor/netsync/peers"
 	"github.com/vapor/protocol/bc"
@@ -21,41 +22,33 @@ var (
 )
 
 type fastSync struct {
-	chain            Chain
-	msgFetcher       MsgFetcher
-	blockProcessor   BlockProcessor
-	peers            *peers.PeerSet
-	mainSyncPeer     *peers.Peer
-	stopHeader       *types.BlockHeader
-	length           uint64
-	blockFetchTasks  []*fetchBlocksWork
-	newBlockNotifyCh chan struct{}
-	downloadStop     chan bool
-	processStop      chan bool
-	quite            chan struct{}
+	chain           Chain
+	msgFetcher      MsgFetcher
+	blockProcessor  BlockProcessor
+	length          uint64
+	blockFetchTasks []*fetchBlocksWork
+	peers           *peers.PeerSet
+	mainSyncPeer    *peers.Peer
+	stopHeader      *types.BlockHeader
+	quite           chan struct{}
 }
 
 func newFastSync(chain Chain, msgFetcher MsgFetcher, storage Storage, peers *peers.PeerSet) *fastSync {
-	newBlockNotifyCh := make(chan struct{}, maxNumOfBlocksPerSync)
-
 	return &fastSync{
-		chain:            chain,
-		blockProcessor:   newBlockProcessor(chain, storage, peers, newBlockNotifyCh),
-		msgFetcher:       msgFetcher,
-		peers:            peers,
-		blockFetchTasks:  make([]*fetchBlocksWork, 0),
-		newBlockNotifyCh: newBlockNotifyCh,
-		downloadStop:     make(chan bool, 1),
-		processStop:      make(chan bool, 1),
-		quite:            make(chan struct{}),
+		chain:           chain,
+		msgFetcher:      msgFetcher,
+		blockProcessor:  newBlockProcessor(chain, storage, peers),
+		peers:           peers,
+		blockFetchTasks: make([]*fetchBlocksWork, 0),
+		quite:           make(chan struct{}),
 	}
 }
 
 func (fs *fastSync) blockLocator() []*bc.Hash {
 	header := fs.chain.BestBlockHeader()
 	locator := []*bc.Hash{}
-
 	step := uint64(1)
+
 	for header != nil {
 		headerHash := header.Hash()
 		locator = append(locator, &headerHash)
@@ -106,13 +99,19 @@ func (fs *fastSync) process() error {
 		return err
 	}
 
+	//downloadNotifyCh true:new blocks false:download stop
+	downloadNotifyCh := make(chan bool, maxNumOfBlocksPerSync+1)
+	processStop := make(chan bool, 1)
+
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go fs.msgFetcher.parallelFetchBlocks(fs.blockFetchTasks, fs.newBlockNotifyCh, fs.downloadStop, fs.processStop, &wg)
-	go fs.blockProcessor.process(fs.downloadStop, fs.processStop, &wg)
+	go fs.msgFetcher.parallelFetchBlocks(fs.blockFetchTasks, downloadNotifyCh, processStop, &wg)
+	go fs.blockProcessor.process(downloadNotifyCh, processStop, &wg)
 	wg.Wait()
-	log.WithFields(log.Fields{"module": logModule, "height": fs.chain.BestBlockHeight()}).Info("fast sync complete")
+	close(processStop)
+	close(downloadNotifyCh)
 	fs.resetParameter()
+	log.WithFields(log.Fields{"module": logModule, "height": fs.chain.BestBlockHeight()}).Info("fast sync complete")
 	return nil
 }
 
@@ -177,16 +176,6 @@ func (fs *fastSync) findSyncRange() error {
 func (fs *fastSync) resetParameter() {
 	fs.blockFetchTasks = make([]*fetchBlocksWork, 0)
 	fs.msgFetcher.resetParameter()
-	//empty chan
-	for {
-		select {
-		case <-fs.downloadResult:
-		case <-fs.processStop:
-		case <-fs.newBlockNotifyCh:
-		default:
-			return
-		}
-	}
 }
 
 func (fs *fastSync) setSyncPeer(peer *peers.Peer) {

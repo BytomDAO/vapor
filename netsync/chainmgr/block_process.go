@@ -13,18 +13,16 @@ type BlockProcessor interface {
 }
 
 type blockProcessor struct {
-	chain            Chain
-	storage          Storage
-	peers            *peers.PeerSet
-	newBlockNotifyCh chan struct{}
+	chain   Chain
+	storage Storage
+	peers   *peers.PeerSet
 }
 
-func newBlockProcessor(chain Chain, storage Storage, peers *peers.PeerSet, newBlockNotifyCh chan struct{}) *blockProcessor {
+func newBlockProcessor(chain Chain, storage Storage, peers *peers.PeerSet) *blockProcessor {
 	return &blockProcessor{
-		chain:            chain,
-		peers:            peers,
-		storage:          storage,
-		newBlockNotifyCh: newBlockNotifyCh,
+		chain:   chain,
+		peers:   peers,
+		storage: storage,
 	}
 }
 
@@ -36,7 +34,7 @@ func (bp *blockProcessor) insert(blockStorage *blockStorage) error {
 	return err
 }
 
-func (bp *blockProcessor) process(downloadComplete chan bool, ProcessStop chan bool, wg *sync.WaitGroup) {
+func (bp *blockProcessor) process(downloadNotifyCh chan bool, ProcessStop chan bool, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	for {
@@ -57,9 +55,10 @@ func (bp *blockProcessor) process(downloadComplete chan bool, ProcessStop chan b
 		}
 
 		select {
-		case <-bp.newBlockNotifyCh:
-		case <-downloadComplete:
-			return
+		case ok := <-downloadNotifyCh:
+			if !ok {
+				return
+			}
 		}
 	}
 }

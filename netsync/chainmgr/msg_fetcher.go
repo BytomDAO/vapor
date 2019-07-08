@@ -36,7 +36,7 @@ type MsgFetcher interface {
 	resetParameter()
 	addSyncPeer(peerID string)
 	requireBlock(peerID string, height uint64) (*types.Block, error)
-	parallelFetchBlocks(work []*fetchBlocksWork, downloadedBlockCh chan struct{}, downloadResult chan bool, ProcessResult chan bool, wg *sync.WaitGroup)
+	parallelFetchBlocks(work []*fetchBlocksWork, downloadNotifyCh chan bool, ProcessResult chan bool, wg *sync.WaitGroup)
 	parallelFetchHeaders(peers []*peers.Peer, locator []*bc.Hash, stopHash *bc.Hash, skip uint64) (map[string][]*types.BlockHeader, error)
 }
 
@@ -115,7 +115,7 @@ func (mf *msgFetcher) fetchBlocks(work *fetchBlocksWork, peerID string) ([]*type
 	return blocks, nil
 }
 
-func (mf *msgFetcher) fetchBlocksProcess(work *fetchBlocksWork, peerCh chan string, downloadedBlockCh chan struct{}, closeCh chan struct{}) error {
+func (mf *msgFetcher) fetchBlocksProcess(work *fetchBlocksWork, peerCh chan string, downloadNotifyCh chan bool, closeCh chan struct{}) error {
 	for {
 		select {
 		case peerID := <-peerCh:
@@ -128,10 +128,11 @@ func (mf *msgFetcher) fetchBlocksProcess(work *fetchBlocksWork, peerCh chan stri
 
 				if err := mf.storage.writeBlocks(peerID, blocks); err != nil {
 					log.WithFields(log.Fields{"module": logModule, "error": err}).Info("write block error")
+					return err
 				}
 
 				// send to block process pool
-				downloadedBlockCh <- struct{}{}
+				downloadNotifyCh <- true
 
 				// work completed
 				if blocks[len(blocks)-1].Height >= work.stopHeader.Height-1 {
@@ -147,11 +148,11 @@ func (mf *msgFetcher) fetchBlocksProcess(work *fetchBlocksWork, peerCh chan stri
 	}
 }
 
-func (mf *msgFetcher) fetchBlocksWorker(workCh chan *fetchBlocksWork, peerCh chan string, resultCh chan *fetchBlocksResult, closeCh chan struct{}, downloadedBlockCh chan struct{}, wg *sync.WaitGroup) {
+func (mf *msgFetcher) fetchBlocksWorker(workCh chan *fetchBlocksWork, peerCh chan string, resultCh chan *fetchBlocksResult, closeCh chan struct{}, downloadNotifyCh chan bool, wg *sync.WaitGroup) {
 	for {
 		select {
 		case work := <-workCh:
-			err := mf.fetchBlocksProcess(work, peerCh, downloadedBlockCh, closeCh)
+			err := mf.fetchBlocksProcess(work, peerCh, downloadNotifyCh, closeCh)
 			resultCh <- &fetchBlocksResult{startHeight: work.startHeader.Height, stopHeight: work.stopHeader.Height, err: err}
 		case <-closeCh:
 			wg.Done()
@@ -160,7 +161,7 @@ func (mf *msgFetcher) fetchBlocksWorker(workCh chan *fetchBlocksWork, peerCh cha
 	}
 }
 
-func (mf *msgFetcher) parallelFetchBlocks(works []*fetchBlocksWork, downloadedBlockCh chan struct{}, downloadStop chan bool, ProcessStop chan bool, wg *sync.WaitGroup) {
+func (mf *msgFetcher) parallelFetchBlocks(works []*fetchBlocksWork, downloadNotifyCh chan bool, ProcessStop chan bool, wg *sync.WaitGroup) {
 	workSize := len(works)
 	workCh := make(chan *fetchBlocksWork, workSize)
 	peerCh := make(chan string, maxNumOfFastSyncPeers)
@@ -170,7 +171,7 @@ func (mf *msgFetcher) parallelFetchBlocks(works []*fetchBlocksWork, downloadedBl
 	var workWg sync.WaitGroup
 	for i := 0; i <= maxNumOfParallelFetchBlocks && i < workSize; i++ {
 		workWg.Add(1)
-		go mf.fetchBlocksWorker(workCh, peerCh, resultCh, closeCh, downloadedBlockCh, &workWg)
+		go mf.fetchBlocksWorker(workCh, peerCh, resultCh, closeCh, downloadNotifyCh, &workWg)
 	}
 
 	for _, work := range works {
@@ -185,9 +186,10 @@ func (mf *msgFetcher) parallelFetchBlocks(works []*fetchBlocksWork, downloadedBl
 	defer func() {
 		close(closeCh)
 		workWg.Wait()
-		close(workCh)
 		close(resultCh)
-		downloadStop <- true
+		close(peerCh)
+		close(workCh)
+		downloadNotifyCh <- false
 		wg.Done()
 	}()
 
