@@ -36,7 +36,7 @@ func (w *Wallet) GetAccountUtxos(accountID string, id string, unconfirmed, isSma
 	return newAccountUtxos
 }
 
-func (w *Wallet) attachUtxos(b *types.Block, txStatus *bc.TransactionStatus) {
+func (w *Wallet) attachUtxos(b *types.Block, txStatus *bc.TransactionStatus, store WalletStore) {
 	for txIndex, tx := range b.Transactions {
 		statusFail, err := txStatus.GetStatus(txIndex)
 		if err != nil {
@@ -50,20 +50,20 @@ func (w *Wallet) attachUtxos(b *types.Block, txStatus *bc.TransactionStatus) {
 			if segwit.IsP2WScript(inputUtxo.ControlProgram) {
 				w.AccountMgr.DeleteStandardUTXO(inputUtxo.OutputID)
 			} else {
-				w.store.DeleteContractUTXO(inputUtxo.OutputID)
+				store.DeleteContractUTXO(inputUtxo.OutputID)
 			}
 		}
 
 		//hand update the transaction output utxos
 		outputUtxos := txOutToUtxos(tx, statusFail, b.Height)
 		utxos := w.filterAccountUtxo(outputUtxos)
-		if err := w.saveUtxos(utxos); err != nil {
+		if err := w.saveUtxos(utxos, store); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("attachUtxos fail on saveUtxos")
 		}
 	}
 }
 
-func (w *Wallet) detachUtxos(b *types.Block, txStatus *bc.TransactionStatus) {
+func (w *Wallet) detachUtxos(b *types.Block, txStatus *bc.TransactionStatus, store WalletStore) {
 	for txIndex := len(b.Transactions) - 1; txIndex >= 0; txIndex-- {
 		tx := b.Transactions[txIndex]
 		for j := range tx.Outputs {
@@ -83,7 +83,7 @@ func (w *Wallet) detachUtxos(b *types.Block, txStatus *bc.TransactionStatus) {
 			if segwit.IsP2WScript(code) {
 				w.AccountMgr.DeleteStandardUTXO(*tx.ResultIds[j])
 			} else {
-				w.store.DeleteContractUTXO(*tx.ResultIds[j])
+				store.DeleteContractUTXO(*tx.ResultIds[j])
 			}
 		}
 
@@ -95,7 +95,7 @@ func (w *Wallet) detachUtxos(b *types.Block, txStatus *bc.TransactionStatus) {
 
 		inputUtxos := txInToUtxos(tx, statusFail)
 		utxos := w.filterAccountUtxo(inputUtxos)
-		if err := w.saveUtxos(utxos); err != nil {
+		if err := w.saveUtxos(utxos, store); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("detachUtxos fail on batchSaveUtxos")
 			return
 		}
@@ -140,14 +140,14 @@ func (w *Wallet) filterAccountUtxo(utxos []*account.UTXO) []*account.UTXO {
 	return result
 }
 
-func (w *Wallet) saveUtxos(utxos []*account.UTXO) error {
+func (w *Wallet) saveUtxos(utxos []*account.UTXO, store WalletStore) error {
 	for _, utxo := range utxos {
 		if segwit.IsP2WScript(utxo.ControlProgram) {
 			if err := w.AccountMgr.SetStandardUTXO(utxo.OutputID, utxo); err != nil {
 				return err
 			}
 		} else {
-			if err := w.store.SetContractUTXO(utxo.OutputID, utxo); err != nil {
+			if err := store.SetContractUTXO(utxo.OutputID, utxo); err != nil {
 				return err
 			}
 		}

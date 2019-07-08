@@ -29,26 +29,24 @@ func parseGlobalTxIdx(globalTxIdx []byte) (*bc.Hash, uint64) {
 // when query ,query local first and if have no then query external
 // details see getAliasDefinition
 func saveExternalAssetDefinition(b *types.Block, store WalletStore) error {
-	if err := store.InitBatch(); err != nil {
-		return err
-	}
+	newStore := store.InitStore()
 
 	for _, tx := range b.Transactions {
 		for _, orig := range tx.Inputs {
 			if cci, ok := orig.TypedInput.(*types.CrossChainInput); ok {
 				assetID := cci.AssetId
-				assetExist, err := store.GetAsset(assetID)
+				assetExist, err := newStore.GetAsset(assetID)
 				if err != nil {
 					return err
 				}
 
 				if assetExist == nil {
-					store.SetAssetDefinition(assetID, cci.AssetDefinition)
+					newStore.SetAssetDefinition(assetID, cci.AssetDefinition)
 				}
 			}
 		}
 	}
-	if err := store.CommitBatch(); err != nil {
+	if err := newStore.CommitBatch(); err != nil {
 		return err
 	}
 
@@ -75,13 +73,13 @@ type TxSummary struct {
 }
 
 // indexTransactions saves all annotated transactions to the database.
-func (w *Wallet) indexTransactions(b *types.Block, txStatus *bc.TransactionStatus, annotatedTxs []*query.AnnotatedTx) error {
+func (w *Wallet) indexTransactions(b *types.Block, txStatus *bc.TransactionStatus, annotatedTxs []*query.AnnotatedTx, store WalletStore) error {
 	for _, tx := range annotatedTxs {
 		if err := w.store.SetTransaction(b.Height, tx); err != nil {
 			return err
 		}
 
-		w.store.DeleteUnconfirmedTransaction(tx.ID.String())
+		store.DeleteUnconfirmedTransaction(tx.ID.String())
 	}
 
 	if !w.TxIndexFlag {
@@ -90,7 +88,7 @@ func (w *Wallet) indexTransactions(b *types.Block, txStatus *bc.TransactionStatu
 
 	for position, globalTx := range b.Transactions {
 		blockHash := b.BlockHeader.Hash()
-		w.store.SetGlobalTransactionIndex(globalTx.ID.String(), &blockHash, uint64(position))
+		store.SetGlobalTransactionIndex(globalTx.ID.String(), &blockHash, uint64(position))
 	}
 
 	return nil

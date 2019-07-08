@@ -108,14 +108,11 @@ func NewWalletStore(db dbm.DB) *WalletStore {
 	}
 }
 
-// InitBatch initial batch
-func (store *WalletStore) InitBatch() error {
-	if store.batch != nil {
-		return errors.New("WalletStore initail fail, store batch is not nil.")
-	}
-
-	store.batch = store.db.NewBatch()
-	return nil
+// InitStore initial new wallet store
+func (store *WalletStore) InitStore() wallet.WalletStore {
+	newStore := NewWalletStore(store.db)
+	newStore.batch = newStore.db.NewBatch()
+	return newStore
 }
 
 // CommitBatch commit batch

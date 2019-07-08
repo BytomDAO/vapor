@@ -157,8 +157,8 @@ func (w *Wallet) LoadWalletInfo() error {
 	return w.AttachBlock(block)
 }
 
-func (w *Wallet) commitWalletInfo() error {
-	if err := w.store.SetWalletInfo(&w.Status); err != nil {
+func (w *Wallet) commitWalletInfo(store WalletStore) error {
+	if err := store.SetWalletInfo(&w.Status); err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("save wallet info")
 		return err
 	}
@@ -193,15 +193,13 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 
 	w.annotateTxsAccount(annotatedTxs)
 
-	if err := w.store.InitBatch(); err != nil {
+	newStore := w.store.InitStore()
+
+	if err := w.indexTransactions(block, txStatus, annotatedTxs, newStore); err != nil {
 		return err
 	}
 
-	if err := w.indexTransactions(block, txStatus, annotatedTxs); err != nil {
-		return err
-	}
-
-	w.attachUtxos(block, txStatus)
+	w.attachUtxos(block, txStatus, newStore)
 	w.Status.WorkHeight = block.Height
 	w.Status.WorkHash = block.Hash()
 	if w.Status.WorkHeight >= w.Status.BestHeight {
@@ -209,11 +207,11 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 		w.Status.BestHash = w.Status.WorkHash
 	}
 
-	if err := w.commitWalletInfo(); err != nil {
+	if err := w.commitWalletInfo(newStore); err != nil {
 		return err
 	}
 
-	if err := w.store.CommitBatch(); err != nil {
+	if err := newStore.CommitBatch(); err != nil {
 		return err
 	}
 
@@ -231,12 +229,10 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 		return err
 	}
 
-	if err := w.store.InitBatch(); err != nil {
-		return err
-	}
+	newStore := w.store.InitStore()
 
-	w.detachUtxos(block, txStatus)
-	w.store.DeleteTransactions(w.Status.BestHeight)
+	w.detachUtxos(block, txStatus, newStore)
+	newStore.DeleteTransactions(w.Status.BestHeight)
 
 	w.Status.BestHeight = block.Height - 1
 	w.Status.BestHash = block.PreviousBlockHash
@@ -245,11 +241,11 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 		w.Status.WorkHeight = w.Status.BestHeight
 		w.Status.WorkHash = w.Status.BestHash
 	}
-	if err := w.commitWalletInfo(); err != nil {
+	if err := w.commitWalletInfo(newStore); err != nil {
 		return err
 	}
 
-	if err := w.store.CommitBatch(); err != nil {
+	if err := newStore.CommitBatch(); err != nil {
 		return err
 	}
 
