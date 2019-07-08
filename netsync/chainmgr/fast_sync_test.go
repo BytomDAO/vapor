@@ -80,11 +80,12 @@ func TestFastBlockSync(t *testing.T) {
 		os.RemoveAll(tmp)
 	}()
 
-	maxNumOfHeadersPerMsg = 10
-	maxNumOfBlocksPerMsg = 10
 	maxNumOfSkeletonPerSync = 10
 	numOfBlocksSkeletonGap = 10
 	maxNumOfBlocksPerSync = maxNumOfSkeletonPerSync * maxNumOfSkeletonPerSync
+	fastSyncPivotGap = uint64(5)
+	minGapStartFastSync = uint64(6)
+
 	baseChain := mockBlocks(nil, 300)
 
 	cases := []struct {
@@ -98,14 +99,35 @@ func TestFastBlockSync(t *testing.T) {
 			syncTimeout: 30 * time.Second,
 			aBlocks:     baseChain[:50],
 			bBlocks:     baseChain[:301],
-			want:        baseChain[:139],
+			want:        baseChain[:150],
 			err:         nil,
 		},
 		{
 			syncTimeout: 30 * time.Second,
 			aBlocks:     baseChain[:2],
 			bBlocks:     baseChain[:300],
-			want:        baseChain[:91],
+			want:        baseChain[:102],
+			err:         nil,
+		},
+		{
+			syncTimeout: 30 * time.Second,
+			aBlocks:     baseChain[:2],
+			bBlocks:     baseChain[:53],
+			want:        baseChain[:48],
+			err:         nil,
+		},
+		{
+			syncTimeout: 30 * time.Second,
+			aBlocks:     baseChain[:2],
+			bBlocks:     baseChain[:53],
+			want:        baseChain[:48],
+			err:         nil,
+		},
+		{
+			syncTimeout: 30 * time.Second,
+			aBlocks:     baseChain[:2],
+			bBlocks:     baseChain[:10],
+			want:        baseChain[:5],
 			err:         nil,
 		},
 	}
