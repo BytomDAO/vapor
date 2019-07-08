@@ -60,23 +60,23 @@ const (
 var (
 	colon               byte = 0x3a
 	store                    = []byte("store:")
-	accountStore             = []byte("accountStore:")
-	walletStore              = []byte("walletStore:")
+	accountStore             = []byte("AS:")
+	walletStore              = []byte("WS:")
 	UTXOPrefix               = append(accountStore, utxoPrefix, colon)
-	SUTXOPrefix              = append(store, sutxoPrefix, colon)
+	SUTXOPrefix              = append(walletStore, sutxoPrefix, colon)
 	ContractPrefix           = append(accountStore, contractPrefix, colon)
 	ContractIndexPrefix      = append(accountStore, contractIndexPrefix, colon)
 	AccountPrefix            = append(accountStore, accountPrefix, colon) // AccountPrefix is account ID prefix
-	AccountAliasPrefix       = append(store, accountAliasPrefix, colon)
+	AccountAliasPrefix       = append(walletStore, accountAliasPrefix, colon)
 	AccountIndexPrefix       = append(accountStore, accountIndexPrefix, colon)
-	TxPrefix                 = append(store, txPrefix, colon)            //TxPrefix is wallet database transactions prefix
-	TxIndexPrefix            = append(store, txIndexPrefix, colon)       //TxIndexPrefix is wallet database tx index prefix
-	UnconfirmedTxPrefix      = append(store, unconfirmedTxPrefix, colon) //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
-	GlobalTxIndexPrefix      = append(store, globalTxIndexPrefix, colon) //GlobalTxIndexPrefix is wallet database global tx index prefix
-	WalletKey                = append(store, walletKey)
-	MiningAddressKey         = append(store, miningAddressKey)
-	CoinbaseAbKey            = append(store, coinbaseAbKey)
-	RecoveryKey              = append(store, recoveryKey)
+	TxPrefix                 = append(walletStore, txPrefix, colon)            //TxPrefix is wallet database transactions prefix
+	TxIndexPrefix            = append(walletStore, txIndexPrefix, colon)       //TxIndexPrefix is wallet database tx index prefix
+	UnconfirmedTxPrefix      = append(walletStore, unconfirmedTxPrefix, colon) //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
+	GlobalTxIndexPrefix      = append(walletStore, globalTxIndexPrefix, colon) //GlobalTxIndexPrefix is wallet database global tx index prefix
+	WalletKey                = append(walletStore, walletKey)
+	MiningAddressKey         = append(walletStore, miningAddressKey)
+	CoinbaseAbKey            = append(walletStore, coinbaseAbKey)
+	RecoveryKey              = append(walletStore, recoveryKey)
 )
 
 const (
