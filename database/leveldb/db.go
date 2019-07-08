@@ -63,18 +63,18 @@ var (
 	UTXOPrefix               = append(store, utxoPrefix, colon)
 	SUTXOPrefix              = append(store, sutxoPrefix, colon)
 	ContractPrefix           = append(store, contractPrefix, colon)
-	ContractIndexPrefix      = []byte{contractIndexPrefix, colon}
-	AccountPrefix            = []byte{accountPrefix, colon} // AccountPrefix is account ID prefix
-	AccountAliasPrefix       = []byte{accountAliasPrefix, colon}
-	AccountIndexPrefix       = []byte{accountIndexPrefix, colon}
-	TxPrefix                 = []byte{txPrefix, colon}            //TxPrefix is wallet database transactions prefix
-	TxIndexPrefix            = []byte{txIndexPrefix, colon}       //TxIndexPrefix is wallet database tx index prefix
-	UnconfirmedTxPrefix      = []byte{unconfirmedTxPrefix, colon} //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
-	GlobalTxIndexPrefix      = []byte{globalTxIndexPrefix, colon} //GlobalTxIndexPrefix is wallet database global tx index prefix
-	WalletKey                = []byte{walletKey}
-	MiningAddressKey         = []byte{miningAddressKey}
-	CoinbaseAbKey            = []byte{coinbaseAbKey}
-	RecoveryKey              = []byte{recoveryKey}
+	ContractIndexPrefix      = append(store, contractIndexPrefix, colon)
+	AccountPrefix            = append(store, accountPrefix, colon) // AccountPrefix is account ID prefix
+	AccountAliasPrefix       = append(store, accountAliasPrefix, colon)
+	AccountIndexPrefix       = append(store, accountIndexPrefix, colon)
+	TxPrefix                 = append(store, txPrefix, colon)            //TxPrefix is wallet database transactions prefix
+	TxIndexPrefix            = append(store, txIndexPrefix, colon)       //TxIndexPrefix is wallet database tx index prefix
+	UnconfirmedTxPrefix      = append(store, unconfirmedTxPrefix, colon) //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
+	GlobalTxIndexPrefix      = append(store, globalTxIndexPrefix, colon) //GlobalTxIndexPrefix is wallet database global tx index prefix
+	WalletKey                = append(store, walletKey)
+	MiningAddressKey         = append(store, miningAddressKey)
+	CoinbaseAbKey            = append(store, coinbaseAbKey)
+	RecoveryKey              = append(store, recoveryKey)
 )
 
 const (
