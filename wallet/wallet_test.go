@@ -696,7 +696,7 @@ func NewMockAccountStore(db dbm.DB) *MockAccountStore {
 	}
 }
 
-// InitStore initial batch
+// InitStore initial new account store
 func (store *MockAccountStore) InitStore() acc.AccountStore {
 	newStore := NewMockAccountStore(store.db)
 	newStore.batch = newStore.db.NewBatch()

@@ -82,7 +82,7 @@ func NewAccountStore(db dbm.DB) *AccountStore {
 	}
 }
 
-// InitStore initial batch
+// InitStore initial new account store
 func (store *AccountStore) InitStore() acc.AccountStore {
 	newStore := NewAccountStore(store.db)
 	newStore.batch = newStore.db.NewBatch()
