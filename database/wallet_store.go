@@ -153,9 +153,9 @@ func (store *WalletStore) DeleteTransactions(height uint64) {
 	txIter := store.db.IteratorPrefix(calcDeleteKey(height))
 	defer txIter.Release()
 
-	tmpTx := query.AnnotatedTx{}
 	for txIter.Next() {
-		if err := json.Unmarshal(txIter.Value(), &tmpTx); err == nil {
+		tmpTx := new(query.AnnotatedTx)
+		if err := json.Unmarshal(txIter.Value(), tmpTx); err == nil {
 			batch.Delete(calcTxIndexKey(tmpTx.ID.String()))
 		} else {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on DeleteTransactions.")
@@ -382,7 +382,7 @@ func (store *WalletStore) ListTransactions(accountID string, StartTxID string, c
 
 	for txNum := count; itr.Next() && txNum > 0; {
 		annotatedTx := new(query.AnnotatedTx)
-		if err := json.Unmarshal(itr.Value(), &annotatedTx); err != nil {
+		if err := json.Unmarshal(itr.Value(), annotatedTx); err != nil {
 			return nil, err
 		}
 
@@ -400,8 +400,8 @@ func (store *WalletStore) ListUnconfirmedTransactions() ([]*query.AnnotatedTx, e
 	defer txIter.Release()
 
 	for txIter.Next() {
-		annotatedTx := &query.AnnotatedTx{}
-		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
+		annotatedTx := new(query.AnnotatedTx)
+		if err := json.Unmarshal(txIter.Value(), annotatedTx); err != nil {
 			return nil, err
 		}
 

@@ -162,17 +162,22 @@ func TestWalletUpdate(t *testing.T) {
 
 // 		accountStore := database.NewAccountStore(testDB)
 // 		accountManager := account.NewManager(accountStore, chain)
-// 		w := newMockWallet(walletStore, accountManager, nil, chain, dispatcher, false)
-// 		// w := newMockWallet(walletStore, nil, nil, chain, dispatcher, false)
-// 		w.Wallet.Status = *walletInfo
+// 		// w := newMockWallet(walletStore, accountManager, nil, chain, dispatcher, false)
+// 		w, err := wt.NewWallet(walletStore, accountManager, nil, nil, chain, dispatcher, false)
+// 		if err != nil {
+// 			t.Fatal(err)
+// 		}
+// 		var hash [32]byte
+// 		w.Status.WorkHash = bc.NewHash(hash)
+// 		w.Status = *walletInfo
 
 // 		// rescan wallet.
-// 		if err := w.Wallet.LoadWalletInfo(); err != nil {
+// 		if err := w.LoadWalletInfo(); err != nil {
 // 			t.Fatal(err)
 // 		}
 
 // 		block := config.GenesisBlock()
-// 		if w.Wallet.Status.WorkHash != block.Hash() {
+// 		if w.Status.WorkHash != block.Hash() {
 // 			t.Fatal("reattach from genesis block")
 // 		}
 // 	}
