@@ -39,13 +39,16 @@ type Iterator interface {
 //-----------------------------------------------------------------------------
 
 const (
-	utxoPrefix  byte = iota //UTXOPrefix is StandardUTXOKey prefix
-	sutxoPrefix             //SUTXOPrefix is ContractUTXOKey prefix
+	utxoPrefix byte = iota //UTXOPrefix is StandardUTXOKey prefix
 	contractPrefix
 	contractIndexPrefix
 	accountPrefix // AccountPrefix is account ID prefix
-	accountAliasPrefix
 	accountIndexPrefix
+)
+
+const (
+	sutxoPrefix byte = iota //SUTXOPrefix is ContractUTXOKey prefix
+	accountAliasPrefix
 	txPrefix            //TxPrefix is wallet database transactions prefix
 	txIndexPrefix       //TxIndexPrefix is wallet database tx index prefix
 	unconfirmedTxPrefix //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
@@ -59,24 +62,26 @@ const (
 // leveldb key prefix
 var (
 	colon               byte = 0x3a
-	store                    = []byte("store:")
 	accountStore             = []byte("AS:")
-	walletStore              = []byte("WS:")
 	UTXOPrefix               = append(accountStore, utxoPrefix, colon)
-	SUTXOPrefix              = append(walletStore, sutxoPrefix, colon)
 	ContractPrefix           = append(accountStore, contractPrefix, colon)
 	ContractIndexPrefix      = append(accountStore, contractIndexPrefix, colon)
 	AccountPrefix            = append(accountStore, accountPrefix, colon) // AccountPrefix is account ID prefix
-	AccountAliasPrefix       = append(walletStore, accountAliasPrefix, colon)
 	AccountIndexPrefix       = append(accountStore, accountIndexPrefix, colon)
-	TxPrefix                 = append(walletStore, txPrefix, colon)            //TxPrefix is wallet database transactions prefix
-	TxIndexPrefix            = append(walletStore, txIndexPrefix, colon)       //TxIndexPrefix is wallet database tx index prefix
-	UnconfirmedTxPrefix      = append(walletStore, unconfirmedTxPrefix, colon) //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
-	GlobalTxIndexPrefix      = append(walletStore, globalTxIndexPrefix, colon) //GlobalTxIndexPrefix is wallet database global tx index prefix
-	WalletKey                = append(walletStore, walletKey)
-	MiningAddressKey         = append(walletStore, miningAddressKey)
-	CoinbaseAbKey            = append(walletStore, coinbaseAbKey)
-	RecoveryKey              = append(walletStore, recoveryKey)
+)
+
+var (
+	walletStore         = []byte("WS:")
+	SUTXOPrefix         = append(walletStore, sutxoPrefix, colon)
+	AccountAliasPrefix  = append(walletStore, accountAliasPrefix, colon)
+	TxPrefix            = append(walletStore, txPrefix, colon)            //TxPrefix is wallet database transactions prefix
+	TxIndexPrefix       = append(walletStore, txIndexPrefix, colon)       //TxIndexPrefix is wallet database tx index prefix
+	UnconfirmedTxPrefix = append(walletStore, unconfirmedTxPrefix, colon) //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
+	GlobalTxIndexPrefix = append(walletStore, globalTxIndexPrefix, colon) //GlobalTxIndexPrefix is wallet database global tx index prefix
+	WalletKey           = append(walletStore, walletKey)
+	MiningAddressKey    = append(walletStore, miningAddressKey)
+	CoinbaseAbKey       = append(walletStore, coinbaseAbKey)
+	RecoveryKey         = append(walletStore, recoveryKey)
 )
 
 const (
