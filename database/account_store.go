@@ -24,11 +24,11 @@ func accountIndexKey(xpubs []chainkd.XPub) []byte {
 		xPubs = append(xPubs, xpub[:]...)
 	}
 	sha3pool.Sum256(hash[:], xPubs)
-	return append(AccountIndexPrefix, hash[:]...)
+	return append(dbm.AccountIndexPrefix, hash[:]...)
 }
 
 func Bip44ContractIndexKey(accountID string, change bool) []byte {
-	key := append(ContractIndexPrefix, []byte(accountID)...)
+	key := append(dbm.ContractIndexPrefix, []byte(accountID)...)
 	if change {
 		return append(key, 0x01)
 	}
@@ -37,17 +37,17 @@ func Bip44ContractIndexKey(accountID string, change bool) []byte {
 
 // ContractKey account control promgram store prefix
 func ContractKey(hash bc.Hash) []byte {
-	return append(ContractPrefix, hash.Bytes()...)
+	return append(dbm.ContractPrefix, hash.Bytes()...)
 }
 
 // AccountIDKey account id store prefix
 func AccountIDKey(accountID string) []byte {
-	return append(AccountPrefix, []byte(accountID)...)
+	return append(dbm.AccountPrefix, []byte(accountID)...)
 }
 
 // StandardUTXOKey makes an account unspent outputs key to store
 func StandardUTXOKey(id bc.Hash) []byte {
-	return append(UTXOPrefix, id.Bytes()...)
+	return append(dbm.UTXOPrefix, id.Bytes()...)
 }
 
 // AccountStore satisfies AccountStore interface.
