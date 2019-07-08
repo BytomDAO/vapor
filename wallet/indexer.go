@@ -238,15 +238,10 @@ func (w *Wallet) GetTransactions(accountID string, StartTxID string, count uint,
 	}
 
 	newAnnotatedTxs := []*query.AnnotatedTx{}
-	txNum := count
 	for _, annotatedTx := range annotatedTxs {
 		if accountID == "" || findTransactionsByAccount(annotatedTx, accountID) {
 			annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 			newAnnotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, newAnnotatedTxs...)
-			txNum--
-			if txNum == 0 {
-				break
-			}
 		}
 	}
 

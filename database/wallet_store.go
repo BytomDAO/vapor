@@ -380,13 +380,14 @@ func (store *WalletStore) ListTransactions(accountID string, StartTxID string, c
 	itr := store.db.IteratorPrefixWithStart(preFix, startKey, true)
 	defer itr.Release()
 
-	for txNum := count; itr.Next() && txNum > 0; txNum-- {
+	for txNum := count; itr.Next() && txNum > 0; {
 		annotatedTx := new(query.AnnotatedTx)
 		if err := json.Unmarshal(itr.Value(), &annotatedTx); err != nil {
 			return nil, err
 		}
 
 		annotatedTxs = append(annotatedTxs, annotatedTx)
+		txNum--
 	}
 
 	return annotatedTxs, nil
