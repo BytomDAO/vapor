@@ -30,9 +30,9 @@ func accountIndexKey(xpubs []chainkd.XPub) []byte {
 func Bip44ContractIndexKey(accountID string, change bool) []byte {
 	key := append(ContractIndexPrefix, []byte(accountID)...)
 	if change {
-		return append(key, []byte{1}...)
+		return append(key, 0x01)
 	}
-	return append(key, []byte{0}...)
+	return append(key, 0x00)
 }
 
 // ContractKey account control promgram store prefix
