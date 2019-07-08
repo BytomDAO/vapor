@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	log "github.com/sirupsen/logrus"
+
 	acc "github.com/vapor/account"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/query"
@@ -169,6 +171,8 @@ func (store *WalletStore) DeleteTransactions(height uint64) {
 	for txIter.Next() {
 		if err := json.Unmarshal(txIter.Value(), &tmpTx); err == nil {
 			batch.Delete(calcTxIndexKey(tmpTx.ID.String()))
+		} else {
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on DeleteTransactions.")
 		}
 		batch.Delete(txIter.Key())
 	}
