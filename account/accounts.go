@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/golang/groupcache/lru"
+	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/blockchain/signers"
@@ -109,7 +110,7 @@ func CreateAccount(xpubs []chainkd.XPub, quorum int, alias string, acctIndex uin
 		return nil, errors.Wrap(err)
 	}
 
-	id := signers.IDGenerate()
+	id := uuid.New().String()
 	return &Account{Signer: signer, ID: id, Alias: strings.ToLower(strings.TrimSpace(alias))}, nil
 }
 
