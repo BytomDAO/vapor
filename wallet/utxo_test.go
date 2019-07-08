@@ -717,6 +717,30 @@ func TestTxOutToUtxos(t *testing.T) {
 				},
 			},
 		},
+		{
+			tx: types.NewTx(types.TxData{
+				Inputs: []*types.TxInput{
+					types.NewCoinbaseInput([]byte{0x51}),
+				},
+				Outputs: []*types.TxOutput{
+					types.NewIntraChainOutput(*consensus.BTMAssetID, 0, []byte{0x51}),
+					types.NewIntraChainOutput(*consensus.BTMAssetID, 3, []byte{0x52}),
+				},
+			}),
+			statusFail:  false,
+			blockHeight: 0,
+			wantUtxos: []*account.UTXO{
+				&account.UTXO{
+					OutputID:       bc.Hash{V0: 17248080803965266442, V1: 11280159100206427956, V2: 14296992668077839045, V3: 10053986081220066749},
+					AssetID:        *consensus.BTMAssetID,
+					Amount:         3,
+					ControlProgram: []byte{0x52},
+					SourceID:       bc.Hash{V0: 14680680172533616824, V1: 32429899179491316, V2: 15399988966960786775, V3: 17411722803888206567},
+					SourcePos:      1,
+					ValidHeight:    100,
+				},
+			},
+		},
 	}
 
 	for i, c := range cases {

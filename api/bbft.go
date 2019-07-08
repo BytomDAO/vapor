@@ -31,13 +31,13 @@ func (a *API) getVoteResult(req struct {
 		blockHash = blockHeader.Hash()
 	}
 
-	voteResult, err := a.chain.GetVoteResultByHash(&blockHash)
+	consensusResult, err := a.chain.GetConsensusResultByHash(&blockHash)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
 
 	voteInfos := []*voteInfo{}
-	for pubKey, voteNum := range voteResult.NumOfVote {
+	for pubKey, voteNum := range consensusResult.NumOfVote {
 		voteInfos = append(voteInfos, &voteInfo{
 			Vote:    pubKey,
 			VoteNum: voteNum,

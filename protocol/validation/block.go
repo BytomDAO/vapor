@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"bytes"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -9,6 +10,7 @@ import (
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/state"
 )
 
 const logModule = "leveldb"
@@ -36,28 +38,34 @@ func checkBlockTime(b *bc.Block, parent *types.BlockHeader) error {
 	return nil
 }
 
-func checkCoinbaseAmount(b *bc.Block, amount uint64) error {
+func checkCoinbaseTx(b *bc.Block, rewards []state.CoinbaseReward) error {
 	if len(b.Transactions) == 0 {
 		return errors.Wrap(ErrWrongCoinbaseTransaction, "block is empty")
 	}
 
 	tx := b.Transactions[0]
-	if len(tx.TxHeader.ResultIds) != 1 {
-		return errors.Wrap(ErrWrongCoinbaseTransaction, "have more than 1 output")
+	if len(tx.TxHeader.ResultIds) != len(rewards)+1 {
+		return errors.Wrapf(ErrWrongCoinbaseTransaction, "dismatch number of outputs, got:%d, want:%d", len(tx.TxHeader.ResultIds), len(rewards))
 	}
 
-	var SourceAmount uint64
-	switch output := tx.Entries[*tx.TxHeader.ResultIds[0]].(type) {
-	case *bc.IntraChainOutput:
-		SourceAmount = output.Source.Value.Amount
-	case *bc.VoteOutput:
-		SourceAmount = output.Source.Value.Amount
-	default:
-		return errors.Wrapf(bc.ErrEntryType, "entry %x has unexpected type %T", tx.TxHeader.ResultIds[0].Bytes(), output)
-	}
+	rewards = append([]state.CoinbaseReward{state.CoinbaseReward{Amount: uint64(0)}}, rewards...)
+	for i, output := range tx.TxHeader.ResultIds {
+		out, err := tx.IntraChainOutput(*output)
+		if err != nil {
+			return err
+		}
 
-	if SourceAmount != amount {
-		return errors.Wrap(ErrWrongCoinbaseTransaction, "dismatch output amount")
+		if rewards[i].Amount != out.Source.Value.Amount {
+			return errors.Wrapf(ErrWrongCoinbaseTransaction, "dismatch output amount, got:%d, want:%d", out.Source.Value.Amount, rewards[i].Amount)
+		}
+
+		if i == 0 {
+			continue
+		}
+
+		if res := bytes.Compare(rewards[i].ControlProgram, out.ControlProgram.Code); res != 0 {
+			return errors.Wrapf(ErrWrongCoinbaseTransaction, "dismatch output control_program, got:%d, want:%d", out.ControlProgram.Code, rewards[i].ControlProgram)
+		}
 	}
 	return nil
 }
@@ -78,16 +86,14 @@ func ValidateBlockHeader(b *bc.Block, parent *types.BlockHeader) error {
 }
 
 // ValidateBlock validates a block and the transactions within.
-func ValidateBlock(b *bc.Block, parent *types.BlockHeader) error {
+func ValidateBlock(b *bc.Block, parent *types.BlockHeader, rewards []state.CoinbaseReward) error {
 	startTime := time.Now()
 	if err := ValidateBlockHeader(b, parent); err != nil {
 		return err
 	}
 
 	blockGasSum := uint64(0)
-	coinbaseAmount := consensus.BlockSubsidy(b.BlockHeader.Height)
 	b.TransactionStatus = bc.NewTransactionStatus()
-
 	validateResults := ValidateTxs(b.Transactions, b)
 	for i, validateResult := range validateResults {
 		if !validateResult.gasStatus.GasValid {
@@ -97,13 +103,13 @@ func ValidateBlock(b *bc.Block, parent *types.BlockHeader) error {
 		if err := b.TransactionStatus.SetStatus(i, validateResult.err != nil); err != nil {
 			return err
 		}
-		coinbaseAmount += validateResult.gasStatus.BTMValue
+
 		if blockGasSum += uint64(validateResult.gasStatus.GasUsed); blockGasSum > consensus.MaxBlockGas {
 			return errOverBlockLimit
 		}
 	}
 
-	if err := checkCoinbaseAmount(b, coinbaseAmount); err != nil {
+	if err := checkCoinbaseTx(b, rewards); err != nil {
 		return err
 	}
 
@@ -120,7 +126,7 @@ func ValidateBlock(b *bc.Block, parent *types.BlockHeader) error {
 		return errors.Wrap(err, "computing transaction status merkle root")
 	}
 	if txStatusHash != *b.TransactionStatusHash {
-		return errors.WithDetailf(errMismatchedMerkleRoot, "transaction status merkle root")
+		return errors.WithDetailf(errMismatchedMerkleRoot, "transaction status merkle root. compute: %v, given: %v", txStatusHash, *b.TransactionStatusHash)
 	}
 
 	log.WithFields(log.Fields{

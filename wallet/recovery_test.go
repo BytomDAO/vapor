@@ -57,9 +57,12 @@ func MockSimpleUtxo(index uint64, assetID *bc.AssetID, amount uint64, ctrlProg *
 	return utxo
 }
 
+func AddInput(sourceID bc.Hash, assetID bc.AssetID, amount uint64, pos uint64, controlProgram []byte) *types.TxInput {
+	return types.NewSpendInput(nil, sourceID, assetID, amount, pos, controlProgram)
+}
+
 func AddTxOutput(assetID bc.AssetID, amount uint64, controlProgram []byte) *types.TxOutput {
-	out := types.NewIntraChainOutput(assetID, amount, controlProgram)
-	return out
+	return types.NewIntraChainOutput(assetID, amount, controlProgram)
 }
 
 func BuildTx(baseUtxo *account.UTXO, signer *signers.Signer) (*txbuilder.Template, error) {
@@ -78,7 +81,9 @@ func BuildTx(baseUtxo *account.UTXO, signer *signers.Signer) (*txbuilder.Templat
 
 func CreateTxBuilder(baseUtxo *account.UTXO, signer *signers.Signer) (*txbuilder.TemplateBuilder, error) {
 	tplBuilder := txbuilder.NewBuilder(time.Now())
+	txInput := AddInput(bc.Hash{V0: 1}, baseUtxo.AssetID, 10000, uint64(1), baseUtxo.ControlProgram)
 	txOutput := AddTxOutput(baseUtxo.AssetID, 100, baseUtxo.ControlProgram)
+	tplBuilder.AddInput(txInput, &txbuilder.SigningInstruction{Position: 0})
 	tplBuilder.AddOutput(txOutput)
 	return tplBuilder, nil
 }
