@@ -17,44 +17,6 @@ import (
 	"github.com/vapor/wallet"
 )
 
-// const (
-// 	utxoPrefix  byte = iota //UTXOPrefix is StandardUTXOKey prefix
-// 	sutxoPrefix             //SUTXOPrefix is ContractUTXOKey prefix
-// 	contractPrefix
-// 	contractIndexPrefix
-// 	accountPrefix // AccountPrefix is account ID prefix
-// 	accountAliasPrefix
-// 	accountIndexPrefix
-// 	txPrefix            //TxPrefix is wallet database transactions prefix
-// 	txIndexPrefix       //TxIndexPrefix is wallet database tx index prefix
-// 	unconfirmedTxPrefix //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
-// 	globalTxIndexPrefix //GlobalTxIndexPrefix is wallet database global tx index prefix
-// 	walletKey
-// 	miningAddressKey
-// 	coinbaseAbKey
-// 	recoveryKey //recoveryKey key for db store recovery info.
-// )
-
-// // leveldb key prefix
-// var (
-// 	// colon               byte = 0x3a
-// 	UTXOPrefix          = []byte{utxoPrefix, colon}
-// 	SUTXOPrefix         = []byte{sutxoPrefix, colon}
-// 	ContractPrefix      = []byte{contractPrefix, contractPrefix, colon}
-// 	ContractIndexPrefix = []byte{contractIndexPrefix, colon}
-// 	AccountPrefix       = []byte{accountPrefix, colon} // AccountPrefix is account ID prefix
-// 	AccountAliasPrefix  = []byte{accountAliasPrefix, colon}
-// 	AccountIndexPrefix  = []byte{accountIndexPrefix, colon}
-// 	TxPrefix            = []byte{txPrefix, colon}            //TxPrefix is wallet database transactions prefix
-// 	TxIndexPrefix       = []byte{txIndexPrefix, colon}       //TxIndexPrefix is wallet database tx index prefix
-// 	UnconfirmedTxPrefix = []byte{unconfirmedTxPrefix, colon} //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
-// 	GlobalTxIndexPrefix = []byte{globalTxIndexPrefix, colon} //GlobalTxIndexPrefix is wallet database global tx index prefix
-// 	WalletKey           = []byte{walletKey}
-// 	MiningAddressKey    = []byte{miningAddressKey}
-// 	CoinbaseAbKey       = []byte{coinbaseAbKey}
-// 	RecoveryKey         = []byte{recoveryKey}
-// )
-
 // errors
 var (
 	errAccntTxIDNotFound = errors.New("account TXID not found")
@@ -98,7 +60,7 @@ func formatKey(blockHeight uint64, position uint32) string {
 }
 
 func contractIndexKey(accountID string) []byte {
-	return append(dbm.ContractIndexPrefix, []byte(accountID)...)
+	return append(ContractIndexPrefix, []byte(accountID)...)
 }
 
 func accountAliasKey(name string) []byte {
@@ -221,7 +183,7 @@ func (store *WalletStore) DeleteWalletUTXOs() {
 		batch = store.batch
 	}
 
-	ruIter := store.db.IteratorPrefix(dbm.UTXOPrefix)
+	ruIter := store.db.IteratorPrefix(UTXOPrefix)
 	defer ruIter.Release()
 
 	for ruIter.Next() {
@@ -344,7 +306,7 @@ func (store *WalletStore) GetWalletInfo() (*wallet.StatusInfo, error) {
 
 // ListAccountUTXOs get all account unspent outputs
 func (store *WalletStore) ListAccountUTXOs(id string, isSmartContract bool) ([]*acc.UTXO, error) {
-	prefix := dbm.UTXOPrefix
+	prefix := UTXOPrefix
 	if isSmartContract {
 		prefix = dbm.SUTXOPrefix
 	}

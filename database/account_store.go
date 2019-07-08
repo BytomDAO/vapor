@@ -15,6 +15,24 @@ import (
 	"github.com/vapor/protocol/bc"
 )
 
+const (
+	utxoPrefix byte = iota //UTXOPrefix is StandardUTXOKey prefix
+	contractPrefix
+	contractIndexPrefix
+	accountPrefix // AccountPrefix is account ID prefix
+	accountIndexPrefix
+)
+
+// leveldb key prefix
+var (
+	accountStore        = []byte("AS:")
+	UTXOPrefix          = append(accountStore, utxoPrefix, colon)
+	ContractPrefix      = append(accountStore, contractPrefix, colon)
+	ContractIndexPrefix = append(accountStore, contractIndexPrefix, colon)
+	AccountPrefix       = append(accountStore, accountPrefix, colon) // AccountPrefix is account ID prefix
+	AccountIndexPrefix  = append(accountStore, accountIndexPrefix, colon)
+)
+
 func accountIndexKey(xpubs []chainkd.XPub) []byte {
 	var hash [32]byte
 	var xPubs []byte
@@ -24,11 +42,11 @@ func accountIndexKey(xpubs []chainkd.XPub) []byte {
 		xPubs = append(xPubs, xpub[:]...)
 	}
 	sha3pool.Sum256(hash[:], xPubs)
-	return append(dbm.AccountIndexPrefix, hash[:]...)
+	return append(AccountIndexPrefix, hash[:]...)
 }
 
 func Bip44ContractIndexKey(accountID string, change bool) []byte {
-	key := append(dbm.ContractIndexPrefix, []byte(accountID)...)
+	key := append(ContractIndexPrefix, []byte(accountID)...)
 	if change {
 		return append(key, 0x01)
 	}
@@ -37,17 +55,17 @@ func Bip44ContractIndexKey(accountID string, change bool) []byte {
 
 // ContractKey account control promgram store prefix
 func ContractKey(hash bc.Hash) []byte {
-	return append(dbm.ContractPrefix, hash.Bytes()...)
+	return append(ContractPrefix, hash.Bytes()...)
 }
 
 // AccountIDKey account id store prefix
 func AccountIDKey(accountID string) []byte {
-	return append(dbm.AccountPrefix, []byte(accountID)...)
+	return append(AccountPrefix, []byte(accountID)...)
 }
 
 // StandardUTXOKey makes an account unspent outputs key to store
 func StandardUTXOKey(id bc.Hash) []byte {
-	return append(dbm.UTXOPrefix, id.Bytes()...)
+	return append(UTXOPrefix, id.Bytes()...)
 }
 
 // AccountStore satisfies AccountStore interface.
@@ -116,7 +134,7 @@ func (store *AccountStore) DeleteAccount(account *acc.Account) error {
 
 // deleteAccountUTXOs delete account utxos by accountID
 func (store *AccountStore) deleteAccountUTXOs(accountID string, batch dbm.Batch) error {
-	accountUtxoIter := store.db.IteratorPrefix(dbm.UTXOPrefix)
+	accountUtxoIter := store.db.IteratorPrefix(UTXOPrefix)
 	defer accountUtxoIter.Release()
 
 	for accountUtxoIter.Next() {
@@ -279,7 +297,7 @@ func (store *AccountStore) ListAccounts(id string) ([]*acc.Account, error) {
 // ListControlPrograms get all local control programs
 func (store *AccountStore) ListControlPrograms() ([]*acc.CtrlProgram, error) {
 	cps := []*acc.CtrlProgram{}
-	cpIter := store.db.IteratorPrefix(dbm.ContractPrefix)
+	cpIter := store.db.IteratorPrefix(ContractPrefix)
 	defer cpIter.Release()
 
 	for cpIter.Next() {
@@ -295,7 +313,7 @@ func (store *AccountStore) ListControlPrograms() ([]*acc.CtrlProgram, error) {
 
 // ListUTXOs get utxos by accountID
 func (store *AccountStore) ListUTXOs() ([]*acc.UTXO, error) {
-	utxoIter := store.db.IteratorPrefix(dbm.UTXOPrefix)
+	utxoIter := store.db.IteratorPrefix(UTXOPrefix)
 	defer utxoIter.Release()
 
 	utxos := []*acc.UTXO{}

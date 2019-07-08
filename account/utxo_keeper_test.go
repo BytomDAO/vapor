@@ -1311,6 +1311,25 @@ func checkUtxoKeeperEqual(t *testing.T, i int, a, b *utxoKeeper) {
 	}
 }
 
+const (
+	utxoPrefix byte = iota //UTXOPrefix is StandardUTXOKey prefix
+	contractPrefix
+	contractIndexPrefix
+	accountPrefix // AccountPrefix is account ID prefix
+	accountIndexPrefix
+)
+
+// leveldb key prefix
+var (
+	colon               byte = 0x3a
+	accountStore             = []byte("AS:")
+	UTXOPrefix               = append(accountStore, utxoPrefix, colon)
+	ContractPrefix           = append(accountStore, contractPrefix, colon)
+	ContractIndexPrefix      = append(accountStore, contractIndexPrefix, colon)
+	AccountPrefix            = append(accountStore, accountPrefix, colon) // AccountPrefix is account ID prefix
+	AccountIndexPrefix       = append(accountStore, accountIndexPrefix, colon)
+)
+
 type mockAccountStore struct {
 	db    dbm.DB
 	batch dbm.Batch
@@ -1326,7 +1345,7 @@ func newMockAccountStore(db dbm.DB) *mockAccountStore {
 
 // StandardUTXOKey makes an account unspent outputs key to store
 func StandardUTXOKey(id bc.Hash) []byte {
-	return append(dbm.UTXOPrefix, id.Bytes()...)
+	return append(UTXOPrefix, id.Bytes()...)
 }
 
 // ContractUTXOKey makes a smart contract unspent outputs key to store
@@ -1378,7 +1397,7 @@ func (store *mockAccountStore) GetUTXO(outid bc.Hash) (*UTXO, error) {
 
 // ListUTXOs get utxos by accountID
 func (store *mockAccountStore) ListUTXOs() ([]*UTXO, error) {
-	utxoIter := store.db.IteratorPrefix([]byte(dbm.UTXOPrefix))
+	utxoIter := store.db.IteratorPrefix([]byte(UTXOPrefix))
 	defer utxoIter.Release()
 
 	utxos := []*UTXO{}

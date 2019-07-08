@@ -167,6 +167,25 @@ var (
 	errGetAsset          = errors.New("Failed to find asset definition")
 )
 
+const (
+	utxoPrefix byte = iota //UTXOPrefix is StandardUTXOKey prefix
+	contractPrefix
+	contractIndexPrefix
+	accountPrefix // AccountPrefix is account ID prefix
+	accountIndexPrefix
+)
+
+// leveldb key prefix
+var (
+	colon               byte = 0x3a
+	accountStore             = []byte("AS:")
+	UTXOPrefix               = append(accountStore, utxoPrefix, colon)
+	ContractPrefix           = append(accountStore, contractPrefix, colon)
+	ContractIndexPrefix      = append(accountStore, contractIndexPrefix, colon)
+	AccountPrefix            = append(accountStore, accountPrefix, colon) // AccountPrefix is account ID prefix
+	AccountIndexPrefix       = append(accountStore, accountIndexPrefix, colon)
+)
+
 func accountIndexKey(xpubs []chainkd.XPub) []byte {
 	var hash [32]byte
 	var xPubs []byte
@@ -176,11 +195,11 @@ func accountIndexKey(xpubs []chainkd.XPub) []byte {
 		xPubs = append(xPubs, xpub[:]...)
 	}
 	sha3pool.Sum256(hash[:], xPubs)
-	return append([]byte(dbm.AccountIndexPrefix), hash[:]...)
+	return append([]byte(AccountIndexPrefix), hash[:]...)
 }
 
 func Bip44ContractIndexKey(accountID string, change bool) []byte {
-	key := append([]byte(dbm.ContractIndexPrefix), accountID...)
+	key := append([]byte(ContractIndexPrefix), accountID...)
 	if change {
 		return append(key, []byte{1}...)
 	}
@@ -189,17 +208,17 @@ func Bip44ContractIndexKey(accountID string, change bool) []byte {
 
 // ContractKey account control promgram store prefix
 func ContractKey(hash bc.Hash) []byte {
-	return append([]byte(dbm.ContractPrefix), hash.Bytes()...)
+	return append([]byte(ContractPrefix), hash.Bytes()...)
 }
 
 // AccountIDKey account id store prefix
 func AccountIDKey(accountID string) []byte {
-	return append([]byte(dbm.AccountPrefix), []byte(accountID)...)
+	return append([]byte(AccountPrefix), []byte(accountID)...)
 }
 
 // StandardUTXOKey makes an account unspent outputs key to store
 func StandardUTXOKey(id bc.Hash) []byte {
-	return append(dbm.UTXOPrefix, id.Bytes()...)
+	return append(UTXOPrefix, id.Bytes()...)
 }
 
 // ContractUTXOKey makes a smart contract unspent outputs key to store
@@ -239,7 +258,7 @@ func formatKey(blockHeight uint64, position uint32) string {
 }
 
 func contractIndexKey(accountID string) []byte {
-	return append([]byte(dbm.ContractIndexPrefix), []byte(accountID)...)
+	return append([]byte(ContractIndexPrefix), []byte(accountID)...)
 }
 
 func accountAliasKey(name string) []byte {
@@ -357,7 +376,7 @@ func (store *MockWalletStore) DeleteWalletUTXOs() {
 	if store.batch != nil {
 		batch = store.batch
 	}
-	ruIter := store.db.IteratorPrefix([]byte(dbm.UTXOPrefix))
+	ruIter := store.db.IteratorPrefix([]byte(UTXOPrefix))
 	defer ruIter.Release()
 	for ruIter.Next() {
 		batch.Delete(ruIter.Key())
@@ -466,7 +485,7 @@ func (store *MockWalletStore) GetWalletInfo() (*StatusInfo, error) {
 
 // ListAccountUTXOs get all account unspent outputs
 func (store *MockWalletStore) ListAccountUTXOs(id string, isSmartContract bool) ([]*acc.UTXO, error) {
-	prefix := dbm.UTXOPrefix
+	prefix := UTXOPrefix
 	if isSmartContract {
 		prefix = dbm.SUTXOPrefix
 	}
@@ -702,7 +721,7 @@ func (store *MockAccountStore) DeleteAccount(account *acc.Account) error {
 
 // deleteAccountUTXOs delete account utxos by accountID
 func (store *MockAccountStore) deleteAccountUTXOs(accountID string, batch dbm.Batch) error {
-	accountUtxoIter := store.db.IteratorPrefix([]byte(dbm.UTXOPrefix))
+	accountUtxoIter := store.db.IteratorPrefix([]byte(UTXOPrefix))
 	defer accountUtxoIter.Release()
 
 	for accountUtxoIter.Next() {
@@ -856,7 +875,7 @@ func (store *MockAccountStore) ListAccounts(id string) ([]*acc.Account, error) {
 // ListControlPrograms get all local control programs
 func (store *MockAccountStore) ListControlPrograms() ([]*acc.CtrlProgram, error) {
 	cps := []*acc.CtrlProgram{}
-	cpIter := store.db.IteratorPrefix([]byte(dbm.ContractPrefix))
+	cpIter := store.db.IteratorPrefix([]byte(ContractPrefix))
 	defer cpIter.Release()
 
 	for cpIter.Next() {
@@ -871,7 +890,7 @@ func (store *MockAccountStore) ListControlPrograms() ([]*acc.CtrlProgram, error)
 
 // ListUTXOs get utxos by accountID
 func (store *MockAccountStore) ListUTXOs() ([]*acc.UTXO, error) {
-	utxoIter := store.db.IteratorPrefix([]byte(dbm.UTXOPrefix))
+	utxoIter := store.db.IteratorPrefix([]byte(UTXOPrefix))
 	defer utxoIter.Release()
 
 	utxos := []*acc.UTXO{}
