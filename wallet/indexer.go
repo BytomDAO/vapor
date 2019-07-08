@@ -105,7 +105,7 @@ transactionLoop:
 			var hash [32]byte
 			sha3pool.Sum256(hash[:], v.ControlProgram())
 			if _, err := w.AccountMgr.GetControlProgram(bc.NewHash(hash)); err != nil {
-				log.WithFields(log.Fields{"module": logModule, "err": err, "hash": string(hash[:])}).Error("filterAccountTxs fail.")
+				log.WithFields(log.Fields{"module": logModule, "err": err, "hash": hex.EncodeToString(hash[:])}).Error("filterAccountTxs fail.")
 				continue
 			}
 			annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
@@ -115,11 +115,11 @@ transactionLoop:
 		for _, v := range tx.Inputs {
 			outid, err := v.SpentOutputID()
 			if err != nil {
-				log.WithFields(log.Fields{"module": logModule, "err": err, "outputID": outid.String()}).Error("filterAccountTxs fail.")
+				log.WithFields(log.Fields{"module": logModule, "err": err, "outputID": hex.EncodeToString(outid.Bytes())}).Error("filterAccountTxs fail.")
 				continue
 			}
 			if _, err = w.store.GetStandardUTXO(outid); err != nil {
-				log.WithFields(log.Fields{"module": logModule, "err": err, "outputID": outid.String()}).Error("filterAccountTxs fail.")
+				log.WithFields(log.Fields{"module": logModule, "err": err, "outputID": hex.EncodeToString(outid.Bytes())}).Error("filterAccountTxs fail.")
 				continue
 			}
 			annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
