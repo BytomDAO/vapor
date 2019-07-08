@@ -62,7 +62,7 @@ var (
 	store                    = []byte("store:")
 	UTXOPrefix               = append(store, utxoPrefix, colon)
 	SUTXOPrefix              = append(store, sutxoPrefix, colon)
-	ContractPrefix           = []byte{contractPrefix, contractPrefix, colon}
+	ContractPrefix           = append(store, contractPrefix, colon)
 	ContractIndexPrefix      = []byte{contractIndexPrefix, colon}
 	AccountPrefix            = []byte{accountPrefix, colon} // AccountPrefix is account ID prefix
 	AccountAliasPrefix       = []byte{accountAliasPrefix, colon}
