@@ -82,13 +82,11 @@ func NewAccountStore(db dbm.DB) *AccountStore {
 	}
 }
 
-// InitBatch initial batch
-func (store *AccountStore) InitBatch() error {
-	if store.batch != nil {
-		return errors.New("AccountStore initail fail, store batch is not nil.")
-	}
-	store.batch = store.db.NewBatch()
-	return nil
+// InitStore initial batch
+func (store *AccountStore) InitStore() acc.AccountStore {
+	newStore := NewAccountStore(store.db)
+	newStore.batch = newStore.db.NewBatch()
+	return newStore
 }
 
 // CommitBatch commit batch

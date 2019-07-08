@@ -696,13 +696,11 @@ func NewMockAccountStore(db dbm.DB) *MockAccountStore {
 	}
 }
 
-// InitBatch initial batch
-func (store *MockAccountStore) InitBatch() error {
-	if store.batch != nil {
-		return errors.New("MockAccountStore initail fail, store batch is not nil.")
-	}
-	store.batch = store.db.NewBatch()
-	return nil
+// InitStore initial batch
+func (store *MockAccountStore) InitStore() acc.AccountStore {
+	newStore := NewMockAccountStore(store.db)
+	newStore.batch = newStore.db.NewBatch()
+	return newStore
 }
 
 // CommitBatch commit batch

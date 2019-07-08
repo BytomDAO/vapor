@@ -44,12 +44,10 @@ func (m *Manager) Restore(image *Image) error {
 	m.accountMu.Lock()
 	defer m.accountMu.Unlock()
 
-	if err := m.store.InitBatch(); err != nil {
-		return err
-	}
+	newStore := m.store.InitStore()
 
 	for _, slice := range image.Slice {
-		if _, err := m.store.GetAccountByID(slice.Account.ID); err != nil {
+		if _, err := newStore.GetAccountByID(slice.Account.ID); err != nil {
 			log.WithFields(log.Fields{
 				"module": logModule,
 				"alias":  slice.Account.Alias,
@@ -58,14 +56,14 @@ func (m *Manager) Restore(image *Image) error {
 			continue
 		}
 
-		if _, err := m.store.GetAccountByAlias(slice.Account.Alias); err != nil {
+		if _, err := newStore.GetAccountByAlias(slice.Account.Alias); err != nil {
 			return err
 		}
 
-		if err := m.store.SetAccount(slice.Account); err != nil {
+		if err := newStore.SetAccount(slice.Account); err != nil {
 			return err
 		}
 	}
 
-	return m.store.CommitBatch()
+	return newStore.CommitBatch()
 }

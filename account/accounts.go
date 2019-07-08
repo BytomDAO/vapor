@@ -115,17 +115,15 @@ func CreateAccount(xpubs []chainkd.XPub, quorum int, alias string, acctIndex uin
 }
 
 func (m *Manager) saveAccount(account *Account) error {
-	if err := m.store.InitBatch(); err != nil {
-		return err
-	}
+	newStore := m.store.InitStore()
 
 	// update account index
-	m.store.SetAccountIndex(account)
-	if err := m.store.SetAccount(account); err != nil {
+	newStore.SetAccountIndex(account)
+	if err := newStore.SetAccount(account); err != nil {
 		return err
 	}
 
-	if err := m.store.CommitBatch(); err != nil {
+	if err := newStore.CommitBatch(); err != nil {
 		return err
 	}
 
@@ -214,19 +212,17 @@ func (m *Manager) UpdateAccountAlias(accountID string, newAlias string) error {
 
 	account.Alias = normalizedAlias
 
-	if err := m.store.InitBatch(); err != nil {
+	newStore := m.store.InitStore()
+
+	if err := newStore.DeleteAccount(&oldAccount); err != nil {
 		return err
 	}
 
-	if err := m.store.DeleteAccount(&oldAccount); err != nil {
+	if err := newStore.SetAccount(account); err != nil {
 		return err
 	}
 
-	if err := m.store.SetAccount(account); err != nil {
-		return err
-	}
-
-	if err := m.store.CommitBatch(); err != nil {
+	if err := newStore.CommitBatch(); err != nil {
 		return err
 	}
 
@@ -621,24 +617,22 @@ func (m *Manager) saveControlProgram(prog *CtrlProgram, updateIndex bool) error 
 		return err
 	}
 
-	if err := m.store.InitBatch(); err != nil {
-		return err
-	}
+	newStore := m.store.InitStore()
 
-	if err := m.store.SetControlProgram(bc.NewHash(hash), prog); err != nil {
+	if err := newStore.SetControlProgram(bc.NewHash(hash), prog); err != nil {
 		return nil
 	}
 
 	if updateIndex {
 		switch acct.DeriveRule {
 		case signers.BIP0032:
-			m.store.SetContractIndex(acct.ID, prog.KeyIndex)
+			newStore.SetContractIndex(acct.ID, prog.KeyIndex)
 		case signers.BIP0044:
-			m.store.SetBip44ContractIndex(acct.ID, prog.Change, prog.KeyIndex)
+			newStore.SetBip44ContractIndex(acct.ID, prog.Change, prog.KeyIndex)
 		}
 	}
 
-	return m.store.CommitBatch()
+	return newStore.CommitBatch()
 }
 
 // SaveControlPrograms save account control programs
