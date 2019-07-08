@@ -98,7 +98,7 @@ func (c *Chain) ProcessBlockSignature(signature, xPub []byte, blockHash *bc.Hash
 
 // validateSign verify the signatures of block, and return the number of correct signature
 // if some signature is invalid, they will be reset to nil
-// if the block has not the signature of blocker, it will return error
+// if the block does not have the signature of blocker, it will return error
 func (c *Chain) validateSign(block *types.Block) error {
 	consensusNodeMap, err := c.getConsensusNodes(&block.PreviousBlockHash)
 	if err != nil {
@@ -225,11 +225,25 @@ func (c *Chain) updateBlockSignature(blockHeader *types.BlockHeader, nodeOrder u
 		return err
 	}
 
-	if c.isIrreversible(blockHeader) && blockHeader.Height > c.bestIrrBlockHeader.Height {
+	if !c.isIrreversible(blockHeader) || blockHeader.Height <= c.lastIrrBlockHeader.Height {
+		return nil
+	}
+
+	if c.InMainChain(blockHeader.Hash()) {
 		if err := c.store.SaveChainStatus(c.bestBlockHeader, blockHeader, []*types.BlockHeader{}, state.NewUtxoViewpoint(), []*state.ConsensusResult{}); err != nil {
 			return err
 		}
-		c.bestIrrBlockHeader = blockHeader
+
+		c.lastIrrBlockHeader = blockHeader
+	} else {
+		// block is on a forked chain
+		log.WithFields(log.Fields{"module": logModule}).Info("majority votes received on forked chain")
+		tail, err := c.traceLongestChainTail(blockHeader)
+		if err != nil {
+			return err
+		}
+
+		return c.reorganizeChain(tail)
 	}
 	return nil
 }
