@@ -29,6 +29,40 @@ func (c byVote) Less(i, j int) bool {
 }
 func (c byVote) Swap(i, j int) { c[i], c[j] = c[j], c[i] }
 
+// CoinbaseReward contains receiver and reward
+type CoinbaseReward struct {
+	Amount         uint64
+	ControlProgram []byte
+}
+
+// SortByAmount implements sort.Interface for CoinbaseReward slices
+type SortByAmount []CoinbaseReward
+
+func (a SortByAmount) Len() int           { return len(a) }
+func (a SortByAmount) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a SortByAmount) Less(i, j int) bool { return a[i].Amount < a[j].Amount }
+
+// CalCoinbaseReward calculate the coinbase reward for block
+func CalCoinbaseReward(block *types.Block) (*CoinbaseReward, error) {
+	result := &CoinbaseReward{}
+	if len(block.Transactions) > 0 && len(block.Transactions[0].Outputs) > 0 {
+		result.ControlProgram = block.Transactions[0].Outputs[0].ControlProgram()
+	} else {
+		return nil, errors.New("not found coinbase receiver")
+	}
+
+	result.Amount = consensus.BlockSubsidy(block.BlockHeader.Height)
+	for _, tx := range block.Transactions {
+		txFee, err := arithmetic.CalculateTxFee(tx)
+		if err != nil {
+			return nil, errors.Wrap(checked.ErrOverflow, "calculate transaction fee")
+		}
+
+		result.Amount += txFee
+	}
+	return result, nil
+}
+
 // CalcVoteSeq calculate the vote sequence
 // seq 0 is the genesis block
 // seq 1 is the the block height 1, to block height RoundVoteBlockNums
@@ -51,45 +85,6 @@ type ConsensusResult struct {
 	CoinbaseReward map[string]uint64
 	BlockHash      bc.Hash
 	BlockHeight    uint64
-}
-
-// CoinbaseReward contains receiver and reward
-type CoinbaseReward struct {
-	Amount         uint64
-	ControlProgram []byte
-}
-
-// SortByAmount implements sort.Interface for CoinbaseReward slices
-type SortByAmount []CoinbaseReward
-
-func (a SortByAmount) Len() int           { return len(a) }
-func (a SortByAmount) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a SortByAmount) Less(i, j int) bool { return a[i].Amount < a[j].Amount }
-
-// CalCoinbaseReward calculate the coinbase reward for block
-func CalCoinbaseReward(block *types.Block) (*CoinbaseReward, error) {
-	var coinbaseReceiver []byte
-	if len(block.Transactions) > 0 && len(block.Transactions[0].Outputs) > 0 {
-		coinbaseReceiver = block.Transactions[0].Outputs[0].ControlProgram()
-	}
-
-	if coinbaseReceiver == nil {
-		return nil, errors.New("not found coinbase receiver")
-	}
-
-	coinbaseAmount := consensus.BlockSubsidy(block.BlockHeader.Height)
-	for _, tx := range block.Transactions {
-		txFee, err := arithmetic.CalculateTxFee(tx)
-		if err != nil {
-			return nil, errors.Wrap(checked.ErrOverflow, "calculate transaction fee")
-		}
-		coinbaseAmount += txFee
-	}
-
-	return &CoinbaseReward{
-		Amount:         coinbaseAmount,
-		ControlProgram: coinbaseReceiver,
-	}, nil
 }
 
 // ApplyBlock calculate the consensus result for new block
@@ -139,6 +134,26 @@ func (c *ConsensusResult) ApplyBlock(block *types.Block) error {
 	return nil
 }
 
+// AttachCoinbaseReward attach coinbase reward
+func (c *ConsensusResult) AttachCoinbaseReward(block *types.Block) error {
+	reward, err := CalCoinbaseReward(block)
+	if err != nil {
+		return err
+	}
+
+	if block.Height%consensus.RoundVoteBlockNums == 1 {
+		c.CoinbaseReward = map[string]uint64{}
+	}
+
+	var ok bool
+	program := hex.EncodeToString(reward.ControlProgram)
+	c.CoinbaseReward[program], ok = checked.AddUint64(c.CoinbaseReward[program], reward.Amount)
+	if !ok {
+		return checked.ErrOverflow
+	}
+	return nil
+}
+
 // ConsensusNodes returns all consensus nodes
 func (c *ConsensusResult) ConsensusNodes() (map[string]*ConsensusNode, error) {
 	var nodes []*ConsensusNode
@@ -165,14 +180,6 @@ func (c *ConsensusResult) ConsensusNodes() (map[string]*ConsensusNode, error) {
 		return result, nil
 	}
 	return federationNodes(), nil
-}
-
-func federationNodes() map[string]*ConsensusNode {
-	consensusResult := map[string]*ConsensusNode{}
-	for i, xpub := range config.CommonConfig.Federation.Xpubs {
-		consensusResult[xpub.String()] = &ConsensusNode{XPub: xpub, VoteNum: 0, Order: uint64(i)}
-	}
-	return consensusResult
 }
 
 // DetachBlock calculate the consensus result for detach block
@@ -223,49 +230,6 @@ func (c *ConsensusResult) DetachBlock(block *types.Block) error {
 	return nil
 }
 
-func (c *ConsensusResult) Fork() *ConsensusResult {
-	f := &ConsensusResult{
-		Seq:            c.Seq,
-		NumOfVote:      map[string]uint64{},
-		CoinbaseReward: map[string]uint64{},
-		BlockHash:      c.BlockHash,
-		BlockHeight:    c.BlockHeight,
-	}
-
-	for key, value := range c.NumOfVote {
-		f.NumOfVote[key] = value
-	}
-
-	for key, value := range c.CoinbaseReward {
-		f.CoinbaseReward[key] = value
-	}
-	return f
-}
-
-func (c *ConsensusResult) IsFinalize() bool {
-	return c.BlockHeight%consensus.RoundVoteBlockNums == 0
-}
-
-// AttachCoinbaseReward attach coinbase reward
-func (c *ConsensusResult) AttachCoinbaseReward(block *types.Block) error {
-	reward, err := CalCoinbaseReward(block)
-	if err != nil {
-		return err
-	}
-
-	if block.Height%consensus.RoundVoteBlockNums == 1 {
-		c.CoinbaseReward = map[string]uint64{}
-	}
-
-	var ok bool
-	program := hex.EncodeToString(reward.ControlProgram)
-	c.CoinbaseReward[program], ok = checked.AddUint64(c.CoinbaseReward[program], reward.Amount)
-	if !ok {
-		return checked.ErrOverflow
-	}
-	return nil
-}
-
 // DetachCoinbaseReward detach coinbase reward
 func (c *ConsensusResult) DetachCoinbaseReward(block *types.Block) error {
 	if block.Height%consensus.RoundVoteBlockNums == 0 {
@@ -295,6 +259,31 @@ func (c *ConsensusResult) DetachCoinbaseReward(block *types.Block) error {
 	return nil
 }
 
+// Fork copy the ConsensusResult struct
+func (c *ConsensusResult) Fork() *ConsensusResult {
+	f := &ConsensusResult{
+		Seq:            c.Seq,
+		NumOfVote:      map[string]uint64{},
+		CoinbaseReward: map[string]uint64{},
+		BlockHash:      c.BlockHash,
+		BlockHeight:    c.BlockHeight,
+	}
+
+	for key, value := range c.NumOfVote {
+		f.NumOfVote[key] = value
+	}
+
+	for key, value := range c.CoinbaseReward {
+		f.CoinbaseReward[key] = value
+	}
+	return f
+}
+
+// IsFinalize check if the result is end of consensus round
+func (c *ConsensusResult) IsFinalize() bool {
+	return c.BlockHeight%consensus.RoundVoteBlockNums == 0
+}
+
 // GetCoinbaseRewards convert into CoinbaseReward array and sort it by amount
 func (c *ConsensusResult) GetCoinbaseRewards(blockHeight uint64) ([]CoinbaseReward, error) {
 	rewards := []CoinbaseReward{}
@@ -303,17 +292,24 @@ func (c *ConsensusResult) GetCoinbaseRewards(blockHeight uint64) ([]CoinbaseRewa
 	}
 
 	for p, amount := range c.CoinbaseReward {
-		coinbaseAmount := amount
 		program, err := hex.DecodeString(p)
 		if err != nil {
 			return nil, err
 		}
 
 		rewards = append(rewards, CoinbaseReward{
-			Amount:         coinbaseAmount,
+			Amount:         amount,
 			ControlProgram: program,
 		})
 	}
 	sort.Sort(SortByAmount(rewards))
 	return rewards, nil
+}
+
+func federationNodes() map[string]*ConsensusNode {
+	consensusResult := map[string]*ConsensusNode{}
+	for i, xpub := range config.CommonConfig.Federation.Xpubs {
+		consensusResult[xpub.String()] = &ConsensusNode{XPub: xpub, VoteNum: 0, Order: uint64(i)}
+	}
+	return consensusResult
 }
