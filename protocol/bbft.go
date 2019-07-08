@@ -221,6 +221,9 @@ func (c *Chain) SignBlock(block *types.Block) ([]byte, error) {
 
 func (c *Chain) updateBlockSignature(blockHeader *types.BlockHeader, nodeOrder uint64, signature []byte) error {
 	blockHeader.Set(nodeOrder, signature)
+	if err := c.store.SaveBlockHeader(blockHeader); err != nil {
+		return err
+	}
 
 	if !c.isIrreversible(blockHeader) || blockHeader.Height <= c.lastIrrBlockHeader.Height {
 		return nil
