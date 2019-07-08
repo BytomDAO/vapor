@@ -26,7 +26,7 @@ const (
 // Chain is the interface for Bytom core
 type Chain interface {
 	BestBlockHeader() *types.BlockHeader
-	BestIrreversibleHeader() *types.BlockHeader
+	LastIrreversibleHeader() *types.BlockHeader
 	BestBlockHeight() uint64
 	GetBlockByHash(*bc.Hash) (*types.Block, error)
 	GetBlockByHeight(uint64) (*types.Block, error)
@@ -352,7 +352,7 @@ func (m *Manager) SendStatus(peer peers.BasePeer) error {
 		return errors.New("invalid peer")
 	}
 
-	if err := p.SendStatus(m.chain.BestBlockHeader(), m.chain.BestIrreversibleHeader()); err != nil {
+	if err := p.SendStatus(m.chain.BestBlockHeader(), m.chain.LastIrreversibleHeader()); err != nil {
 		m.peers.RemovePeer(p.ID())
 		return err
 	}
