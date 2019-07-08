@@ -314,10 +314,10 @@ func (m *mainchainKeeper) processIssuing(txs []*types.Tx) error {
 				}
 
 				m.assetStore.Add(&orm.Asset{
-					AssetID:           assetID.String(),
-					IssuanceProgram:   hex.EncodeToString(inp.IssuanceProgram),
-					VMVersion:         inp.VMVersion,
-					RawDefinitionByte: hex.EncodeToString(inp.AssetDefinition),
+					AssetID:         assetID.String(),
+					IssuanceProgram: hex.EncodeToString(inp.IssuanceProgram),
+					VMVersion:       inp.VMVersion,
+					Definition:      string(inp.AssetDefinition),
 				})
 			}
 		}
