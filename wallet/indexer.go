@@ -313,7 +313,7 @@ func (w *Wallet) GetTransactions(accountID string, StartTxID string, count uint,
 	itr := w.DB.IteratorPrefixWithStart([]byte(preFix), startKey, true)
 	defer itr.Release()
 
-	for txNum := count; itr.Next() && txNum > 0; txNum-- {
+	for txNum := count; itr.Next() && txNum > 0; {
 		annotatedTx := &query.AnnotatedTx{}
 		if err := json.Unmarshal(itr.Value(), &annotatedTx); err != nil {
 			return nil, err
@@ -322,6 +322,7 @@ func (w *Wallet) GetTransactions(accountID string, StartTxID string, count uint,
 		if accountID == "" || findTransactionsByAccount(annotatedTx, accountID) {
 			annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 			annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
+			txNum--
 		}
 	}
 
