@@ -1324,19 +1324,14 @@ func newMockAccountStore(db dbm.DB) *mockAccountStore {
 	}
 }
 
-var (
-	UTXOPrefix  = []byte{0x00, 0x3a}
-	SUTXOPrefix = []byte{0x01, 0x3a}
-)
-
 // StandardUTXOKey makes an account unspent outputs key to store
 func StandardUTXOKey(id bc.Hash) []byte {
-	return append(UTXOPrefix, id.Bytes()...)
+	return append(dbm.UTXOPrefix, id.Bytes()...)
 }
 
 // ContractUTXOKey makes a smart contract unspent outputs key to store
 func ContractUTXOKey(id bc.Hash) []byte {
-	return append(SUTXOPrefix, id.Bytes()...)
+	return append(dbm.SUTXOPrefix, id.Bytes()...)
 }
 
 func (store *mockAccountStore) InitBatch() error                                { return nil }
@@ -1383,7 +1378,7 @@ func (store *mockAccountStore) GetUTXO(outid bc.Hash) (*UTXO, error) {
 
 // ListUTXOs get utxos by accountID
 func (store *mockAccountStore) ListUTXOs() ([]*UTXO, error) {
-	utxoIter := store.db.IteratorPrefix([]byte(UTXOPrefix))
+	utxoIter := store.db.IteratorPrefix([]byte(dbm.UTXOPrefix))
 	defer utxoIter.Release()
 
 	utxos := []*UTXO{}
