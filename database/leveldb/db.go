@@ -60,13 +60,15 @@ const (
 var (
 	colon               byte = 0x3a
 	store                    = []byte("store:")
-	UTXOPrefix               = append(store, utxoPrefix, colon)
+	accountStore             = []byte("accountStore:")
+	walletStore              = []byte("walletStore:")
+	UTXOPrefix               = append(accountStore, utxoPrefix, colon)
 	SUTXOPrefix              = append(store, sutxoPrefix, colon)
-	ContractPrefix           = append(store, contractPrefix, colon)
-	ContractIndexPrefix      = append(store, contractIndexPrefix, colon)
-	AccountPrefix            = append(store, accountPrefix, colon) // AccountPrefix is account ID prefix
+	ContractPrefix           = append(accountStore, contractPrefix, colon)
+	ContractIndexPrefix      = append(accountStore, contractIndexPrefix, colon)
+	AccountPrefix            = append(accountStore, accountPrefix, colon) // AccountPrefix is account ID prefix
 	AccountAliasPrefix       = append(store, accountAliasPrefix, colon)
-	AccountIndexPrefix       = append(store, accountIndexPrefix, colon)
+	AccountIndexPrefix       = append(accountStore, accountIndexPrefix, colon)
 	TxPrefix                 = append(store, txPrefix, colon)            //TxPrefix is wallet database transactions prefix
 	TxIndexPrefix            = append(store, txIndexPrefix, colon)       //TxIndexPrefix is wallet database tx index prefix
 	UnconfirmedTxPrefix      = append(store, unconfirmedTxPrefix, colon) //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
