@@ -138,11 +138,18 @@ func (m *mainchainKeeper) processBlock(chain *orm.Chain, block *types.Block, txS
 }
 
 func (m *mainchainKeeper) isDepositTx(tx *types.Tx) bool {
+	for _, input := range tx.Inputs {
+		if bytes.Equal(input.ControlProgram(), m.fedProg) {
+			return false
+		}
+	}
+
 	for _, output := range tx.Outputs {
 		if bytes.Equal(output.OutputCommitment.ControlProgram, m.fedProg) {
 			return true
 		}
 	}
+
 	return false
 }
 
