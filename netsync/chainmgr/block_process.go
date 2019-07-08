@@ -4,94 +4,62 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
-
 	"github.com/vapor/netsync/peers"
 	"github.com/vapor/p2p/security"
 )
 
 type BlockProcessor interface {
 	process(chan bool, chan bool, *sync.WaitGroup)
-	resetParameter()
-}
-
-type downloadedBlock struct {
-	startHeight uint64
-	stopHeight  uint64
 }
 
 type blockProcessor struct {
-	chain             Chain
-	storage           Storage
-	peers             *peers.PeerSet
-	downloadedBlockCh chan *downloadedBlock
-	queue             *prque.Prque
+	chain            Chain
+	storage          Storage
+	peers            *peers.PeerSet
+	newBlockNotifyCh chan struct{}
 }
 
-func newBlockProcessor(chain Chain, storage Storage, peers *peers.PeerSet, downloadedBlockCh chan *downloadedBlock) *blockProcessor {
+func newBlockProcessor(chain Chain, storage Storage, peers *peers.PeerSet, newBlockNotifyCh chan struct{}) *blockProcessor {
 	return &blockProcessor{
-		chain:   chain,
-		peers:   peers,
-		storage: storage,
-		queue:   prque.New(),
-
-		downloadedBlockCh: downloadedBlockCh,
+		chain:            chain,
+		peers:            peers,
+		storage:          storage,
+		newBlockNotifyCh: newBlockNotifyCh,
 	}
 }
 
-func (bp *blockProcessor) add(download *downloadedBlock) {
-	for i := download.startHeight; i <= download.stopHeight; i++ {
-		bp.queue.Push(i, -float32(i))
-	}
-}
-
-func (bp *blockProcessor) insert(height uint64) error {
-	blockStore, err := bp.storage.readBlock(height)
-	if err != nil {
-		return err
-	}
-
-	isOrphan, err := bp.chain.ProcessBlock(blockStore.block)
+func (bp *blockProcessor) insert(blockStorage *blockStorage) error {
+	isOrphan, err := bp.chain.ProcessBlock(blockStorage.block)
 	if err != nil || isOrphan {
-		bp.peers.ProcessIllegal(blockStore.peerID, security.LevelMsgIllegal, err.Error())
-		return err
+		bp.peers.ProcessIllegal(blockStorage.peerID, security.LevelMsgIllegal, err.Error())
 	}
-
-	bp.storage.deleteBlock(height)
-	return nil
+	return err
 }
 
-func (bp *blockProcessor) process(downloadComplete chan bool, ProcessComplete chan bool, wg *sync.WaitGroup) {
+func (bp *blockProcessor) process(downloadComplete chan bool, ProcessStop chan bool, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	for {
-		for !bp.queue.Empty() {
-			height := bp.queue.PopItem().(uint64)
-			if height > bp.chain.BestBlockHeight()+1 {
-				bp.queue.Push(height, -float32(height))
+		for {
+			nextHeight := bp.chain.BestBlockHeight() + 1
+			block, err := bp.storage.readBlock(nextHeight)
+			if err != nil {
 				break
 			}
 
-			if err := bp.insert(height); err != nil {
-				ProcessComplete <- true
+			if err := bp.insert(block); err != nil {
+				ProcessStop <- true
 				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("failed on process block")
 				return
 			}
+
+			bp.storage.deleteBlock(nextHeight)
 		}
 
 		select {
-		case blocks := <-bp.downloadedBlockCh:
-			bp.add(blocks)
-			for len(bp.downloadedBlockCh) > 0 {
-				bp.add(<-bp.downloadedBlockCh)
-			}
-
+		case <-bp.newBlockNotifyCh:
 		case <-downloadComplete:
 			return
 		}
 	}
-}
-
-func (bp *blockProcessor) resetParameter() {
-	bp.queue.Reset()
 }

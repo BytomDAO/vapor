@@ -21,9 +21,12 @@ const (
 	regularSyncType
 )
 
+var (
+	maxNumOfBlocksPerMsg  = uint64(1000)
+	maxNumOfHeadersPerMsg = uint64(1000)
+)
+
 type FastSync interface {
-	locateBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*types.Block, error)
-	locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, skip uint64, maxNum uint64) ([]*types.BlockHeader, error)
 	process() error
 	setSyncPeer(peer *peers.Peer)
 }
@@ -73,11 +76,60 @@ func newBlockKeeper(chain Chain, peers *peers.PeerSet, fastSyncDB dbm.DB) *block
 }
 
 func (bk *blockKeeper) locateBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*types.Block, error) {
-	return bk.fastSync.locateBlocks(locator, stopHash)
+	headers, err := bk.locateHeaders(locator, stopHash, 0, maxNumOfBlocksPerMsg)
+	if err != nil {
+		return nil, err
+	}
+
+	blocks := []*types.Block{}
+	for _, header := range headers {
+		headerHash := header.Hash()
+		block, err := bk.chain.GetBlockByHash(&headerHash)
+		if err != nil {
+			return nil, err
+		}
+
+		blocks = append(blocks, block)
+	}
+	return blocks, nil
 }
 
 func (bk *blockKeeper) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, skip uint64, maxNum uint64) ([]*types.BlockHeader, error) {
-	return bk.fastSync.locateHeaders(locator, stopHash, skip, maxNum)
+	startHeader, err := bk.chain.GetHeaderByHeight(0)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, hash := range locator {
+		header, err := bk.chain.GetHeaderByHash(hash)
+		if err == nil && bk.chain.InMainChain(header.Hash()) {
+			startHeader = header
+			break
+		}
+	}
+
+	headers := make([]*types.BlockHeader, 0)
+	stopHeader, err := bk.chain.GetHeaderByHash(stopHash)
+	if err != nil {
+		return headers, nil
+	}
+
+	if !bk.chain.InMainChain(*stopHash) {
+		return headers, nil
+	}
+
+	num := uint64(0)
+	for i := startHeader.Height; i <= stopHeader.Height && num < maxNum; i += skip + 1 {
+		header, err := bk.chain.GetHeaderByHeight(i)
+		if err != nil {
+			return nil, err
+		}
+
+		headers = append(headers, header)
+		num++
+	}
+
+	return headers, nil
 }
 
 func (bk *blockKeeper) processBlock(peerID string, block *types.Block) {

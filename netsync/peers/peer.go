@@ -673,7 +673,7 @@ func (ps *PeerSet) SetStatus(peerID string, height uint64, hash *bc.Hash) {
 
 func (ps *PeerSet) Size() int {
 	ps.mtx.RLock()
-	ps.mtx.RUnlock()
+	defer ps.mtx.RUnlock()
 
 	return len(ps.peers)
 }

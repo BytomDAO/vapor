@@ -21,7 +21,7 @@ var (
 type Storage interface {
 	resetParameter()
 	writeBlocks(peerID string, blocks []*types.Block) error
-	readBlock(height uint64) (*blockStore, error)
+	readBlock(height uint64) (*blockStorage, error)
 	deleteBlock(height uint64)
 }
 
@@ -31,7 +31,7 @@ type LocalStore interface {
 	clearData()
 }
 
-type blockStore struct {
+type blockStorage struct {
 	block  *types.Block
 	peerID string
 	size   int
@@ -40,7 +40,7 @@ type blockStore struct {
 
 type storage struct {
 	actualUsage int
-	blocks      map[uint64]*blockStore
+	blocks      map[uint64]*blockStorage
 	localStore  LocalStore
 	mux         sync.RWMutex
 }
@@ -49,7 +49,7 @@ func newStorage(db dbm.DB) *storage {
 	DBStorage := newDBStore(db)
 	DBStorage.clearData()
 	return &storage{
-		blocks:     make(map[uint64]*blockStore),
+		blocks:     make(map[uint64]*blockStorage),
 		localStore: DBStorage,
 	}
 }
@@ -65,7 +65,7 @@ func (s *storage) writeBlocks(peerID string, blocks []*types.Block) error {
 		}
 
 		if len(binaryBlock)+s.actualUsage < maxRAMFastSync {
-			s.blocks[block.Height] = &blockStore{block: block, peerID: peerID, size: len(binaryBlock), isRAM: true}
+			s.blocks[block.Height] = &blockStorage{block: block, peerID: peerID, size: len(binaryBlock), isRAM: true}
 			s.actualUsage += len(binaryBlock)
 			continue
 		}
@@ -74,13 +74,13 @@ func (s *storage) writeBlocks(peerID string, blocks []*types.Block) error {
 			return err
 		}
 
-		s.blocks[block.Height] = &blockStore{peerID: peerID, isRAM: false}
+		s.blocks[block.Height] = &blockStorage{peerID: peerID, isRAM: false}
 	}
 
 	return nil
 }
 
-func (s *storage) readBlock(height uint64) (*blockStore, error) {
+func (s *storage) readBlock(height uint64) (*blockStorage, error) {
 	s.mux.RLock()
 	defer s.mux.RUnlock()
 
@@ -122,7 +122,7 @@ func (s *storage) resetParameter() {
 	s.mux.Lock()
 	defer s.mux.Unlock()
 
-	s.blocks = make(map[uint64]*blockStore)
+	s.blocks = make(map[uint64]*blockStorage)
 	s.actualUsage = 0
 	s.localStore.clearData()
 }
