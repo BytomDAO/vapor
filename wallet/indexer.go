@@ -46,7 +46,7 @@ func saveExternalAssetDefinition(b *types.Block, store WalletStore) error {
 			}
 		}
 	}
-	if err := newStore.CommitBatch(); err != nil {
+	if err := newStore.CommitStore(); err != nil {
 		return err
 	}
 

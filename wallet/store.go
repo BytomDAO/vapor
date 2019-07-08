@@ -10,7 +10,7 @@ import (
 // WalletStore interface contains wallet storage functions.
 type WalletStore interface {
 	InitStore() WalletStore
-	CommitBatch() error
+	CommitStore() error
 	DeleteContractUTXO(bc.Hash)
 	DeleteRecoveryStatus()
 	DeleteTransactions(uint64)

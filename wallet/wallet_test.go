@@ -313,8 +313,8 @@ func (store *MockWalletStore) InitStore() WalletStore {
 	return newStore
 }
 
-// CommitBatch commit batch
-func (store *MockWalletStore) CommitBatch() error {
+// CommitStore commit batch
+func (store *MockWalletStore) CommitStore() error {
 	if store.batch == nil {
 		return errors.New("MockWalletStore commit fail, store batch is nil.")
 	}

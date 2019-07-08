@@ -115,8 +115,8 @@ func (store *WalletStore) InitStore() wallet.WalletStore {
 	return newStore
 }
 
-// CommitBatch commit batch
-func (store *WalletStore) CommitBatch() error {
+// CommitStore commit batch
+func (store *WalletStore) CommitStore() error {
 	if store.batch == nil {
 		return errors.New("WalletStore commit fail, store batch is nil.")
 	}
