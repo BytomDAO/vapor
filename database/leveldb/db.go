@@ -39,34 +39,6 @@ type Iterator interface {
 //-----------------------------------------------------------------------------
 
 const (
-	sutxoPrefix byte = iota //SUTXOPrefix is ContractUTXOKey prefix
-	accountAliasPrefix
-	txPrefix            //TxPrefix is wallet database transactions prefix
-	txIndexPrefix       //TxIndexPrefix is wallet database tx index prefix
-	unconfirmedTxPrefix //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
-	globalTxIndexPrefix //GlobalTxIndexPrefix is wallet database global tx index prefix
-	walletKey
-	miningAddressKey
-	coinbaseAbKey
-	recoveryKey //recoveryKey key for db store recovery info.
-)
-
-var (
-	colon               byte = 0x3a
-	walletStore              = []byte("WS:")
-	SUTXOPrefix              = append(walletStore, sutxoPrefix, colon)
-	AccountAliasPrefix       = append(walletStore, accountAliasPrefix, colon)
-	TxPrefix                 = append(walletStore, txPrefix, colon)            //TxPrefix is wallet database transactions prefix
-	TxIndexPrefix            = append(walletStore, txIndexPrefix, colon)       //TxIndexPrefix is wallet database tx index prefix
-	UnconfirmedTxPrefix      = append(walletStore, unconfirmedTxPrefix, colon) //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
-	GlobalTxIndexPrefix      = append(walletStore, globalTxIndexPrefix, colon) //GlobalTxIndexPrefix is wallet database global tx index prefix
-	WalletKey                = append(walletStore, walletKey)
-	MiningAddressKey         = append(walletStore, miningAddressKey)
-	CoinbaseAbKey            = append(walletStore, coinbaseAbKey)
-	RecoveryKey              = append(walletStore, recoveryKey)
-)
-
-const (
 	LevelDBBackendStr   = "leveldb" // legacy, defaults to goleveldb.
 	CLevelDBBackendStr  = "cleveldb"
 	GoLevelDBBackendStr = "goleveldb"

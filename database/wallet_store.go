@@ -17,6 +17,33 @@ import (
 	"github.com/vapor/wallet"
 )
 
+const (
+	sutxoPrefix byte = iota //SUTXOPrefix is ContractUTXOKey prefix
+	accountAliasPrefix
+	txPrefix            //TxPrefix is wallet database transactions prefix
+	txIndexPrefix       //TxIndexPrefix is wallet database tx index prefix
+	unconfirmedTxPrefix //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
+	globalTxIndexPrefix //GlobalTxIndexPrefix is wallet database global tx index prefix
+	walletKey
+	miningAddressKey
+	coinbaseAbKey
+	recoveryKey //recoveryKey key for db store recovery info.
+)
+
+var (
+	walletStore         = []byte("WS:")
+	SUTXOPrefix         = append(walletStore, sutxoPrefix, colon)
+	AccountAliasPrefix  = append(walletStore, accountAliasPrefix, colon)
+	TxPrefix            = append(walletStore, txPrefix, colon)            //TxPrefix is wallet database transactions prefix
+	TxIndexPrefix       = append(walletStore, txIndexPrefix, colon)       //TxIndexPrefix is wallet database tx index prefix
+	UnconfirmedTxPrefix = append(walletStore, unconfirmedTxPrefix, colon) //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
+	GlobalTxIndexPrefix = append(walletStore, globalTxIndexPrefix, colon) //GlobalTxIndexPrefix is wallet database global tx index prefix
+	WalletKey           = append(walletStore, walletKey)
+	MiningAddressKey    = append(walletStore, miningAddressKey)
+	CoinbaseAbKey       = append(walletStore, coinbaseAbKey)
+	RecoveryKey         = append(walletStore, recoveryKey)
+)
+
 // errors
 var (
 	errAccntTxIDNotFound = errors.New("account TXID not found")
@@ -25,27 +52,27 @@ var (
 
 // ContractUTXOKey makes a smart contract unspent outputs key to store
 func ContractUTXOKey(id bc.Hash) []byte {
-	return append(dbm.SUTXOPrefix, id.Bytes()...)
+	return append(SUTXOPrefix, id.Bytes()...)
 }
 
 func calcDeleteKey(blockHeight uint64) []byte {
-	return []byte(fmt.Sprintf("%s%016x", dbm.TxPrefix, blockHeight))
+	return []byte(fmt.Sprintf("%s%016x", TxPrefix, blockHeight))
 }
 
 func calcTxIndexKey(txID string) []byte {
-	return append(dbm.TxIndexPrefix, []byte(txID)...)
+	return append(TxIndexPrefix, []byte(txID)...)
 }
 
 func calcAnnotatedKey(formatKey string) []byte {
-	return append(dbm.TxPrefix, []byte(formatKey)...)
+	return append(TxPrefix, []byte(formatKey)...)
 }
 
 func calcUnconfirmedTxKey(formatKey string) []byte {
-	return append(dbm.UnconfirmedTxPrefix, []byte(formatKey)...)
+	return append(UnconfirmedTxPrefix, []byte(formatKey)...)
 }
 
 func CalcGlobalTxIndexKey(txID string) []byte {
-	return append(dbm.GlobalTxIndexPrefix, []byte(txID)...)
+	return append(GlobalTxIndexPrefix, []byte(txID)...)
 }
 
 func CalcGlobalTxIndex(blockHash *bc.Hash, position uint64) []byte {
@@ -64,7 +91,7 @@ func contractIndexKey(accountID string) []byte {
 }
 
 func accountAliasKey(name string) []byte {
-	return append(dbm.AccountAliasPrefix, []byte(name)...)
+	return append(AccountAliasPrefix, []byte(name)...)
 }
 
 // WalletStore store wallet using leveldb
@@ -114,9 +141,9 @@ func (store *WalletStore) DeleteContractUTXO(outputID bc.Hash) {
 // DeleteRecoveryStatus delete recovery status
 func (store *WalletStore) DeleteRecoveryStatus() {
 	if store.batch == nil {
-		store.db.Delete(dbm.RecoveryKey)
+		store.db.Delete(RecoveryKey)
 	} else {
-		store.batch.Delete(dbm.RecoveryKey)
+		store.batch.Delete(RecoveryKey)
 	}
 }
 
@@ -158,14 +185,14 @@ func (store *WalletStore) DeleteWalletTransactions() {
 	if store.batch != nil {
 		batch = store.batch
 	}
-	txIter := store.db.IteratorPrefix(dbm.TxPrefix)
+	txIter := store.db.IteratorPrefix(TxPrefix)
 	defer txIter.Release()
 
 	for txIter.Next() {
 		batch.Delete(txIter.Key())
 	}
 
-	txIndexIter := store.db.IteratorPrefix(dbm.TxIndexPrefix)
+	txIndexIter := store.db.IteratorPrefix(TxIndexPrefix)
 	defer txIndexIter.Release()
 
 	for txIndexIter.Next() {
@@ -190,7 +217,7 @@ func (store *WalletStore) DeleteWalletUTXOs() {
 		batch.Delete(ruIter.Key())
 	}
 
-	suIter := store.db.IteratorPrefix(dbm.SUTXOPrefix)
+	suIter := store.db.IteratorPrefix(SUTXOPrefix)
 	defer suIter.Release()
 
 	for suIter.Next() {
@@ -276,7 +303,7 @@ func (store *WalletStore) GetUnconfirmedTransaction(txID string) (*query.Annotat
 
 // GetRecoveryStatus delete recovery status
 func (store *WalletStore) GetRecoveryStatus() (*wallet.RecoveryState, error) {
-	rawStatus := store.db.Get(dbm.RecoveryKey)
+	rawStatus := store.db.Get(RecoveryKey)
 	if rawStatus == nil {
 		return nil, wallet.ErrGetRecoveryStatus
 	}
@@ -291,7 +318,7 @@ func (store *WalletStore) GetRecoveryStatus() (*wallet.RecoveryState, error) {
 
 // GetWalletInfo get wallet information
 func (store *WalletStore) GetWalletInfo() (*wallet.StatusInfo, error) {
-	rawStatus := store.db.Get(dbm.WalletKey)
+	rawStatus := store.db.Get(WalletKey)
 	if rawStatus == nil {
 		return nil, wallet.ErrGetWalletStatusInfo
 	}
@@ -308,7 +335,7 @@ func (store *WalletStore) GetWalletInfo() (*wallet.StatusInfo, error) {
 func (store *WalletStore) ListAccountUTXOs(id string, isSmartContract bool) ([]*acc.UTXO, error) {
 	prefix := UTXOPrefix
 	if isSmartContract {
-		prefix = dbm.SUTXOPrefix
+		prefix = SUTXOPrefix
 	}
 
 	idBytes, err := hex.DecodeString(id)
@@ -334,7 +361,7 @@ func (store *WalletStore) ListAccountUTXOs(id string, isSmartContract bool) ([]*
 func (store *WalletStore) ListTransactions(accountID string, StartTxID string, count uint, unconfirmed bool) ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
 	var startKey []byte
-	preFix := dbm.TxPrefix
+	preFix := TxPrefix
 
 	if StartTxID != "" {
 		if unconfirmed {
@@ -350,7 +377,7 @@ func (store *WalletStore) ListTransactions(accountID string, StartTxID string, c
 	}
 
 	if unconfirmed {
-		preFix = dbm.UnconfirmedTxPrefix
+		preFix = UnconfirmedTxPrefix
 	}
 
 	itr := store.db.IteratorPrefixWithStart(preFix, startKey, true)
@@ -371,7 +398,7 @@ func (store *WalletStore) ListTransactions(accountID string, StartTxID string, c
 // ListUnconfirmedTransactions get all unconfirmed txs
 func (store *WalletStore) ListUnconfirmedTransactions() ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
-	txIter := store.db.IteratorPrefix(dbm.UnconfirmedTxPrefix)
+	txIter := store.db.IteratorPrefix(UnconfirmedTxPrefix)
 	defer txIter.Release()
 
 	for txIter.Next() {
@@ -426,9 +453,9 @@ func (store *WalletStore) SetRecoveryStatus(recoveryState *wallet.RecoveryState)
 	}
 
 	if store.batch == nil {
-		store.db.Set(dbm.RecoveryKey, rawStatus)
+		store.db.Set(RecoveryKey, rawStatus)
 	} else {
-		store.batch.Set(dbm.RecoveryKey, rawStatus)
+		store.batch.Set(RecoveryKey, rawStatus)
 	}
 	return nil
 }
@@ -477,9 +504,9 @@ func (store *WalletStore) SetWalletInfo(status *wallet.StatusInfo) error {
 	}
 
 	if store.batch == nil {
-		store.db.Set(dbm.WalletKey, rawWallet)
+		store.db.Set(WalletKey, rawWallet)
 	} else {
-		store.batch.Set(dbm.WalletKey, rawWallet)
+		store.batch.Set(WalletKey, rawWallet)
 	}
 	return nil
 }

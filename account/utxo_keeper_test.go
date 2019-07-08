@@ -1330,6 +1330,33 @@ var (
 	AccountIndexPrefix       = append(accountStore, accountIndexPrefix, colon)
 )
 
+const (
+	sutxoPrefix byte = iota //SUTXOPrefix is ContractUTXOKey prefix
+	accountAliasPrefix
+	txPrefix            //TxPrefix is wallet database transactions prefix
+	txIndexPrefix       //TxIndexPrefix is wallet database tx index prefix
+	unconfirmedTxPrefix //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
+	globalTxIndexPrefix //GlobalTxIndexPrefix is wallet database global tx index prefix
+	walletKey
+	miningAddressKey
+	coinbaseAbKey
+	recoveryKey //recoveryKey key for db store recovery info.
+)
+
+var (
+	walletStore         = []byte("WS:")
+	SUTXOPrefix         = append(walletStore, sutxoPrefix, colon)
+	AccountAliasPrefix  = append(walletStore, accountAliasPrefix, colon)
+	TxPrefix            = append(walletStore, txPrefix, colon)            //TxPrefix is wallet database transactions prefix
+	TxIndexPrefix       = append(walletStore, txIndexPrefix, colon)       //TxIndexPrefix is wallet database tx index prefix
+	UnconfirmedTxPrefix = append(walletStore, unconfirmedTxPrefix, colon) //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
+	GlobalTxIndexPrefix = append(walletStore, globalTxIndexPrefix, colon) //GlobalTxIndexPrefix is wallet database global tx index prefix
+	WalletKey           = append(walletStore, walletKey)
+	MiningAddressKey    = append(walletStore, miningAddressKey)
+	CoinbaseAbKey       = append(walletStore, coinbaseAbKey)
+	RecoveryKey         = append(walletStore, recoveryKey)
+)
+
 type mockAccountStore struct {
 	db    dbm.DB
 	batch dbm.Batch
@@ -1350,7 +1377,7 @@ func StandardUTXOKey(id bc.Hash) []byte {
 
 // ContractUTXOKey makes a smart contract unspent outputs key to store
 func ContractUTXOKey(id bc.Hash) []byte {
-	return append(dbm.SUTXOPrefix, id.Bytes()...)
+	return append(SUTXOPrefix, id.Bytes()...)
 }
 
 func (store *mockAccountStore) InitBatch() error                                { return nil }

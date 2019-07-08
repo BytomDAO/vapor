@@ -186,6 +186,33 @@ var (
 	AccountIndexPrefix       = append(accountStore, accountIndexPrefix, colon)
 )
 
+const (
+	sutxoPrefix byte = iota //SUTXOPrefix is ContractUTXOKey prefix
+	accountAliasPrefix
+	txPrefix            //TxPrefix is wallet database transactions prefix
+	txIndexPrefix       //TxIndexPrefix is wallet database tx index prefix
+	unconfirmedTxPrefix //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
+	globalTxIndexPrefix //GlobalTxIndexPrefix is wallet database global tx index prefix
+	walletKey
+	miningAddressKey
+	coinbaseAbKey
+	recoveryKey //recoveryKey key for db store recovery info.
+)
+
+var (
+	walletStore         = []byte("WS:")
+	SUTXOPrefix         = append(walletStore, sutxoPrefix, colon)
+	AccountAliasPrefix  = append(walletStore, accountAliasPrefix, colon)
+	TxPrefix            = append(walletStore, txPrefix, colon)            //TxPrefix is wallet database transactions prefix
+	TxIndexPrefix       = append(walletStore, txIndexPrefix, colon)       //TxIndexPrefix is wallet database tx index prefix
+	UnconfirmedTxPrefix = append(walletStore, unconfirmedTxPrefix, colon) //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
+	GlobalTxIndexPrefix = append(walletStore, globalTxIndexPrefix, colon) //GlobalTxIndexPrefix is wallet database global tx index prefix
+	WalletKey           = append(walletStore, walletKey)
+	MiningAddressKey    = append(walletStore, miningAddressKey)
+	CoinbaseAbKey       = append(walletStore, coinbaseAbKey)
+	RecoveryKey         = append(walletStore, recoveryKey)
+)
+
 func accountIndexKey(xpubs []chainkd.XPub) []byte {
 	var hash [32]byte
 	var xPubs []byte
@@ -223,27 +250,27 @@ func StandardUTXOKey(id bc.Hash) []byte {
 
 // ContractUTXOKey makes a smart contract unspent outputs key to store
 func ContractUTXOKey(id bc.Hash) []byte {
-	return append(dbm.SUTXOPrefix, id.Bytes()...)
+	return append(SUTXOPrefix, id.Bytes()...)
 }
 
 func calcDeleteKey(blockHeight uint64) []byte {
-	return []byte(fmt.Sprintf("%s%016x", dbm.TxPrefix, blockHeight))
+	return []byte(fmt.Sprintf("%s%016x", TxPrefix, blockHeight))
 }
 
 func calcTxIndexKey(txID string) []byte {
-	return append(dbm.TxIndexPrefix, []byte(txID)...)
+	return append(TxIndexPrefix, []byte(txID)...)
 }
 
 func calcAnnotatedKey(formatKey string) []byte {
-	return append(dbm.TxPrefix, []byte(formatKey)...)
+	return append(TxPrefix, []byte(formatKey)...)
 }
 
 func calcUnconfirmedTxKey(formatKey string) []byte {
-	return append(dbm.UnconfirmedTxPrefix, []byte(formatKey)...)
+	return append(UnconfirmedTxPrefix, []byte(formatKey)...)
 }
 
 func CalcGlobalTxIndexKey(txID string) []byte {
-	return append(dbm.GlobalTxIndexPrefix, []byte(txID)...)
+	return append(GlobalTxIndexPrefix, []byte(txID)...)
 }
 
 func CalcGlobalTxIndex(blockHash *bc.Hash, position uint64) []byte {
@@ -262,7 +289,7 @@ func contractIndexKey(accountID string) []byte {
 }
 
 func accountAliasKey(name string) []byte {
-	return append([]byte(dbm.AccountAliasPrefix), []byte(name)...)
+	return append([]byte(AccountAliasPrefix), []byte(name)...)
 }
 
 // MockWalletStore store wallet using leveldb
@@ -310,9 +337,9 @@ func (store *MockWalletStore) DeleteContractUTXO(outputID bc.Hash) {
 // DeleteRecoveryStatus delete recovery status
 func (store *MockWalletStore) DeleteRecoveryStatus() {
 	if store.batch == nil {
-		store.db.Delete(dbm.RecoveryKey)
+		store.db.Delete(RecoveryKey)
 	} else {
-		store.batch.Delete(dbm.RecoveryKey)
+		store.batch.Delete(RecoveryKey)
 	}
 }
 
@@ -352,14 +379,14 @@ func (store *MockWalletStore) DeleteWalletTransactions() {
 	if store.batch != nil {
 		batch = store.batch
 	}
-	txIter := store.db.IteratorPrefix([]byte(dbm.TxPrefix))
+	txIter := store.db.IteratorPrefix([]byte(TxPrefix))
 	defer txIter.Release()
 
 	for txIter.Next() {
 		batch.Delete(txIter.Key())
 	}
 
-	txIndexIter := store.db.IteratorPrefix([]byte(dbm.TxIndexPrefix))
+	txIndexIter := store.db.IteratorPrefix([]byte(TxIndexPrefix))
 	defer txIndexIter.Release()
 
 	for txIndexIter.Next() {
@@ -382,7 +409,7 @@ func (store *MockWalletStore) DeleteWalletUTXOs() {
 		batch.Delete(ruIter.Key())
 	}
 
-	suIter := store.db.IteratorPrefix([]byte(dbm.SUTXOPrefix))
+	suIter := store.db.IteratorPrefix([]byte(SUTXOPrefix))
 	defer suIter.Release()
 	for suIter.Next() {
 		batch.Delete(suIter.Key())
@@ -459,7 +486,7 @@ func (store *MockWalletStore) GetUnconfirmedTransaction(txID string) (*query.Ann
 
 // GetRecoveryStatus delete recovery status
 func (store *MockWalletStore) GetRecoveryStatus() (*RecoveryState, error) {
-	rawStatus := store.db.Get(dbm.RecoveryKey)
+	rawStatus := store.db.Get(RecoveryKey)
 	if rawStatus == nil {
 		return nil, ErrGetRecoveryStatus
 	}
@@ -472,7 +499,7 @@ func (store *MockWalletStore) GetRecoveryStatus() (*RecoveryState, error) {
 
 // GetWalletInfo get wallet information
 func (store *MockWalletStore) GetWalletInfo() (*StatusInfo, error) {
-	rawStatus := store.db.Get([]byte(dbm.WalletKey))
+	rawStatus := store.db.Get([]byte(WalletKey))
 	if rawStatus == nil {
 		return nil, fmt.Errorf("failed get wallet info")
 	}
@@ -487,7 +514,7 @@ func (store *MockWalletStore) GetWalletInfo() (*StatusInfo, error) {
 func (store *MockWalletStore) ListAccountUTXOs(id string, isSmartContract bool) ([]*acc.UTXO, error) {
 	prefix := UTXOPrefix
 	if isSmartContract {
-		prefix = dbm.SUTXOPrefix
+		prefix = SUTXOPrefix
 	}
 
 	idBytes, err := hex.DecodeString(id)
@@ -513,7 +540,7 @@ func (store *MockWalletStore) ListAccountUTXOs(id string, isSmartContract bool) 
 func (store *MockWalletStore) ListTransactions(accountID string, StartTxID string, count uint, unconfirmed bool) ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
 	var startKey []byte
-	preFix := dbm.TxPrefix
+	preFix := TxPrefix
 
 	if StartTxID != "" {
 		if unconfirmed {
@@ -528,7 +555,7 @@ func (store *MockWalletStore) ListTransactions(accountID string, StartTxID strin
 	}
 
 	if unconfirmed {
-		preFix = dbm.UnconfirmedTxPrefix
+		preFix = UnconfirmedTxPrefix
 	}
 
 	itr := store.db.IteratorPrefixWithStart([]byte(preFix), startKey, true)
@@ -548,7 +575,7 @@ func (store *MockWalletStore) ListTransactions(accountID string, StartTxID strin
 // ListUnconfirmedTransactions get all unconfirmed txs
 func (store *MockWalletStore) ListUnconfirmedTransactions() ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
-	txIter := store.db.IteratorPrefix([]byte(dbm.UnconfirmedTxPrefix))
+	txIter := store.db.IteratorPrefix([]byte(UnconfirmedTxPrefix))
 	defer txIter.Release()
 
 	for txIter.Next() {
@@ -600,9 +627,9 @@ func (store *MockWalletStore) SetRecoveryStatus(recoveryState *RecoveryState) er
 		return err
 	}
 	if store.batch == nil {
-		store.db.Set(dbm.RecoveryKey, rawStatus)
+		store.db.Set(RecoveryKey, rawStatus)
 	} else {
-		store.batch.Set(dbm.RecoveryKey, rawStatus)
+		store.batch.Set(RecoveryKey, rawStatus)
 	}
 	return nil
 }
@@ -649,9 +676,9 @@ func (store *MockWalletStore) SetWalletInfo(status *StatusInfo) error {
 	}
 
 	if store.batch == nil {
-		store.db.Set([]byte(dbm.WalletKey), rawWallet)
+		store.db.Set([]byte(WalletKey), rawWallet)
 	} else {
-		store.batch.Set([]byte(dbm.WalletKey), rawWallet)
+		store.batch.Set([]byte(WalletKey), rawWallet)
 	}
 	return nil
 }
@@ -806,7 +833,7 @@ func (store *MockAccountStore) GetBip44ContractIndex(accountID string, change bo
 
 // GetCoinbaseArbitrary get coinbase arbitrary
 func (store *MockAccountStore) GetCoinbaseArbitrary() []byte {
-	return store.db.Get([]byte(dbm.CoinbaseAbKey))
+	return store.db.Get([]byte(CoinbaseAbKey))
 }
 
 // GetContractIndex get contract index
@@ -833,7 +860,7 @@ func (store *MockAccountStore) GetControlProgram(hash bc.Hash) (*acc.CtrlProgram
 
 // GetMiningAddress get mining address
 func (store *MockAccountStore) GetMiningAddress() (*acc.CtrlProgram, error) {
-	rawCP := store.db.Get([]byte(dbm.MiningAddressKey))
+	rawCP := store.db.Get([]byte(MiningAddressKey))
 	if rawCP == nil {
 		return nil, acc.ErrFindMiningAddress
 	}
@@ -949,9 +976,9 @@ func (store *MockAccountStore) SetBip44ContractIndex(accountID string, change bo
 // SetCoinbaseArbitrary set coinbase arbitrary
 func (store *MockAccountStore) SetCoinbaseArbitrary(arbitrary []byte) {
 	if store.batch == nil {
-		store.db.Set([]byte(dbm.CoinbaseAbKey), arbitrary)
+		store.db.Set([]byte(CoinbaseAbKey), arbitrary)
 	} else {
-		store.batch.Set([]byte(dbm.CoinbaseAbKey), arbitrary)
+		store.batch.Set([]byte(CoinbaseAbKey), arbitrary)
 	}
 }
 
@@ -986,9 +1013,9 @@ func (store *MockAccountStore) SetMiningAddress(program *acc.CtrlProgram) error 
 	}
 
 	if store.batch == nil {
-		store.db.Set([]byte(dbm.MiningAddressKey), rawProgram)
+		store.db.Set([]byte(MiningAddressKey), rawProgram)
 	} else {
-		store.batch.Set([]byte(dbm.MiningAddressKey), rawProgram)
+		store.batch.Set([]byte(MiningAddressKey), rawProgram)
 	}
 	return nil
 }

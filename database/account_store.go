@@ -221,7 +221,7 @@ func (store *AccountStore) GetBip44ContractIndex(accountID string, change bool) 
 
 // GetCoinbaseArbitrary get coinbase arbitrary
 func (store *AccountStore) GetCoinbaseArbitrary() []byte {
-	return store.db.Get(dbm.CoinbaseAbKey)
+	return store.db.Get(CoinbaseAbKey)
 }
 
 // GetContractIndex get contract index
@@ -250,7 +250,7 @@ func (store *AccountStore) GetControlProgram(hash bc.Hash) (*acc.CtrlProgram, er
 
 // GetMiningAddress get mining address
 func (store *AccountStore) GetMiningAddress() (*acc.CtrlProgram, error) {
-	rawCP := store.db.Get(dbm.MiningAddressKey)
+	rawCP := store.db.Get(MiningAddressKey)
 	if rawCP == nil {
 		return nil, acc.ErrFindMiningAddress
 	}
@@ -373,9 +373,9 @@ func (store *AccountStore) SetBip44ContractIndex(accountID string, change bool, 
 // SetCoinbaseArbitrary set coinbase arbitrary
 func (store *AccountStore) SetCoinbaseArbitrary(arbitrary []byte) {
 	if store.batch == nil {
-		store.db.Set(dbm.CoinbaseAbKey, arbitrary)
+		store.db.Set(CoinbaseAbKey, arbitrary)
 	} else {
-		store.batch.Set(dbm.CoinbaseAbKey, arbitrary)
+		store.batch.Set(CoinbaseAbKey, arbitrary)
 	}
 }
 
@@ -410,9 +410,9 @@ func (store *AccountStore) SetMiningAddress(program *acc.CtrlProgram) error {
 	}
 
 	if store.batch == nil {
-		store.db.Set(dbm.MiningAddressKey, rawProgram)
+		store.db.Set(MiningAddressKey, rawProgram)
 	} else {
-		store.batch.Set(dbm.MiningAddressKey, rawProgram)
+		store.batch.Set(MiningAddressKey, rawProgram)
 	}
 	return nil
 }
