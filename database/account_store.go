@@ -2,6 +2,7 @@ package database
 
 import (
 	"encoding/json"
+	"fmt"
 	"sort"
 	"strings"
 
@@ -55,6 +56,7 @@ func Bip44ContractIndexKey(accountID string, change bool) []byte {
 
 // ContractKey account control promgram store prefix
 func ContractKey(hash bc.Hash) []byte {
+	fmt.Println("ContractKey...")
 	return append(ContractPrefix, hash.Bytes()...)
 }
 

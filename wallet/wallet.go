@@ -194,7 +194,6 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 	w.annotateTxsAccount(annotatedTxs)
 
 	newStore := w.store.InitStore()
-
 	if err := w.indexTransactions(block, txStatus, annotatedTxs, newStore); err != nil {
 		return err
 	}
