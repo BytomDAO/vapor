@@ -341,7 +341,7 @@ func newMockWallet(store wt.WalletStore, account *account.Manager, asset *asset.
 // 		eventDispatcher: dispatcher,
 // 		TxIndexFlag:     txIndexFlag,
 // 	}
-// 	wallet.txMsgSub, _ = wallet.eventDispatcher.Subscribe(protocol.TxMsgEvent{})
+// 	wallet.TxMsgSub, _ = wallet.eventDispatcher.Subscribe(protocol.TxMsgEvent{})
 // 	return &mockWallet{wallet}
 
 // }

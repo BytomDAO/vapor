@@ -48,7 +48,7 @@ func (w *Wallet) AddUnconfirmedTx(txD *protocol.TxDesc) {
 // GetUnconfirmedTxs get account unconfirmed transactions, filter transactions by accountID when accountID is not empty
 func (w *Wallet) GetUnconfirmedTxs(accountID string) ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
-	annotatedTxs, err := w.store.ListUnconfirmedTransactions()
+	annotatedTxs, err := w.Store.ListUnconfirmedTransactions()
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func (w *Wallet) GetUnconfirmedTxs(accountID string) ([]*query.AnnotatedTx, erro
 
 // GetUnconfirmedTxByTxID get unconfirmed transaction by txID
 func (w *Wallet) GetUnconfirmedTxByTxID(txID string) (*query.AnnotatedTx, error) {
-	annotatedTx, err := w.store.GetUnconfirmedTransaction(txID)
+	annotatedTx, err := w.Store.GetUnconfirmedTransaction(txID)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (w *Wallet) RemoveUnconfirmedTx(txD *protocol.TxDesc) {
 		return
 	}
 
-	w.store.DeleteUnconfirmedTransaction(txD.Tx.ID.String())
+	w.Store.DeleteUnconfirmedTransaction(txD.Tx.ID.String())
 	w.AccountMgr.RemoveUnconfirmedUtxo(txD.Tx.ResultIds)
 }
 
@@ -127,7 +127,7 @@ func (w *Wallet) checkRelatedTransaction(tx *types.Tx) bool {
 		if err != nil {
 			continue
 		}
-		utxo, err := w.store.GetStandardUTXO(outid)
+		utxo, err := w.Store.GetStandardUTXO(outid)
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err, "outputID": outid.String()}).Error("checkRelatedTransaction fail.")
 			continue
@@ -151,7 +151,7 @@ func (w *Wallet) saveUnconfirmedTx(tx *types.Tx) error {
 	annotatedTxs = append(annotatedTxs, annotatedTx)
 	w.annotateTxsAccount(annotatedTxs)
 
-	if err := w.store.SetUnconfirmedTransaction(tx.ID.String(), annotatedTxs[0]); err != nil {
+	if err := w.Store.SetUnconfirmedTransaction(tx.ID.String(), annotatedTxs[0]); err != nil {
 		return err
 	}
 	return nil
@@ -165,7 +165,7 @@ func (w *Wallet) delExpiredTxs() error {
 
 	for _, tx := range AnnotatedTx {
 		if time.Now().After(time.Unix(int64(tx.Timestamp), 0).Add(MaxUnconfirmedTxDuration)) {
-			w.store.DeleteUnconfirmedTransaction(tx.ID.String())
+			w.Store.DeleteUnconfirmedTransaction(tx.ID.String())
 		}
 	}
 	return nil

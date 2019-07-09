@@ -40,17 +40,17 @@ type StatusInfo struct {
 
 //Wallet is related to storing account unspent outputs
 type Wallet struct {
-	store           WalletStore
+	Store           WalletStore
 	rw              sync.RWMutex
 	Status          StatusInfo
 	TxIndexFlag     bool
 	AccountMgr      *account.Manager
 	AssetReg        *asset.Registry
 	Hsm             *pseudohsm.HSM
-	chain           *protocol.Chain
+	Chain           *protocol.Chain
 	RecoveryMgr     *recoveryManager
 	EventDispatcher *event.Dispatcher
-	txMsgSub        *event.Subscription
+	TxMsgSub        *event.Subscription
 
 	rescanCh chan struct{}
 }
@@ -58,10 +58,10 @@ type Wallet struct {
 //NewWallet return a new wallet instance
 func NewWallet(store WalletStore, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) (*Wallet, error) {
 	w := &Wallet{
-		store:           store,
+		Store:           store,
 		AccountMgr:      account,
 		AssetReg:        asset,
-		chain:           chain,
+		Chain:           chain,
 		Hsm:             hsm,
 		RecoveryMgr:     newRecoveryManager(store, account),
 		EventDispatcher: dispatcher,
@@ -78,7 +78,7 @@ func NewWallet(store WalletStore, account *account.Manager, asset *asset.Registr
 	}
 
 	var err error
-	w.txMsgSub, err = w.EventDispatcher.Subscribe(protocol.TxMsgEvent{})
+	w.TxMsgSub, err = w.EventDispatcher.Subscribe(protocol.TxMsgEvent{})
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func NewWallet(store WalletStore, account *account.Manager, asset *asset.Registr
 func (w *Wallet) MemPoolTxQueryLoop() {
 	for {
 		select {
-		case obj, ok := <-w.txMsgSub.Chan():
+		case obj, ok := <-w.TxMsgSub.Chan():
 			if !ok {
 				log.WithFields(log.Fields{"module": logModule}).Warning("tx pool tx msg subscription channel closed")
 				return
@@ -120,7 +120,7 @@ func (w *Wallet) MemPoolTxQueryLoop() {
 func (w *Wallet) checkWalletInfo() error {
 	if w.Status.Version != currentVersion {
 		return errWalletVersionMismatch
-	} else if !w.chain.BlockExist(&w.Status.BestHash) {
+	} else if !w.Chain.BlockExist(&w.Status.BestHash) {
 		return errBestBlockNotFoundInCore
 	}
 
@@ -130,7 +130,7 @@ func (w *Wallet) checkWalletInfo() error {
 //LoadWalletInfo return stored wallet info and nil,
 //if error, return initial wallet info and err
 func (w *Wallet) LoadWalletInfo() error {
-	walletStatus, err := w.store.GetWalletInfo()
+	walletStatus, err := w.Store.GetWalletInfo()
 	if walletStatus == nil && err != ErrGetWalletStatusInfo {
 		return err
 	}
@@ -143,13 +143,13 @@ func (w *Wallet) LoadWalletInfo() error {
 		}
 
 		log.WithFields(log.Fields{"module": logModule}).Warn(err.Error())
-		w.store.DeleteWalletTransactions()
-		w.store.DeleteWalletUTXOs()
+		w.Store.DeleteWalletTransactions()
+		w.Store.DeleteWalletUTXOs()
 	}
 
 	w.Status.Version = currentVersion
 	w.Status.WorkHash = bc.Hash{}
-	block, err := w.chain.GetBlockByHeight(0)
+	block, err := w.Chain.GetBlockByHeight(0)
 	if err != nil {
 		return err
 	}
@@ -176,7 +176,7 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 	}
 
 	blockHash := block.Hash()
-	txStatus, err := w.chain.GetTransactionStatus(&blockHash)
+	txStatus, err := w.Chain.GetTransactionStatus(&blockHash)
 	if err != nil {
 		return err
 	}
@@ -187,13 +187,13 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 	}
 
 	annotatedTxs := w.filterAccountTxs(block, txStatus)
-	if err := saveExternalAssetDefinition(block, w.store); err != nil {
+	if err := saveExternalAssetDefinition(block, w.Store); err != nil {
 		return err
 	}
 
 	w.annotateTxsAccount(annotatedTxs)
 
-	newStore := w.store.InitBatch()
+	newStore := w.Store.InitBatch()
 	if err := w.indexTransactions(block, txStatus, annotatedTxs, newStore); err != nil {
 		return err
 	}
@@ -223,12 +223,12 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 	defer w.rw.Unlock()
 
 	blockHash := block.Hash()
-	txStatus, err := w.chain.GetTransactionStatus(&blockHash)
+	txStatus, err := w.Chain.GetTransactionStatus(&blockHash)
 	if err != nil {
 		return err
 	}
 
-	newStore := w.store.InitBatch()
+	newStore := w.Store.InitBatch()
 
 	w.detachUtxos(block, txStatus, newStore)
 	newStore.DeleteTransactions(w.Status.BestHeight)
@@ -255,8 +255,8 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 func (w *Wallet) walletUpdater() {
 	for {
 		w.getRescanNotification()
-		for !w.chain.InMainChain(w.Status.BestHash) {
-			block, err := w.chain.GetBlockByHash(&w.Status.BestHash)
+		for !w.Chain.InMainChain(w.Status.BestHash) {
+			block, err := w.Chain.GetBlockByHash(&w.Status.BestHash)
 			if err != nil {
 				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("walletUpdater GetBlockByHash")
 				return
@@ -268,7 +268,7 @@ func (w *Wallet) walletUpdater() {
 			}
 		}
 
-		block, _ := w.chain.GetBlockByHeight(w.Status.WorkHeight + 1)
+		block, _ := w.Chain.GetBlockByHeight(w.Status.WorkHeight + 1)
 		if block == nil {
 			w.walletBlockWaiter()
 			continue
@@ -299,7 +299,7 @@ func (w *Wallet) DeleteAccount(accountID string) (err error) {
 		return err
 	}
 
-	w.store.DeleteWalletTransactions()
+	w.Store.DeleteWalletTransactions()
 	w.RescanBlocks()
 	return nil
 }
@@ -312,7 +312,7 @@ func (w *Wallet) UpdateAccountAlias(accountID string, newAlias string) (err erro
 		return err
 	}
 
-	w.store.DeleteWalletTransactions()
+	w.Store.DeleteWalletTransactions()
 	w.RescanBlocks()
 	return nil
 }
@@ -327,14 +327,14 @@ func (w *Wallet) getRescanNotification() {
 }
 
 func (w *Wallet) setRescanStatus() {
-	block, _ := w.chain.GetBlockByHeight(0)
+	block, _ := w.Chain.GetBlockByHeight(0)
 	w.Status.WorkHash = bc.Hash{}
 	w.AttachBlock(block)
 }
 
 func (w *Wallet) walletBlockWaiter() {
 	select {
-	case <-w.chain.BlockWaiter(w.Status.WorkHeight + 1):
+	case <-w.Chain.BlockWaiter(w.Status.WorkHeight + 1):
 	case <-w.rescanCh:
 		w.setRescanStatus()
 	}
