@@ -51,7 +51,6 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 		destPos = &e.WitnessDestination.Position
 		s := e.SpentOutputId.Bytes()
 		spentOutputID = &s
-
 	}
 
 	var txSigHash *[]byte
