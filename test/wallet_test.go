@@ -1,7 +1,6 @@
 package test
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"reflect"
@@ -124,67 +123,67 @@ func TestWalletUpdate(t *testing.T) {
 	}
 }
 
-func TestRescanWallet(t *testing.T) {
-	rescan := func() {
-		// prepare wallet & db.
-		dirPath, err := ioutil.TempDir(".", "")
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer os.RemoveAll(dirPath)
+// func TestRescanWallet(t *testing.T) {
+// 	rescan := func() {
+// 		// prepare wallet & db.
+// 		dirPath, err := ioutil.TempDir(".", "")
+// 		if err != nil {
+// 			t.Fatal(err)
+// 		}
+// 		defer os.RemoveAll(dirPath)
 
-		config.CommonConfig = config.DefaultConfig()
-		testDB := dbm.NewDB("testdb", "leveldb", "temp")
-		walletStore := database.NewWalletStore(testDB)
-		defer func() {
-			testDB.Close()
-			os.RemoveAll("temp")
-		}()
+// 		config.CommonConfig = config.DefaultConfig()
+// 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+// 		walletStore := database.NewWalletStore(testDB)
+// 		defer func() {
+// 			testDB.Close()
+// 			os.RemoveAll("temp")
+// 		}()
 
-		store := database.NewStore(testDB)
-		dispatcher := event.NewDispatcher()
-		txPool := protocol.NewTxPool(store, dispatcher)
-		chain, err := protocol.NewChain(store, txPool, dispatcher)
-		if err != nil {
-			t.Fatal(err)
-		}
+// 		store := database.NewStore(testDB)
+// 		dispatcher := event.NewDispatcher()
+// 		txPool := protocol.NewTxPool(store, dispatcher)
+// 		chain, err := protocol.NewChain(store, txPool, dispatcher)
+// 		if err != nil {
+// 			t.Fatal(err)
+// 		}
 
-		statusInfo := wt.StatusInfo{
-			Version:  uint(1),
-			WorkHash: bc.Hash{V0: 0xff},
-		}
-		if err := walletStore.SetWalletInfo(&statusInfo); err != nil {
-			t.Fatal(err)
-		}
-		walletInfo, err := walletStore.GetWalletInfo()
-		if err != nil {
-			t.Fatal(err)
-		}
+// 		statusInfo := wt.StatusInfo{
+// 			Version:  uint(1),
+// 			WorkHash: bc.Hash{V0: 0xff},
+// 		}
+// 		if err := walletStore.SetWalletInfo(&statusInfo); err != nil {
+// 			t.Fatal(err)
+// 		}
+// 		walletInfo, err := walletStore.GetWalletInfo()
+// 		if err != nil {
+// 			t.Fatal(err)
+// 		}
 
-		accountStore := database.NewAccountStore(testDB)
-		accountManager := account.NewManager(accountStore, chain)
-		w := newMockWallet(walletStore, accountManager, nil, chain, dispatcher, false)
-		if err != nil {
-			t.Fatal(err)
-		}
-		w.Wallet.Status = *walletInfo
+// 		accountStore := database.NewAccountStore(testDB)
+// 		accountManager := account.NewManager(accountStore, chain)
+// 		w := newMockWallet(walletStore, accountManager, nil, chain, dispatcher, false)
+// 		if err != nil {
+// 			t.Fatal(err)
+// 		}
+// 		w.Wallet.Status = *walletInfo
 
-		// rescan wallet.
-		if err := w.Wallet.LoadWalletInfo(); err != nil {
-			t.Fatal(err)
-		}
+// 		// rescan wallet.
+// 		if err := w.Wallet.LoadWalletInfo(); err != nil {
+// 			t.Fatal(err)
+// 		}
 
-		block := config.GenesisBlock()
-		if w.Wallet.Status.WorkHash != block.Hash() {
-			t.Fatal("reattach from genesis block")
-		}
-	}
+// 		block := config.GenesisBlock()
+// 		if w.Wallet.Status.WorkHash != block.Hash() {
+// 			t.Fatal("reattach from genesis block")
+// 		}
+// 	}
 
-	for i := 0; i < 100; i++ {
-		fmt.Printf("case i: %v\n", i)
-		rescan()
-	}
-}
+// 	for i := 0; i < 100; i++ {
+// 		fmt.Printf("case i: %v\n", i)
+// 		rescan()
+// 	}
+// }
 
 func TestMemPoolTxQueryLoop(t *testing.T) {
 	dirPath, err := ioutil.TempDir(".", "")
