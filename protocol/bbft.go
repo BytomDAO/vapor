@@ -45,12 +45,10 @@ func (c *Chain) checkDoubleSign(bh *types.BlockHeader, xPub string) error {
 		}
 
 		consensusNode, err := c.getConsensusNode(&blockHeader.PreviousBlockHash, xPub)
-		if err != nil && err != errNotFoundConsensusNode {
-			return err
-		}
-
 		if err == errNotFoundConsensusNode {
 			continue
+		} else if err != nil {
+			return err
 		}
 
 		if blockHeader.BlockWitness.Get(consensusNode.Order) != nil {
