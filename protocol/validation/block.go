@@ -28,10 +28,10 @@ var (
 
 func checkBlockTime(b *bc.Block, parent *types.BlockHeader) error {
 	now := uint64(time.Now().UnixNano() / 1e6)
-	if b.Timestamp < (parent.Timestamp + consensus.BlockTimeInterval) {
+	if b.Timestamp < (parent.Timestamp + consensus.ActiveNetParams.BlockTimeInterval) {
 		return errBadTimestamp
 	}
-	if b.Timestamp > (now + consensus.MaxTimeOffsetMs) {
+	if b.Timestamp > (now + consensus.ActiveNetParams.MaxTimeOffsetMs) {
 		return errBadTimestamp
 	}
 
@@ -104,7 +104,7 @@ func ValidateBlock(b *bc.Block, parent *types.BlockHeader, rewards []state.Coinb
 			return err
 		}
 
-		if blockGasSum += uint64(validateResult.gasStatus.GasUsed); blockGasSum > consensus.MaxBlockGas {
+		if blockGasSum += uint64(validateResult.gasStatus.GasUsed); blockGasSum > consensus.ActiveNetParams.MaxBlockGas {
 			return errOverBlockLimit
 		}
 	}

@@ -40,8 +40,8 @@ func TestCheckBlockTime(t *testing.T) {
 		},
 		{
 			desc:       "timestamp of the block and the parent block are both greater than max limit",
-			blockTime:  uint64(time.Now().UnixNano()/int64(time.Millisecond)) + consensus.MaxTimeOffsetMs + 2000,
-			parentTime: []uint64{uint64(time.Now().UnixNano()/int64(time.Millisecond)) + consensus.MaxTimeOffsetMs + 1000},
+			blockTime:  uint64(time.Now().UnixNano()/int64(time.Millisecond)) + consensus.ActiveNetParams.MaxTimeOffsetMs + 2000,
+			parentTime: []uint64{uint64(time.Now().UnixNano()/int64(time.Millisecond)) + consensus.ActiveNetParams.MaxTimeOffsetMs + 1000},
 			err:        errBadTimestamp,
 		},
 	}

@@ -38,7 +38,7 @@ func (c *Chain) GetBlocker(prevBlockHash *bc.Hash, timeStamp uint64) (string, er
 		return "", err
 	}
 
-	startTimestamp := prevVoteRoundLastBlock.Timestamp + consensus.BlockTimeInterval
+	startTimestamp := prevVoteRoundLastBlock.Timestamp + consensus.ActiveNetParams.BlockTimeInterval
 	order := getBlockerOrder(startTimestamp, timeStamp, uint64(len(consensusNodeMap)))
 	for xPub, consensusNode := range consensusNodeMap {
 		if consensusNode.Order == order {
@@ -52,11 +52,11 @@ func (c *Chain) GetBlocker(prevBlockHash *bc.Hash, timeStamp uint64) (string, er
 
 func getBlockerOrder(startTimestamp, blockTimestamp, numOfConsensusNode uint64) uint64 {
 	// One round of product block time for all consensus nodes
-	roundBlockTime := consensus.BlockNumEachNode * numOfConsensusNode * consensus.BlockTimeInterval
+	roundBlockTime := consensus.ActiveNetParams.BlockNumEachNode * numOfConsensusNode * consensus.ActiveNetParams.BlockTimeInterval
 	// The start time of the last round of product block
 	lastRoundStartTime := startTimestamp + (blockTimestamp-startTimestamp)/roundBlockTime*roundBlockTime
 	// Order of blocker
-	return (blockTimestamp - lastRoundStartTime) / (consensus.BlockNumEachNode * consensus.BlockTimeInterval)
+	return (blockTimestamp - lastRoundStartTime) / (consensus.ActiveNetParams.BlockNumEachNode * consensus.ActiveNetParams.BlockTimeInterval)
 }
 
 func (c *Chain) getPrevRoundLastBlock(prevBlockHash *bc.Hash) (*types.BlockHeader, error) {
@@ -65,7 +65,7 @@ func (c *Chain) getPrevRoundLastBlock(prevBlockHash *bc.Hash) (*types.BlockHeade
 		return nil, errNotFoundBlockNode
 	}
 
-	for blockHeader.Height%consensus.RoundVoteBlockNums != 0 {
+	for blockHeader.Height%consensus.ActiveNetParams.RoundVoteBlockNums != 0 {
 		blockHeader, err = c.store.GetBlockHeader(&blockHeader.PreviousBlockHash)
 		if err != nil {
 			return nil, err

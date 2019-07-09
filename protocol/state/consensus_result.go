@@ -72,7 +72,7 @@ func CalcVoteSeq(blockHeight uint64) uint64 {
 	if blockHeight == 0 {
 		return 0
 	}
-	return (blockHeight-1)/consensus.RoundVoteBlockNums + 1
+	return (blockHeight-1)/consensus.ActiveNetParams.RoundVoteBlockNums + 1
 }
 
 // ConsensusResult represents a snapshot of each round of DPOS voting
@@ -141,7 +141,7 @@ func (c *ConsensusResult) AttachCoinbaseReward(block *types.Block) error {
 		return err
 	}
 
-	if block.Height%consensus.RoundVoteBlockNums == 1 {
+	if block.Height%consensus.ActiveNetParams.RoundVoteBlockNums == 1 {
 		c.CoinbaseReward = map[string]uint64{}
 	}
 
@@ -158,7 +158,7 @@ func (c *ConsensusResult) AttachCoinbaseReward(block *types.Block) error {
 func (c *ConsensusResult) ConsensusNodes() (map[string]*ConsensusNode, error) {
 	var nodes []*ConsensusNode
 	for pubkey, voteNum := range c.NumOfVote {
-		if voteNum >= consensus.MinConsensusNodeVoteNum {
+		if voteNum >= consensus.ActiveNetParams.MinConsensusNodeVoteNum {
 			var xpub chainkd.XPub
 			if err := xpub.UnmarshalText([]byte(pubkey)); err != nil {
 				return nil, err
@@ -171,7 +171,7 @@ func (c *ConsensusResult) ConsensusNodes() (map[string]*ConsensusNode, error) {
 	// if there is a performance problem, consider the optimization later.
 	sort.Sort(byVote(nodes))
 	result := make(map[string]*ConsensusNode)
-	for i := 0; i < len(nodes) && i < consensus.NumOfConsensusNode; i++ {
+	for i := 0; i < len(nodes) && int64(i) < consensus.ActiveNetParams.NumOfConsensusNode; i++ {
 		nodes[i].Order = uint64(i)
 		result[nodes[i].XPub.String()] = nodes[i]
 	}
@@ -232,7 +232,7 @@ func (c *ConsensusResult) DetachBlock(block *types.Block) error {
 
 // DetachCoinbaseReward detach coinbase reward
 func (c *ConsensusResult) DetachCoinbaseReward(block *types.Block) error {
-	if block.Height%consensus.RoundVoteBlockNums == 0 {
+	if block.Height%consensus.ActiveNetParams.RoundVoteBlockNums == 0 {
 		for i, output := range block.Transactions[0].Outputs {
 			if i == 0 {
 				continue
@@ -281,13 +281,13 @@ func (c *ConsensusResult) Fork() *ConsensusResult {
 
 // IsFinalize check if the result is end of consensus round
 func (c *ConsensusResult) IsFinalize() bool {
-	return c.BlockHeight%consensus.RoundVoteBlockNums == 0
+	return c.BlockHeight%consensus.ActiveNetParams.RoundVoteBlockNums == 0
 }
 
 // GetCoinbaseRewards convert into CoinbaseReward array and sort it by amount
 func (c *ConsensusResult) GetCoinbaseRewards(blockHeight uint64) ([]CoinbaseReward, error) {
 	rewards := []CoinbaseReward{}
-	if blockHeight%consensus.RoundVoteBlockNums != 0 {
+	if blockHeight%consensus.ActiveNetParams.RoundVoteBlockNums != 0 {
 		return rewards, nil
 	}
 

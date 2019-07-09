@@ -327,7 +327,7 @@ func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 
 // return gasRate
 func (a *API) gasRate() Response {
-	gasrate := map[string]int64{"gas_rate": consensus.VMGasRate}
+	gasrate := map[string]int64{"gas_rate": consensus.ActiveNetParams.VMGasRate}
 	return NewSuccessResponse(gasrate)
 }
 
