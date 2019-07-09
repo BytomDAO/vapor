@@ -68,6 +68,10 @@ func StandardUTXOKey(id bc.Hash) []byte {
 	return append(UTXOPrefix, id.Bytes()...)
 }
 
+func accountAliasKey(name string) []byte {
+	return append(AccountAliasPrefix, []byte(name)...)
+}
+
 // AccountStore satisfies AccountStore interface.
 type AccountStore struct {
 	db    dbm.DB

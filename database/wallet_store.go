@@ -90,10 +90,6 @@ func contractIndexKey(accountID string) []byte {
 	return append(ContractIndexPrefix, []byte(accountID)...)
 }
 
-func accountAliasKey(name string) []byte {
-	return append(AccountAliasPrefix, []byte(name)...)
-}
-
 // WalletStore store wallet using leveldb
 type WalletStore struct {
 	db    dbm.DB
