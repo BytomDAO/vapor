@@ -321,30 +321,30 @@ type mockWallet struct {
 	Wallet *wt.Wallet
 }
 
-func newMockWallet(store wt.WalletStore, account *account.Manager, asset *asset.Registry, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) *mockWallet {
-	w, err := wt.NewWallet(store, account, asset, nil, chain, dispatcher, txIndexFlag)
-	if err != nil {
-		panic(err)
-	}
-	var hash [32]byte
-	w.Status.WorkHash = bc.NewHash(hash)
-	return &mockWallet{w}
-}
-
 // func newMockWallet(store wt.WalletStore, account *account.Manager, asset *asset.Registry, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) *mockWallet {
-// 	wallet := &wt.Wallet{
-// 		Store:           store,
-// 		AccountMgr:      account,
-// 		AssetReg:        asset,
-// 		Chain:           chain,
-// 		RecoveryMgr:     newRecoveryManager(walletDB, account),
-// 		EventDispatcher: dispatcher,
-// 		TxIndexFlag:     txIndexFlag,
+// 	w, err := wt.NewWallet(store, account, asset, nil, chain, dispatcher, txIndexFlag)
+// 	if err != nil {
+// 		panic(err)
 // 	}
-// 	wallet.TxMsgSub, _ = wallet.EventDispatcher.Subscribe(protocol.TxMsgEvent{})
-// 	return &mockWallet{wallet}
-
+// 	var hash [32]byte
+// 	w.Status.WorkHash = bc.NewHash(hash)
+// 	return &mockWallet{w}
 // }
+
+func newMockWallet(store wt.WalletStore, account *account.Manager, asset *asset.Registry, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) *mockWallet {
+	wallet := &wt.Wallet{
+		Store:           store,
+		AccountMgr:      account,
+		AssetReg:        asset,
+		Chain:           chain,
+		RecoveryMgr:     wt.NewRecoveryManager(store, account),
+		EventDispatcher: dispatcher,
+		TxIndexFlag:     txIndexFlag,
+	}
+	wallet.TxMsgSub, _ = wallet.EventDispatcher.Subscribe(protocol.TxMsgEvent{})
+	return &mockWallet{wallet}
+
+}
 
 func mockSingleBlock(tx *types.Tx) *types.Block {
 	return &types.Block{
