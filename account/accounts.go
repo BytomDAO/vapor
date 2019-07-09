@@ -145,11 +145,9 @@ func (m *Manager) SaveAccount(account *Account) error {
 	}
 
 	acct, err := m.GetAccountByXPubsIndex(account.XPubs, account.KeyIndex)
-	if err != nil {
+	if err != nil && err != ErrFindAccount {
 		return err
-	}
-
-	if acct != nil {
+	} else if acct != nil {
 		return ErrDuplicateIndex
 	}
 
@@ -347,7 +345,7 @@ func (m *Manager) GetAccountByXPubsIndex(xPubs []chainkd.XPub, index uint64) (*A
 			return account, nil
 		}
 	}
-	return nil, nil
+	return nil, ErrFindAccount
 }
 
 // GetAliasByID return the account alias by given ID
