@@ -313,8 +313,8 @@ func (store *MockWalletStore) InitBatch() WalletStore {
 	return newStore
 }
 
-// CommitStore commit batch
-func (store *MockWalletStore) CommitStore() error {
+// CommitBatch commit batch
+func (store *MockWalletStore) CommitBatch() error {
 	if store.batch == nil {
 		return errors.New("MockWalletStore commit fail, store batch is nil.")
 	}
@@ -701,8 +701,8 @@ func (store *MockAccountStore) InitBatch() acc.AccountStore {
 	return newStore
 }
 
-// CommitStore commit batch
-func (store *MockAccountStore) CommitStore() error {
+// CommitBatch commit batch
+func (store *MockAccountStore) CommitBatch() error {
 	if store.batch == nil {
 		return errors.New("MockAccountStore commit fail, store batch is nil.")
 	}

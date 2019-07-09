@@ -65,5 +65,5 @@ func (m *Manager) Restore(image *Image) error {
 		}
 	}
 
-	return newStore.CommitStore()
+	return newStore.CommitBatch()
 }

@@ -210,7 +210,7 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 		return err
 	}
 
-	if err := newStore.CommitStore(); err != nil {
+	if err := newStore.CommitBatch(); err != nil {
 		return err
 	}
 
@@ -244,7 +244,7 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 		return err
 	}
 
-	if err := newStore.CommitStore(); err != nil {
+	if err := newStore.CommitBatch(); err != nil {
 		return err
 	}
 

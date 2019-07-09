@@ -93,8 +93,8 @@ func (store *AccountStore) InitBatch() acc.AccountStore {
 	return newStore
 }
 
-// CommitStore commit batch
-func (store *AccountStore) CommitStore() error {
+// CommitBatch commit batch
+func (store *AccountStore) CommitBatch() error {
 	if store.batch == nil {
 		return errors.New("AccountStore commit fail, store batch is nil.")
 	}
