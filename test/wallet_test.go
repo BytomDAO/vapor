@@ -36,7 +36,7 @@ func TestWalletUpdate(t *testing.T) {
 		config.CommonConfig = config.DefaultConfig()
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
 		defer func() {
-			// testDB.Close()
+			testDB.Close()
 			os.RemoveAll("temp")
 		}()
 
@@ -142,7 +142,7 @@ func TestRescanWallet(t *testing.T) {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
 		walletStore := database.NewWalletStore(testDB)
 		defer func() {
-			// testDB.Close()
+			testDB.Close()
 			os.RemoveAll("temp")
 		}()
 
@@ -343,7 +343,6 @@ func newMockWallet(store wt.WalletStore, account *account.Manager, asset *asset.
 	}
 	wallet.TxMsgSub, _ = wallet.EventDispatcher.Subscribe(protocol.TxMsgEvent{})
 	return &mockWallet{wallet}
-
 }
 
 func mockSingleBlock(tx *types.Tx) *types.Block {
