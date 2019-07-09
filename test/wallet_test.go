@@ -193,87 +193,93 @@ func TestRescanWallet(t *testing.T) {
 }
 
 func TestMemPoolTxQueryLoop(t *testing.T) {
-	dirPath, err := ioutil.TempDir(".", "")
-	if err != nil {
-		t.Fatal(err)
+	query := func() {
+		dirPath, err := ioutil.TempDir(".", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		config.CommonConfig = config.DefaultConfig()
+		testDB := dbm.NewDB("testdb", "leveldb", dirPath)
+		defer func() {
+			testDB.Close()
+			os.RemoveAll(dirPath)
+		}()
+
+		store := database.NewStore(testDB)
+		dispatcher := event.NewDispatcher()
+		txPool := protocol.NewTxPool(store, dispatcher)
+
+		chain, err := protocol.NewChain(store, txPool, dispatcher)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		accountStore := database.NewAccountStore(testDB)
+		accountManager := account.NewManager(accountStore, chain)
+		hsm, err := pseudohsm.New(dirPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		xpub1, _, err := hsm.XCreate("test_pub1", "password", "en")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		testAccount, err := accountManager.Create([]chainkd.XPub{xpub1.XPub}, 1, "testAccount", signers.BIP0044)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		controlProg, err := accountManager.CreateAddress(testAccount.ID, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		controlProg.KeyIndex = 1
+
+		reg := asset.NewRegistry(testDB, chain)
+		asset := bc.AssetID{V0: 5}
+
+		utxos := []*account.UTXO{}
+		btmUtxo := mockUTXO(controlProg, consensus.BTMAssetID)
+		utxos = append(utxos, btmUtxo)
+		OtherUtxo := mockUTXO(controlProg, &asset)
+		utxos = append(utxos, OtherUtxo)
+
+		_, txData, err := mockTxData(utxos, testAccount)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		tx := types.NewTx(*txData)
+		txStatus := bc.NewTransactionStatus()
+		txStatus.SetStatus(0, false)
+		walletStore := database.NewWalletStore(testDB)
+		w := newMockWallet(walletStore, accountManager, reg, chain, dispatcher, false)
+		go w.Wallet.MemPoolTxQueryLoop()
+		w.Wallet.EventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: protocol.MsgNewTx}})
+		time.Sleep(time.Millisecond * 10)
+		if _, err := w.Wallet.GetUnconfirmedTxByTxID(tx.ID.String()); err != nil {
+			t.Fatal("dispatch new tx msg error:", err)
+		}
+		w.Wallet.EventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: protocol.MsgRemoveTx}})
+		time.Sleep(time.Millisecond * 10)
+		txs, err := w.Wallet.GetUnconfirmedTxs(testAccount.ID)
+		if err != nil {
+			t.Fatal("get unconfirmed tx error:", err)
+		}
+
+		if len(txs) != 0 {
+			t.Fatal("dispatch remove tx msg error")
+		}
+
+		w.Wallet.EventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: 2}})
 	}
-	config.CommonConfig = config.DefaultConfig()
-	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
-	defer func() {
-		testDB.Close()
-		os.RemoveAll(dirPath)
-	}()
-
-	store := database.NewStore(testDB)
-	dispatcher := event.NewDispatcher()
-	txPool := protocol.NewTxPool(store, dispatcher)
-
-	chain, err := protocol.NewChain(store, txPool, dispatcher)
-	if err != nil {
-		t.Fatal(err)
+	for i := 0; i < 100; i++ {
+		fmt.Printf("case i: %v\n", i)
+		query()
 	}
-
-	accountStore := database.NewAccountStore(testDB)
-	accountManager := account.NewManager(accountStore, chain)
-	hsm, err := pseudohsm.New(dirPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	xpub1, _, err := hsm.XCreate("test_pub1", "password", "en")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	testAccount, err := accountManager.Create([]chainkd.XPub{xpub1.XPub}, 1, "testAccount", signers.BIP0044)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	controlProg, err := accountManager.CreateAddress(testAccount.ID, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	controlProg.KeyIndex = 1
-
-	reg := asset.NewRegistry(testDB, chain)
-	asset := bc.AssetID{V0: 5}
-
-	utxos := []*account.UTXO{}
-	btmUtxo := mockUTXO(controlProg, consensus.BTMAssetID)
-	utxos = append(utxos, btmUtxo)
-	OtherUtxo := mockUTXO(controlProg, &asset)
-	utxos = append(utxos, OtherUtxo)
-
-	_, txData, err := mockTxData(utxos, testAccount)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	tx := types.NewTx(*txData)
-	txStatus := bc.NewTransactionStatus()
-	txStatus.SetStatus(0, false)
-	walletStore := database.NewWalletStore(testDB)
-	w := newMockWallet(walletStore, accountManager, reg, chain, dispatcher, false)
-	go w.Wallet.MemPoolTxQueryLoop()
-	w.Wallet.EventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: protocol.MsgNewTx}})
-	time.Sleep(time.Millisecond * 10)
-	if _, err := w.Wallet.GetUnconfirmedTxByTxID(tx.ID.String()); err != nil {
-		t.Fatal("dispatch new tx msg error:", err)
-	}
-	w.Wallet.EventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: protocol.MsgRemoveTx}})
-	time.Sleep(time.Millisecond * 10)
-	txs, err := w.Wallet.GetUnconfirmedTxs(testAccount.ID)
-	if err != nil {
-		t.Fatal("get unconfirmed tx error:", err)
-	}
-
-	if len(txs) != 0 {
-		t.Fatal("dispatch remove tx msg error")
-	}
-
-	w.Wallet.EventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: 2}})
 }
 
 func mockUTXO(controlProg *account.CtrlProgram, assetID *bc.AssetID) *account.UTXO {
