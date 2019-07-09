@@ -52,8 +52,8 @@ func TestSyncMempool(t *testing.T) {
 		t.Fatalf("failed to create temporary data folder: %v", err)
 	}
 	defer os.RemoveAll(tmpDir)
-	testDBA := dbm.NewDB("testdba", "leveldb", "tmpDir")
-	testDBB := dbm.NewDB("testdbb", "leveldb", "tmpDir")
+	testDBA := dbm.NewDB("testdba", "leveldb", tmpDir)
+	testDBB := dbm.NewDB("testdbb", "leveldb", tmpDir)
 
 	blocks := mockBlocks(nil, 5)
 	a := mockSync(blocks, &mock.Mempool{}, testDBA)

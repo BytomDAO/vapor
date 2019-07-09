@@ -183,7 +183,6 @@ func (bk *blockKeeper) checkSyncType() int {
 	}
 
 	bestHeight := bk.chain.BestBlockHeight()
-
 	if peerIrreversibleHeight := peer.IrreversibleHeight(); peerIrreversibleHeight >= bestHeight+minGapStartFastSync {
 		bk.fastSync.setSyncPeer(peer)
 		return fastSyncType

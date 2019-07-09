@@ -59,20 +59,17 @@ func TestRegularBlockSync(t *testing.T) {
 			err:         nil,
 		},
 	}
-	tmpDirA, err := ioutil.TempDir(".", "")
+	tmp, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatalf("failed to create temporary data folder: %v", err)
 	}
-	tmpDirB, err := ioutil.TempDir(".", "")
-	if err != nil {
-		t.Fatalf("failed to create temporary data folder: %v", err)
-	}
-	testDBA := dbm.NewDB("testdba", "leveldb", "tmpDirA")
-	testDBB := dbm.NewDB("testdbb", "leveldb", "tmpDirB")
-	defer testDBA.Close()
-	defer testDBB.Close()
-	defer os.RemoveAll(tmpDirA)
-	defer os.RemoveAll(tmpDirB)
+	testDBA := dbm.NewDB("testdba", "leveldb", tmp)
+	testDBB := dbm.NewDB("testdbb", "leveldb", tmp)
+	defer func() {
+		testDBA.Close()
+		testDBB.Close()
+		os.RemoveAll(tmp)
+	}()
 
 	for i, c := range cases {
 		a := mockSync(c.aBlocks, nil, testDBA)
@@ -108,20 +105,17 @@ func TestRegularBlockSync(t *testing.T) {
 }
 
 func TestRequireBlock(t *testing.T) {
-	tmpDirA, err := ioutil.TempDir(".", "")
+	tmp, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatalf("failed to create temporary data folder: %v", err)
 	}
-	tmpDirB, err := ioutil.TempDir(".", "")
-	if err != nil {
-		t.Fatalf("failed to create temporary data folder: %v", err)
-	}
-	testDBA := dbm.NewDB("testdba", "leveldb", "tmpDirA")
-	testDBB := dbm.NewDB("testdbb", "leveldb", "tmpDirB")
-	defer testDBA.Close()
-	defer testDBB.Close()
-	defer os.RemoveAll(tmpDirA)
-	defer os.RemoveAll(tmpDirB)
+	testDBA := dbm.NewDB("testdba", "leveldb", tmp)
+	testDBB := dbm.NewDB("testdbb", "leveldb", tmp)
+	defer func() {
+		testDBB.Close()
+		testDBA.Close()
+		os.RemoveAll(tmp)
+	}()
 
 	blocks := mockBlocks(nil, 5)
 	a := mockSync(blocks[:1], nil, testDBA)
@@ -173,20 +167,18 @@ func TestRequireBlock(t *testing.T) {
 }
 
 func TestSendMerkleBlock(t *testing.T) {
-	tmpDirA, err := ioutil.TempDir(".", "")
+	tmp, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatalf("failed to create temporary data folder: %v", err)
 	}
-	tmpDirB, err := ioutil.TempDir(".", "")
-	if err != nil {
-		t.Fatalf("failed to create temporary data folder: %v", err)
-	}
-	testDBA := dbm.NewDB("testdba", "leveldb", "tmpDirA")
-	testDBB := dbm.NewDB("testdbb", "leveldb", "tmpDirB")
-	defer testDBA.Close()
-	defer testDBB.Close()
-	defer os.RemoveAll(tmpDirA)
-	defer os.RemoveAll(tmpDirB)
+
+	testDBA := dbm.NewDB("testdba", "leveldb", tmp)
+	testDBB := dbm.NewDB("testdbb", "leveldb", tmp)
+	defer func() {
+		testDBA.Close()
+		testDBB.Close()
+		os.RemoveAll(tmp)
+	}()
 
 	cases := []struct {
 		txCount        int

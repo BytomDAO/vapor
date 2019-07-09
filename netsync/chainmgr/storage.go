@@ -9,11 +9,8 @@ import (
 	"github.com/vapor/protocol/bc/types"
 )
 
-const (
-	maxRAMFastSync = 800 * 1024 * 1024 //100MB
-)
-
 var (
+	maxByteOfStorageRAM = 800 * 1024 * 1024 //100MB
 	errStorageFindBlock = errors.New("can't find block from storage")
 	errDBFindBlock      = errors.New("can't find block from DB")
 )
@@ -64,7 +61,7 @@ func (s *storage) writeBlocks(peerID string, blocks []*types.Block) error {
 			return errors.Wrap(err, "Marshal block header")
 		}
 
-		if len(binaryBlock)+s.actualUsage < maxRAMFastSync {
+		if len(binaryBlock)+s.actualUsage < maxByteOfStorageRAM {
 			s.blocks[block.Height] = &blockStorage{block: block, peerID: peerID, size: len(binaryBlock), isRAM: true}
 			s.actualUsage += len(binaryBlock)
 			continue
