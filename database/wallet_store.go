@@ -90,10 +90,6 @@ func contractIndexKey(accountID string) []byte {
 	return append(ContractIndexPrefix, []byte(accountID)...)
 }
 
-func accountAliasKey(name string) []byte {
-	return append(AccountAliasPrefix, []byte(name)...)
-}
-
 // WalletStore store wallet using leveldb
 type WalletStore struct {
 	db    dbm.DB
@@ -108,15 +104,15 @@ func NewWalletStore(db dbm.DB) *WalletStore {
 	}
 }
 
-// InitStore initial new wallet store
-func (store *WalletStore) InitStore() wallet.WalletStore {
+// InitBatch initial new wallet store
+func (store *WalletStore) InitBatch() wallet.WalletStore {
 	newStore := NewWalletStore(store.db)
 	newStore.batch = newStore.db.NewBatch()
 	return newStore
 }
 
-// CommitStore commit batch
-func (store *WalletStore) CommitStore() error {
+// CommitBatch commit batch
+func (store *WalletStore) CommitBatch() error {
 	if store.batch == nil {
 		return errors.New("WalletStore commit fail, store batch is nil.")
 	}

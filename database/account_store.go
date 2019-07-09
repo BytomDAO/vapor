@@ -68,6 +68,10 @@ func StandardUTXOKey(id bc.Hash) []byte {
 	return append(UTXOPrefix, id.Bytes()...)
 }
 
+func accountAliasKey(name string) []byte {
+	return append(AccountAliasPrefix, []byte(name)...)
+}
+
 // AccountStore satisfies AccountStore interface.
 type AccountStore struct {
 	db    dbm.DB
@@ -82,15 +86,15 @@ func NewAccountStore(db dbm.DB) *AccountStore {
 	}
 }
 
-// InitStore initial new account store
-func (store *AccountStore) InitStore() acc.AccountStore {
+// InitBatch initial new account store
+func (store *AccountStore) InitBatch() acc.AccountStore {
 	newStore := NewAccountStore(store.db)
 	newStore.batch = newStore.db.NewBatch()
 	return newStore
 }
 
-// CommitStore commit batch
-func (store *AccountStore) CommitStore() error {
+// CommitBatch commit batch
+func (store *AccountStore) CommitBatch() error {
 	if store.batch == nil {
 		return errors.New("AccountStore commit fail, store batch is nil.")
 	}

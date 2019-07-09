@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/vapor/account"
+	acc "github.com/vapor/account"
 	"github.com/vapor/blockchain/pseudohsm"
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/blockchain/txbuilder"
@@ -297,7 +298,7 @@ func TestRecoveryFromXPubs(t *testing.T) {
 
 		for _, acct := range Accounts {
 			tmp, err := recAcctMgr.GetAccountByXPubsIndex(acct.XPubs, acct.KeyIndex)
-			if err != nil {
+			if err != nil && err != acc.ErrFindAccount {
 				t.Fatal("recovery from XPubs err:", err)
 			}
 
@@ -386,7 +387,7 @@ func TestRecoveryByRescanAccount(t *testing.T) {
 
 		for _, acct := range accounts {
 			tmp, err := recAcctMgr.GetAccountByXPubsIndex(acct.XPubs, acct.KeyIndex)
-			if err != nil {
+			if err != nil && err != acc.ErrFindAccount {
 				t.Fatal("recovery from XPubs err:", err)
 			}
 

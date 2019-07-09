@@ -115,7 +115,7 @@ func CreateAccount(xpubs []chainkd.XPub, quorum int, alias string, acctIndex uin
 }
 
 func (m *Manager) saveAccount(account *Account) error {
-	newStore := m.store.InitStore()
+	newStore := m.store.InitBatch()
 
 	// update account index
 	newStore.SetAccountIndex(account)
@@ -123,7 +123,7 @@ func (m *Manager) saveAccount(account *Account) error {
 		return err
 	}
 
-	if err := newStore.CommitStore(); err != nil {
+	if err := newStore.CommitBatch(); err != nil {
 		return err
 	}
 
@@ -145,11 +145,9 @@ func (m *Manager) SaveAccount(account *Account) error {
 	}
 
 	acct, err := m.GetAccountByXPubsIndex(account.XPubs, account.KeyIndex)
-	if err != nil {
+	if err != nil && err != ErrFindAccount {
 		return err
-	}
-
-	if acct != nil {
+	} else if acct != nil {
 		return ErrDuplicateIndex
 	}
 
@@ -164,9 +162,7 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string, deriveR
 	_, err := m.store.GetAccountByAlias(alias)
 	if err == nil {
 		return nil, ErrDuplicateAlias
-	}
-
-	if err != ErrFindAccount {
+	} else if err != ErrFindAccount {
 		return nil, err
 	}
 
@@ -212,7 +208,7 @@ func (m *Manager) UpdateAccountAlias(accountID string, newAlias string) error {
 
 	account.Alias = normalizedAlias
 
-	newStore := m.store.InitStore()
+	newStore := m.store.InitBatch()
 
 	if err := newStore.DeleteAccount(&oldAccount); err != nil {
 		return err
@@ -222,7 +218,7 @@ func (m *Manager) UpdateAccountAlias(accountID string, newAlias string) error {
 		return err
 	}
 
-	if err := newStore.CommitStore(); err != nil {
+	if err := newStore.CommitBatch(); err != nil {
 		return err
 	}
 
@@ -347,7 +343,7 @@ func (m *Manager) GetAccountByXPubsIndex(xPubs []chainkd.XPub, index uint64) (*A
 			return account, nil
 		}
 	}
-	return nil, nil
+	return nil, ErrFindAccount
 }
 
 // GetAliasByID return the account alias by given ID
@@ -374,16 +370,17 @@ func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
 		log.Warningf("GetCoinbaseControlProgram: can't find any account in db")
 		return vmutil.DefaultCoinbaseProgram()
 	}
+
 	if err != nil {
 		return nil, err
 	}
+
 	return cp.ControlProgram, nil
 }
 
 // GetCoinbaseCtrlProgram will return the coinbase CtrlProgram
 func (m *Manager) GetCoinbaseCtrlProgram() (*CtrlProgram, error) {
-	_, err := m.store.GetMiningAddress()
-	if err != nil {
+	if _, err := m.store.GetMiningAddress(); err != nil {
 		return nil, err
 	}
 
@@ -392,6 +389,7 @@ func (m *Manager) GetCoinbaseCtrlProgram() (*CtrlProgram, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	if len(accounts) > 0 {
 		account = accounts[0]
 	} else {
@@ -617,7 +615,7 @@ func (m *Manager) saveControlProgram(prog *CtrlProgram, updateIndex bool) error 
 		return err
 	}
 
-	newStore := m.store.InitStore()
+	newStore := m.store.InitBatch()
 
 	if err := newStore.SetControlProgram(bc.NewHash(hash), prog); err != nil {
 		return nil
@@ -632,7 +630,7 @@ func (m *Manager) saveControlProgram(prog *CtrlProgram, updateIndex bool) error 
 		}
 	}
 
-	return newStore.CommitStore()
+	return newStore.CommitBatch()
 }
 
 // SaveControlPrograms save account control programs

@@ -29,7 +29,7 @@ func parseGlobalTxIdx(globalTxIdx []byte) (*bc.Hash, uint64) {
 // when query ,query local first and if have no then query external
 // details see getAliasDefinition
 func saveExternalAssetDefinition(b *types.Block, store WalletStore) error {
-	newStore := store.InitStore()
+	newStore := store.InitBatch()
 
 	for _, tx := range b.Transactions {
 		for _, orig := range tx.Inputs {
@@ -46,7 +46,7 @@ func saveExternalAssetDefinition(b *types.Block, store WalletStore) error {
 			}
 		}
 	}
-	if err := newStore.CommitStore(); err != nil {
+	if err := newStore.CommitBatch(); err != nil {
 		return err
 	}
 

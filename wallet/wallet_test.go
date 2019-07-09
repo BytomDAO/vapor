@@ -306,15 +306,15 @@ func NewMockWalletStore(db dbm.DB) *MockWalletStore {
 	}
 }
 
-// InitStore initial new wallet store
-func (store *MockWalletStore) InitStore() WalletStore {
+// InitBatch initial new wallet store
+func (store *MockWalletStore) InitBatch() WalletStore {
 	newStore := NewMockWalletStore(store.db)
 	newStore.batch = newStore.db.NewBatch()
 	return newStore
 }
 
-// CommitStore commit batch
-func (store *MockWalletStore) CommitStore() error {
+// CommitBatch commit batch
+func (store *MockWalletStore) CommitBatch() error {
 	if store.batch == nil {
 		return errors.New("MockWalletStore commit fail, store batch is nil.")
 	}
@@ -694,15 +694,15 @@ func NewMockAccountStore(db dbm.DB) *MockAccountStore {
 	}
 }
 
-// InitStore initial new account store
-func (store *MockAccountStore) InitStore() acc.AccountStore {
+// InitBatch initial new account store
+func (store *MockAccountStore) InitBatch() acc.AccountStore {
 	newStore := NewMockAccountStore(store.db)
 	newStore.batch = newStore.db.NewBatch()
 	return newStore
 }
 
-// CommitStore commit batch
-func (store *MockAccountStore) CommitStore() error {
+// CommitBatch commit batch
+func (store *MockAccountStore) CommitBatch() error {
 	if store.batch == nil {
 		return errors.New("MockAccountStore commit fail, store batch is nil.")
 	}
