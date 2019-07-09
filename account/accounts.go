@@ -374,9 +374,11 @@ func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
 		log.Warningf("GetCoinbaseControlProgram: can't find any account in db")
 		return vmutil.DefaultCoinbaseProgram()
 	}
+
 	if err != nil {
 		return nil, err
 	}
+
 	return cp.ControlProgram, nil
 }
 
@@ -392,6 +394,7 @@ func (m *Manager) GetCoinbaseCtrlProgram() (*CtrlProgram, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	if len(accounts) > 0 {
 		account = accounts[0]
 	} else {
