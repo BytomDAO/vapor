@@ -63,7 +63,7 @@ func NewWallet(store WalletStore, account *account.Manager, asset *asset.Registr
 		AssetReg:        asset,
 		Chain:           chain,
 		Hsm:             hsm,
-		RecoveryMgr:     newRecoveryManager(store, account),
+		RecoveryMgr:     NewRecoveryManager(store, account),
 		EventDispatcher: dispatcher,
 		rescanCh:        make(chan struct{}, 1),
 		TxIndexFlag:     txIndexFlag,

@@ -275,7 +275,7 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 
 		w.Wallet.EventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: 2}})
 	}
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 1; i++ {
 		fmt.Printf("case i: %v\n", i)
 		query()
 	}
@@ -333,15 +333,15 @@ func newMockWallet(store wt.WalletStore, account *account.Manager, asset *asset.
 
 // func newMockWallet(store wt.WalletStore, account *account.Manager, asset *asset.Registry, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) *mockWallet {
 // 	wallet := &wt.Wallet{
-// 		store:           store,
+// 		Store:           store,
 // 		AccountMgr:      account,
 // 		AssetReg:        asset,
-// 		chain:           chain,
+// 		Chain:           chain,
 // 		RecoveryMgr:     newRecoveryManager(walletDB, account),
-// 		eventDispatcher: dispatcher,
+// 		EventDispatcher: dispatcher,
 // 		TxIndexFlag:     txIndexFlag,
 // 	}
-// 	wallet.TxMsgSub, _ = wallet.eventDispatcher.Subscribe(protocol.TxMsgEvent{})
+// 	wallet.TxMsgSub, _ = wallet.EventDispatcher.Subscribe(protocol.TxMsgEvent{})
 // 	return &mockWallet{wallet}
 
 // }

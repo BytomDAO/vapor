@@ -155,7 +155,7 @@ func TestXPubsRecoveryLock(t *testing.T) {
 
 	acctStore := NewMockAccountStore(testDB)
 	acctMgr := account.NewManager(acctStore, nil)
-	recoveryMgr := newRecoveryManager(walletStore, acctMgr)
+	recoveryMgr := NewRecoveryManager(walletStore, acctMgr)
 	recoveryMgr.state = newRecoveryState()
 	recoveryMgr.state.XPubs = []chainkd.XPub{xpub.XPub}
 	recoveryMgr.state.XPubsStatus = newBranchRecoveryState(acctRecoveryWindow)
@@ -206,7 +206,7 @@ func TestExtendScanAddresses(t *testing.T) {
 
 	acctStore := NewMockAccountStore(testDB)
 	acctMgr := account.NewManager(acctStore, nil)
-	recoveryMgr := newRecoveryManager(walletStore, acctMgr)
+	recoveryMgr := NewRecoveryManager(walletStore, acctMgr)
 	acc1 := &account.Account{ID: "testA", Alias: "test1", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub.XPub}, KeyIndex: 1, DeriveRule: signers.BIP0044}}
 	acc2 := &account.Account{ID: "testB", Alias: "test2"}
 	acc3 := &account.Account{ID: "testC", Alias: "test3", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub.XPub}, KeyIndex: 2, DeriveRule: 3}}
@@ -267,7 +267,7 @@ func TestRecoveryFromXPubs(t *testing.T) {
 	txs, err := MockTxsP2PKH(acctMgr, xpub.XPub, false)
 	recActStore := NewMockAccountStore(recoveryDB)
 	recAcctMgr := account.NewManager(recActStore, nil)
-	recoveryMgr := newRecoveryManager(recoveryStore, recAcctMgr)
+	recoveryMgr := NewRecoveryManager(recoveryStore, recAcctMgr)
 
 	cases := []struct {
 		xPubs []chainkd.XPub
@@ -359,7 +359,7 @@ func TestRecoveryByRescanAccount(t *testing.T) {
 		}
 	}
 
-	recoveryMgr := newRecoveryManager(recoveryStore, recAcctMgr)
+	recoveryMgr := NewRecoveryManager(recoveryStore, recAcctMgr)
 
 	acct := &account.Account{ID: "testA", Alias: "test1", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub.XPub}, KeyIndex: 1, DeriveRule: 3}}
 
@@ -437,7 +437,7 @@ func TestReportFound(t *testing.T) {
 
 	acctStore := NewMockAccountStore(testDB)
 	acctMgr := account.NewManager(acctStore, nil)
-	recoveryMgr := newRecoveryManager(testStore, acctMgr)
+	recoveryMgr := NewRecoveryManager(testStore, acctMgr)
 	acc1 := &account.Account{ID: "testA", Alias: "test1", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub1.XPub}, KeyIndex: 1, DeriveRule: signers.BIP0044}}
 	acc2 := &account.Account{ID: "testB", Alias: "test2", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub2.XPub}, KeyIndex: 1, DeriveRule: signers.BIP0032}}
 	acc3 := &account.Account{ID: "testC", Alias: "test3", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub2.XPub}, KeyIndex: 2, DeriveRule: signers.BIP0044}}
@@ -523,7 +523,7 @@ func TestLoadStatusInfo(t *testing.T) {
 
 	acctStore := NewMockAccountStore(testDB)
 	acctMgr := account.NewManager(acctStore, nil)
-	recoveryMgr := newRecoveryManager(testStore, acctMgr)
+	recoveryMgr := NewRecoveryManager(testStore, acctMgr)
 	// StatusInit init recovery status manager.
 	recoveryMgr.state = newRecoveryState()
 	recoveryMgr.state.XPubs = []chainkd.XPub{xpub.XPub}
@@ -536,7 +536,7 @@ func TestLoadStatusInfo(t *testing.T) {
 
 	recoveryMgr.commitStatusInfo()
 
-	recoveryMgrRestore := newRecoveryManager(testStore, acctMgr)
+	recoveryMgrRestore := NewRecoveryManager(testStore, acctMgr)
 	if err := recoveryMgrRestore.LoadStatusInfo(); err != nil {
 		t.Fatal("TestLoadStatusInfo err:", err)
 	}
@@ -589,7 +589,7 @@ func TestLock(t *testing.T) {
 
 	acctStore := NewMockAccountStore(testDB)
 	acctMgr := account.NewManager(acctStore, nil)
-	recoveryMgr := newRecoveryManager(testStore, acctMgr)
+	recoveryMgr := NewRecoveryManager(testStore, acctMgr)
 	if !recoveryMgr.tryStartXPubsRec() {
 		t.Fatal("recovery manager try lock test err")
 	}
@@ -649,7 +649,7 @@ func TestContractIndexResidue(t *testing.T) {
 	contractIndexResidue := uint64(5)
 	acctStore := NewMockAccountStore(testDB)
 	acctMgr := account.NewManager(acctStore, nil)
-	recoveryMgr := newRecoveryManager(testStore, acctMgr)
+	recoveryMgr := NewRecoveryManager(testStore, acctMgr)
 	acct := &account.Account{ID: "testA", Alias: "test1", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub1.XPub}, KeyIndex: 1, DeriveRule: signers.BIP0044}}
 
 	cp1 := &account.CtrlProgram{AccountID: acct.ID, Address: "address1", KeyIndex: 10, Change: false}
