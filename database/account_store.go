@@ -86,8 +86,8 @@ func NewAccountStore(db dbm.DB) *AccountStore {
 	}
 }
 
-// InitStore initial new account store
-func (store *AccountStore) InitStore() acc.AccountStore {
+// InitBatch initial new account store
+func (store *AccountStore) InitBatch() acc.AccountStore {
 	newStore := NewAccountStore(store.db)
 	newStore.batch = newStore.db.NewBatch()
 	return newStore

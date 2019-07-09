@@ -306,8 +306,8 @@ func NewMockWalletStore(db dbm.DB) *MockWalletStore {
 	}
 }
 
-// InitStore initial new wallet store
-func (store *MockWalletStore) InitStore() WalletStore {
+// InitBatch initial new wallet store
+func (store *MockWalletStore) InitBatch() WalletStore {
 	newStore := NewMockWalletStore(store.db)
 	newStore.batch = newStore.db.NewBatch()
 	return newStore
@@ -694,8 +694,8 @@ func NewMockAccountStore(db dbm.DB) *MockAccountStore {
 	}
 }
 
-// InitStore initial new account store
-func (store *MockAccountStore) InitStore() acc.AccountStore {
+// InitBatch initial new account store
+func (store *MockAccountStore) InitBatch() acc.AccountStore {
 	newStore := NewMockAccountStore(store.db)
 	newStore.batch = newStore.db.NewBatch()
 	return newStore

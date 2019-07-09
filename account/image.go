@@ -44,7 +44,7 @@ func (m *Manager) Restore(image *Image) error {
 	m.accountMu.Lock()
 	defer m.accountMu.Unlock()
 
-	newStore := m.store.InitStore()
+	newStore := m.store.InitBatch()
 
 	for _, slice := range image.Slice {
 		if _, err := newStore.GetAccountByID(slice.Account.ID); err != nil {

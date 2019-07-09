@@ -1380,7 +1380,7 @@ func ContractUTXOKey(id bc.Hash) []byte {
 	return append(SUTXOPrefix, id.Bytes()...)
 }
 
-func (store *mockAccountStore) InitStore() AccountStore                         { return nil }
+func (store *mockAccountStore) InitBatch() AccountStore                         { return nil }
 func (store *mockAccountStore) CommitStore() error                              { return nil }
 func (store *mockAccountStore) DeleteAccount(*Account) error                    { return nil }
 func (store *mockAccountStore) GetAccountByAlias(string) (*Account, error)      { return nil, nil }

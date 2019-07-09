@@ -7,7 +7,7 @@ import (
 
 // AccountStore interface contains account storage functions.
 type AccountStore interface {
-	InitStore() AccountStore
+	InitBatch() AccountStore
 	CommitStore() error
 	DeleteAccount(*Account) error
 	DeleteStandardUTXO(bc.Hash)

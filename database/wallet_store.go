@@ -104,8 +104,8 @@ func NewWalletStore(db dbm.DB) *WalletStore {
 	}
 }
 
-// InitStore initial new wallet store
-func (store *WalletStore) InitStore() wallet.WalletStore {
+// InitBatch initial new wallet store
+func (store *WalletStore) InitBatch() wallet.WalletStore {
 	newStore := NewWalletStore(store.db)
 	newStore.batch = newStore.db.NewBatch()
 	return newStore

@@ -193,7 +193,7 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 
 	w.annotateTxsAccount(annotatedTxs)
 
-	newStore := w.store.InitStore()
+	newStore := w.store.InitBatch()
 	if err := w.indexTransactions(block, txStatus, annotatedTxs, newStore); err != nil {
 		return err
 	}
@@ -228,7 +228,7 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 		return err
 	}
 
-	newStore := w.store.InitStore()
+	newStore := w.store.InitBatch()
 
 	w.detachUtxos(block, txStatus, newStore)
 	newStore.DeleteTransactions(w.Status.BestHeight)
