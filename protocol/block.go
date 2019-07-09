@@ -138,6 +138,7 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 		return err
 	}
 
+	txsToRestore := map[bc.Hash]*types.Tx{}
 	for _, detachBlockHeader := range detachBlockHeaders {
 		detachHash := detachBlockHeader.Hash()
 		b, err := c.store.GetBlock(&detachHash)
@@ -163,10 +164,15 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 			return err
 		}
 
+		for _, tx := range b.Transactions {
+			txsToRestore[tx.ID] = tx
+		}
+
 		blockHash := blockHeader.Hash()
 		log.WithFields(log.Fields{"module": logModule, "height": blockHeader.Height, "hash": blockHash.String()}).Debug("detach from mainchain")
 	}
 
+	txsToRemove := map[bc.Hash]*types.Tx{}
 	irrBlockHeader := c.lastIrrBlockHeader
 	for _, attachBlockHeader := range attachBlockHeaders {
 		attachHash := attachBlockHeader.Hash()
@@ -201,6 +207,14 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 			irrBlockHeader = attachBlockHeader
 		}
 
+		for _, tx := range b.Transactions {
+			if _, ok := txsToRestore[tx.ID]; !ok {
+				txsToRemove[tx.ID] = tx
+			} else {
+				delete(txsToRestore, tx.ID)
+			}
+		}
+
 		blockHash := blockHeader.Hash()
 		log.WithFields(log.Fields{"module": logModule, "height": blockHeader.Height, "hash": blockHash.String()}).Debug("attach from mainchain")
 	}
@@ -210,8 +224,27 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 		irrBlockHeader.Height <= c.lastIrrBlockHeader.Height {
 		return errors.New("rollback block below the height of irreversible block")
 	}
+
 	consensusResults = append(consensusResults, consensusResult.Fork())
-	return c.setState(blockHeader, irrBlockHeader, attachBlockHeaders, utxoView, consensusResults)
+	if err := c.setState(blockHeader, irrBlockHeader, attachBlockHeaders, utxoView, consensusResults); err != nil {
+		return err
+	}
+
+	for txHash := range txsToRemove {
+		c.txPool.RemoveTransaction(&txHash)
+	}
+
+	for _, tx := range txsToRestore {
+		// the number of restored Tx should be very small or most of time ZERO
+		// Error returned from validation is ignored, tx could still be lost if validation fails.
+		// TODO: adjust tx timestamp so that it won't starve in pool.
+		c.ValidateTx(tx)
+	}
+
+	if len(txsToRestore) > 0 {
+		log.WithFields(log.Fields{"module": logModule, "num": len(txsToRestore)}).Debug("restore txs back to pool")
+	}
+	return nil
 }
 
 // SaveBlock will validate and save block into storage
