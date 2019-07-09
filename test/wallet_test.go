@@ -75,7 +75,6 @@ func TestWalletUpdate(t *testing.T) {
 		controlProg.KeyIndex = 1
 
 		reg := asset.NewRegistry(testDB, chain)
-		// reg := asset.NewRegistry(testDB, nil)
 		asset := bc.AssetID{V0: 5}
 
 		utxos := []*account.UTXO{}
