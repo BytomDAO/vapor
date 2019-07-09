@@ -96,16 +96,16 @@ func TestWalletUpdate(t *testing.T) {
 		store.SaveBlock(block, txStatus)
 
 		w := newMockWallet(walletStore, accountManager, reg, chain, dispatcher, true)
-		err = w.Wallet.AttachBlock(block)
+		err = w.AttachBlock(block)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		if _, err := w.Wallet.GetTransactionByTxID(tx.ID.String()); err != nil {
+		if _, err := w.GetTransactionByTxID(tx.ID.String()); err != nil {
 			t.Fatal(err)
 		}
 
-		wants, err := w.Wallet.GetTransactions(testAccount.ID, "", 1, false)
+		wants, err := w.GetTransactions(testAccount.ID, "", 1, false)
 		if len(wants) != 1 {
 			t.Fatal(err)
 		}
@@ -123,6 +123,7 @@ func TestWalletUpdate(t *testing.T) {
 			}
 		}
 	}
+
 	for i := 0; i < 100; i++ {
 		fmt.Printf("case i: %v\n", i)
 		update()
@@ -172,15 +173,15 @@ func TestRescanWallet(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		w.Wallet.Status = *walletInfo
+		w.Status = *walletInfo
 
 		// rescan wallet.
-		if err := w.Wallet.LoadWalletInfo(); err != nil {
+		if err := w.LoadWalletInfo(); err != nil {
 			t.Fatal(err)
 		}
 
 		block := config.GenesisBlock()
-		if w.Wallet.Status.WorkHash != block.Hash() {
+		if w.Status.WorkHash != block.Hash() {
 			t.Fatal("reattach from genesis block")
 		}
 	}
@@ -256,15 +257,15 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 		txStatus.SetStatus(0, false)
 		walletStore := database.NewWalletStore(testDB)
 		w := newMockWallet(walletStore, accountManager, reg, chain, dispatcher, false)
-		go w.Wallet.MemPoolTxQueryLoop()
-		w.Wallet.EventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: protocol.MsgNewTx}})
+		go w.MemPoolTxQueryLoop()
+		w.EventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: protocol.MsgNewTx}})
 		time.Sleep(time.Millisecond * 10)
-		if _, err := w.Wallet.GetUnconfirmedTxByTxID(tx.ID.String()); err != nil {
+		if _, err := w.GetUnconfirmedTxByTxID(tx.ID.String()); err != nil {
 			t.Fatal("dispatch new tx msg error:", err)
 		}
-		w.Wallet.EventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: protocol.MsgRemoveTx}})
+		w.EventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: protocol.MsgRemoveTx}})
 		time.Sleep(time.Millisecond * 10)
-		txs, err := w.Wallet.GetUnconfirmedTxs(testAccount.ID)
+		txs, err := w.GetUnconfirmedTxs(testAccount.ID)
 		if err != nil {
 			t.Fatal("get unconfirmed tx error:", err)
 		}
@@ -273,9 +274,9 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 			t.Fatal("dispatch remove tx msg error")
 		}
 
-		w.Wallet.EventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: 2}})
+		w.EventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: 2}})
 	}
-	for i := 0; i < 1; i++ {
+	for i := 0; i < 100; i++ {
 		fmt.Printf("case i: %v\n", i)
 		query()
 	}
@@ -321,17 +322,7 @@ type mockWallet struct {
 	Wallet *wt.Wallet
 }
 
-// func newMockWallet(store wt.WalletStore, account *account.Manager, asset *asset.Registry, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) *mockWallet {
-// 	w, err := wt.NewWallet(store, account, asset, nil, chain, dispatcher, txIndexFlag)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	var hash [32]byte
-// 	w.Status.WorkHash = bc.NewHash(hash)
-// 	return &mockWallet{w}
-// }
-
-func newMockWallet(store wt.WalletStore, account *account.Manager, asset *asset.Registry, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) *mockWallet {
+func newMockWallet(store wt.WalletStore, account *account.Manager, asset *asset.Registry, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) *wt.Wallet {
 	wallet := &wt.Wallet{
 		Store:           store,
 		AccountMgr:      account,
@@ -342,7 +333,7 @@ func newMockWallet(store wt.WalletStore, account *account.Manager, asset *asset.
 		TxIndexFlag:     txIndexFlag,
 	}
 	wallet.TxMsgSub, _ = wallet.EventDispatcher.Subscribe(protocol.TxMsgEvent{})
-	return &mockWallet{wallet}
+	return wallet
 }
 
 func mockSingleBlock(tx *types.Tx) *types.Block {
