@@ -162,9 +162,7 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string, deriveR
 	_, err := m.store.GetAccountByAlias(alias)
 	if err == nil {
 		return nil, ErrDuplicateAlias
-	}
-
-	if err != ErrFindAccount {
+	} else if err != ErrFindAccount {
 		return nil, err
 	}
 
