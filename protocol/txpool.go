@@ -208,8 +208,7 @@ func isTransactionNoBtmInput(tx *types.Tx) bool {
 
 func isTransactionZeroOutput(tx *types.Tx) bool {
 	for _, output := range tx.TxData.Outputs {
-		value := output.AssetAmount()
-		if value.Amount == uint64(0) {
+		if value := output.AssetAmount(); value.Amount == uint64(0) {
 			return true
 		}
 	}
@@ -282,11 +281,12 @@ func (tp *TxPool) addTransaction(txD *TxDesc) error {
 	txD.Added = time.Now()
 	tp.pool[tx.ID] = txD
 	for _, id := range tx.ResultIds {
-		var assetID bc.AssetID
 		outputEntry, err := tx.Entry(*id)
 		if err != nil {
 			return err
 		}
+
+		var assetID bc.AssetID
 		switch output := outputEntry.(type) {
 		case *bc.IntraChainOutput:
 			assetID = *output.Source.Value.AssetId
