@@ -75,7 +75,7 @@ type TxSummary struct {
 // indexTransactions saves all annotated transactions to the database.
 func (w *Wallet) indexTransactions(b *types.Block, txStatus *bc.TransactionStatus, annotatedTxs []*query.AnnotatedTx, store WalletStore) error {
 	for _, tx := range annotatedTxs {
-		if err := w.store.SetTransaction(b.Height, tx); err != nil {
+		if err := w.Store.SetTransaction(b.Height, tx); err != nil {
 			return err
 		}
 
@@ -119,7 +119,7 @@ transactionLoop:
 				log.WithFields(log.Fields{"module": logModule, "err": err, "outputID": hex.EncodeToString(outid.Bytes())}).Error("filterAccountTxs fail.")
 				continue
 			}
-			if _, err = w.store.GetStandardUTXO(outid); err == nil {
+			if _, err = w.Store.GetStandardUTXO(outid); err == nil {
 				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
 				continue transactionLoop
 			} else {
@@ -144,7 +144,7 @@ func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
 }
 
 func (w *Wallet) getAccountTxByTxID(txID string) (*query.AnnotatedTx, error) {
-	annotatedTx, err := w.store.GetTransaction(txID)
+	annotatedTx, err := w.Store.GetTransaction(txID)
 	if err != nil {
 		return nil, err
 	}
@@ -154,18 +154,18 @@ func (w *Wallet) getAccountTxByTxID(txID string) (*query.AnnotatedTx, error) {
 }
 
 func (w *Wallet) getGlobalTxByTxID(txID string) (*query.AnnotatedTx, error) {
-	globalTxIdx := w.store.GetGlobalTransactionIndex(txID)
+	globalTxIdx := w.Store.GetGlobalTransactionIndex(txID)
 	if globalTxIdx == nil {
 		return nil, fmt.Errorf("No transaction(tx_id=%s) ", txID)
 	}
 
 	blockHash, pos := parseGlobalTxIdx(globalTxIdx)
-	block, err := w.chain.GetBlockByHash(blockHash)
+	block, err := w.Chain.GetBlockByHash(blockHash)
 	if err != nil {
 		return nil, err
 	}
 
-	txStatus, err := w.chain.GetTransactionStatus(blockHash)
+	txStatus, err := w.Chain.GetTransactionStatus(blockHash)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +234,7 @@ func findTransactionsByAccount(annotatedTx *query.AnnotatedTx, accountID string)
 // GetTransactions get all walletDB transactions or unconfirmed transactions, and filter transactions by accountID and StartTxID optional
 func (w *Wallet) GetTransactions(accountID string, StartTxID string, count uint, unconfirmed bool) ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
-	annotatedTxs, err := w.store.ListTransactions(accountID, StartTxID, count, unconfirmed)
+	annotatedTxs, err := w.Store.ListTransactions(accountID, StartTxID, count, unconfirmed)
 	if err != nil {
 		return nil, err
 	}

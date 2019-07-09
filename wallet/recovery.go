@@ -183,8 +183,8 @@ type recoveryManager struct {
 	addresses map[bc.Hash]*account.CtrlProgram
 }
 
-// newRecoveryManager create recovery manger.
-func newRecoveryManager(store WalletStore, accountMgr *account.Manager) *recoveryManager {
+// NewRecoveryManager create recovery manger.
+func NewRecoveryManager(store WalletStore, accountMgr *account.Manager) *recoveryManager {
 	return &recoveryManager{
 		store:      store,
 		accountMgr: accountMgr,

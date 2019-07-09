@@ -31,7 +31,7 @@ func annotateTxsAsset(w *Wallet, txs []*query.AnnotatedTx) {
 }
 
 func (w *Wallet) getExternalDefinition(assetID *bc.AssetID) json.RawMessage {
-	externalAsset, err := w.store.GetAsset(assetID)
+	externalAsset, err := w.Store.GetAsset(assetID)
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on get asset definition.")
 	}

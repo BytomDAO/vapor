@@ -70,11 +70,11 @@ func TestWalletVersion(t *testing.T) {
 	w := mockWallet(walletStore, nil, nil, nil, dispatcher, false)
 
 	walletStatus := new(StatusInfo)
-	if err := w.store.SetWalletInfo(walletStatus); err != nil {
+	if err := w.Store.SetWalletInfo(walletStatus); err != nil {
 		t.Fatal(err)
 	}
 
-	status, err := w.store.GetWalletInfo()
+	status, err := w.Store.GetWalletInfo()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,11 +86,11 @@ func TestWalletVersion(t *testing.T) {
 
 	// lower wallet version test case
 	lowerVersion := StatusInfo{Version: currentVersion - 1}
-	if err := w.store.SetWalletInfo(&lowerVersion); err != nil {
+	if err := w.Store.SetWalletInfo(&lowerVersion); err != nil {
 		t.Fatal(err)
 	}
 
-	status, err = w.store.GetWalletInfo()
+	status, err = w.Store.GetWalletInfo()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,15 +139,15 @@ func mockTxData(utxos []*account.UTXO, testAccount *account.Account) (*txbuilder
 
 func mockWallet(store WalletStore, account *account.Manager, asset *asset.Registry, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) *Wallet {
 	wallet := &Wallet{
-		store:           store,
+		Store:           store,
 		AccountMgr:      account,
 		AssetReg:        asset,
-		chain:           chain,
-		RecoveryMgr:     newRecoveryManager(store, account),
+		Chain:           chain,
+		RecoveryMgr:     NewRecoveryManager(store, account),
 		EventDispatcher: dispatcher,
 		TxIndexFlag:     txIndexFlag,
 	}
-	wallet.txMsgSub, _ = wallet.EventDispatcher.Subscribe(protocol.TxMsgEvent{})
+	wallet.TxMsgSub, _ = wallet.EventDispatcher.Subscribe(protocol.TxMsgEvent{})
 	return wallet
 }
 
