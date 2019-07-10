@@ -13,7 +13,6 @@ import (
 
 	"github.com/vapor/errors"
 	"github.com/vapor/net/http/httperror"
-	"github.com/vapor/net/http/reqid"
 )
 
 // Bytom-specific header fields
@@ -112,7 +111,6 @@ func (c *Client) CallRaw(ctx context.Context, path string, request interface{}) 
 	}
 
 	// Propagate our request ID so that we can trace a request across nodes.
-	req.Header.Add("Request-ID", reqid.FromContext(ctx))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", c.userAgent())
 	req.Header.Set(HeaderBlockchainID, c.BlockchainID)

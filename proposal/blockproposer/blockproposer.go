@@ -64,13 +64,13 @@ func (b *BlockProposer) generateBlocks() {
 			nextBlockTime += consensus.ActiveNetParams.BlockTimeInterval
 		}
 
-		isBlocker, err := b.chain.IsBlocker(&bestBlockHash, xpubStr, nextBlockTime)
+		blocker, err := b.chain.GetBlocker(&bestBlockHash, nextBlockTime)
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "error": err, "pubKey": xpubStr}).Error("fail on check is next blocker")
 			continue
 		}
 
-		if !isBlocker {
+		if xpubStr != blocker {
 			continue
 		}
 
