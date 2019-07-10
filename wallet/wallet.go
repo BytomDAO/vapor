@@ -28,6 +28,7 @@ var (
 	errWalletVersionMismatch   = errors.New("wallet version mismatch")
 	ErrGetWalletStatusInfo     = errors.New("failed get wallet info")
 	ErrGetAsset                = errors.New("Failed to find asset definition")
+	ErrAccntTxIDNotFound       = errors.New("account TXID not found")
 )
 
 //StatusInfo is base valid block info to handle orphan block rollback

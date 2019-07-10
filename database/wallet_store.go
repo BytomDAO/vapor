@@ -44,11 +44,6 @@ var (
 	RecoveryKey         = append(walletStore, recoveryKey)
 )
 
-// errors
-var (
-	errAccntTxIDNotFound = errors.New("account TXID not found")
-)
-
 // ContractUTXOKey makes a smart contract unspent outputs key to store
 func ContractUTXOKey(id bc.Hash) []byte {
 	return append(SUTXOPrefix, id.Bytes()...)
@@ -266,7 +261,7 @@ func (store *WalletStore) GetStandardUTXO(outid bc.Hash) (*acc.UTXO, error) {
 func (store *WalletStore) GetTransaction(txID string) (*query.AnnotatedTx, error) {
 	formatKey := store.db.Get(calcTxIndexKey(txID))
 	if formatKey == nil {
-		return nil, errAccntTxIDNotFound
+		return nil, wallet.ErrAccntTxIDNotFound
 	}
 
 	rawTx := store.db.Get(calcAnnotatedKey(string(formatKey)))
@@ -361,7 +356,7 @@ func (store *WalletStore) ListTransactions(accountID string, StartTxID string, c
 		} else {
 			formatKey := store.db.Get(calcTxIndexKey(StartTxID))
 			if formatKey == nil {
-				return nil, errAccntTxIDNotFound
+				return nil, wallet.ErrAccntTxIDNotFound
 			}
 
 			startKey = calcAnnotatedKey(string(formatKey))
