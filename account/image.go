@@ -54,11 +54,13 @@ func (m *Manager) Restore(image *Image) error {
 				"id":     slice.Account.ID,
 			}).Warning("skip restore account due to already existed")
 			continue
-		} else {
+		} else if err != ErrFindAccount {
 			return err
 		}
 
-		if _, err := newStore.GetAccountByAlias(slice.Account.Alias); err != nil {
+		if _, err := newStore.GetAccountByAlias(slice.Account.Alias); err == nil {
+			return ErrDuplicateAlias
+		} else if err != ErrFindAccount {
 			return err
 		}
 
