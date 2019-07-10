@@ -110,7 +110,6 @@ transactionLoop:
 			} else {
 				log.WithFields(log.Fields{"module": logModule, "err": err, "hash": hex.EncodeToString(hash[:])}).Error("filterAccountTxs fail.")
 			}
-
 		}
 
 		for _, v := range tx.Inputs {
@@ -125,7 +124,6 @@ transactionLoop:
 			} else {
 				log.WithFields(log.Fields{"module": logModule, "err": err, "outputID": hex.EncodeToString(outid.Bytes())}).Error("filterAccountTxs fail.")
 			}
-
 		}
 	}
 
