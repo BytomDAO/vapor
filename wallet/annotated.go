@@ -16,6 +16,8 @@ import (
 	"github.com/vapor/protocol/bc/types"
 )
 
+var ZeroAssetID = new(bc.AssetID)
+
 // annotateTxs adds asset data to transactions
 func annotateTxsAsset(w *Wallet, txs []*query.AnnotatedTx) {
 	for i, tx := range txs {
@@ -32,15 +34,15 @@ func annotateTxsAsset(w *Wallet, txs []*query.AnnotatedTx) {
 
 func (w *Wallet) getExternalDefinition(assetID *bc.AssetID) json.RawMessage {
 	externalAsset, err := w.Store.GetAsset(assetID)
-	if err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on get asset definition.")
+	if err != nil && assetID.String() != ZeroAssetID.String() {
+		log.WithFields(log.Fields{"module": logModule, "err": err, "assetID": assetID.String()}).Info("fail on get asset definition.")
 	}
 	if externalAsset == nil {
 		return nil
 	}
 
 	if err := w.AssetReg.SaveAsset(externalAsset, *externalAsset.Alias); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err, "assetAlias": *externalAsset.Alias}).Warning("fail on save external asset to internal asset DB")
+		log.WithFields(log.Fields{"module": logModule, "err": err, "assetAlias": *externalAsset.Alias}).Info("fail on save external asset to internal asset DB")
 	}
 	return json.RawMessage(externalAsset.RawDefinitionByte)
 }

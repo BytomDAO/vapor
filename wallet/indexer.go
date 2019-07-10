@@ -108,21 +108,21 @@ transactionLoop:
 				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
 				continue transactionLoop
 			} else {
-				log.WithFields(log.Fields{"module": logModule, "err": err, "hash": hex.EncodeToString(hash[:])}).Error("filterAccountTxs fail.")
+				log.WithFields(log.Fields{"module": logModule, "err": err, "hash": hex.EncodeToString(hash[:])}).Info("filterAccountTxs fail.")
 			}
 		}
 
 		for _, v := range tx.Inputs {
 			outid, err := v.SpentOutputID()
 			if err != nil {
-				log.WithFields(log.Fields{"module": logModule, "err": err, "outputID": hex.EncodeToString(outid.Bytes())}).Error("filterAccountTxs fail.")
+				log.WithFields(log.Fields{"module": logModule, "err": err, "outputID": hex.EncodeToString(outid.Bytes())}).Info("filterAccountTxs fail.")
 				continue
 			}
 			if _, err = w.Store.GetStandardUTXO(outid); err == nil {
 				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
 				continue transactionLoop
 			} else {
-				log.WithFields(log.Fields{"module": logModule, "err": err, "outputID": hex.EncodeToString(outid.Bytes())}).Error("filterAccountTxs fail.")
+				log.WithFields(log.Fields{"module": logModule, "err": err, "outputID": hex.EncodeToString(outid.Bytes())}).Info("filterAccountTxs fail.")
 			}
 		}
 	}
