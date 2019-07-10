@@ -162,6 +162,8 @@ var TestNetParams = Params{
 var VaporNetParams = Params{
 	Name:            "vapor",
 	Bech32HRPSegwit: "vp",
+	DefaultPort:     "56656",
+	DNSSeeds:        []string{"www.vapornetseed.bytom.io"},
 	BasicConfig:     VaporBasicConfig(),
 	DPOSConfig:      VaporDPOSConfig(),
 	Checkpoints:     []Checkpoint{},
@@ -174,6 +176,7 @@ var VaporNetParams = Params{
 var SoloNetParams = Params{
 	Name:            "solo",
 	Bech32HRPSegwit: "sm",
+	DefaultPort:     "56657",
 	BasicConfig:     VaporBasicConfig(),
 	DPOSConfig:      VaporDPOSConfig(),
 	Checkpoints:     []Checkpoint{},

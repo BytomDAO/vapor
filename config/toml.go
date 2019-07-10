@@ -29,7 +29,7 @@ moniker = ""
 
 var soloNetConfigTmpl = `chain_id = "solonet"
 [p2p]
-laddr = "tcp://0.0.0.0:46658"
+laddr = "tcp://0.0.0.0:56657"
 seeds = ""
 `
 

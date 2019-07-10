@@ -293,7 +293,7 @@ func SignInstructionFor(input *types.SpendInput, db dbm.DB, signer *signers.Sign
 		return sigInst, nil
 	}
 
-	address, err := common.DecodeAddress(cp.Address, &consensus.MainNetParams)
+	address, err := common.DecodeAddress(cp.Address, &consensus.VaporNetParams)
 	if err != nil {
 		return nil, err
 	}
