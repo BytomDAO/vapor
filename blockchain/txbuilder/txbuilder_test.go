@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	btmCommon "github.com/bytom/common"
+	btmConsensus "github.com/bytom/consensus"
 	"github.com/davecgh/go-spew/spew"
 
 	"github.com/vapor/common"
@@ -88,7 +90,7 @@ func TestBuildIntra(t *testing.T) {
 }
 
 func newCrossOutAction(assetAmt bc.AssetAmount, redeemContract []byte) *crossOutAction {
-	address, err := common.NewAddressWitnessPubKeyHash(redeemContract, &consensus.MainNetParams)
+	address, err := btmCommon.NewAddressWitnessPubKeyHash(redeemContract, &btmConsensus.MainNetParams)
 	if err != nil {
 		panic(err)
 	}

@@ -24,27 +24,27 @@ func TestAddresses(t *testing.T) {
 		// Segwit address tests.
 		{
 			name:    "segwit mainnet p2wpkh v0",
-			addr:    "BM1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7K23GYYF",
-			encoded: "bm1qw508d6qejxtdg4y5r3zarvary0c5xw7k23gyyf",
+			addr:    "VP1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KPSCEPL",
+			encoded: "vp1qw508d6qejxtdg4y5r3zarvary0c5xw7kpscepl",
 			valid:   true,
 			result: tstAddressWitnessPubKeyHash(
 				0,
 				[20]byte{
 					0x75, 0x1e, 0x76, 0xe8, 0x19, 0x91, 0x96, 0xd4, 0x54, 0x94,
 					0x1c, 0x45, 0xd1, 0xb3, 0xa3, 0x23, 0xf1, 0x43, 0x3b, 0xd6},
-				consensus.MainNetParams.Bech32HRPSegwit),
+				consensus.VaporNetParams.Bech32HRPSegwit),
 			f: func() (Address, error) {
 				pkHash := []byte{
 					0x75, 0x1e, 0x76, 0xe8, 0x19, 0x91, 0x96, 0xd4, 0x54, 0x94,
 					0x1c, 0x45, 0xd1, 0xb3, 0xa3, 0x23, 0xf1, 0x43, 0x3b, 0xd6}
-				return NewAddressWitnessPubKeyHash(pkHash, &consensus.MainNetParams)
+				return NewAddressWitnessPubKeyHash(pkHash, &consensus.VaporNetParams)
 			},
-			net: &consensus.MainNetParams,
+			net: &consensus.VaporNetParams,
 		},
 		{
 			name:    "segwit mainnet p2wsh v0",
-			addr:    "bm1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qk5egtg",
-			encoded: "bm1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qk5egtg",
+			addr:    "vp1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3ql5u263",
+			encoded: "vp1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3ql5u263",
 			valid:   true,
 			result: tstAddressWitnessScriptHash(
 				0,
@@ -53,40 +53,40 @@ func TestAddresses(t *testing.T) {
 					0x04, 0xbd, 0x19, 0x20, 0x33, 0x56, 0xda, 0x13,
 					0x6c, 0x98, 0x56, 0x78, 0xcd, 0x4d, 0x27, 0xa1,
 					0xb8, 0xc6, 0x32, 0x96, 0x04, 0x90, 0x32, 0x62},
-				consensus.MainNetParams.Bech32HRPSegwit),
+				consensus.VaporNetParams.Bech32HRPSegwit),
 			f: func() (Address, error) {
 				scriptHash := []byte{
 					0x18, 0x63, 0x14, 0x3c, 0x14, 0xc5, 0x16, 0x68,
 					0x04, 0xbd, 0x19, 0x20, 0x33, 0x56, 0xda, 0x13,
 					0x6c, 0x98, 0x56, 0x78, 0xcd, 0x4d, 0x27, 0xa1,
 					0xb8, 0xc6, 0x32, 0x96, 0x04, 0x90, 0x32, 0x62}
-				return NewAddressWitnessScriptHash(scriptHash, &consensus.MainNetParams)
+				return NewAddressWitnessScriptHash(scriptHash, &consensus.VaporNetParams)
 			},
-			net: &consensus.MainNetParams,
+			net: &consensus.VaporNetParams,
 		},
 		{
 			name:    "segwit testnet p2wpkh v0",
-			addr:    "tm1qw508d6qejxtdg4y5r3zarvary0c5xw7kw8fqyc",
-			encoded: "tm1qw508d6qejxtdg4y5r3zarvary0c5xw7kw8fqyc",
+			addr:    "sm1qw508d6qejxtdg4y5r3zarvary0c5xw7ktqz9y8",
+			encoded: "sm1qw508d6qejxtdg4y5r3zarvary0c5xw7ktqz9y8",
 			valid:   true,
 			result: tstAddressWitnessPubKeyHash(
 				0,
 				[20]byte{
 					0x75, 0x1e, 0x76, 0xe8, 0x19, 0x91, 0x96, 0xd4, 0x54, 0x94,
 					0x1c, 0x45, 0xd1, 0xb3, 0xa3, 0x23, 0xf1, 0x43, 0x3b, 0xd6},
-				consensus.TestNetParams.Bech32HRPSegwit),
+				consensus.SoloNetParams.Bech32HRPSegwit),
 			f: func() (Address, error) {
 				pkHash := []byte{
 					0x75, 0x1e, 0x76, 0xe8, 0x19, 0x91, 0x96, 0xd4, 0x54, 0x94,
 					0x1c, 0x45, 0xd1, 0xb3, 0xa3, 0x23, 0xf1, 0x43, 0x3b, 0xd6}
-				return NewAddressWitnessPubKeyHash(pkHash, &consensus.TestNetParams)
+				return NewAddressWitnessPubKeyHash(pkHash, &consensus.SoloNetParams)
 			},
-			net: &consensus.TestNetParams,
+			net: &consensus.SoloNetParams,
 		},
 		{
 			name:    "segwit testnet p2wsh v0",
-			addr:    "tm1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qqq379v",
-			encoded: "tm1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qqq379v",
+			addr:    "sm1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q83meuf",
+			encoded: "sm1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q83meuf",
 			valid:   true,
 			result: tstAddressWitnessScriptHash(
 				0,
@@ -95,21 +95,21 @@ func TestAddresses(t *testing.T) {
 					0x04, 0xbd, 0x19, 0x20, 0x33, 0x56, 0xda, 0x13,
 					0x6c, 0x98, 0x56, 0x78, 0xcd, 0x4d, 0x27, 0xa1,
 					0xb8, 0xc6, 0x32, 0x96, 0x04, 0x90, 0x32, 0x62},
-				consensus.TestNetParams.Bech32HRPSegwit),
+				consensus.SoloNetParams.Bech32HRPSegwit),
 			f: func() (Address, error) {
 				scriptHash := []byte{
 					0x18, 0x63, 0x14, 0x3c, 0x14, 0xc5, 0x16, 0x68,
 					0x04, 0xbd, 0x19, 0x20, 0x33, 0x56, 0xda, 0x13,
 					0x6c, 0x98, 0x56, 0x78, 0xcd, 0x4d, 0x27, 0xa1,
 					0xb8, 0xc6, 0x32, 0x96, 0x04, 0x90, 0x32, 0x62}
-				return NewAddressWitnessScriptHash(scriptHash, &consensus.TestNetParams)
+				return NewAddressWitnessScriptHash(scriptHash, &consensus.SoloNetParams)
 			},
-			net: &consensus.TestNetParams,
+			net: &consensus.SoloNetParams,
 		},
 		{
 			name:    "segwit testnet p2wsh witness v0",
-			addr:    "tm1qqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsesvkesyk",
-			encoded: "tm1qqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsesvkesyk",
+			addr:    "sm1qqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsest8nhan",
+			encoded: "sm1qqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsest8nhan",
 			valid:   true,
 			result: tstAddressWitnessScriptHash(
 				0,
@@ -118,90 +118,90 @@ func TestAddresses(t *testing.T) {
 					0x21, 0xb2, 0xa1, 0x87, 0x90, 0x5e, 0x52, 0x66,
 					0x36, 0x2b, 0x99, 0xd5, 0xe9, 0x1c, 0x6c, 0xe2,
 					0x4d, 0x16, 0x5d, 0xab, 0x93, 0xe8, 0x64, 0x33},
-				consensus.TestNetParams.Bech32HRPSegwit),
+				consensus.SoloNetParams.Bech32HRPSegwit),
 			f: func() (Address, error) {
 				scriptHash := []byte{
 					0x00, 0x00, 0x00, 0xc4, 0xa5, 0xca, 0xd4, 0x62,
 					0x21, 0xb2, 0xa1, 0x87, 0x90, 0x5e, 0x52, 0x66,
 					0x36, 0x2b, 0x99, 0xd5, 0xe9, 0x1c, 0x6c, 0xe2,
 					0x4d, 0x16, 0x5d, 0xab, 0x93, 0xe8, 0x64, 0x33}
-				return NewAddressWitnessScriptHash(scriptHash, &consensus.TestNetParams)
+				return NewAddressWitnessScriptHash(scriptHash, &consensus.SoloNetParams)
 			},
-			net: &consensus.TestNetParams,
+			net: &consensus.SoloNetParams,
 		},
 		// Unsupported witness versions (version 0 only supported at this point)
 		{
 			name:  "segwit mainnet witness v1",
-			addr:  "bm1pw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7k7grplx",
+			addr:  "vp1pw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7k7grplx",
 			valid: false,
-			net:   &consensus.MainNetParams,
+			net:   &consensus.VaporNetParams,
 		},
 		{
 			name:  "segwit mainnet witness v16",
-			addr:  "BM1SW50QA3JX3S",
+			addr:  "VP1SW50QA3JX3S",
 			valid: false,
-			net:   &consensus.MainNetParams,
+			net:   &consensus.VaporNetParams,
 		},
 		{
 			name:  "segwit mainnet witness v2",
-			addr:  "bm1zw508d6qejxtdg4y5r3zarvaryvg6kdaj",
+			addr:  "vp1zw508d6qejxtdg4y5r3zarvaryvg6kdaj",
 			valid: false,
-			net:   &consensus.MainNetParams,
+			net:   &consensus.VaporNetParams,
 		},
 		// Invalid segwit addresses
 		{
 			name:  "segwit invalid hrp",
 			addr:  "tc1qw508d6qejxtdg4y5r3zarvary0c5xw7kg3g4ty",
 			valid: false,
-			net:   &consensus.TestNetParams,
+			net:   &consensus.SoloNetParams,
 		},
 		{
 			name:  "segwit invalid checksum",
-			addr:  "bm1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t5",
+			addr:  "vp1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t5",
 			valid: false,
-			net:   &consensus.MainNetParams,
+			net:   &consensus.VaporNetParams,
 		},
 		{
 			name:  "segwit invalid witness version",
-			addr:  "BM13W508D6QEJXTDG4Y5R3ZARVARY0C5XW7KN40WF2",
+			addr:  "VP13W508D6QEJXTDG4Y5R3ZARVARY0C5XW7KN40WF2",
 			valid: false,
-			net:   &consensus.MainNetParams,
+			net:   &consensus.VaporNetParams,
 		},
 		{
 			name:  "segwit invalid program length",
-			addr:  "bm1rw5uspcuh",
+			addr:  "vp1rw5uspcuh",
 			valid: false,
-			net:   &consensus.MainNetParams,
+			net:   &consensus.VaporNetParams,
 		},
 		{
 			name:  "segwit invalid program length",
-			addr:  "bm10w508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7kw5rljs90",
+			addr:  "vp10w508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7kw5rljs90",
 			valid: false,
-			net:   &consensus.MainNetParams,
+			net:   &consensus.VaporNetParams,
 		},
 		{
 			name:  "segwit invalid program length for witness version 0 (per BIP141)",
-			addr:  "BM1QR508D6QEJXTDG4Y5R3ZARVARYV98GJ9P",
+			addr:  "VP1QR508D6QEJXTDG4Y5R3ZARVARYV98GJ9P",
 			valid: false,
-			net:   &consensus.MainNetParams,
+			net:   &consensus.VaporNetParams,
 		},
 		{
 			name:  "segwit mixed case",
-			addr:  "tm1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sL5k7",
+			addr:  "sm1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sL5k7",
 			valid: false,
-			net:   &consensus.TestNetParams,
+			net:   &consensus.SoloNetParams,
 		},
 		{
 			name:  "segwit zero padding of more than 4 bits",
-			addr:  "tm1pw508d6qejxtdg4y5r3zarqfsj6c3",
+			addr:  "sm1pw508d6qejxtdg4y5r3zarqfsj6c3",
 			valid: false,
-			net:   &consensus.TestNetParams,
+			net:   &consensus.SoloNetParams,
 		},
 		{
 			name:  "segwit non-zero padding in 8-to-5 conversion",
-			addr:  "tm1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3pjxtptv",
+			addr:  "sm1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3pjxtptv",
 			valid: false,
-			net:   &consensus.TestNetParams,
+			net:   &consensus.SoloNetParams,
 		},
 	}
 
@@ -214,9 +214,7 @@ func TestAddresses(t *testing.T) {
 		}
 
 		if err == nil {
-			// Ensure the stringer returns the same address as the
-			// original.
-
+			// Ensure the stringer returns the same address as the original.
 			if decodedStringer, ok := decoded.(fmt.Stringer); ok {
 				addr := test.addr
 
@@ -232,7 +230,6 @@ func TestAddresses(t *testing.T) {
 						test.name, test.addr, decodedStringer.String())
 					return
 				}
-
 			}
 
 			// Encode again and compare against the original.
@@ -246,7 +243,6 @@ func TestAddresses(t *testing.T) {
 			// Perform type-specific calculations.
 			var saddr []byte
 			switch decoded.(type) {
-
 			case *AddressWitnessPubKeyHash:
 				saddr = tstAddressSegwitSAddr(encoded)
 			case *AddressWitnessScriptHash:
@@ -261,7 +257,6 @@ func TestAddresses(t *testing.T) {
 				return
 			}
 			switch a := decoded.(type) {
-
 			case *AddressWitnessPubKeyHash:
 				if hrp := a.Hrp(); test.net.Bech32HRPSegwit != hrp {
 					t.Errorf("%v: hrps do not match:\n%x != \n%x",
@@ -343,9 +338,7 @@ func TestAddresses(t *testing.T) {
 
 // TstAddressWitnessPubKeyHash creates an AddressWitnessPubKeyHash, initiating
 // the fields as given.
-func tstAddressWitnessPubKeyHash(version byte, program [20]byte,
-	hrp string) *AddressWitnessPubKeyHash {
-
+func tstAddressWitnessPubKeyHash(version byte, program [20]byte, hrp string) *AddressWitnessPubKeyHash {
 	return &AddressWitnessPubKeyHash{
 		hrp:            hrp,
 		witnessVersion: version,
@@ -355,9 +348,7 @@ func tstAddressWitnessPubKeyHash(version byte, program [20]byte,
 
 // TstAddressWitnessScriptHash creates an AddressWitnessScriptHash, initiating
 // the fields as given.
-func tstAddressWitnessScriptHash(version byte, program [32]byte,
-	hrp string) *AddressWitnessScriptHash {
-
+func tstAddressWitnessScriptHash(version byte, program [32]byte, hrp string) *AddressWitnessScriptHash {
 	return &AddressWitnessScriptHash{
 		hrp:            hrp,
 		witnessVersion: version,

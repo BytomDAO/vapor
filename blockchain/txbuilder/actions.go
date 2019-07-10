@@ -5,6 +5,8 @@ import (
 	stdjson "encoding/json"
 	"errors"
 
+	btmCommon "github.com/bytom/common"
+	btmConsensus "github.com/bytom/consensus"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/vapor/common"
@@ -168,7 +170,7 @@ func (a *crossOutAction) Build(ctx context.Context, b *TemplateBuilder) error {
 		return MissingFieldsError(missing...)
 	}
 
-	address, err := common.DecodeAddress(a.Address, &consensus.MainNetParams)
+	address, err := btmCommon.DecodeAddress(a.Address, &btmConsensus.MainNetParams)
 	if err != nil {
 		return err
 	}
@@ -176,9 +178,9 @@ func (a *crossOutAction) Build(ctx context.Context, b *TemplateBuilder) error {
 	redeemContract := address.ScriptAddress()
 	program := []byte{}
 	switch address.(type) {
-	case *common.AddressWitnessPubKeyHash:
+	case *btmCommon.AddressWitnessPubKeyHash:
 		program, err = vmutil.P2WPKHProgram(redeemContract)
-	case *common.AddressWitnessScriptHash:
+	case *btmCommon.AddressWitnessScriptHash:
 		program, err = vmutil.P2WSHProgram(redeemContract)
 	default:
 		return errors.New("unsupport address type")
