@@ -185,6 +185,7 @@ func (store *AccountStore) GetAccountByAlias(accountAlias string) (*acc.Account,
 	if accountID == nil {
 		return nil, acc.ErrFindAccount
 	}
+
 	return store.GetAccountByID(string(accountID))
 }
 

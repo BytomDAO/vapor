@@ -47,13 +47,15 @@ func (m *Manager) Restore(image *Image) error {
 	newStore := m.store.InitBatch()
 
 	for _, slice := range image.Slice {
-		if _, err := newStore.GetAccountByID(slice.Account.ID); err != nil {
+		if _, err := newStore.GetAccountByID(slice.Account.ID); err == nil {
 			log.WithFields(log.Fields{
 				"module": logModule,
 				"alias":  slice.Account.Alias,
 				"id":     slice.Account.ID,
 			}).Warning("skip restore account due to already existed")
 			continue
+		} else {
+			return err
 		}
 
 		if _, err := newStore.GetAccountByAlias(slice.Account.Alias); err != nil {
