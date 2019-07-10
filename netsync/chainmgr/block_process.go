@@ -4,12 +4,13 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
+
 	"github.com/vapor/netsync/peers"
 	"github.com/vapor/p2p/security"
 )
 
 type BlockProcessor interface {
-	process(chan bool, chan bool, *sync.WaitGroup)
+	process(chan struct{}, chan struct{}, *sync.WaitGroup)
 }
 
 type blockProcessor struct {
@@ -34,8 +35,11 @@ func (bp *blockProcessor) insert(blockStorage *blockStorage) error {
 	return err
 }
 
-func (bp *blockProcessor) process(downloadNotifyCh chan bool, ProcessStop chan bool, wg *sync.WaitGroup) {
-	defer wg.Done()
+func (bp *blockProcessor) process(downloadNotifyCh chan struct{}, ProcessStop chan struct{}, wg *sync.WaitGroup) {
+	defer func() {
+		close(ProcessStop)
+		wg.Done()
+	}()
 
 	for {
 		for {
@@ -46,7 +50,6 @@ func (bp *blockProcessor) process(downloadNotifyCh chan bool, ProcessStop chan b
 			}
 
 			if err := bp.insert(block); err != nil {
-				ProcessStop <- true
 				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("failed on process block")
 				return
 			}
@@ -55,7 +58,7 @@ func (bp *blockProcessor) process(downloadNotifyCh chan bool, ProcessStop chan b
 		}
 
 		select {
-		case ok := <-downloadNotifyCh:
+		case _, ok := <-downloadNotifyCh:
 			if !ok {
 				return
 			}

@@ -36,8 +36,8 @@ type MsgFetcher interface {
 	resetParameter()
 	addSyncPeer(peerID string)
 	requireBlock(peerID string, height uint64) (*types.Block, error)
-	parallelFetchBlocks(work []*fetchBlocksWork, downloadNotifyCh chan bool, ProcessResult chan bool, wg *sync.WaitGroup)
-	parallelFetchHeaders(peers []*peers.Peer, locator []*bc.Hash, stopHash *bc.Hash, skip uint64) (map[string][]*types.BlockHeader, error)
+	parallelFetchBlocks(work []*fetchBlocksWork, downloadNotifyCh chan struct{}, ProcessStopCh chan struct{}, wg *sync.WaitGroup)
+	parallelFetchHeaders(peers []*peers.Peer, locator []*bc.Hash, stopHash *bc.Hash, skip uint64) map[string][]*types.BlockHeader
 }
 
 type fetchBlocksWork struct {
@@ -76,25 +76,29 @@ func (mf *msgFetcher) addSyncPeer(peerID string) {
 	mf.syncPeers.add(peerID)
 }
 
-func (mf *msgFetcher) processBlock(peerID string, block *types.Block) {
-	mf.blockProcessCh <- &blockMsg{block: block, peerID: peerID}
-}
+func (mf *msgFetcher) collectResultLoop(peerCh chan string, quit chan struct{}, resultCh chan *fetchBlocksResult, workerCloseCh chan struct{}, workSize int) {
+	defer close(workerCloseCh)
+	//collect fetch results
+	for resultCount := 0; resultCount < workSize && mf.syncPeers.size() > 0; resultCount++ {
+		select {
+		case result := <-resultCh:
+			if result.err != nil {
+				log.WithFields(log.Fields{"module": logModule, "startHeight": result.startHeight, "stopHeight": result.stopHeight, "err": result.err}).Error("failed on fetch blocks")
+				return
+			}
 
-func (mf *msgFetcher) processBlocks(peerID string, blocks []*types.Block) {
-	mf.blocksProcessCh <- &blocksMsg{blocks: blocks, peerID: peerID}
-	mf.mux.RLock()
-	blocksMsgChan, ok := mf.blocksMsgChanMap[peerID]
-	mf.mux.RUnlock()
-	if !ok {
-		log.WithFields(log.Fields{"module": logModule}).Warn("msg from unsolicited peer")
-		return
+			peer, err := mf.syncPeers.selectIdlePeer()
+			if err != nil {
+				log.WithFields(log.Fields{"module": logModule, "err": result.err}).Warn("failed on find fast sync peer")
+				break
+			}
+			peerCh <- peer
+		case _, ok := <-quit:
+			if !ok {
+				return
+			}
+		}
 	}
-
-	blocksMsgChan <- blocks
-}
-
-func (mf *msgFetcher) processHeaders(peerID string, headers []*types.BlockHeader) {
-	mf.headersProcessCh <- &headersMsg{headers: headers, peerID: peerID}
 }
 
 func (mf *msgFetcher) fetchBlocks(work *fetchBlocksWork, peerID string) ([]*types.Block, error) {
@@ -103,19 +107,19 @@ func (mf *msgFetcher) fetchBlocks(work *fetchBlocksWork, peerID string) ([]*type
 	stopHash := work.stopHeader.Hash()
 	blocks, err := mf.requireBlocks(peerID, []*bc.Hash{&startHash}, &stopHash)
 	if err != nil {
-		mf.peers.ErrorHandler(peerID, security.LevelConnException, err)
+		mf.peers.ProcessIllegal(peerID, security.LevelConnException, err.Error())
 		return nil, err
 	}
 
 	if err := mf.verifyBlocksMsg(blocks, work.startHeader, work.stopHeader); err != nil {
-		mf.peers.ErrorHandler(peerID, security.LevelConnException, err)
+		mf.peers.ProcessIllegal(peerID, security.LevelConnException, err.Error())
 		return nil, err
 	}
 
 	return blocks, nil
 }
 
-func (mf *msgFetcher) fetchBlocksProcess(work *fetchBlocksWork, peerCh chan string, downloadNotifyCh chan bool, closeCh chan struct{}) error {
+func (mf *msgFetcher) fetchBlocksProcess(work *fetchBlocksWork, peerCh chan string, downloadNotifyCh chan struct{}, closeCh chan struct{}) error {
 	for {
 		select {
 		case peerID := <-peerCh:
@@ -132,7 +136,10 @@ func (mf *msgFetcher) fetchBlocksProcess(work *fetchBlocksWork, peerCh chan stri
 				}
 
 				// send to block process pool
-				downloadNotifyCh <- true
+				select {
+				case downloadNotifyCh <- struct{}{}:
+				default:
+				}
 
 				// work completed
 				if blocks[len(blocks)-1].Height >= work.stopHeader.Height-1 {
@@ -148,7 +155,7 @@ func (mf *msgFetcher) fetchBlocksProcess(work *fetchBlocksWork, peerCh chan stri
 	}
 }
 
-func (mf *msgFetcher) fetchBlocksWorker(workCh chan *fetchBlocksWork, peerCh chan string, resultCh chan *fetchBlocksResult, closeCh chan struct{}, downloadNotifyCh chan bool, wg *sync.WaitGroup) {
+func (mf *msgFetcher) fetchBlocksWorker(workCh chan *fetchBlocksWork, peerCh chan string, resultCh chan *fetchBlocksResult, closeCh chan struct{}, downloadNotifyCh chan struct{}, wg *sync.WaitGroup) {
 	for {
 		select {
 		case work := <-workCh:
@@ -161,12 +168,20 @@ func (mf *msgFetcher) fetchBlocksWorker(workCh chan *fetchBlocksWork, peerCh cha
 	}
 }
 
-func (mf *msgFetcher) parallelFetchBlocks(works []*fetchBlocksWork, downloadNotifyCh chan bool, ProcessStop chan bool, wg *sync.WaitGroup) {
+func (mf *msgFetcher) parallelFetchBlocks(works []*fetchBlocksWork, downloadNotifyCh chan struct{}, ProcessStopCh chan struct{}, wg *sync.WaitGroup) {
 	workSize := len(works)
 	workCh := make(chan *fetchBlocksWork, workSize)
 	peerCh := make(chan string, maxNumOfFastSyncPeers)
 	resultCh := make(chan *fetchBlocksResult, workSize)
 	closeCh := make(chan struct{})
+
+	for _, work := range works {
+		workCh <- work
+	}
+	syncPeers := mf.syncPeers.selectIdlePeers()
+	for i := 0; i < len(syncPeers) && i < maxNumOfFastSyncPeers; i++ {
+		peerCh <- syncPeers[i]
+	}
 
 	var workWg sync.WaitGroup
 	for i := 0; i <= maxNumOfParallelFetchBlocks && i < workSize; i++ {
@@ -174,47 +189,17 @@ func (mf *msgFetcher) parallelFetchBlocks(works []*fetchBlocksWork, downloadNoti
 		go mf.fetchBlocksWorker(workCh, peerCh, resultCh, closeCh, downloadNotifyCh, &workWg)
 	}
 
-	for _, work := range works {
-		workCh <- work
-	}
+	go mf.collectResultLoop(peerCh, ProcessStopCh, resultCh, closeCh, workSize)
 
-	syncPeers := mf.syncPeers.selectIdlePeers()
-	for i := 0; i < len(syncPeers) && i < maxNumOfFastSyncPeers; i++ {
-		peerCh <- syncPeers[i]
-	}
-
-	defer func() {
-		close(closeCh)
-		workWg.Wait()
-		close(resultCh)
-		close(peerCh)
-		close(workCh)
-		downloadNotifyCh <- false
-		wg.Done()
-	}()
-
-	//collect fetch results
-	for resultCount := 0; resultCount < workSize && mf.syncPeers.size() > 0; resultCount++ {
-		select {
-		case result := <-resultCh:
-			if result.err != nil {
-				log.WithFields(log.Fields{"module": logModule, "startHeight": result.startHeight, "stopHeight": result.stopHeight, "err": result.err}).Error("failed on fetch blocks")
-				return
-			}
-
-			peer, err := mf.syncPeers.selectIdlePeer()
-			if err != nil {
-				log.WithFields(log.Fields{"module": logModule, "err": result.err}).Warn("failed on find fast sync peer")
-				break
-			}
-			peerCh <- peer
-		case <-ProcessStop:
-			return
-		}
-	}
+	workWg.Wait()
+	close(resultCh)
+	close(peerCh)
+	close(workCh)
+	close(downloadNotifyCh)
+	wg.Done()
 }
 
-func (mf *msgFetcher) parallelFetchHeaders(peers []*peers.Peer, locator []*bc.Hash, stopHash *bc.Hash, skip uint64) (map[string][]*types.BlockHeader, error) {
+func (mf *msgFetcher) parallelFetchHeaders(peers []*peers.Peer, locator []*bc.Hash, stopHash *bc.Hash, skip uint64) map[string][]*types.BlockHeader {
 	result := make(map[string][]*types.BlockHeader)
 	response := make(map[string]bool)
 	for _, peer := range peers {
@@ -233,14 +218,35 @@ func (mf *msgFetcher) parallelFetchHeaders(peers []*peers.Peer, locator []*bc.Ha
 				result[msg.peerID] = append(result[msg.peerID], msg.headers[:]...)
 				response[msg.peerID] = true
 				if len(response) == len(result) {
-					return result, nil
+					return result
 				}
 			}
 		case <-timeout.C:
 			log.WithFields(log.Fields{"module": logModule, "err": errRequestTimeout}).Warn("failed on parallel fetch headers")
-			return result, errors.Wrap(errRequestTimeout, "parallelFetchHeaders")
+			return result
 		}
 	}
+}
+
+func (mf *msgFetcher) processBlock(peerID string, block *types.Block) {
+	mf.blockProcessCh <- &blockMsg{block: block, peerID: peerID}
+}
+
+func (mf *msgFetcher) processBlocks(peerID string, blocks []*types.Block) {
+	mf.blocksProcessCh <- &blocksMsg{blocks: blocks, peerID: peerID}
+	mf.mux.RLock()
+	blocksMsgChan, ok := mf.blocksMsgChanMap[peerID]
+	mf.mux.RUnlock()
+	if !ok {
+		mf.peers.ProcessIllegal(peerID, security.LevelMsgIllegal, "msg from unsolicited peer")
+		return
+	}
+
+	blocksMsgChan <- blocks
+}
+
+func (mf *msgFetcher) processHeaders(peerID string, headers []*types.BlockHeader) {
+	mf.headersProcessCh <- &headersMsg{headers: headers, peerID: peerID}
 }
 
 func (mf *msgFetcher) requireBlock(peerID string, height uint64) (*types.Block, error) {

@@ -35,12 +35,12 @@ func TestBlockProcess(t *testing.T) {
 	}
 
 	bp := newBlockProcessor(mockChain, s, nil)
-	downloadNotifyCh := make(chan bool, 1)
-	ProcessStopCh := make(chan bool, 1)
+	downloadNotifyCh := make(chan struct{}, 1)
+	ProcessStopCh := make(chan struct{})
 	var wg sync.WaitGroup
 	go func() {
 		time.Sleep(1 * time.Second)
-		downloadNotifyCh <- false
+		close(downloadNotifyCh)
 	}()
 	wg.Add(1)
 	bp.process(downloadNotifyCh, ProcessStopCh, &wg)

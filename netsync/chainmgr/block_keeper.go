@@ -151,13 +151,13 @@ func (bk *blockKeeper) regularBlockSync() error {
 	for i <= peerHeight {
 		block, err := bk.msgFetcher.requireBlock(bk.syncPeer.ID(), i)
 		if err != nil {
-			bk.peers.ErrorHandler(bk.syncPeer.ID(), security.LevelConnException, err)
+			bk.peers.ProcessIllegal(bk.syncPeer.ID(), security.LevelConnException, err.Error())
 			return err
 		}
 
 		isOrphan, err := bk.chain.ProcessBlock(block)
 		if err != nil {
-			bk.peers.ErrorHandler(bk.syncPeer.ID(), security.LevelMsgIllegal, err)
+			bk.peers.ProcessIllegal(bk.syncPeer.ID(), security.LevelMsgIllegal, err.Error())
 			return err
 		}
 
