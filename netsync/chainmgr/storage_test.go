@@ -24,19 +24,19 @@ func TestReadWriteBlocks(t *testing.T) {
 	s := newStorage(testDB)
 
 	cases := []struct {
-		storageRamLimit int
+		storageRAMLimit int
 		blocks          []*types.Block
 		peerID          string
 		isRAM           bool
 	}{
 		{
-			storageRamLimit: 800 * 1024 * 1024,
+			storageRAMLimit: 800 * 1024 * 1024,
 			blocks:          mockBlocks(nil, 500),
 			peerID:          "testPeer",
 			isRAM:           true,
 		},
 		{
-			storageRamLimit: 1,
+			storageRAMLimit: 1,
 			blocks:          mockBlocks(nil, 500),
 			peerID:          "testPeer",
 			isRAM:           false,
@@ -44,7 +44,7 @@ func TestReadWriteBlocks(t *testing.T) {
 	}
 
 	for index, c := range cases {
-		maxByteOfStorageRAM = c.storageRamLimit
+		maxByteOfStorageRAM = c.storageRAMLimit
 		s.writeBlocks(c.peerID, c.blocks)
 
 		for i := 0; i < len(c.blocks); i++ {

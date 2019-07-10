@@ -57,11 +57,9 @@ func (bp *blockProcessor) process(downloadNotifyCh chan struct{}, ProcessStop ch
 			bp.storage.deleteBlock(nextHeight)
 		}
 
-		select {
-		case _, ok := <-downloadNotifyCh:
-			if !ok {
-				return
-			}
+		_, ok := <-downloadNotifyCh
+		if !ok {
+			return
 		}
 	}
 }
