@@ -11,7 +11,6 @@ import (
 	"github.com/vapor/account"
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/errors"
-	"github.com/vapor/net/http/reqid"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
@@ -89,8 +88,7 @@ func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Te
 
 // POST /build-transaction
 func (a *API) build(ctx context.Context, buildReqs *BuildRequest) Response {
-	subctx := reqid.NewSubContext(ctx, reqid.New())
-	tmpl, err := a.buildSingle(subctx, buildReqs)
+	tmpl, err := a.buildSingle(ctx, buildReqs)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -178,8 +176,7 @@ func (a *API) buildTxs(ctx context.Context, req *BuildRequest) ([]*txbuilder.Tem
 
 // POST /build-chain-transactions
 func (a *API) buildChainTxs(ctx context.Context, buildReqs *BuildRequest) Response {
-	subctx := reqid.NewSubContext(ctx, reqid.New())
-	tmpls, err := a.buildTxs(subctx, buildReqs)
+	tmpls, err := a.buildTxs(ctx, buildReqs)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
