@@ -47,7 +47,6 @@ var (
 // errors
 var (
 	errAccntTxIDNotFound = errors.New("account TXID not found")
-	errGetAsset          = errors.New("Failed to find asset definition")
 )
 
 // ContractUTXOKey makes a smart contract unspent outputs key to store
@@ -225,7 +224,7 @@ func (store *WalletStore) DeleteWalletUTXOs() {
 func (store *WalletStore) GetAsset(assetID *bc.AssetID) (*asset.Asset, error) {
 	definitionByte := store.db.Get(asset.ExtAssetKey(assetID))
 	if definitionByte == nil {
-		return nil, errGetAsset
+		return nil, wallet.ErrGetAsset
 	}
 
 	definitionMap := make(map[string]interface{})

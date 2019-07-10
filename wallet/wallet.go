@@ -27,6 +27,7 @@ var (
 	errBestBlockNotFoundInCore = errors.New("best block not found in core")
 	errWalletVersionMismatch   = errors.New("wallet version mismatch")
 	ErrGetWalletStatusInfo     = errors.New("failed get wallet info")
+	ErrGetAsset                = errors.New("Failed to find asset definition")
 )
 
 //StatusInfo is base valid block info to handle orphan block rollback
