@@ -143,10 +143,9 @@ func (c *Chain) InMainChain(hash bc.Hash) bool {
 func (c *Chain) traceLongestChainTail(blockHeader *types.BlockHeader) (*types.BlockHeader, error) {
 	longestTail, workQueue := blockHeader, []*types.BlockHeader{blockHeader}
 
-	for len(workQueue) > 0 {
+	for ; len(workQueue) > 0; workQueue = workQueue[1:] {
 		currentHeader := workQueue[0]
 		currentHash := currentHeader.Hash()
-		workQueue = workQueue[1:]
 		hashes, err := c.store.GetBlockHashesByHeight(currentHeader.Height + 1)
 		if err != nil {
 			return nil, err

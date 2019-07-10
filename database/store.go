@@ -35,18 +35,8 @@ const (
 	consensusResult
 )
 
-var (
-	blockStoreKey          = []byte{blockStore}
-	blockHashesPrefix      = []byte{blockHashes, colon}
-	blockHeaderPrefix      = []byte{blockHeader, colon}
-	blockTransactonsPrefix = []byte{blockTransactons, colon}
-	mainChainIndexPrefix   = []byte{mainChainIndex, colon}
-	txStatusPrefix         = []byte{txStatus, colon}
-	consensusResultPrefix  = []byte{consensusResult, colon}
-)
-
 func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
-	bytes := db.Get(blockStoreKey)
+	bytes := db.Get([]byte{blockStore})
 	if bytes == nil {
 		return nil
 	}
@@ -69,31 +59,31 @@ type Store struct {
 func calcMainChainIndexPrefix(height uint64) []byte {
 	buf := [8]byte{}
 	binary.BigEndian.PutUint64(buf[:], height)
-	return append(mainChainIndexPrefix, buf[:]...)
+	return append([]byte{mainChainIndex, colon}, buf[:]...)
 }
 
 func calcBlockHashesPrefix(height uint64) []byte {
 	buf := [8]byte{}
 	binary.BigEndian.PutUint64(buf[:], height)
-	return append(blockHashesPrefix, buf[:]...)
+	return append([]byte{blockHashes, colon}, buf[:]...)
 }
 
 func calcBlockHeaderKey(hash *bc.Hash) []byte {
-	return append(blockHeaderPrefix, hash.Bytes()...)
+	return append([]byte{blockHeader, colon}, hash.Bytes()...)
 }
 
 func calcBlockTransactionsKey(hash *bc.Hash) []byte {
-	return append(blockTransactonsPrefix, hash.Bytes()...)
+	return append([]byte{blockTransactons, colon}, hash.Bytes()...)
 }
 
 func calcTxStatusKey(hash *bc.Hash) []byte {
-	return append(txStatusPrefix, hash.Bytes()...)
+	return append([]byte{txStatus, colon}, hash.Bytes()...)
 }
 
 func calcConsensusResultKey(seq uint64) []byte {
 	buf := [8]byte{}
 	binary.BigEndian.PutUint64(buf[:], seq)
-	return append(consensusResultPrefix, buf[:]...)
+	return append([]byte{consensusResult, colon}, buf[:]...)
 }
 
 // GetBlockHeader return the block header by given hash
@@ -361,7 +351,7 @@ func (s *Store) SaveChainStatus(blockHeader, irrBlockHeader *types.BlockHeader, 
 	if err != nil {
 		return err
 	}
-	batch.Set(blockStoreKey, bytes)
+	batch.Set([]byte{blockStore}, bytes)
 
 	// save main chain blockHeaders
 	for _, bh := range mainBlockHeaders {

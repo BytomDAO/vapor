@@ -560,7 +560,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: true,
+			gasValid: false,
 		},
 		{
 			category: "double spend",
@@ -587,7 +587,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: true,
+			gasValid: false,
 		},
 	}
 

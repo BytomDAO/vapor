@@ -57,7 +57,7 @@ func TestSaveUtxoView(t *testing.T) {
 		{
 			hash:      bc.Hash{V0: 6},
 			utxoEntry: storage.NewUtxoEntry(storage.VoteUTXOType, 0, true),
-			exist:     false,
+			exist:     true,
 		},
 		{
 			hash:      bc.Hash{V0: 7},
