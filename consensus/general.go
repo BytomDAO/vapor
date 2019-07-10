@@ -134,28 +134,8 @@ var ActiveNetParams = VaporNetParams
 
 // NetParams is the correspondence between chain_id and Params
 var NetParams = map[string]Params{
-	"mainnet": MainNetParams,
-	"wisdom":  TestNetParams,
 	"vapor":   VaporNetParams,
 	"solonet": SoloNetParams,
-}
-
-// MainNetParams is the config for bytom main-net
-var MainNetParams = Params{
-	Name:            "main",
-	Bech32HRPSegwit: "bm",
-	DefaultPort:     "46657",
-	DNSSeeds:        []string{"www.mainnetseed.bytom.io"},
-	Checkpoints:     []Checkpoint{},
-}
-
-// TestNetParams is the config for bytom test-net
-var TestNetParams = Params{
-	Name:            "test",
-	Bech32HRPSegwit: "tm",
-	DefaultPort:     "46656",
-	DNSSeeds:        []string{"www.testnetseed.bytom.io"},
-	Checkpoints:     []Checkpoint{},
 }
 
 // VaporNetParams is the config for vapor-net

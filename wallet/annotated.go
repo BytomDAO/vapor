@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	btmCommon "github.com/bytom/common"
 	btmConsensus "github.com/bytom/consensus"
 	log "github.com/sirupsen/logrus"
 
@@ -234,22 +235,48 @@ func (w *Wallet) getAddressFromControlProgram(prog []byte, isMainchain bool) str
 	return ""
 }
 
-func BuildP2PKHAddress(pubHash []byte, netParams *consensus.Params) string {
-	address, err := common.NewAddressWitnessPubKeyHash(pubHash, netParams)
-	if err != nil {
-		return ""
-	}
+// BuildP2PKHAddress create P2PKH address
+func BuildP2PKHAddress(pubHash []byte, netParams interface{}) string {
+	switch netParams.(type) {
+	case *consensus.Params:
+		params := netParams.(*consensus.Params)
+		address, err := common.NewAddressWitnessPubKeyHash(pubHash, params)
+		if err != nil {
+			return ""
+		}
+		return address.EncodeAddress()
 
-	return address.EncodeAddress()
+	case *btmConsensus.Params:
+		params := netParams.(*btmConsensus.Params)
+		address, err := btmCommon.NewAddressWitnessPubKeyHash(pubHash, params)
+		if err != nil {
+			return ""
+		}
+		return address.EncodeAddress()
+	}
+	return ""
 }
 
-func BuildP2SHAddress(scriptHash []byte, netParams *consensus.Params) string {
-	address, err := common.NewAddressWitnessScriptHash(scriptHash, netParams)
-	if err != nil {
-		return ""
-	}
+// BuildP2SHAddress create P2SH address
+func BuildP2SHAddress(scriptHash []byte, netParams interface{}) string {
+	switch netParams.(type) {
+	case *consensus.Params:
+		params := netParams.(*consensus.Params)
+		address, err := common.NewAddressWitnessScriptHash(scriptHash, params)
+		if err != nil {
+			return ""
+		}
+		return address.EncodeAddress()
 
-	return address.EncodeAddress()
+	case *btmConsensus.Params:
+		params := netParams.(*btmConsensus.Params)
+		address, err := btmCommon.NewAddressWitnessScriptHash(scriptHash, params)
+		if err != nil {
+			return ""
+		}
+		return address.EncodeAddress()
+	}
+	return ""
 }
 
 // BuildAnnotatedOutput build the annotated output.

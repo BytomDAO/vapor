@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	btmConsensus "github.com/bytom/consensus"
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 
@@ -259,11 +260,12 @@ func (s *sidechainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types
 		switch {
 		case segwit.IsP2WPKHScript(outputCP):
 			if pubHash, err := segwit.GetHashFromStandardProg(outputCP); err == nil {
-				toAddress = wallet.BuildP2PKHAddress(pubHash, &consensus.MainNetParams)
+				toAddress = wallet.BuildP2PKHAddress(pubHash, &btmConsensus.MainNetParams)
 			}
+
 		case segwit.IsP2WSHScript(outputCP):
 			if scriptHash, err := segwit.GetHashFromStandardProg(outputCP); err == nil {
-				toAddress = wallet.BuildP2SHAddress(scriptHash, &consensus.MainNetParams)
+				toAddress = wallet.BuildP2SHAddress(scriptHash, &btmConsensus.MainNetParams)
 			}
 		}
 
