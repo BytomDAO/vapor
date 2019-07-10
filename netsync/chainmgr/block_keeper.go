@@ -114,27 +114,26 @@ func (bk *blockKeeper) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, skip
 		return headers, nil
 	}
 
-	if !bk.chain.InMainChain(*stopHash) {
+	if !bk.chain.InMainChain(*stopHash) || stopHeader.Height < startHeader.Height {
 		return headers, nil
 	}
 
-	num := uint64(0)
-	for i := startHeader.Height; i < stopHeader.Height && num < maxNum-1; i += skip + 1 {
-		header, err := bk.chain.GetHeaderByHeight(i)
+	headers = append(headers, startHeader)
+	for num, index := uint64(0), startHeader.Height; num < maxNum-1 && index < stopHeader.Height; num++ {
+		index += skip + 1
+		if index >= stopHeader.Height {
+			headers = append(headers, stopHeader)
+			break
+		}
+
+		header, err := bk.chain.GetHeaderByHeight(index)
 		if err != nil {
 			return nil, err
 		}
 
 		headers = append(headers, header)
-		num++
-	}
-	//add stopHeader
-	header, err := bk.chain.GetHeaderByHeight(stopHeader.Height)
-	if err != nil {
-		return nil, err
 	}
 
-	headers = append(headers, header)
 	return headers, nil
 }
 

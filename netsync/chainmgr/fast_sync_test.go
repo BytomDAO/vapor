@@ -86,6 +86,15 @@ func TestFastBlockSync(t *testing.T) {
 	fastSyncPivotGap = uint64(5)
 	minGapStartFastSync = uint64(6)
 
+	defer func() {
+		maxNumOfSkeletonPerSync = 10
+		numOfBlocksSkeletonGap = maxNumOfBlocksPerMsg
+		maxNumOfBlocksPerSync = maxNumOfSkeletonPerSync * maxNumOfSkeletonPerSync
+		fastSyncPivotGap = uint64(64)
+		minGapStartFastSync = uint64(128)
+
+	}()
+
 	baseChain := mockBlocks(nil, 300)
 
 	cases := []struct {

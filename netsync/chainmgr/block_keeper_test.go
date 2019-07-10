@@ -155,7 +155,12 @@ func TestRequireBlock(t *testing.T) {
 		},
 	}
 
+	defer func() {
+		requireBlockTimeout = 20 * time.Second
+	}()
+
 	for i, c := range cases {
+		requireBlockTimeout = c.syncTimeout
 		got, err := c.testNode.blockKeeper.msgFetcher.requireBlock(c.testNode.blockKeeper.syncPeer.ID(), c.requireHeight)
 		if !testutil.DeepEqual(got, c.want) {
 			t.Errorf("case %d: got %v want %v", i, got, c.want)
@@ -337,6 +342,9 @@ func TestLocateBlocks(t *testing.T) {
 }
 
 func TestLocateHeaders(t *testing.T) {
+	defer func() {
+		maxNumOfHeadersPerMsg = 1000
+	}()
 	maxNumOfHeadersPerMsg = 10
 	blocks := mockBlocks(nil, 150)
 	blocksHash := []bc.Hash{}
@@ -402,7 +410,7 @@ func TestLocateHeaders(t *testing.T) {
 			locator:     []uint64{15},
 			stopHash:    &blocksHash[80],
 			skip:        10,
-			wantHeight:  []uint64{15, 26, 37, 48, 59, 70},
+			wantHeight:  []uint64{15, 26, 37, 48, 59, 70, 80},
 			err:         false,
 		},
 		{
