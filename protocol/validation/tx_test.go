@@ -231,8 +231,8 @@ func TestOverflow(t *testing.T) {
 		txInputs := make([]*types.TxInput, 0, len(inputs))
 		txOutputs := make([]*types.TxOutput, 0, len(outputs))
 
-		for _, amount := range inputs {
-			txInput := types.NewSpendInput(nil, *sourceID, *consensus.BTMAssetID, amount, 0, ctrlProgram)
+		for i, amount := range inputs {
+			txInput := types.NewSpendInput(nil, *sourceID, *consensus.BTMAssetID, amount, uint64(i), ctrlProgram)
 			txInputs = append(txInputs, txInput)
 		}
 
@@ -712,8 +712,8 @@ func TestCoinbase(t *testing.T) {
 					types.MapTx(&types.TxData{
 						SerializedSize: 1,
 						Inputs: []*types.TxInput{
-							types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp),
 							types.NewCoinbaseInput(nil),
+							types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp),
 						},
 						Outputs: []*types.TxOutput{
 							types.NewIntraChainOutput(*consensus.BTMAssetID, 888, cp),

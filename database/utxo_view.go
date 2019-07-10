@@ -72,12 +72,12 @@ func getUtxo(db dbm.DB, hash *bc.Hash) (*storage.UtxoEntry, error) {
 
 func saveUtxoView(batch dbm.Batch, view *state.UtxoViewpoint) error {
 	for key, entry := range view.Entries {
-		if (entry.Type == storage.CrosschainUTXOType) && (!entry.Spent) {
+		if entry.Type == storage.CrosschainUTXOType && !entry.Spent {
 			batch.Delete(calcUtxoKey(&key))
 			continue
 		}
 
-		if (entry.Type == storage.NormalUTXOType || entry.Type == storage.VoteUTXOType) && (entry.Spent) {
+		if entry.Type == storage.NormalUTXOType && entry.Spent {
 			batch.Delete(calcUtxoKey(&key))
 			continue
 		}
