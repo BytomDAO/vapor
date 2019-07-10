@@ -116,7 +116,7 @@ func DecodeAddress(addr string, param *consensus.Params) (Address, error) {
 	oneIndex := strings.LastIndexByte(addr, '1')
 	if oneIndex > 1 {
 		prefix := addr[:oneIndex+1]
-		if consensus.IsBech32SegwitPrefix(prefix, param) {
+		if strings.ToLower(prefix) == param.Bech32HRPSegwit+"1" {
 			witnessVer, witnessProg, err := decodeSegWitAddress(addr)
 			if err != nil {
 				return nil, err

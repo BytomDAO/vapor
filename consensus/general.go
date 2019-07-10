@@ -2,7 +2,6 @@ package consensus
 
 import (
 	"encoding/binary"
-	"strings"
 
 	"github.com/vapor/protocol/bc"
 )
@@ -194,12 +193,4 @@ func BlockSubsidy(height uint64) uint64 {
 		}
 	}
 	return 0
-}
-
-// IsBech32SegwitPrefix returns whether the prefix is a known prefix for segwit
-// addresses on any default or registered network.  This is used when decoding
-// an address string into a specific address type.
-func IsBech32SegwitPrefix(prefix string, params *Params) bool {
-	prefix = strings.ToLower(prefix)
-	return prefix == params.Bech32HRPSegwit+"1"
 }
