@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	btmConsensus "github.com/bytom/consensus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/account"
@@ -215,7 +216,9 @@ func (w *Wallet) BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInp
 func (w *Wallet) getAddressFromControlProgram(prog []byte, isMainchain bool) string {
 	netParams := &consensus.ActiveNetParams
 	if isMainchain {
-		netParams = &consensus.MainNetParams
+		netParams := new(consensus.Params)
+		netParams.Name = btmConsensus.MainNetParams.Name
+		netParams.Bech32HRPSegwit = btmConsensus.MainNetParams.Bech32HRPSegwit
 	}
 
 	if segwit.IsP2WPKHScript(prog) {
