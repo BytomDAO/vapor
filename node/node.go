@@ -110,9 +110,11 @@ func NewNode(config *cfg.Config) *Node {
 
 	if !config.Wallet.Disable {
 		walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
-		accounts = account.NewManager(walletDB, chain)
+		walletStore := database.NewWalletStore(walletDB)
+		accountStore := database.NewAccountStore(walletDB)
+		accounts = account.NewManager(accountStore, chain)
 		assets = asset.NewRegistry(walletDB, chain)
-		wallet, err = w.NewWallet(walletDB, accounts, assets, hsm, chain, dispatcher, config.Wallet.TxIndex)
+		wallet, err = w.NewWallet(walletStore, accounts, assets, hsm, chain, dispatcher, config.Wallet.TxIndex)
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("init NewWallet")
 		}
@@ -122,8 +124,8 @@ func NewNode(config *cfg.Config) *Node {
 			wallet.RescanBlocks()
 		}
 	}
-
-	syncManager, err := netsync.NewSyncManager(config, chain, txPool, dispatcher)
+	fastSyncDB := dbm.NewDB("fastsync", config.DBBackend, config.DBDir())
+	syncManager, err := netsync.NewSyncManager(config, chain, txPool, dispatcher,fastSyncDB)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create sync manager: %v", err))
 	}

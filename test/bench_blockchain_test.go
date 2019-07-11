@@ -159,7 +159,7 @@ func InsertChain(chain *protocol.Chain, txPool *protocol.TxPool, txs []*types.Tx
 		}
 	}
 
-	block, err := proposal.NewBlockTemplate(chain, txPool, nil, uint64(time.Now().UnixNano() / 1e6))
+	block, err := proposal.NewBlockTemplate(chain, txPool, nil, uint64(time.Now().UnixNano()/1e6))
 	if err != nil {
 		return err
 	}
@@ -368,7 +368,8 @@ func SetUtxoView(db dbm.DB, view *state.UtxoViewpoint) error {
 
 //-------------------------Mock actual transaction----------------------------------
 func MockTxsP2PKH(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum int) ([]*types.Tx, error) {
-	accountManager := account.NewManager(testDB, nil)
+	accountStore := database.NewAccountStore(testDB)
+	accountManager := account.NewManager(accountStore, nil)
 	hsm, err := pseudohsm.New(keyDirPath)
 	if err != nil {
 		return nil, err
@@ -410,7 +411,8 @@ func MockTxsP2PKH(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum int)
 }
 
 func MockTxsP2SH(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum int) ([]*types.Tx, error) {
-	accountManager := account.NewManager(testDB, nil)
+	accountStore := database.NewAccountStore(testDB)
+	accountManager := account.NewManager(accountStore, nil)
 	hsm, err := pseudohsm.New(keyDirPath)
 	if err != nil {
 		return nil, err
@@ -457,7 +459,8 @@ func MockTxsP2SH(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum int) 
 }
 
 func MockTxsMultiSign(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum int) ([]*types.Tx, error) {
-	accountManager := account.NewManager(testDB, nil)
+	accountStore := database.NewAccountStore(testDB)
+	accountManager := account.NewManager(accountStore, nil)
 	hsm, err := pseudohsm.New(keyDirPath)
 	if err != nil {
 		return nil, err

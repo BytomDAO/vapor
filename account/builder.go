@@ -90,7 +90,7 @@ func (m *Manager) reserveBtmUtxoChain(builder *txbuilder.TemplateBuilder, accoun
 	return utxos, nil
 }
 
-func (m *Manager) buildBtmTxChain(utxos []*UTXO, signer *signers.Signer) ([]*txbuilder.Template, *UTXO, error) {
+func (m *Manager) BuildBtmTxChain(utxos []*UTXO, signer *signers.Signer) ([]*txbuilder.Template, *UTXO, error) {
 	if len(utxos) == 0 {
 		return nil, nil, errors.New("mergeSpendActionUTXO utxos num 0")
 	}
@@ -166,6 +166,7 @@ func SpendAccountChain(ctx context.Context, builder *txbuilder.TemplateBuilder, 
 	if !ok {
 		return nil, errors.New("fail to convert the spend action")
 	}
+
 	if *act.AssetId != *consensus.BTMAssetID {
 		return nil, errors.New("spend chain action only support BTM")
 	}
@@ -180,7 +181,7 @@ func SpendAccountChain(ctx context.Context, builder *txbuilder.TemplateBuilder, 
 		return nil, err
 	}
 
-	tpls, utxo, err := act.accounts.buildBtmTxChain(utxos, acct.Signer)
+	tpls, utxo, err := act.accounts.BuildBtmTxChain(utxos, acct.Signer)
 	if err != nil {
 		return nil, err
 	}
@@ -324,6 +325,7 @@ func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.S
 	if err != nil {
 		return nil, nil, err
 	}
+
 	if u.Address == "" {
 		sigInst.AddWitnessKeys(signer.XPubs, path, signer.Quorum)
 		return txInput, sigInst, nil
@@ -382,6 +384,7 @@ func (m *Manager) insertControlProgramDelayed(b *txbuilder.TemplateBuilder, acp 
 		if len(acps) == 0 {
 			return nil
 		}
+
 		return m.SaveControlPrograms(acps...)
 	})
 }

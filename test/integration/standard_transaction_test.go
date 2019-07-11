@@ -10,6 +10,7 @@ import (
 	"github.com/vapor/blockchain/pseudohsm"
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/crypto/ed25519/chainkd"
+	"github.com/vapor/database"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/validation"
@@ -31,7 +32,8 @@ func TestP2PKH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	accountManager := account.NewManager(testDB, chain)
+	accountStore := database.NewAccountStore(testDB)
+	accountManager := account.NewManager(accountStore, chain)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -82,7 +84,8 @@ func TestBip0032P2PKH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	accountManager := account.NewManager(testDB, chain)
+	accountStore := database.NewAccountStore(testDB)
+	accountManager := account.NewManager(accountStore, chain)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -109,7 +112,7 @@ func TestBip0032P2PKH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testDB.Set(account.Key(testAccount.ID), rawAccount)
+	testDB.Set(database.AccountIDKey(testAccount.ID), rawAccount)
 	controlProg, err := accountManager.CreateAddress(testAccount.ID, false)
 	if err != nil {
 		t.Fatal(err)
@@ -146,7 +149,8 @@ func TestP2SH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	accountManager := account.NewManager(testDB, chain)
+	accountStore := database.NewAccountStore(testDB)
+	accountManager := account.NewManager(accountStore, chain)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -207,7 +211,8 @@ func TestBip0032P2SH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	accountManager := account.NewManager(testDB, chain)
+	accountStore := database.NewAccountStore(testDB)
+	accountManager := account.NewManager(accountStore, chain)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -238,7 +243,7 @@ func TestBip0032P2SH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testDB.Set(account.Key(testAccount.ID), rawAccount)
+	testDB.Set(database.AccountIDKey(testAccount.ID), rawAccount)
 
 	controlProg, err := accountManager.CreateAddress(testAccount.ID, false)
 	if err != nil {
@@ -280,7 +285,8 @@ func TestMutilNodeSign(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	accountManager := account.NewManager(testDB, chain)
+	accountStore := database.NewAccountStore(testDB)
+	accountManager := account.NewManager(accountStore, chain)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -351,7 +357,8 @@ func TestBip0032MutilNodeSign(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	accountManager := account.NewManager(testDB, chain)
+	accountStore := database.NewAccountStore(testDB)
+	accountManager := account.NewManager(accountStore, chain)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -383,7 +390,7 @@ func TestBip0032MutilNodeSign(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testDB.Set(account.Key(testAccount.ID), rawAccount)
+	testDB.Set(database.AccountIDKey(testAccount.ID), rawAccount)
 
 	controlProg, err := accountManager.CreateAddress(testAccount.ID, false)
 	if err != nil {

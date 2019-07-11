@@ -2,8 +2,6 @@
 package account
 
 import (
-	"encoding/json"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -27,17 +25,15 @@ func (m *Manager) Backup() (*Image, error) {
 		Slice: []*ImageSlice{},
 	}
 
-	accountIter := m.db.IteratorPrefix(accountPrefix)
-	defer accountIter.Release()
-	for accountIter.Next() {
-		a := &Account{}
-		if err := json.Unmarshal(accountIter.Value(), a); err != nil {
-			return nil, err
-		}
+	accounts, err := m.store.ListAccounts("")
+	if err != nil {
+		return nil, err
+	}
 
+	for _, account := range accounts {
 		image.Slice = append(image.Slice, &ImageSlice{
-			Account:       a,
-			ContractIndex: m.GetContractIndex(a.ID),
+			Account:       account,
+			ContractIndex: m.store.GetContractIndex(account.ID),
 		})
 	}
 	return image, nil
@@ -48,29 +44,30 @@ func (m *Manager) Restore(image *Image) error {
 	m.accountMu.Lock()
 	defer m.accountMu.Unlock()
 
-	storeBatch := m.db.NewBatch()
+	newStore := m.store.InitBatch()
+
 	for _, slice := range image.Slice {
-		if existed := m.db.Get(Key(slice.Account.ID)); existed != nil {
+		if _, err := newStore.GetAccountByID(slice.Account.ID); err == nil {
 			log.WithFields(log.Fields{
 				"module": logModule,
 				"alias":  slice.Account.Alias,
 				"id":     slice.Account.ID,
 			}).Warning("skip restore account due to already existed")
 			continue
+		} else if err != ErrFindAccount {
+			return err
 		}
-		if existed := m.db.Get(aliasKey(slice.Account.Alias)); existed != nil {
+
+		if _, err := newStore.GetAccountByAlias(slice.Account.Alias); err == nil {
 			return ErrDuplicateAlias
+		} else if err != ErrFindAccount {
+			return err
 		}
 
-		rawAccount, err := json.Marshal(slice.Account)
-		if err != nil {
-			return ErrMarshalAccount
+		if err := newStore.SetAccount(slice.Account); err != nil {
+			return err
 		}
-
-		storeBatch.Set(Key(slice.Account.ID), rawAccount)
-		storeBatch.Set(aliasKey(slice.Account.Alias), []byte(slice.Account.ID))
 	}
 
-	storeBatch.Write()
-	return nil
+	return newStore.CommitBatch()
 }

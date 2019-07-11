@@ -30,12 +30,14 @@ const (
 var (
 	errSendStatusMsg = errors.New("send status msg fail")
 	ErrPeerMisbehave = errors.New("peer is misbehave")
+	ErrNoValidPeer   = errors.New("Can't find valid fast sync peer")
 )
 
 //BasePeer is the interface for connection level peer
 type BasePeer interface {
 	Addr() net.Addr
 	ID() string
+	RemoteAddrHost() string
 	ServiceFlag() consensus.ServiceFlag
 	TrafficStatus() (*flowrate.Status, *flowrate.Status)
 	TrySend(byte, interface{}) bool
@@ -45,7 +47,7 @@ type BasePeer interface {
 //BasePeerSet is the intergace for connection level peer manager
 type BasePeerSet interface {
 	StopPeerGracefully(string)
-	IsBanned(peerID string, level byte, reason string) bool
+	IsBanned(ip string, level byte, reason string) bool
 }
 
 type BroadcastMsg interface {
@@ -417,7 +419,8 @@ func (ps *PeerSet) ProcessIllegal(peerID string, level byte, reason string) {
 	if peer == nil {
 		return
 	}
-	if banned := ps.IsBanned(peer.Addr().String(), level, reason); banned {
+
+	if banned := ps.IsBanned(peer.RemoteAddrHost(), level, reason); banned {
 		ps.RemovePeer(peerID)
 	}
 	return
@@ -556,6 +559,19 @@ func (ps *PeerSet) GetPeer(id string) *Peer {
 	return ps.peers[id]
 }
 
+func (ps *PeerSet) GetPeersByHeight(height uint64) []*Peer {
+	ps.mtx.RLock()
+	defer ps.mtx.RUnlock()
+
+	peers := []*Peer{}
+	for _, peer := range ps.peers {
+		if peer.Height() >= height {
+			peers = append(peers, peer)
+		}
+	}
+	return peers
+}
+
 func (ps *PeerSet) GetPeerInfos() []*PeerInfo {
 	ps.mtx.RLock()
 	defer ps.mtx.RUnlock()
@@ -655,4 +671,11 @@ func (ps *PeerSet) SetStatus(peerID string, height uint64, hash *bc.Hash) {
 	}
 
 	peer.SetBestStatus(height, hash)
+}
+
+func (ps *PeerSet) Size() int {
+	ps.mtx.RLock()
+	defer ps.mtx.RUnlock()
+
+	return len(ps.peers)
 }

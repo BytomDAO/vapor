@@ -99,21 +99,6 @@ type Params struct {
 	ProducerSubsidys []ProducerSubsidy
 }
 
-// VaporBasicConfig return the basic config
-func VaporBasicConfig() BasicConfig {
-	return BasicConfig{
-		MaxBlockGas:      uint64(10000000),
-		MaxGasAmount:     int64(200000),
-		DefaultGasCredit: int64(160000),
-		StorageGasRate:   int64(1),
-		VMGasRate:        int64(200),
-
-		VotePendingBlockNumber:     uint64(10000),
-		CoinbasePendingBlockNumber: uint64(100),
-		CoinbaseArbitrarySizeLimit: 128,
-	}
-}
-
 // VaporDPOSConfig return the dpos consensus config
 func VaporDPOSConfig() DPOSConfig {
 	dpos := DPOSConfig{
@@ -142,11 +127,18 @@ var NetParams = map[string]Params{
 var VaporNetParams = Params{
 	Name:            "vapor",
 	Bech32HRPSegwit: "vp",
-	DefaultPort:     "56656",
-	DNSSeeds:        []string{"www.vapornetseed.bytom.io"},
-	BasicConfig:     VaporBasicConfig(),
-	DPOSConfig:      VaporDPOSConfig(),
-	Checkpoints:     []Checkpoint{},
+	BasicConfig: BasicConfig{
+		MaxBlockGas:                uint64(10000000),
+		MaxGasAmount:               int64(200000),
+		DefaultGasCredit:           int64(160000),
+		StorageGasRate:             int64(1),
+		VMGasRate:                  int64(200),
+		VotePendingBlockNumber:     uint64(10000),
+		CoinbasePendingBlockNumber: uint64(100),
+		CoinbaseArbitrarySizeLimit: 128,
+	},
+	DPOSConfig:  VaporDPOSConfig(),
+	Checkpoints: []Checkpoint{},
 	ProducerSubsidys: []ProducerSubsidy{
 		{BeginBlock: 1, EndBlock: 63072000, Subsidy: 15000000},
 	},
@@ -156,10 +148,18 @@ var VaporNetParams = Params{
 var SoloNetParams = Params{
 	Name:            "solo",
 	Bech32HRPSegwit: "sm",
-	DefaultPort:     "56657",
-	BasicConfig:     VaporBasicConfig(),
-	DPOSConfig:      VaporDPOSConfig(),
-	Checkpoints:     []Checkpoint{},
+	BasicConfig: BasicConfig{
+		MaxBlockGas:                uint64(10000000),
+		MaxGasAmount:               int64(200000),
+		DefaultGasCredit:           int64(160000),
+		StorageGasRate:             int64(1),
+		VMGasRate:                  int64(200),
+		VotePendingBlockNumber:     uint64(10000),
+		CoinbasePendingBlockNumber: uint64(100),
+		CoinbaseArbitrarySizeLimit: 128,
+	},
+	DPOSConfig:  VaporDPOSConfig(),
+	Checkpoints: []Checkpoint{},
 	ProducerSubsidys: []ProducerSubsidy{
 		{BeginBlock: 0, EndBlock: 0, Subsidy: 24},
 		{BeginBlock: 1, EndBlock: 840000, Subsidy: 24},

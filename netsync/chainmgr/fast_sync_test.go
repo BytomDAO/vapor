@@ -1,10 +1,13 @@
 package chainmgr
 
 import (
+	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/vapor/consensus"
+	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -65,9 +68,33 @@ func TestBlockLocator(t *testing.T) {
 }
 
 func TestFastBlockSync(t *testing.T) {
-	maxBlocksPerMsg = 10
-	maxHeadersPerMsg = 10
-	maxFastSyncBlocksNum = 200
+	tmp, err := ioutil.TempDir(".", "")
+	if err != nil {
+		t.Fatalf("failed to create temporary data folder: %v", err)
+	}
+	testDBA := dbm.NewDB("testdba", "leveldb", tmp)
+	testDBB := dbm.NewDB("testdbb", "leveldb", tmp)
+	defer func() {
+		testDBA.Close()
+		testDBB.Close()
+		os.RemoveAll(tmp)
+	}()
+
+	maxNumOfSkeletonPerSync = 10
+	numOfBlocksSkeletonGap = 10
+	maxNumOfBlocksPerSync = maxNumOfSkeletonPerSync * maxNumOfSkeletonPerSync
+	fastSyncPivotGap = uint64(5)
+	minGapStartFastSync = uint64(6)
+
+	defer func() {
+		maxNumOfSkeletonPerSync = 10
+		numOfBlocksSkeletonGap = maxNumOfBlocksPerMsg
+		maxNumOfBlocksPerSync = maxNumOfSkeletonPerSync * maxNumOfSkeletonPerSync
+		fastSyncPivotGap = uint64(64)
+		minGapStartFastSync = uint64(128)
+
+	}()
+
 	baseChain := mockBlocks(nil, 300)
 
 	cases := []struct {
@@ -81,22 +108,42 @@ func TestFastBlockSync(t *testing.T) {
 			syncTimeout: 30 * time.Second,
 			aBlocks:     baseChain[:50],
 			bBlocks:     baseChain[:301],
-			want:        baseChain[:237],
+			want:        baseChain[:150],
 			err:         nil,
 		},
 		{
 			syncTimeout: 30 * time.Second,
 			aBlocks:     baseChain[:2],
 			bBlocks:     baseChain[:300],
-			want:        baseChain[:202],
+			want:        baseChain[:102],
+			err:         nil,
+		},
+		{
+			syncTimeout: 30 * time.Second,
+			aBlocks:     baseChain[:2],
+			bBlocks:     baseChain[:53],
+			want:        baseChain[:48],
+			err:         nil,
+		},
+		{
+			syncTimeout: 30 * time.Second,
+			aBlocks:     baseChain[:2],
+			bBlocks:     baseChain[:53],
+			want:        baseChain[:48],
+			err:         nil,
+		},
+		{
+			syncTimeout: 30 * time.Second,
+			aBlocks:     baseChain[:2],
+			bBlocks:     baseChain[:10],
+			want:        baseChain[:5],
 			err:         nil,
 		},
 	}
 
 	for i, c := range cases {
-		syncTimeout = c.syncTimeout
-		a := mockSync(c.aBlocks, nil)
-		b := mockSync(c.bBlocks, nil)
+		a := mockSync(c.aBlocks, nil, testDBA)
+		b := mockSync(c.bBlocks, nil, testDBB)
 		netWork := NewNetWork()
 		netWork.Register(a, "192.168.0.1", "test node A", consensus.SFFullNode|consensus.SFFastSync)
 		netWork.Register(b, "192.168.0.2", "test node B", consensus.SFFullNode|consensus.SFFastSync)
@@ -123,153 +170,6 @@ func TestFastBlockSync(t *testing.T) {
 		}
 		if !testutil.DeepEqual(got, c.want) {
 			t.Errorf("case %d: got %v want %v", i, got, c.want)
-		}
-	}
-}
-
-func TestLocateBlocks(t *testing.T) {
-	maxBlocksPerMsg = 5
-	blocks := mockBlocks(nil, 100)
-	cases := []struct {
-		locator    []uint64
-		stopHash   bc.Hash
-		wantHeight []uint64
-	}{
-		{
-			locator:    []uint64{20},
-			stopHash:   blocks[100].Hash(),
-			wantHeight: []uint64{20, 21, 22, 23, 24},
-		},
-	}
-
-	mockChain := mock.NewChain(nil)
-	fs := &fastSync{chain: mockChain}
-	for _, block := range blocks {
-		mockChain.SetBlockByHeight(block.Height, block)
-	}
-
-	for i, c := range cases {
-		locator := []*bc.Hash{}
-		for _, i := range c.locator {
-			hash := blocks[i].Hash()
-			locator = append(locator, &hash)
-		}
-
-		want := []*types.Block{}
-		for _, i := range c.wantHeight {
-			want = append(want, blocks[i])
-		}
-
-		got, _ := fs.locateBlocks(locator, &c.stopHash)
-		if !testutil.DeepEqual(got, want) {
-			t.Errorf("case %d: got %v want %v", i, got, want)
-		}
-	}
-}
-
-func TestLocateHeaders(t *testing.T) {
-	maxHeadersPerMsg = 10
-	blocks := mockBlocks(nil, 150)
-	blocksHash := []bc.Hash{}
-	for _, block := range blocks {
-		blocksHash = append(blocksHash, block.Hash())
-	}
-
-	cases := []struct {
-		chainHeight uint64
-		locator     []uint64
-		stopHash    *bc.Hash
-		skip        uint64
-		wantHeight  []uint64
-		err         bool
-	}{
-		{
-			chainHeight: 100,
-			locator:     []uint64{90},
-			stopHash:    &blocksHash[100],
-			skip:        0,
-			wantHeight:  []uint64{90, 91, 92, 93, 94, 95, 96, 97, 98, 99},
-			err:         false,
-		},
-		{
-			chainHeight: 100,
-			locator:     []uint64{20},
-			stopHash:    &blocksHash[24],
-			skip:        0,
-			wantHeight:  []uint64{20, 21, 22, 23, 24},
-			err:         false,
-		},
-		{
-			chainHeight: 100,
-			locator:     []uint64{20},
-			stopHash:    &blocksHash[20],
-			wantHeight:  []uint64{20},
-			err:         false,
-		},
-		{
-			chainHeight: 100,
-			locator:     []uint64{20},
-			stopHash:    &blocksHash[120],
-			wantHeight:  []uint64{},
-			err:         false,
-		},
-		{
-			chainHeight: 100,
-			locator:     []uint64{120, 70},
-			stopHash:    &blocksHash[78],
-			wantHeight:  []uint64{70, 71, 72, 73, 74, 75, 76, 77, 78},
-			err:         false,
-		},
-		{
-			chainHeight: 100,
-			locator:     []uint64{15},
-			stopHash:    &blocksHash[10],
-			skip:        10,
-			wantHeight:  []uint64{},
-			err:         false,
-		},
-		{
-			chainHeight: 100,
-			locator:     []uint64{15},
-			stopHash:    &blocksHash[80],
-			skip:        10,
-			wantHeight:  []uint64{15, 26, 37, 48, 59, 70},
-			err:         false,
-		},
-		{
-			chainHeight: 100,
-			locator:     []uint64{0},
-			stopHash:    &blocksHash[100],
-			skip:        9,
-			wantHeight:  []uint64{0, 10, 20, 30, 40, 50, 60, 70, 80, 90},
-			err:         false,
-		},
-	}
-
-	for i, c := range cases {
-		mockChain := mock.NewChain(nil)
-		fs := &fastSync{chain: mockChain}
-		for i := uint64(0); i <= c.chainHeight; i++ {
-			mockChain.SetBlockByHeight(i, blocks[i])
-		}
-
-		locator := []*bc.Hash{}
-		for _, i := range c.locator {
-			hash := blocks[i].Hash()
-			locator = append(locator, &hash)
-		}
-
-		want := []*types.BlockHeader{}
-		for _, i := range c.wantHeight {
-			want = append(want, &blocks[i].BlockHeader)
-		}
-
-		got, err := fs.locateHeaders(locator, c.stopHash, c.skip, maxHeadersPerMsg)
-		if err != nil != c.err {
-			t.Errorf("case %d: got %v want err = %v", i, err, c.err)
-		}
-		if !testutil.DeepEqual(got, want) {
-			t.Errorf("case %d: got %v want %v", i, got, want)
 		}
 	}
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/tendermint/go-wire"
 	"github.com/tendermint/tmlibs/flowrate"
+	dbm "github.com/vapor/database/leveldb"
 
 	"github.com/vapor/consensus"
 	"github.com/vapor/netsync/peers"
@@ -46,6 +47,10 @@ func (p *P2PPeer) ID() string {
 
 func (p *P2PPeer) IsLAN() bool {
 	return false
+}
+
+func (p *P2PPeer) RemoteAddrHost() string {
+	return ""
 }
 
 func (p *P2PPeer) ServiceFlag() consensus.ServiceFlag {
@@ -89,7 +94,7 @@ func NewPeerSet() *PeerSet {
 	return &PeerSet{}
 }
 
-func (ps *PeerSet) IsBanned(peerID string, level byte, reason string) bool {
+func (ps *PeerSet) IsBanned(ip string, level byte, reason string) bool {
 	return false
 }
 
@@ -154,7 +159,7 @@ func mockBlocks(startBlock *types.Block, height uint64) []*types.Block {
 	return blocks
 }
 
-func mockSync(blocks []*types.Block, mempool *mock.Mempool) *Manager {
+func mockSync(blocks []*types.Block, mempool *mock.Mempool, fastSyncDB dbm.DB) *Manager {
 	chain := mock.NewChain(mempool)
 	peers := peers.NewPeerSet(NewPeerSet())
 	chain.SetBestBlockHeader(&blocks[len(blocks)-1].BlockHeader)
@@ -164,7 +169,7 @@ func mockSync(blocks []*types.Block, mempool *mock.Mempool) *Manager {
 
 	return &Manager{
 		chain:       chain,
-		blockKeeper: newBlockKeeper(chain, peers),
+		blockKeeper: newBlockKeeper(chain, peers, fastSyncDB),
 		peers:       peers,
 		mempool:     mempool,
 		txSyncCh:    make(chan *txSyncMsg),
