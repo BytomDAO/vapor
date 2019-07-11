@@ -132,6 +132,7 @@ func (c *Chain) validateSign(block *types.Block) error {
 			cachekey := signCacheKey(blockHash.String(), pubKey)
 			if signature, ok := c.signatureCache.Get(cachekey); ok {
 				block.Set(node.Order, signature.([]byte))
+				c.signatureCache.Remove(cachekey)
 			} else {
 				continue
 			}
