@@ -16,8 +16,6 @@ import (
 	"github.com/vapor/protocol/bc/types"
 )
 
-var ZeroAssetID = new(bc.AssetID)
-
 // annotateTxs adds asset data to transactions
 func annotateTxsAsset(w *Wallet, txs []*query.AnnotatedTx) {
 	for i, tx := range txs {
@@ -34,7 +32,7 @@ func annotateTxsAsset(w *Wallet, txs []*query.AnnotatedTx) {
 
 func (w *Wallet) getExternalDefinition(assetID *bc.AssetID) json.RawMessage {
 	externalAsset, err := w.Store.GetAsset(assetID)
-	if err != nil && assetID.String() != ZeroAssetID.String() {
+	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err, "assetID": assetID.String()}).Info("fail on get asset definition.")
 	}
 	if externalAsset == nil {
@@ -146,6 +144,8 @@ func (w *Wallet) BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInp
 	if orig.InputType() != types.CoinbaseInputType {
 		in.AssetID = orig.AssetID()
 		in.Amount = orig.Amount()
+	} else {
+		in.AssetID = *consensus.BTMAssetID
 	}
 
 	id := tx.Tx.InputIDs[i]
