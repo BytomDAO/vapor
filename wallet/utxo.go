@@ -226,7 +226,7 @@ func txInToUtxos(tx *types.Tx, statusFail bool) []*account.UTXO {
 func txOutToUtxos(tx *types.Tx, statusFail bool, blockHeight uint64) []*account.UTXO {
 	validHeight := uint64(0)
 	if tx.Inputs[0].InputType() == types.CoinbaseInputType {
-		validHeight = blockHeight + consensus.CoinbasePendingBlockNumber
+		validHeight = blockHeight + consensus.ActiveNetParams.CoinbasePendingBlockNumber
 	}
 
 	utxos := []*account.UTXO{}
@@ -258,7 +258,7 @@ func txOutToUtxos(tx *types.Tx, statusFail bool, blockHeight uint64) []*account.
 				continue
 			}
 
-			voteValidHeight := blockHeight + consensus.VotePendingBlockNumber
+			voteValidHeight := blockHeight + consensus.ActiveNetParams.VotePendingBlockNumber
 			if validHeight < voteValidHeight {
 				validHeight = voteValidHeight
 			}

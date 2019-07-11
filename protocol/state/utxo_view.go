@@ -165,12 +165,12 @@ func (view *UtxoViewpoint) applySpendUtxo(block *bc.Block, tx *bc.Tx, statusFail
 
 		switch entry.Type {
 		case storage.CoinbaseUTXOType:
-			if (entry.BlockHeight + consensus.CoinbasePendingBlockNumber) > block.Height {
+			if (entry.BlockHeight + consensus.ActiveNetParams.CoinbasePendingBlockNumber) > block.Height {
 				return errors.New("coinbase utxo is not ready for use")
 			}
 
 		case storage.VoteUTXOType:
-			if (entry.BlockHeight + consensus.VotePendingBlockNumber) > block.Height {
+			if (entry.BlockHeight + consensus.ActiveNetParams.VotePendingBlockNumber) > block.Height {
 				return errors.New("Coin is  within the voting lock time")
 			}
 		}

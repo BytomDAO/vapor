@@ -60,15 +60,15 @@ func (g *GasState) setGas(BTMValue int64, txSize int64) error {
 	g.BTMValue = uint64(BTMValue)
 
 	var ok bool
-	if g.GasLeft, ok = checked.DivInt64(BTMValue, consensus.VMGasRate); !ok {
+	if g.GasLeft, ok = checked.DivInt64(BTMValue, consensus.ActiveNetParams.VMGasRate); !ok {
 		return errors.Wrap(ErrGasCalculate, "setGas calc gas amount")
 	}
 
-	if g.GasLeft > consensus.MaxGasAmount {
-		g.GasLeft = consensus.MaxGasAmount
+	if g.GasLeft > consensus.ActiveNetParams.MaxGasAmount {
+		g.GasLeft = consensus.ActiveNetParams.MaxGasAmount
 	}
 
-	if g.StorageGas, ok = checked.MulInt64(txSize, consensus.StorageGasRate); !ok {
+	if g.StorageGas, ok = checked.MulInt64(txSize, consensus.ActiveNetParams.StorageGasRate); !ok {
 		return errors.Wrap(ErrGasCalculate, "setGas calc tx storage gas")
 	}
 	return nil
@@ -100,7 +100,7 @@ func (g *GasState) updateUsage(gasLeft int64) error {
 		return errors.Wrap(ErrGasCalculate, "updateUsage calc gas diff")
 	}
 
-	if !g.GasValid && (g.GasUsed > consensus.DefaultGasCredit || g.StorageGas > g.GasLeft) {
+	if !g.GasValid && (g.GasUsed > consensus.ActiveNetParams.DefaultGasCredit || g.StorageGas > g.GasLeft) {
 		return ErrOverGasCredit
 	}
 	return nil
@@ -238,7 +238,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		if err = checkValidSrc(&vs2, e.Source); err != nil {
 			return errors.Wrap(err, "checking vote output source")
 		}
-		if e.Source.Value.Amount < consensus.MinVoteOutputAmount {
+		if e.Source.Value.Amount < consensus.ActiveNetParams.MinVoteOutputAmount {
 			return ErrVoteOutputAmount
 		}
 
@@ -269,7 +269,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			Code:      config.FederationWScript(config.CommonConfig),
 		}
 
-		if _, err := vm.Verify(NewTxVMContext(vs, e, prog, e.WitnessArguments), consensus.DefaultGasCredit); err != nil {
+		if _, err := vm.Verify(NewTxVMContext(vs, e, prog, e.WitnessArguments), consensus.ActiveNetParams.DefaultGasCredit); err != nil {
 			return errors.Wrap(err, "checking cross-chain input control program")
 		}
 
@@ -385,7 +385,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return ErrWrongCoinbaseAsset
 		}
 
-		if e.Arbitrary != nil && len(e.Arbitrary) > consensus.CoinbaseArbitrarySizeLimit {
+		if e.Arbitrary != nil && len(e.Arbitrary) > consensus.ActiveNetParams.CoinbaseArbitrarySizeLimit {
 			return ErrCoinbaseArbitraryOversize
 		}
 

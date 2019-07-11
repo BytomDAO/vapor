@@ -107,7 +107,7 @@ func TestDoubleSpentInDiffBlock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := AppendBlocks(chain, consensus.CoinbasePendingBlockNumber+1); err != nil {
+	if err := AppendBlocks(chain, consensus.ActiveNetParams.CoinbasePendingBlockNumber+1); err != nil {
 		t.Fatal(err)
 	}
 
@@ -148,7 +148,7 @@ func TestDoubleSpentInSameBlock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := AppendBlocks(chain, consensus.CoinbasePendingBlockNumber+1); err != nil {
+	if err := AppendBlocks(chain, consensus.ActiveNetParams.CoinbasePendingBlockNumber+1); err != nil {
 		t.Fatal(err)
 	}
 
@@ -201,7 +201,7 @@ func TestTxPoolDependencyTx(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := AppendBlocks(chain, consensus.CoinbasePendingBlockNumber+1); err != nil {
+	if err := AppendBlocks(chain, consensus.ActiveNetParams.CoinbasePendingBlockNumber+1); err != nil {
 		t.Fatal(err)
 	}
 
@@ -256,7 +256,7 @@ func TestAddInvalidTxToTxPool(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := AppendBlocks(chain, consensus.CoinbasePendingBlockNumber+1); err != nil {
+	if err := AppendBlocks(chain, consensus.ActiveNetParams.CoinbasePendingBlockNumber+1); err != nil {
 		t.Fatal(err)
 	}
 

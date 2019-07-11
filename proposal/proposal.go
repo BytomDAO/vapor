@@ -37,7 +37,7 @@ func createCoinbaseTx(accountManager *account.Manager, blockHeight uint64) (tx *
 		return nil, err
 	}
 
-	if len(arbitrary) > consensus.CoinbaseArbitrarySizeLimit {
+	if len(arbitrary) > consensus.ActiveNetParams.CoinbaseArbitrarySizeLimit {
 		return nil, validation.ErrCoinbaseArbitraryOversize
 	}
 
@@ -99,7 +99,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			PreviousBlockHash: preBlockHash,
 			Timestamp:         timestamp,
 			BlockCommitment:   types.BlockCommitment{},
-			BlockWitness:      types.BlockWitness{Witness: make([][]byte, consensus.NumOfConsensusNode)},
+			BlockWitness:      types.BlockWitness{Witness: make([][]byte, consensus.ActiveNetParams.NumOfConsensusNode)},
 		},
 	}
 	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: nextBlockHeight}}
@@ -133,7 +133,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			continue
 		}
 
-		if gasUsed+uint64(gasStatus.GasUsed) > consensus.MaxBlockGas {
+		if gasUsed+uint64(gasStatus.GasUsed) > consensus.ActiveNetParams.MaxBlockGas {
 			break
 		}
 
@@ -149,7 +149,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 		b.Transactions = append(b.Transactions, txDesc.Tx)
 		txEntries = append(txEntries, tx)
 		gasUsed += uint64(gasStatus.GasUsed)
-		if gasUsed == consensus.MaxBlockGas {
+		if gasUsed == consensus.ActiveNetParams.MaxBlockGas {
 			break
 		}
 
