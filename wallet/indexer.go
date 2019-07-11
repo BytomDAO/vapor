@@ -212,7 +212,7 @@ func (w *Wallet) GetTransactionsSummary(transactions []*query.AnnotatedTx) []TxS
 	return Txs
 }
 
-func findTransactionsByAccount(annotatedTx *query.AnnotatedTx, accountID string) bool {
+func FindTransactionsByAccount(annotatedTx *query.AnnotatedTx, accountID string) bool {
 	for _, input := range annotatedTx.Inputs {
 		if input.AccountID == accountID {
 			return true
@@ -238,16 +238,14 @@ func (w *Wallet) GetTransactions(accountID string, StartTxID string, count uint,
 
 	newAnnotatedTxs := []*query.AnnotatedTx{}
 	for _, annotatedTx := range annotatedTxs {
-		if accountID == "" || findTransactionsByAccount(annotatedTx, accountID) {
-			annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
-			newAnnotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, newAnnotatedTxs...)
-		}
+		annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
+		newAnnotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, newAnnotatedTxs...)
 	}
 
 	if unconfirmed {
-		sort.Sort(SortByTimestamp(annotatedTxs))
+		sort.Sort(SortByTimestamp(newAnnotatedTxs))
 	} else {
-		sort.Sort(SortByHeight(annotatedTxs))
+		sort.Sort(SortByHeight(newAnnotatedTxs))
 	}
 
 	return newAnnotatedTxs, nil

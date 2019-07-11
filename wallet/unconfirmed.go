@@ -57,7 +57,7 @@ func (w *Wallet) GetUnconfirmedTxs(accountID string) ([]*query.AnnotatedTx, erro
 
 	newAnnotatedTxs := []*query.AnnotatedTx{}
 	for _, annotatedTx := range annotatedTxs {
-		if accountID == "" || findTransactionsByAccount(annotatedTx, accountID) {
+		if accountID == "" || FindTransactionsByAccount(annotatedTx, accountID) {
 			annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 			newAnnotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, newAnnotatedTxs...)
 		}
