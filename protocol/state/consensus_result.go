@@ -38,9 +38,11 @@ type CoinbaseReward struct {
 // SortByAmount implements sort.Interface for CoinbaseReward slices
 type SortByAmount []CoinbaseReward
 
-func (a SortByAmount) Len() int           { return len(a) }
-func (a SortByAmount) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a SortByAmount) Less(i, j int) bool { return a[i].Amount < a[j].Amount }
+func (a SortByAmount) Len() int      { return len(a) }
+func (a SortByAmount) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a SortByAmount) Less(i, j int) bool {
+	return a[i].Amount > a[j].Amount || (a[i].Amount == a[j].Amount && hex.EncodeToString(a[i].ControlProgram) > hex.EncodeToString(a[j].ControlProgram))
+}
 
 // CalCoinbaseReward calculate the coinbase reward for block
 func CalCoinbaseReward(block *types.Block) (*CoinbaseReward, error) {
