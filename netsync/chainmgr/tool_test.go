@@ -7,6 +7,7 @@ import (
 
 	"github.com/tendermint/go-wire"
 	"github.com/tendermint/tmlibs/flowrate"
+	dbm "github.com/vapor/database/leveldb"
 
 	"github.com/vapor/consensus"
 	"github.com/vapor/netsync/peers"
@@ -158,7 +159,7 @@ func mockBlocks(startBlock *types.Block, height uint64) []*types.Block {
 	return blocks
 }
 
-func mockSync(blocks []*types.Block, mempool *mock.Mempool) *Manager {
+func mockSync(blocks []*types.Block, mempool *mock.Mempool, fastSyncDB dbm.DB) *Manager {
 	chain := mock.NewChain(mempool)
 	peers := peers.NewPeerSet(NewPeerSet())
 	chain.SetBestBlockHeader(&blocks[len(blocks)-1].BlockHeader)
@@ -168,7 +169,7 @@ func mockSync(blocks []*types.Block, mempool *mock.Mempool) *Manager {
 
 	return &Manager{
 		chain:       chain,
-		blockKeeper: newBlockKeeper(chain, peers),
+		blockKeeper: newBlockKeeper(chain, peers, fastSyncDB),
 		peers:       peers,
 		mempool:     mempool,
 		txSyncCh:    make(chan *txSyncMsg),
