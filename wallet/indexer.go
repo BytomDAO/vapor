@@ -212,7 +212,7 @@ func (w *Wallet) GetTransactionsSummary(transactions []*query.AnnotatedTx) []TxS
 	return Txs
 }
 
-func findTransactionsByAccount(annotatedTx *query.AnnotatedTx, accountID string) bool {
+func FindTransactionsByAccount(annotatedTx *query.AnnotatedTx, accountID string) bool {
 	for _, input := range annotatedTx.Inputs {
 		if input.AccountID == accountID {
 			return true
