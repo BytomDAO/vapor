@@ -106,22 +106,22 @@ transactionLoop:
 			if _, err := w.AccountMgr.GetControlProgram(bc.NewHash(hash)); err == nil {
 				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
 				continue transactionLoop
-			} else {
-				log.WithFields(log.Fields{"module": logModule, "err": err, "hash": hex.EncodeToString(hash[:])}).Info("filterAccountTxs fail.")
+			} else if err != account.ErrFindCtrlProgram {
+				log.WithFields(log.Fields{"module": logModule, "err": err, "hash": hex.EncodeToString(hash[:])}).Error("filterAccountTxs fail.")
 			}
 		}
 
 		for _, v := range tx.Inputs {
 			outid, err := v.SpentOutputID()
 			if err != nil {
-				log.WithFields(log.Fields{"module": logModule, "err": err, "outputID": hex.EncodeToString(outid.Bytes())}).Info("filterAccountTxs fail.")
+				log.WithFields(log.Fields{"module": logModule, "err": err, "outputID": hex.EncodeToString(outid.Bytes())}).Error("filterAccountTxs fail.")
 				continue
 			}
 			if _, err = w.Store.GetStandardUTXO(outid); err == nil {
 				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
 				continue transactionLoop
-			} else {
-				log.WithFields(log.Fields{"module": logModule, "err": err, "outputID": hex.EncodeToString(outid.Bytes())}).Info("filterAccountTxs fail.")
+			} else if err != ErrGetStandardUTXO {
+				log.WithFields(log.Fields{"module": logModule, "err": err, "outputID": hex.EncodeToString(outid.Bytes())}).Error("filterAccountTxs fail.")
 			}
 		}
 	}
