@@ -119,7 +119,11 @@ func (bk *blockKeeper) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, skip
 	}
 
 	headers = append(headers, startHeader)
-	for num, index := uint64(0), startHeader.Height; num < maxNum-1 && index < stopHeader.Height; num++ {
+	if stopHeader.Height == startHeader.Height {
+		return headers, nil
+	}
+
+	for num, index := uint64(0), startHeader.Height; num < maxNum-1; num++ {
 		index += skip + 1
 		if index >= stopHeader.Height {
 			headers = append(headers, stopHeader)
