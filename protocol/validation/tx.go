@@ -15,7 +15,6 @@ import (
 
 const (
 	validateWorkerNum = 32
-	ruleAA            = 142500
 )
 
 // validate transaction error
@@ -265,14 +264,29 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errors.New("incorrect asset_id while checking CrossChainInput")
 		}
 
-		code := config.FederationWScript(config.CommonConfig)
 		prog := &bc.Program{
 			VmVersion: e.ControlProgram.VmVersion,
-			Code:      code,
+			Code:      config.FederationWScript(config.CommonConfig),
 		}
 
 		if _, err := vm.Verify(NewTxVMContext(vs, e, prog, e.WitnessArguments), consensus.DefaultGasCredit); err != nil {
 			return errors.Wrap(err, "checking cross-chain input control program")
+		}
+
+		eq, err := mainchainOutput.Source.Value.Equal(e.WitnessDestination.Value)
+		if err != nil {
+			return err
+		}
+
+		if !eq {
+			return errors.WithDetailf(
+				ErrMismatchedValue,
+				"previous output is for %d unit(s) of %x, spend wants %d unit(s) of %x",
+				mainchainOutput.Source.Value.Amount,
+				mainchainOutput.Source.Value.AssetId.Bytes(),
+				e.WitnessDestination.Value.Amount,
+				e.WitnessDestination.Value.AssetId.Bytes(),
+			)
 		}
 
 		vs2 := *vs
@@ -329,6 +343,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		if err != nil {
 			return errors.Wrap(err, "getting vetoInput prevout")
 		}
+
 		if len(voteOutput.Vote) != 64 {
 			return ErrVotePubKey
 		}
@@ -538,7 +553,7 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 
 func checkInputID(tx *bc.Tx, blockHeight uint64) error {
 	for _, id := range tx.InputIDs {
-		if blockHeight >= ruleAA && id.IsZero() {
+		if id.IsZero() {
 			return ErrEmptyInputIDs
 		}
 	}
@@ -589,26 +604,29 @@ type validateTxWork struct {
 	block *bc.Block
 }
 
-type validateTxResult struct {
+// ValidateTxResult is the result of async tx validate
+type ValidateTxResult struct {
 	i         int
 	gasStatus *GasState
 	err       error
 }
 
-func (r *validateTxResult) GetGasState() *GasState {
+// GetGasState return the gasStatus
+func (r *ValidateTxResult) GetGasState() *GasState {
 	return r.gasStatus
 }
 
-func (r *validateTxResult) GetError() error {
+// GetError return the err
+func (r *ValidateTxResult) GetError() error {
 	return r.err
 }
 
-func validateTxWorker(workCh chan *validateTxWork, resultCh chan *validateTxResult, closeCh chan struct{}, wg *sync.WaitGroup) {
+func validateTxWorker(workCh chan *validateTxWork, resultCh chan *ValidateTxResult, closeCh chan struct{}, wg *sync.WaitGroup) {
 	for {
 		select {
 		case work := <-workCh:
 			gasStatus, err := ValidateTx(work.tx, work.block)
-			resultCh <- &validateTxResult{i: work.i, gasStatus: gasStatus, err: err}
+			resultCh <- &ValidateTxResult{i: work.i, gasStatus: gasStatus, err: err}
 		case <-closeCh:
 			wg.Done()
 			return
@@ -616,12 +634,13 @@ func validateTxWorker(workCh chan *validateTxWork, resultCh chan *validateTxResu
 	}
 }
 
-func ValidateTxs(txs []*bc.Tx, block *bc.Block) []*validateTxResult {
+// ValidateTxs validates txs in async mode
+func ValidateTxs(txs []*bc.Tx, block *bc.Block) []*ValidateTxResult {
 	txSize := len(txs)
 	//init the goroutine validate worker
 	var wg sync.WaitGroup
 	workCh := make(chan *validateTxWork, txSize)
-	resultCh := make(chan *validateTxResult, txSize)
+	resultCh := make(chan *ValidateTxResult, txSize)
 	closeCh := make(chan struct{})
 	for i := 0; i <= validateWorkerNum && i < txSize; i++ {
 		wg.Add(1)
@@ -634,7 +653,7 @@ func ValidateTxs(txs []*bc.Tx, block *bc.Block) []*validateTxResult {
 	}
 
 	//collect validate results
-	results := make([]*validateTxResult, txSize)
+	results := make([]*ValidateTxResult, txSize)
 	for i := 0; i < txSize; i++ {
 		result := <-resultCh
 		results[result.i] = result
