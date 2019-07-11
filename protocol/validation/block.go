@@ -2,6 +2,7 @@ package validation
 
 import (
 	"bytes"
+	"encoding/hex"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -64,7 +65,7 @@ func checkCoinbaseTx(b *bc.Block, rewards []state.CoinbaseReward) error {
 		}
 
 		if res := bytes.Compare(rewards[i].ControlProgram, out.ControlProgram.Code); res != 0 {
-			return errors.Wrapf(ErrWrongCoinbaseTransaction, "dismatch output control_program, got:%d, want:%d", out.ControlProgram.Code, rewards[i].ControlProgram)
+			return errors.Wrapf(ErrWrongCoinbaseTransaction, "dismatch output control_program, got:%s, want:%s", hex.EncodeToString(out.ControlProgram.Code), hex.EncodeToString(rewards[i].ControlProgram))
 		}
 	}
 	return nil
