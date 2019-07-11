@@ -1,7 +1,6 @@
 package wallet
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"sync"
@@ -12,7 +11,6 @@ import (
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/crypto/sha3pool"
-	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -28,15 +26,14 @@ const (
 	addrRecoveryWindow = uint64(128)
 )
 
-//recoveryKey key for db store recovery info.
 var (
-	recoveryKey = []byte("RecoveryInfo")
-
 	// ErrRecoveryBusy another recovery in progress, can not get recovery manager lock
 	ErrRecoveryBusy = errors.New("another recovery in progress")
 
 	// ErrInvalidAcctID can not find account by account id
-	ErrInvalidAcctID = errors.New("invalid account id")
+	ErrInvalidAcctID     = errors.New("invalid account id")
+	ErrGetRecoveryStatus = errors.New("failed to get recovery status.")
+	ErrRecoveryStatus    = errors.New("recovery status is nil.")
 )
 
 // branchRecoveryState maintains the required state in-order to properly
@@ -127,8 +124,8 @@ func newAddressRecoveryState(recoveryWindow uint64, account *account.Account) *a
 	}
 }
 
-// recoveryState used to record the status of a recovery process.
-type recoveryState struct {
+// RecoveryState used to record the status of a recovery process.
+type RecoveryState struct {
 	// XPubs recovery account xPubs
 	XPubs []chainkd.XPub
 
@@ -145,8 +142,8 @@ type recoveryState struct {
 	AccountsStatus map[string]*addressRecoveryState
 }
 
-func newRecoveryState() *recoveryState {
-	return &recoveryState{
+func newRecoveryState() *RecoveryState {
+	return &RecoveryState{
 		AccountsStatus: make(map[string]*addressRecoveryState),
 		StartTime:      time.Now(),
 	}
@@ -155,7 +152,7 @@ func newRecoveryState() *recoveryState {
 // stateForScope returns a ScopeRecoveryState for the provided key scope. If one
 // does not already exist, a new one will be generated with the RecoveryState's
 // recoveryWindow.
-func (rs *recoveryState) stateForScope(account *account.Account) {
+func (rs *RecoveryState) stateForScope(account *account.Account) {
 	// If the account recovery state already exists, return it.
 	if _, ok := rs.AccountsStatus[account.ID]; ok {
 		return
@@ -170,7 +167,7 @@ func (rs *recoveryState) stateForScope(account *account.Account) {
 type recoveryManager struct {
 	mu sync.Mutex
 
-	db         dbm.DB
+	store      WalletStore
 	accountMgr *account.Manager
 
 	locked int32
@@ -179,17 +176,17 @@ type recoveryManager struct {
 
 	// state encapsulates and allocates the necessary recovery state for all
 	// key scopes and subsidiary derivation paths.
-	state *recoveryState
+	state *RecoveryState
 
 	//addresses all addresses derivation lookahead used when
 	// attempting to recover the set of used addresses.
 	addresses map[bc.Hash]*account.CtrlProgram
 }
 
-// newRecoveryManager create recovery manger.
-func newRecoveryManager(db dbm.DB, accountMgr *account.Manager) *recoveryManager {
+// NewRecoveryManager create recovery manger.
+func NewRecoveryManager(store WalletStore, accountMgr *account.Manager) *recoveryManager {
 	return &recoveryManager{
-		db:         db,
+		store:      store,
 		accountMgr: accountMgr,
 		addresses:  make(map[bc.Hash]*account.CtrlProgram),
 		state:      newRecoveryState(),
@@ -249,13 +246,7 @@ func (m *recoveryManager) AcctResurrect(xPubs []chainkd.XPub) error {
 }
 
 func (m *recoveryManager) commitStatusInfo() error {
-	rawStatus, err := json.Marshal(m.state)
-	if err != nil {
-		return err
-	}
-
-	m.db.Set(recoveryKey, rawStatus)
-	return nil
+	return m.store.SetRecoveryStatus(m.state)
 }
 
 func genAcctAlias(xPubs []chainkd.XPub, index uint64) string {
@@ -364,7 +355,7 @@ func (m *recoveryManager) FilterRecoveryTxs(b *types.Block) error {
 }
 
 func (m *recoveryManager) finished() {
-	m.db.Delete(recoveryKey)
+	m.store.DeleteRecoveryStatus()
 	m.started = false
 	m.addresses = make(map[bc.Hash]*account.CtrlProgram)
 	m.state = newRecoveryState()
@@ -375,14 +366,17 @@ func (m *recoveryManager) LoadStatusInfo() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	rawStatus := m.db.Get(recoveryKey)
-	if rawStatus == nil {
+	if m.state == nil {
+		return ErrRecoveryStatus
+	}
+	status, err := m.store.GetRecoveryStatus()
+	if err == ErrGetRecoveryStatus {
 		return nil
 	}
-
-	if err := json.Unmarshal(rawStatus, m.state); err != nil {
+	if err != nil {
 		return err
 	}
+	m.state = status
 
 	if m.state.XPubs != nil && !m.tryStartXPubsRec() {
 		return ErrRecoveryBusy

@@ -34,7 +34,7 @@ func TestGasStatus(t *testing.T) {
 				BTMValue: 0,
 			},
 			output: &GasState{
-				GasLeft:  10000 / consensus.VMGasRate,
+				GasLeft:  10000 / consensus.ActiveNetParams.VMGasRate,
 				GasUsed:  0,
 				BTMValue: 10000,
 			},
@@ -61,7 +61,7 @@ func TestGasStatus(t *testing.T) {
 		},
 		{
 			input: &GasState{
-				GasLeft:  consensus.DefaultGasCredit,
+				GasLeft:  consensus.ActiveNetParams.DefaultGasCredit,
 				GasUsed:  0,
 				BTMValue: 0,
 			},
@@ -77,7 +77,7 @@ func TestGasStatus(t *testing.T) {
 		},
 		{
 			input: &GasState{
-				GasLeft:  consensus.DefaultGasCredit,
+				GasLeft:  consensus.ActiveNetParams.DefaultGasCredit,
 				GasUsed:  0,
 				BTMValue: 0,
 			},
@@ -557,7 +557,7 @@ func TestTxValidation(t *testing.T) {
 		{
 			desc: "coinbase arbitrary size out of limit",
 			f: func() {
-				arbitrary := make([]byte, consensus.CoinbaseArbitrarySizeLimit+1)
+				arbitrary := make([]byte, consensus.ActiveNetParams.CoinbaseArbitrarySizeLimit+1)
 				addCoinbase(consensus.BTMAssetID, 100000, arbitrary)
 			},
 			err: ErrCoinbaseArbitraryOversize,

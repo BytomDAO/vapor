@@ -63,7 +63,7 @@ func TestBlockHeader(t *testing.T) {
 			desc:       "invalid timestamp, greater than MaxTimeOffsetMs  from system time",
 			version:    func() uint64 { return chain.BestBlockHeader().Version },
 			prevHeight: chain.BestBlockHeight,
-			timestamp:  func() uint64 { return uint64(time.Now().Unix()) + consensus.MaxTimeOffsetMs + 60 },
+			timestamp:  func() uint64 { return uint64(time.Now().Unix()) + consensus.ActiveNetParams.MaxTimeOffsetMs + 60 },
 			prevHash:   chain.BestBlockHash,
 			valid:      false,
 		},

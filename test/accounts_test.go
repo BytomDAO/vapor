@@ -1,13 +1,12 @@
-package account
+package test
 
 import (
 	"io/ioutil"
 	"os"
-	"reflect"
 	"strings"
 	"testing"
 
-	"github.com/vapor/blockchain/pseudohsm"
+	acc "github.com/vapor/account"
 	"github.com/vapor/blockchain/signers"
 	"github.com/vapor/config"
 	"github.com/vapor/crypto/ed25519/chainkd"
@@ -22,7 +21,7 @@ import (
 func TestCreateAccountWithUppercase(t *testing.T) {
 	m := mockAccountManager(t)
 	alias := "UPPER"
-	account, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, alias, signers.BIP0044)
+	account, err := m.Manager.Create([]chainkd.XPub{testutil.TestXPub}, 1, alias, signers.BIP0044)
 
 	if err != nil {
 		t.Fatal(err)
@@ -36,7 +35,7 @@ func TestCreateAccountWithUppercase(t *testing.T) {
 func TestCreateAccountWithSpaceTrimed(t *testing.T) {
 	m := mockAccountManager(t)
 	alias := " with space "
-	account, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, alias, signers.BIP0044)
+	account, err := m.Manager.Create([]chainkd.XPub{testutil.TestXPub}, 1, alias, signers.BIP0044)
 
 	if err != nil {
 		t.Fatal(err)
@@ -46,12 +45,12 @@ func TestCreateAccountWithSpaceTrimed(t *testing.T) {
 		t.Fatal("created account alias should be lowercase")
 	}
 
-	nilAccount, err := m.FindByAlias(alias)
+	nilAccount, err := m.Manager.FindByAlias(alias)
 	if nilAccount != nil {
 		t.Fatal("expected nil")
 	}
 
-	target, err := m.FindByAlias(strings.ToLower(strings.TrimSpace(alias)))
+	target, err := m.Manager.FindByAlias(strings.ToLower(strings.TrimSpace(alias)))
 	if target == nil {
 		t.Fatal("expected Account, but got nil")
 	}
@@ -59,15 +58,16 @@ func TestCreateAccountWithSpaceTrimed(t *testing.T) {
 
 func TestCreateAccount(t *testing.T) {
 	m := mockAccountManager(t)
-	account, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, "test-alias", signers.BIP0044)
+	account, err := m.Manager.Create([]chainkd.XPub{testutil.TestXPub}, 1, "test-alias", signers.BIP0044)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	found, err := m.FindByID(account.ID)
+	found, err := m.Manager.FindByID(account.ID)
 	if err != nil {
 		t.Errorf("unexpected error %v", err)
 	}
+
 	if !testutil.DeepEqual(account, found) {
 		t.Errorf("expected account %v to be recorded as %v", account, found)
 	}
@@ -77,9 +77,9 @@ func TestCreateAccountReusedAlias(t *testing.T) {
 	m := mockAccountManager(t)
 	m.createTestAccount(t, "test-alias", nil)
 
-	_, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, "test-alias", signers.BIP0044)
-	if errors.Root(err) != ErrDuplicateAlias {
-		t.Errorf("expected %s when reusing an alias, got %v", ErrDuplicateAlias, err)
+	_, err := m.Manager.Create([]chainkd.XPub{testutil.TestXPub}, 1, "test-alias", signers.BIP0044)
+	if errors.Root(err) != acc.ErrDuplicateAlias {
+		t.Errorf("expected %s when reusing an alias, got %v", acc.ErrDuplicateAlias, err)
 	}
 }
 
@@ -89,56 +89,58 @@ func TestUpdateAccountAlias(t *testing.T) {
 
 	m := mockAccountManager(t)
 	account := m.createTestAccount(t, oldAlias, nil)
-	if err := m.UpdateAccountAlias("testID", newAlias); err == nil {
-		t.Fatal("expected error when using an invalid account id")
+	err := m.Manager.UpdateAccountAlias("testID", newAlias)
+	if err == nil {
+		t.Errorf("expected error when using an invalid account id")
 	}
 
-	err := m.UpdateAccountAlias(account.ID, oldAlias)
-	if errors.Root(err) != ErrDuplicateAlias {
-		t.Errorf("expected %s when using a duplicate alias, got %v", ErrDuplicateAlias, err)
+	err = m.Manager.UpdateAccountAlias(account.ID, oldAlias)
+	if errors.Root(err) != acc.ErrDuplicateAlias {
+		t.Errorf("expected %s when using a duplicate alias, got %v", acc.ErrDuplicateAlias, err)
 	}
 
-	if err := m.UpdateAccountAlias(account.ID, newAlias); err != nil {
+	err = m.Manager.UpdateAccountAlias(account.ID, newAlias)
+	if err != nil {
 		t.Errorf("expected account %v alias should be update", account)
 	}
 
-	updatedAccount, err := m.FindByID(account.ID)
+	updatedAccount, err := m.Manager.FindByID(account.ID)
 	if err != nil {
 		t.Errorf("unexpected error %v", err)
 	}
 
 	if updatedAccount.Alias != newAlias {
-		t.Fatalf("alias:\ngot:  %v\nwant: %v", updatedAccount.Alias, newAlias)
+		t.Errorf("alias:\ngot:  %v\nwant: %v", updatedAccount.Alias, newAlias)
 	}
 
-	if _, err = m.FindByAlias(oldAlias); errors.Root(err) != ErrFindAccount {
-		t.Errorf("expected %s when using a old alias, got %v", ErrFindAccount, err)
+	if _, err = m.Manager.FindByAlias(oldAlias); errors.Root(err) != acc.ErrFindAccount {
+		t.Errorf("expected %s when using a old alias, got %v", acc.ErrFindAccount, err)
 	}
 }
 
 func TestDeleteAccount(t *testing.T) {
 	m := mockAccountManager(t)
 
-	account1, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, "test-alias1", signers.BIP0044)
+	account1, err := m.Manager.Create([]chainkd.XPub{testutil.TestXPub}, 1, "test-alias1", signers.BIP0044)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	account2, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, "test-alias2", signers.BIP0044)
+	account2, err := m.Manager.Create([]chainkd.XPub{testutil.TestXPub}, 1, "test-alias2", signers.BIP0044)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	found, err := m.FindByID(account1.ID)
+	found, err := m.Manager.FindByID(account1.ID)
 	if err != nil {
 		t.Errorf("expected account %v should be deleted", found)
 	}
 
-	if err = m.DeleteAccount(account2.ID); err != nil {
+	if err = m.Manager.DeleteAccount(account2.ID); err != nil {
 		t.Fatal(err)
 	}
 
-	found, err = m.FindByID(account2.ID)
+	found, err = m.Manager.FindByID(account2.ID)
 	if err != nil {
 		t.Errorf("expected account %v should be deleted", found)
 	}
@@ -148,7 +150,7 @@ func TestFindByID(t *testing.T) {
 	m := mockAccountManager(t)
 	account := m.createTestAccount(t, "", nil)
 
-	found, err := m.FindByID(account.ID)
+	found, err := m.Manager.FindByID(account.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +164,7 @@ func TestFindByAlias(t *testing.T) {
 	m := mockAccountManager(t)
 	account := m.createTestAccount(t, "some-alias", nil)
 
-	found, err := m.FindByAlias("some-alias")
+	found, err := m.Manager.FindByAlias("some-alias")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,40 +174,11 @@ func TestFindByAlias(t *testing.T) {
 	}
 }
 
-func TestGetAccountIndexKey(t *testing.T) {
-	dirPath, err := ioutil.TempDir(".", "TestAccount")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dirPath)
-
-	hsm, err := pseudohsm.New(dirPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	xpub1, _, err := hsm.XCreate("TestAccountIndex1", "password", "en")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	xpub2, _, err := hsm.XCreate("TestAccountIndex2", "password", "en")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	xpubs1 := []chainkd.XPub{xpub1.XPub, xpub2.XPub}
-	xpubs2 := []chainkd.XPub{xpub2.XPub, xpub1.XPub}
-	if !reflect.DeepEqual(GetAccountIndexKey(xpubs1), GetAccountIndexKey(xpubs2)) {
-		t.Fatal("GetAccountIndexKey test err")
-	}
-
-	if reflect.DeepEqual(xpubs1, xpubs2) {
-		t.Fatal("GetAccountIndexKey test err")
-	}
+type mockAccManager struct {
+	Manager *acc.Manager
 }
 
-func mockAccountManager(t *testing.T) *Manager {
+func mockAccountManager(t *testing.T) *mockAccManager {
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatal(err)
@@ -215,6 +188,7 @@ func mockAccountManager(t *testing.T) *Manager {
 	testDB := dbm.NewDB("testdb", "memdb", dirPath)
 	dispatcher := event.NewDispatcher()
 	store := database.NewStore(testDB)
+	accountStore := database.NewAccountStore(testDB)
 	txPool := protocol.NewTxPool(store, dispatcher)
 	config.CommonConfig = config.DefaultConfig()
 	chain, err := protocol.NewChain(store, txPool, dispatcher)
@@ -222,15 +196,14 @@ func mockAccountManager(t *testing.T) *Manager {
 		t.Fatal(err)
 	}
 
-	return NewManager(testDB, chain)
+	return &mockAccManager{acc.NewManager(accountStore, chain)}
 }
 
-func (m *Manager) createTestAccount(t testing.TB, alias string, tags map[string]interface{}) *Account {
-	account, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, alias, signers.BIP0044)
+func (m *mockAccManager) createTestAccount(t testing.TB, alias string, tags map[string]interface{}) *acc.Account {
+	account, err := m.Manager.Create([]chainkd.XPub{testutil.TestXPub}, 1, alias, signers.BIP0044)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	return account
-
 }

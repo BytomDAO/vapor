@@ -116,7 +116,7 @@ func DecodeAddress(addr string, param *consensus.Params) (Address, error) {
 	oneIndex := strings.LastIndexByte(addr, '1')
 	if oneIndex > 1 {
 		prefix := addr[:oneIndex+1]
-		if consensus.IsBech32SegwitPrefix(prefix, param) {
+		if IsBech32SegwitPrefix(prefix, param) {
 			witnessVer, witnessProg, err := decodeSegWitAddress(addr)
 			if err != nil {
 				return nil, err
@@ -142,6 +142,13 @@ func DecodeAddress(addr string, param *consensus.Params) (Address, error) {
 		}
 	}
 	return nil, ErrUnknownAddressType
+}
+
+// IsBech32SegwitPrefix returns whether the prefix is a known prefix for segwit
+// addresses on any default or registered network.  This is used when decoding
+// an address string into a specific address type.
+func IsBech32SegwitPrefix(prefix string, params *consensus.Params) bool {
+	return strings.ToLower(prefix) == params.Bech32HRPSegwit+"1"
 }
 
 // decodeSegWitAddress parses a bech32 encoded segwit address string and

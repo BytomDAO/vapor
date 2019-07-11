@@ -14,6 +14,7 @@ import (
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/crypto/sha3pool"
+	"github.com/vapor/database"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
@@ -267,7 +268,7 @@ func SignInstructionFor(input *types.SpendInput, db dbm.DB, signer *signers.Sign
 	cp := account.CtrlProgram{}
 	var hash [32]byte
 	sha3pool.Sum256(hash[:], input.ControlProgram)
-	bytes := db.Get(account.ContractKey(hash))
+	bytes := db.Get(database.ContractKey(bc.NewHash(hash)))
 	if bytes == nil {
 		return nil, fmt.Errorf("can't find CtrlProgram for the SpendInput")
 	}

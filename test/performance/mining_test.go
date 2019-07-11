@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/vapor/account"
+	"github.com/vapor/database"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/proposal"
 	"github.com/vapor/test"
@@ -20,10 +21,11 @@ func BenchmarkNewBlockTpl(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	accountManager := account.NewManager(testDB, chain)
+	accountStore := database.NewAccountStore(testDB)
+	accountManager := account.NewManager(accountStore, chain)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		proposal.NewBlockTemplate(chain, txPool, accountManager, uint64(time.Now().UnixNano() / 1e6))
+		proposal.NewBlockTemplate(chain, txPool, accountManager, uint64(time.Now().UnixNano()/1e6))
 	}
 }

@@ -27,9 +27,11 @@ func TestWalletUnconfirmedTxs(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	testStore := NewMockWalletStore(testDB)
 	defer os.RemoveAll("temp")
 
-	accountManager := account.NewManager(testDB, nil)
+	accountStore := NewMockAccountStore(testDB)
+	accountManager := account.NewManager(accountStore, nil)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
@@ -56,7 +58,7 @@ func TestWalletUnconfirmedTxs(t *testing.T) {
 	asset := bc.AssetID{V0: 5}
 
 	dispatcher := event.NewDispatcher()
-	w := mockWallet(testDB, accountManager, reg, nil, dispatcher, false)
+	w := mockWallet(testStore, accountManager, reg, nil, dispatcher, false)
 	utxos := []*account.UTXO{}
 	btmUtxo := mockUTXO(controlProg, consensus.BTMAssetID)
 	utxos = append(utxos, btmUtxo)
@@ -126,7 +128,7 @@ func AnnotatedTxs(txs []*types.Tx, w *Wallet) []*query.AnnotatedTx {
 		annotatedTxs = append(annotatedTxs, annotatedTx)
 	}
 
-	annotateTxsAccount(annotatedTxs, w.DB)
+	w.annotateTxsAccount(annotatedTxs)
 	annotateTxsAsset(w, annotatedTxs)
 
 	return annotatedTxs
