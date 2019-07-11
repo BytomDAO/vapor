@@ -12,13 +12,11 @@ import (
 )
 
 func TestCalCoinbaseTxReward(t *testing.T) {
-	consensus.ActiveNetParams = consensus.Params{
-		ProducerSubsidys: []consensus.ProducerSubsidy{
-			{BeginBlock: 0, EndBlock: 0, Subsidy: 24},
-			{BeginBlock: 1, EndBlock: 840000, Subsidy: 24},
-			{BeginBlock: 840001, EndBlock: 1680000, Subsidy: 12},
-			{BeginBlock: 1680001, EndBlock: 3360000, Subsidy: 6},
-		},
+	consensus.ActiveNetParams.ProducerSubsidys = []consensus.ProducerSubsidy{
+		{BeginBlock: 0, EndBlock: 0, Subsidy: 24},
+		{BeginBlock: 1, EndBlock: 840000, Subsidy: 24},
+		{BeginBlock: 840001, EndBlock: 1680000, Subsidy: 12},
+		{BeginBlock: 1680001, EndBlock: 3360000, Subsidy: 6},
 	}
 	reductionInterval := uint64(840000)
 
@@ -134,13 +132,11 @@ func TestCalCoinbaseTxReward(t *testing.T) {
 }
 
 func TestCountCoinbaseTxRewards(t *testing.T) {
-	consensus.ActiveNetParams = consensus.Params{
-		ProducerSubsidys: []consensus.ProducerSubsidy{
-			{BeginBlock: 0, EndBlock: 0, Subsidy: 24},
-			{BeginBlock: 1, EndBlock: 840000, Subsidy: 24},
-			{BeginBlock: 840001, EndBlock: 1680000, Subsidy: 12},
-			{BeginBlock: 1680001, EndBlock: 3360000, Subsidy: 6},
-		},
+	consensus.ActiveNetParams.ProducerSubsidys = []consensus.ProducerSubsidy{
+		{BeginBlock: 0, EndBlock: 0, Subsidy: 24},
+		{BeginBlock: 1, EndBlock: 840000, Subsidy: 24},
+		{BeginBlock: 840001, EndBlock: 1680000, Subsidy: 12},
+		{BeginBlock: 1680001, EndBlock: 3360000, Subsidy: 6},
 	}
 
 	cases := []struct {
@@ -153,7 +149,7 @@ func TestCountCoinbaseTxRewards(t *testing.T) {
 			desc: "the block height is RoundVoteBlockNums - 1",
 			block: &types.Block{
 				BlockHeader: types.BlockHeader{
-					Height: consensus.RoundVoteBlockNums - 1,
+					Height: consensus.ActiveNetParams.RoundVoteBlockNums - 1,
 				},
 				Transactions: []*types.Tx{nil},
 			},
@@ -168,7 +164,7 @@ func TestCountCoinbaseTxRewards(t *testing.T) {
 			desc: "the block height is RoundVoteBlockNums",
 			block: &types.Block{
 				BlockHeader: types.BlockHeader{
-					Height: consensus.RoundVoteBlockNums,
+					Height: consensus.ActiveNetParams.RoundVoteBlockNums,
 				},
 				Transactions: []*types.Tx{nil},
 			},
@@ -193,7 +189,7 @@ func TestCountCoinbaseTxRewards(t *testing.T) {
 			desc: "the block height is RoundVoteBlockNums + 1",
 			block: &types.Block{
 				BlockHeader: types.BlockHeader{
-					Height: consensus.RoundVoteBlockNums + 1,
+					Height: consensus.ActiveNetParams.RoundVoteBlockNums + 1,
 				},
 				Transactions: []*types.Tx{nil},
 			},
@@ -208,7 +204,7 @@ func TestCountCoinbaseTxRewards(t *testing.T) {
 			desc: "the block height is RoundVoteBlockNums * 2",
 			block: &types.Block{
 				BlockHeader: types.BlockHeader{
-					Height: consensus.RoundVoteBlockNums * 2,
+					Height: consensus.ActiveNetParams.RoundVoteBlockNums * 2,
 				},
 				Transactions: []*types.Tx{nil},
 			},
@@ -238,7 +234,7 @@ func TestCountCoinbaseTxRewards(t *testing.T) {
 			desc: "the block height is 2*RoundVoteBlockNums + 1",
 			block: &types.Block{
 				BlockHeader: types.BlockHeader{
-					Height: 2*consensus.RoundVoteBlockNums + 1,
+					Height: 2*consensus.ActiveNetParams.RoundVoteBlockNums + 1,
 				},
 				Transactions: []*types.Tx{nil},
 			},

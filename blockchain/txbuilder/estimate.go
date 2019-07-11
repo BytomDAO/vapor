@@ -37,21 +37,21 @@ func EstimateTxGas(template Template) (*EstimateTxGasInfo, error) {
 
 	flexibleGas := int64(0)
 	if totalP2WPKHGas > 0 {
-		flexibleGas += baseP2WPKHGas + (baseSize+baseP2WPKHSize)*consensus.StorageGasRate
+		flexibleGas += baseP2WPKHGas + (baseSize+baseP2WPKHSize)*consensus.ActiveNetParams.StorageGasRate
 	} else if totalP2WSHGas > 0 {
-		flexibleGas += baseP2WSHGas + (baseSize+baseP2WSHSize)*consensus.StorageGasRate
+		flexibleGas += baseP2WSHGas + (baseSize+baseP2WSHSize)*consensus.ActiveNetParams.StorageGasRate
 	}
 
 	// the total transaction storage gas
-	totalTxSizeGas := (int64(template.Transaction.TxData.SerializedSize) + totalWitnessSize) * consensus.StorageGasRate
+	totalTxSizeGas := (int64(template.Transaction.TxData.SerializedSize) + totalWitnessSize) * consensus.ActiveNetParams.StorageGasRate
 
 	// the total transaction gas is composed of storage and virtual machines
 	totalGas := totalTxSizeGas + totalP2WPKHGas + totalP2WSHGas + flexibleGas
 	return &EstimateTxGasInfo{
-		TotalNeu:    totalGas * consensus.VMGasRate,
-		FlexibleNeu: flexibleGas * consensus.VMGasRate,
-		StorageNeu:  totalTxSizeGas * consensus.VMGasRate,
-		VMNeu:       (totalP2WPKHGas + totalP2WSHGas) * consensus.VMGasRate,
+		TotalNeu:    totalGas * consensus.ActiveNetParams.VMGasRate,
+		FlexibleNeu: flexibleGas * consensus.ActiveNetParams.VMGasRate,
+		StorageNeu:  totalTxSizeGas * consensus.ActiveNetParams.VMGasRate,
+		VMNeu:       (totalP2WPKHGas + totalP2WSHGas) * consensus.ActiveNetParams.VMGasRate,
 	}, nil
 }
 
