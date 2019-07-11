@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"encoding/hex"
 	"fmt"
 	"sort"
 	"time"
@@ -9,6 +10,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	acc "github.com/vapor/account"
 	"github.com/vapor/blockchain/query"
 	"github.com/vapor/crypto/sha3pool"
 	"github.com/vapor/protocol"
@@ -113,8 +115,8 @@ func (w *Wallet) checkRelatedTransaction(tx *types.Tx) bool {
 		var hash [32]byte
 		sha3pool.Sum256(hash[:], v.ControlProgram())
 		cp, err := w.AccountMgr.GetControlProgram(bc.NewHash(hash))
-		if err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err, "hash": string(hash[:])}).Error("checkRelatedTransaction fail.")
+		if err != nil && err != acc.ErrFindCtrlProgram {
+			log.WithFields(log.Fields{"module": logModule, "err": err, "hash": hex.EncodeToString(hash[:])}).Error("checkRelatedTransaction fail.")
 			continue
 		}
 		if cp != nil {
@@ -128,7 +130,7 @@ func (w *Wallet) checkRelatedTransaction(tx *types.Tx) bool {
 			continue
 		}
 		utxo, err := w.Store.GetStandardUTXO(outid)
-		if err != nil {
+		if err != nil && err != ErrGetStandardUTXO {
 			log.WithFields(log.Fields{"module": logModule, "err": err, "outputID": outid.String()}).Error("checkRelatedTransaction fail.")
 			continue
 		}

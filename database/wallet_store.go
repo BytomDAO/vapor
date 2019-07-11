@@ -246,7 +246,7 @@ func (store *WalletStore) GetGlobalTransactionIndex(txID string) []byte {
 func (store *WalletStore) GetStandardUTXO(outid bc.Hash) (*acc.UTXO, error) {
 	rawUTXO := store.db.Get(StandardUTXOKey(outid))
 	if rawUTXO == nil {
-		return nil, fmt.Errorf("failed get standard UTXO, outputID: %s ", outid.String())
+		return nil, wallet.ErrGetStandardUTXO
 	}
 
 	UTXO := new(acc.UTXO)
