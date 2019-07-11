@@ -29,6 +29,7 @@ var (
 	ErrGetWalletStatusInfo     = errors.New("failed get wallet info")
 	ErrGetAsset                = errors.New("Failed to find asset definition")
 	ErrAccntTxIDNotFound       = errors.New("account TXID not found")
+	ErrGetStandardUTXO         = errors.New("failed get standard UTXO")
 )
 
 //StatusInfo is base valid block info to handle orphan block rollback
