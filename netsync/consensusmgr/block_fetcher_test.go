@@ -12,7 +12,7 @@ import (
 type peerMgr struct {
 }
 
-func (pm *peerMgr) IsBanned(peerID string, level byte, reason string) bool {
+func (pm *peerMgr) IsBanned(ip string, level byte, reason string) bool {
 	return false
 }
 
