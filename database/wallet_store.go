@@ -342,7 +342,24 @@ func (store *WalletStore) ListAccountUTXOs(id string, isSmartContract bool) ([]*
 
 		confirmedUTXOs = append(confirmedUTXOs, utxo)
 	}
+
 	return confirmedUTXOs, nil
+}
+
+func findTransactionsByAccount(annotatedTx *query.AnnotatedTx, accountID string) bool {
+	for _, input := range annotatedTx.Inputs {
+		if input.AccountID == accountID {
+			return true
+		}
+	}
+
+	for _, output := range annotatedTx.Outputs {
+		if output.AccountID == accountID {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (store *WalletStore) ListTransactions(accountID string, StartTxID string, count uint, unconfirmed bool) ([]*query.AnnotatedTx, error) {
@@ -376,8 +393,11 @@ func (store *WalletStore) ListTransactions(accountID string, StartTxID string, c
 			return nil, err
 		}
 
-		annotatedTxs = append(annotatedTxs, annotatedTx)
-		txNum--
+		if accountID == "" || findTransactionsByAccount(annotatedTx, accountID) {
+			annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
+			txNum--
+		}
+
 	}
 
 	return annotatedTxs, nil
