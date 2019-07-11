@@ -2,7 +2,6 @@ package wallet
 
 import (
 	"encoding/json"
-	"fmt"
 
 	log "github.com/sirupsen/logrus"
 
@@ -13,7 +12,6 @@ import (
 	"github.com/vapor/consensus"
 	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/crypto/sha3pool"
-	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
@@ -33,29 +31,18 @@ func annotateTxsAsset(w *Wallet, txs []*query.AnnotatedTx) {
 }
 
 func (w *Wallet) getExternalDefinition(assetID *bc.AssetID) json.RawMessage {
-	// definitionByte := w.DB.Get(asset.ExtAssetKey(assetID))
-	definitionByte := w.DB.Get(asset.ExtAssetKey(assetID))
-	if definitionByte == nil {
+	externalAsset, err := w.Store.GetAsset(assetID)
+	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "err": err, "assetID": assetID.String()}).Info("fail on get asset definition.")
+	}
+	if externalAsset == nil {
 		return nil
 	}
 
-	definitionMap := make(map[string]interface{})
-	if err := json.Unmarshal(definitionByte, &definitionMap); err != nil {
-		return nil
+	if err := w.AssetReg.SaveAsset(externalAsset, *externalAsset.Alias); err != nil {
+		log.WithFields(log.Fields{"module": logModule, "err": err, "assetAlias": *externalAsset.Alias}).Info("fail on save external asset to internal asset DB")
 	}
-
-	alias := assetID.String()
-	externalAsset := &asset.Asset{
-		AssetID:           *assetID,
-		Alias:             &alias,
-		DefinitionMap:     definitionMap,
-		RawDefinitionByte: definitionByte,
-	}
-
-	if err := w.AssetReg.SaveAsset(externalAsset, alias); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err, "assetID": alias}).Warning("fail on save external asset to internal asset DB")
-	}
-	return definitionByte
+	return json.RawMessage(externalAsset.RawDefinitionByte)
 }
 
 func (w *Wallet) getAliasDefinition(assetID bc.AssetID) (string, json.RawMessage) {
@@ -83,14 +70,14 @@ func (w *Wallet) getAliasDefinition(assetID bc.AssetID) (string, json.RawMessage
 }
 
 // annotateTxs adds account data to transactions
-func annotateTxsAccount(txs []*query.AnnotatedTx, walletDB dbm.DB) {
+func (w *Wallet) annotateTxsAccount(txs []*query.AnnotatedTx) {
 	for i, tx := range txs {
 		for j, input := range tx.Inputs {
 			//issue asset tx input SpentOutputID is nil
 			if input.SpentOutputID == nil {
 				continue
 			}
-			localAccount, err := getAccountFromACP(input.ControlProgram, walletDB)
+			localAccount, err := w.getAccountFromACP(input.ControlProgram)
 			if localAccount == nil || err != nil {
 				continue
 			}
@@ -98,7 +85,7 @@ func annotateTxsAccount(txs []*query.AnnotatedTx, walletDB dbm.DB) {
 			txs[i].Inputs[j].AccountID = localAccount.ID
 		}
 		for j, output := range tx.Outputs {
-			localAccount, err := getAccountFromACP(output.ControlProgram, walletDB)
+			localAccount, err := w.getAccountFromACP(output.ControlProgram)
 			if localAccount == nil || err != nil {
 				continue
 			}
@@ -108,32 +95,20 @@ func annotateTxsAccount(txs []*query.AnnotatedTx, walletDB dbm.DB) {
 	}
 }
 
-func getAccountFromACP(program []byte, walletDB dbm.DB) (*account.Account, error) {
-	var hash common.Hash
-	accountCP := account.CtrlProgram{}
-	localAccount := account.Account{}
-
+func (w *Wallet) getAccountFromACP(program []byte) (*account.Account, error) {
+	var hash [32]byte
 	sha3pool.Sum256(hash[:], program)
-
-	rawProgram := walletDB.Get(account.ContractKey(hash))
-	if rawProgram == nil {
-		return nil, fmt.Errorf("failed get account control program:%x ", hash)
-	}
-
-	if err := json.Unmarshal(rawProgram, &accountCP); err != nil {
+	accountCP, err := w.AccountMgr.GetControlProgram(bc.NewHash(hash))
+	if err != nil {
 		return nil, err
 	}
 
-	accountValue := walletDB.Get(account.Key(accountCP.AccountID))
-	if accountValue == nil {
-		return nil, fmt.Errorf("failed get account:%s ", accountCP.AccountID)
-	}
-
-	if err := json.Unmarshal(accountValue, &localAccount); err != nil {
+	account, err := w.AccountMgr.FindByID(accountCP.AccountID)
+	if err != nil {
 		return nil, err
 	}
 
-	return &localAccount, nil
+	return account, nil
 }
 
 var emptyJSONObject = json.RawMessage(`{}`)
@@ -169,6 +144,8 @@ func (w *Wallet) BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInp
 	if orig.InputType() != types.CoinbaseInputType {
 		in.AssetID = orig.AssetID()
 		in.Amount = orig.Amount()
+	} else {
+		in.AssetID = *consensus.BTMAssetID
 	}
 
 	id := tx.Tx.InputIDs[i]

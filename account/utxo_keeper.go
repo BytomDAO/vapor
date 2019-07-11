@@ -3,15 +3,12 @@ package account
 import (
 	"bytes"
 	"container/list"
-	"encoding/json"
 	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	log "github.com/sirupsen/logrus"
-
-	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 )
@@ -56,7 +53,7 @@ type utxoKeeper struct {
 	// `sync/atomic` expects the first word in an allocated struct to be 64-bit
 	// aligned on both ARM and x86-32. See https://goo.gl/zW7dgq for more details.
 	nextIndex     uint64
-	db            dbm.DB
+	store         AccountStore
 	mtx           sync.RWMutex
 	currentHeight func() uint64
 
@@ -65,9 +62,9 @@ type utxoKeeper struct {
 	reservations map[uint64]*reservation
 }
 
-func newUtxoKeeper(f func() uint64, walletdb dbm.DB) *utxoKeeper {
+func newUtxoKeeper(f func() uint64, store AccountStore) *utxoKeeper {
 	uk := &utxoKeeper{
-		db:            walletdb,
+		store:         store,
 		currentHeight: f,
 		unconfirmed:   make(map[bc.Hash]*UTXO),
 		reserved:      make(map[bc.Hash]uint64),
@@ -216,6 +213,7 @@ func (uk *utxoKeeper) findUtxos(accountID string, assetID *bc.AssetID, useUnconf
 		if u.AccountID != accountID || u.AssetID != *assetID || !bytes.Equal(u.Vote, vote) {
 			return
 		}
+
 		if u.ValidHeight > currentHeight {
 			immatureAmount += u.Amount
 		} else {
@@ -223,16 +221,15 @@ func (uk *utxoKeeper) findUtxos(accountID string, assetID *bc.AssetID, useUnconf
 		}
 	}
 
-	utxoIter := uk.db.IteratorPrefix([]byte(UTXOPreFix))
-	defer utxoIter.Release()
-	for utxoIter.Next() {
-		u := &UTXO{}
-		if err := json.Unmarshal(utxoIter.Value(), u); err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("utxoKeeper findUtxos fail on unmarshal utxo")
-			continue
-		}
-		appendUtxo(u)
+	UTXOs, err := uk.store.ListUTXOs()
+	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("utxoKeeper findUtxos fail on unmarshal utxo")
 	}
+
+	for _, UTXO := range UTXOs {
+		appendUtxo(UTXO)
+	}
+
 	if !useUnconfirmed {
 		return utxos, immatureAmount
 	}
@@ -247,15 +244,7 @@ func (uk *utxoKeeper) findUtxo(outHash bc.Hash, useUnconfirmed bool) (*UTXO, err
 	if u, ok := uk.unconfirmed[outHash]; useUnconfirmed && ok {
 		return u, nil
 	}
-
-	u := &UTXO{}
-	if data := uk.db.Get(StandardUTXOKey(outHash)); data != nil {
-		return u, json.Unmarshal(data, u)
-	}
-	if data := uk.db.Get(ContractUTXOKey(outHash)); data != nil {
-		return u, json.Unmarshal(data, u)
-	}
-	return nil, ErrMatchUTXO
+	return uk.store.GetUTXO(outHash)
 }
 
 func (uk *utxoKeeper) optUTXOs(utxos []*UTXO, amount uint64) ([]*UTXO, uint64, uint64) {

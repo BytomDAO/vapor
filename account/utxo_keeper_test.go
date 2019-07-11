@@ -2,10 +2,14 @@ package account
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/golang/groupcache/lru"
+	"github.com/vapor/blockchain/txbuilder"
+	"github.com/vapor/crypto/ed25519/chainkd"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/testutil"
@@ -278,6 +282,8 @@ func TestReserve(t *testing.T) {
 		os.RemoveAll("temp")
 	}()
 
+	accountStore := newMockAccountStore(testDB)
+
 	cases := []struct {
 		before        utxoKeeper
 		after         utxoKeeper
@@ -288,13 +294,13 @@ func TestReserve(t *testing.T) {
 	}{
 		{
 			before: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				reserved:      map[bc.Hash]uint64{},
 				reservations:  map[uint64]*reservation{},
 			},
 			after: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				reserved:      map[bc.Hash]uint64{},
 				reservations:  map[uint64]*reservation{},
@@ -304,7 +310,7 @@ func TestReserve(t *testing.T) {
 		},
 		{
 			before: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed: map[bc.Hash]*UTXO{
 					bc.NewHash([32]byte{0x01}): &UTXO{
@@ -317,7 +323,7 @@ func TestReserve(t *testing.T) {
 				reservations: map[uint64]*reservation{},
 			},
 			after: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed: map[bc.Hash]*UTXO{
 					bc.NewHash([32]byte{0x01}): &UTXO{
@@ -334,7 +340,7 @@ func TestReserve(t *testing.T) {
 		},
 		{
 			before: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed: map[bc.Hash]*UTXO{
 					bc.NewHash([32]byte{0x01}): &UTXO{
@@ -348,7 +354,7 @@ func TestReserve(t *testing.T) {
 				reservations: map[uint64]*reservation{},
 			},
 			after: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed: map[bc.Hash]*UTXO{
 					bc.NewHash([32]byte{0x01}): &UTXO{
@@ -366,7 +372,7 @@ func TestReserve(t *testing.T) {
 		},
 		{
 			before: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed: map[bc.Hash]*UTXO{
 					bc.NewHash([32]byte{0x01}): &UTXO{
@@ -381,7 +387,7 @@ func TestReserve(t *testing.T) {
 				reservations: map[uint64]*reservation{},
 			},
 			after: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed: map[bc.Hash]*UTXO{
 					bc.NewHash([32]byte{0x01}): &UTXO{
@@ -400,7 +406,7 @@ func TestReserve(t *testing.T) {
 		},
 		{
 			before: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed: map[bc.Hash]*UTXO{
 					bc.NewHash([32]byte{0x01}): &UTXO{
@@ -413,7 +419,7 @@ func TestReserve(t *testing.T) {
 				reservations: map[uint64]*reservation{},
 			},
 			after: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed: map[bc.Hash]*UTXO{
 					bc.NewHash([32]byte{0x01}): &UTXO{
@@ -446,7 +452,7 @@ func TestReserve(t *testing.T) {
 		},
 		{
 			before: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				nextIndex:     1,
 				unconfirmed: map[bc.Hash]*UTXO{
@@ -472,7 +478,7 @@ func TestReserve(t *testing.T) {
 				reservations: map[uint64]*reservation{},
 			},
 			after: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed: map[bc.Hash]*UTXO{
 					bc.NewHash([32]byte{0x01}): &UTXO{
@@ -522,7 +528,7 @@ func TestReserve(t *testing.T) {
 		},
 		{
 			before: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed: map[bc.Hash]*UTXO{
 					bc.NewHash([32]byte{0x01}): &UTXO{
@@ -536,7 +542,7 @@ func TestReserve(t *testing.T) {
 				reservations: map[uint64]*reservation{},
 			},
 			after: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed: map[bc.Hash]*UTXO{
 					bc.NewHash([32]byte{0x01}): &UTXO{
@@ -585,6 +591,8 @@ func TestReserveParticular(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 
+	accountStore := newMockAccountStore(testDB)
+
 	cases := []struct {
 		before      utxoKeeper
 		after       utxoKeeper
@@ -594,7 +602,7 @@ func TestReserveParticular(t *testing.T) {
 	}{
 		{
 			before: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed: map[bc.Hash]*UTXO{
 					bc.NewHash([32]byte{0x01}): &UTXO{
@@ -609,7 +617,7 @@ func TestReserveParticular(t *testing.T) {
 				reservations: map[uint64]*reservation{},
 			},
 			after: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed: map[bc.Hash]*UTXO{
 					bc.NewHash([32]byte{0x01}): &UTXO{
@@ -628,7 +636,7 @@ func TestReserveParticular(t *testing.T) {
 		},
 		{
 			before: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed: map[bc.Hash]*UTXO{
 					bc.NewHash([32]byte{0x01}): &UTXO{
@@ -642,7 +650,7 @@ func TestReserveParticular(t *testing.T) {
 				reservations: map[uint64]*reservation{},
 			},
 			after: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed: map[bc.Hash]*UTXO{
 					bc.NewHash([32]byte{0x01}): &UTXO{
@@ -660,7 +668,7 @@ func TestReserveParticular(t *testing.T) {
 		},
 		{
 			before: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed: map[bc.Hash]*UTXO{
 					bc.NewHash([32]byte{0x01}): &UTXO{
@@ -673,7 +681,7 @@ func TestReserveParticular(t *testing.T) {
 				reservations: map[uint64]*reservation{},
 			},
 			after: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed: map[bc.Hash]*UTXO{
 					bc.NewHash([32]byte{0x01}): &UTXO{
@@ -743,6 +751,8 @@ func TestFindUtxos(t *testing.T) {
 		os.RemoveAll("temp")
 	}()
 
+	accountStore := newMockAccountStore(testDB)
+
 	cases := []struct {
 		uk             utxoKeeper
 		dbUtxos        []*UTXO
@@ -753,7 +763,7 @@ func TestFindUtxos(t *testing.T) {
 	}{
 		{
 			uk: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed:   map[bc.Hash]*UTXO{},
 			},
@@ -764,7 +774,7 @@ func TestFindUtxos(t *testing.T) {
 		},
 		{
 			uk: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed:   map[bc.Hash]*UTXO{},
 			},
@@ -793,7 +803,7 @@ func TestFindUtxos(t *testing.T) {
 		},
 		{
 			uk: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed:   map[bc.Hash]*UTXO{},
 			},
@@ -811,7 +821,7 @@ func TestFindUtxos(t *testing.T) {
 		},
 		{
 			uk: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed: map[bc.Hash]*UTXO{
 					bc.NewHash([32]byte{0x01}): &UTXO{
@@ -840,7 +850,7 @@ func TestFindUtxos(t *testing.T) {
 		},
 		{
 			uk: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed: map[bc.Hash]*UTXO{
 					bc.NewHash([32]byte{0x11}): &UTXO{
@@ -874,7 +884,7 @@ func TestFindUtxos(t *testing.T) {
 		},
 		{
 			uk: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed: map[bc.Hash]*UTXO{
 					bc.NewHash([32]byte{0x01}): &UTXO{
@@ -918,7 +928,7 @@ func TestFindUtxos(t *testing.T) {
 		},
 		{
 			uk: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed:   map[bc.Hash]*UTXO{},
 			},
@@ -946,11 +956,9 @@ func TestFindUtxos(t *testing.T) {
 
 	for i, c := range cases {
 		for _, u := range c.dbUtxos {
-			data, err := json.Marshal(u)
-			if err != nil {
+			if err := c.uk.store.SetStandardUTXO(u.OutputID, u); err != nil {
 				t.Error(err)
 			}
-			testDB.Set(StandardUTXOKey(u.OutputID), data)
 		}
 
 		gotUtxos, immatureAmount := c.uk.findUtxos("testAccount", &bc.AssetID{}, c.useUnconfirmed, c.vote)
@@ -962,15 +970,17 @@ func TestFindUtxos(t *testing.T) {
 		}
 
 		for _, u := range c.dbUtxos {
-			testDB.Delete(StandardUTXOKey(u.OutputID))
+			c.uk.store.DeleteStandardUTXO(u.OutputID)
 		}
 	}
 }
 
-func TestFindUtxo(t *testing.T) {
+func TestFindUTXO(t *testing.T) {
 	currentHeight := func() uint64 { return 9527 }
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
+
+	accountStore := newMockAccountStore(testDB)
 
 	cases := []struct {
 		uk             utxoKeeper
@@ -982,7 +992,7 @@ func TestFindUtxo(t *testing.T) {
 	}{
 		{
 			uk: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed:   map[bc.Hash]*UTXO{},
 			},
@@ -993,7 +1003,7 @@ func TestFindUtxo(t *testing.T) {
 		},
 		{
 			uk: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed: map[bc.Hash]*UTXO{
 					bc.NewHash([32]byte{0x01}): &UTXO{OutputID: bc.NewHash([32]byte{0x01})},
@@ -1007,7 +1017,7 @@ func TestFindUtxo(t *testing.T) {
 		},
 		{
 			uk: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed: map[bc.Hash]*UTXO{
 					bc.NewHash([32]byte{0x01}): &UTXO{OutputID: bc.NewHash([32]byte{0x01})},
@@ -1021,7 +1031,7 @@ func TestFindUtxo(t *testing.T) {
 		},
 		{
 			uk: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed:   map[bc.Hash]*UTXO{},
 			},
@@ -1035,7 +1045,7 @@ func TestFindUtxo(t *testing.T) {
 		},
 		{
 			uk: utxoKeeper{
-				db:            testDB,
+				store:         accountStore,
 				currentHeight: currentHeight,
 				unconfirmed:   map[bc.Hash]*UTXO{},
 			},
@@ -1067,7 +1077,7 @@ func TestFindUtxo(t *testing.T) {
 		}
 
 		for _, u := range c.dbUtxos {
-			testDB.Delete(StandardUTXOKey(u.OutputID))
+			c.uk.store.DeleteStandardUTXO(u.OutputID)
 		}
 	}
 }
@@ -1298,5 +1308,167 @@ func checkUtxoKeeperEqual(t *testing.T, i int, a, b *utxoKeeper) {
 	}
 	if !testutil.DeepEqual(a.reservations, b.reservations) {
 		t.Errorf("case %d: reservations got %v want %v", i, a.reservations, b.reservations)
+	}
+}
+
+const (
+	utxoPrefix byte = iota //UTXOPrefix is StandardUTXOKey prefix
+	contractPrefix
+	contractIndexPrefix
+	accountPrefix // AccountPrefix is account ID prefix
+	accountIndexPrefix
+)
+
+// leveldb key prefix
+var (
+	colon               byte = 0x3a
+	accountStore             = []byte("AS:")
+	UTXOPrefix               = append(accountStore, utxoPrefix, colon)
+	ContractPrefix           = append(accountStore, contractPrefix, colon)
+	ContractIndexPrefix      = append(accountStore, contractIndexPrefix, colon)
+	AccountPrefix            = append(accountStore, accountPrefix, colon) // AccountPrefix is account ID prefix
+	AccountIndexPrefix       = append(accountStore, accountIndexPrefix, colon)
+)
+
+const (
+	sutxoPrefix byte = iota //SUTXOPrefix is ContractUTXOKey prefix
+	accountAliasPrefix
+	txPrefix            //TxPrefix is wallet database transactions prefix
+	txIndexPrefix       //TxIndexPrefix is wallet database tx index prefix
+	unconfirmedTxPrefix //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
+	globalTxIndexPrefix //GlobalTxIndexPrefix is wallet database global tx index prefix
+	walletKey
+	miningAddressKey
+	coinbaseAbKey
+	recoveryKey //recoveryKey key for db store recovery info.
+)
+
+var (
+	walletStore         = []byte("WS:")
+	SUTXOPrefix         = append(walletStore, sutxoPrefix, colon)
+	AccountAliasPrefix  = append(walletStore, accountAliasPrefix, colon)
+	TxPrefix            = append(walletStore, txPrefix, colon)            //TxPrefix is wallet database transactions prefix
+	TxIndexPrefix       = append(walletStore, txIndexPrefix, colon)       //TxIndexPrefix is wallet database tx index prefix
+	UnconfirmedTxPrefix = append(walletStore, unconfirmedTxPrefix, colon) //UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
+	GlobalTxIndexPrefix = append(walletStore, globalTxIndexPrefix, colon) //GlobalTxIndexPrefix is wallet database global tx index prefix
+	WalletKey           = append(walletStore, walletKey)
+	MiningAddressKey    = append(walletStore, miningAddressKey)
+	CoinbaseAbKey       = append(walletStore, coinbaseAbKey)
+	RecoveryKey         = append(walletStore, recoveryKey)
+)
+
+type mockAccountStore struct {
+	db    dbm.DB
+	batch dbm.Batch
+}
+
+// NewAccountStore create new AccountStore.
+func newMockAccountStore(db dbm.DB) *mockAccountStore {
+	return &mockAccountStore{
+		db:    db,
+		batch: nil,
+	}
+}
+
+// StandardUTXOKey makes an account unspent outputs key to store
+func StandardUTXOKey(id bc.Hash) []byte {
+	return append(UTXOPrefix, id.Bytes()...)
+}
+
+// ContractUTXOKey makes a smart contract unspent outputs key to store
+func ContractUTXOKey(id bc.Hash) []byte {
+	return append(SUTXOPrefix, id.Bytes()...)
+}
+
+func (store *mockAccountStore) InitBatch() AccountStore                         { return nil }
+func (store *mockAccountStore) CommitBatch() error                              { return nil }
+func (store *mockAccountStore) DeleteAccount(*Account) error                    { return nil }
+func (store *mockAccountStore) GetAccountByAlias(string) (*Account, error)      { return nil, nil }
+func (store *mockAccountStore) GetAccountByID(string) (*Account, error)         { return nil, nil }
+func (store *mockAccountStore) GetAccountIndex([]chainkd.XPub) uint64           { return 0 }
+func (store *mockAccountStore) GetBip44ContractIndex(string, bool) uint64       { return 0 }
+func (store *mockAccountStore) GetCoinbaseArbitrary() []byte                    { return nil }
+func (store *mockAccountStore) GetContractIndex(string) uint64                  { return 0 }
+func (store *mockAccountStore) GetControlProgram(bc.Hash) (*CtrlProgram, error) { return nil, nil }
+func (store *mockAccountStore) GetMiningAddress() (*CtrlProgram, error)         { return nil, nil }
+func (store *mockAccountStore) ListAccounts(string) ([]*Account, error)         { return nil, nil }
+func (store *mockAccountStore) ListControlPrograms() ([]*CtrlProgram, error)    { return nil, nil }
+func (store *mockAccountStore) SetAccount(*Account) error                       { return nil }
+func (store *mockAccountStore) SetAccountIndex(*Account)                        { return }
+func (store *mockAccountStore) SetBip44ContractIndex(string, bool, uint64)      { return }
+func (store *mockAccountStore) SetCoinbaseArbitrary([]byte)                     { return }
+func (store *mockAccountStore) SetContractIndex(string, uint64)                 { return }
+func (store *mockAccountStore) SetControlProgram(bc.Hash, *CtrlProgram) error   { return nil }
+func (store *mockAccountStore) SetMiningAddress(*CtrlProgram) error             { return nil }
+
+// DeleteStandardUTXO delete utxo by outpu id
+func (store *mockAccountStore) DeleteStandardUTXO(outputID bc.Hash) {
+	if store.batch == nil {
+		store.db.Delete(StandardUTXOKey(outputID))
+	} else {
+		store.batch.Delete(StandardUTXOKey(outputID))
+	}
+}
+
+// GetUTXO get standard utxo by id
+func (store *mockAccountStore) GetUTXO(outid bc.Hash) (*UTXO, error) {
+	u := new(UTXO)
+	if data := store.db.Get(StandardUTXOKey(outid)); data != nil {
+		return u, json.Unmarshal(data, u)
+	}
+	if data := store.db.Get(ContractUTXOKey(outid)); data != nil {
+		return u, json.Unmarshal(data, u)
+	}
+	return nil, ErrMatchUTXO
+}
+
+// ListUTXOs get utxos by accountID
+func (store *mockAccountStore) ListUTXOs() ([]*UTXO, error) {
+	utxoIter := store.db.IteratorPrefix([]byte(UTXOPrefix))
+	defer utxoIter.Release()
+
+	utxos := []*UTXO{}
+	for utxoIter.Next() {
+		utxo := new(UTXO)
+		if err := json.Unmarshal(utxoIter.Value(), utxo); err != nil {
+			return nil, err
+		}
+		utxos = append(utxos, utxo)
+	}
+	return utxos, nil
+}
+
+// SetStandardUTXO set standard utxo
+func (store *mockAccountStore) SetStandardUTXO(outputID bc.Hash, utxo *UTXO) error {
+	data, err := json.Marshal(utxo)
+	if err != nil {
+		return err
+	}
+	if store.batch == nil {
+		store.db.Set(StandardUTXOKey(outputID), data)
+	} else {
+		store.batch.Set(StandardUTXOKey(outputID), data)
+	}
+	return nil
+}
+
+func mockAccountManager(t *testing.T) *Manager {
+	dirPath, err := ioutil.TempDir(".", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dirPath)
+
+	testDB := dbm.NewDB("testdb", "memdb", dirPath)
+	accountStore := newMockAccountStore(testDB)
+	bestBlockHeight := func() uint64 { return 9527 }
+
+	return &Manager{
+		store:       accountStore,
+		chain:       nil,
+		utxoKeeper:  newUtxoKeeper(bestBlockHeight, accountStore),
+		cache:       lru.New(maxAccountCache),
+		aliasCache:  lru.New(maxAccountCache),
+		delayedACPs: make(map[*txbuilder.TemplateBuilder][]*CtrlProgram),
 	}
 }

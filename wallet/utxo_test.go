@@ -18,6 +18,7 @@ import (
 
 func TestGetAccountUtxos(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	testStore := NewMockWalletStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
@@ -40,16 +41,16 @@ func TestGetAccountUtxos(t *testing.T) {
 		},
 		{
 			dbUtxos: map[string]*account.UTXO{
-				string(account.StandardUTXOKey(bc.Hash{V0: 1})): &account.UTXO{
+				string(StandardUTXOKey(bc.Hash{V0: 1})): &account.UTXO{
 					OutputID: bc.Hash{V0: 1},
 				},
-				string(account.StandardUTXOKey(bc.Hash{V0: 2})): &account.UTXO{
+				string(StandardUTXOKey(bc.Hash{V0: 2})): &account.UTXO{
 					OutputID: bc.Hash{V0: 2},
 				},
-				string(account.StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
+				string(StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
 					OutputID: bc.Hash{V0: 3},
 				},
-				string(account.ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
+				string(ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
 					OutputID: bc.Hash{V0: 4},
 				},
 			},
@@ -64,16 +65,16 @@ func TestGetAccountUtxos(t *testing.T) {
 		},
 		{
 			dbUtxos: map[string]*account.UTXO{
-				string(account.StandardUTXOKey(bc.Hash{V0: 1})): &account.UTXO{
+				string(StandardUTXOKey(bc.Hash{V0: 1})): &account.UTXO{
 					OutputID: bc.Hash{V0: 1},
 				},
-				string(account.StandardUTXOKey(bc.Hash{V0: 2})): &account.UTXO{
+				string(StandardUTXOKey(bc.Hash{V0: 2})): &account.UTXO{
 					OutputID: bc.Hash{V0: 2},
 				},
-				string(account.StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
+				string(StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
 					OutputID: bc.Hash{V0: 3},
 				},
-				string(account.ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
+				string(ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
 					OutputID: bc.Hash{V0: 4},
 				},
 			},
@@ -92,16 +93,16 @@ func TestGetAccountUtxos(t *testing.T) {
 		},
 		{
 			dbUtxos: map[string]*account.UTXO{
-				string(account.StandardUTXOKey(bc.Hash{V0: 1})): &account.UTXO{
+				string(StandardUTXOKey(bc.Hash{V0: 1})): &account.UTXO{
 					OutputID: bc.Hash{V0: 1},
 				},
-				string(account.StandardUTXOKey(bc.Hash{V0: 1, V1: 2})): &account.UTXO{
+				string(StandardUTXOKey(bc.Hash{V0: 1, V1: 2})): &account.UTXO{
 					OutputID: bc.Hash{V0: 1, V1: 2},
 				},
-				string(account.StandardUTXOKey(bc.Hash{V0: 2})): &account.UTXO{
+				string(StandardUTXOKey(bc.Hash{V0: 2})): &account.UTXO{
 					OutputID: bc.Hash{V0: 2},
 				},
-				string(account.StandardUTXOKey(bc.Hash{V0: 2, V1: 2})): &account.UTXO{
+				string(StandardUTXOKey(bc.Hash{V0: 2, V1: 2})): &account.UTXO{
 					OutputID: bc.Hash{V0: 2, V1: 2},
 				},
 			},
@@ -121,10 +122,10 @@ func TestGetAccountUtxos(t *testing.T) {
 		},
 		{
 			dbUtxos: map[string]*account.UTXO{
-				string(account.StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
+				string(StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
 					OutputID: bc.Hash{V0: 3},
 				},
-				string(account.ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
+				string(ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
 					OutputID: bc.Hash{V0: 4},
 				},
 			},
@@ -153,10 +154,10 @@ func TestGetAccountUtxos(t *testing.T) {
 		},
 		{
 			dbUtxos: map[string]*account.UTXO{
-				string(account.StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
+				string(StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
 					OutputID: bc.Hash{V0: 3},
 				},
-				string(account.ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
+				string(ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
 					OutputID: bc.Hash{V0: 4},
 				},
 			},
@@ -185,7 +186,7 @@ func TestGetAccountUtxos(t *testing.T) {
 		},
 	}
 
-	w := &Wallet{DB: testDB}
+	w := &Wallet{Store: testStore}
 	for i, c := range cases {
 		for k, u := range c.dbUtxos {
 			data, err := json.Marshal(u)
@@ -195,7 +196,8 @@ func TestGetAccountUtxos(t *testing.T) {
 			testDB.Set([]byte(k), data)
 		}
 
-		w.AccountMgr = account.NewManager(testDB, nil)
+		acccountStore := NewMockAccountStore(testDB)
+		w.AccountMgr = account.NewManager(acccountStore, nil)
 		w.AccountMgr.AddUnconfirmedUtxo(c.unconfirmedUtxos)
 		gotUtxos := w.GetAccountUtxos("", c.id, c.unconfirmed, c.isSmartContract, false)
 		if !testutil.DeepEqual(gotUtxos, c.wantUtxos) {
@@ -210,6 +212,7 @@ func TestGetAccountUtxos(t *testing.T) {
 
 func TestFilterAccountUtxo(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	testStore := NewMockWalletStore(testDB)
 	defer func() {
 		testDB.Close()
 		os.RemoveAll("temp")
@@ -227,7 +230,7 @@ func TestFilterAccountUtxo(t *testing.T) {
 		},
 		{
 			dbPrograms: map[string]*account.CtrlProgram{
-				"436f6e74726163743a2a37a64a4e15a772ab43bf3f5956d0d1f353946496788e7f40d0ff1796286a6f": &account.CtrlProgram{
+				"41533a013a2a37a64a4e15a772ab43bf3f5956d0d1f353946496788e7f40d0ff1796286a6f": &account.CtrlProgram{
 					AccountID: "testAccount",
 					Address:   "testAddress",
 					KeyIndex:  53,
@@ -287,13 +290,13 @@ func TestFilterAccountUtxo(t *testing.T) {
 		},
 		{
 			dbPrograms: map[string]*account.CtrlProgram{
-				"436f6e74726163743a2a37a64a4e15a772ab43bf3f5956d0d1f353946496788e7f40d0ff1796286a6f": &account.CtrlProgram{
+				"41533a013a2a37a64a4e15a772ab43bf3f5956d0d1f353946496788e7f40d0ff1796286a6f": &account.CtrlProgram{
 					AccountID: "testAccount",
 					Address:   "testAddress",
 					KeyIndex:  53,
 					Change:    true,
 				},
-				"436f6e74726163743adb4d86262c12ba70d50b3ca3ae102d5682436243bd1e8c79569603f75675036a": &account.CtrlProgram{
+				"41533a013adb4d86262c12ba70d50b3ca3ae102d5682436243bd1e8c79569603f75675036a": &account.CtrlProgram{
 					AccountID: "testAccount2",
 					Address:   "testAddress2",
 					KeyIndex:  72,
@@ -349,7 +352,12 @@ func TestFilterAccountUtxo(t *testing.T) {
 		},
 	}
 
-	w := &Wallet{DB: testDB}
+	accountStore := NewMockAccountStore(testDB)
+	accountManager := account.NewManager(accountStore, nil)
+	w := &Wallet{
+		Store:      testStore,
+		AccountMgr: accountManager,
+	}
 	for i, c := range cases {
 		for s, p := range c.dbPrograms {
 			data, err := json.Marshal(p)
