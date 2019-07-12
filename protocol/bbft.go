@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/config"
+	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
 	"github.com/vapor/event"
 	"github.com/vapor/protocol/bc"
@@ -132,6 +133,7 @@ func (c *Chain) validateSign(block *types.Block) error {
 			cachekey := signCacheKey(blockHash.String(), pubKey)
 			if signature, ok := c.signatureCache.Get(cachekey); ok {
 				block.Set(node.Order, signature.([]byte))
+				c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: blockHash, Signature: signature.([]byte), XPub: []byte(pubKey)})
 				c.signatureCache.Remove(cachekey)
 			} else {
 				continue
@@ -160,6 +162,12 @@ func (c *Chain) validateSign(block *types.Block) error {
 // ProcessBlockSignature process the received block signature messages
 // return whether a block become irreversible, if so, the chain module must update status
 func (c *Chain) ProcessBlockSignature(signature, xPub []byte, blockHash *bc.Hash) error {
+	var xPubKey chainkd.XPub
+	copy(xPub[:], xPub[:])
+	if !xPubKey.Verify(blockHash.Bytes(), signature) {
+		return errInvalidSignature
+	}
+
 	xpubStr := hex.EncodeToString(xPub[:])
 	blockHeader, _ := c.store.GetBlockHeader(blockHash)
 

@@ -67,7 +67,7 @@ func (m *Manager) processMsg(peerID string, msgType byte, msg ConsensusMessage) 
 		return
 	}
 
-	logrus.WithFields(logrus.Fields{"module": logModule, "peer": peerID, "type": reflect.TypeOf(msg), "message": msg.String()}).Info("receive message from peer")
+	logrus.WithFields(logrus.Fields{"module": logModule, "peer": peer.Addr(), "type": reflect.TypeOf(msg), "message": msg.String()}).Info("receive message from peer")
 
 	switch msg := msg.(type) {
 	case *BlockProposeMsg:
