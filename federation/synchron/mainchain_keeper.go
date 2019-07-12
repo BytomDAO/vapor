@@ -224,13 +224,13 @@ func (m *mainchainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types
 	switch {
 	case segwit.IsP2WPKHScript(prog):
 		if pubHash, err := segwit.GetHashFromStandardProg(prog); err == nil {
-			fromAddress = wallet.BuildP2PKHAddress(pubHash, &vaporConsensus.MainNetParams)
-			toAddress = wallet.BuildP2PKHAddress(pubHash, &vaporConsensus.VaporNetParams)
+			fromAddress = wallet.BuildP2PKHAddress(pubHash, &vaporConsensus.BytomMainNetParams)
+			toAddress = wallet.BuildP2PKHAddress(pubHash, &vaporConsensus.MainNetParams)
 		}
 	case segwit.IsP2WSHScript(prog):
 		if scriptHash, err := segwit.GetHashFromStandardProg(prog); err == nil {
-			fromAddress = wallet.BuildP2SHAddress(scriptHash, &vaporConsensus.MainNetParams)
-			toAddress = wallet.BuildP2SHAddress(scriptHash, &vaporConsensus.VaporNetParams)
+			fromAddress = wallet.BuildP2SHAddress(scriptHash, &vaporConsensus.BytomMainNetParams)
+			toAddress = wallet.BuildP2SHAddress(scriptHash, &vaporConsensus.MainNetParams)
 		}
 	}
 

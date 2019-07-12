@@ -204,3 +204,9 @@ func BlockSubsidy(height uint64) uint64 {
 	}
 	return 0
 }
+
+// BytomMainNetParams is the config for bytom mainnet
+var BytomMainNetParams = Params{
+	Name:            "main",
+	Bech32HRPSegwit: "bm",
+}
