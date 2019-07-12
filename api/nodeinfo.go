@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 
+	cfg "github.com/vapor/config"
 	"github.com/vapor/errors"
 	"github.com/vapor/netsync/peers"
 	"github.com/vapor/p2p"
@@ -21,7 +22,7 @@ type NetInfo struct {
 	Listening    bool         `json:"listening"`
 	Syncing      bool         `json:"syncing"`
 	Mining       bool         `json:"mining"`
-	PeerXPub     string       `json:"peer_xpub"`
+	NodeXPub     string       `json:"peer_xpub"`
 	PeerCount    int          `json:"peer_count"`
 	CurrentBlock uint64       `json:"current_block"`
 	HighestBlock uint64       `json:"highest_block"`
@@ -31,11 +32,12 @@ type NetInfo struct {
 
 // GetNodeInfo return net information
 func (a *API) GetNodeInfo() *NetInfo {
+	nodeXPub := cfg.CommonConfig.PrivateKey().XPub()
 	info := &NetInfo{
 		Listening:    a.sync.IsListening(),
 		Syncing:      !a.sync.IsCaughtUp(),
 		Mining:       a.blockProposer.IsProposing(),
-		PeerXPub:     a.peerXPub.String(),
+		NodeXPub:     nodeXPub.String(),
 		PeerCount:    a.sync.PeerCount(),
 		CurrentBlock: a.chain.BestBlockHeight(),
 		NetWorkID:    a.sync.GetNetwork(),
