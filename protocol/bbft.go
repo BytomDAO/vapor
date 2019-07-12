@@ -168,7 +168,7 @@ func (c *Chain) ProcessBlockSignature(signature, xPub []byte, blockHash *bc.Hash
 	// save the signature if the block is not exist
 	if blockHeader == nil {
 		var xPubKey chainkd.XPub
-		copy(xPub[:], xPub[:])
+		copy(xPubKey[:], xPub[:])
 		if !xPubKey.Verify(blockHash.Bytes(), signature) {
 			return errInvalidSignature
 		}
