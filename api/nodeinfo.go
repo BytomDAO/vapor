@@ -21,6 +21,7 @@ type NetInfo struct {
 	Listening    bool         `json:"listening"`
 	Syncing      bool         `json:"syncing"`
 	Mining       bool         `json:"mining"`
+	PeerXPub     string       `json:"peer_xpub"`
 	PeerCount    int          `json:"peer_count"`
 	CurrentBlock uint64       `json:"current_block"`
 	HighestBlock uint64       `json:"highest_block"`
@@ -34,6 +35,7 @@ func (a *API) GetNodeInfo() *NetInfo {
 		Listening:    a.sync.IsListening(),
 		Syncing:      !a.sync.IsCaughtUp(),
 		Mining:       a.blockProposer.IsProposing(),
+		PeerXPub:     a.peerXPub.String(),
 		PeerCount:    a.sync.PeerCount(),
 		CurrentBlock: a.chain.BestBlockHeight(),
 		NetWorkID:    a.sync.GetNetwork(),

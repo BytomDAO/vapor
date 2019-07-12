@@ -13,6 +13,7 @@ import (
 
 	"github.com/vapor/accesstoken"
 	cfg "github.com/vapor/config"
+	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/dashboard/dashboard"
 	"github.com/vapor/dashboard/equity"
 	"github.com/vapor/errors"
@@ -106,6 +107,7 @@ func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 // API is the scheduling center for server
 type API struct {
 	sync            NetSync
+	peerXPub        chainkd.XPub
 	wallet          *wallet.Wallet
 	accessTokens    *accesstoken.CredentialStore
 	chain           *protocol.Chain
@@ -144,6 +146,7 @@ func (a *API) initServer(config *cfg.Config) {
 		// https://github.com/golang/go/issues/17071
 		TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){},
 	}
+	a.peerXPub = config.PrivateKey().XPub()
 
 	coreHandler.Set(a)
 }
