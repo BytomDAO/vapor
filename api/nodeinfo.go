@@ -22,7 +22,7 @@ type NetInfo struct {
 	Listening    bool         `json:"listening"`
 	Syncing      bool         `json:"syncing"`
 	Mining       bool         `json:"mining"`
-	NodeXPub     string       `json:"peer_xpub"`
+	NodeXPub     string       `json:"node_xpub"`
 	PeerCount    int          `json:"peer_count"`
 	CurrentBlock uint64       `json:"current_block"`
 	HighestBlock uint64       `json:"highest_block"`
