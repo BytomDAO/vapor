@@ -162,17 +162,17 @@ func (c *Chain) validateSign(block *types.Block) error {
 // ProcessBlockSignature process the received block signature messages
 // return whether a block become irreversible, if so, the chain module must update status
 func (c *Chain) ProcessBlockSignature(signature, xPub []byte, blockHash *bc.Hash) error {
-	var xPubKey chainkd.XPub
-	copy(xPub[:], xPub[:])
-	if !xPubKey.Verify(blockHash.Bytes(), signature) {
-		return errInvalidSignature
-	}
-
 	xpubStr := hex.EncodeToString(xPub[:])
 	blockHeader, _ := c.store.GetBlockHeader(blockHash)
 
 	// save the signature if the block is not exist
 	if blockHeader == nil {
+		var xPubKey chainkd.XPub
+		copy(xPub[:], xPub[:])
+		if !xPubKey.Verify(blockHash.Bytes(), signature) {
+			return errInvalidSignature
+		}
+
 		cacheKey := signCacheKey(blockHash.String(), xpubStr)
 		c.signatureCache.Add(cacheKey, signature)
 		return nil
