@@ -176,12 +176,12 @@ func TestCountCoinbaseTxRewards(t *testing.T) {
 			},
 			wantRewards: []state.CoinbaseReward{
 				state.CoinbaseReward{
-					Amount:         20,
-					ControlProgram: []byte{0x52},
-				},
-				state.CoinbaseReward{
 					Amount:         34,
 					ControlProgram: []byte{0x51},
+				},
+				state.CoinbaseReward{
+					Amount:         20,
+					ControlProgram: []byte{0x52},
 				},
 			},
 		},
@@ -210,6 +210,7 @@ func TestCountCoinbaseTxRewards(t *testing.T) {
 			},
 			consensusResult: &state.ConsensusResult{
 				CoinbaseReward: map[string]uint64{
+					"50": 20,
 					"51": 10,
 					"52": 20,
 					"53": 30,
@@ -217,16 +218,20 @@ func TestCountCoinbaseTxRewards(t *testing.T) {
 			},
 			wantRewards: []state.CoinbaseReward{
 				state.CoinbaseReward{
-					Amount:         20,
-					ControlProgram: []byte{0x52},
+					Amount:         34,
+					ControlProgram: []byte{0x51},
 				},
 				state.CoinbaseReward{
 					Amount:         30,
 					ControlProgram: []byte{0x53},
 				},
 				state.CoinbaseReward{
-					Amount:         34,
-					ControlProgram: []byte{0x51},
+					Amount:         20,
+					ControlProgram: []byte{0x52},
+				},
+				state.CoinbaseReward{
+					Amount:         20,
+					ControlProgram: []byte{0x50},
 				},
 			},
 		},
