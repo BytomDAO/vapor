@@ -4,7 +4,7 @@ fast_sync = true
 db_backend = "leveldb"
 api_addr = "0.0.0.0:9889"
 moniker = ""
-chain_id = "vapor"
+chain_id = "mainnet"
 [p2p]
 laddr = "tcp://0.0.0.0:56659"
 seeds = "52.83.133.152:56659"
