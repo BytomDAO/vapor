@@ -34,10 +34,13 @@ func saveExternalAssetDefinition(b *types.Block, store WalletStore) error {
 	for _, tx := range b.Transactions {
 		for _, orig := range tx.Inputs {
 			if cci, ok := orig.TypedInput.(*types.CrossChainInput); ok {
+				if cci.AssetId.String() == consensus.BTMAssetID.String() {
+					continue
+				}
 				assetID := cci.AssetId
 				if _, err := newStore.GetAsset(assetID); err == nil {
 					continue
-				} else if err != ErrGetAsset && assetID.String() != consensus.BTMAssetID.String() {
+				} else if err != ErrGetAsset {
 					return err
 				}
 
