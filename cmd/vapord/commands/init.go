@@ -20,7 +20,7 @@ var initFilesCmd = &cobra.Command{
 }
 
 func init() {
-	initFilesCmd.Flags().String("chain_id", config.ChainID, "Select [vapor] or [solonet]")
+	initFilesCmd.Flags().String("chain_id", config.ChainID, "Select [mainnet], [testnet] or [solonet]")
 
 	RootCmd.AddCommand(initFilesCmd)
 }
