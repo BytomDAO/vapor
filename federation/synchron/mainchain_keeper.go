@@ -313,8 +313,13 @@ func (m *mainchainKeeper) processIssuing(txs []*types.Tx) error {
 					continue
 				}
 
+				var def struct {
+					Symbol string `json:"symbol"`
+				}
+				json.Unmarshal(inp.AssetDefinition, &def)
 				m.assetStore.Add(&orm.Asset{
 					AssetID:         assetID.String(),
+					Symbol:          strings.ToUpper(def.Symbol),
 					IssuanceProgram: hex.EncodeToString(inp.IssuanceProgram),
 					VMVersion:       inp.VMVersion,
 					Definition:      string(inp.AssetDefinition),
