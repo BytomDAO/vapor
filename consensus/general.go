@@ -115,38 +115,21 @@ func VaporDPOSConfig() DPOSConfig {
 }
 
 // ActiveNetParams is the active NetParams
-var ActiveNetParams = VaporNetParams
+var ActiveNetParams = MainNetParams
 
 // NetParams is the correspondence between chain_id and Params
 var NetParams = map[string]Params{
 	"mainnet": MainNetParams,
-	"wisdom":  TestNetParams,
-	"vapor":   VaporNetParams,
+	"testnet": TestNetParams,
 	"solonet": SoloNetParams,
 }
 
-// MainNetParams is the config for bytom main-net
+// MainNetParams is the config for vapor-mainnet
 var MainNetParams = Params{
 	Name:            "main",
-	Bech32HRPSegwit: "bm",
-	DefaultPort:     "46657",
-	DNSSeeds:        []string{"www.mainnetseed.bytom.io"},
-	Checkpoints:     []Checkpoint{},
-}
-
-// TestNetParams is the config for bytom test-net
-var TestNetParams = Params{
-	Name:            "test",
-	Bech32HRPSegwit: "tm",
-	DefaultPort:     "46656",
-	DNSSeeds:        []string{"www.testnetseed.bytom.io"},
-	Checkpoints:     []Checkpoint{},
-}
-
-// VaporNetParams is the config for vapor-net
-var VaporNetParams = Params{
-	Name:            "vapor",
 	Bech32HRPSegwit: "vp",
+	DefaultPort:     "56656",
+	DNSSeeds:        []string{"www.mainnetseed.vapor.io"},
 	BasicConfig: BasicConfig{
 		MaxBlockGas:                uint64(10000000),
 		MaxGasAmount:               int64(200000),
@@ -164,10 +147,34 @@ var VaporNetParams = Params{
 	},
 }
 
-// SoloNetParams is the config for solo test-net
+// TestNetParams is the config for vapor-testnet
+var TestNetParams = Params{
+	Name:            "test",
+	Bech32HRPSegwit: "tp",
+	DefaultPort:     "56657",
+	DNSSeeds:        []string{"www.testnetseed.vapor.io"},
+	BasicConfig: BasicConfig{
+		MaxBlockGas:                uint64(10000000),
+		MaxGasAmount:               int64(200000),
+		DefaultGasCredit:           int64(160000),
+		StorageGasRate:             int64(1),
+		VMGasRate:                  int64(200),
+		VotePendingBlockNumber:     uint64(10000),
+		CoinbasePendingBlockNumber: uint64(100),
+		CoinbaseArbitrarySizeLimit: 128,
+	},
+	DPOSConfig:  VaporDPOSConfig(),
+	Checkpoints: []Checkpoint{},
+	ProducerSubsidys: []ProducerSubsidy{
+		{BeginBlock: 1, EndBlock: 63072000, Subsidy: 15000000},
+	},
+}
+
+// SoloNetParams is the config for vapor solonet
 var SoloNetParams = Params{
 	Name:            "solo",
-	Bech32HRPSegwit: "sm",
+	Bech32HRPSegwit: "sp",
+	DefaultPort:     "56658",
 	BasicConfig: BasicConfig{
 		MaxBlockGas:                uint64(10000000),
 		MaxGasAmount:               int64(200000),
