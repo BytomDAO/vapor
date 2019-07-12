@@ -192,11 +192,10 @@ func (w *Wallet) BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInp
 }
 
 func (w *Wallet) getAddressFromControlProgram(prog []byte, isMainchain bool) string {
-	netParams := &consensus.ActiveNetParams
+	var netParams interface{}
+	netParams = &consensus.ActiveNetParams
 	if isMainchain {
-		netParams := new(consensus.Params)
-		netParams.Name = btmConsensus.MainNetParams.Name
-		netParams.Bech32HRPSegwit = btmConsensus.MainNetParams.Bech32HRPSegwit
+		netParams = &btmConsensus.MainNetParams
 	}
 
 	if segwit.IsP2WPKHScript(prog) {
@@ -218,18 +217,16 @@ func BuildP2PKHAddress(pubHash []byte, netParams interface{}) string {
 	case *consensus.Params:
 		params := netParams.(*consensus.Params)
 		address, err := common.NewAddressWitnessPubKeyHash(pubHash, params)
-		if err != nil {
-			return ""
+		if err == nil {
+			return address.EncodeAddress()
 		}
-		return address.EncodeAddress()
 
 	case *btmConsensus.Params:
 		params := netParams.(*btmConsensus.Params)
 		address, err := btmCommon.NewAddressWitnessPubKeyHash(pubHash, params)
-		if err != nil {
-			return ""
+		if err == nil {
+			return address.EncodeAddress()
 		}
-		return address.EncodeAddress()
 	}
 	return ""
 }
@@ -240,18 +237,16 @@ func BuildP2SHAddress(scriptHash []byte, netParams interface{}) string {
 	case *consensus.Params:
 		params := netParams.(*consensus.Params)
 		address, err := common.NewAddressWitnessScriptHash(scriptHash, params)
-		if err != nil {
-			return ""
+		if err == nil {
+			return address.EncodeAddress()
 		}
-		return address.EncodeAddress()
 
 	case *btmConsensus.Params:
 		params := netParams.(*btmConsensus.Params)
 		address, err := btmCommon.NewAddressWitnessScriptHash(scriptHash, params)
-		if err != nil {
-			return ""
+		if err == nil {
+			return address.EncodeAddress()
 		}
-		return address.EncodeAddress()
 	}
 	return ""
 }
