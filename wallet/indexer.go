@@ -37,7 +37,7 @@ func saveExternalAssetDefinition(b *types.Block, store WalletStore) error {
 				assetID := cci.AssetId
 				if _, err := newStore.GetAsset(assetID); err == nil {
 					continue
-				} else if err != ErrGetAsset {
+				} else if err != ErrGetAsset && assetID.String() != consensus.BTMAssetID.String() {
 					return err
 				}
 
