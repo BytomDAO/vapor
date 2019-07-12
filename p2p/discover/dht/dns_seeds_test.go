@@ -26,39 +26,39 @@ func lookupHostErrIP(host string) ([]string, error) {
 	return errAddr, nil
 }
 
-var testCases = []struct {
-	chainID    string
-	lookupHost func(host string) (addrs []string, err error)
-	wantErr    error
-	wantAddr   []string
-}{
-	{
-		chainID:    "wisdom",
-		lookupHost: lookupHostNormal,
-		wantErr:    nil,
-		wantAddr:   []string{"1.2.3.4:46656", "5.6.7.8:46656"},
-	},
-	{
-		chainID:    "mainnet",
-		lookupHost: lookupHostNormal,
-		wantErr:    nil,
-		wantAddr:   []string{"11.22.33.44:46657", "55.66.77.88:46657"},
-	},
-	{
-		chainID:    "solonet",
-		lookupHost: lookupHostNormal,
-		wantErr:    errDNSSeedsEmpty,
-		wantAddr:   nil,
-	},
-	{
-		chainID:    "wisdom",
-		lookupHost: lookupHostErrIP,
-		wantErr:    errDNSTimeout,
-		wantAddr:   nil,
-	},
-}
-
 func TestQueryDNSSeeds(t *testing.T) {
+	testCases := []struct {
+		chainID    string
+		lookupHost func(host string) (addrs []string, err error)
+		wantErr    error
+		wantAddr   []string
+	}{
+		{
+			chainID:    "testnet",
+			lookupHost: lookupHostNormal,
+			wantErr:    nil,
+			wantAddr:   []string{"1.2.3.4:56657", "5.6.7.8:56657"},
+		},
+		{
+			chainID:    "mainnet",
+			lookupHost: lookupHostNormal,
+			wantErr:    nil,
+			wantAddr:   []string{"11.22.33.44:56656", "55.66.77.88:56656"},
+		},
+		{
+			chainID:    "solonet",
+			lookupHost: lookupHostNormal,
+			wantErr:    errDNSSeedsEmpty,
+			wantAddr:   nil,
+		},
+		{
+			chainID:    "testnet",
+			lookupHost: lookupHostErrIP,
+			wantErr:    errDNSTimeout,
+			wantAddr:   nil,
+		},
+	}
+
 	for i, tc := range testCases {
 		consensus.ActiveNetParams = consensus.NetParams[tc.chainID]
 		addresses, err := QueryDNSSeeds(tc.lookupHost)

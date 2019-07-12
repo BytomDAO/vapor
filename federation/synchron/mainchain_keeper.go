@@ -226,11 +226,11 @@ func (m *mainchainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types
 	var fromAddress, toAddress string
 	switch {
 	case segwit.IsP2WPKHScript(prog):
-		fromAddress = wallet.BuildP2PKHAddress(scriptHash, &vaporConsensus.MainNetParams)
-		toAddress = wallet.BuildP2PKHAddress(scriptHash, &vaporConsensus.VaporNetParams)
+		fromAddress = wallet.BuildP2PKHAddress(scriptHash, &vaporConsensus.BytomMainNetParams)
+		toAddress = wallet.BuildP2PKHAddress(scriptHash, &vaporConsensus.MainNetParams)
 	case segwit.IsP2WSHScript(prog):
-		fromAddress = wallet.BuildP2SHAddress(scriptHash, &vaporConsensus.MainNetParams)
-		toAddress = wallet.BuildP2SHAddress(scriptHash, &vaporConsensus.VaporNetParams)
+		fromAddress = wallet.BuildP2SHAddress(scriptHash, &vaporConsensus.BytomMainNetParams)
+		toAddress = wallet.BuildP2SHAddress(scriptHash, &vaporConsensus.MainNetParams)
 	}
 
 	reqs := []*orm.CrossTransactionReq{}
