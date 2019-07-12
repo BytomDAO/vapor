@@ -32,7 +32,9 @@ func initFiles(cmd *cobra.Command, args []string) {
 	}
 
 	switch config.ChainID {
-	case "vapor":
+	case "mainnet":
+		cfg.EnsureRoot(config.RootDir, config.ChainID)
+	case "testnet":
 		cfg.EnsureRoot(config.RootDir, config.ChainID)
 	default:
 		cfg.EnsureRoot(config.RootDir, "solonet")
