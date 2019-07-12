@@ -66,13 +66,3 @@ func (a *AssetStore) GetByAssetID(assetID string) (*orm.Asset, error) {
 	a.cache.Add(fmtAssetIDKey(asset.AssetID), asset)
 	return asset, nil
 }
-
-func (a *AssetStore) Add(asset *orm.Asset) error {
-	if err := a.db.Create(asset).Error; err != nil {
-		return err
-	}
-
-	a.cache.Add(fmtOrmIDKey(asset.ID), asset)
-	a.cache.Add(fmtAssetIDKey(asset.AssetID), asset)
-	return nil
-}

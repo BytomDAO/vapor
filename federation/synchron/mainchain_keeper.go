@@ -116,11 +116,11 @@ func (m *mainchainKeeper) tryAttachBlock(chain *orm.Chain, block *types.Block, t
 }
 
 func (m *mainchainKeeper) processBlock(chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus) error {
-	if err := m.processIssuing(block.Transactions); err != nil {
-		return err
-	}
-
 	for i, tx := range block.Transactions {
+		if err := m.processIssuing(tx); err != nil {
+			return err
+		}
+
 		if m.isDepositTx(tx) {
 			if err := m.processDepositTx(chain, block, txStatus, uint64(i), tx); err != nil {
 				return err
@@ -149,7 +149,6 @@ func (m *mainchainKeeper) isDepositTx(tx *types.Tx) bool {
 			return true
 		}
 	}
-
 	return false
 }
 
@@ -217,21 +216,21 @@ func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *types.Block,
 }
 
 func (m *mainchainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types.Tx, statusFail bool) ([]*orm.CrossTransactionReq, error) {
-	var fromAddress, toAddress string
 	// assume inputs are from an identical owner
 	prog := tx.Inputs[0].ControlProgram()
-	script := hex.EncodeToString(prog)
+	scriptHash, err := segwit.GetHashFromStandardProg(prog)
+	if err != nil {
+		return nil, err
+	}
+
+	var fromAddress, toAddress string
 	switch {
 	case segwit.IsP2WPKHScript(prog):
-		if pubHash, err := segwit.GetHashFromStandardProg(prog); err == nil {
-			fromAddress = wallet.BuildP2PKHAddress(pubHash, &vaporConsensus.MainNetParams)
-			toAddress = wallet.BuildP2PKHAddress(pubHash, &vaporConsensus.VaporNetParams)
-		}
+		fromAddress = wallet.BuildP2PKHAddress(scriptHash, &vaporConsensus.MainNetParams)
+		toAddress = wallet.BuildP2PKHAddress(scriptHash, &vaporConsensus.VaporNetParams)
 	case segwit.IsP2WSHScript(prog):
-		if scriptHash, err := segwit.GetHashFromStandardProg(prog); err == nil {
-			fromAddress = wallet.BuildP2SHAddress(scriptHash, &vaporConsensus.MainNetParams)
-			toAddress = wallet.BuildP2SHAddress(scriptHash, &vaporConsensus.VaporNetParams)
-		}
+		fromAddress = wallet.BuildP2SHAddress(scriptHash, &vaporConsensus.MainNetParams)
+		toAddress = wallet.BuildP2SHAddress(scriptHash, &vaporConsensus.VaporNetParams)
 	}
 
 	reqs := []*orm.CrossTransactionReq{}
@@ -255,7 +254,7 @@ func (m *mainchainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types
 			SourcePos:          uint64(i),
 			AssetID:            asset.ID,
 			AssetAmount:        rawOutput.OutputCommitment.AssetAmount.Amount,
-			Script:             script,
+			Script:             hex.EncodeToString(prog),
 			FromAddress:        fromAddress,
 			ToAddress:          toAddress,
 		}
@@ -303,25 +302,26 @@ func (m *mainchainKeeper) processChainInfo(chain *orm.Chain, block *types.Block)
 	return nil
 }
 
-func (m *mainchainKeeper) processIssuing(txs []*types.Tx) error {
-	for _, tx := range txs {
-		for _, input := range tx.Inputs {
-			switch inp := input.TypedInput.(type) {
-			case *types.IssuanceInput:
-				assetID := inp.AssetID()
-				if _, err := m.assetStore.GetByAssetID(assetID.String()); err == nil {
-					continue
-				}
+func (m *mainchainKeeper) processIssuing(tx *types.Tx) error {
+	for _, input := range tx.Inputs {
+		switch inp := input.TypedInput.(type) {
+		case *types.IssuanceInput:
+			assetID := inp.AssetID()
+			if _, err := m.assetStore.GetByAssetID(assetID.String()); err == nil {
+				continue
+			}
 
-				m.assetStore.Add(&orm.Asset{
-					AssetID:         assetID.String(),
-					IssuanceProgram: hex.EncodeToString(inp.IssuanceProgram),
-					VMVersion:       inp.VMVersion,
-					Definition:      string(inp.AssetDefinition),
-				})
+			asset := &orm.Asset{
+				AssetID:         assetID.String(),
+				IssuanceProgram: hex.EncodeToString(inp.IssuanceProgram),
+				VMVersion:       inp.VMVersion,
+				Definition:      string(inp.AssetDefinition),
+			}
+
+			if err := m.db.Create(asset).Error; err != nil {
+				return err
 			}
 		}
 	}
-
 	return nil
 }
