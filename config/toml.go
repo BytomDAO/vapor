@@ -27,23 +27,31 @@ api_addr = "0.0.0.0:9889"
 moniker = ""
 `
 
-var soloNetConfigTmpl = `chain_id = "solonet"
-[p2p]
-laddr = "tcp://0.0.0.0:46658"
-seeds = ""
-`
-
-var vaporNetConfigTmpl = `chain_id = "vapor"
+var mainNetConfigTmpl = `chain_id = "mainnet"
 [p2p]
 laddr = "tcp://0.0.0.0:56656"
 seeds = "52.82.28.25:56656,52.82.31.195:56656,52.82.31.247:56656"
 `
 
+var testNetConfigTmpl = `chain_id = "testnet"
+[p2p]
+laddr = "tcp://0.0.0.0:56657"
+seeds = ""
+`
+
+var soloNetConfigTmpl = `chain_id = "solonet"
+[p2p]
+laddr = "tcp://0.0.0.0:56658"
+seeds = ""
+`
+
 // Select network seeds to merge a new string.
 func selectNetwork(network string) string {
 	switch network {
-	case "vapor":
-		return defaultConfigTmpl + vaporNetConfigTmpl
+	case "mainnet":
+		return defaultConfigTmpl + mainNetConfigTmpl
+	case "testnet":
+		return defaultConfigTmpl + testNetConfigTmpl
 	default:
 		return defaultConfigTmpl + soloNetConfigTmpl
 	}

@@ -192,7 +192,7 @@ func (w *Wallet) BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInp
 func (w *Wallet) getAddressFromControlProgram(prog []byte, isMainchain bool) string {
 	netParams := &consensus.ActiveNetParams
 	if isMainchain {
-		netParams = &consensus.MainNetParams
+		netParams = &consensus.BytomMainNetParams
 	}
 
 	if segwit.IsP2WPKHScript(prog) {

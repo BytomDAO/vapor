@@ -88,7 +88,7 @@ func TestBuildIntra(t *testing.T) {
 }
 
 func newCrossOutAction(assetAmt bc.AssetAmount, redeemContract []byte) *crossOutAction {
-	address, err := common.NewAddressWitnessPubKeyHash(redeemContract, &consensus.MainNetParams)
+	address, err := common.NewAddressWitnessPubKeyHash(redeemContract, &consensus.BytomMainNetParams)
 	if err != nil {
 		panic(err)
 	}

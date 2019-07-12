@@ -230,11 +230,11 @@ func (s *sidechainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types
 	switch {
 	case segwit.IsP2WPKHScript(inputCP):
 		if pubHash, err := segwit.GetHashFromStandardProg(inputCP); err == nil {
-			fromAddress = wallet.BuildP2PKHAddress(pubHash, &consensus.VaporNetParams)
+			fromAddress = wallet.BuildP2PKHAddress(pubHash, &consensus.MainNetParams)
 		}
 	case segwit.IsP2WSHScript(inputCP):
 		if scriptHash, err := segwit.GetHashFromStandardProg(inputCP); err == nil {
-			fromAddress = wallet.BuildP2SHAddress(scriptHash, &consensus.VaporNetParams)
+			fromAddress = wallet.BuildP2SHAddress(scriptHash, &consensus.MainNetParams)
 		}
 	}
 
@@ -259,11 +259,11 @@ func (s *sidechainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types
 		switch {
 		case segwit.IsP2WPKHScript(outputCP):
 			if pubHash, err := segwit.GetHashFromStandardProg(outputCP); err == nil {
-				toAddress = wallet.BuildP2PKHAddress(pubHash, &consensus.MainNetParams)
+				toAddress = wallet.BuildP2PKHAddress(pubHash, &consensus.BytomMainNetParams)
 			}
 		case segwit.IsP2WSHScript(outputCP):
 			if scriptHash, err := segwit.GetHashFromStandardProg(outputCP); err == nil {
-				toAddress = wallet.BuildP2SHAddress(scriptHash, &consensus.MainNetParams)
+				toAddress = wallet.BuildP2SHAddress(scriptHash, &consensus.BytomMainNetParams)
 			}
 		}
 
