@@ -26,7 +26,6 @@ type sidechainKeeper struct {
 	cfg        *config.Chain
 	db         *gorm.DB
 	node       *service.Node
-	chainName  string
 	assetStore *database.AssetStore
 }
 
@@ -35,7 +34,6 @@ func NewSidechainKeeper(db *gorm.DB, assetStore *database.AssetStore, cfg *confi
 		cfg:        &cfg.Sidechain,
 		db:         db,
 		node:       service.NewNode(cfg.Sidechain.Upstream),
-		chainName:  cfg.Sidechain.Name,
 		assetStore: assetStore,
 	}
 }
@@ -58,7 +56,7 @@ func (s *sidechainKeeper) Run() {
 }
 
 func (s *sidechainKeeper) syncBlock() (bool, error) {
-	chain := &orm.Chain{Name: s.chainName}
+	chain := &orm.Chain{Name: common.VaporChainName}
 	if err := s.db.Where(chain).First(chain).Error; err != nil {
 		return false, errors.Wrap(err, "query chain")
 	}
@@ -100,31 +98,35 @@ func (s *sidechainKeeper) syncBlock() (bool, error) {
 func (s *sidechainKeeper) tryAttachBlock(chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus) error {
 	blockHash := block.Hash()
 	log.WithFields(log.Fields{"block_height": block.Height, "block_hash": blockHash.String()}).Info("start to attachBlock")
+
 	dbTx := s.db.Begin()
-	if err := s.processBlock(chain, block, txStatus); err != nil {
+	if err := s.processBlock(dbTx, chain, block, txStatus); err != nil {
 		dbTx.Rollback()
 		return err
 	}
 
+	if err := s.processChainInfo(dbTx, chain, block); err != nil {
+		dbTx.Rollback()
+		return err
+	}
 	return dbTx.Commit().Error
 }
 
-func (s *sidechainKeeper) processBlock(chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus) error {
+func (s *sidechainKeeper) processBlock(db *gorm.DB, chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus) error {
 	for i, tx := range block.Transactions {
 		if s.isDepositTx(tx) {
-			if err := s.processDepositTx(chain, block, uint64(i), tx); err != nil {
+			if err := s.processDepositTx(db, chain, block, uint64(i), tx); err != nil {
 				return err
 			}
 		}
 
 		if s.isWithdrawalTx(tx) {
-			if err := s.processWithdrawalTx(chain, block, txStatus, uint64(i), tx); err != nil {
+			if err := s.processWithdrawalTx(db, chain, block, txStatus, uint64(i), tx); err != nil {
 				return err
 			}
 		}
 	}
-
-	return s.processChainInfo(chain, block)
+	return nil
 }
 
 func (s *sidechainKeeper) isDepositTx(tx *types.Tx) bool {
@@ -145,17 +147,19 @@ func (s *sidechainKeeper) isWithdrawalTx(tx *types.Tx) bool {
 	return false
 }
 
-func (s *sidechainKeeper) processDepositTx(chain *orm.Chain, block *types.Block, txIndex uint64, tx *types.Tx) error {
+func (s *sidechainKeeper) processDepositTx(db *gorm.DB, chain *orm.Chain, block *types.Block, txIndex uint64, tx *types.Tx) error {
+	sourceTxHash, err := s.locateMainChainTx(tx.Inputs[0])
+	if err != nil {
+		return err
+	}
+
 	blockHash := block.Hash()
-	stmt := s.db.Model(&orm.CrossTransaction{}).Where("chain_id != ?", chain.ID).
-		Where(&orm.CrossTransaction{
-			DestTxHash: sql.NullString{tx.ID.String(), true},
-			Status:     common.CrossTxPendingStatus,
-		}).UpdateColumn(&orm.CrossTransaction{
+	stmt := db.Model(&orm.CrossTransaction{}).Where("source_tx_hash = ? ", sourceTxHash).UpdateColumn(&orm.CrossTransaction{
 		DestBlockHeight:    sql.NullInt64{int64(block.Height), true},
 		DestBlockTimestamp: sql.NullInt64{int64(block.Timestamp), true},
 		DestBlockHash:      sql.NullString{blockHash.String(), true},
 		DestTxIndex:        sql.NullInt64{int64(txIndex), true},
+		DestTxHash:         sql.NullString{tx.ID.String(), true},
 		Status:             common.CrossTxCompletedStatus,
 	})
 	if stmt.Error != nil {
@@ -163,14 +167,12 @@ func (s *sidechainKeeper) processDepositTx(chain *orm.Chain, block *types.Block,
 	}
 
 	if stmt.RowsAffected != 1 {
-		log.Warnf("sidechainKeeper.processDepositTx(%v): rows affected != 1", tx.ID.String())
+		return ErrInconsistentDB
 	}
 	return nil
 }
 
-func (s *sidechainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus, txIndex uint64, tx *types.Tx) error {
-	blockHash := block.Hash()
-
+func (s *sidechainKeeper) processWithdrawalTx(db *gorm.DB, chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus, txIndex uint64, tx *types.Tx) error {
 	var muxID bc.Hash
 	res0ID := tx.ResultIds[0]
 	switch res := tx.Entries[*res0ID].(type) {
@@ -189,6 +191,7 @@ func (s *sidechainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Blo
 		return err
 	}
 
+	blockHash := block.Hash()
 	ormTx := &orm.CrossTransaction{
 		ChainID:              chain.ID,
 		SourceBlockHeight:    block.Height,
@@ -205,26 +208,14 @@ func (s *sidechainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Blo
 		DestTxHash:           sql.NullString{Valid: false},
 		Status:               common.CrossTxPendingStatus,
 	}
-	if err := s.db.Create(ormTx).Error; err != nil {
+	if err := db.Create(ormTx).Error; err != nil {
 		return errors.Wrap(err, fmt.Sprintf("create sidechain WithdrawalTx %s", tx.ID.String()))
 	}
 
-	statusFail := txStatus.VerifyStatus[txIndex].StatusFail
-	crossChainOutputs, err := s.getCrossChainReqs(ormTx.ID, tx, statusFail)
-	if err != nil {
-		return err
-	}
-
-	for _, output := range crossChainOutputs {
-		if err := s.db.Create(output).Error; err != nil {
-			return errors.Wrap(err, fmt.Sprintf("create WithdrawalFromSidechain output: txid(%s), pos(%d)", tx.ID.String(), output.SourcePos))
-		}
-	}
-
-	return nil
+	return s.createCrossChainReqs(db, ormTx.ID, tx, txStatus.VerifyStatus[txIndex].StatusFail)
 }
 
-func (s *sidechainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types.Tx, statusFail bool) ([]*orm.CrossTransactionReq, error) {
+func (s *sidechainKeeper) createCrossChainReqs(db *gorm.DB, crossTransactionID uint64, tx *types.Tx, statusFail bool) error {
 	var fromAddress string
 	inputCP := tx.Inputs[0].ControlProgram()
 	switch {
@@ -238,9 +229,7 @@ func (s *sidechainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types
 		}
 	}
 
-	reqs := []*orm.CrossTransactionReq{}
 	for i, rawOutput := range tx.Outputs {
-		// check valid withdrawal
 		if rawOutput.OutputType() != types.CrossChainOutputType {
 			continue
 		}
@@ -251,7 +240,7 @@ func (s *sidechainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types
 
 		asset, err := s.assetStore.GetByAssetID(rawOutput.OutputCommitment().AssetAmount.AssetId.String())
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		var toAddress string
@@ -276,16 +265,19 @@ func (s *sidechainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types
 			FromAddress:        fromAddress,
 			ToAddress:          toAddress,
 		}
-		reqs = append(reqs, req)
+
+		if err := db.Create(req).Error; err != nil {
+			return err
+		}
 	}
-	return reqs, nil
+	return nil
 }
 
-func (s *sidechainKeeper) processChainInfo(chain *orm.Chain, block *types.Block) error {
+func (s *sidechainKeeper) processChainInfo(db *gorm.DB, chain *orm.Chain, block *types.Block) error {
 	blockHash := block.Hash()
 	chain.BlockHash = blockHash.String()
 	chain.BlockHeight = block.Height
-	res := s.db.Model(chain).Where("block_hash = ?", block.PreviousBlockHash.String()).Updates(chain)
+	res := db.Model(chain).Where("block_hash = ?", block.PreviousBlockHash.String()).Updates(chain)
 	if err := res.Error; err != nil {
 		return err
 	}
@@ -295,4 +287,18 @@ func (s *sidechainKeeper) processChainInfo(chain *orm.Chain, block *types.Block)
 	}
 
 	return nil
+}
+
+func (s *sidechainKeeper) locateMainChainTx(input *types.TxInput) (string, error) {
+	if input.InputType() != types.CrossChainInputType {
+		return "", errors.New("found weird crossChain tx")
+	}
+
+	crossIn := input.TypedInput.(*types.CrossChainInput)
+	crossTx := &orm.CrossTransaction{SourceMuxID: crossIn.SpendCommitment.SourceID.String()}
+	if err := s.
+		db.Where(crossTx).First(crossTx).Error; err != nil {
+		return "", errors.Wrap(err, "fail on find CrossTransaction")
+	}
+	return crossTx.SourceTxHash, nil
 }
