@@ -119,9 +119,9 @@ var ActiveNetParams = MainNetParams
 
 // NetParams is the correspondence between chain_id and Params
 var NetParams = map[string]Params{
-	"main": MainNetParams,
-	"test": TestNetParams,
-	"solo": SoloNetParams,
+	"mainnet": MainNetParams,
+	"testnet": TestNetParams,
+	"solonet": SoloNetParams,
 }
 
 // MainNetParams is the config for vapor-mainnet
