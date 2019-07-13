@@ -101,7 +101,7 @@ func (sm *SyncManager) Stop() {
 
 }
 
-// IsListening check if the bytomd service port is open?
+// IsListening check if the vapord service port is open?
 func (sm *SyncManager) IsListening() bool {
 	if sm.config.VaultMode {
 		return false

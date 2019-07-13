@@ -153,7 +153,7 @@ var buildTransactionCmd = &cobra.Command{
 			buildReqStr = fmt.Sprintf(buildControlAddressReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, address)
 		case "unlock":
 			var err error
-			usage := "Usage:\n  bytomcli build-transaction <accountID|alias> <assetID|alias> <amount> <outputID> -c <contractName>"
+			usage := "Usage:\n  vaporcli build-transaction <accountID|alias> <assetID|alias> <amount> <outputID> -c <contractName>"
 			baseCount := 4
 			if len(args) < baseCount {
 				jww.ERROR.Printf("%s <contract_argument> ... [flags]\n\n", usage)

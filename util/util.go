@@ -14,12 +14,12 @@ const (
 	Success = iota
 	// ErrLocalExe indicates error occurs before the rpc calling.
 	ErrLocalExe
-	// ErrConnect indicates error occurs connecting to the bytomd, e.g.,
-	// bytomd can't parse the received arguments.
+	// ErrConnect indicates error occurs connecting to the vapord, e.g.,
+	// vapord can't parse the received arguments.
 	ErrConnect
 	// ErrLocalParse indicates error occurs locally when parsing the response.
 	ErrLocalParse
-	// ErrRemote indicates error occurs in bytomd.
+	// ErrRemote indicates error occurs in vapord.
 	ErrRemote
 )
 
@@ -51,7 +51,7 @@ func ClientCall(path string, req ...interface{}) (interface{}, int) {
 		jww.ERROR.Println(response.Msg)
 		return nil, ErrRemote
 	case "":
-		jww.ERROR.Println("Unable to connect to the bytomd")
+		jww.ERROR.Println("Unable to connect to the vapord")
 		return nil, ErrConnect
 	}
 

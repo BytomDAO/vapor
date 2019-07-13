@@ -11,8 +11,8 @@ import (
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "Print the version number of Bytomcli",
+	Short: "Print the version number of vaporcli",
 	Run: func(cmd *cobra.Command, args []string) {
-		jww.FEEDBACK.Printf("Bytomcli v%s %s/%s\n", version.Version, runtime.GOOS, runtime.GOARCH)
+		jww.FEEDBACK.Printf("vaporcli v%s %s/%s\n", version.Version, runtime.GOOS, runtime.GOARCH)
 	},
 }
