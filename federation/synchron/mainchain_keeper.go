@@ -29,13 +29,19 @@ type mainchainKeeper struct {
 	db             *gorm.DB
 	node           *service.Node
 	assetStore     *database.AssetStore
+	chainID        uint64
 	federationProg []byte
 }
 
 func NewMainchainKeeper(db *gorm.DB, assetStore *database.AssetStore, cfg *config.Config) *mainchainKeeper {
 	federationProg, err := hex.DecodeString(cfg.FederationProg)
 	if err != nil {
-		log.WithField("err", err).Panic("fail on decode federation prog")
+		log.WithField("err", err).Fatal("fail on decode federation prog")
+	}
+
+	chain := &orm.Chain{Name: common.BytomChainName}
+	if err := db.Where(chain).First(chain).Error; err != nil {
+		log.WithField("err", err).Fatal("fail on get chain info")
 	}
 
 	return &mainchainKeeper{
@@ -44,6 +50,7 @@ func NewMainchainKeeper(db *gorm.DB, assetStore *database.AssetStore, cfg *confi
 		node:           service.NewNode(cfg.Mainchain.Upstream),
 		assetStore:     assetStore,
 		federationProg: federationProg,
+		chainID:        chain.ID,
 	}
 }
 
@@ -62,113 +69,6 @@ func (m *mainchainKeeper) Run() {
 			}
 		}
 	}
-}
-
-func (m *mainchainKeeper) syncBlock() (bool, error) {
-	chain := &orm.Chain{Name: common.BytomChainName}
-	if err := m.db.Where(chain).First(chain).Error; err != nil {
-		return false, errors.Wrap(err, "query chain")
-	}
-
-	height, err := m.node.GetBlockCount()
-	if err != nil {
-		return false, err
-	}
-
-	if height <= chain.BlockHeight+m.cfg.Confirmations {
-		return false, nil
-	}
-
-	nextBlockStr, txStatus, err := m.node.GetBlockByHeight(chain.BlockHeight + 1)
-	if err != nil {
-		return false, err
-	}
-
-	nextBlock := &types.Block{}
-	if err := nextBlock.UnmarshalText([]byte(nextBlockStr)); err != nil {
-		return false, errors.New("Unmarshal nextBlock")
-	}
-
-	if nextBlock.PreviousBlockHash.String() != chain.BlockHash {
-		log.WithFields(log.Fields{
-			"remote previous_block_Hash": nextBlock.PreviousBlockHash.String(),
-			"db block_hash":              chain.BlockHash,
-		}).Fatal("fail on block hash mismatch")
-	}
-
-	if err := m.tryAttachBlock(chain, nextBlock, txStatus); err != nil {
-		return false, err
-	}
-
-	return true, nil
-}
-
-func (m *mainchainKeeper) tryAttachBlock(chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus) error {
-	blockHash := block.Hash()
-	log.WithFields(log.Fields{"block_height": block.Height, "block_hash": blockHash.String()}).Info("start to attachBlock")
-
-	dbTx := m.db.Begin()
-	if err := m.processBlock(dbTx, chain, block, txStatus); err != nil {
-		dbTx.Rollback()
-		return err
-	}
-
-	if err := m.processChainInfo(dbTx, chain, block); err != nil {
-		dbTx.Rollback()
-		return err
-	}
-
-	return dbTx.Commit().Error
-}
-
-func (m *mainchainKeeper) processBlock(db *gorm.DB, chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus) error {
-	for i, tx := range block.Transactions {
-		if err := m.processIssuance(tx); err != nil {
-			return err
-		}
-
-		if m.isDepositTx(tx) {
-			if err := m.processDepositTx(db, chain, block, txStatus, uint64(i), tx); err != nil {
-				return err
-			}
-		}
-
-		if m.isWithdrawalTx(tx) {
-			if err := m.processWithdrawalTx(db, chain, block, uint64(i), tx); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
-func (m *mainchainKeeper) isDepositTx(tx *types.Tx) bool {
-	for _, input := range tx.Inputs {
-		if bytes.Equal(input.ControlProgram(), m.federationProg) {
-			return false
-		}
-	}
-
-	for _, output := range tx.Outputs {
-		if bytes.Equal(output.OutputCommitment.ControlProgram, m.federationProg) {
-			return true
-		}
-	}
-	return false
-}
-
-func (m *mainchainKeeper) isWithdrawalTx(tx *types.Tx) bool {
-	for _, input := range tx.Inputs {
-		if !bytes.Equal(input.ControlProgram(), m.federationProg) {
-			return false
-		}
-	}
-
-	if sourceTxHash := locateSideChainTx(tx.Outputs[len(tx.Outputs)-1]); sourceTxHash == "" {
-		return false
-	}
-	return false
 }
 
 func (m *mainchainKeeper) createCrossChainReqs(db *gorm.DB, crossTransactionID uint64, tx *types.Tx, statusFail bool) error {
@@ -206,11 +106,75 @@ func (m *mainchainKeeper) createCrossChainReqs(db *gorm.DB, crossTransactionID u
 	return nil
 }
 
-func (m *mainchainKeeper) processChainInfo(db *gorm.DB, chain *orm.Chain, block *types.Block) error {
+func (m *mainchainKeeper) isDepositTx(tx *types.Tx) bool {
+	for _, input := range tx.Inputs {
+		if bytes.Equal(input.ControlProgram(), m.federationProg) {
+			return false
+		}
+	}
+
+	for _, output := range tx.Outputs {
+		if bytes.Equal(output.OutputCommitment.ControlProgram, m.federationProg) {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *mainchainKeeper) isWithdrawalTx(tx *types.Tx) bool {
+	for _, input := range tx.Inputs {
+		if !bytes.Equal(input.ControlProgram(), m.federationProg) {
+			return false
+		}
+	}
+
+	if sourceTxHash := locateSideChainTx(tx.Outputs[len(tx.Outputs)-1]); sourceTxHash == "" {
+		return false
+	}
+	return false
+}
+
+func locateSideChainTx(output *types.TxOutput) string {
+	insts, err := vm.ParseProgram(output.OutputCommitment.ControlProgram)
+	if err != nil {
+		return ""
+	}
+
+	if len(insts) != 2 {
+		return ""
+	}
+
+	return hex.EncodeToString(insts[1].Data)
+}
+
+func (m *mainchainKeeper) processBlock(db *gorm.DB, block *types.Block, txStatus *bc.TransactionStatus) error {
+	for i, tx := range block.Transactions {
+		if err := m.processIssuance(tx); err != nil {
+			return err
+		}
+
+		if m.isDepositTx(tx) {
+			if err := m.processDepositTx(db, block, txStatus, i); err != nil {
+				return err
+			}
+		}
+
+		if m.isWithdrawalTx(tx) {
+			if err := m.processWithdrawalTx(db, block, i); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (m *mainchainKeeper) processChainInfo(db *gorm.DB, block *types.Block) error {
 	blockHash := block.Hash()
-	chain.BlockHash = blockHash.String()
-	chain.BlockHeight = block.Height
-	res := db.Model(chain).Where("block_hash = ?", block.PreviousBlockHash.String()).Updates(chain)
+	res := db.Model(&orm.Chain{}).Where("block_hash = ?", block.PreviousBlockHash.String()).Updates(&orm.Chain{
+		BlockHash:   blockHash.String(),
+		BlockHeight: block.Height,
+	})
 	if err := res.Error; err != nil {
 		return err
 	}
@@ -221,10 +185,10 @@ func (m *mainchainKeeper) processChainInfo(db *gorm.DB, chain *orm.Chain, block 
 	return nil
 }
 
-func (m *mainchainKeeper) processDepositTx(db *gorm.DB, chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus, txIndex uint64, tx *types.Tx) error {
+func (m *mainchainKeeper) processDepositTx(db *gorm.DB, block *types.Block, txStatus *bc.TransactionStatus, txIndex int) error {
+	tx := block.Transactions[txIndex]
 	var muxID btmBc.Hash
-	res0ID := tx.ResultIds[0]
-	switch res := tx.Entries[*res0ID].(type) {
+	switch res := tx.Entries[*tx.ResultIds[0]].(type) {
 	case *btmBc.Output:
 		muxID = *res.Source.Ref
 	case *btmBc.Retirement:
@@ -240,11 +204,11 @@ func (m *mainchainKeeper) processDepositTx(db *gorm.DB, chain *orm.Chain, block 
 
 	blockHash := block.Hash()
 	ormTx := &orm.CrossTransaction{
-		ChainID:              chain.ID,
+		ChainID:              m.chainID,
 		SourceBlockHeight:    block.Height,
 		SourceBlockTimestamp: block.Timestamp,
 		SourceBlockHash:      blockHash.String(),
-		SourceTxIndex:        txIndex,
+		SourceTxIndex:        uint64(txIndex),
 		SourceMuxID:          muxID.String(),
 		SourceTxHash:         tx.ID.String(),
 		SourceRawTransaction: string(rawTx),
@@ -288,14 +252,14 @@ func (m *mainchainKeeper) processIssuance(tx *types.Tx) error {
 	return nil
 }
 
-func (m *mainchainKeeper) processWithdrawalTx(db *gorm.DB, chain *orm.Chain, block *types.Block, txIndex uint64, tx *types.Tx) error {
-	crossTx := &orm.CrossTransaction{SourceTxHash: locateSideChainTx(tx.Outputs[len(tx.Outputs)-1])}
-	if err := db.Where(crossTx).First(crossTx).Error; err != nil {
-		return errors.Wrap(err, "fail on find CrossTransaction")
-	}
-
+func (m *mainchainKeeper) processWithdrawalTx(db *gorm.DB, block *types.Block, txIndex int) error {
 	blockHash := block.Hash()
-	stmt := db.Model(&orm.CrossTransaction{}).Where(crossTx).UpdateColumn(&orm.CrossTransaction{
+	tx := block.Transactions[txIndex]
+
+	stmt := db.Model(&orm.CrossTransaction{}).Where(&orm.CrossTransaction{
+		SourceTxHash: locateSideChainTx(tx.Outputs[len(tx.Outputs)-1]),
+		Status:       common.CrossTxPendingStatus,
+	}).UpdateColumn(&orm.CrossTransaction{
 		DestBlockHeight:    sql.NullInt64{int64(block.Height), true},
 		DestBlockTimestamp: sql.NullInt64{int64(block.Timestamp), true},
 		DestBlockHash:      sql.NullString{blockHash.String(), true},
@@ -313,15 +277,59 @@ func (m *mainchainKeeper) processWithdrawalTx(db *gorm.DB, chain *orm.Chain, blo
 	return nil
 }
 
-func locateSideChainTx(output *types.TxOutput) string {
-	insts, err := vm.ParseProgram(output.OutputCommitment.ControlProgram)
+func (m *mainchainKeeper) syncBlock() (bool, error) {
+	chain := &orm.Chain{ID: m.chainID}
+	if err := m.db.First(chain).Error; err != nil {
+		return false, errors.Wrap(err, "query chain")
+	}
+
+	height, err := m.node.GetBlockCount()
 	if err != nil {
-		return ""
+		return false, err
 	}
 
-	if len(insts) != 2 {
-		return ""
+	if height <= chain.BlockHeight+m.cfg.Confirmations {
+		return false, nil
 	}
 
-	return hex.EncodeToString(insts[1].Data)
+	nextBlockStr, txStatus, err := m.node.GetBlockByHeight(chain.BlockHeight + 1)
+	if err != nil {
+		return false, err
+	}
+
+	nextBlock := &types.Block{}
+	if err := nextBlock.UnmarshalText([]byte(nextBlockStr)); err != nil {
+		return false, errors.New("Unmarshal nextBlock")
+	}
+
+	if nextBlock.PreviousBlockHash.String() != chain.BlockHash {
+		log.WithFields(log.Fields{
+			"remote previous_block_Hash": nextBlock.PreviousBlockHash.String(),
+			"db block_hash":              chain.BlockHash,
+		}).Fatal("fail on block hash mismatch")
+	}
+
+	if err := m.tryAttachBlock(nextBlock, txStatus); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (m *mainchainKeeper) tryAttachBlock(block *types.Block, txStatus *bc.TransactionStatus) error {
+	blockHash := block.Hash()
+	log.WithFields(log.Fields{"block_height": block.Height, "block_hash": blockHash.String()}).Info("start to attachBlock")
+
+	dbTx := m.db.Begin()
+	if err := m.processBlock(dbTx, block, txStatus); err != nil {
+		dbTx.Rollback()
+		return err
+	}
+
+	if err := m.processChainInfo(dbTx, block); err != nil {
+		dbTx.Rollback()
+		return err
+	}
+
+	return dbTx.Commit().Error
 }
