@@ -39,6 +39,7 @@ func NewSidechainKeeper(db *gorm.DB, assetStore *database.AssetStore, cfg *confi
 		db:         db,
 		node:       service.NewNode(cfg.Sidechain.Upstream),
 		assetStore: assetStore,
+		chainID:    chain.ID,
 	}
 }
 

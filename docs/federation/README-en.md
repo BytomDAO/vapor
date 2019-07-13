@@ -24,13 +24,7 @@ A `fed_cfg.json` would look like this:
         },
         "log_mode" : true
     },
-    "warders" : [
-        {
-            "position" : 1,
-            "xpub" : "50ef22b3a3fca7bc08916187cc9ec2f4005c9c6b1353aa1decbd4be3f3bb0fbe1967589f0d9dec13a388c0412002d2c267bdf3b920864e1ddc50581be5604ce1"
-        }
-    ],
-    "quorum": 1,
+    "federation_prog" : "0020305dc12c0dbec0c1dc1f30e835034c1f19094c06afb0eb953a6d1af42222a721",
     "mainchain" : {
         "name" : "bytom",
         "confirmations" : 10,
