@@ -6,7 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/crypto/ed25519/chainkd"
+	vaporJson "github.com/vapor/encoding/json"
 )
 
 func NewConfig() *Config {
@@ -33,12 +33,11 @@ func NewConfigWithPath(path string) *Config {
 }
 
 type Config struct {
-	API         API         `json:"api"`
-	MySQLConfig MySQLConfig `json:"mysql"`
-	Warders     []Warder    `json:"warders"`
-	Quorum      int         `json:"quorum"`
-	Mainchain   Chain       `json:"mainchain"`
-	Sidechain   Chain       `json:"sidechain"`
+	API            API                `json:"api"`
+	MySQLConfig    MySQLConfig        `json:"mysql"`
+	FederationProg vaporJson.HexBytes `json:"federation_prog"`
+	Mainchain      Chain              `json:"mainchain"`
+	Sidechain      Chain              `json:"sidechain"`
 }
 
 type API struct {
@@ -56,11 +55,6 @@ type MySQLConnection struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	DbName   string `json:"database"`
-}
-
-type Warder struct {
-	Position uint8        `json:"position"`
-	XPub     chainkd.XPub `json:"xpub"`
 }
 
 type Chain struct {

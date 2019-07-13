@@ -134,6 +134,9 @@ func (t *TxInput) SpentOutputID() (o bc.Hash, err error) {
 
 	case *VetoInput:
 		o, err = ComputeOutputID(&inp.SpendCommitment, VetoInputType, inp.Vote)
+
+	case *CrossChainInput:
+		o, err = ComputeOutputID(&inp.SpendCommitment, SpendInputType, nil)
 	}
 
 	return o, err

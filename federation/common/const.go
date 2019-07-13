@@ -7,6 +7,9 @@ const (
 )
 
 const (
+	BytomChainName = "btm"
+	VaporChainName = "vapor"
+
 	CrossTxPendingStatusLabel   = "pending"
 	CrossTxCompletedStatusLabel = "completed"
 )

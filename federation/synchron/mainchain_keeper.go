@@ -10,39 +10,42 @@ import (
 	btmConsensus "github.com/bytom/consensus"
 	btmBc "github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/protocol/vm"
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 
-	vaporConsensus "github.com/vapor/consensus"
-	"github.com/vapor/consensus/segwit"
+	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/common"
 	"github.com/vapor/federation/config"
 	"github.com/vapor/federation/database"
 	"github.com/vapor/federation/database/orm"
 	"github.com/vapor/federation/service"
-	"github.com/vapor/federation/util"
 	"github.com/vapor/protocol/bc"
-	"github.com/vapor/wallet"
 )
 
 type mainchainKeeper struct {
-	cfg        *config.Chain
-	db         *gorm.DB
-	node       *service.Node
-	chainName  string
-	assetStore *database.AssetStore
-	fedProg    []byte
+	cfg            *config.Chain
+	db             *gorm.DB
+	node           *service.Node
+	assetStore     *database.AssetStore
+	chainID        uint64
+	federationProg []byte
 }
 
 func NewMainchainKeeper(db *gorm.DB, assetStore *database.AssetStore, cfg *config.Config) *mainchainKeeper {
+	chain := &orm.Chain{Name: common.BytomChainName}
+	if err := db.Where(chain).First(chain).Error; err != nil {
+		log.WithField("err", err).Fatal("fail on get chain info")
+	}
+
 	return &mainchainKeeper{
-		cfg:        &cfg.Mainchain,
-		db:         db,
-		node:       service.NewNode(cfg.Mainchain.Upstream),
-		chainName:  cfg.Mainchain.Name,
-		assetStore: assetStore,
-		fedProg:    util.ParseFedProg(cfg.Warders, cfg.Quorum),
+		cfg:            &cfg.Mainchain,
+		db:             db,
+		node:           service.NewNode(cfg.Mainchain.Upstream),
+		assetStore:     assetStore,
+		federationProg: cfg.FederationProg,
+		chainID:        chain.ID,
 	}
 }
 
@@ -63,9 +66,215 @@ func (m *mainchainKeeper) Run() {
 	}
 }
 
+func (m *mainchainKeeper) createCrossChainReqs(db *gorm.DB, crossTransactionID uint64, tx *types.Tx, statusFail bool) error {
+	prog := tx.Inputs[0].ControlProgram()
+	fromAddress := common.ProgToAddress(prog, &consensus.BytomMainNetParams)
+	toAddress := common.ProgToAddress(prog, &consensus.MainNetParams)
+	for i, rawOutput := range tx.Outputs {
+		if !bytes.Equal(rawOutput.OutputCommitment.ControlProgram, m.federationProg) {
+			continue
+		}
+
+		if statusFail && *rawOutput.OutputCommitment.AssetAmount.AssetId != *btmConsensus.BTMAssetID {
+			continue
+		}
+
+		asset, err := m.assetStore.GetByAssetID(rawOutput.OutputCommitment.AssetAmount.AssetId.String())
+		if err != nil {
+			return err
+		}
+
+		req := &orm.CrossTransactionReq{
+			CrossTransactionID: crossTransactionID,
+			SourcePos:          uint64(i),
+			AssetID:            asset.ID,
+			AssetAmount:        rawOutput.OutputCommitment.AssetAmount.Amount,
+			Script:             hex.EncodeToString(prog),
+			FromAddress:        fromAddress,
+			ToAddress:          toAddress,
+		}
+
+		if err := db.Create(req).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m *mainchainKeeper) isDepositTx(tx *types.Tx) bool {
+	for _, input := range tx.Inputs {
+		if bytes.Equal(input.ControlProgram(), m.federationProg) {
+			return false
+		}
+	}
+
+	for _, output := range tx.Outputs {
+		if bytes.Equal(output.OutputCommitment.ControlProgram, m.federationProg) {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *mainchainKeeper) isWithdrawalTx(tx *types.Tx) bool {
+	for _, input := range tx.Inputs {
+		if !bytes.Equal(input.ControlProgram(), m.federationProg) {
+			return false
+		}
+	}
+
+	if sourceTxHash := locateSideChainTx(tx.Outputs[len(tx.Outputs)-1]); sourceTxHash == "" {
+		return false
+	}
+	return false
+}
+
+func locateSideChainTx(output *types.TxOutput) string {
+	insts, err := vm.ParseProgram(output.OutputCommitment.ControlProgram)
+	if err != nil {
+		return ""
+	}
+
+	if len(insts) != 2 {
+		return ""
+	}
+
+	return hex.EncodeToString(insts[1].Data)
+}
+
+func (m *mainchainKeeper) processBlock(db *gorm.DB, block *types.Block, txStatus *bc.TransactionStatus) error {
+	for i, tx := range block.Transactions {
+		if err := m.processIssuance(tx); err != nil {
+			return err
+		}
+
+		if m.isDepositTx(tx) {
+			if err := m.processDepositTx(db, block, txStatus, i); err != nil {
+				return err
+			}
+		}
+
+		if m.isWithdrawalTx(tx) {
+			if err := m.processWithdrawalTx(db, block, i); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (m *mainchainKeeper) processChainInfo(db *gorm.DB, block *types.Block) error {
+	blockHash := block.Hash()
+	res := db.Model(&orm.Chain{}).Where("block_hash = ?", block.PreviousBlockHash.String()).Updates(&orm.Chain{
+		BlockHash:   blockHash.String(),
+		BlockHeight: block.Height,
+	})
+	if err := res.Error; err != nil {
+		return err
+	}
+
+	if res.RowsAffected != 1 {
+		return ErrInconsistentDB
+	}
+	return nil
+}
+
+func (m *mainchainKeeper) processDepositTx(db *gorm.DB, block *types.Block, txStatus *bc.TransactionStatus, txIndex int) error {
+	tx := block.Transactions[txIndex]
+	var muxID btmBc.Hash
+	switch res := tx.Entries[*tx.ResultIds[0]].(type) {
+	case *btmBc.Output:
+		muxID = *res.Source.Ref
+	case *btmBc.Retirement:
+		muxID = *res.Source.Ref
+	default:
+		return ErrOutputType
+	}
+
+	rawTx, err := tx.MarshalText()
+	if err != nil {
+		return err
+	}
+
+	blockHash := block.Hash()
+	ormTx := &orm.CrossTransaction{
+		ChainID:              m.chainID,
+		SourceBlockHeight:    block.Height,
+		SourceBlockTimestamp: block.Timestamp,
+		SourceBlockHash:      blockHash.String(),
+		SourceTxIndex:        uint64(txIndex),
+		SourceMuxID:          muxID.String(),
+		SourceTxHash:         tx.ID.String(),
+		SourceRawTransaction: string(rawTx),
+		DestBlockHeight:      sql.NullInt64{Valid: false},
+		DestBlockTimestamp:   sql.NullInt64{Valid: false},
+		DestBlockHash:        sql.NullString{Valid: false},
+		DestTxIndex:          sql.NullInt64{Valid: false},
+		DestTxHash:           sql.NullString{Valid: false},
+		Status:               common.CrossTxPendingStatus,
+	}
+	if err := db.Create(ormTx).Error; err != nil {
+		return errors.Wrap(err, fmt.Sprintf("create mainchain DepositTx %s", tx.ID.String()))
+	}
+
+	return m.createCrossChainReqs(db, ormTx.ID, tx, txStatus.VerifyStatus[txIndex].StatusFail)
+}
+
+func (m *mainchainKeeper) processIssuance(tx *types.Tx) error {
+	for _, input := range tx.Inputs {
+		if input.InputType() != types.IssuanceInputType {
+			continue
+		}
+
+		issuance := input.TypedInput.(*types.IssuanceInput)
+		assetID := issuance.AssetID()
+		if _, err := m.assetStore.GetByAssetID(assetID.String()); err == nil {
+			continue
+		}
+
+		asset := &orm.Asset{
+			AssetID:         assetID.String(),
+			IssuanceProgram: hex.EncodeToString(issuance.IssuanceProgram),
+			VMVersion:       issuance.VMVersion,
+			Definition:      string(issuance.AssetDefinition),
+		}
+
+		if err := m.db.Create(asset).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m *mainchainKeeper) processWithdrawalTx(db *gorm.DB, block *types.Block, txIndex int) error {
+	blockHash := block.Hash()
+	tx := block.Transactions[txIndex]
+
+	stmt := db.Model(&orm.CrossTransaction{}).Where(&orm.CrossTransaction{
+		SourceTxHash: locateSideChainTx(tx.Outputs[len(tx.Outputs)-1]),
+		Status:       common.CrossTxPendingStatus,
+	}).UpdateColumn(&orm.CrossTransaction{
+		DestBlockHeight:    sql.NullInt64{int64(block.Height), true},
+		DestBlockTimestamp: sql.NullInt64{int64(block.Timestamp), true},
+		DestBlockHash:      sql.NullString{blockHash.String(), true},
+		DestTxIndex:        sql.NullInt64{int64(txIndex), true},
+		DestTxHash:         sql.NullString{tx.ID.String(), true},
+		Status:             common.CrossTxCompletedStatus,
+	})
+	if stmt.Error != nil {
+		return stmt.Error
+	}
+
+	if stmt.RowsAffected != 1 {
+		return ErrInconsistentDB
+	}
+	return nil
+}
+
 func (m *mainchainKeeper) syncBlock() (bool, error) {
-	chain := &orm.Chain{Name: m.chainName}
-	if err := m.db.Where(chain).First(chain).Error; err != nil {
+	chain := &orm.Chain{ID: m.chainID}
+	if err := m.db.First(chain).Error; err != nil {
 		return false, errors.Wrap(err, "query chain")
 	}
 
@@ -90,238 +299,32 @@ func (m *mainchainKeeper) syncBlock() (bool, error) {
 
 	if nextBlock.PreviousBlockHash.String() != chain.BlockHash {
 		log.WithFields(log.Fields{
-			"remote PreviousBlockHash": nextBlock.PreviousBlockHash.String(),
-			"db block_hash":            chain.BlockHash,
-		}).Fatal("BlockHash mismatch")
-		return false, ErrInconsistentDB
+			"remote previous_block_Hash": nextBlock.PreviousBlockHash.String(),
+			"db block_hash":              chain.BlockHash,
+		}).Fatal("fail on block hash mismatch")
 	}
 
-	if err := m.tryAttachBlock(chain, nextBlock, txStatus); err != nil {
+	if err := m.tryAttachBlock(nextBlock, txStatus); err != nil {
 		return false, err
 	}
 
 	return true, nil
 }
 
-func (m *mainchainKeeper) tryAttachBlock(chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus) error {
+func (m *mainchainKeeper) tryAttachBlock(block *types.Block, txStatus *bc.TransactionStatus) error {
 	blockHash := block.Hash()
 	log.WithFields(log.Fields{"block_height": block.Height, "block_hash": blockHash.String()}).Info("start to attachBlock")
+
 	dbTx := m.db.Begin()
-	if err := m.processBlock(chain, block, txStatus); err != nil {
+	if err := m.processBlock(dbTx, block, txStatus); err != nil {
+		dbTx.Rollback()
+		return err
+	}
+
+	if err := m.processChainInfo(dbTx, block); err != nil {
 		dbTx.Rollback()
 		return err
 	}
 
 	return dbTx.Commit().Error
-}
-
-func (m *mainchainKeeper) processBlock(chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus) error {
-	if err := m.processIssuing(block.Transactions); err != nil {
-		return err
-	}
-
-	for i, tx := range block.Transactions {
-		if m.isDepositTx(tx) {
-			if err := m.processDepositTx(chain, block, txStatus, uint64(i), tx); err != nil {
-				return err
-			}
-		}
-
-		if m.isWithdrawalTx(tx) {
-			if err := m.processWithdrawalTx(chain, block, uint64(i), tx); err != nil {
-				return err
-			}
-		}
-	}
-
-	return m.processChainInfo(chain, block)
-}
-
-func (m *mainchainKeeper) isDepositTx(tx *types.Tx) bool {
-	for _, input := range tx.Inputs {
-		if bytes.Equal(input.ControlProgram(), m.fedProg) {
-			return false
-		}
-	}
-
-	for _, output := range tx.Outputs {
-		if bytes.Equal(output.OutputCommitment.ControlProgram, m.fedProg) {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (m *mainchainKeeper) isWithdrawalTx(tx *types.Tx) bool {
-	for _, input := range tx.Inputs {
-		if bytes.Equal(input.ControlProgram(), m.fedProg) {
-			return true
-		}
-	}
-	return false
-}
-
-func (m *mainchainKeeper) processDepositTx(chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus, txIndex uint64, tx *types.Tx) error {
-	blockHash := block.Hash()
-
-	var muxID btmBc.Hash
-	res0ID := tx.ResultIds[0]
-	switch res := tx.Entries[*res0ID].(type) {
-	case *btmBc.Output:
-		muxID = *res.Source.Ref
-	case *btmBc.Retirement:
-		muxID = *res.Source.Ref
-	default:
-		return ErrOutputType
-	}
-
-	rawTx, err := tx.MarshalText()
-	if err != nil {
-		return err
-	}
-
-	ormTx := &orm.CrossTransaction{
-		ChainID:              chain.ID,
-		SourceBlockHeight:    block.Height,
-		SourceBlockTimestamp: block.Timestamp,
-		SourceBlockHash:      blockHash.String(),
-		SourceTxIndex:        txIndex,
-		SourceMuxID:          muxID.String(),
-		SourceTxHash:         tx.ID.String(),
-		SourceRawTransaction: string(rawTx),
-		DestBlockHeight:      sql.NullInt64{Valid: false},
-		DestBlockTimestamp:   sql.NullInt64{Valid: false},
-		DestBlockHash:        sql.NullString{Valid: false},
-		DestTxIndex:          sql.NullInt64{Valid: false},
-		DestTxHash:           sql.NullString{Valid: false},
-		Status:               common.CrossTxPendingStatus,
-	}
-	if err := m.db.Create(ormTx).Error; err != nil {
-		return errors.Wrap(err, fmt.Sprintf("create mainchain DepositTx %s", tx.ID.String()))
-	}
-
-	statusFail := txStatus.VerifyStatus[txIndex].StatusFail
-	crossChainInputs, err := m.getCrossChainReqs(ormTx.ID, tx, statusFail)
-	if err != nil {
-		return err
-	}
-
-	for _, input := range crossChainInputs {
-		if err := m.db.Create(input).Error; err != nil {
-			return errors.Wrap(err, fmt.Sprintf("create DepositFromMainchain input: txid(%s), pos(%d)", tx.ID.String(), input.SourcePos))
-		}
-	}
-
-	return nil
-}
-
-func (m *mainchainKeeper) getCrossChainReqs(crossTransactionID uint64, tx *types.Tx, statusFail bool) ([]*orm.CrossTransactionReq, error) {
-	var fromAddress, toAddress string
-	// assume inputs are from an identical owner
-	prog := tx.Inputs[0].ControlProgram()
-	script := hex.EncodeToString(prog)
-	switch {
-	case segwit.IsP2WPKHScript(prog):
-		if pubHash, err := segwit.GetHashFromStandardProg(prog); err == nil {
-			fromAddress = wallet.BuildP2PKHAddress(pubHash, &vaporConsensus.BytomMainNetParams)
-			toAddress = wallet.BuildP2PKHAddress(pubHash, &vaporConsensus.MainNetParams)
-		}
-	case segwit.IsP2WSHScript(prog):
-		if scriptHash, err := segwit.GetHashFromStandardProg(prog); err == nil {
-			fromAddress = wallet.BuildP2SHAddress(scriptHash, &vaporConsensus.BytomMainNetParams)
-			toAddress = wallet.BuildP2SHAddress(scriptHash, &vaporConsensus.MainNetParams)
-		}
-	}
-
-	reqs := []*orm.CrossTransactionReq{}
-	for i, rawOutput := range tx.Outputs {
-		// check valid deposit
-		if !bytes.Equal(rawOutput.OutputCommitment.ControlProgram, m.fedProg) {
-			continue
-		}
-
-		if statusFail && *rawOutput.OutputCommitment.AssetAmount.AssetId != *btmConsensus.BTMAssetID {
-			continue
-		}
-
-		asset, err := m.assetStore.GetByAssetID(rawOutput.OutputCommitment.AssetAmount.AssetId.String())
-		if err != nil {
-			return nil, err
-		}
-
-		req := &orm.CrossTransactionReq{
-			CrossTransactionID: crossTransactionID,
-			SourcePos:          uint64(i),
-			AssetID:            asset.ID,
-			AssetAmount:        rawOutput.OutputCommitment.AssetAmount.Amount,
-			Script:             script,
-			FromAddress:        fromAddress,
-			ToAddress:          toAddress,
-		}
-		reqs = append(reqs, req)
-	}
-	return reqs, nil
-}
-
-func (m *mainchainKeeper) processWithdrawalTx(chain *orm.Chain, block *types.Block, txIndex uint64, tx *types.Tx) error {
-	blockHash := block.Hash()
-	stmt := m.db.Model(&orm.CrossTransaction{}).Where("chain_id != ?", chain.ID).
-		Where(&orm.CrossTransaction{
-			DestTxHash: sql.NullString{tx.ID.String(), true},
-			Status:     common.CrossTxPendingStatus,
-		}).UpdateColumn(&orm.CrossTransaction{
-		DestBlockHeight:    sql.NullInt64{int64(block.Height), true},
-		DestBlockTimestamp: sql.NullInt64{int64(block.Timestamp), true},
-		DestBlockHash:      sql.NullString{blockHash.String(), true},
-		DestTxIndex:        sql.NullInt64{int64(txIndex), true},
-		Status:             common.CrossTxCompletedStatus,
-	})
-	if stmt.Error != nil {
-		return stmt.Error
-	}
-
-	if stmt.RowsAffected != 1 {
-		log.Warnf("mainchainKeeper.processWithdrawalTx(%v): rows affected != 1", tx.ID.String())
-	}
-	return nil
-}
-
-func (m *mainchainKeeper) processChainInfo(chain *orm.Chain, block *types.Block) error {
-	blockHash := block.Hash()
-	chain.BlockHash = blockHash.String()
-	chain.BlockHeight = block.Height
-	res := m.db.Model(chain).Where("block_hash = ?", block.PreviousBlockHash.String()).Updates(chain)
-	if err := res.Error; err != nil {
-		return err
-	}
-
-	if res.RowsAffected != 1 {
-		return ErrInconsistentDB
-	}
-
-	return nil
-}
-
-func (m *mainchainKeeper) processIssuing(txs []*types.Tx) error {
-	for _, tx := range txs {
-		for _, input := range tx.Inputs {
-			switch inp := input.TypedInput.(type) {
-			case *types.IssuanceInput:
-				assetID := inp.AssetID()
-				if _, err := m.assetStore.GetByAssetID(assetID.String()); err == nil {
-					continue
-				}
-
-				m.assetStore.Add(&orm.Asset{
-					AssetID:         assetID.String(),
-					IssuanceProgram: hex.EncodeToString(inp.IssuanceProgram),
-					VMVersion:       inp.VMVersion,
-					Definition:      string(inp.AssetDefinition),
-				})
-			}
-		}
-	}
-
-	return nil
 }
