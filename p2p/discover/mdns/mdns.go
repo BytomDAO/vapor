@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	instanceName = "bytomd"
+	instanceName = "vapord"
 	serviceName  = "lanDiscover"
 	domainName   = "local"
 )

@@ -47,7 +47,7 @@ func TestNodeInfoWriteRead(t *testing.T) {
 	if err != nil {
 		t.Fatal("create pubkey err.", err)
 	}
-	nodeInfo := &NodeInfo{PubKey: pubKey.String(), Moniker: "bytomd", Network: "mainnet", NetworkID: 0x888, RemoteAddr: "127.0.0.2:0", ListenAddr: "127.0.0.1:0", Version: "1.1.0-test", ServiceFlag: 10, Other: []string{"abc", "bcd"}}
+	nodeInfo := &NodeInfo{PubKey: pubKey.String(), Moniker: "vapord", Network: "mainnet", NetworkID: 0x888, RemoteAddr: "127.0.0.2:0", ListenAddr: "127.0.0.1:0", Version: "1.1.0-test", ServiceFlag: 10, Other: []string{"abc", "bcd"}}
 	n, err1, err2 := new(int), new(error), new(error)
 	buf := new(bytes.Buffer)
 
