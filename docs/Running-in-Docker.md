@@ -18,7 +18,7 @@ vapor data directory has three config files:
 - `federation.json`
 - `node_key.txt`
 
-Then you can use bytomd and bytomcli following [Bytom Wiki](https://github.com/Bytom/bytom/wiki/Command-Line-Options).
+Then you can use bytomd and vaporcli following [Bytom Wiki](https://github.com/Bytom/bytom/wiki/Command-Line-Options).
 
 Use `exit` to exit Docker's iterative mode.
 
@@ -45,7 +45,7 @@ $ docker ps
 __To execute a command inside a containner, for example:__
 
 ```bash
-$ docker exec -it <containerId> bytomcli create-access-token <tokenId>
+$ docker exec -it <containerId> vaporcli create-access-token <tokenId>
 ```
 
 __To stop a running containner:__

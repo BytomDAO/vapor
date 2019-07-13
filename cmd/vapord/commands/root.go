@@ -16,7 +16,7 @@ var (
 )
 
 var RootCmd = &cobra.Command{
-	Use:   "bytomd",
+	Use:   "vapord",
 	Short: "Multiple asset management.",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		err := viper.Unmarshal(config)

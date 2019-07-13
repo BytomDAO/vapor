@@ -10,7 +10,7 @@ import (
 	"github.com/vapor/util"
 )
 
-// bytomcli usage template
+// vaporcli usage template
 var usageTemplate = `Usage:{{if .Runnable}}
   {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
   {{.CommandPath}} [command]{{end}}{{if gt (len .Aliases) 0}}
@@ -80,11 +80,11 @@ func isUserError(err error) bool {
 	return userErrorRegexp.MatchString(err.Error())
 }
 
-// BytomcliCmd is Bytomcli's root command.
-// Every other command attached to BytomcliCmd is a child command to it.
-var BytomcliCmd = &cobra.Command{
-	Use:   "bytomcli",
-	Short: "Bytomcli is a commond line client for bytom core (a.k.a. bytomd)",
+// VaporCmd is Vaporcli's root command.
+// Every other command attached to VaporcliCmd is a child command to it.
+var VaporcliCmd = &cobra.Command{
+	Use:   "vaporcli",
+	Short: "Vaporcli is a commond line client for vapor (a.k.a. vapord)",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 1 {
 			cmd.SetUsageTemplate(usageTemplate)
@@ -93,90 +93,90 @@ var BytomcliCmd = &cobra.Command{
 	},
 }
 
-// Execute adds all child commands to the root command BytomcliCmd and sets flags appropriately.
+// Execute adds all child commands to the root command VaporcliCmd and sets flags appropriately.
 func Execute() {
 
 	AddCommands()
 	AddTemplateFunc()
 
-	if _, err := BytomcliCmd.ExecuteC(); err != nil {
+	if _, err := VaporcliCmd.ExecuteC(); err != nil {
 		os.Exit(util.ErrLocalExe)
 	}
 }
 
-// AddCommands adds child commands to the root command BytomcliCmd.
+// AddCommands adds child commands to the root command VaporcliCmd.
 func AddCommands() {
-	BytomcliCmd.AddCommand(createAccessTokenCmd)
-	BytomcliCmd.AddCommand(listAccessTokenCmd)
-	BytomcliCmd.AddCommand(deleteAccessTokenCmd)
-	BytomcliCmd.AddCommand(checkAccessTokenCmd)
+	VaporcliCmd.AddCommand(createAccessTokenCmd)
+	VaporcliCmd.AddCommand(listAccessTokenCmd)
+	VaporcliCmd.AddCommand(deleteAccessTokenCmd)
+	VaporcliCmd.AddCommand(checkAccessTokenCmd)
 
-	BytomcliCmd.AddCommand(createAccountCmd)
-	BytomcliCmd.AddCommand(deleteAccountCmd)
-	BytomcliCmd.AddCommand(listAccountsCmd)
-	BytomcliCmd.AddCommand(updateAccountAliasCmd)
-	BytomcliCmd.AddCommand(createAccountReceiverCmd)
-	BytomcliCmd.AddCommand(listAddressesCmd)
-	BytomcliCmd.AddCommand(validateAddressCmd)
-	BytomcliCmd.AddCommand(listPubKeysCmd)
+	VaporcliCmd.AddCommand(createAccountCmd)
+	VaporcliCmd.AddCommand(deleteAccountCmd)
+	VaporcliCmd.AddCommand(listAccountsCmd)
+	VaporcliCmd.AddCommand(updateAccountAliasCmd)
+	VaporcliCmd.AddCommand(createAccountReceiverCmd)
+	VaporcliCmd.AddCommand(listAddressesCmd)
+	VaporcliCmd.AddCommand(validateAddressCmd)
+	VaporcliCmd.AddCommand(listPubKeysCmd)
 
-	BytomcliCmd.AddCommand(createAssetCmd)
-	BytomcliCmd.AddCommand(getAssetCmd)
-	BytomcliCmd.AddCommand(listAssetsCmd)
-	BytomcliCmd.AddCommand(updateAssetAliasCmd)
+	VaporcliCmd.AddCommand(createAssetCmd)
+	VaporcliCmd.AddCommand(getAssetCmd)
+	VaporcliCmd.AddCommand(listAssetsCmd)
+	VaporcliCmd.AddCommand(updateAssetAliasCmd)
 
-	BytomcliCmd.AddCommand(getTransactionCmd)
-	BytomcliCmd.AddCommand(listTransactionsCmd)
+	VaporcliCmd.AddCommand(getTransactionCmd)
+	VaporcliCmd.AddCommand(listTransactionsCmd)
 
-	BytomcliCmd.AddCommand(getUnconfirmedTransactionCmd)
-	BytomcliCmd.AddCommand(listUnconfirmedTransactionsCmd)
-	BytomcliCmd.AddCommand(decodeRawTransactionCmd)
+	VaporcliCmd.AddCommand(getUnconfirmedTransactionCmd)
+	VaporcliCmd.AddCommand(listUnconfirmedTransactionsCmd)
+	VaporcliCmd.AddCommand(decodeRawTransactionCmd)
 
-	BytomcliCmd.AddCommand(listUnspentOutputsCmd)
-	BytomcliCmd.AddCommand(listBalancesCmd)
+	VaporcliCmd.AddCommand(listUnspentOutputsCmd)
+	VaporcliCmd.AddCommand(listBalancesCmd)
 
-	BytomcliCmd.AddCommand(rescanWalletCmd)
-	BytomcliCmd.AddCommand(walletInfoCmd)
+	VaporcliCmd.AddCommand(rescanWalletCmd)
+	VaporcliCmd.AddCommand(walletInfoCmd)
 
-	BytomcliCmd.AddCommand(buildTransactionCmd)
-	BytomcliCmd.AddCommand(signTransactionCmd)
-	BytomcliCmd.AddCommand(submitTransactionCmd)
-	BytomcliCmd.AddCommand(estimateTransactionGasCmd)
+	VaporcliCmd.AddCommand(buildTransactionCmd)
+	VaporcliCmd.AddCommand(signTransactionCmd)
+	VaporcliCmd.AddCommand(submitTransactionCmd)
+	VaporcliCmd.AddCommand(estimateTransactionGasCmd)
 
-	BytomcliCmd.AddCommand(getBlockCountCmd)
-	BytomcliCmd.AddCommand(getBlockHashCmd)
-	BytomcliCmd.AddCommand(getBlockCmd)
-	BytomcliCmd.AddCommand(getBlockHeaderCmd)
-	BytomcliCmd.AddCommand(getDifficultyCmd)
-	BytomcliCmd.AddCommand(getHashRateCmd)
+	VaporcliCmd.AddCommand(getBlockCountCmd)
+	VaporcliCmd.AddCommand(getBlockHashCmd)
+	VaporcliCmd.AddCommand(getBlockCmd)
+	VaporcliCmd.AddCommand(getBlockHeaderCmd)
+	VaporcliCmd.AddCommand(getDifficultyCmd)
+	VaporcliCmd.AddCommand(getHashRateCmd)
 
-	BytomcliCmd.AddCommand(createKeyCmd)
-	BytomcliCmd.AddCommand(deleteKeyCmd)
-	BytomcliCmd.AddCommand(listKeysCmd)
-	BytomcliCmd.AddCommand(updateKeyAliasCmd)
-	BytomcliCmd.AddCommand(resetKeyPwdCmd)
-	BytomcliCmd.AddCommand(checkKeyPwdCmd)
+	VaporcliCmd.AddCommand(createKeyCmd)
+	VaporcliCmd.AddCommand(deleteKeyCmd)
+	VaporcliCmd.AddCommand(listKeysCmd)
+	VaporcliCmd.AddCommand(updateKeyAliasCmd)
+	VaporcliCmd.AddCommand(resetKeyPwdCmd)
+	VaporcliCmd.AddCommand(checkKeyPwdCmd)
 
-	BytomcliCmd.AddCommand(signMsgCmd)
-	BytomcliCmd.AddCommand(verifyMsgCmd)
-	BytomcliCmd.AddCommand(decodeProgCmd)
+	VaporcliCmd.AddCommand(signMsgCmd)
+	VaporcliCmd.AddCommand(verifyMsgCmd)
+	VaporcliCmd.AddCommand(decodeProgCmd)
 
-	BytomcliCmd.AddCommand(createTransactionFeedCmd)
-	BytomcliCmd.AddCommand(listTransactionFeedsCmd)
-	BytomcliCmd.AddCommand(deleteTransactionFeedCmd)
-	BytomcliCmd.AddCommand(getTransactionFeedCmd)
-	BytomcliCmd.AddCommand(updateTransactionFeedCmd)
+	VaporcliCmd.AddCommand(createTransactionFeedCmd)
+	VaporcliCmd.AddCommand(listTransactionFeedsCmd)
+	VaporcliCmd.AddCommand(deleteTransactionFeedCmd)
+	VaporcliCmd.AddCommand(getTransactionFeedCmd)
+	VaporcliCmd.AddCommand(updateTransactionFeedCmd)
 
-	BytomcliCmd.AddCommand(isMiningCmd)
-	BytomcliCmd.AddCommand(setMiningCmd)
+	VaporcliCmd.AddCommand(isMiningCmd)
+	VaporcliCmd.AddCommand(setMiningCmd)
 
-	BytomcliCmd.AddCommand(netInfoCmd)
-	BytomcliCmd.AddCommand(gasRateCmd)
+	VaporcliCmd.AddCommand(netInfoCmd)
+	VaporcliCmd.AddCommand(gasRateCmd)
 
-	BytomcliCmd.AddCommand(versionCmd)
+	VaporcliCmd.AddCommand(versionCmd)
 }
 
-// AddTemplateFunc adds usage template to the root command BytomcliCmd.
+// AddTemplateFunc adds usage template to the root command VaporcliCmd.
 func AddTemplateFunc() {
 	walletEnableCmd := []string{
 		createAccountCmd.Name(),

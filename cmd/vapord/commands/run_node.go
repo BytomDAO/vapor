@@ -14,12 +14,12 @@ const logModule = "cmd"
 
 var runNodeCmd = &cobra.Command{
 	Use:   "node",
-	Short: "Run the bytomd",
+	Short: "Run the vapord",
 	RunE:  runNode,
 }
 
 func init() {
-	runNodeCmd.Flags().String("prof_laddr", config.ProfListenAddress, "Use http to profile bytomd programs")
+	runNodeCmd.Flags().String("prof_laddr", config.ProfListenAddress, "Use http to profile vapord programs")
 	runNodeCmd.Flags().Bool("mining", config.Mining, "Enable mining")
 
 	runNodeCmd.Flags().Bool("auth.disable", config.Auth.Disable, "Disable rpc access authenticate")

@@ -135,7 +135,7 @@ func NewNode(config *cfg.Config) *Node {
 	// run the profile server
 	profileHost := config.ProfListenAddress
 	if profileHost != "" {
-		// Profiling bytomd programs.see (https://blog.golang.org/profiling-go-programs)
+		// Profiling vapord programs.see (https://blog.golang.org/profiling-go-programs)
 		// go tool pprof http://profileHose/debug/pprof/heap
 		go func() {
 			if err = http.ListenAndServe(profileHost, nil); err != nil {
