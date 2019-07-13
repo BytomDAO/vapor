@@ -5,6 +5,8 @@ import (
 	"os"
 
 	log "github.com/sirupsen/logrus"
+
+	vaporJson "github.com/vapor/encoding/json"
 )
 
 func NewConfig() *Config {
@@ -31,11 +33,11 @@ func NewConfigWithPath(path string) *Config {
 }
 
 type Config struct {
-	API            API         `json:"api"`
-	MySQLConfig    MySQLConfig `json:"mysql"`
-	FederationProg string      `json:"federation_prog"`
-	Mainchain      Chain       `json:"mainchain"`
-	Sidechain      Chain       `json:"sidechain"`
+	API            API                `json:"api"`
+	MySQLConfig    MySQLConfig        `json:"mysql"`
+	FederationProg vaporJson.HexBytes `json:"federation_prog"`
+	Mainchain      Chain              `json:"mainchain"`
+	Sidechain      Chain              `json:"sidechain"`
 }
 
 type API struct {

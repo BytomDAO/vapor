@@ -34,11 +34,6 @@ type mainchainKeeper struct {
 }
 
 func NewMainchainKeeper(db *gorm.DB, assetStore *database.AssetStore, cfg *config.Config) *mainchainKeeper {
-	federationProg, err := hex.DecodeString(cfg.FederationProg)
-	if err != nil {
-		log.WithField("err", err).Fatal("fail on decode federation prog")
-	}
-
 	chain := &orm.Chain{Name: common.BytomChainName}
 	if err := db.Where(chain).First(chain).Error; err != nil {
 		log.WithField("err", err).Fatal("fail on get chain info")
@@ -49,7 +44,7 @@ func NewMainchainKeeper(db *gorm.DB, assetStore *database.AssetStore, cfg *confi
 		db:             db,
 		node:           service.NewNode(cfg.Mainchain.Upstream),
 		assetStore:     assetStore,
-		federationProg: federationProg,
+		federationProg: cfg.FederationProg,
 		chainID:        chain.ID,
 	}
 }
