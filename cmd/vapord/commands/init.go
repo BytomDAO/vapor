@@ -28,7 +28,7 @@ func init() {
 func initFiles(cmd *cobra.Command, args []string) {
 	configFilePath := path.Join(config.RootDir, "config.toml")
 	if _, err := os.Stat(configFilePath); !os.IsNotExist(err) {
-		log.Fatal("Already exists config file.")
+		log.WithFields(log.Fields{"module": logModule, "config": configFilePath}).Fatal("Already exists config file.")
 	}
 
 	switch config.ChainID {
@@ -44,7 +44,7 @@ func initFiles(cmd *cobra.Command, args []string) {
 	fedFilePath := config.FederationFile()
 	if _, err := os.Stat(fedFilePath); os.IsNotExist(err) {
 		if err := cfg.ExportFederationFile(fedFilePath, config); err != nil {
-			log.Fatal("fail on export federation file")
+			log.WithFields(log.Fields{"module": logModule, "config": fedFilePath, "error": err}).Fatal("fail on export federation file")
 		}
 	}
 
@@ -53,11 +53,11 @@ func initFiles(cmd *cobra.Command, args []string) {
 	if _, err := os.Stat(keyFilePath); os.IsNotExist(err) {
 		xprv, err := chainkd.NewXPrv(nil)
 		if err != nil {
-			log.Fatal("fail on generate private key")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal("fail on generate private key")
 		}
 
 		if err := ioutil.WriteFile(keyFilePath, []byte(hex.EncodeToString(xprv[:])), 0600); err != nil {
-			log.Fatal("fail on save private key")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal("fail on save private key")
 		}
 
 		log.WithFields(log.Fields{"pubkey": xprv.XPub()}).Info("success generate private")
