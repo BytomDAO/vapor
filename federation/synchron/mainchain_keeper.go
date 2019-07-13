@@ -14,8 +14,7 @@ import (
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 
-	vaporConsensus "github.com/vapor/consensus"
-	"github.com/vapor/consensus/segwit"
+	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/common"
 	"github.com/vapor/federation/config"
@@ -23,7 +22,6 @@ import (
 	"github.com/vapor/federation/database/orm"
 	"github.com/vapor/federation/service"
 	"github.com/vapor/protocol/bc"
-	"github.com/vapor/wallet"
 )
 
 type mainchainKeeper struct {
@@ -93,10 +91,9 @@ func (m *mainchainKeeper) syncBlock() (bool, error) {
 
 	if nextBlock.PreviousBlockHash.String() != chain.BlockHash {
 		log.WithFields(log.Fields{
-			"remote PreviousBlockHash": nextBlock.PreviousBlockHash.String(),
-			"db block_hash":            chain.BlockHash,
-		}).Fatal("BlockHash mismatch")
-		return false, ErrInconsistentDB
+			"remote previous_block_Hash": nextBlock.PreviousBlockHash.String(),
+			"db block_hash":              chain.BlockHash,
+		}).Fatal("fail on block hash mismatch")
 	}
 
 	if err := m.tryAttachBlock(chain, nextBlock, txStatus); err != nil {
@@ -176,21 +173,8 @@ func (m *mainchainKeeper) isWithdrawalTx(tx *types.Tx) bool {
 
 func (m *mainchainKeeper) createCrossChainReqs(db *gorm.DB, crossTransactionID uint64, tx *types.Tx, statusFail bool) error {
 	prog := tx.Inputs[0].ControlProgram()
-	scriptHash, err := segwit.GetHashFromStandardProg(prog)
-	if err != nil {
-		log.WithField("tx_id", tx.ID.String()).Warn("skip create CrossTransactionReq due to none standard prog")
-		return nil
-	}
-
-	var fromAddress, toAddress string
-	if segwit.IsP2WPKHScript(prog) {
-		fromAddress = wallet.BuildP2PKHAddress(scriptHash, &vaporConsensus.BytomMainNetParams)
-		toAddress = wallet.BuildP2PKHAddress(scriptHash, &vaporConsensus.MainNetParams)
-	} else if segwit.IsP2WSHScript(prog) {
-		fromAddress = wallet.BuildP2SHAddress(scriptHash, &vaporConsensus.BytomMainNetParams)
-		toAddress = wallet.BuildP2SHAddress(scriptHash, &vaporConsensus.MainNetParams)
-	}
-
+	fromAddress := common.ProgToAddress(prog, &consensus.BytomMainNetParams)
+	toAddress := common.ProgToAddress(prog, &consensus.MainNetParams)
 	for i, rawOutput := range tx.Outputs {
 		if !bytes.Equal(rawOutput.OutputCommitment.ControlProgram, m.federationProg) {
 			continue

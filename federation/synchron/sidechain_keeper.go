@@ -10,7 +10,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/consensus"
-	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/errors"
 	"github.com/vapor/federation/common"
 	"github.com/vapor/federation/config"
@@ -19,7 +18,6 @@ import (
 	"github.com/vapor/federation/service"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/wallet"
 )
 
 type sidechainKeeper struct {
@@ -82,10 +80,9 @@ func (s *sidechainKeeper) syncBlock() (bool, error) {
 
 	if nextBlock.PreviousBlockHash.String() != chain.BlockHash {
 		log.WithFields(log.Fields{
-			"remote PreviousBlockHash": nextBlock.PreviousBlockHash.String(),
-			"db block_hash":            chain.BlockHash,
-		}).Fatal("BlockHash mismatch")
-		return false, ErrInconsistentDB
+			"remote previous_block_Hash": nextBlock.PreviousBlockHash.String(),
+			"db block_hash":              chain.BlockHash,
+		}).Fatal("fail on block hash mismatch")
 	}
 
 	if err := s.tryAttachBlock(chain, nextBlock, txStatus); err != nil {
@@ -154,7 +151,10 @@ func (s *sidechainKeeper) processDepositTx(db *gorm.DB, chain *orm.Chain, block 
 	}
 
 	blockHash := block.Hash()
-	stmt := db.Model(&orm.CrossTransaction{}).Where("source_tx_hash = ? ", sourceTxHash).UpdateColumn(&orm.CrossTransaction{
+	stmt := db.Model(&orm.CrossTransaction{}).Where(&orm.CrossTransaction{
+		SourceTxHash: sourceTxHash,
+		Status:       common.CrossTxPendingStatus,
+	}).UpdateColumn(&orm.CrossTransaction{
 		DestBlockHeight:    sql.NullInt64{int64(block.Height), true},
 		DestBlockTimestamp: sql.NullInt64{int64(block.Timestamp), true},
 		DestBlockHash:      sql.NullString{blockHash.String(), true},
@@ -167,20 +167,21 @@ func (s *sidechainKeeper) processDepositTx(db *gorm.DB, chain *orm.Chain, block 
 	}
 
 	if stmt.RowsAffected != 1 {
-		return ErrInconsistentDB
+		return errors.Wrap(ErrInconsistentDB, "fail on find deposit data on database")
 	}
 	return nil
 }
 
 func (s *sidechainKeeper) processWithdrawalTx(db *gorm.DB, chain *orm.Chain, block *types.Block, txStatus *bc.TransactionStatus, txIndex uint64, tx *types.Tx) error {
 	var muxID bc.Hash
-	res0ID := tx.ResultIds[0]
-	switch res := tx.Entries[*res0ID].(type) {
+	switch res := tx.Entries[*tx.ResultIds[0]].(type) {
 	case *bc.CrossChainOutput:
 		muxID = *res.Source.Ref
 	case *bc.IntraChainOutput:
 		muxID = *res.Source.Ref
 	case *bc.VoteOutput:
+		muxID = *res.Source.Ref
+	case *bc.Retirement:
 		muxID = *res.Source.Ref
 	default:
 		return ErrOutputType
@@ -216,19 +217,7 @@ func (s *sidechainKeeper) processWithdrawalTx(db *gorm.DB, chain *orm.Chain, blo
 }
 
 func (s *sidechainKeeper) createCrossChainReqs(db *gorm.DB, crossTransactionID uint64, tx *types.Tx, statusFail bool) error {
-	var fromAddress string
-	inputCP := tx.Inputs[0].ControlProgram()
-	switch {
-	case segwit.IsP2WPKHScript(inputCP):
-		if pubHash, err := segwit.GetHashFromStandardProg(inputCP); err == nil {
-			fromAddress = wallet.BuildP2PKHAddress(pubHash, &consensus.MainNetParams)
-		}
-	case segwit.IsP2WSHScript(inputCP):
-		if scriptHash, err := segwit.GetHashFromStandardProg(inputCP); err == nil {
-			fromAddress = wallet.BuildP2SHAddress(scriptHash, &consensus.MainNetParams)
-		}
-	}
-
+	fromAddress := common.ProgToAddress(tx.Inputs[0].ControlProgram(), &consensus.MainNetParams)
 	for i, rawOutput := range tx.Outputs {
 		if rawOutput.OutputType() != types.CrossChainOutputType {
 			continue
@@ -243,27 +232,15 @@ func (s *sidechainKeeper) createCrossChainReqs(db *gorm.DB, crossTransactionID u
 			return err
 		}
 
-		var toAddress string
-		outputCP := rawOutput.ControlProgram()
-		switch {
-		case segwit.IsP2WPKHScript(outputCP):
-			if pubHash, err := segwit.GetHashFromStandardProg(outputCP); err == nil {
-				toAddress = wallet.BuildP2PKHAddress(pubHash, &consensus.BytomMainNetParams)
-			}
-		case segwit.IsP2WSHScript(outputCP):
-			if scriptHash, err := segwit.GetHashFromStandardProg(outputCP); err == nil {
-				toAddress = wallet.BuildP2SHAddress(scriptHash, &consensus.BytomMainNetParams)
-			}
-		}
-
+		prog := rawOutput.ControlProgram()
 		req := &orm.CrossTransactionReq{
 			CrossTransactionID: crossTransactionID,
 			SourcePos:          uint64(i),
 			AssetID:            asset.ID,
 			AssetAmount:        rawOutput.OutputCommitment().AssetAmount.Amount,
-			Script:             hex.EncodeToString(rawOutput.ControlProgram()),
+			Script:             hex.EncodeToString(prog),
 			FromAddress:        fromAddress,
-			ToAddress:          toAddress,
+			ToAddress:          common.ProgToAddress(prog, &consensus.BytomMainNetParams),
 		}
 
 		if err := db.Create(req).Error; err != nil {
@@ -296,8 +273,7 @@ func (s *sidechainKeeper) locateMainChainTx(input *types.TxInput) (string, error
 
 	crossIn := input.TypedInput.(*types.CrossChainInput)
 	crossTx := &orm.CrossTransaction{SourceMuxID: crossIn.SpendCommitment.SourceID.String()}
-	if err := s.
-		db.Where(crossTx).First(crossTx).Error; err != nil {
+	if err := s.db.Where(crossTx).First(crossTx).Error; err != nil {
 		return "", errors.Wrap(err, "fail on find CrossTransaction")
 	}
 	return crossTx.SourceTxHash, nil
