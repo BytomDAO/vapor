@@ -11,11 +11,11 @@ import (
 
 	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
-	"github.com/vapor/federation/common"
-	"github.com/vapor/federation/config"
-	"github.com/vapor/federation/database"
-	"github.com/vapor/federation/database/orm"
-	"github.com/vapor/federation/service"
+	"github.com/vapor/toolbar/federation/common"
+	"github.com/vapor/toolbar/federation/config"
+	"github.com/vapor/toolbar/federation/database"
+	"github.com/vapor/toolbar/federation/database/orm"
+	"github.com/vapor/toolbar/federation/service"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
@@ -159,7 +159,7 @@ func (s *sidechainKeeper) processDepositTx(db *gorm.DB, block *types.Block, txIn
 		Status:       common.CrossTxPendingStatus,
 	}).UpdateColumn(&orm.CrossTransaction{
 		DestBlockHeight:    sql.NullInt64{int64(block.Height), true},
-		DestBlockTimestamp: sql.NullInt64{int64(block.Timestamp), true},
+		DestBlockTimestamp: sql.NullInt64{int64(block.Timestamp / 1000), true},
 		DestBlockHash:      sql.NullString{blockHash.String(), true},
 		DestTxIndex:        sql.NullInt64{int64(txIndex), true},
 		DestTxHash:         sql.NullString{tx.ID.String(), true},
@@ -200,7 +200,7 @@ func (s *sidechainKeeper) processWithdrawalTx(db *gorm.DB, block *types.Block, t
 	ormTx := &orm.CrossTransaction{
 		ChainID:              s.chainID,
 		SourceBlockHeight:    block.Height,
-		SourceBlockTimestamp: block.Timestamp,
+		SourceBlockTimestamp: block.Timestamp / 1000,
 		SourceBlockHash:      blockHash.String(),
 		SourceTxIndex:        uint64(txIndex),
 		SourceMuxID:          muxID.String(),

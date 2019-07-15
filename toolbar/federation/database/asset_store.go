@@ -7,7 +7,7 @@ import (
 	"github.com/jinzhu/gorm"
 
 	"github.com/vapor/errors"
-	"github.com/vapor/federation/database/orm"
+	"github.com/vapor/toolbar/federation/database/orm"
 )
 
 const (

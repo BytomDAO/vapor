@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	vaporJson "github.com/vapor/encoding/json"
+	"github.com/vapor/toolbar/common"
 )
 
 func NewConfig() *Config {
@@ -34,7 +35,7 @@ func NewConfigWithPath(path string) *Config {
 
 type Config struct {
 	API            API                `json:"api"`
-	MySQLConfig    MySQLConfig        `json:"mysql"`
+	MySQLConfig    common.MySQLConfig `json:"mysql"`
 	FederationProg vaporJson.HexBytes `json:"federation_prog"`
 	Mainchain      Chain              `json:"mainchain"`
 	Sidechain      Chain              `json:"sidechain"`
@@ -42,19 +43,6 @@ type Config struct {
 
 type API struct {
 	IsReleaseMode bool `json:"is_release_mode"`
-}
-
-type MySQLConfig struct {
-	Connection MySQLConnection `json:"connection"`
-	LogMode    bool            `json:"log_mode"`
-}
-
-type MySQLConnection struct {
-	Host     string `json:"host"`
-	Port     uint   `json:"port"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-	DbName   string `json:"database"`
 }
 
 type Chain struct {
