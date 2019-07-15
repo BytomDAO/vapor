@@ -13,6 +13,7 @@ import (
 	"github.com/vapor/protocol/vm/vmutil"
 )
 
+// FedAddressPath is used to derive federation root xpubs for signing cross-chain txs
 var FedAddressPath = [][]byte{
 	[]byte{0x2C, 0x00, 0x00, 0x00},
 	[]byte{0x99, 0x00, 0x00, 0x00},
