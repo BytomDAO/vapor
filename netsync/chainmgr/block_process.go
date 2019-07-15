@@ -43,16 +43,15 @@ func (bp *blockProcessor) insert(blockStorage *blockStorage) error {
 	return err
 }
 
-func (bp *blockProcessor) process(downloadNotifyCh chan struct{}, ProcessStop chan struct{}, startHeight uint64, wg *sync.WaitGroup) {
+func (bp *blockProcessor) process(downloadNotifyCh chan struct{}, ProcessStop chan struct{}, syncHeight uint64, wg *sync.WaitGroup) {
 	defer func() {
 		close(ProcessStop)
 		wg.Done()
 	}()
 
-	nextHeight := startHeight + 1
 	for {
 		for {
-			block, err := bp.storage.readBlock(nextHeight)
+			block, err := bp.storage.readBlock(syncHeight)
 			if err != nil {
 				break
 			}
@@ -62,8 +61,8 @@ func (bp *blockProcessor) process(downloadNotifyCh chan struct{}, ProcessStop ch
 				return
 			}
 
-			bp.storage.deleteBlock(nextHeight)
-			nextHeight++
+			bp.storage.deleteBlock(syncHeight)
+			syncHeight++
 		}
 
 		if _, ok := <-downloadNotifyCh; !ok {
