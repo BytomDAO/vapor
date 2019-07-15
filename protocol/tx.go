@@ -37,6 +37,16 @@ func (c *Chain) ValidateTx(tx *types.Tx) (bool, error) {
 	}
 
 	bh := c.BestBlockHeader()
+	blockHash := bh.Hash()
+	consensusResult, err := c.GetConsensusResultByHash(&blockHash)
+	if err != nil {
+		return false, err
+	}
+
+	if err := validation.ValidateVoteTx(tx.Tx, consensusResult); err != nil {
+		return false, err
+	}
+
 	gasStatus, err := validation.ValidateTx(tx.Tx, types.MapBlock(&types.Block{BlockHeader: *bh}))
 	if !gasStatus.GasValid {
 		c.txPool.AddErrCache(&tx.ID, err)

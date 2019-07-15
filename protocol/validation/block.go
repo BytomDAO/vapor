@@ -25,6 +25,7 @@ var (
 	errOverBlockLimit        = errors.New("block's gas is over the limit")
 	errWorkProof             = errors.New("invalid difficulty proof of work")
 	errVersionRegression     = errors.New("version regression")
+	errBadVoteTx             = errors.New("invalid vote transaction")
 )
 
 func checkBlockTime(b *bc.Block, parent *types.BlockHeader) error {
@@ -87,10 +88,16 @@ func ValidateBlockHeader(b *bc.Block, parent *types.BlockHeader) error {
 }
 
 // ValidateBlock validates a block and the transactions within.
-func ValidateBlock(b *bc.Block, parent *types.BlockHeader, rewards []state.CoinbaseReward) error {
+func ValidateBlock(b *bc.Block, parent *types.BlockHeader, consensusResult *state.ConsensusResult) error {
 	startTime := time.Now()
 	if err := ValidateBlockHeader(b, parent); err != nil {
 		return err
+	}
+
+	for _, tx := range b.Transactions {
+		if err := ValidateVoteTx(tx, consensusResult); err != nil {
+			return err
+		}
 	}
 
 	blockGasSum := uint64(0)
@@ -108,6 +115,11 @@ func ValidateBlock(b *bc.Block, parent *types.BlockHeader, rewards []state.Coinb
 		if blockGasSum += uint64(validateResult.gasStatus.GasUsed); blockGasSum > consensus.ActiveNetParams.MaxBlockGas {
 			return errOverBlockLimit
 		}
+	}
+
+	rewards, err := consensusResult.GetCoinbaseRewards(b.Height)
+	if err != nil {
+		return err
 	}
 
 	if err := checkCoinbaseTx(b, rewards); err != nil {
@@ -136,5 +148,21 @@ func ValidateBlock(b *bc.Block, parent *types.BlockHeader, rewards []state.Coinb
 		"hash":     b.ID.String(),
 		"duration": time.Since(startTime),
 	}).Debug("finish validate block")
+	return nil
+}
+
+// ValidateVoteTx validate the block vote transactions.
+func ValidateVoteTx(tx *bc.Tx, consensusResult *state.ConsensusResult) error {
+	for _, output := range tx.TxHeader.ResultIds {
+		voteOutput, err := tx.VoteOutput(*output)
+		if err != nil {
+			continue
+		}
+
+		pubkey := hex.EncodeToString(voteOutput.Vote)
+		if _, ok := consensusResult.NumOfVote[pubkey]; !ok && voteOutput.Source.Value.Amount < consensus.ActiveNetParams.MinConsensusNodeVoteNum {
+			return errors.WithDetailf(errBadVoteTx, " the fisrt vote amount must be greater than or equal to: %d, given: %d", consensus.ActiveNetParams.MinConsensusNodeVoteNum, voteOutput.Source.Value.Amount)
+		}
+	}
 	return nil
 }

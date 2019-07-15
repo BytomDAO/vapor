@@ -269,13 +269,8 @@ func (c *Chain) saveBlock(block *types.Block) error {
 		return err
 	}
 
-	rewards, err := consensusResult.GetCoinbaseRewards(block.Height)
-	if err != nil {
-		return err
-	}
-
 	bcBlock := types.MapBlock(block)
-	if err := validation.ValidateBlock(bcBlock, parent, rewards); err != nil {
+	if err := validation.ValidateBlock(bcBlock, parent, consensusResult); err != nil {
 		return errors.Sub(ErrBadBlock, err)
 	}
 
