@@ -55,7 +55,7 @@ func TestRegularBlockSync(t *testing.T) {
 			syncTimeout: 30 * time.Second,
 			aBlocks:     chainX[:52],
 			bBlocks:     chainZ,
-			want:        chainZ[:201],
+			want:        chainZ[:180],
 			err:         nil,
 		},
 	}

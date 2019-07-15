@@ -22,8 +22,9 @@ const (
 )
 
 var (
-	maxNumOfBlocksPerMsg  = uint64(1000)
-	maxNumOfHeadersPerMsg = uint64(1000)
+	maxNumOfBlocksPerMsg      = uint64(1000)
+	maxNumOfHeadersPerMsg     = uint64(1000)
+	maxNumOfBlocksRegularSync = uint64(128)
 )
 
 type FastSync interface {
@@ -156,8 +157,13 @@ func (bk *blockKeeper) processHeaders(peerID string, headers []*types.BlockHeade
 func (bk *blockKeeper) regularBlockSync() error {
 	peerHeight := bk.syncPeer.Height()
 	bestHeight := bk.chain.BestBlockHeight()
+	targetHeight := bestHeight + maxNumOfBlocksRegularSync
+	if targetHeight > peerHeight {
+		targetHeight = peerHeight
+	}
+
 	i := bestHeight + 1
-	for i <= peerHeight {
+	for i <= targetHeight {
 		block, err := bk.msgFetcher.requireBlock(bk.syncPeer.ID(), i)
 		if err != nil {
 			bk.peers.ProcessIllegal(bk.syncPeer.ID(), security.LevelConnException, err.Error())
