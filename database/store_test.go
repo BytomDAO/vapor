@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/vapor/consensus"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/database/storage"
 	"github.com/vapor/protocol"
@@ -75,70 +76,217 @@ func TestSaveBlock(t *testing.T) {
 	}()
 
 	store := NewStore(testDB)
-	block := mockGenesisBlock()
-	status := &bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{{StatusFail: true}}}
-	if err := store.SaveBlock(block, status); err != nil {
-		t.Fatal(err)
-	}
-
-	blockHash := block.Hash()
-	gotBlock, err := store.GetBlock(&blockHash)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	gotBlock.Transactions[0].Tx.SerializedSize = 0
-	gotBlock.Transactions[0].SerializedSize = 0
-	if !testutil.DeepEqual(block, gotBlock) {
-		t.Errorf("got block:%v, expect block:%v", gotBlock, block)
-	}
-
-	gotStatus, err := store.GetTransactionStatus(&blockHash)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !testutil.DeepEqual(status, gotStatus) {
-		t.Errorf("got status:%v, expect status:%v", gotStatus, status)
-	}
-
-	data := store.db.Get(calcBlockHeaderKey(&blockHash))
-	gotBlockHeader := types.BlockHeader{}
-	if err := gotBlockHeader.UnmarshalText(data); err != nil {
-		t.Fatal(err)
-	}
-
-	if !testutil.DeepEqual(block.BlockHeader, gotBlockHeader) {
-		t.Errorf("got block header:%v, expect block header:%v", gotBlockHeader, block.BlockHeader)
-	}
-}
-
-func mockGenesisBlock() *types.Block {
-	txData := types.TxData{
+	coinbaseTxData := &types.TxData{
 		Version: 1,
 		Inputs: []*types.TxInput{
 			types.NewCoinbaseInput([]byte("Information is power. -- Jan/11/2013. Computing is power. -- Apr/24/2018.")),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewVoteOutput(bc.AssetID{V0: 1}, uint64(10000), []byte{0x51}, []byte{0x51}),
+			types.NewVoteOutput(*consensus.BTMAssetID, uint64(10000), []byte{0x51}, []byte{0x51}),
 		},
 	}
-	tx := types.NewTx(txData)
-	txStatus := bc.NewTransactionStatus()
-	txStatus.SetStatus(0, false)
-	txStatusHash, _ := types.TxStatusMerkleRoot(txStatus.VerifyStatus)
-	merkleRoot, _ := types.TxMerkleRoot([]*bc.Tx{tx.Tx})
-	block := &types.Block{
-		BlockHeader: types.BlockHeader{
-			Version:   1,
-			Height:    0,
-			Timestamp: 1528945000,
-			BlockCommitment: types.BlockCommitment{
-				TransactionsMerkleRoot: merkleRoot,
-				TransactionStatusHash:  txStatusHash,
+	coinbaseTx := types.NewTx(*coinbaseTxData)
+
+	cases := []struct {
+		txData      []*types.TxData
+		txStatus    *bc.TransactionStatus
+		blockHeader *types.BlockHeader
+	}{
+		{
+			txStatus: &bc.TransactionStatus{
+				VerifyStatus: []*bc.TxVerifyResult{
+					{StatusFail: true},
+				},
+			},
+			blockHeader: &types.BlockHeader{
+				Version:   uint64(1),
+				Height:    uint64(1111),
+				Timestamp: uint64(1528945000),
 			},
 		},
-		Transactions: []*types.Tx{tx},
+		{
+			txStatus: &bc.TransactionStatus{
+				VerifyStatus: []*bc.TxVerifyResult{
+					{StatusFail: false},
+				},
+			},
+			blockHeader: &types.BlockHeader{
+				Version:   uint64(1),
+				Height:    uint64(1111),
+				Timestamp: uint64(1528945000),
+			},
+		},
+		{
+			txData: []*types.TxData{
+				{
+					Version: 1,
+					Inputs: []*types.TxInput{
+						types.NewSpendInput([][]byte{}, bc.NewHash([32]byte{}), *consensus.BTMAssetID, 100000000, 0, []byte{0x51}),
+					},
+					Outputs: []*types.TxOutput{
+						types.NewVoteOutput(*consensus.BTMAssetID, uint64(10000), []byte{0x51}, []byte{0x51}),
+					},
+				},
+			},
+			txStatus: &bc.TransactionStatus{
+				VerifyStatus: []*bc.TxVerifyResult{
+					{StatusFail: true},
+				},
+			},
+			blockHeader: &types.BlockHeader{
+				Version:   uint64(1),
+				Height:    uint64(1111),
+				Timestamp: uint64(1528945000),
+			},
+		},
+		{
+			txData: []*types.TxData{
+				{
+					Version: 1,
+					Inputs: []*types.TxInput{
+						types.NewSpendInput([][]byte{}, bc.NewHash([32]byte{}), *consensus.BTMAssetID, 100000000, 0, []byte{0x51}),
+					},
+					Outputs: []*types.TxOutput{
+						types.NewVoteOutput(*consensus.BTMAssetID, uint64(88888), []byte{0x51}, []byte{0x51}),
+					},
+				},
+			},
+			txStatus: &bc.TransactionStatus{
+				VerifyStatus: []*bc.TxVerifyResult{
+					{StatusFail: false},
+				},
+			},
+			blockHeader: &types.BlockHeader{
+				Version:   uint64(1),
+				Height:    uint64(0),
+				Timestamp: uint64(152894500000),
+			},
+		},
 	}
-	return block
+
+	for i, c := range cases {
+		txs := []*bc.Tx{coinbaseTx.Tx}
+		for _, tx := range c.txData {
+			t := types.NewTx(*tx)
+			txs = append(txs, t.Tx)
+		}
+		merkleRoot, _ := types.TxMerkleRoot(txs)
+		txStatusHash, _ := types.TxStatusMerkleRoot(c.txStatus.VerifyStatus)
+		block := &types.Block{
+			BlockHeader: types.BlockHeader{
+				Version:   c.blockHeader.Version,
+				Height:    c.blockHeader.Height,
+				Timestamp: c.blockHeader.Timestamp,
+				BlockCommitment: types.BlockCommitment{
+					TransactionsMerkleRoot: merkleRoot,
+					TransactionStatusHash:  txStatusHash,
+				},
+			},
+		}
+
+		if err := store.SaveBlock(block, c.txStatus); err != nil {
+			t.Fatal(err)
+		}
+
+		blockHash := block.Hash()
+		gotBlock, err := store.GetBlock(&blockHash)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !testutil.DeepEqual(gotBlock, block) {
+			t.Errorf("case %v: block mismatch: have %x, want %x", i, gotBlock, block)
+		}
+
+		gotStatus, err := store.GetTransactionStatus(&blockHash)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !testutil.DeepEqual(gotStatus.VerifyStatus, c.txStatus.VerifyStatus) {
+			t.Errorf("case %v: VerifyStatus mismatch: have %x, want %x", i, gotStatus.VerifyStatus, c.txStatus.VerifyStatus)
+		}
+
+		gotBlockHeader, err := store.GetBlockHeader(&blockHash)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !testutil.DeepEqual(block.BlockHeader, *gotBlockHeader) {
+			t.Errorf("got block header:%v, expect block header:%v", gotBlockHeader, block.BlockHeader)
+		}
+	}
+}
+
+func TestSaveBlockHeader(t *testing.T) {
+	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	defer func() {
+		testDB.Close()
+		os.RemoveAll("temp")
+	}()
+
+	store := NewStore(testDB)
+
+	cases := []struct {
+		blockHeader *types.BlockHeader
+	}{
+		{
+			blockHeader: &types.BlockHeader{
+				Version:   uint64(1),
+				Height:    uint64(1111),
+				Timestamp: uint64(1528945000),
+			},
+		},
+		{
+			blockHeader: &types.BlockHeader{
+				Version:           uint64(1),
+				Height:            uint64(0),
+				PreviousBlockHash: bc.NewHash([32]byte{0x3e, 0x94, 0x5d, 0x35, 0x70, 0x30, 0xd4, 0x3b, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+				Timestamp:         uint64(1563186936),
+				BlockCommitment: types.BlockCommitment{
+					TransactionsMerkleRoot: bc.NewHash([32]byte{0x3e, 0x94, 0x5d, 0x35, 0x70, 0x30, 0xd4, 0x3b, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+					TransactionStatusHash:  bc.NewHash([32]byte{0x3e, 0x94, 0x5d, 0x35, 0x70, 0x30, 0xd4, 0x3b, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+				},
+				BlockWitness: types.BlockWitness{
+					Witness: [][]byte{[]byte{0x3e, 0x94, 0x5d, 0x35}, []byte{0x3e, 0x94, 0x5d, 0x35}},
+				},
+			},
+		},
+		{
+			blockHeader: &types.BlockHeader{
+				Version:           uint64(1),
+				Height:            uint64(8848),
+				PreviousBlockHash: bc.NewHash([32]byte{0x3e, 0x94, 0x5d, 0x35, 0x70, 0x30, 0xd4, 0x3b, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+				Timestamp:         uint64(156318693600),
+				BlockCommitment: types.BlockCommitment{
+					TransactionsMerkleRoot: bc.NewHash([32]byte{0x3e, 0x94, 0x5d, 0x35, 0x70, 0x30, 0xd4, 0x3b, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+					TransactionStatusHash:  bc.NewHash([32]byte{0x3e, 0x94, 0x5d, 0x35, 0x70, 0x30, 0xd4, 0x3b, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+				},
+				BlockWitness: types.BlockWitness{
+					Witness: [][]byte{
+						[]byte{0x3e, 0x94, 0x5d, 0x35},
+						[]byte{0xdd, 0x80, 0x67, 0x29},
+						[]byte{0xff, 0xff, 0xff, 0xff},
+						[]byte{0x00, 0x01, 0x02, 0x03},
+					},
+				},
+			},
+		},
+	}
+
+	for i, c := range cases {
+		if err := store.SaveBlockHeader(c.blockHeader); err != nil {
+			t.Fatal(err)
+		}
+
+		blockHash := c.blockHeader.Hash()
+		gotBlockHeader, err := store.GetBlockHeader(&blockHash)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !testutil.DeepEqual(gotBlockHeader, c.blockHeader) {
+			t.Errorf("case %v: block header mismatch: have %x, want %x", i, gotBlockHeader, c.blockHeader)
+		}
+	}
 }
