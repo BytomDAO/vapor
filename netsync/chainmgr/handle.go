@@ -6,7 +6,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/common"
 	cfg "github.com/vapor/config"
 	"github.com/vapor/consensus"
 	dbm "github.com/vapor/database/leveldb"
@@ -21,8 +20,6 @@ import (
 )
 
 const (
-	maxKnownTxs = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
-
 	logModule = "netsync"
 )
 
@@ -69,12 +66,10 @@ type Manager struct {
 
 	eventDispatcher *event.Dispatcher
 	txMsgSub        *event.Subscription
-	knownTxs        *common.OrderedSet // Set of transaction hashes known so far
 }
 
 //NewManager create a chain sync manager.
 func NewManager(config *cfg.Config, sw Switch, chain Chain, mempool Mempool, dispatcher *event.Dispatcher, peers *peers.PeerSet, fastSyncDB dbm.DB) (*Manager, error) {
-	knownTxs, _ := common.NewOrderedSet(maxKnownTxs)
 	manager := &Manager{
 		sw:              sw,
 		mempool:         mempool,
@@ -85,7 +80,6 @@ func NewManager(config *cfg.Config, sw Switch, chain Chain, mempool Mempool, dis
 		quit:            make(chan struct{}),
 		config:          config,
 		eventDispatcher: dispatcher,
-		knownTxs:        knownTxs,
 	}
 
 	if !config.VaultMode {
@@ -110,6 +104,7 @@ func (m *Manager) handleBlockMsg(peer *peers.Peer, msg *msgs.BlockMessage) {
 	if err != nil {
 		return
 	}
+
 	m.blockKeeper.processBlock(peer.ID(), block)
 }
 
@@ -259,11 +254,6 @@ func (m *Manager) handleTransactionMsg(peer *peers.Peer, msg *msgs.TransactionMe
 		return
 	}
 
-	if m.knownTxs.Has(tx.ID.String()) {
-		return
-	}
-
-	m.knownTxs.Add(tx.ID.String())
 	m.peers.MarkTx(peer.ID(), tx.ID)
 	if isOrphan, err := m.chain.ValidateTx(tx); err != nil && err != core.ErrDustTx && !isOrphan {
 		m.peers.ProcessIllegal(peer.ID(), security.LevelMsgIllegal, "fail on validate tx transaction")
@@ -283,11 +273,6 @@ func (m *Manager) handleTransactionsMsg(peer *peers.Peer, msg *msgs.Transactions
 	}
 
 	for _, tx := range txs {
-		if m.knownTxs.Has(tx.ID.String()) {
-			continue
-		}
-
-		m.knownTxs.Add(tx.ID.String())
 		m.peers.MarkTx(peer.ID(), tx.ID)
 		if isOrphan, err := m.chain.ValidateTx(tx); err != nil && !isOrphan {
 			m.peers.ProcessIllegal(peer.ID(), security.LevelMsgIllegal, "fail on validate tx transaction")

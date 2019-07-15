@@ -50,9 +50,7 @@ func (m *Manager) broadcastTxsLoop() {
 			}
 
 			if ev.TxMsg.MsgType == core.MsgNewTx {
-				tx := ev.TxMsg.Tx
-				m.knownTxs.Add(tx.ID.String())
-				if err := m.peers.BroadcastTx(tx); err != nil {
+				if err := m.peers.BroadcastTx(ev.TxMsg.Tx); err != nil {
 					log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on broadcast new tx.")
 					continue
 				}

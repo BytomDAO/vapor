@@ -27,6 +27,12 @@ func (c *Chain) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) err
 // per-transaction validation results and is consulted before
 // performing full validation.
 func (c *Chain) ValidateTx(tx *types.Tx) (bool, error) {
+	if c.hasSeenTx(tx) {
+		return false, nil
+	}
+
+	c.markTransactions(tx)
+
 	if ok := c.txPool.HaveTransaction(&tx.ID); ok {
 		return false, c.txPool.GetErrCache(&tx.ID)
 	}
