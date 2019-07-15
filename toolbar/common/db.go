@@ -1,4 +1,4 @@
-package database
+package common
 
 import (
 	"fmt"
@@ -7,10 +7,9 @@ import (
 	"github.com/jinzhu/gorm"
 
 	"github.com/vapor/errors"
-	"github.com/vapor/federation/config"
 )
 
-func NewMySQLDB(cfg config.MySQLConfig) (*gorm.DB, error) {
+func NewMySQLDB(cfg MySQLConfig) (*gorm.DB, error) {
 	dsnTemplate := "%s:%s@tcp(%s:%d)/%s?charset=utf8&parseTime=true&loc=Local"
 	dsn := fmt.Sprintf(dsnTemplate, cfg.Connection.Username, cfg.Connection.Password, cfg.Connection.Host, cfg.Connection.Port, cfg.Connection.DbName)
 	db, err := gorm.Open("mysql", dsn)

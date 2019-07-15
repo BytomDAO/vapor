@@ -10,7 +10,7 @@ import (
 	"github.com/jinzhu/gorm"
 
 	"github.com/vapor/errors"
-	"github.com/vapor/federation/config"
+	"github.com/vapor/toolbar/federation/config"
 )
 
 type Server struct {

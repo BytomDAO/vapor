@@ -1,7 +1,7 @@
 package orm
 
 import (
-	"github.com/vapor/federation/types"
+	"github.com/vapor/toolbar/federation/types"
 )
 
 type Asset struct {
