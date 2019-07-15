@@ -13,7 +13,7 @@ import (
 	"github.com/vapor/protocol/vm/vmutil"
 )
 
-var FedPath = [][]byte{
+var FedAddressPath = [][]byte{
 	[]byte{0x2C, 0x00, 0x00, 0x00},
 	[]byte{0x99, 0x00, 0x00, 0x00},
 	[]byte{0x01, 0x00, 0x00, 0x00},
@@ -23,7 +23,8 @@ var FedPath = [][]byte{
 
 func FederationPMultiSigScript(c *Config) []byte {
 	xpubs := c.Federation.Xpubs
-	derivedXPubs := chainkd.DeriveXPubs(xpubs, FedPath)
+	derivedXPubs := chainkd.DeriveXPubs(xpubs, FedAddressPath)
+	// derivedXPubs := xpubs
 	program, err := vmutil.P2SPMultiSigProgram(chainkd.XPubKeys(derivedXPubs), c.Federation.Quorum)
 	if err != nil {
 		log.Panicf("fail to generate federation scirpt for federation: %v", err)
