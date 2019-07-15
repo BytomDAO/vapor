@@ -131,7 +131,7 @@ func (fs *fastSync) process() error {
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go fs.msgFetcher.parallelFetchBlocks(tasks, downloadNotifyCh, processStopCh, &wg)
-	go fs.blockProcessor.process(downloadNotifyCh, processStopCh, &wg)
+	go fs.blockProcessor.process(downloadNotifyCh, processStopCh, tasks[0].startHeader.Height, &wg)
 	wg.Wait()
 	fs.msgFetcher.resetParameter()
 	log.WithFields(log.Fields{"module": logModule, "height": fs.chain.BestBlockHeight()}).Info("fast sync complete")

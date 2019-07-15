@@ -13,7 +13,7 @@ import (
 var errOrphanBlock = errors.New("fast sync inserting orphan block")
 
 type BlockProcessor interface {
-	process(chan struct{}, chan struct{}, *sync.WaitGroup)
+	process(chan struct{}, chan struct{}, uint64, *sync.WaitGroup)
 }
 
 type blockProcessor struct {
@@ -43,15 +43,15 @@ func (bp *blockProcessor) insert(blockStorage *blockStorage) error {
 	return err
 }
 
-func (bp *blockProcessor) process(downloadNotifyCh chan struct{}, ProcessStop chan struct{}, wg *sync.WaitGroup) {
+func (bp *blockProcessor) process(downloadNotifyCh chan struct{}, ProcessStop chan struct{}, startHeight uint64, wg *sync.WaitGroup) {
 	defer func() {
 		close(ProcessStop)
 		wg.Done()
 	}()
 
+	nextHeight := startHeight + 1
 	for {
 		for {
-			nextHeight := bp.chain.BestBlockHeight() + 1
 			block, err := bp.storage.readBlock(nextHeight)
 			if err != nil {
 				break
@@ -63,6 +63,7 @@ func (bp *blockProcessor) process(downloadNotifyCh chan struct{}, ProcessStop ch
 			}
 
 			bp.storage.deleteBlock(nextHeight)
+			nextHeight++
 		}
 
 		if _, ok := <-downloadNotifyCh; !ok {
