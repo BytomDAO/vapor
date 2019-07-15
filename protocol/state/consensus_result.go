@@ -14,7 +14,7 @@ import (
 	"github.com/vapor/protocol/bc/types"
 )
 
-// fedConsensusPath helps derive federation root xpubs for consensus
+// fedConsensusPath is used to derive federation root xpubs for signing blocks
 var fedConsensusPath = [][]byte{
 	[]byte{0xff, 0xff, 0xff, 0xff},
 	[]byte{0xff, 0x00, 0x00, 0x00},
