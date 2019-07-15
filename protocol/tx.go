@@ -55,3 +55,28 @@ func (c *Chain) ValidateTx(tx *types.Tx) (bool, error) {
 
 	return c.txPool.ProcessTransaction(tx, err != nil, bh.Height, gasStatus.BTMValue)
 }
+
+// validateTx validates the given transaction without checking duplication.
+func (c *Chain) validateTx(tx *types.Tx) (bool, error) {
+	if ok := c.txPool.HaveTransaction(&tx.ID); ok {
+		return false, c.txPool.GetErrCache(&tx.ID)
+	}
+
+	if c.txPool.IsDust(tx) {
+		c.txPool.AddErrCache(&tx.ID, ErrDustTx)
+		return false, ErrDustTx
+	}
+
+	bh := c.BestBlockHeader()
+	gasStatus, err := validation.ValidateTx(tx.Tx, types.MapBlock(&types.Block{BlockHeader: *bh}))
+	if !gasStatus.GasValid {
+		c.txPool.AddErrCache(&tx.ID, err)
+		return false, err
+	}
+
+	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "tx_id": tx.Tx.ID.String(), "error": err}).Info("transaction status fail")
+	}
+
+	return c.txPool.ProcessTransaction(tx, err != nil, bh.Height, gasStatus.BTMValue)
+}
