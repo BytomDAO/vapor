@@ -5,9 +5,12 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/vapor/errors"
 	"github.com/vapor/netsync/peers"
 	"github.com/vapor/p2p/security"
 )
+
+var errOrphanBlock = errors.New("fast sync inserting orphan block")
 
 type BlockProcessor interface {
 	process(chan struct{}, chan struct{}, *sync.WaitGroup)
@@ -29,7 +32,12 @@ func newBlockProcessor(chain Chain, storage Storage, peers *peers.PeerSet) *bloc
 
 func (bp *blockProcessor) insert(blockStorage *blockStorage) error {
 	isOrphan, err := bp.chain.ProcessBlock(blockStorage.block)
-	if err != nil || isOrphan {
+	if isOrphan {
+		bp.peers.ProcessIllegal(blockStorage.peerID, security.LevelMsgIllegal, errOrphanBlock.Error())
+		return errOrphanBlock
+	}
+
+	if err != nil {
 		bp.peers.ProcessIllegal(blockStorage.peerID, security.LevelMsgIllegal, err.Error())
 	}
 	return err
