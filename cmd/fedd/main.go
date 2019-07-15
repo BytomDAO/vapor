@@ -5,15 +5,16 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/federation/api"
-	"github.com/vapor/federation/config"
-	"github.com/vapor/federation/database"
-	"github.com/vapor/federation/synchron"
+	"github.com/vapor/toolbar/federation/api"
+	"github.com/vapor/toolbar/federation/config"
+	"github.com/vapor/toolbar/federation/database"
+	"github.com/vapor/toolbar/common"
+	"github.com/vapor/toolbar/federation/synchron"
 )
 
 func main() {
 	cfg := config.NewConfig()
-	db, err := database.NewMySQLDB(cfg.MySQLConfig)
+	db, err := common.NewMySQLDB(cfg.MySQLConfig)
 	if err != nil {
 		log.WithField("err", err).Panic("initialize mysql db error")
 	}
