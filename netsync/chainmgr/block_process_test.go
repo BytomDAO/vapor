@@ -43,7 +43,7 @@ func TestBlockProcess(t *testing.T) {
 		close(downloadNotifyCh)
 	}()
 	wg.Add(1)
-	bp.process(downloadNotifyCh, ProcessStopCh, &wg)
+	bp.process(downloadNotifyCh, ProcessStopCh, uint64(blockNum/2), &wg)
 	if bp.chain.BestBlockHeight() != uint64(blockNum) {
 		t.Fatalf("TestBlockProcess fail: got %d want %d", bp.chain.BestBlockHeight(), blockNum)
 	}
