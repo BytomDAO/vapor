@@ -207,9 +207,8 @@ func TestSaveBlock(t *testing.T) {
 			t.Errorf("case %v: VerifyStatus mismatch: have %x, want %x", i, gotStatus.VerifyStatus, c.txStatus.VerifyStatus)
 		}
 
-		data := store.db.Get(calcBlockHeaderKey(&blockHash))
-		gotBlockHeader := new(types.BlockHeader)
-		if err := gotBlockHeader.UnmarshalText(data); err != nil {
+		gotBlockHeader, err := store.GetBlockHeader(&blockHash)
+		if err != nil {
 			t.Fatal(err)
 		}
 
@@ -266,9 +265,9 @@ func TestSaveBlockHeader(t *testing.T) {
 				BlockWitness: types.BlockWitness{
 					Witness: [][]byte{
 						[]byte{0x3e, 0x94, 0x5d, 0x35},
-						[]byte{0x3e, 0x94, 0x5d, 0x35},
-						[]byte{0x3e, 0x94, 0x5d, 0x35},
-						[]byte{0xd4, 0x3b, 0x3d, 0xe3},
+						[]byte{0xdd, 0x80, 0x67, 0x29},
+						[]byte{0xff, 0xff, 0xff, 0xff},
+						[]byte{0x00, 0x01, 0x02, 0x03},
 					},
 				},
 			},
@@ -281,14 +280,13 @@ func TestSaveBlockHeader(t *testing.T) {
 		}
 
 		blockHash := c.blockHeader.Hash()
-		gotBlockHeaderData := store.db.Get(calcBlockHeaderKey(&blockHash))
-		binaryBlockHeader, err := c.blockHeader.MarshalText()
+		gotBlockHeader, err := store.GetBlockHeader(&blockHash)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		if !testutil.DeepEqual(gotBlockHeaderData, binaryBlockHeader) {
-			t.Errorf("case %v: block header mismatch: have %x, want %x", i, gotBlockHeaderData, binaryBlockHeader)
+		if !testutil.DeepEqual(gotBlockHeader, c.blockHeader) {
+			t.Errorf("case %v: block header mismatch: have %x, want %x", i, gotBlockHeader, c.blockHeader)
 		}
 	}
 }
