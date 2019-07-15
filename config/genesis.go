@@ -24,7 +24,6 @@ var FedAddressPath = [][]byte{
 func FederationPMultiSigScript(c *Config) []byte {
 	xpubs := c.Federation.Xpubs
 	derivedXPubs := chainkd.DeriveXPubs(xpubs, FedAddressPath)
-	// derivedXPubs := xpubs
 	program, err := vmutil.P2SPMultiSigProgram(chainkd.XPubKeys(derivedXPubs), c.Federation.Quorum)
 	if err != nil {
 		log.Panicf("fail to generate federation scirpt for federation: %v", err)
