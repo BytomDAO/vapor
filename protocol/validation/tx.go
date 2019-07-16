@@ -58,12 +58,13 @@ func (g *GasState) setGas(BTMValue int64, txSize int64) error {
 	}
 
 	g.BTMValue = uint64(BTMValue)
-
 	var ok bool
 	if g.GasLeft, ok = checked.DivInt64(BTMValue, consensus.ActiveNetParams.VMGasRate); !ok {
 		return errors.Wrap(ErrGasCalculate, "setGas calc gas amount")
 	}
 
+	// set tx free gas
+	g.GasLeft += consensus.ActiveNetParams.DefaultGasCredit
 	if g.GasLeft > consensus.ActiveNetParams.MaxGasAmount {
 		g.GasLeft = consensus.ActiveNetParams.MaxGasAmount
 	}
@@ -172,14 +173,17 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			parity[*dest.Value.AssetId] = diff
 		}
 
+		btmAmount := int64(0)
 		for assetID, amount := range parity {
 			if assetID == *consensus.BTMAssetID {
-				if err = vs.gasStatus.setGas(amount, int64(vs.tx.SerializedSize)); err != nil {
-					return err
-				}
+				btmAmount = amount
 			} else if amount != 0 {
 				return errors.WithDetailf(ErrUnbalanced, "asset %x sources - destinations = %d (should be 0)", assetID.Bytes(), amount)
 			}
+		}
+
+		if err = vs.gasStatus.setGas(btmAmount, int64(vs.tx.SerializedSize)); err != nil {
+			return err
 		}
 
 		for _, BTMInputID := range vs.tx.GasInputIDs {
