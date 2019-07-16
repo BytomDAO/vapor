@@ -129,6 +129,10 @@ func TestDeleteAccount(t *testing.T) {
 			if _, err := accountStore.GetAccountByID(a.ID); err == acc.ErrFindAccount {
 				t.Errorf("case %v: cann't find account, err: %v", i, err)
 			}
+
+			if _, err := accountStore.GetAccountByAlias(a.Alias); err == acc.ErrFindAccount {
+				t.Errorf("case %v: cann't find account, err: %v", i, err)
+			}
 		}
 	}
 }
