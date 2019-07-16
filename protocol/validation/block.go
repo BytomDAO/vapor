@@ -138,23 +138,3 @@ func ValidateBlock(b *bc.Block, parent *types.BlockHeader, rewards []state.Coinb
 	}).Debug("finish validate block")
 	return nil
 }
-
-// ValidateVoteTx validate the block vote transactions.
-func ValidateVoteTx(tx *bc.Tx, consensusResult *state.ConsensusResult) error {
-	for _, output := range tx.TxHeader.ResultIds {
-		voteOutput, err := tx.VoteOutput(*output)
-		if err != nil {
-			continue
-		}
-
-		if voteOutput.Source.Value.Amount < consensus.ActiveNetParams.MinVoteOutputAmount {
-			return errors.WithDetailf(ErrVoteOutputAmount, "vote amount %d less than MinVoteOutputAmount: %d", voteOutput.Source.Value.Amount, consensus.ActiveNetParams.MinVoteOutputAmount)
-		}
-
-		pubkey := hex.EncodeToString(voteOutput.Vote)
-		if _, ok := consensusResult.NumOfVote[pubkey]; !ok && voteOutput.Source.Value.Amount < consensus.ActiveNetParams.MinConsensusNodeVoteNum {
-			return errors.WithDetailf(ErrVoteOutputAmount, " the fisrt vote amount %d less than MinConsensusNodeVoteNum: %d", voteOutput.Source.Value.Amount, consensus.ActiveNetParams.MinConsensusNodeVoteNum)
-		}
-	}
-	return nil
-}
