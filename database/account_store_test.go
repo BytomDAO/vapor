@@ -405,5 +405,4 @@ func TestGetBip44ContractIndex(t *testing.T) {
 			t.Errorf("case %v: got incorrect bip44 contract index, got: %v, want: %v.", i, gotIndex, c.index)
 		}
 	}
-
 }
