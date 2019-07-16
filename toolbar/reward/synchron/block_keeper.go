@@ -95,7 +95,11 @@ func (c *ChainKeeper) syncBlock() (bool, error) {
 func (c *ChainKeeper) AttachBlock(block *types.Block, txStatus *bc.TransactionStatus) error {
 	ormDB := c.db.Begin()
 	for pos, tx := range block.Transactions {
-		statusFail, _ := txStatus.GetStatus(pos)
+		statusFail, err := txStatus.GetStatus(pos)
+		if err != nil {
+			return err
+		}
+
 		if statusFail {
 			log.WithFields(log.Fields{"block height": block.Height, "statusFail": statusFail}).Debug("AttachBlock")
 			continue
@@ -107,22 +111,24 @@ func (c *ChainKeeper) AttachBlock(block *types.Block, txStatus *bc.TransactionSt
 				continue
 			}
 
-			prog := &bc.Program{VmVersion: vetoInput.VMVersion, Code: vetoInput.ControlProgram}
-			src := &bc.ValueSource{
-				Ref:      &vetoInput.SourceID,
-				Value:    &vetoInput.AssetAmount,
-				Position: vetoInput.SourcePosition,
+			outputID, err := input.SpentOutputID()
+			if err != nil {
+				return err
 			}
-			prevout := bc.NewVoteOutput(src, prog, 0, vetoInput.Vote) // ordinal doesn't matter for prevouts, only for result outputs
-			outputID := bc.EntryID(prevout)
 			utxo := &orm.Utxo{
 				VoterAddress: common.GetAddressFromControlProgram(vetoInput.ControlProgram),
 				OutputID:     outputID.String(),
 			}
 			// update data
-			if err := ormDB.Where(utxo).Update("veto_height", block.Height).Error; err != nil && err != gorm.ErrRecordNotFound {
+			db := ormDB.Where(utxo).Update("veto_height", block.Height)
+			if err := db.Error; err != nil {
 				ormDB.Rollback()
 				return err
+			}
+
+			if db.RowsAffected != 1 {
+				ormDB.Rollback()
+				return ErrInconsistentDB
 			}
 
 		}
@@ -144,6 +150,7 @@ func (c *ChainKeeper) AttachBlock(block *types.Block, txStatus *bc.TransactionSt
 			}
 			// insert data
 			if err := ormDB.Save(utxo).Error; err != nil {
+				ormDB.Rollback()
 				return err
 			}
 		}
@@ -154,60 +161,24 @@ func (c *ChainKeeper) AttachBlock(block *types.Block, txStatus *bc.TransactionSt
 
 func (c *ChainKeeper) DetachBlock(block *types.Block, txStatus *bc.TransactionStatus) error {
 	ormDB := c.db.Begin()
-	for txIndex := len(block.Transactions) - 1; txIndex >= 0; txIndex-- {
-		statusFail, _ := txStatus.GetStatus(txIndex)
-		if statusFail {
-			log.WithFields(log.Fields{"block height": block.Height, "statusFail": statusFail}).Debug("DetachBlock")
-			continue
-		}
-		tx := block.Transactions[txIndex]
 
-		for _, input := range tx.Inputs {
-			vetoInput, ok := input.TypedInput.(*types.VetoInput)
-			if !ok {
-				continue
-			}
+	utxo := &orm.Utxo{
+		VoteHeight: block.Height,
+	}
+	// insert data
+	if err := ormDB.Where(utxo).Delete(&orm.Utxo{}).Error; err != nil {
+		ormDB.Rollback()
+		return err
+	}
 
-			prog := &bc.Program{VmVersion: vetoInput.VMVersion, Code: vetoInput.ControlProgram}
-			src := &bc.ValueSource{
-				Ref:      &vetoInput.SourceID,
-				Value:    &vetoInput.AssetAmount,
-				Position: vetoInput.SourcePosition,
-			}
-			prevout := bc.NewVoteOutput(src, prog, 0, vetoInput.Vote) // ordinal doesn't matter for prevouts, only for result outputs
-			outputID := bc.EntryID(prevout)
-			utxo := &orm.Utxo{
-				VoterAddress: common.GetAddressFromControlProgram(vetoInput.ControlProgram),
-				OutputID:     outputID.String(),
-			}
-			// update data
-			if err := ormDB.Where(utxo).Update("veto_height", 0).Error; err != nil && err != gorm.ErrRecordNotFound {
-				ormDB.Rollback()
-				return err
-			}
-		}
+	utxo = &orm.Utxo{
+		VetoHeight: block.Height,
+	}
 
-		for index, output := range tx.Outputs {
-			voteOutput, ok := output.TypedOutput.(*types.VoteOutput)
-			if !ok {
-				continue
-			}
-			pubkey := hex.EncodeToString(voteOutput.Vote)
-			outputID := tx.OutputID(index)
-			utxo := &orm.Utxo{
-				Xpub:         pubkey,
-				VoterAddress: common.GetAddressFromControlProgram(voteOutput.ControlProgram),
-				VoteHeight:   block.Height,
-				VoteNum:      voteOutput.Amount,
-				OutputID:     outputID.String(),
-			}
-			// insert data
-			if err := ormDB.Where(utxo).Delete(&orm.Utxo{}).Error; err != nil {
-				return err
-			}
-
-		}
-
+	// update data
+	if err := ormDB.Where(utxo).Update("veto_height", 0).Error; err != nil {
+		ormDB.Rollback()
+		return err
 	}
 
 	return ormDB.Commit().Error
