@@ -115,10 +115,6 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 
 	entriesTxs := []*bc.Tx{}
 	for _, txDesc := range txs {
-		if err := consensusResult.ApplyTransaction(txDesc.Tx); err != nil {
-			blkGenSkipTxForErr(txPool, &txDesc.Tx.ID, err)
-			continue
-		}
 		entriesTxs = append(entriesTxs, txDesc.Tx.Tx)
 	}
 
@@ -147,6 +143,11 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 		}
 
 		if err := view.ApplyTransaction(bcBlock, tx, gasOnlyTx); err != nil {
+			blkGenSkipTxForErr(txPool, &tx.ID, err)
+			continue
+		}
+
+		if err := consensusResult.ApplyTransaction(txDesc.Tx); err != nil {
 			blkGenSkipTxForErr(txPool, &tx.ID, err)
 			continue
 		}
