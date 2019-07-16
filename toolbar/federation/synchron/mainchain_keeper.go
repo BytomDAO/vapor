@@ -16,12 +16,12 @@ import (
 
 	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
-	"github.com/vapor/federation/common"
-	"github.com/vapor/federation/config"
-	"github.com/vapor/federation/database"
-	"github.com/vapor/federation/database/orm"
-	"github.com/vapor/federation/service"
 	"github.com/vapor/protocol/bc"
+	"github.com/vapor/toolbar/common/service"
+	"github.com/vapor/toolbar/federation/common"
+	"github.com/vapor/toolbar/federation/config"
+	"github.com/vapor/toolbar/federation/database"
+	"github.com/vapor/toolbar/federation/database/orm"
 )
 
 type mainchainKeeper struct {

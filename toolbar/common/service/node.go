@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/vapor/errors"
-	"github.com/vapor/federation/util"
+	"github.com/vapor/toolbar/federation/util"
 	"github.com/vapor/protocol/bc"
 )
 

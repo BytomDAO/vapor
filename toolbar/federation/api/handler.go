@@ -8,8 +8,8 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/vapor/errors"
-	"github.com/vapor/federation/common"
-	"github.com/vapor/federation/database/orm"
+	"github.com/vapor/toolbar/federation/common"
+	"github.com/vapor/toolbar/federation/database/orm"
 )
 
 type listCrosschainTxsReq struct{ Display }

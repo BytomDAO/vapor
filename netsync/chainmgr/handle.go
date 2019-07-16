@@ -68,7 +68,7 @@ type Manager struct {
 	txMsgSub        *event.Subscription
 }
 
-//NewChainManager create a chain sync manager.
+//NewManager create a chain sync manager.
 func NewManager(config *cfg.Config, sw Switch, chain Chain, mempool Mempool, dispatcher *event.Dispatcher, peers *peers.PeerSet, fastSyncDB dbm.DB) (*Manager, error) {
 	manager := &Manager{
 		sw:              sw,
@@ -104,6 +104,7 @@ func (m *Manager) handleBlockMsg(peer *peers.Peer, msg *msgs.BlockMessage) {
 	if err != nil {
 		return
 	}
+
 	m.blockKeeper.processBlock(peer.ID(), block)
 }
 

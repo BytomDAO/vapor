@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 
 	"github.com/vapor/errors"
-	"github.com/vapor/federation/common"
-	"github.com/vapor/federation/types"
+	"github.com/vapor/toolbar/federation/common"
+	"github.com/vapor/toolbar/federation/types"
 )
 
 type CrossTransaction struct {

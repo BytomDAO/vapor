@@ -13,7 +13,10 @@ import (
 	"github.com/vapor/protocol/state"
 )
 
-const maxProcessBlockChSize = 1024
+const (
+	maxProcessBlockChSize = 1024
+	maxKnownTxs           = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
+)
 
 // Chain provides functions for working with the Bytom block chain.
 type Chain struct {
@@ -28,10 +31,13 @@ type Chain struct {
 	cond               sync.Cond
 	bestBlockHeader    *types.BlockHeader // the last block on current main chain
 	lastIrrBlockHeader *types.BlockHeader // the last irreversible block
+
+	knownTxs *common.OrderedSet
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
 func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*Chain, error) {
+	knownTxs, _ := common.NewOrderedSet(maxKnownTxs)
 	c := &Chain{
 		orphanManage:    NewOrphanManage(),
 		txPool:          txPool,
@@ -39,6 +45,7 @@ func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*
 		signatureCache:  common.NewCache(maxSignatureCacheSize),
 		eventDispatcher: eventDispatcher,
 		processBlockCh:  make(chan *processBlockMsg, maxProcessBlockChSize),
+		knownTxs:        knownTxs,
 	}
 	c.cond.L = new(sync.Mutex)
 
@@ -163,6 +170,16 @@ func (c *Chain) traceLongestChainTail(blockHeader *types.BlockHeader) (*types.Bl
 		}
 	}
 	return longestTail, nil
+}
+
+func (c *Chain) hasSeenTx(tx *types.Tx) bool {
+	return c.knownTxs.Has(tx.ID.String())
+}
+
+func (c *Chain) markTransactions(txs ...*types.Tx) {
+	for _, tx := range txs {
+		c.knownTxs.Add(tx.ID.String())
+	}
 }
 
 // This function must be called with mu lock in above level
