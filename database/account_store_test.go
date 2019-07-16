@@ -516,3 +516,57 @@ func TestGetContractIndex(t *testing.T) {
 		}
 	}
 }
+
+func TestGetControlProgram(t *testing.T) {
+	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	defer func() {
+		testDB.Close()
+		os.RemoveAll("temp")
+	}()
+
+	cases := []struct {
+		hash    bc.Hash
+		program *acc.CtrlProgram
+	}{
+		{
+			hash:    bc.NewHash([32]byte{}),
+			program: &acc.CtrlProgram{},
+		},
+		{
+			hash:    bc.NewHash([32]byte{0x01, 0x01, 0x02, 0x39, 0x70, 0x30, 0xd4, 0x3b, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+			program: &acc.CtrlProgram{},
+		},
+		{
+			hash: bc.NewHash([32]byte{}),
+			program: &acc.CtrlProgram{
+				AccountID: "account1",
+				Address:   "address",
+			},
+		},
+		{
+			hash: bc.NewHash([32]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+			program: &acc.CtrlProgram{
+				AccountID: "account1",
+				Address:   "address",
+			},
+		},
+	}
+
+	accountStore := NewAccountStore(testDB)
+	for i, c := range cases {
+		as := accountStore.InitBatch()
+		as.SetControlProgram(c.hash, c.program)
+		if err := as.CommitBatch(); err != nil {
+			t.Fatal(err)
+		}
+
+		gotProgram, err := as.GetControlProgram(c.hash)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !testutil.DeepEqual(gotProgram, c.program) {
+			t.Errorf("case %v: got control program, got: %v, want: %v.", i, gotProgram, c.program)
+		}
+	}
+}
