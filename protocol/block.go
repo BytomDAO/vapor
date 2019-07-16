@@ -291,7 +291,7 @@ func (c *Chain) saveBlock(block *types.Block) error {
 
 	if len(signature) != 0 {
 		xPub := config.CommonConfig.PrivateKey().XPub()
-		if err := c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: block.Hash(), Signature: signature, XPub: xPub[:]}); err != nil {
+		if err := c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: block.Hash(), Height: block.Height, Signature: signature, XPub: xPub[:]}); err != nil {
 			return err
 		}
 	}

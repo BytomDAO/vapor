@@ -29,6 +29,7 @@ type NewProposedBlockEvent struct{ Block types.Block }
 
 type BlockSignatureEvent struct {
 	BlockHash bc.Hash
+	Height    uint64
 	Signature []byte
 	XPub      []byte
 }

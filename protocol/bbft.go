@@ -133,7 +133,7 @@ func (c *Chain) validateSign(block *types.Block) error {
 			cachekey := signCacheKey(blockHash.String(), pubKey)
 			if signature, ok := c.signatureCache.Get(cachekey); ok {
 				block.Set(node.Order, signature.([]byte))
-				c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: blockHash, Signature: signature.([]byte), XPub: node.XPub[:]})
+				c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: blockHash, Height: block.Height, Signature: signature.([]byte), XPub: node.XPub[:]})
 				c.signatureCache.Remove(cachekey)
 			} else {
 				continue
@@ -196,7 +196,7 @@ func (c *Chain) ProcessBlockSignature(signature, xPub []byte, blockHash *bc.Hash
 	if err := c.updateBlockSignature(blockHeader, consensusNode.Order, signature); err != nil {
 		return err
 	}
-	return c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: *blockHash, Signature: signature, XPub: xPub})
+	return c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: *blockHash, Height: blockHeader.Height, Signature: signature, XPub: xPub})
 }
 
 // SignBlock signing the block if current node is consensus node
