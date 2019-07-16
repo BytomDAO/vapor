@@ -56,12 +56,10 @@ func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *types.Tx) error {
 
 	isOrphan, err := c.ValidateTx(tx)
 	if err != nil {
-		switch {
-		case errors.Root(err) == err:
+		if errors.Root(err) == err {
 			return errors.Sub(ErrRejected, err)
-		default:
-			return err
 		}
+		return err
 	}
 
 	if isOrphan {
