@@ -406,3 +406,39 @@ func TestGetBip44ContractIndex(t *testing.T) {
 		}
 	}
 }
+
+func TestGetCoinbaseArbitrary(t *testing.T) {
+	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	defer func() {
+		testDB.Close()
+		os.RemoveAll("temp")
+	}()
+
+	cases := []struct {
+		arbitrary []byte
+	}{
+		{
+			arbitrary: []byte{},
+		},
+		{
+			arbitrary: []byte("test arbitrary"),
+		},
+		{
+			arbitrary: []byte("test arbitrary test arbitrary test arbitrary test arbitrary test arbitrary"),
+		},
+	}
+
+	accountStore := NewAccountStore(testDB)
+	for i, c := range cases {
+		as := accountStore.InitBatch()
+		as.SetCoinbaseArbitrary(c.arbitrary)
+		if err := as.CommitBatch(); err != nil {
+			t.Fatal(err)
+		}
+
+		gotArbitrary := as.GetCoinbaseArbitrary()
+		if !testutil.DeepEqual(gotArbitrary, c.arbitrary) {
+			t.Errorf("case %v: got incorrect arbitrary, got: %v, want: %v.", i, gotArbitrary, c.arbitrary)
+		}
+	}
+}
