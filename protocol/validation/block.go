@@ -90,16 +90,10 @@ func ValidateBlockHeader(b *bc.Block, parent *types.BlockHeader) error {
 }
 
 // ValidateBlock validates a block and the transactions within.
-func ValidateBlock(b *bc.Block, parent *types.BlockHeader, consensusResult *state.ConsensusResult) error {
+func ValidateBlock(b *bc.Block, parent *types.BlockHeader, rewards []state.CoinbaseReward) error {
 	startTime := time.Now()
 	if err := ValidateBlockHeader(b, parent); err != nil {
 		return err
-	}
-
-	for _, tx := range b.Transactions {
-		if err := ValidateVoteTx(tx, consensusResult); err != nil {
-			return err
-		}
 	}
 
 	blockGasSum := uint64(0)
@@ -117,11 +111,6 @@ func ValidateBlock(b *bc.Block, parent *types.BlockHeader, consensusResult *stat
 		if blockGasSum += uint64(validateResult.gasStatus.GasUsed); blockGasSum > consensus.ActiveNetParams.MaxBlockGas {
 			return errOverBlockLimit
 		}
-	}
-
-	rewards, err := consensusResult.GetCoinbaseRewards(b.Height)
-	if err != nil {
-		return err
 	}
 
 	if err := checkCoinbaseTx(b, rewards); err != nil {

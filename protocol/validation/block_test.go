@@ -246,11 +246,11 @@ func TestValidateBlock(t *testing.T) {
 	txStatusHash := testutil.MustDecodeHash("6978a65b4ee5b6f4914fe5c05000459a803ecf59132604e5d334d64249c5e50a")
 
 	cases := []struct {
-		desc      string
-		block     *bc.Block
-		parent    *types.BlockHeader
-		conResult *state.ConsensusResult
-		err       error
+		desc    string
+		block   *bc.Block
+		parent  *types.BlockHeader
+		rewards []state.CoinbaseReward
+		err     error
 	}{
 		{
 			desc: "The calculated transaction merkel root hash is not equals to the hash of the block header",
@@ -329,8 +329,9 @@ func TestValidateBlock(t *testing.T) {
 					}),
 				},
 			},
-			parent: parent,
-			err:    ErrWrongCoinbaseTransaction,
+			parent:  parent,
+			rewards: []state.CoinbaseReward{},
+			err:     ErrWrongCoinbaseTransaction,
 		},
 		{
 			desc: "the coinbase amount is less than the real coinbase amount",
@@ -366,7 +367,7 @@ func TestValidateBlock(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		err := ValidateBlock(c.block, c.parent, c.conResult)
+		err := ValidateBlock(c.block, c.parent, c.rewards)
 		if rootErr(err) != c.err {
 			t.Errorf("case #%d (%s) got error %s, want %s", i, c.desc, err, c.err)
 		}
@@ -414,7 +415,7 @@ func TestGasOverBlockLimit(t *testing.T) {
 		}))
 	}
 
-	if err := ValidateBlock(block, parent, nil); err != errOverBlockLimit {
+	if err := ValidateBlock(block, parent, []state.CoinbaseReward{}); err != errOverBlockLimit {
 		t.Errorf("got error %s, want %s", err, errOverBlockLimit)
 	}
 }
@@ -472,7 +473,7 @@ func TestSetTransactionStatus(t *testing.T) {
 		},
 	}
 
-	if err := ValidateBlock(block, parent, nil); err != nil {
+	if err := ValidateBlock(block, parent, []state.CoinbaseReward{}); err != nil {
 		t.Fatal(err)
 	}
 

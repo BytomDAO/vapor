@@ -124,6 +124,10 @@ func (c *ConsensusResult) ApplyBlock(block *types.Block) error {
 			}
 
 			pubkey := hex.EncodeToString(voteOutput.Vote)
+			if _, ok := c.NumOfVote[pubkey]; !ok && voteOutput.Amount < consensus.ActiveNetParams.MinConsensusNodeVoteNum {
+				return errors.New("invalid vote transaction with first vote amount less than MinConsensusNodeVoteNum")
+			}
+
 			if c.NumOfVote[pubkey], ok = checked.AddUint64(c.NumOfVote[pubkey], voteOutput.Amount); !ok {
 				return checked.ErrOverflow
 			}
