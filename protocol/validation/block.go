@@ -17,6 +17,9 @@ import (
 const logModule = "leveldb"
 
 var (
+	// ErrBadVoteTx return the invalid vote transaction
+	ErrBadVoteTx = errors.New("invalid vote transaction")
+
 	errBadTimestamp          = errors.New("block timestamp is not in the valid range")
 	errBadBits               = errors.New("block bits is invalid")
 	errMismatchedBlock       = errors.New("mismatched block")
@@ -25,7 +28,6 @@ var (
 	errOverBlockLimit        = errors.New("block's gas is over the limit")
 	errWorkProof             = errors.New("invalid difficulty proof of work")
 	errVersionRegression     = errors.New("version regression")
-	errBadVoteTx             = errors.New("invalid vote transaction")
 )
 
 func checkBlockTime(b *bc.Block, parent *types.BlockHeader) error {
@@ -161,7 +163,7 @@ func ValidateVoteTx(tx *bc.Tx, consensusResult *state.ConsensusResult) error {
 
 		pubkey := hex.EncodeToString(voteOutput.Vote)
 		if _, ok := consensusResult.NumOfVote[pubkey]; !ok && voteOutput.Source.Value.Amount < consensus.ActiveNetParams.MinConsensusNodeVoteNum {
-			return errors.WithDetailf(errBadVoteTx, " the fisrt vote amount must be greater than or equal to: %d, given: %d", consensus.ActiveNetParams.MinConsensusNodeVoteNum, voteOutput.Source.Value.Amount)
+			return errors.WithDetailf(ErrBadVoteTx, " the fisrt vote amount must be greater than or equal to: %d, given: %d", consensus.ActiveNetParams.MinConsensusNodeVoteNum, voteOutput.Source.Value.Amount)
 		}
 	}
 	return nil
