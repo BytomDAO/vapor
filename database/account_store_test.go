@@ -357,3 +357,53 @@ func TestGetAccountIndex(t *testing.T) {
 		}
 	}
 }
+
+func TestGetBip44ContractIndex(t *testing.T) {
+	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	defer func() {
+		testDB.Close()
+		os.RemoveAll("temp")
+	}()
+
+	cases := []struct {
+		accountID string
+		change    bool
+		index     uint64
+	}{
+		{
+			accountID: "",
+			change:    false,
+			index:     uint64(0),
+		},
+		{
+			accountID: "account1",
+			change:    true,
+			index:     uint64(0),
+		},
+		{
+			accountID: "account1",
+			change:    false,
+			index:     uint64(0),
+		},
+		{
+			accountID: "account1",
+			change:    true,
+			index:     uint64(100),
+		},
+	}
+
+	accountStore := NewAccountStore(testDB)
+	for i, c := range cases {
+		as := accountStore.InitBatch()
+		as.SetBip44ContractIndex(c.accountID, c.change, c.index)
+		if err := as.CommitBatch(); err != nil {
+			t.Fatal(err)
+		}
+
+		gotIndex := as.GetBip44ContractIndex(c.accountID, c.change)
+		if !testutil.DeepEqual(gotIndex, c.index) {
+			t.Errorf("case %v: got incorrect bip44 contract index, got: %v, want: %v.", i, gotIndex, c.index)
+		}
+	}
+
+}
