@@ -98,7 +98,7 @@ var respErrFormatter = map[error]httperror.Info{
 	validation.ErrUnbalanced:                {400, "BTM746", "Unbalanced asset amount between input and output"},
 	validation.ErrOverGasCredit:             {400, "BTM747", "Gas credit has been spent"},
 	validation.ErrGasCalculate:              {400, "BTM748", "Gas usage calculate got a math error"},
-	validation.ErrBadVoteTx:                 {400, "BTM749", "Invalid vote transaction"},
+	validation.ErrVoteOutputAmount:          {400, "BTM749", "Invalid vote amount"},
 
 	// VM error (76x ~ 78x)
 	vm.ErrAltStackUnderflow:  {400, "BTM760", "Alt stack underflow"},
