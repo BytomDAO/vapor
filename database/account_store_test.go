@@ -442,3 +442,47 @@ func TestGetCoinbaseArbitrary(t *testing.T) {
 		}
 	}
 }
+
+func TestGetContractIndex(t *testing.T) {
+	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	defer func() {
+		testDB.Close()
+		os.RemoveAll("temp")
+	}()
+
+	cases := []struct {
+		accountID string
+		index     uint64
+	}{
+		{
+			accountID: "",
+			index:     uint64(0),
+		},
+		{
+			accountID: "account1",
+			index:     uint64(0),
+		},
+		{
+			accountID: "",
+			index:     uint64(1000),
+		},
+		{
+			accountID: "account1",
+			index:     uint64(8888),
+		},
+	}
+
+	accountStore := NewAccountStore(testDB)
+	for i, c := range cases {
+		as := accountStore.InitBatch()
+		as.SetContractIndex(c.accountID, c.index)
+		if err := as.CommitBatch(); err != nil {
+			t.Fatal(err)
+		}
+
+		gotIndex := as.GetContractIndex(c.accountID)
+		if !testutil.DeepEqual(gotIndex, c.index) {
+			t.Errorf("case %v: got contract index, got: %v, want: %v.", i, gotIndex, c.index)
+		}
+	}
+}
