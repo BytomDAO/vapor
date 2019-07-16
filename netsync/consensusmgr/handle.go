@@ -162,16 +162,10 @@ func (m *Manager) blockSignatureMsgBroadcastLoop() {
 				continue
 			}
 
-			blockHeader, err := m.chain.GetHeaderByHash(&ev.BlockHash)
-			if err != nil {
-				logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on get header by hash from chain.")
-				return
-			}
-
-			blockSignatureMsg := NewBroadcastMsg(NewBlockSignatureMsg(ev.BlockHash, blockHeader.Height, ev.Signature, ev.XPub), consensusChannel)
+			blockSignatureMsg := NewBroadcastMsg(NewBlockSignatureMsg(ev.BlockHash, ev.Signature, ev.XPub), consensusChannel)
 			if err := m.peers.BroadcastMsg(blockSignatureMsg); err != nil {
 				logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on broadcast BlockSignBroadcastMsg.")
-				return
+				continue
 			}
 
 		case <-m.quit:
