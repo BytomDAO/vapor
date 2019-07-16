@@ -126,7 +126,7 @@ func (m *mainchainKeeper) isWithdrawalTx(tx *types.Tx) bool {
 	if sourceTxHash := locateSideChainTx(tx.Outputs[len(tx.Outputs)-1]); sourceTxHash == "" {
 		return false
 	}
-	return false
+	return true
 }
 
 func locateSideChainTx(output *types.TxOutput) string {
@@ -139,7 +139,7 @@ func locateSideChainTx(output *types.TxOutput) string {
 		return ""
 	}
 
-	return hex.EncodeToString(insts[1].Data)
+	return string(insts[1].Data)
 }
 
 func (m *mainchainKeeper) processBlock(db *gorm.DB, block *types.Block, txStatus *bc.TransactionStatus) error {
