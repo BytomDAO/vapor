@@ -95,12 +95,12 @@ func (m *Manager) handleBlockProposeMsg(peerID string, msg *BlockProposeMsg) {
 }
 
 func (m *Manager) handleBlockSignatureMsg(peerID string, msg *BlockSignatureMsg) {
+	m.peers.MarkBlockSignature(peerID, msg.Signature)
 	blockHash := bc.NewHash(msg.BlockHash)
 	if err := m.chain.ProcessBlockSignature(msg.Signature, msg.PubKey, &blockHash); err != nil {
 		m.peers.ProcessIllegal(peerID, security.LevelMsgIllegal, err.Error())
 		return
 	}
-	m.peers.MarkBlockSignature(peerID, msg.Signature)
 }
 
 func (m *Manager) blockProposeMsgBroadcastLoop() {
@@ -162,16 +162,10 @@ func (m *Manager) blockSignatureMsgBroadcastLoop() {
 				continue
 			}
 
-			blockHeader, err := m.chain.GetHeaderByHash(&ev.BlockHash)
-			if err != nil {
-				logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on get header by hash from chain.")
-				return
-			}
-
-			blockSignatureMsg := NewBroadcastMsg(NewBlockSignatureMsg(ev.BlockHash, blockHeader.Height, ev.Signature, ev.XPub), consensusChannel)
+			blockSignatureMsg := NewBroadcastMsg(NewBlockSignatureMsg(ev.BlockHash, ev.Signature, ev.XPub), consensusChannel)
 			if err := m.peers.BroadcastMsg(blockSignatureMsg); err != nil {
 				logrus.WithFields(logrus.Fields{"module": logModule, "err": err}).Error("failed on broadcast BlockSignBroadcastMsg.")
-				return
+				continue
 			}
 
 		case <-m.quit:
