@@ -14,6 +14,15 @@ import (
 	"github.com/vapor/protocol/bc/types"
 )
 
+// fedConsensusPath is used to derive federation root xpubs for signing blocks
+var fedConsensusPath = [][]byte{
+	[]byte{0xff, 0xff, 0xff, 0xff},
+	[]byte{0xff, 0x00, 0x00, 0x00},
+	[]byte{0xff, 0xff, 0xff, 0xff},
+	[]byte{0xff, 0x00, 0x00, 0x00},
+	[]byte{0xff, 0x00, 0x00, 0x00},
+}
+
 // ConsensusNode represents a consensus node
 type ConsensusNode struct {
 	XPub    chainkd.XPub
@@ -311,7 +320,8 @@ func (c *ConsensusResult) GetCoinbaseRewards(blockHeight uint64) ([]CoinbaseRewa
 func federationNodes() map[string]*ConsensusNode {
 	consensusResult := map[string]*ConsensusNode{}
 	for i, xpub := range config.CommonConfig.Federation.Xpubs {
-		consensusResult[xpub.String()] = &ConsensusNode{XPub: xpub, VoteNum: 0, Order: uint64(i)}
+		derivedXPub := xpub.Derive(fedConsensusPath)
+		consensusResult[derivedXPub.String()] = &ConsensusNode{XPub: derivedXPub, VoteNum: 0, Order: uint64(i)}
 	}
 	return consensusResult
 }
