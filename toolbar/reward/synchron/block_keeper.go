@@ -1,6 +1,8 @@
 package synchron
 
 import (
+	"encoding/hex"
+	"fmt"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -9,22 +11,30 @@ import (
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/toolbar/common"
 	"github.com/vapor/toolbar/common/service"
 	"github.com/vapor/toolbar/reward/config"
 	"github.com/vapor/toolbar/reward/database/orm"
 )
 
 type chainKeeper struct {
-	cfg  *config.Chain
-	db   *gorm.DB
-	node *service.Node
+	cfg   *config.Chain
+	db    *gorm.DB
+	node  *service.Node
+	XPubs map[string]bool
 }
 
 func NewChainKeeper(db *gorm.DB, cfg *config.Config) *chainKeeper {
+	xpubs := map[string]bool{}
+	for _, xpub := range cfg.XPubs {
+		xpubs[xpub.String()] = true
+	}
+
 	return &chainKeeper{
-		cfg:  &cfg.Chain,
-		db:   db,
-		node: service.NewNode(cfg.Chain.Upstream),
+		cfg:   &cfg.Chain,
+		db:    db,
+		node:  service.NewNode(cfg.Chain.Upstream),
+		XPubs: xpubs,
 	}
 }
 
@@ -91,9 +101,132 @@ func (c *chainKeeper) syncBlock() (bool, error) {
 }
 
 func (c *chainKeeper) AttachBlock(block *types.Block, txStatus *bc.TransactionStatus) error {
-	return nil
+	ormDB := c.db.Begin()
+	for pos, tx := range block.Transactions {
+		statusFail, _ := txStatus.GetStatus(pos)
+		if statusFail {
+			log.WithFields(log.Fields{"block height": block.Height, "statusFail": statusFail}).Debug("AttachBlock")
+			continue
+		}
+
+		for _, input := range tx.Inputs {
+			vetoInput, ok := input.TypedInput.(*types.VetoInput)
+			if !ok {
+				continue
+			}
+
+			pubkey := hex.EncodeToString(vetoInput.Vote)
+			if ok := c.XPubs[pubkey]; ok {
+				prog := &bc.Program{VmVersion: vetoInput.VMVersion, Code: vetoInput.ControlProgram}
+				src := &bc.ValueSource{
+					Ref:      &vetoInput.SourceID,
+					Value:    &vetoInput.AssetAmount,
+					Position: vetoInput.SourcePosition,
+				}
+				prevout := bc.NewVoteOutput(src, prog, 0, vetoInput.Vote) // ordinal doesn't matter for prevouts, only for result outputs
+				outputID := bc.EntryID(prevout)
+				utxo := &orm.Utxo{
+					VoterAddress: common.GetAddressFromControlProgram(vetoInput.ControlProgram),
+					OutputID:     outputID.String(),
+				}
+				// update data
+				if err := ormDB.Where(utxo).Update("veto_height", block.Height).Error; err != nil && err != gorm.ErrRecordNotFound {
+					ormDB.Rollback()
+					return err
+				}
+			}
+		}
+
+		for index, output := range tx.Outputs {
+			voteOutput, ok := output.TypedOutput.(*types.VoteOutput)
+			if !ok {
+				continue
+			}
+			pubkey := hex.EncodeToString(voteOutput.Vote)
+			fmt.Println(pubkey)
+			if ok := c.XPubs[pubkey]; ok {
+				outputID := tx.OutputID(index)
+				utxo := &orm.Utxo{
+					Xpub:         pubkey,
+					VoterAddress: common.GetAddressFromControlProgram(voteOutput.ControlProgram),
+					VoteHeight:   block.Height,
+					VoteNum:      voteOutput.Amount,
+					VetoHeight:   0,
+					OutputID:     outputID.String(),
+				}
+				// insert data
+				if err := ormDB.Save(utxo).Error; err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return ormDB.Commit().Error
 }
 
 func (c *chainKeeper) DetachBlock(block *types.Block, txStatus *bc.TransactionStatus) error {
-	return nil
+	ormDB := c.db.Begin()
+	for txIndex := len(block.Transactions) - 1; txIndex >= 0; txIndex-- {
+		statusFail, _ := txStatus.GetStatus(txIndex)
+		if statusFail {
+			log.WithFields(log.Fields{"block height": block.Height, "statusFail": statusFail}).Debug("DetachBlock")
+			continue
+		}
+		tx := block.Transactions[txIndex]
+
+		for _, input := range tx.Inputs {
+			vetoInput, ok := input.TypedInput.(*types.VetoInput)
+			if !ok {
+				continue
+			}
+
+			pubkey := hex.EncodeToString(vetoInput.Vote)
+			if ok := c.XPubs[pubkey]; ok {
+				prog := &bc.Program{VmVersion: vetoInput.VMVersion, Code: vetoInput.ControlProgram}
+				src := &bc.ValueSource{
+					Ref:      &vetoInput.SourceID,
+					Value:    &vetoInput.AssetAmount,
+					Position: vetoInput.SourcePosition,
+				}
+				prevout := bc.NewVoteOutput(src, prog, 0, vetoInput.Vote) // ordinal doesn't matter for prevouts, only for result outputs
+				outputID := bc.EntryID(prevout)
+				utxo := &orm.Utxo{
+					VoterAddress: common.GetAddressFromControlProgram(vetoInput.ControlProgram),
+					OutputID:     outputID.String(),
+				}
+				// update data
+				if err := ormDB.Where(utxo).Update("veto_height", 0).Error; err != nil && err != gorm.ErrRecordNotFound {
+					ormDB.Rollback()
+					return err
+				}
+			}
+		}
+
+		for index, output := range tx.Outputs {
+			voteOutput, ok := output.TypedOutput.(*types.VoteOutput)
+			if !ok {
+				continue
+			}
+			pubkey := hex.EncodeToString(voteOutput.Vote)
+			fmt.Println(pubkey)
+			if ok := c.XPubs[pubkey]; ok {
+				outputID := tx.OutputID(index)
+				utxo := &orm.Utxo{
+					Xpub:         pubkey,
+					VoterAddress: common.GetAddressFromControlProgram(voteOutput.ControlProgram),
+					VoteHeight:   block.Height,
+					VoteNum:      voteOutput.Amount,
+					OutputID:     outputID.String(),
+				}
+				// insert data
+				if err := ormDB.Where(utxo).Delete(&orm.Utxo{}).Error; err != nil {
+					return err
+				}
+			}
+		}
+
+	}
+
+	return ormDB.Commit().Error
 }

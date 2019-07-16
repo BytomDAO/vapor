@@ -6,6 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/toolbar/common"
 )
 
@@ -35,6 +36,7 @@ func NewConfigWithPath(path string) *Config {
 type Config struct {
 	MySQLConfig common.MySQLConfig `json:"mysql"`
 	Chain       Chain              `json:"chain"`
+	XPubs       []chainkd.XPub     `json:"xpubs"`
 }
 
 type Chain struct {
