@@ -21,7 +21,7 @@ CREATE TABLE `vote`  (
   `vote_height` int(11) NOT NULL,
   `vote_num` int(11) NOT NULL,
   `veto_height` int(11) NOT NULL,
-  `output_id` varchar(64) SET NOT NULL,
+  `output_id` varchar(64) NOT NULL,
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `xpub`(`xpub`, `vote_height`, `output_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 6 DEFAULT CHARSET=utf8;
