@@ -115,7 +115,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 
 	entriesTxs := []*bc.Tx{}
 	for _, txDesc := range txs {
-		if err := validation.ValidateVoteTx(txDesc.Tx.Tx, consensusResult); err != nil {
+		if err := consensusResult.ApplyTransaction(txDesc.Tx); err != nil {
 			blkGenSkipTxForErr(txPool, &txDesc.Tx.ID, err)
 			continue
 		}

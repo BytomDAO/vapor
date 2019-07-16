@@ -3,6 +3,7 @@ package protocol
 import (
 	log "github.com/sirupsen/logrus"
 
+	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
@@ -39,8 +40,8 @@ func (c *Chain) ValidateTx(tx *types.Tx) (bool, error) {
 		return false, err
 	}
 
-	if err := validation.ValidateVoteTx(tx.Tx, consensusResult); err != nil {
-		return false, err
+	if err := consensusResult.ApplyTransaction(tx); err != nil {
+		return false, errors.Wrap(validation.ErrVoteOutputAmount, err)
 	}
 
 	gasStatus, err := validation.ValidateTx(tx.Tx, types.MapBlock(&types.Block{BlockHeader: *bh}))

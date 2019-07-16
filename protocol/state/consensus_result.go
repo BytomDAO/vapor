@@ -100,43 +100,55 @@ func (c *ConsensusResult) ApplyBlock(block *types.Block) error {
 	}
 
 	for _, tx := range block.Transactions {
-		for _, input := range tx.Inputs {
-			vetoInput, ok := input.TypedInput.(*types.VetoInput)
-			if !ok {
-				continue
-			}
-
-			pubkey := hex.EncodeToString(vetoInput.Vote)
-			c.NumOfVote[pubkey], ok = checked.SubUint64(c.NumOfVote[pubkey], vetoInput.Amount)
-			if !ok {
-				return checked.ErrOverflow
-			}
-
-			if c.NumOfVote[pubkey] == 0 {
-				delete(c.NumOfVote, pubkey)
-			}
-		}
-
-		for _, output := range tx.Outputs {
-			voteOutput, ok := output.TypedOutput.(*types.VoteOutput)
-			if !ok {
-				continue
-			}
-
-			pubkey := hex.EncodeToString(voteOutput.Vote)
-			if _, ok := c.NumOfVote[pubkey]; !ok && voteOutput.Amount < consensus.ActiveNetParams.MinConsensusNodeVoteNum {
-				return errors.New("invalid vote transaction with first vote amount less than MinConsensusNodeVoteNum")
-			}
-
-			if c.NumOfVote[pubkey], ok = checked.AddUint64(c.NumOfVote[pubkey], voteOutput.Amount); !ok {
-				return checked.ErrOverflow
-			}
+		if err := c.ApplyTransaction(tx); err != nil {
+			return err
 		}
 	}
 
 	c.BlockHash = block.Hash()
 	c.BlockHeight = block.Height
 	c.Seq = CalcVoteSeq(block.Height)
+	return nil
+}
+
+// ApplyTransaction calculate the consensus result for transaction
+func (c *ConsensusResult) ApplyTransaction(tx *types.Tx) error {
+	for _, input := range tx.Inputs {
+		vetoInput, ok := input.TypedInput.(*types.VetoInput)
+		if !ok {
+			continue
+		}
+
+		pubkey := hex.EncodeToString(vetoInput.Vote)
+		c.NumOfVote[pubkey], ok = checked.SubUint64(c.NumOfVote[pubkey], vetoInput.Amount)
+		if !ok {
+			return checked.ErrOverflow
+		}
+
+		if c.NumOfVote[pubkey] == 0 {
+			delete(c.NumOfVote, pubkey)
+		}
+	}
+
+	for _, output := range tx.Outputs {
+		voteOutput, ok := output.TypedOutput.(*types.VoteOutput)
+		if !ok {
+			continue
+		}
+
+		if voteOutput.Amount < consensus.ActiveNetParams.MinVoteOutputAmount {
+			return errors.New("invalid vote transaction with vote amount less than MinVoteOutputAmount")
+		}
+
+		pubkey := hex.EncodeToString(voteOutput.Vote)
+		if _, ok := c.NumOfVote[pubkey]; !ok && voteOutput.Amount < consensus.ActiveNetParams.MinConsensusNodeVoteNum {
+			return errors.New("invalid vote transaction with first vote amount less than MinConsensusNodeVoteNum")
+		}
+
+		if c.NumOfVote[pubkey], ok = checked.AddUint64(c.NumOfVote[pubkey], voteOutput.Amount); !ok {
+			return checked.ErrOverflow
+		}
+	}
 	return nil
 }
 
