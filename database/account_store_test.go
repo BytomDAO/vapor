@@ -1,7 +1,9 @@
 package database
 
 import (
+	"bytes"
 	"os"
+	"sort"
 	"testing"
 
 	"github.com/vapor/common"
@@ -16,12 +18,6 @@ import (
 )
 
 func TestDeleteAccount(t *testing.T) {
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer func() {
-		testDB.Close()
-		os.RemoveAll("temp")
-	}()
-
 	cases := []struct {
 		accounts      []*acc.Account
 		deleteAccount *acc.Account
@@ -113,8 +109,9 @@ func TestDeleteAccount(t *testing.T) {
 		},
 	}
 
-	accountStore := NewAccountStore(testDB)
 	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		accountStore := NewAccountStore(testDB)
 		as := accountStore.InitBatch()
 		// store mock accounts
 		for _, a := range c.accounts {
@@ -146,16 +143,13 @@ func TestDeleteAccount(t *testing.T) {
 				t.Errorf("case %v: cann't find account, err: %v", i, err)
 			}
 		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
 	}
 }
 
 func TestDeleteStandardUTXO(t *testing.T) {
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer func() {
-		testDB.Close()
-		os.RemoveAll("temp")
-	}()
-
 	cases := []struct {
 		utxos      []*acc.UTXO
 		deleteUTXO *acc.UTXO
@@ -259,8 +253,9 @@ func TestDeleteStandardUTXO(t *testing.T) {
 		},
 	}
 
-	accountStore := NewAccountStore(testDB)
 	for _, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		accountStore := NewAccountStore(testDB)
 		as := accountStore.InitBatch()
 		// store mock utxos
 		for _, utxo := range c.utxos {
@@ -281,16 +276,13 @@ func TestDeleteStandardUTXO(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
 	}
 }
 
 func TestGetAccountIndex(t *testing.T) {
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer func() {
-		testDB.Close()
-		os.RemoveAll("temp")
-	}()
-
 	cases := []struct {
 		account      *acc.Account
 		currentIndex uint64
@@ -372,8 +364,9 @@ func TestGetAccountIndex(t *testing.T) {
 		},
 	}
 
-	accountStore := NewAccountStore(testDB)
 	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		accountStore := NewAccountStore(testDB)
 		as := accountStore.InitBatch()
 		v := as.(*AccountStore)
 		v.db.Set(accountIndexKey(c.account.XPubs), common.Unit64ToBytes(c.currentIndex))
@@ -385,16 +378,13 @@ func TestGetAccountIndex(t *testing.T) {
 		if !testutil.DeepEqual(gotIndex, c.want) {
 			t.Errorf("case %v: got incorrect account index, got: %v, want: %v.", i, gotIndex, c.want)
 		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
 	}
 }
 
 func TestGetBip44ContractIndex(t *testing.T) {
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer func() {
-		testDB.Close()
-		os.RemoveAll("temp")
-	}()
-
 	cases := []struct {
 		accountID string
 		change    bool
@@ -422,8 +412,9 @@ func TestGetBip44ContractIndex(t *testing.T) {
 		},
 	}
 
-	accountStore := NewAccountStore(testDB)
 	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		accountStore := NewAccountStore(testDB)
 		as := accountStore.InitBatch()
 		as.SetBip44ContractIndex(c.accountID, c.change, c.index)
 		if err := as.CommitBatch(); err != nil {
@@ -434,16 +425,13 @@ func TestGetBip44ContractIndex(t *testing.T) {
 		if !testutil.DeepEqual(gotIndex, c.index) {
 			t.Errorf("case %v: got incorrect bip44 contract index, got: %v, want: %v.", i, gotIndex, c.index)
 		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
 	}
 }
 
 func TestGetCoinbaseArbitrary(t *testing.T) {
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer func() {
-		testDB.Close()
-		os.RemoveAll("temp")
-	}()
-
 	cases := []struct {
 		arbitrary []byte
 	}{
@@ -458,8 +446,9 @@ func TestGetCoinbaseArbitrary(t *testing.T) {
 		},
 	}
 
-	accountStore := NewAccountStore(testDB)
 	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		accountStore := NewAccountStore(testDB)
 		as := accountStore.InitBatch()
 		as.SetCoinbaseArbitrary(c.arbitrary)
 		if err := as.CommitBatch(); err != nil {
@@ -470,16 +459,13 @@ func TestGetCoinbaseArbitrary(t *testing.T) {
 		if !testutil.DeepEqual(gotArbitrary, c.arbitrary) {
 			t.Errorf("case %v: got incorrect arbitrary, got: %v, want: %v.", i, gotArbitrary, c.arbitrary)
 		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
 	}
 }
 
 func TestGetContractIndex(t *testing.T) {
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer func() {
-		testDB.Close()
-		os.RemoveAll("temp")
-	}()
-
 	cases := []struct {
 		accountID string
 		index     uint64
@@ -502,8 +488,9 @@ func TestGetContractIndex(t *testing.T) {
 		},
 	}
 
-	accountStore := NewAccountStore(testDB)
 	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		accountStore := NewAccountStore(testDB)
 		as := accountStore.InitBatch()
 		as.SetContractIndex(c.accountID, c.index)
 		if err := as.CommitBatch(); err != nil {
@@ -514,5 +501,544 @@ func TestGetContractIndex(t *testing.T) {
 		if !testutil.DeepEqual(gotIndex, c.index) {
 			t.Errorf("case %v: got contract index, got: %v, want: %v.", i, gotIndex, c.index)
 		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
 	}
 }
+
+func TestGetControlProgram(t *testing.T) {
+	cases := []struct {
+		hash    bc.Hash
+		program *acc.CtrlProgram
+	}{
+		{
+			hash:    bc.NewHash([32]byte{}),
+			program: &acc.CtrlProgram{},
+		},
+		{
+			hash:    bc.NewHash([32]byte{0x01, 0x01, 0x02, 0x39, 0x70, 0x30, 0xd4, 0x3b, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+			program: &acc.CtrlProgram{},
+		},
+		{
+			hash: bc.NewHash([32]byte{}),
+			program: &acc.CtrlProgram{
+				AccountID: "account1",
+				Address:   "address",
+			},
+		},
+		{
+			hash: bc.NewHash([32]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+			program: &acc.CtrlProgram{
+				AccountID: "account1",
+				Address:   "address",
+			},
+		},
+	}
+
+	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		accountStore := NewAccountStore(testDB)
+		as := accountStore.InitBatch()
+		as.SetControlProgram(c.hash, c.program)
+		if err := as.CommitBatch(); err != nil {
+			t.Fatal(err)
+		}
+
+		gotProgram, err := as.GetControlProgram(c.hash)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !testutil.DeepEqual(gotProgram, c.program) {
+			t.Errorf("case %v: got control program, got: %v, want: %v.", i, gotProgram, c.program)
+		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
+	}
+}
+
+func TestGetMiningAddress(t *testing.T) {
+	cases := []struct {
+		program *acc.CtrlProgram
+	}{
+		{
+			program: &acc.CtrlProgram{},
+		},
+		{
+			program: &acc.CtrlProgram{
+				AccountID: "account1",
+			},
+		},
+	}
+
+	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		accountStore := NewAccountStore(testDB)
+		as := accountStore.InitBatch()
+		if err := as.SetMiningAddress(c.program); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := as.CommitBatch(); err != nil {
+			t.Fatal(err)
+		}
+
+		gotProgram, err := as.GetMiningAddress()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !testutil.DeepEqual(gotProgram, c.program) {
+			t.Errorf("case %v: got mining address got: %v, want: %v.", i, gotProgram, c.program)
+		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
+	}
+}
+
+func TestListAccounts(t *testing.T) {
+	cases := []struct {
+		accounts []*acc.Account
+		id       string
+		want     []*acc.Account
+	}{
+		{
+			accounts: []*acc.Account{},
+			id:       "",
+			want:     []*acc.Account{},
+		},
+		{
+			accounts: []*acc.Account{
+				&acc.Account{
+					ID: "account1",
+				},
+			},
+			id: "account",
+			want: []*acc.Account{
+				&acc.Account{
+					ID: "account1",
+				},
+			},
+		},
+		{
+			accounts: []*acc.Account{
+				&acc.Account{
+					ID: "account2",
+				},
+				&acc.Account{
+					ID: "test1",
+				},
+			},
+			id: "account",
+			want: []*acc.Account{
+				&acc.Account{
+					ID: "account2",
+				},
+			},
+		},
+		{
+			accounts: []*acc.Account{},
+			id:       "account",
+			want:     []*acc.Account{},
+		},
+		{
+			accounts: []*acc.Account{
+				&acc.Account{
+					ID: "account1",
+				},
+				&acc.Account{
+					ID: "test1",
+				},
+			},
+			id: "",
+			want: []*acc.Account{
+				&acc.Account{
+					ID: "account1",
+				},
+				&acc.Account{
+					ID: "test1",
+				},
+			},
+		},
+		{
+			accounts: []*acc.Account{
+				&acc.Account{
+					ID:    "account1",
+					Alias: "alias1",
+				},
+				&acc.Account{
+					ID:    "test1",
+					Alias: "alias1",
+				},
+				&acc.Account{
+					ID:    "account11",
+					Alias: "alias1",
+				},
+				&acc.Account{
+					ID:    "account2",
+					Alias: "alias1",
+				},
+				&acc.Account{
+					ID:    "account112",
+					Alias: "alias1",
+				},
+			},
+			id: "account1",
+			want: []*acc.Account{
+				&acc.Account{
+					ID:    "account1",
+					Alias: "alias1",
+				},
+				&acc.Account{
+					ID:    "account11",
+					Alias: "alias1",
+				},
+				&acc.Account{
+					ID:    "account112",
+					Alias: "alias1",
+				},
+			},
+		},
+	}
+
+	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		accountStore := NewAccountStore(testDB)
+		as := accountStore.InitBatch()
+		for _, a := range c.accounts {
+			if err := as.SetAccount(a); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		if err := as.CommitBatch(); err != nil {
+			t.Fatal(err)
+		}
+
+		gotAccounts, err := as.ListAccounts(c.id)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		sort.Sort(SortAccounts(gotAccounts))
+		sort.Sort(SortAccounts(c.want))
+
+		if !testutil.DeepEqual(gotAccounts, c.want) {
+			t.Errorf("case %v: list accounts, got: %v, want: %v.", i, gotAccounts, c.want)
+		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
+	}
+}
+
+type SortAccounts []*acc.Account
+
+func (s SortAccounts) Len() int { return len(s) }
+func (s SortAccounts) Less(i, j int) bool {
+	return bytes.Compare([]byte(s[i].ID), []byte(s[j].ID)) < 0
+}
+func (s SortAccounts) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+
+func TestListControlPrograms(t *testing.T) {
+	cases := []struct {
+		hashs    []bc.Hash
+		programs []*acc.CtrlProgram
+	}{
+		{
+			hashs:    []bc.Hash{},
+			programs: []*acc.CtrlProgram{},
+		},
+		{
+			hashs: []bc.Hash{
+				bc.NewHash([32]byte{}),
+			},
+			programs: []*acc.CtrlProgram{
+				&acc.CtrlProgram{},
+			},
+		},
+		{
+			hashs: []bc.Hash{
+				bc.NewHash([32]byte{}),
+				bc.NewHash([32]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+				bc.NewHash([32]byte{0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+				bc.NewHash([32]byte{0x02, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+				bc.NewHash([32]byte{0x03, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+				bc.NewHash([32]byte{0x04, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+				bc.NewHash([32]byte{0x05, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+				bc.NewHash([32]byte{0x06, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+				bc.NewHash([32]byte{0x07, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+				bc.NewHash([32]byte{0x08, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+			},
+			programs: []*acc.CtrlProgram{
+				&acc.CtrlProgram{
+					AccountID:      "account0",
+					Address:        "address",
+					KeyIndex:       uint64(0),
+					ControlProgram: []byte("program"),
+					Change:         true,
+				},
+				&acc.CtrlProgram{
+					AccountID:      "account1",
+					Address:        "address",
+					KeyIndex:       uint64(0),
+					ControlProgram: []byte("program"),
+					Change:         false,
+				},
+				&acc.CtrlProgram{
+					AccountID:      "account2",
+					Address:        "address",
+					KeyIndex:       uint64(0),
+					ControlProgram: []byte("program"),
+					Change:         false,
+				},
+				&acc.CtrlProgram{
+					AccountID:      "account3",
+					Address:        "address",
+					KeyIndex:       uint64(0),
+					ControlProgram: []byte("program"),
+					Change:         true,
+				},
+				&acc.CtrlProgram{
+					AccountID:      "account4",
+					Address:        "address",
+					KeyIndex:       uint64(0),
+					ControlProgram: []byte("program"),
+					Change:         true,
+				},
+				&acc.CtrlProgram{
+					AccountID:      "account5",
+					Address:        "address",
+					KeyIndex:       uint64(0),
+					ControlProgram: []byte("program"),
+					Change:         true,
+				},
+				&acc.CtrlProgram{
+					AccountID:      "account6",
+					Address:        "address",
+					KeyIndex:       uint64(0),
+					ControlProgram: []byte("program"),
+					Change:         true,
+				},
+				&acc.CtrlProgram{
+					AccountID:      "account7",
+					Address:        "address",
+					KeyIndex:       uint64(0),
+					ControlProgram: []byte("program"),
+					Change:         true,
+				},
+				&acc.CtrlProgram{
+					AccountID:      "account8",
+					Address:        "address",
+					KeyIndex:       uint64(0),
+					ControlProgram: []byte("program"),
+					Change:         true,
+				},
+				&acc.CtrlProgram{
+					AccountID:      "account9",
+					Address:        "address",
+					KeyIndex:       uint64(0),
+					ControlProgram: []byte("program"),
+					Change:         true,
+				},
+			},
+		},
+	}
+
+	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		accountStore := NewAccountStore(testDB)
+		as := accountStore.InitBatch()
+		for j := 0; j < len(c.hashs); j++ {
+			if err := as.SetControlProgram(c.hashs[j], c.programs[j]); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		if err := as.CommitBatch(); err != nil {
+			t.Fatal(err)
+		}
+
+		gotPrograms, err := as.ListControlPrograms()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		sort.Sort(SortPrograms(gotPrograms))
+		sort.Sort(SortPrograms(c.programs))
+
+		if !testutil.DeepEqual(gotPrograms, c.programs) {
+			t.Errorf("case %v: list control programs, got: %v, want: %v.", i, gotPrograms, c.programs)
+		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
+	}
+}
+
+type SortPrograms []*acc.CtrlProgram
+
+func (s SortPrograms) Len() int { return len(s) }
+func (s SortPrograms) Less(i, j int) bool {
+	return bytes.Compare([]byte(s[i].AccountID), []byte(s[j].AccountID)) < 0
+}
+func (s SortPrograms) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+
+func TestListUTXOs(t *testing.T) {
+	cases := []struct {
+		utxos []*acc.UTXO
+	}{
+		{
+			utxos: []*acc.UTXO{},
+		},
+		{
+			utxos: []*acc.UTXO{
+				&acc.UTXO{
+					OutputID:  bc.NewHash([32]byte{}),
+					Address:   "address0",
+					Amount:    uint64(0),
+					Change:    true,
+					AccountID: "account",
+					SourcePos: uint64(0),
+				},
+			},
+		},
+		{
+			utxos: []*acc.UTXO{
+				&acc.UTXO{
+					OutputID:  bc.NewHash([32]byte{0x08, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+					Address:   "address0",
+					Amount:    uint64(0),
+					Change:    true,
+					AccountID: "account",
+					SourcePos: uint64(0),
+				},
+			},
+		},
+		{
+			utxos: []*acc.UTXO{
+				&acc.UTXO{
+					OutputID:  bc.NewHash([32]byte{0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+					Address:   "address0",
+					Amount:    uint64(0),
+					Change:    true,
+					AccountID: "account",
+					SourcePos: uint64(0),
+				},
+				&acc.UTXO{
+					OutputID:  bc.NewHash([32]byte{0x02, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+					Address:   "address1",
+					Amount:    uint64(0),
+					Change:    true,
+					AccountID: "account",
+					SourcePos: uint64(0),
+				},
+				&acc.UTXO{
+					OutputID:  bc.NewHash([32]byte{0x03, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+					Address:   "address2",
+					Amount:    uint64(0),
+					Change:    true,
+					AccountID: "account",
+					SourcePos: uint64(0),
+				},
+				&acc.UTXO{
+					OutputID:  bc.NewHash([32]byte{0x04, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+					Address:   "address3",
+					Amount:    uint64(0),
+					Change:    true,
+					AccountID: "account",
+					SourcePos: uint64(0),
+				},
+				&acc.UTXO{
+					OutputID:  bc.NewHash([32]byte{0x05, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+					Address:   "address4",
+					Amount:    uint64(0),
+					Change:    true,
+					AccountID: "account",
+					SourcePos: uint64(0),
+				},
+				&acc.UTXO{
+					OutputID:  bc.NewHash([32]byte{0x06, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+					Address:   "address5",
+					Amount:    uint64(0),
+					Change:    true,
+					AccountID: "account",
+					SourcePos: uint64(0),
+				},
+				&acc.UTXO{
+					OutputID:  bc.NewHash([32]byte{0x07, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+					Address:   "address6",
+					Amount:    uint64(0),
+					Change:    true,
+					AccountID: "account",
+					SourcePos: uint64(0),
+				},
+				&acc.UTXO{
+					OutputID:  bc.NewHash([32]byte{0x08, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+					Address:   "address7",
+					Amount:    uint64(0),
+					Change:    true,
+					AccountID: "account",
+					SourcePos: uint64(0),
+				},
+				&acc.UTXO{
+					OutputID:  bc.NewHash([32]byte{0x09, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+					Address:   "address8",
+					Amount:    uint64(0),
+					Change:    true,
+					AccountID: "account",
+					SourcePos: uint64(0),
+				},
+				&acc.UTXO{
+					OutputID:  bc.NewHash([32]byte{0x0a, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+					Address:   "address9",
+					Amount:    uint64(0),
+					Change:    true,
+					AccountID: "account",
+					SourcePos: uint64(0),
+				},
+			},
+		},
+	}
+
+	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		accountStore := NewAccountStore(testDB)
+		as := accountStore.InitBatch()
+		for j := 0; j < len(c.utxos); j++ {
+			if err := as.SetStandardUTXO(c.utxos[j].OutputID, c.utxos[j]); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		if err := as.CommitBatch(); err != nil {
+			t.Fatal(err)
+		}
+
+		gotUTXOs, err := as.ListUTXOs()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		sort.Sort(SortUTXOs(gotUTXOs))
+		sort.Sort(SortUTXOs(c.utxos))
+
+		if !testutil.DeepEqual(gotUTXOs, c.utxos) {
+			t.Errorf("case %v: list utxos, got: %v, want: %v.", i, gotUTXOs, c.utxos)
+		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
+	}
+}
+
+type SortUTXOs []*acc.UTXO
+
+func (s SortUTXOs) Len() int { return len(s) }
+func (s SortUTXOs) Less(i, j int) bool {
+	return bytes.Compare(s[i].OutputID.Bytes(), s[j].OutputID.Bytes()) < 0
+}
+func (s SortUTXOs) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
