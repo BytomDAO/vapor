@@ -12,22 +12,27 @@ import (
 	"github.com/vapor/toolbar/reward/config"
 )
 
-type VoterReward struct {
+type voterReward struct {
 	rewards map[string]*big.Int
 }
 
-type VoteResult struct {
+type voteResult struct {
 	Votes     map[string]*big.Int
 	VoteTotal *big.Int
+}
+
+type coinBaseReward struct {
+	totalReward     uint64
+	voteTotalReward *big.Int
 }
 
 type Vote struct {
 	nodes          []config.VoteRewardConfig
 	ch             chan VoteInfo
 	overReadCH     chan struct{}
-	voteResults    map[string]*VoteResult
-	voterRewards   map[string]*VoterReward
-	coinBaseReward map[string]uint64
+	voteResults    map[string]*voteResult
+	voterRewards   map[string]*voterReward
+	coinBaseReward map[string]*coinBaseReward
 	period         uint64
 }
 
@@ -36,9 +41,9 @@ func NewVote(nodes []config.VoteRewardConfig, ch chan VoteInfo, overReadCH chan 
 		nodes:          nodes,
 		ch:             ch,
 		overReadCH:     overReadCH,
-		voteResults:    make(map[string]*VoteResult),
-		voterRewards:   make(map[string]*VoterReward),
-		coinBaseReward: make(map[string]uint64),
+		voteResults:    make(map[string]*voteResult),
+		voterRewards:   make(map[string]*voterReward),
+		coinBaseReward: make(map[string]*coinBaseReward),
 		period:         period,
 	}
 }
@@ -73,7 +78,14 @@ func (v *Vote) getCoinbaseReward() error {
 			address := common.GetAddressFromControlProgram(voteOutput.ControlProgram)
 			for _, node := range v.nodes {
 				if address == node.MiningAddress {
-					v.coinBaseReward[node.XPub] = voteOutput.Amount
+					reward := &coinBaseReward{
+						totalReward: voteOutput.Amount,
+					}
+					ratioNumerator := big.NewInt(int64(node.RewardRatio))
+					ratioDenominator := big.NewInt(100)
+					coinBaseReward := big.NewInt(0).SetUint64(voteOutput.Amount)
+					reward.voteTotalReward = coinBaseReward.Mul(coinBaseReward, ratioNumerator).Div(coinBaseReward, ratioDenominator)
+					v.coinBaseReward[node.XPub] = reward
 				}
 			}
 		}
@@ -93,7 +105,7 @@ out:
 			if value, ok := v.voteResults[voteInfo.XPub]; ok {
 				value.Votes[voteInfo.Address] = bigVoteNum.Add(bigVoteNum, value.Votes[voteInfo.Address])
 			} else {
-				voteResult := &VoteResult{
+				voteResult := &voteResult{
 					Votes:     make(map[string]*big.Int),
 					VoteTotal: big.NewInt(0),
 				}
@@ -111,21 +123,20 @@ out:
 
 func (v *Vote) countReward() {
 	for xpub, votes := range v.voteResults {
-		coinbaseReward, ok := v.coinBaseReward[xpub]
+		coinBaseReward, ok := v.coinBaseReward[xpub]
 		if !ok {
 			log.Errorf("%s doesn't have a coinbase reward \n", xpub)
 			continue
 		}
+
 		for address, vote := range votes.Votes {
 			if value, ok := v.voterRewards[xpub]; ok {
-				coinBaseReward := big.NewInt(0).SetUint64(coinbaseReward)
-				value.rewards[address] = vote.Mul(vote, coinBaseReward).Div(vote, votes.VoteTotal)
+				value.rewards[address] = vote.Mul(vote, coinBaseReward.voteTotalReward).Div(vote, votes.VoteTotal)
 			} else {
-				reward := &VoterReward{
+				reward := &voterReward{
 					rewards: make(map[string]*big.Int),
 				}
-				coinBaseReward := big.NewInt(0).SetUint64(coinbaseReward)
-				reward.rewards[address] = vote.Mul(vote, coinBaseReward).Div(vote, votes.VoteTotal)
+				reward.rewards[address] = vote.Mul(vote, coinBaseReward.voteTotalReward).Div(vote, votes.VoteTotal)
 				v.voterRewards[xpub] = reward
 			}
 		}
@@ -142,7 +153,7 @@ func (v *Vote) sendRewardTransaction() error {
 		}
 
 		if voterRewards, ok := v.voterRewards[node.XPub]; ok {
-			txID, err := v.sendReward(coinbaseReward, node, voterRewards)
+			txID, err := v.sendReward(coinbaseReward.totalReward, node, voterRewards)
 			if err != nil {
 				return err
 			}
@@ -153,7 +164,7 @@ func (v *Vote) sendRewardTransaction() error {
 	return nil
 }
 
-func (v *Vote) sendReward(coinbaseReward uint64, node config.VoteRewardConfig, voterReward *VoterReward) (string, error) {
+func (v *Vote) sendReward(coinbaseReward uint64, node config.VoteRewardConfig, voterReward *voterReward) (string, error) {
 	var outputAction string
 
 	inputAction := fmt.Sprintf(inputActionFmt, coinbaseReward, node.AccountID)

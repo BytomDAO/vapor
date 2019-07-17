@@ -1,7 +1,9 @@
 package config
 
 import (
+	"bytes"
 	"encoding/json"
+	"io/ioutil"
 	"os"
 
 	log "github.com/sirupsen/logrus"
@@ -39,6 +41,19 @@ type Config struct {
 	OptionalNodeConf *OptionalNodeRewardConfig `json:"optional_node_reward"`
 }
 
+func DefaultConfig(isVoterReward bool) *Config {
+	if isVoterReward {
+		return &Config{
+			VoteConf: DefaultVoteRewardConfig(),
+		}
+	} else {
+		return &Config{
+			OptionalNodeConf: DefaultOptionalNodeRewardConfig(),
+		}
+	}
+
+}
+
 type Chain struct {
 	Name        string `json:"name"`
 	Upstream    string `json:"upstream"`
@@ -57,4 +72,41 @@ type VoteRewardConfig struct {
 
 type OptionalNodeRewardConfig struct {
 	TotalReward uint64 `json:"total_reward"`
+}
+
+func DefaultVoteRewardConfig() []VoteRewardConfig {
+	return []VoteRewardConfig{
+		VoteRewardConfig{
+			Host: "127.0.0.1",
+			Port: 9889,
+		},
+	}
+}
+
+func DefaultOptionalNodeRewardConfig() *OptionalNodeRewardConfig {
+	return &OptionalNodeRewardConfig{
+		TotalReward: 30,
+	}
+}
+
+func ExportFederationFile(fedFile string, config *Config) error {
+	buf := new(bytes.Buffer)
+
+	encoder := json.NewEncoder(buf)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(config); err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(fedFile, buf.Bytes(), 0644)
+}
+
+func LoadFederationFile(fedFile string, config *Config) error {
+	file, err := os.Open(fedFile)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	return json.NewDecoder(file).Decode(config)
 }
