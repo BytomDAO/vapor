@@ -50,7 +50,7 @@ func (c *ChainKeeper) Run() {
 func (c *ChainKeeper) syncBlock() (bool, error) {
 	blockState := &orm.BlockState{}
 	if err := c.db.First(blockState).Error; err != nil {
-		return false, errors.Wrap(err, "query chain")
+		return false, errors.Wrap(err, "query blockState")
 	}
 
 	height, err := c.node.GetBlockCount()
@@ -156,6 +156,10 @@ func (c *ChainKeeper) AttachBlock(block *types.Block, txStatus *bc.TransactionSt
 		}
 	}
 
+	if err := c.updateBlockState(ormDB, block); err != nil {
+		return err
+	}
+
 	return ormDB.Commit().Error
 }
 
@@ -181,5 +185,31 @@ func (c *ChainKeeper) DetachBlock(block *types.Block, txStatus *bc.TransactionSt
 		return err
 	}
 
+	if err := c.updateBlockState(ormDB, block); err != nil {
+		return err
+	}
+
 	return ormDB.Commit().Error
+}
+
+func (c *ChainKeeper) updateBlockState(db *gorm.DB, block *types.Block) error {
+	// update blockState
+	blockHash := block.Hash()
+	blockState := &orm.BlockState{
+		Height:    block.Height,
+		BlockHash: blockHash.String(),
+	}
+
+	u := db.Updates(blockState)
+
+	if err := u.Error; err != nil {
+		db.Rollback()
+		return err
+	}
+
+	if u.RowsAffected != 1 {
+		db.Rollback()
+		return ErrInconsistentDB
+	}
+	return nil
 }
