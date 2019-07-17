@@ -24,6 +24,7 @@ A `fed_cfg.json` would look like this:
         },
         "log_mode" : true
     },
+    "network" : "testnet",
     "federation_prog" : "0020305dc12c0dbec0c1dc1f30e835034c1f19094c06afb0eb953a6d1af42222a721",
     "mainchain" : {
         "name" : "btm",

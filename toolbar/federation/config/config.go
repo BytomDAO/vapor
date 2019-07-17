@@ -37,6 +37,7 @@ type Config struct {
 	API            API                `json:"api"`
 	MySQLConfig    common.MySQLConfig `json:"mysql"`
 	FederationProg vaporJson.HexBytes `json:"federation_prog"`
+	Network        string             `json:"network"`
 	Mainchain      Chain              `json:"mainchain"`
 	Sidechain      Chain              `json:"sidechain"`
 }
