@@ -26,7 +26,7 @@ A `fed_cfg.json` would look like this:
     },
     "federation_prog" : "0020305dc12c0dbec0c1dc1f30e835034c1f19094c06afb0eb953a6d1af42222a721",
     "mainchain" : {
-        "name" : "bytom",
+        "name" : "btm",
         "confirmations" : 10,
         "upstream" : "http://127.0.0.1:9888",
         "sync_seconds" : 150
