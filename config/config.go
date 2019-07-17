@@ -243,7 +243,8 @@ func DefaultWebsocketConfig() *WebsocketConfig {
 func DefaultFederationConfig() *FederationConfig {
 	return &FederationConfig{
 		Xpubs: []chainkd.XPub{
-			xpub("50ef22b3a3fca7bc08916187cc9ec2f4005c9c6b1353aa1decbd4be3f3bb0fbe1967589f0d9dec13a388c0412002d2c267bdf3b920864e1ddc50581be5604ce1"),
+			xpub("001784369b39078a898cb596a0f862af8fdfc1b83e1d799b7ced87f63c79186c2b3ca399942dcfbd1f638aa13b994a64bf8886fcbc206e9f90eb4df30c6f4ca5"),
+			xpub("a8018a1ba4d85fc7118bbd065612da78b2c503e61a1a093d9c659567c5d3a591b3752569fbcafa951b2304b8f576f3f220e03b957ca819840e7c29e4b7fb2c4d"),
 		},
 		Quorum: 1,
 	}
