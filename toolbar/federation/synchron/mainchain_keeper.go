@@ -68,7 +68,7 @@ func (m *mainchainKeeper) Run() {
 
 func (m *mainchainKeeper) createCrossChainReqs(db *gorm.DB, crossTransactionID uint64, tx *types.Tx, statusFail bool) error {
 	prog := tx.Inputs[0].ControlProgram()
-	fromAddress := common.ProgToAddress(prog, &consensus.BytomMainNetParams)
+	fromAddress := common.ProgToAddress(prog, consensus.BytomMainNetParams(&consensus.ActiveNetParams))
 	toAddress := common.ProgToAddress(prog, &consensus.MainNetParams)
 	for i, rawOutput := range tx.Outputs {
 		if !bytes.Equal(rawOutput.OutputCommitment.ControlProgram, m.federationProg) {
