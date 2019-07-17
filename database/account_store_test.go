@@ -16,12 +16,6 @@ import (
 )
 
 func TestDeleteAccount(t *testing.T) {
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer func() {
-		testDB.Close()
-		os.RemoveAll("temp")
-	}()
-
 	cases := []struct {
 		accounts      []*acc.Account
 		deleteAccount *acc.Account
@@ -113,8 +107,9 @@ func TestDeleteAccount(t *testing.T) {
 		},
 	}
 
-	accountStore := NewAccountStore(testDB)
 	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		accountStore := NewAccountStore(testDB)
 		as := accountStore.InitBatch()
 		// store mock accounts
 		for _, a := range c.accounts {
@@ -146,16 +141,13 @@ func TestDeleteAccount(t *testing.T) {
 				t.Errorf("case %v: cann't find account, err: %v", i, err)
 			}
 		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
 	}
 }
 
 func TestDeleteStandardUTXO(t *testing.T) {
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer func() {
-		testDB.Close()
-		os.RemoveAll("temp")
-	}()
-
 	cases := []struct {
 		utxos      []*acc.UTXO
 		deleteUTXO *acc.UTXO
@@ -259,8 +251,9 @@ func TestDeleteStandardUTXO(t *testing.T) {
 		},
 	}
 
-	accountStore := NewAccountStore(testDB)
 	for _, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		accountStore := NewAccountStore(testDB)
 		as := accountStore.InitBatch()
 		// store mock utxos
 		for _, utxo := range c.utxos {
@@ -281,16 +274,13 @@ func TestDeleteStandardUTXO(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
 	}
 }
 
 func TestGetAccountIndex(t *testing.T) {
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer func() {
-		testDB.Close()
-		os.RemoveAll("temp")
-	}()
-
 	cases := []struct {
 		account      *acc.Account
 		currentIndex uint64
@@ -372,8 +362,9 @@ func TestGetAccountIndex(t *testing.T) {
 		},
 	}
 
-	accountStore := NewAccountStore(testDB)
 	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		accountStore := NewAccountStore(testDB)
 		as := accountStore.InitBatch()
 		v := as.(*AccountStore)
 		v.db.Set(accountIndexKey(c.account.XPubs), common.Unit64ToBytes(c.currentIndex))
@@ -381,20 +372,18 @@ func TestGetAccountIndex(t *testing.T) {
 		if err := as.CommitBatch(); err != nil {
 			t.Fatal(err)
 		}
+
 		gotIndex := as.GetAccountIndex(c.account.XPubs)
 		if !testutil.DeepEqual(gotIndex, c.want) {
 			t.Errorf("case %v: got incorrect account index, got: %v, want: %v.", i, gotIndex, c.want)
 		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
 	}
 }
 
 func TestGetBip44ContractIndex(t *testing.T) {
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer func() {
-		testDB.Close()
-		os.RemoveAll("temp")
-	}()
-
 	cases := []struct {
 		accountID string
 		change    bool
@@ -422,8 +411,9 @@ func TestGetBip44ContractIndex(t *testing.T) {
 		},
 	}
 
-	accountStore := NewAccountStore(testDB)
 	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		accountStore := NewAccountStore(testDB)
 		as := accountStore.InitBatch()
 		as.SetBip44ContractIndex(c.accountID, c.change, c.index)
 		if err := as.CommitBatch(); err != nil {
@@ -434,16 +424,13 @@ func TestGetBip44ContractIndex(t *testing.T) {
 		if !testutil.DeepEqual(gotIndex, c.index) {
 			t.Errorf("case %v: got incorrect bip44 contract index, got: %v, want: %v.", i, gotIndex, c.index)
 		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
 	}
 }
 
 func TestGetCoinbaseArbitrary(t *testing.T) {
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer func() {
-		testDB.Close()
-		os.RemoveAll("temp")
-	}()
-
 	cases := []struct {
 		arbitrary []byte
 	}{
@@ -458,8 +445,9 @@ func TestGetCoinbaseArbitrary(t *testing.T) {
 		},
 	}
 
-	accountStore := NewAccountStore(testDB)
 	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		accountStore := NewAccountStore(testDB)
 		as := accountStore.InitBatch()
 		as.SetCoinbaseArbitrary(c.arbitrary)
 		if err := as.CommitBatch(); err != nil {
@@ -470,16 +458,13 @@ func TestGetCoinbaseArbitrary(t *testing.T) {
 		if !testutil.DeepEqual(gotArbitrary, c.arbitrary) {
 			t.Errorf("case %v: got incorrect arbitrary, got: %v, want: %v.", i, gotArbitrary, c.arbitrary)
 		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
 	}
 }
 
 func TestGetContractIndex(t *testing.T) {
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer func() {
-		testDB.Close()
-		os.RemoveAll("temp")
-	}()
-
 	cases := []struct {
 		accountID string
 		index     uint64
@@ -502,8 +487,9 @@ func TestGetContractIndex(t *testing.T) {
 		},
 	}
 
-	accountStore := NewAccountStore(testDB)
 	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		accountStore := NewAccountStore(testDB)
 		as := accountStore.InitBatch()
 		as.SetContractIndex(c.accountID, c.index)
 		if err := as.CommitBatch(); err != nil {
@@ -514,16 +500,13 @@ func TestGetContractIndex(t *testing.T) {
 		if !testutil.DeepEqual(gotIndex, c.index) {
 			t.Errorf("case %v: got contract index, got: %v, want: %v.", i, gotIndex, c.index)
 		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
 	}
 }
 
 func TestGetControlProgram(t *testing.T) {
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer func() {
-		testDB.Close()
-		os.RemoveAll("temp")
-	}()
-
 	cases := []struct {
 		hash    bc.Hash
 		program *acc.CtrlProgram
@@ -552,8 +535,9 @@ func TestGetControlProgram(t *testing.T) {
 		},
 	}
 
-	accountStore := NewAccountStore(testDB)
 	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		accountStore := NewAccountStore(testDB)
 		as := accountStore.InitBatch()
 		as.SetControlProgram(c.hash, c.program)
 		if err := as.CommitBatch(); err != nil {
@@ -568,16 +552,13 @@ func TestGetControlProgram(t *testing.T) {
 		if !testutil.DeepEqual(gotProgram, c.program) {
 			t.Errorf("case %v: got control program, got: %v, want: %v.", i, gotProgram, c.program)
 		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
 	}
 }
 
 func TestGetMiningAddress(t *testing.T) {
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer func() {
-		testDB.Close()
-		os.RemoveAll("temp")
-	}()
-
 	cases := []struct {
 		program *acc.CtrlProgram
 	}{
@@ -591,8 +572,9 @@ func TestGetMiningAddress(t *testing.T) {
 		},
 	}
 
-	accountStore := NewAccountStore(testDB)
 	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		accountStore := NewAccountStore(testDB)
 		as := accountStore.InitBatch()
 		if err := as.SetMiningAddress(c.program); err != nil {
 			t.Fatal(err)
@@ -608,7 +590,135 @@ func TestGetMiningAddress(t *testing.T) {
 		}
 
 		if !testutil.DeepEqual(gotProgram, c.program) {
-			t.Errorf("case %v: got control program, got: %v, want: %v.", i, gotProgram, c.program)
+			t.Errorf("case %v: got mining address got: %v, want: %v.", i, gotProgram, c.program)
 		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
+	}
+}
+
+func TestListAccounts(t *testing.T) {
+	cases := []struct {
+		accounts []*acc.Account
+		id       string
+		want     []*acc.Account
+	}{
+		{
+			accounts: []*acc.Account{},
+			id:       "",
+			want:     []*acc.Account{},
+		},
+		{
+			accounts: []*acc.Account{
+				&acc.Account{
+					ID: "account1",
+				},
+			},
+			id: "account",
+			want: []*acc.Account{
+				&acc.Account{
+					ID: "account1",
+				},
+			},
+		},
+		{
+			accounts: []*acc.Account{
+				&acc.Account{
+					ID: "account2",
+				},
+				&acc.Account{
+					ID: "test1",
+				},
+			},
+			id: "account",
+			want: []*acc.Account{
+				&acc.Account{
+					ID: "account2",
+				},
+			},
+		},
+		{
+			accounts: []*acc.Account{},
+			id:       "account",
+			want:     []*acc.Account{},
+		},
+		{
+			accounts: []*acc.Account{
+				&acc.Account{
+					ID: "account1",
+				},
+				&acc.Account{
+					ID: "test1",
+				},
+			},
+			id: "",
+			want: []*acc.Account{
+				&acc.Account{
+					ID: "account1",
+				},
+				&acc.Account{
+					ID: "test1",
+				},
+			},
+		},
+		{
+			accounts: []*acc.Account{
+				&acc.Account{
+					ID: "account1",
+				},
+				&acc.Account{
+					ID: "test1",
+				},
+				&acc.Account{
+					ID: "account11",
+				},
+				&acc.Account{
+					ID: "account2",
+				},
+				&acc.Account{
+					ID: "account112",
+				},
+			},
+			id: "account1",
+			want: []*acc.Account{
+				&acc.Account{
+					ID: "account1",
+				},
+				&acc.Account{
+					ID: "account11",
+				},
+				&acc.Account{
+					ID: "account112",
+				},
+			},
+		},
+	}
+
+	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		accountStore := NewAccountStore(testDB)
+		as := accountStore.InitBatch()
+		for _, a := range c.accounts {
+			if err := as.SetAccount(a); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		if err := as.CommitBatch(); err != nil {
+			t.Fatal(err)
+		}
+
+		gotAccounts, err := as.ListAccounts(c.id)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !testutil.DeepEqual(gotAccounts, c.want) {
+			t.Errorf("case %v: list accounts, got: %v, want: %v.", i, gotAccounts, c.want)
+		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
 	}
 }
