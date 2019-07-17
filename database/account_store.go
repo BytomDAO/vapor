@@ -314,7 +314,7 @@ func (store *AccountStore) ListControlPrograms() ([]*acc.CtrlProgram, error) {
 	return cps, nil
 }
 
-// ListUTXOs get utxos by accountID
+// ListUTXOs list all utxos includling 
 func (store *AccountStore) ListUTXOs() ([]*acc.UTXO, error) {
 	utxoIter := store.db.IteratorPrefix(UTXOPrefix)
 	defer utxoIter.Release()
