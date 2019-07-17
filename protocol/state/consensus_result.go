@@ -108,11 +108,17 @@ func (c *ConsensusResult) ApplyBlock(block *types.Block) error {
 		return err
 	}
 
+	federationProgram := hex.EncodeToString(config.FederationWScript(config.CommonConfig))
+
 	for _, tx := range block.Transactions {
 		for _, input := range tx.Inputs {
 			vetoInput, ok := input.TypedInput.(*types.VetoInput)
 			if !ok {
 				continue
+			}
+
+			if federationProgram == hex.EncodeToString(vetoInput.ControlProgram) {
+				vetoInput.Amount = vetoInput.Amount * 10
 			}
 
 			pubkey := hex.EncodeToString(vetoInput.Vote)
@@ -130,6 +136,10 @@ func (c *ConsensusResult) ApplyBlock(block *types.Block) error {
 			voteOutput, ok := output.TypedOutput.(*types.VoteOutput)
 			if !ok {
 				continue
+			}
+
+			if federationProgram == hex.EncodeToString(voteOutput.ControlProgram) {
+				voteOutput.Amount = voteOutput.Amount * 10
 			}
 
 			pubkey := hex.EncodeToString(voteOutput.Vote)
@@ -203,12 +213,18 @@ func (c *ConsensusResult) DetachBlock(block *types.Block) error {
 		return err
 	}
 
+	federationProgram := hex.EncodeToString(config.FederationWScript(config.CommonConfig))
+
 	for i := len(block.Transactions) - 1; i >= 0; i-- {
 		tx := block.Transactions[i]
 		for _, input := range tx.Inputs {
 			vetoInput, ok := input.TypedInput.(*types.VetoInput)
 			if !ok {
 				continue
+			}
+
+			if federationProgram == hex.EncodeToString(vetoInput.ControlProgram) {
+				vetoInput.Amount = vetoInput.Amount * 10
 			}
 
 			pubkey := hex.EncodeToString(vetoInput.Vote)
@@ -221,6 +237,10 @@ func (c *ConsensusResult) DetachBlock(block *types.Block) error {
 			voteOutput, ok := output.TypedOutput.(*types.VoteOutput)
 			if !ok {
 				continue
+			}
+
+			if federationProgram == hex.EncodeToString(voteOutput.ControlProgram) {
+				voteOutput.Amount = voteOutput.Amount * 10
 			}
 
 			pubkey := hex.EncodeToString(voteOutput.Vote)
