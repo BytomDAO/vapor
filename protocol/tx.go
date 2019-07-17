@@ -10,9 +10,6 @@ import (
 	"github.com/vapor/protocol/validation"
 )
 
-// ErrBadTx is returned for transactions failing validation
-var ErrBadTx = errors.New("invalid transaction")
-
 // GetTransactionStatus return the transaction status of give block
 func (c *Chain) GetTransactionStatus(hash *bc.Hash) (*bc.TransactionStatus, error) {
 	return c.store.GetTransactionStatus(hash)
@@ -48,6 +45,16 @@ func (c *Chain) validateTx(tx *types.Tx) (bool, error) {
 	}
 
 	bh := c.BestBlockHeader()
+	blockHash := bh.Hash()
+	consensusResult, err := c.GetConsensusResultByHash(&blockHash)
+	if err != nil {
+		return false, err
+	}
+
+	if err := consensusResult.ApplyTransaction(tx); err != nil {
+		return false, errors.Wrap(validation.ErrVoteOutputAmount, err)
+	}
+
 	gasStatus, err := validation.ValidateTx(tx.Tx, types.MapBlock(&types.Block{BlockHeader: *bh}))
 	if !gasStatus.GasValid {
 		c.txPool.AddErrCache(&tx.ID, err)

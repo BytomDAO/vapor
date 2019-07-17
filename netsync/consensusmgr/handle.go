@@ -95,12 +95,12 @@ func (m *Manager) handleBlockProposeMsg(peerID string, msg *BlockProposeMsg) {
 }
 
 func (m *Manager) handleBlockSignatureMsg(peerID string, msg *BlockSignatureMsg) {
+	m.peers.MarkBlockSignature(peerID, msg.Signature)
 	blockHash := bc.NewHash(msg.BlockHash)
 	if err := m.chain.ProcessBlockSignature(msg.Signature, msg.PubKey, &blockHash); err != nil {
 		m.peers.ProcessIllegal(peerID, security.LevelMsgIllegal, err.Error())
 		return
 	}
-	m.peers.MarkBlockSignature(peerID, msg.Signature)
 }
 
 func (m *Manager) blockProposeMsgBroadcastLoop() {

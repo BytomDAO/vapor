@@ -49,12 +49,13 @@ func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *types.Tx) error {
 	tx.Tx.SerializedSize = uint64(len(data) / 2)
 
 	isOrphan, err := c.ValidateTx(tx)
-	if errors.Root(err) == protocol.ErrBadTx {
-		return errors.Sub(ErrRejected, err)
-	}
 	if err != nil {
-		return errors.WithDetail(err, "tx rejected: "+err.Error())
+		if errors.Root(err) == err {
+			return errors.Sub(ErrRejected, err)
+		}
+		return err
 	}
+
 	if isOrphan {
 		return ErrOrphanTx
 	}

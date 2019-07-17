@@ -244,9 +244,6 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		if err = checkValidSrc(&vs2, e.Source); err != nil {
 			return errors.Wrap(err, "checking vote output source")
 		}
-		if e.Source.Value.Amount < consensus.ActiveNetParams.MinVoteOutputAmount {
-			return ErrVoteOutputAmount
-		}
 
 	case *bc.Retirement:
 		vs2 := *vs
