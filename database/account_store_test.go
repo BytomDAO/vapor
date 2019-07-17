@@ -570,3 +570,45 @@ func TestGetControlProgram(t *testing.T) {
 		}
 	}
 }
+
+func TestGetMiningAddress(t *testing.T) {
+	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	defer func() {
+		testDB.Close()
+		os.RemoveAll("temp")
+	}()
+
+	cases := []struct {
+		program *acc.CtrlProgram
+	}{
+		{
+			program: &acc.CtrlProgram{},
+		},
+		{
+			program: &acc.CtrlProgram{
+				AccountID: "account1",
+			},
+		},
+	}
+
+	accountStore := NewAccountStore(testDB)
+	for i, c := range cases {
+		as := accountStore.InitBatch()
+		if err := as.SetMiningAddress(c.program); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := as.CommitBatch(); err != nil {
+			t.Fatal(err)
+		}
+
+		gotProgram, err := as.GetMiningAddress()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !testutil.DeepEqual(gotProgram, c.program) {
+			t.Errorf("case %v: got control program, got: %v, want: %v.", i, gotProgram, c.program)
+		}
+	}
+}
