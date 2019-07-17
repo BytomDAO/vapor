@@ -667,31 +667,39 @@ func TestListAccounts(t *testing.T) {
 		{
 			accounts: []*acc.Account{
 				&acc.Account{
-					ID: "account1",
+					ID:    "account1",
+					Alias: "alias1",
 				},
 				&acc.Account{
-					ID: "test1",
+					ID:    "test1",
+					Alias: "alias1",
 				},
 				&acc.Account{
-					ID: "account11",
+					ID:    "account11",
+					Alias: "alias1",
 				},
 				&acc.Account{
-					ID: "account2",
+					ID:    "account2",
+					Alias: "alias1",
 				},
 				&acc.Account{
-					ID: "account112",
+					ID:    "account112",
+					Alias: "alias1",
 				},
 			},
 			id: "account1",
 			want: []*acc.Account{
 				&acc.Account{
-					ID: "account1",
+					ID:    "account1",
+					Alias: "alias1",
 				},
 				&acc.Account{
-					ID: "account11",
+					ID:    "account11",
+					Alias: "alias1",
 				},
 				&acc.Account{
-					ID: "account112",
+					ID:    "account112",
+					Alias: "alias1",
 				},
 			},
 		},
@@ -768,34 +776,74 @@ func TestListControlPrograms(t *testing.T) {
 			},
 			programs: []*acc.CtrlProgram{
 				&acc.CtrlProgram{
-					AccountID: "account0",
+					AccountID:      "account0",
+					Address:        "address",
+					KeyIndex:       uint64(0),
+					ControlProgram: []byte("program"),
+					Change:         true,
 				},
 				&acc.CtrlProgram{
-					AccountID: "account1",
+					AccountID:      "account1",
+					Address:        "address",
+					KeyIndex:       uint64(0),
+					ControlProgram: []byte("program"),
+					Change:         false,
 				},
 				&acc.CtrlProgram{
-					AccountID: "account2",
+					AccountID:      "account2",
+					Address:        "address",
+					KeyIndex:       uint64(0),
+					ControlProgram: []byte("program"),
+					Change:         false,
 				},
 				&acc.CtrlProgram{
-					AccountID: "account3",
+					AccountID:      "account3",
+					Address:        "address",
+					KeyIndex:       uint64(0),
+					ControlProgram: []byte("program"),
+					Change:         true,
 				},
 				&acc.CtrlProgram{
-					AccountID: "account4",
+					AccountID:      "account4",
+					Address:        "address",
+					KeyIndex:       uint64(0),
+					ControlProgram: []byte("program"),
+					Change:         true,
 				},
 				&acc.CtrlProgram{
-					AccountID: "account5",
+					AccountID:      "account5",
+					Address:        "address",
+					KeyIndex:       uint64(0),
+					ControlProgram: []byte("program"),
+					Change:         true,
 				},
 				&acc.CtrlProgram{
-					AccountID: "account6",
+					AccountID:      "account6",
+					Address:        "address",
+					KeyIndex:       uint64(0),
+					ControlProgram: []byte("program"),
+					Change:         true,
 				},
 				&acc.CtrlProgram{
-					AccountID: "account7",
+					AccountID:      "account7",
+					Address:        "address",
+					KeyIndex:       uint64(0),
+					ControlProgram: []byte("program"),
+					Change:         true,
 				},
 				&acc.CtrlProgram{
-					AccountID: "account8",
+					AccountID:      "account8",
+					Address:        "address",
+					KeyIndex:       uint64(0),
+					ControlProgram: []byte("program"),
+					Change:         true,
 				},
 				&acc.CtrlProgram{
-					AccountID: "account9",
+					AccountID:      "account9",
+					Address:        "address",
+					KeyIndex:       uint64(0),
+					ControlProgram: []byte("program"),
+					Change:         true,
 				},
 			},
 		},
@@ -839,3 +887,159 @@ func (s SortPrograms) Less(i, j int) bool {
 	return bytes.Compare([]byte(s[i].AccountID), []byte(s[j].AccountID)) < 0
 }
 func (s SortPrograms) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+
+func TestListUTXOs(t *testing.T) {
+	cases := []struct {
+		utxos []*acc.UTXO
+	}{
+		{
+			utxos: []*acc.UTXO{},
+		},
+		{
+			utxos: []*acc.UTXO{
+				&acc.UTXO{
+					OutputID:  bc.NewHash([32]byte{}),
+					Address:   "address0",
+					Amount:    uint64(0),
+					Change:    true,
+					AccountID: "account",
+					SourcePos: uint64(0),
+				},
+			},
+		},
+		{
+			utxos: []*acc.UTXO{
+				&acc.UTXO{
+					OutputID:  bc.NewHash([32]byte{0x08, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+					Address:   "address0",
+					Amount:    uint64(0),
+					Change:    true,
+					AccountID: "account",
+					SourcePos: uint64(0),
+				},
+			},
+		},
+		{
+			utxos: []*acc.UTXO{
+				&acc.UTXO{
+					OutputID:  bc.NewHash([32]byte{0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+					Address:   "address0",
+					Amount:    uint64(0),
+					Change:    true,
+					AccountID: "account",
+					SourcePos: uint64(0),
+				},
+				&acc.UTXO{
+					OutputID:  bc.NewHash([32]byte{0x02, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+					Address:   "address1",
+					Amount:    uint64(0),
+					Change:    true,
+					AccountID: "account",
+					SourcePos: uint64(0),
+				},
+				&acc.UTXO{
+					OutputID:  bc.NewHash([32]byte{0x03, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+					Address:   "address2",
+					Amount:    uint64(0),
+					Change:    true,
+					AccountID: "account",
+					SourcePos: uint64(0),
+				},
+				&acc.UTXO{
+					OutputID:  bc.NewHash([32]byte{0x04, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+					Address:   "address3",
+					Amount:    uint64(0),
+					Change:    true,
+					AccountID: "account",
+					SourcePos: uint64(0),
+				},
+				&acc.UTXO{
+					OutputID:  bc.NewHash([32]byte{0x05, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+					Address:   "address4",
+					Amount:    uint64(0),
+					Change:    true,
+					AccountID: "account",
+					SourcePos: uint64(0),
+				},
+				&acc.UTXO{
+					OutputID:  bc.NewHash([32]byte{0x06, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+					Address:   "address5",
+					Amount:    uint64(0),
+					Change:    true,
+					AccountID: "account",
+					SourcePos: uint64(0),
+				},
+				&acc.UTXO{
+					OutputID:  bc.NewHash([32]byte{0x07, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+					Address:   "address6",
+					Amount:    uint64(0),
+					Change:    true,
+					AccountID: "account",
+					SourcePos: uint64(0),
+				},
+				&acc.UTXO{
+					OutputID:  bc.NewHash([32]byte{0x08, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+					Address:   "address7",
+					Amount:    uint64(0),
+					Change:    true,
+					AccountID: "account",
+					SourcePos: uint64(0),
+				},
+				&acc.UTXO{
+					OutputID:  bc.NewHash([32]byte{0x09, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+					Address:   "address8",
+					Amount:    uint64(0),
+					Change:    true,
+					AccountID: "account",
+					SourcePos: uint64(0),
+				},
+				&acc.UTXO{
+					OutputID:  bc.NewHash([32]byte{0x0a, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+					Address:   "address9",
+					Amount:    uint64(0),
+					Change:    true,
+					AccountID: "account",
+					SourcePos: uint64(0),
+				},
+			},
+		},
+	}
+
+	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		accountStore := NewAccountStore(testDB)
+		as := accountStore.InitBatch()
+		for j := 0; j < len(c.utxos); j++ {
+			if err := as.SetStandardUTXO(c.utxos[j].OutputID, c.utxos[j]); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		if err := as.CommitBatch(); err != nil {
+			t.Fatal(err)
+		}
+
+		gotUTXOs, err := as.ListUTXOs()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		sort.Sort(SortUTXOs(gotUTXOs))
+		sort.Sort(SortUTXOs(c.utxos))
+
+		if !testutil.DeepEqual(gotUTXOs, c.utxos) {
+			t.Errorf("case %v: list utxos, got: %v, want: %v.", i, gotUTXOs, c.utxos)
+		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
+	}
+}
+
+type SortUTXOs []*acc.UTXO
+
+func (s SortUTXOs) Len() int { return len(s) }
+func (s SortUTXOs) Less(i, j int) bool {
+	return bytes.Compare(s[i].OutputID.Bytes(), s[j].OutputID.Bytes()) < 0
+}
+func (s SortUTXOs) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
