@@ -12,6 +12,7 @@ import (
 	"github.com/vapor/errors"
 	"github.com/vapor/net/http/httperror"
 	"github.com/vapor/net/http/httpjson"
+	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/validation"
 	"github.com/vapor/protocol/vm"
 )
@@ -56,22 +57,25 @@ var respErrFormatter = map[error]httperror.Info{
 
 	// Transaction error namespace (7xx)
 	// Build transaction error namespace (70x ~ 72x)
-	account.ErrInsufficient:         {400, "BTM700", "Funds of account are insufficient"},
-	account.ErrImmature:             {400, "BTM701", "Available funds of account are immature"},
-	account.ErrReserved:             {400, "BTM702", "Available UTXOs of account have been reserved"},
-	account.ErrMatchUTXO:            {400, "BTM703", "UTXO with given hash not found"},
-	ErrBadActionType:                {400, "BTM704", "Invalid action type"},
-	ErrBadAction:                    {400, "BTM705", "Invalid action object"},
-	ErrBadActionConstruction:        {400, "BTM706", "Invalid action construction"},
-	txbuilder.ErrMissingFields:      {400, "BTM707", "One or more fields are missing"},
-	txbuilder.ErrBadAmount:          {400, "BTM708", "Invalid asset amount"},
-	account.ErrFindAccount:          {400, "BTM709", "Account not found"},
-	asset.ErrFindAsset:              {400, "BTM710", "Asset not found"},
-	txbuilder.ErrBadContractArgType: {400, "BTM711", "Invalid contract argument type"},
-	txbuilder.ErrOrphanTx:           {400, "BTM712", "Transaction input UTXO not found"},
-	txbuilder.ErrExtTxFee:           {400, "BTM713", "Transaction fee exceeded max limit"},
-	txbuilder.ErrNoGasInput:         {400, "BTM714", "Transaction has no gas input"},
-	account.ErrVoteLock:             {400, "BTM715", "Locked by the vote"},
+	account.ErrInsufficient: {400, "BTM700", "Funds of account are insufficient"},
+	account.ErrImmature:     {400, "BTM701", "Available funds of account are immature"},
+	account.ErrReserved:     {400, "BTM702", "Available UTXOs of account have been reserved"},
+	account.ErrMatchUTXO:    {400, "BTM703", "UTXO with given hash not found"},
+	account.ErrVoteLock:     {400, "BTM704", "Locked by the vote"},
+	account.ErrFindAccount:  {400, "BTM705", "Account not found"},
+	asset.ErrFindAsset:      {400, "BTM706", "Asset not found"},
+
+	ErrBadActionType:                {400, "BTM710", "Invalid action type"},
+	ErrBadAction:                    {400, "BTM711", "Invalid action object"},
+	ErrBadActionConstruction:        {400, "BTM712", "Invalid action construction"},
+	txbuilder.ErrMissingFields:      {400, "BTM713", "One or more fields are missing"},
+	txbuilder.ErrBadAmount:          {400, "BTM714", "Invalid asset amount"},
+	txbuilder.ErrBadContractArgType: {400, "BTM715", "Invalid contract argument type"},
+	txbuilder.ErrOrphanTx:           {400, "BTM716", "Transaction input UTXO not found"},
+	txbuilder.ErrExtTxFee:           {400, "BTM717", "Transaction fee exceeded max limit"},
+	txbuilder.ErrNoGasInput:         {400, "BTM718", "Transaction has no gas input"},
+	txbuilder.ErrRejected:           {400, "BTM719", "Transaction rejected"},
+	protocol.ErrDustTx:              {400, "BTM720", "Dust Transaction"},
 
 	// Submit transaction error namespace (73x ~ 79x)
 	// Validation error (73x ~ 75x)
@@ -94,6 +98,7 @@ var respErrFormatter = map[error]httperror.Info{
 	validation.ErrUnbalanced:                {400, "BTM746", "Unbalanced asset amount between input and output"},
 	validation.ErrOverGasCredit:             {400, "BTM747", "Gas credit has been spent"},
 	validation.ErrGasCalculate:              {400, "BTM748", "Gas usage calculate got a math error"},
+	validation.ErrVoteOutputAmount:          {400, "BTM749", "Invalid vote amount"},
 
 	// VM error (76x ~ 78x)
 	vm.ErrAltStackUnderflow:  {400, "BTM760", "Alt stack underflow"},
