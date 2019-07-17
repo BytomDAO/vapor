@@ -168,7 +168,7 @@ func (a *crossOutAction) Build(ctx context.Context, b *TemplateBuilder) error {
 		return MissingFieldsError(missing...)
 	}
 
-	address, err := common.DecodeAddress(a.Address, &consensus.BytomMainNetParams)
+	address, err := common.DecodeAddress(a.Address, consensus.BytomMainNetParams(&consensus.ActiveNetParams))
 	if err != nil {
 		return err
 	}

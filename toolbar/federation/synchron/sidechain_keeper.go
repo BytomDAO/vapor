@@ -84,7 +84,7 @@ func (s *sidechainKeeper) createCrossChainReqs(db *gorm.DB, crossTransactionID u
 			AssetAmount:        rawOutput.OutputCommitment().AssetAmount.Amount,
 			Script:             hex.EncodeToString(prog),
 			FromAddress:        fromAddress,
-			ToAddress:          common.ProgToAddress(prog, &consensus.BytomMainNetParams),
+			ToAddress:          common.ProgToAddress(prog, consensus.BytomMainNetParams(&consensus.ActiveNetParams)),
 		}
 
 		if err := db.Create(req).Error; err != nil {
