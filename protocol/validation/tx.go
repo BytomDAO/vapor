@@ -63,8 +63,10 @@ func (g *GasState) setGas(BTMValue int64, txSize int64) error {
 		return errors.Wrap(ErrGasCalculate, "setGas calc gas amount")
 	}
 
-	// set tx free gas
-	g.GasLeft += consensus.ActiveNetParams.DefaultGasCredit
+	if g.GasLeft, ok = checked.AddInt64(g.GasLeft, consensus.ActiveNetParams.DefaultGasCredit); !ok {
+		return errors.Wrap(ErrGasCalculate, "setGas calc free gas")
+	}
+
 	if g.GasLeft > consensus.ActiveNetParams.MaxGasAmount {
 		g.GasLeft = consensus.ActiveNetParams.MaxGasAmount
 	}
