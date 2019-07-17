@@ -374,7 +374,6 @@ func TestGetAccountIndex(t *testing.T) {
 		if err := as.CommitBatch(); err != nil {
 			t.Fatal(err)
 		}
-
 		gotIndex := as.GetAccountIndex(c.account.XPubs)
 		if !testutil.DeepEqual(gotIndex, c.want) {
 			t.Errorf("case %v: got incorrect account index, got: %v, want: %v.", i, gotIndex, c.want)

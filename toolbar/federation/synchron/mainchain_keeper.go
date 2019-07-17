@@ -68,7 +68,7 @@ func (m *mainchainKeeper) Run() {
 
 func (m *mainchainKeeper) createCrossChainReqs(db *gorm.DB, crossTransactionID uint64, tx *types.Tx, statusFail bool) error {
 	prog := tx.Inputs[0].ControlProgram()
-	fromAddress := common.ProgToAddress(prog, &consensus.BytomMainNetParams)
+	fromAddress := common.ProgToAddress(prog, consensus.BytomMainNetParams(&consensus.ActiveNetParams))
 	toAddress := common.ProgToAddress(prog, &consensus.MainNetParams)
 	for i, rawOutput := range tx.Outputs {
 		if !bytes.Equal(rawOutput.OutputCommitment.ControlProgram, m.federationProg) {
@@ -126,7 +126,7 @@ func (m *mainchainKeeper) isWithdrawalTx(tx *types.Tx) bool {
 	if sourceTxHash := locateSideChainTx(tx.Outputs[len(tx.Outputs)-1]); sourceTxHash == "" {
 		return false
 	}
-	return false
+	return true
 }
 
 func locateSideChainTx(output *types.TxOutput) string {
@@ -139,7 +139,7 @@ func locateSideChainTx(output *types.TxOutput) string {
 		return ""
 	}
 
-	return hex.EncodeToString(insts[1].Data)
+	return string(insts[1].Data)
 }
 
 func (m *mainchainKeeper) processBlock(db *gorm.DB, block *types.Block, txStatus *bc.TransactionStatus) error {
