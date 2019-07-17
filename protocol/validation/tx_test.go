@@ -34,7 +34,7 @@ func TestGasStatus(t *testing.T) {
 				BTMValue: 0,
 			},
 			output: &GasState{
-				GasLeft:  10000 / consensus.ActiveNetParams.VMGasRate,
+				GasLeft:  10000/consensus.ActiveNetParams.VMGasRate + consensus.ActiveNetParams.DefaultGasCredit,
 				GasUsed:  0,
 				BTMValue: 10000,
 			},
@@ -500,7 +500,7 @@ func TestTxValidation(t *testing.T) {
 			err: bc.ErrMissingEntry,
 		},
 		{
-			desc: "no gas spend input",
+			desc: "normal check with no gas spend input",
 			f: func() {
 				spendID := mux.Sources[len(mux.Sources)-1].Ref
 				delete(tx.Entries, *spendID)
@@ -508,7 +508,7 @@ func TestTxValidation(t *testing.T) {
 				tx.GasInputIDs = nil
 				vs.gasStatus.GasLeft = 0
 			},
-			err: vm.ErrRunLimitExceeded,
+			err: nil,
 		},
 		{
 			desc: "no gas spend input, but set gas left, so it's ok",

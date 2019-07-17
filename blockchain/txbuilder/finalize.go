@@ -24,8 +24,6 @@ var (
 	ErrOrphanTx = errors.New("finalize can't find transaction input utxo")
 	// ErrExtTxFee means transaction fee exceed max limit
 	ErrExtTxFee = errors.New("transaction fee exceed max limit")
-	// ErrNoGasInput means transaction has no gas input
-	ErrNoGasInput = errors.New("transaction has no gas input")
 )
 
 // FinalizeTx validates a transaction signature template,
@@ -39,10 +37,6 @@ func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *types.Tx) error {
 	}
 
 	if err := checkTxSighashCommitment(tx); err != nil {
-		return err
-	}
-
-	if err := checkGasInputIDs(tx); err != nil {
 		return err
 	}
 
@@ -130,18 +124,4 @@ func checkTxSighashCommitment(tx *types.Tx) error {
 	}
 
 	return lastError
-}
-
-func checkGasInputIDs(tx *types.Tx) error {
-	for _, inp := range tx.Inputs {
-		switch inp.InputType() {
-		case types.CrossChainInputType:
-			return nil
-		}
-	}
-
-	if len(tx.GasInputIDs) == 0 {
-		return ErrNoGasInput
-	}
-	return nil
 }
