@@ -166,7 +166,7 @@ func TestApplyBlock(t *testing.T) {
 		{
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
-					Height:            101,
+					Height:            consensus.MainNetParams.CoinbasePendingBlockNumber + 1,
 					TransactionStatus: bc.NewTransactionStatus(),
 				},
 				Transactions: []*bc.Tx{
@@ -340,7 +340,7 @@ func TestApplyBlock(t *testing.T) {
 		{
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
-					Height:            10001,
+					Height:            consensus.MainNetParams.VotePendingBlockNumber + 1,
 					TransactionStatus: bc.NewTransactionStatus(),
 				},
 				Transactions: []*bc.Tx{
