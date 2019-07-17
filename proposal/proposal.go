@@ -108,11 +108,6 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	txs := txPool.GetTransactions()
 	sort.Sort(byTime(txs))
 
-	consensusResult, err := c.GetConsensusResultByHash(&preBlockHash)
-	if err != nil {
-		return nil, err
-	}
-
 	entriesTxs := []*bc.Tx{}
 	for _, txDesc := range txs {
 		entriesTxs = append(entriesTxs, txDesc.Tx.Tx)
@@ -147,11 +142,6 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			continue
 		}
 
-		if err := consensusResult.ApplyTransaction(txDesc.Tx); err != nil {
-			blkGenSkipTxForErr(txPool, &tx.ID, err)
-			continue
-		}
-
 		if err := txStatus.SetStatus(len(b.Transactions), gasOnlyTx); err != nil {
 			return nil, err
 		}
@@ -169,6 +159,11 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	b.Transactions[0], err = createCoinbaseTx(accountManager, nextBlockHeight)
 	if err != nil {
 		return nil, errors.Wrap(err, "fail on createCoinbaseTx")
+	}
+
+	consensusResult, err := c.GetConsensusResultByHash(&preBlockHash)
+	if err != nil {
+		return nil, err
 	}
 
 	if err := consensusResult.AttachCoinbaseReward(b); err != nil {

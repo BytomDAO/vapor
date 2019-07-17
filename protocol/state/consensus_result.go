@@ -145,15 +145,7 @@ func (c *ConsensusResult) ApplyTransaction(tx *types.Tx) error {
 			continue
 		}
 
-		if voteOutput.Amount < consensus.ActiveNetParams.MinVoteOutputAmount {
-			return errors.New("invalid vote transaction with vote amount less than MinVoteOutputAmount")
-		}
-
 		pubkey := hex.EncodeToString(voteOutput.Vote)
-		if _, ok := c.NumOfVote[pubkey]; !ok && voteOutput.Amount < consensus.ActiveNetParams.MinConsensusNodeVoteNum {
-			return errors.New("invalid vote transaction with first vote amount less than MinConsensusNodeVoteNum")
-		}
-
 		if c.NumOfVote[pubkey], ok = checked.AddUint64(c.NumOfVote[pubkey], voteOutput.Amount); !ok {
 			return checked.ErrOverflow
 		}
