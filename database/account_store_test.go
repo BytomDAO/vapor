@@ -253,7 +253,7 @@ func TestDeleteStandardUTXO(t *testing.T) {
 		},
 	}
 
-	for _, c := range cases {
+	for i, c := range cases {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
 		accountStore := NewAccountStore(testDB)
 		as := accountStore.InitBatch()
@@ -270,11 +270,16 @@ func TestDeleteStandardUTXO(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		// get utxo by outputID
-		for _, utxo := range c.want {
-			if _, err := as.GetUTXO(utxo.OutputID); err != nil {
-				t.Fatal(err)
-			}
+		gotUTXOs, err := as.ListUTXOs()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		sort.Sort(SortUTXOs(gotUTXOs))
+		sort.Sort(SortUTXOs(c.want))
+
+		if !testutil.DeepEqual(gotUTXOs, c.want) {
+			t.Errorf("case %v: got Delete Standard UTXOs, got: %v, want: %v.", i, gotUTXOs, c.want)
 		}
 
 		testDB.Close()

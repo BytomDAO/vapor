@@ -190,7 +190,7 @@ func (store *WalletStore) DeleteWalletTransactions() {
 	}
 }
 
-// DeleteWalletUTXOs delete all txs in wallet
+// DeleteWalletUTXOs delete all utxos in wallet
 func (store *WalletStore) DeleteWalletUTXOs() {
 	batch := store.db.NewBatch()
 	if store.batch != nil {
@@ -381,7 +381,6 @@ func (store *WalletStore) ListTransactions(accountID string, StartTxID string, c
 			annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
 			txNum--
 		}
-
 	}
 
 	return annotatedTxs, nil
