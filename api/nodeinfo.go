@@ -42,7 +42,7 @@ func (a *API) GetNodeInfo() *NetInfo {
 
 	signScript := cfg.FederationWScript(cfg.CommonConfig)
 	scriptHash := crypto.Sha256(signScript)
-	address, err := common.NewAddressWitnessScriptHash(scriptHash, &consensus.ActiveNetParams)
+	address, err := common.NewAddressWitnessScriptHash(scriptHash, consensus.BytomMainNetParams(&consensus.ActiveNetParams))
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal("Failed to get federation address.")
 	}
