@@ -4,7 +4,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- ----------------------------
 -- Table structure for block_state
 -- ----------------------------
-DROP TABLE IF EXISTS `block_state`;
+DROP TABLE IF EXISTS `block_states`;
 CREATE TABLE `block_states`  (
   `height` int(11) NOT NULL,
   `block_hash` varchar(64) NOT NULL
@@ -13,7 +13,7 @@ CREATE TABLE `block_states`  (
 -- ----------------------------
 -- Table structure for vote
 -- ----------------------------
-DROP TABLE IF EXISTS `vote`;
+DROP TABLE IF EXISTS `utxos`;
 CREATE TABLE `utxos`  (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `xpub` varchar(128) NOT NULL,
