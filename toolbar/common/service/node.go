@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 
 	"github.com/vapor/errors"
-	"github.com/vapor/toolbar/federation/util"
 	"github.com/vapor/protocol/bc"
+	util "github.com/vapor/toolbar/common"
 )
 
 // Node can invoke the api which provide by the full node server
