@@ -140,3 +140,13 @@ func (t *Transaction) GetCoinbaseTx(blockHeight uint64) (*types.Tx, error) {
 
 	return nil, errors.New("no coinbase")
 }
+
+type getBlockCountResp struct {
+	BlockCount uint64 `json:"block_count"`
+}
+
+func (t *Transaction) GetCurrentHeight() (uint64, error) {
+	url := "/get-block-count"
+	res := &getBlockCountResp{}
+	return res.BlockCount, t.request(url, nil, res)
+}

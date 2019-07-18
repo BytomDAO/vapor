@@ -55,6 +55,7 @@ func DefaultConfig(isVoterReward bool) *Config {
 }
 
 type Chain struct {
+	ChainID     string `json:"chain_id"`
 	Name        string `json:"name"`
 	Upstream    string `json:"upstream"`
 	SyncSeconds uint64 `json:"sync_seconds"`

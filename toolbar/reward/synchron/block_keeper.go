@@ -23,11 +23,33 @@ type ChainKeeper struct {
 }
 
 func NewChainKeeper(db *gorm.DB, cfg *config.Config) *ChainKeeper {
-	return &ChainKeeper{
+
+	keeper := &ChainKeeper{
 		cfg:  &cfg.Chain,
 		db:   db,
 		node: service.NewNode(cfg.Chain.Upstream),
 	}
+
+	blockState := &orm.BlockState{}
+	if err := db.First(blockState).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			blockStr, _, err := keeper.node.GetBlockByHeight(0)
+			if err != nil {
+				panic(err)
+			}
+			block := &types.Block{}
+			if err := block.UnmarshalText([]byte(blockStr)); err != nil {
+				panic(err)
+			}
+			if err := keeper.insertBlockState(db, block); err != nil {
+				panic(err)
+			}
+		} else {
+			panic(err)
+		}
+	}
+
+	return keeper
 }
 
 func (c *ChainKeeper) Run() {
@@ -120,7 +142,7 @@ func (c *ChainKeeper) AttachBlock(block *types.Block, txStatus *bc.TransactionSt
 				OutputID:     outputID.String(),
 			}
 			// update data
-			db := ormDB.Where(utxo).Update("veto_height", block.Height)
+			db := ormDB.Model(&orm.Utxo{}).Where(utxo).Update("veto_height", block.Height)
 			if err := db.Error; err != nil {
 				ormDB.Rollback()
 				return err
@@ -192,6 +214,18 @@ func (c *ChainKeeper) DetachBlock(block *types.Block, txStatus *bc.TransactionSt
 	return ormDB.Commit().Error
 }
 
+func (c *ChainKeeper) insertBlockState(db *gorm.DB, block *types.Block) error {
+	blockHash := block.Hash()
+	blockState := &orm.BlockState{
+		Height:    block.Height,
+		BlockHash: blockHash.String(),
+	}
+	if err := db.Save(blockState).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *ChainKeeper) updateBlockState(db *gorm.DB, block *types.Block) error {
 	// update blockState
 	blockHash := block.Hash()
@@ -200,7 +234,7 @@ func (c *ChainKeeper) updateBlockState(db *gorm.DB, block *types.Block) error {
 		BlockHash: blockHash.String(),
 	}
 
-	u := db.Updates(blockState)
+	u := db.Model(&orm.BlockState{}).Updates(blockState)
 
 	if err := u.Error; err != nil {
 		db.Rollback()

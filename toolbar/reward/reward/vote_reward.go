@@ -30,17 +30,19 @@ type Vote struct {
 	nodes          []config.VoteRewardConfig
 	ch             chan VoteInfo
 	overReadCH     chan struct{}
+	quit           chan struct{}
 	voteResults    map[string]*voteResult
 	voterRewards   map[string]*voterReward
 	coinBaseReward map[string]*coinBaseReward
 	period         uint64
 }
 
-func NewVote(nodes []config.VoteRewardConfig, ch chan VoteInfo, overReadCH chan struct{}, period uint64) *Vote {
+func NewVote(nodes []config.VoteRewardConfig, ch chan VoteInfo, overReadCH, quit chan struct{}, period uint64) *Vote {
 	return &Vote{
 		nodes:          nodes,
 		ch:             ch,
 		overReadCH:     overReadCH,
+		quit:           quit,
 		voteResults:    make(map[string]*voteResult),
 		voterRewards:   make(map[string]*voterReward),
 		coinBaseReward: make(map[string]*coinBaseReward),
@@ -58,7 +60,9 @@ func (v *Vote) Start() {
 	v.countReward()
 
 	// send transactions
-	v.sendRewardTransaction()
+	if err := v.sendRewardTransaction(); err != nil {
+		panic(err)
+	}
 }
 
 func (v *Vote) getCoinbaseReward() error {
@@ -66,24 +70,37 @@ func (v *Vote) getCoinbaseReward() error {
 		tx := Transaction{
 			ip: fmt.Sprintf("http://%s:%d", v.nodes[0].Host, v.nodes[0].Port),
 		}
+		for {
+			h, err := tx.GetCurrentHeight()
+			if err != nil {
+				close(v.quit)
+				return errors.Wrap(err, "get block height")
+			}
+			if h >= 1200*v.period {
+				break
+			}
+		}
+
 		coinbaseTx, err := tx.GetCoinbaseTx(1200 * v.period)
 		if err != nil {
+			close(v.quit)
 			return err
 		}
 		for _, output := range coinbaseTx.Outputs {
-			voteOutput, ok := output.TypedOutput.(*types.IntraChainOutput)
+			output, ok := output.TypedOutput.(*types.IntraChainOutput)
 			if !ok {
+				close(v.quit)
 				return errors.New("Output type error")
 			}
-			address := common.GetAddressFromControlProgram(voteOutput.ControlProgram)
+			address := common.GetAddressFromControlProgram(output.ControlProgram)
 			for _, node := range v.nodes {
 				if address == node.MiningAddress {
 					reward := &coinBaseReward{
-						totalReward: voteOutput.Amount,
+						totalReward: output.Amount,
 					}
 					ratioNumerator := big.NewInt(int64(node.RewardRatio))
 					ratioDenominator := big.NewInt(100)
-					coinBaseReward := big.NewInt(0).SetUint64(voteOutput.Amount)
+					coinBaseReward := big.NewInt(0).SetUint64(output.Amount)
 					reward.voteTotalReward = coinBaseReward.Mul(coinBaseReward, ratioNumerator).Div(coinBaseReward, ratioDenominator)
 					v.coinBaseReward[node.XPub] = reward
 				}
@@ -100,10 +117,14 @@ out:
 		case voteInfo := <-v.ch:
 			bigBlockNum := big.NewInt(0).SetUint64(voteInfo.VoteBlockNum)
 			bigVoteNum := big.NewInt(0).SetUint64(voteInfo.VoteNum)
-			bigVoteNum = bigBlockNum.Mul(bigBlockNum, bigVoteNum)
+			bigVoteNum.Mul(bigVoteNum, bigBlockNum)
 
 			if value, ok := v.voteResults[voteInfo.XPub]; ok {
-				value.Votes[voteInfo.Address] = bigVoteNum.Add(bigVoteNum, value.Votes[voteInfo.Address])
+				if vote, ok := value.Votes[voteInfo.Address]; ok {
+					vote.Add(vote, bigVoteNum)
+				} else {
+					value.Votes[voteInfo.Address] = bigVoteNum
+				}
 			} else {
 				voteResult := &voteResult{
 					Votes:     make(map[string]*big.Int),
@@ -113,8 +134,9 @@ out:
 				voteResult.Votes[voteInfo.Address] = bigVoteNum
 				v.voteResults[voteInfo.XPub] = voteResult
 			}
-
-			v.voteResults[voteInfo.XPub].VoteTotal = bigVoteNum.Add(bigVoteNum, v.voteResults[voteInfo.XPub].VoteTotal)
+			voteTotal := v.voteResults[voteInfo.XPub].VoteTotal
+			voteTotal.Add(voteTotal, bigVoteNum)
+			v.voteResults[voteInfo.XPub].VoteTotal = voteTotal
 		case <-v.overReadCH:
 			break out
 		}
@@ -131,12 +153,21 @@ func (v *Vote) countReward() {
 
 		for address, vote := range votes.Votes {
 			if value, ok := v.voterRewards[xpub]; ok {
-				value.rewards[address] = vote.Mul(vote, coinBaseReward.voteTotalReward).Div(vote, votes.VoteTotal)
+				mul := vote.Mul(vote, coinBaseReward.voteTotalReward)
+				amount := big.NewInt(0)
+				amount.Div(mul, votes.VoteTotal)
+
+				value.rewards[address] = amount
 			} else {
 				reward := &voterReward{
 					rewards: make(map[string]*big.Int),
 				}
-				reward.rewards[address] = vote.Mul(vote, coinBaseReward.voteTotalReward).Div(vote, votes.VoteTotal)
+
+				mul := vote.Mul(vote, coinBaseReward.voteTotalReward)
+				amount := big.NewInt(0)
+				amount.Div(mul, votes.VoteTotal)
+
+				reward.rewards[address] = amount
 				v.voterRewards[xpub] = reward
 			}
 		}
@@ -160,7 +191,7 @@ func (v *Vote) sendRewardTransaction() error {
 			log.Info("tx_id: ", txID)
 		}
 	}
-
+	close(v.quit)
 	return nil
 }
 
