@@ -381,7 +381,6 @@ func (store *WalletStore) ListTransactions(accountID string, StartTxID string, c
 			annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
 			txNum--
 		}
-
 	}
 
 	return annotatedTxs, nil
