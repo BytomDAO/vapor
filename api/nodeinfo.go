@@ -10,11 +10,9 @@ import (
 	cfg "github.com/vapor/config"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto"
-	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
 	"github.com/vapor/netsync/peers"
 	"github.com/vapor/p2p"
-	"github.com/vapor/protocol/vm/vmutil"
 	"github.com/vapor/version"
 )
 
@@ -30,7 +28,7 @@ type NetInfo struct {
 	Syncing      bool         `json:"syncing"`
 	Mining       bool         `json:"mining"`
 	NodeXPub     string       `json:"node_xpub"`
-	FedAddress   string       `json:"fed_address"`
+	FedAddress   string       `json:"federation_address"`
 	PeerCount    int          `json:"peer_count"`
 	CurrentBlock uint64       `json:"current_block"`
 	HighestBlock uint64       `json:"highest_block"`
@@ -42,14 +40,7 @@ type NetInfo struct {
 func (a *API) GetNodeInfo() *NetInfo {
 	nodeXPub := cfg.CommonConfig.PrivateKey().XPub()
 
-	federationXPubs := cfg.CommonConfig.Federation.Xpubs
-	fedDerivedPKs := chainkd.XPubKeys(federationXPubs)
-	federationQuorum := cfg.CommonConfig.Federation.Quorum
-	signScript, err := vmutil.P2SPMultiSigProgram(fedDerivedPKs, federationQuorum)
-	if err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal("Failed to get federation signScript.")
-	}
-
+	signScript := cfg.FederationWScript(cfg.CommonConfig)
 	scriptHash := crypto.Sha256(signScript)
 	address, err := common.NewAddressWitnessScriptHash(scriptHash, &consensus.ActiveNetParams)
 	if err != nil {
