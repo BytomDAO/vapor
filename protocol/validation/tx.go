@@ -277,7 +277,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		}
 
 		if _, err := vm.Verify(NewTxVMContext(vs, e, prog, e.WitnessArguments), consensus.ActiveNetParams.DefaultGasCredit); err != nil {
-			//return errors.Wrap(err, "checking cross-chain input control program")
+			return errors.Wrap(err, "checking cross-chain input control program")
 		}
 
 		eq, err := mainchainOutput.Source.Value.Equal(e.WitnessDestination.Value)
