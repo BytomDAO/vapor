@@ -598,3 +598,69 @@ func TestGetAsset(t *testing.T) {
 		os.RemoveAll("temp")
 	}
 }
+
+func TestDeleteTransactions(t *testing.T) {
+	cases := []struct {
+		height uint64
+		txs    []*query.AnnotatedTx
+	}{
+		{
+			height: uint64(0),
+			txs:    []*query.AnnotatedTx{},
+		},
+		{
+			height: uint64(0),
+			txs: []*query.AnnotatedTx{
+				&query.AnnotatedTx{
+					ID: bc.NewHash([32]byte{0x01, 0x01, 0x51, 0x31, 0x71, 0x30, 0xd4, 0x3b, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+				},
+			},
+		},
+	}
+
+	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		walletStore := NewWalletStore(testDB)
+		ws := walletStore.InitBatch()
+		// store txs by given height
+		for _, tx := range c.txs {
+			if err := ws.SetTransaction(c.height, tx); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		if err := ws.CommitBatch(); err != nil {
+			t.Fatal(err)
+		}
+
+		// get tx by txID
+		for j := 0; j < len(c.txs); j++ {
+			gotTx, err := ws.GetTransaction(c.txs[j].ID.String())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !testutil.DeepEqual(gotTx, c.txs[j]) {
+				t.Errorf("case %v: got transaction, got: %v, want: %v.", i, gotTx, c.txs[j])
+			}
+		}
+
+		// delete all txs by given height
+		ws = walletStore.InitBatch()
+		ws.DeleteTransactions(c.height)
+		if err := ws.CommitBatch(); err != nil {
+			t.Fatal(err)
+		}
+
+		// get tx by txID, it should return err
+		for _, tx := range c.txs {
+			_, err := ws.GetTransaction(tx.ID.String())
+			if err == nil {
+				t.Errorf("case: %v: it should return some err.", i)
+			}
+		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
+	}
+}
