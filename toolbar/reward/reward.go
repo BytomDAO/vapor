@@ -5,6 +5,7 @@ import (
 
 	"github.com/jinzhu/gorm"
 
+	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
 	"github.com/vapor/toolbar/reward/config"
 	"github.com/vapor/toolbar/reward/database/orm"
@@ -16,12 +17,13 @@ type CountReward interface {
 }
 
 type Reward struct {
-	cfg         *config.Config
-	db          *gorm.DB
-	countReward CountReward
-	VoteInfoCh  chan instance.VoteInfo
-	OverReadCh  chan struct{}
-	period      uint64
+	cfg                *config.Config
+	db                 *gorm.DB
+	countReward        CountReward
+	VoteInfoCh         chan instance.VoteInfo
+	OverReadCh         chan struct{}
+	period             uint64
+	roundVoteBlockNums uint64
 }
 
 func NewReward(db *gorm.DB, cfg *config.Config, period uint64, quit chan struct{}) *Reward {
@@ -39,12 +41,13 @@ func NewReward(db *gorm.DB, cfg *config.Config, period uint64, quit chan struct{
 	}
 
 	reward := &Reward{
-		cfg:         cfg,
-		db:          db,
-		countReward: countReward,
-		VoteInfoCh:  voteInfoCh,
-		OverReadCh:  overReadCh,
-		period:      period,
+		cfg:                cfg,
+		db:                 db,
+		countReward:        countReward,
+		VoteInfoCh:         voteInfoCh,
+		OverReadCh:         overReadCh,
+		period:             period,
+		roundVoteBlockNums: consensus.ActiveNetParams.DPOSConfig.RoundVoteBlockNums,
 	}
 
 	return reward
@@ -56,8 +59,8 @@ func (r *Reward) readVoteInfo() error {
 		xpubs = append(xpubs, node.XPub)
 	}
 
-	minHeight := (1 + 1200*(r.period-1))
-	maxHeight := 1200 * r.period
+	minHeight := (1 + r.roundVoteBlockNums*(r.period-1))
+	maxHeight := r.roundVoteBlockNums * r.period
 
 	ticker := time.NewTicker(time.Duration(r.cfg.Chain.SyncSeconds) * time.Second)
 	for ; true; <-ticker.C {
@@ -90,10 +93,10 @@ func (r *Reward) readVoteInfo() error {
 			return err
 		}
 
-		if vetoHeight > minHeight && vetoHeight < 1200*r.period {
+		if vetoHeight > minHeight && vetoHeight < r.roundVoteBlockNums*r.period {
 			voteBlockNum = vetoHeight - voteHeight
 		} else {
-			voteBlockNum = 1200*r.period - voteHeight
+			voteBlockNum = r.roundVoteBlockNums*r.period - voteHeight
 		}
 
 		r.VoteInfoCh <- instance.VoteInfo{

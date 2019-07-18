@@ -6,6 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/toolbar/common"
@@ -27,26 +28,28 @@ type coinBaseReward struct {
 }
 
 type Vote struct {
-	nodes          []config.VoteRewardConfig
-	ch             chan VoteInfo
-	overReadCH     chan struct{}
-	quit           chan struct{}
-	voteResults    map[string]*voteResult
-	voterRewards   map[string]*voterReward
-	coinBaseReward map[string]*coinBaseReward
-	period         uint64
+	nodes              []config.VoteRewardConfig
+	ch                 chan VoteInfo
+	overReadCH         chan struct{}
+	quit               chan struct{}
+	voteResults        map[string]*voteResult
+	voterRewards       map[string]*voterReward
+	coinBaseReward     map[string]*coinBaseReward
+	period             uint64
+	roundVoteBlockNums uint64
 }
 
 func NewVote(nodes []config.VoteRewardConfig, ch chan VoteInfo, overReadCH, quit chan struct{}, period uint64) *Vote {
 	return &Vote{
-		nodes:          nodes,
-		ch:             ch,
-		overReadCH:     overReadCH,
-		quit:           quit,
-		voteResults:    make(map[string]*voteResult),
-		voterRewards:   make(map[string]*voterReward),
-		coinBaseReward: make(map[string]*coinBaseReward),
-		period:         period,
+		nodes:              nodes,
+		ch:                 ch,
+		overReadCH:         overReadCH,
+		quit:               quit,
+		voteResults:        make(map[string]*voteResult),
+		voterRewards:       make(map[string]*voterReward),
+		coinBaseReward:     make(map[string]*coinBaseReward),
+		period:             period,
+		roundVoteBlockNums: consensus.ActiveNetParams.DPOSConfig.RoundVoteBlockNums,
 	}
 }
 
@@ -76,12 +79,12 @@ func (v *Vote) getCoinbaseReward() error {
 				close(v.quit)
 				return errors.Wrap(err, "get block height")
 			}
-			if h >= 1200*v.period {
+			if h >= v.roundVoteBlockNums*v.period {
 				break
 			}
 		}
 
-		coinbaseTx, err := tx.GetCoinbaseTx(1200 * v.period)
+		coinbaseTx, err := tx.GetCoinbaseTx(v.roundVoteBlockNums * v.period)
 		if err != nil {
 			close(v.quit)
 			return err
