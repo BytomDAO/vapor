@@ -1,7 +1,6 @@
 package command
 
 import (
-	"fmt"
 	"os"
 	"path"
 
@@ -27,7 +26,6 @@ func init() {
 
 func initFiles(cmd *cobra.Command, args []string) {
 	//generate the reward config file
-	fmt.Println(isVoterReward)
 	config := cfg.DefaultConfig(isVoterReward)
 	configFilePath := path.Join("./", "reward.json")
 	if _, err := os.Stat(configFilePath); os.IsNotExist(err) {

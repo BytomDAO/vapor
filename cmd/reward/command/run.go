@@ -1,7 +1,6 @@
 package command
 
 import (
-	"fmt"
 	"path"
 	"time"
 
@@ -57,7 +56,6 @@ func runReward(cmd *cobra.Command, args []string) error {
 	go sync.Run()
 
 	quit := make(chan struct{})
-	fmt.Println(coinBasePeriod)
 	r := reward.NewReward(db, config, coinBasePeriod, quit)
 	r.Start()
 
