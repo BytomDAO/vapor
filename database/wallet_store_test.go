@@ -356,7 +356,7 @@ func TestDeleteUnconfirmedTransaction(t *testing.T) {
 
 		gotTx, err = ws.GetUnconfirmedTransaction(c.tx.ID.String())
 		if err == nil {
-			t.Errorf("case %v: got state should fail.", i)
+			t.Errorf("case %v: got unconfirmed transaction should fail.", i)
 		}
 
 		testDB.Close()
