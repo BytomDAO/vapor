@@ -18,8 +18,8 @@ type voterReward struct {
 }
 
 type voteResult struct {
-	Votes     map[string]*big.Int
-	VoteTotal *big.Int
+	votes     map[string]*big.Int
+	voteTotal *big.Int
 }
 
 type coinBaseReward struct {
@@ -123,23 +123,23 @@ out:
 			bigVoteNum.Mul(bigVoteNum, bigBlockNum)
 
 			if value, ok := v.voteResults[voteInfo.XPub]; ok {
-				if vote, ok := value.Votes[voteInfo.Address]; ok {
+				if vote, ok := value.votes[voteInfo.Address]; ok {
 					vote.Add(vote, bigVoteNum)
 				} else {
-					value.Votes[voteInfo.Address] = bigVoteNum
+					value.votes[voteInfo.Address] = bigVoteNum
 				}
 			} else {
 				voteResult := &voteResult{
-					Votes:     make(map[string]*big.Int),
-					VoteTotal: big.NewInt(0),
+					votes:     make(map[string]*big.Int),
+					voteTotal: big.NewInt(0),
 				}
 
-				voteResult.Votes[voteInfo.Address] = bigVoteNum
+				voteResult.votes[voteInfo.Address] = bigVoteNum
 				v.voteResults[voteInfo.XPub] = voteResult
 			}
-			voteTotal := v.voteResults[voteInfo.XPub].VoteTotal
+			voteTotal := v.voteResults[voteInfo.XPub].voteTotal
 			voteTotal.Add(voteTotal, bigVoteNum)
-			v.voteResults[voteInfo.XPub].VoteTotal = voteTotal
+			v.voteResults[voteInfo.XPub].voteTotal = voteTotal
 		case <-v.overReadCH:
 			break out
 		}
@@ -154,11 +154,11 @@ func (v *Vote) countReward() {
 			continue
 		}
 
-		for address, vote := range votes.Votes {
+		for address, vote := range votes.votes {
 			if value, ok := v.voterRewards[xpub]; ok {
 				mul := vote.Mul(vote, coinBaseReward.voteTotalReward)
 				amount := big.NewInt(0)
-				amount.Div(mul, votes.VoteTotal)
+				amount.Div(mul, votes.voteTotal)
 
 				value.rewards[address] = amount
 			} else {
@@ -168,7 +168,7 @@ func (v *Vote) countReward() {
 
 				mul := vote.Mul(vote, coinBaseReward.voteTotalReward)
 				amount := big.NewInt(0)
-				amount.Div(mul, votes.VoteTotal)
+				amount.Div(mul, votes.voteTotal)
 				if amount.Uint64() > 0 {
 					reward.rewards[address] = amount
 					v.voterRewards[xpub] = reward

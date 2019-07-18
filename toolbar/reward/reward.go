@@ -20,8 +20,8 @@ type Reward struct {
 	cfg                *config.Config
 	db                 *gorm.DB
 	countReward        CountReward
-	VoteInfoCh         chan instance.VoteInfo
-	OverReadCh         chan struct{}
+	voteInfoCh         chan instance.VoteInfo
+	overReadCh         chan struct{}
 	period             uint64
 	roundVoteBlockNums uint64
 }
@@ -44,8 +44,8 @@ func NewReward(db *gorm.DB, cfg *config.Config, period uint64, quit chan struct{
 		cfg:                cfg,
 		db:                 db,
 		countReward:        countReward,
-		VoteInfoCh:         voteInfoCh,
-		OverReadCh:         overReadCh,
+		voteInfoCh:         voteInfoCh,
+		overReadCh:         overReadCh,
 		period:             period,
 		roundVoteBlockNums: consensus.ActiveNetParams.DPOSConfig.RoundVoteBlockNums,
 	}
@@ -99,7 +99,7 @@ func (r *Reward) readVoteInfo() error {
 			voteBlockNum = r.roundVoteBlockNums*r.period - voteHeight
 		}
 
-		r.VoteInfoCh <- instance.VoteInfo{
+		r.voteInfoCh <- instance.VoteInfo{
 			XPub:         xpub,
 			Address:      address,
 			VoteNum:      voteNum,
@@ -109,11 +109,11 @@ func (r *Reward) readVoteInfo() error {
 		}
 	}
 
-	close(r.OverReadCh)
+	close(r.overReadCh)
 	return nil
 }
 
 func (r *Reward) Start() {
 	go r.readVoteInfo()
-	r.countReward.Start()
+	go r.countReward.Start()
 }

@@ -207,7 +207,17 @@ func (c *ChainKeeper) DetachBlock(block *types.Block, txStatus *bc.TransactionSt
 		return err
 	}
 
-	if err := c.updateBlockState(ormDB, block); err != nil {
+	preBlockStr, _, err := c.node.GetBlockByHeight(block.Height + 1)
+	if err != nil {
+		return err
+	}
+
+	preBlock := &types.Block{}
+	if err := preBlock.UnmarshalText([]byte(preBlockStr)); err != nil {
+		return errors.New("Unmarshal preBlock")
+	}
+
+	if err := c.updateBlockState(ormDB, preBlock); err != nil {
 		return err
 	}
 
