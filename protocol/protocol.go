@@ -201,7 +201,7 @@ func (c *Chain) setState(blockHeader, irrBlockHeader *types.BlockHeader, mainBlo
 func (c *Chain) BlockWaiter(height uint64) <-chan struct{} {
 	ch := make(chan struct{}, 1)
 	go func() {
-		for bestHeigh := c.BestBlockHeight(); bestHeigh < height; bestHeigh = c.BestBlockHeight() {
+		for bestHeight := c.BestBlockHeight(); bestHeight < height; bestHeight = c.BestBlockHeight() {
 			c.cond.Wait()
 		}
 		ch <- struct{}{}
