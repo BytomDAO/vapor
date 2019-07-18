@@ -28,7 +28,6 @@ func (c *Chain) ValidateTx(tx *types.Tx) (bool, error) {
 	}
 
 	c.markTransactions(tx)
-
 	return c.validateTx(tx)
 }
 

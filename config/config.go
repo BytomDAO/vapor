@@ -170,10 +170,10 @@ type P2PConfig struct {
 // Default configurable p2p parameters.
 func DefaultP2PConfig() *P2PConfig {
 	return &P2PConfig{
-		ListenAddress:    "tcp://0.0.0.0:46656",
+		ListenAddress:    "tcp://0.0.0.0:56656",
 		SkipUPNP:         false,
 		LANDiscover:      true,
-		MaxNumPeers:      50,
+		MaxNumPeers:      20,
 		HandshakeTimeout: 30,
 		DialTimeout:      3,
 		ProxyAddress:     "",

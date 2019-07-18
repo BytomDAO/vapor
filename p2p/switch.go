@@ -27,7 +27,7 @@ import (
 const (
 	logModule = "p2p"
 
-	minNumOutboundPeers = 4
+	minNumOutboundPeers = 3
 	maxNumLANPeers      = 5
 	//magicNumber used to generate unique netID
 	magicNumber = uint64(0x054c5638)
