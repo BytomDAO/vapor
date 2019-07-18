@@ -4,7 +4,12 @@ import (
 	"context"
 	"net"
 
+	log "github.com/sirupsen/logrus"
+
+	"github.com/vapor/common"
 	cfg "github.com/vapor/config"
+	"github.com/vapor/consensus"
+	"github.com/vapor/crypto"
 	"github.com/vapor/errors"
 	"github.com/vapor/netsync/peers"
 	"github.com/vapor/p2p"
@@ -23,6 +28,7 @@ type NetInfo struct {
 	Syncing      bool         `json:"syncing"`
 	Mining       bool         `json:"mining"`
 	NodeXPub     string       `json:"node_xpub"`
+	FedAddress   string       `json:"federation_address"`
 	PeerCount    int          `json:"peer_count"`
 	CurrentBlock uint64       `json:"current_block"`
 	HighestBlock uint64       `json:"highest_block"`
@@ -33,11 +39,20 @@ type NetInfo struct {
 // GetNodeInfo return net information
 func (a *API) GetNodeInfo() *NetInfo {
 	nodeXPub := cfg.CommonConfig.PrivateKey().XPub()
+
+	signScript := cfg.FederationPMultiSigScript(cfg.CommonConfig)
+	scriptHash := crypto.Sha256(signScript)
+	address, err := common.NewAddressWitnessScriptHash(scriptHash, consensus.BytomMainNetParams(&consensus.ActiveNetParams))
+	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal("Failed to get federation address.")
+	}
+
 	info := &NetInfo{
 		Listening:    a.sync.IsListening(),
 		Syncing:      !a.sync.IsCaughtUp(),
 		Mining:       a.blockProposer.IsProposing(),
 		NodeXPub:     nodeXPub.String(),
+		FedAddress:   address.EncodeAddress(),
 		PeerCount:    a.sync.PeerCount(),
 		CurrentBlock: a.chain.BestBlockHeight(),
 		NetWorkID:    a.sync.GetNetwork(),
