@@ -63,9 +63,8 @@ func (v *Vote) Start() {
 	v.countReward()
 
 	// send transactions
-	if err := v.sendRewardTransaction(); err != nil {
-		panic(err)
-	}
+	v.sendRewardTransaction()
+
 }
 
 func (v *Vote) getCoinbaseReward() error {
@@ -179,7 +178,7 @@ func (v *Vote) countReward() {
 	}
 }
 
-func (v *Vote) sendRewardTransaction() error {
+func (v *Vote) sendRewardTransaction() {
 	for _, node := range v.nodes {
 		coinbaseReward, ok := v.coinBaseReward[node.XPub]
 		if !ok {
@@ -190,13 +189,13 @@ func (v *Vote) sendRewardTransaction() error {
 		if voterRewards, ok := v.voterRewards[node.XPub]; ok {
 			txID, err := v.sendReward(coinbaseReward.totalReward, node, voterRewards)
 			if err != nil {
-				return err
+				log.WithFields(log.Fields{"error": err, "node": node}).Error("send reward transaction")
+				continue
 			}
 			log.Info("tx_id: ", txID)
 		}
 	}
 	close(v.quit)
-	return nil
 }
 
 func (v *Vote) sendReward(coinbaseReward uint64, node config.VoteRewardConfig, voterReward *voterReward) (string, error) {

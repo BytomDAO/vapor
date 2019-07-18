@@ -6,6 +6,7 @@ import (
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
+	cmn "github.com/tendermint/tmlibs/common"
 
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
@@ -35,17 +36,17 @@ func NewChainKeeper(db *gorm.DB, cfg *config.Config) *ChainKeeper {
 		if err == gorm.ErrRecordNotFound {
 			blockStr, _, err := keeper.node.GetBlockByHeight(0)
 			if err != nil {
-				panic(err)
+				cmn.Exit(cmn.Fmt("Failed to get genenis block:[%s]", err.Error()))
 			}
 			block := &types.Block{}
 			if err := block.UnmarshalText([]byte(blockStr)); err != nil {
-				panic(err)
+				cmn.Exit(cmn.Fmt("unmarshal block:[%s]", err.Error()))
 			}
 			if err := keeper.insertBlockState(db, block); err != nil {
-				panic(err)
+				cmn.Exit(cmn.Fmt("Failed to insert blockState:[%s]", err.Error()))
 			}
 		} else {
-			panic(err)
+			cmn.Exit(cmn.Fmt("Failed to get blockState:[%s]", err.Error()))
 		}
 	}
 
