@@ -24,8 +24,6 @@ var (
 	ErrOrphanTx = errors.New("finalize can't find transaction input utxo")
 	// ErrExtTxFee means transaction fee exceed max limit
 	ErrExtTxFee = errors.New("transaction fee exceed max limit")
-	// ErrNoGasInput means transaction has no gas input
-	ErrNoGasInput = errors.New("transaction has no gas input")
 )
 
 // FinalizeTx validates a transaction signature template,
@@ -42,10 +40,6 @@ func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *types.Tx) error {
 		return err
 	}
 
-	if err := checkGasInputIDs(tx); err != nil {
-		return err
-	}
-
 	// This part is use for prevent tx size  is 0
 	data, err := tx.TxData.MarshalText()
 	if err != nil {
@@ -55,12 +49,13 @@ func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *types.Tx) error {
 	tx.Tx.SerializedSize = uint64(len(data) / 2)
 
 	isOrphan, err := c.ValidateTx(tx)
-	if errors.Root(err) == protocol.ErrBadTx {
-		return errors.Sub(ErrRejected, err)
-	}
 	if err != nil {
-		return errors.WithDetail(err, "tx rejected: "+err.Error())
+		if errors.Root(err) == err {
+			return errors.Sub(ErrRejected, err)
+		}
+		return err
 	}
+
 	if isOrphan {
 		return ErrOrphanTx
 	}
@@ -129,18 +124,4 @@ func checkTxSighashCommitment(tx *types.Tx) error {
 	}
 
 	return lastError
-}
-
-func checkGasInputIDs(tx *types.Tx) error {
-	for _, inp := range tx.Inputs {
-		switch inp.InputType() {
-		case types.CrossChainInputType:
-			return nil
-		}
-	}
-
-	if len(tx.GasInputIDs) == 0 {
-		return ErrNoGasInput
-	}
-	return nil
 }

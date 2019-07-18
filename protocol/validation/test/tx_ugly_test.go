@@ -66,7 +66,7 @@ func TestValidateUglyTx(t *testing.T) {
 			gasValid: false,
 		},
 		{
-			category: "fee insufficient",
+			category: "normal with no fee",
 			desc:     "sum of btm output equals to input btm",
 			insts:    []*signingInst{singleSignInst},
 			txData: types.TxData{
@@ -77,11 +77,11 @@ func TestValidateUglyTx(t *testing.T) {
 						*consensus.BTMAssetID, 10000000000, 0, nil),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewIntraChainOutput(*consensus.BTMAssetID, 10000000001, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewIntraChainOutput(*consensus.BTMAssetID, 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
-			err:      true,
-			gasValid: false,
+			err:      false,
+			gasValid: true,
 		},
 		{
 			category: "fee insufficient",
@@ -98,11 +98,11 @@ func TestValidateUglyTx(t *testing.T) {
 					types.NewIntraChainOutput(*consensus.BTMAssetID, 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
-			err:      true,
-			gasValid: false,
+			err:      false,
+			gasValid: true,
 		},
 		{
-			category: "fee insufficient",
+			category: "normal with no fee",
 			desc:     "no btm input",
 			insts:    []*signingInst{singleSignInst},
 			txData: types.TxData{
@@ -116,7 +116,7 @@ func TestValidateUglyTx(t *testing.T) {
 					types.NewIntraChainOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
-			err:      true,
+			err:      false,
 			gasValid: true,
 		},
 		{
@@ -279,24 +279,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 				Outputs: []*types.TxOutput{
 					types.NewIntraChainOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-				},
-			},
-			err:      true,
-			gasValid: false,
-		},
-		{
-			category: "input output unbalance",
-			desc:     "input utxo is zero",
-			insts:    []*signingInst{singleSignInst},
-			txData: types.TxData{
-				Version: 1,
-				Inputs: []*types.TxInput{
-					types.NewSpendInput(nil,
-						bc.Hash{V0: 14760873410800997144, V1: 1698395500822741684, V2: 5965908492734661392, V3: 9445539829830863994},
-						*consensus.BTMAssetID, 0, 0, nil),
-				},
-				Outputs: []*types.TxOutput{
-					types.NewIntraChainOutput(*consensus.BTMAssetID, 0, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,

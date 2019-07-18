@@ -47,6 +47,12 @@ func EstimateTxGas(template Template) (*EstimateTxGasInfo, error) {
 
 	// the total transaction gas is composed of storage and virtual machines
 	totalGas := totalTxSizeGas + totalP2WPKHGas + totalP2WSHGas + flexibleGas
+	if totalGas > consensus.ActiveNetParams.DefaultGasCredit {
+		totalGas -= consensus.ActiveNetParams.DefaultGasCredit
+	} else {
+		totalGas = 0
+	}
+
 	return &EstimateTxGasInfo{
 		TotalNeu:    totalGas * consensus.ActiveNetParams.VMGasRate,
 		FlexibleNeu: flexibleGas * consensus.ActiveNetParams.VMGasRate,

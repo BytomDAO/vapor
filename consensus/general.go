@@ -136,8 +136,8 @@ var MainNetParams = Params{
 		DefaultGasCredit:           int64(160000),
 		StorageGasRate:             int64(1),
 		VMGasRate:                  int64(200),
-		VotePendingBlockNumber:     uint64(10000),
-		CoinbasePendingBlockNumber: uint64(100),
+		VotePendingBlockNumber:     uint64(3456000),
+		CoinbasePendingBlockNumber: uint64(7200),
 		CoinbaseArbitrarySizeLimit: 128,
 	},
 	DPOSConfig:  VaporDPOSConfig(),
@@ -160,7 +160,7 @@ var TestNetParams = Params{
 		StorageGasRate:             int64(1),
 		VMGasRate:                  int64(200),
 		VotePendingBlockNumber:     uint64(10000),
-		CoinbasePendingBlockNumber: uint64(100),
+		CoinbasePendingBlockNumber: uint64(1200),
 		CoinbaseArbitrarySizeLimit: 128,
 	},
 	DPOSConfig:  VaporDPOSConfig(),
@@ -182,7 +182,7 @@ var SoloNetParams = Params{
 		StorageGasRate:             int64(1),
 		VMGasRate:                  int64(200),
 		VotePendingBlockNumber:     uint64(10000),
-		CoinbasePendingBlockNumber: uint64(100),
+		CoinbasePendingBlockNumber: uint64(1200),
 		CoinbaseArbitrarySizeLimit: 128,
 	},
 	DPOSConfig:  VaporDPOSConfig(),
@@ -206,7 +206,13 @@ func BlockSubsidy(height uint64) uint64 {
 }
 
 // BytomMainNetParams is the config for bytom mainnet
-var BytomMainNetParams = Params{
-	Name:            "main",
-	Bech32HRPSegwit: "bm",
+func BytomMainNetParams(vaporParam *Params) *Params {
+	bech32HRPSegwit := "sm"
+	switch vaporParam.Name {
+	case "main":
+		bech32HRPSegwit = "bm"
+	case "test":
+		bech32HRPSegwit = "tm"
+	}
+	return &Params{Bech32HRPSegwit: bech32HRPSegwit}
 }

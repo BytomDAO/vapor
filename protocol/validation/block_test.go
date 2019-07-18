@@ -338,10 +338,12 @@ func TestValidateBlock(t *testing.T) {
 			block: &bc.Block{
 				ID: bc.Hash{V0: 1},
 				BlockHeader: &bc.BlockHeader{
-					Version:         1,
-					Height:          1,
-					Timestamp:       1523352601000,
-					PreviousBlockId: &parentHash,
+					Version:               1,
+					Height:                1,
+					Timestamp:             1523352601000,
+					PreviousBlockId:       &parentHash,
+					TransactionsRoot:      &bc.Hash{V0: 16229071813194843118, V1: 7413717724217377663, V2: 10255217553502780716, V3: 17975900656333257644},
+					TransactionStatusHash: &txStatusHash,
 				},
 				Transactions: []*bc.Tx{
 					types.MapTx(&types.TxData{
@@ -362,7 +364,7 @@ func TestValidateBlock(t *testing.T) {
 				},
 			},
 			parent: parent,
-			err:    vm.ErrRunLimitExceeded,
+			err:    nil,
 		},
 	}
 

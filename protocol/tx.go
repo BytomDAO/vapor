@@ -3,15 +3,11 @@ package protocol
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
 	"github.com/vapor/protocol/validation"
 )
-
-// ErrBadTx is returned for transactions failing validation
-var ErrBadTx = errors.New("invalid transaction")
 
 // GetTransactionStatus return the transaction status of give block
 func (c *Chain) GetTransactionStatus(hash *bc.Hash) (*bc.TransactionStatus, error) {
