@@ -163,7 +163,15 @@ var TestNetParams = Params{
 		CoinbasePendingBlockNumber: uint64(1200),
 		CoinbaseArbitrarySizeLimit: 128,
 	},
-	DPOSConfig:  VaporDPOSConfig(),
+	DPOSConfig: DPOSConfig{
+		NumOfConsensusNode:      10,
+		BlockNumEachNode:        12,
+		MinConsensusNodeVoteNum: uint64(100000000000000),
+		MinVoteOutputAmount:     uint64(100000000),
+		BlockTimeInterval:       500,
+		RoundVoteBlockNums:      1200,
+		MaxTimeOffsetMs:         2000,
+	},
 	Checkpoints: []Checkpoint{},
 	ProducerSubsidys: []ProducerSubsidy{
 		{BeginBlock: 1, EndBlock: 63072000, Subsidy: 15000000},
@@ -185,7 +193,15 @@ var SoloNetParams = Params{
 		CoinbasePendingBlockNumber: uint64(1200),
 		CoinbaseArbitrarySizeLimit: 128,
 	},
-	DPOSConfig:  VaporDPOSConfig(),
+	DPOSConfig: DPOSConfig{
+		NumOfConsensusNode:      10,
+		BlockNumEachNode:        12,
+		MinConsensusNodeVoteNum: uint64(100000000000000),
+		MinVoteOutputAmount:     uint64(100000000),
+		BlockTimeInterval:       500,
+		RoundVoteBlockNums:      1200,
+		MaxTimeOffsetMs:         2000,
+	},
 	Checkpoints: []Checkpoint{},
 	ProducerSubsidys: []ProducerSubsidy{
 		{BeginBlock: 0, EndBlock: 0, Subsidy: 24},
