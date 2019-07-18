@@ -8,6 +8,7 @@ import (
 
 	acc "github.com/vapor/account"
 	"github.com/vapor/blockchain/pseudohsm"
+	"github.com/vapor/blockchain/query"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol/bc"
@@ -299,6 +300,52 @@ func TestGetWalletInfo(t *testing.T) {
 
 		if !testutil.DeepEqual(gotState, c.state) {
 			t.Errorf("case %v: got wallet info, got: %v, want: %v.", i, gotState, c.state)
+		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
+	}
+}
+
+func TestDeleteUnconfirmedTransaction(t *testing.T) {
+	cases := []struct {
+		tx *query.AnnotatedTx
+	}{
+		{
+			tx: &query.AnnotatedTx{},
+		},
+	}
+
+	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		walletStore := NewWalletStore(testDB)
+		ws := walletStore.InitBatch()
+		if err := ws.SetUnconfirmedTransaction(c.tx.ID.String(), c.tx); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := ws.CommitBatch(); err != nil {
+			t.Fatal(err)
+		}
+
+		gotTx, err := ws.GetUnconfirmedTransaction(c.tx.ID.String())
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !testutil.DeepEqual(gotTx, c.tx) {
+			t.Errorf("case %v: got unconfirmed transaction, got: %v, want: %v.", i, gotTx, c.tx)
+		}
+
+		ws = walletStore.InitBatch()
+		ws.DeleteUnconfirmedTransaction(c.tx.ID.String())
+		if err := ws.CommitBatch(); err != nil {
+			t.Fatal(err)
+		}
+
+		gotTx, err = ws.GetUnconfirmedTransaction(c.tx.ID.String())
+		if err == nil {
+			t.Errorf("case %v: got state should fail.", i)
 		}
 
 		testDB.Close()
