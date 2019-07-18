@@ -475,3 +475,53 @@ func (s SortUnconfirmedTxs) Less(i, j int) bool {
 	return bytes.Compare(s[i].ID.Bytes(), s[j].ID.Bytes()) < 0
 }
 func (s SortUnconfirmedTxs) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+
+func TestGetGlobalTransactionIndex(t *testing.T) {
+	cases := []struct {
+		globalTxID string
+		blockHash  bc.Hash
+		position   uint64
+	}{
+		{
+			globalTxID: "",
+			blockHash:  bc.NewHash([32]byte{}),
+			position:   uint64(0),
+		},
+		{
+			globalTxID: "8838474e18e945e2f648745a362ac6988bad172b0eef5c593038a2fc8b46261e",
+			blockHash:  bc.NewHash([32]byte{0x00, 0x01, 0x51, 0x31, 0x71, 0x30, 0xd4, 0x3b, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+			position:   uint64(0),
+		},
+		{
+			globalTxID: "d8de517917a591daa447d6be28ffb2fac866703e4feb65e86221be9a22d3033a",
+			blockHash:  bc.NewHash([32]byte{0x00, 0x01, 0x51, 0x31, 0x71, 0x30, 0xd4, 0x3b, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+			position:   uint64(99),
+		},
+		{
+			globalTxID: "f4c64e9f72623c26b06e17f909aec7c03c927fcf681781489257097e537b8d5a",
+			blockHash:  bc.NewHash([32]byte{0x01, 0x01, 0x51, 0x31, 0x71, 0x30, 0xd4, 0x3b, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+			position:   uint64(99),
+		},
+	}
+
+	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		walletStore := NewWalletStore(testDB)
+		ws := walletStore.InitBatch()
+		ws.SetGlobalTransactionIndex(c.globalTxID, &c.blockHash, c.position)
+
+		if err := ws.CommitBatch(); err != nil {
+			t.Fatal(err)
+		}
+
+		gotIndex := ws.GetGlobalTransactionIndex(c.globalTxID)
+		wantIndex := CalcGlobalTxIndex(&c.blockHash, c.position)
+
+		if !testutil.DeepEqual(gotIndex, wantIndex) {
+			t.Errorf("case %v: got global transaction index, got: %v, want: %v.", i, gotIndex, wantIndex)
+		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
+	}
+}
