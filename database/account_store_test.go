@@ -278,7 +278,6 @@ func TestDeleteStandardUTXO(t *testing.T) {
 		sort.Sort(SortUTXOs(gotUTXOs))
 		sort.Sort(SortUTXOs(c.want))
 
-		// get utxo by outputID
 		if !testutil.DeepEqual(gotUTXOs, c.want) {
 			t.Errorf("case %v: got Delete Standard UTXOs, got: %v, want: %v.", i, gotUTXOs, c.want)
 		}

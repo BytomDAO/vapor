@@ -11,6 +11,8 @@ import (
 	"github.com/vapor/crypto/ed25519/chainkd"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol/bc"
+	"github.com/vapor/testutil"
+	"github.com/vapor/wallet"
 )
 
 func TestAccountIndexKey(t *testing.T) {
@@ -173,6 +175,46 @@ func TestDeleteContractUTXO(t *testing.T) {
 			if _, err := accountStore.GetUTXO(utxo.OutputID); err != nil {
 				t.Fatal(err)
 			}
+		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
+	}
+}
+
+func TestDeleteRecoveryStatus(t *testing.T) {
+	cases := []struct {
+		state *wallet.RecoveryState
+	}{
+		{
+			state: &wallet.RecoveryState{},
+		},
+	}
+
+	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		walletStore := NewWalletStore(testDB)
+		ws := walletStore.InitBatch()
+
+		// store recoverystatus
+		if err := ws.SetRecoveryStatus(c.state); err != nil {
+			t.Fatal(err)
+		}
+
+		// delete recoverystatus
+		ws.DeleteRecoveryStatus()
+
+		if err := ws.CommitBatch(); err != nil {
+			t.Fatal(err)
+		}
+
+		gotState, err := ws.GetRecoveryStatus()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !testutil.DeepEqual(gotState, c.state) {
+			t.Errorf("case %v: got Delete Recovery Status, got: %v, want: %v.", i, gotState, c.state)
 		}
 
 		testDB.Close()
