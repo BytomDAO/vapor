@@ -190,7 +190,7 @@ func (store *WalletStore) DeleteWalletTransactions() {
 	}
 }
 
-// DeleteWalletUTXOs delete all txs in wallet
+// DeleteWalletUTXOs delete all utxos in wallet
 func (store *WalletStore) DeleteWalletUTXOs() {
 	batch := store.db.NewBatch()
 	if store.batch != nil {

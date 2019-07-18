@@ -2,6 +2,7 @@ package database
 
 import (
 	"bytes"
+	"encoding/json"
 	"io/ioutil"
 	"os"
 	"reflect"
@@ -9,6 +10,7 @@ import (
 	"testing"
 
 	acc "github.com/vapor/account"
+	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/pseudohsm"
 	"github.com/vapor/blockchain/query"
 	"github.com/vapor/crypto/ed25519/chainkd"
@@ -519,6 +521,77 @@ func TestGetGlobalTransactionIndex(t *testing.T) {
 
 		if !testutil.DeepEqual(gotIndex, wantIndex) {
 			t.Errorf("case %v: got global transaction index, got: %v, want: %v.", i, gotIndex, wantIndex)
+		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
+	}
+}
+
+func TestGetAsset(t *testing.T) {
+	cases := []struct {
+		asset *asset.Asset
+	}{
+		{
+			asset: &asset.Asset{
+				AssetID:       bc.NewAssetID([32]byte{}),
+				DefinitionMap: map[string]interface{}{},
+			},
+		},
+		{
+			asset: &asset.Asset{
+				AssetID:       bc.NewAssetID([32]byte{0x01, 0x01, 0x51, 0x31, 0x71, 0x30, 0xd4, 0x3b, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+				DefinitionMap: map[string]interface{}{},
+			},
+		},
+		{
+			asset: &asset.Asset{
+				AssetID: bc.NewAssetID([32]byte{}),
+				DefinitionMap: map[string]interface{}{
+					"Name": "assetname",
+				},
+			},
+		},
+		{
+			asset: &asset.Asset{
+				AssetID: bc.NewAssetID([32]byte{0x01, 0x01, 0x51, 0x31, 0x71, 0x30, 0xd4, 0x3b, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+				DefinitionMap: map[string]interface{}{
+					"Name": "assetname",
+				},
+			},
+		},
+		{
+			asset: &asset.Asset{
+				AssetID: bc.NewAssetID([32]byte{0x02, 0x01, 0x51, 0x31, 0x71, 0x30, 0xd4, 0x3b, 0x3d, 0xe3, 0xdd, 0x80, 0x67, 0x29, 0x9a, 0x5e, 0x09, 0xf9, 0xfb, 0x2b, 0xad, 0x5f, 0x92, 0xc8, 0x69, 0xd1, 0x42, 0x39, 0x74, 0x9a, 0xd1, 0x1c}),
+				DefinitionMap: map[string]interface{}{
+					"Name":   "assetname",
+					"Amount": "1000000",
+				},
+			},
+		},
+	}
+
+	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		walletStore := NewWalletStore(testDB)
+		ws := walletStore.InitBatch()
+		definitionByte, err := json.Marshal(c.asset.DefinitionMap)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		ws.SetAssetDefinition(&c.asset.AssetID, definitionByte)
+		if err := ws.CommitBatch(); err != nil {
+			t.Fatal(err)
+		}
+
+		gotAsset, err := ws.GetAsset(&c.asset.AssetID)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !testutil.DeepEqual(gotAsset.DefinitionMap, c.asset.DefinitionMap) {
+			t.Errorf("case %v: got asset, got: %v, want: %v.", i, gotAsset.DefinitionMap, c.asset.DefinitionMap)
 		}
 
 		testDB.Close()
