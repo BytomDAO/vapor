@@ -26,11 +26,11 @@ const (
 var (
 	maxCachedErrTxs = 1000
 	maxMsgChSize    = 1000
-	maxNewTxNum     = 10000
-	maxOrphanNum    = 2000
+	maxNewTxNum     = 65536
+	maxOrphanNum    = 32768
 
-	orphanTTL                = 10 * time.Minute
-	orphanExpireScanInterval = 3 * time.Minute
+	orphanTTL                = 60 * time.Second
+	orphanExpireScanInterval = 30 * time.Second
 
 	// ErrTransactionNotExist is the pre-defined error message
 	ErrTransactionNotExist = errors.New("transaction are not existed in the mempool")
