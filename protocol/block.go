@@ -238,7 +238,7 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 		// the number of restored Tx should be very small or most of time ZERO
 		// Error returned from validation is ignored, tx could still be lost if validation fails.
 		// TODO: adjust tx timestamp so that it won't starve in pool.
-		if _, err := c.validateTx(tx); err != nil {
+		if _, err := c.validateTx(tx, blockHeader); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "tx_id": tx.Tx.ID.String(), "error": err}).Info("restore tx fail")
 		}
 	}
