@@ -31,6 +31,7 @@ type mainchainKeeper struct {
 	assetStore     *database.AssetStore
 	chainID        uint64
 	federationProg []byte
+	vaporNetParams consensus.Params
 }
 
 func NewMainchainKeeper(db *gorm.DB, assetStore *database.AssetStore, cfg *config.Config) *mainchainKeeper {
@@ -46,6 +47,7 @@ func NewMainchainKeeper(db *gorm.DB, assetStore *database.AssetStore, cfg *confi
 		assetStore:     assetStore,
 		federationProg: cfg.FederationProg,
 		chainID:        chain.ID,
+		vaporNetParams: consensus.NetParams[cfg.Network],
 	}
 }
 
@@ -68,8 +70,8 @@ func (m *mainchainKeeper) Run() {
 
 func (m *mainchainKeeper) createCrossChainReqs(db *gorm.DB, crossTransactionID uint64, tx *types.Tx, statusFail bool) error {
 	prog := tx.Inputs[0].ControlProgram()
-	fromAddress := common.ProgToAddress(prog, consensus.BytomMainNetParams(&consensus.ActiveNetParams))
-	toAddress := common.ProgToAddress(prog, &consensus.MainNetParams)
+	fromAddress := common.ProgToAddress(prog, consensus.BytomMainNetParams(&m.vaporNetParams))
+	toAddress := common.ProgToAddress(prog, &m.vaporNetParams)
 	for i, rawOutput := range tx.Outputs {
 		if !bytes.Equal(rawOutput.OutputCommitment.ControlProgram, m.federationProg) {
 			continue

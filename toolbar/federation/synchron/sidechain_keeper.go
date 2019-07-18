@@ -26,6 +26,7 @@ type sidechainKeeper struct {
 	node       *service.Node
 	assetStore *database.AssetStore
 	chainID    uint64
+	netParams  consensus.Params
 }
 
 func NewSidechainKeeper(db *gorm.DB, assetStore *database.AssetStore, cfg *config.Config) *sidechainKeeper {
@@ -40,6 +41,7 @@ func NewSidechainKeeper(db *gorm.DB, assetStore *database.AssetStore, cfg *confi
 		node:       service.NewNode(cfg.Sidechain.Upstream),
 		assetStore: assetStore,
 		chainID:    chain.ID,
+		netParams:  consensus.NetParams[cfg.Network],
 	}
 }
 
@@ -61,7 +63,7 @@ func (s *sidechainKeeper) Run() {
 }
 
 func (s *sidechainKeeper) createCrossChainReqs(db *gorm.DB, crossTransactionID uint64, tx *types.Tx, statusFail bool) error {
-	fromAddress := common.ProgToAddress(tx.Inputs[0].ControlProgram(), &consensus.MainNetParams)
+	fromAddress := common.ProgToAddress(tx.Inputs[0].ControlProgram(), &s.netParams)
 	for i, rawOutput := range tx.Outputs {
 		if rawOutput.OutputType() != types.CrossChainOutputType {
 			continue
@@ -84,7 +86,7 @@ func (s *sidechainKeeper) createCrossChainReqs(db *gorm.DB, crossTransactionID u
 			AssetAmount:        rawOutput.OutputCommitment().AssetAmount.Amount,
 			Script:             hex.EncodeToString(prog),
 			FromAddress:        fromAddress,
-			ToAddress:          common.ProgToAddress(prog, consensus.BytomMainNetParams(&consensus.ActiveNetParams)),
+			ToAddress:          common.ProgToAddress(prog, consensus.BytomMainNetParams(&s.netParams)),
 		}
 
 		if err := db.Create(req).Error; err != nil {
