@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"path"
 
 	"github.com/vapor/toolbar/common"
 )
@@ -27,6 +28,10 @@ func DefaultConfig(isVoterReward bool) *Config {
 		}
 	}
 
+}
+
+func ConfigFile() string {
+	return path.Join("./", "reward.json")
 }
 
 type Chain struct {

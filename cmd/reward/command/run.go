@@ -1,7 +1,6 @@
 package command
 
 import (
-	"path"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -38,7 +37,7 @@ func init() {
 
 func runReward(cmd *cobra.Command, args []string) error {
 	startTime := time.Now()
-	configFilePath := path.Join("./", "reward.json")
+	configFilePath := cfg.ConfigFile()
 	config := &cfg.Config{}
 	if err := cfg.LoadFederationFile(configFilePath, config); err != nil {
 		cmn.Exit(cmn.Fmt("Failed to load reward information:[%s]", err.Error()))
