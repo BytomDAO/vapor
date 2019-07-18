@@ -71,9 +71,7 @@ func (r *Reward) readVoteInfo() error {
 
 	}
 
-	//rows, err := r.db.Model(&orm.Utxo{}).Select("xpub, voter_address, vote_num, vote_height, veto_height").Where("vote_height BETWEEN ? and ? and xpub in (?)", minHeight, maxHeight, xpubs).Rows()
-	rows, err := r.db.Model(&orm.Utxo{}).Select("xpub, voter_address, vote_num, vote_height, veto_height").Where("veto_height >= ? and vote_height <= ? and xpub in (?)", minHeight, maxHeight, xpubs).Rows()
-
+	rows, err := r.db.Model(&orm.Utxo{}).Select("xpub, voter_address, vote_num, vote_height, veto_height").Where("(veto_height >= ? or veto_height = 0) and vote_height <= ? and xpub in (?)", minHeight, maxHeight, xpubs).Rows()
 	if err != nil {
 		return err
 	}
@@ -92,11 +90,12 @@ func (r *Reward) readVoteInfo() error {
 			return err
 		}
 
-		if vetoHeight < 1200*r.period {
+		if vetoHeight > minHeight && vetoHeight < 1200*r.period {
 			voteBlockNum = vetoHeight - voteHeight
 		} else {
 			voteBlockNum = 1200*r.period - voteHeight
 		}
+
 		r.VoteInfoCh <- instance.VoteInfo{
 			XPub:         xpub,
 			Address:      address,

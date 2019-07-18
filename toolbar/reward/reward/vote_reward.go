@@ -166,9 +166,10 @@ func (v *Vote) countReward() {
 				mul := vote.Mul(vote, coinBaseReward.voteTotalReward)
 				amount := big.NewInt(0)
 				amount.Div(mul, votes.VoteTotal)
-
-				reward.rewards[address] = amount
-				v.voterRewards[xpub] = reward
+				if amount.Uint64() > 0 {
+					reward.rewards[address] = amount
+					v.voterRewards[xpub] = reward
+				}
 			}
 		}
 
@@ -202,8 +203,8 @@ func (v *Vote) sendReward(coinbaseReward uint64, node config.VoteRewardConfig, v
 
 	index := 0
 	for address, amount := range voterReward.rewards {
-		outputAction += fmt.Sprintf(outputActionFmt, amount.Uint64(), address)
 		index++
+		outputAction += fmt.Sprintf(outputActionFmt, amount.Uint64(), address)
 		if index != len(voterReward.rewards) {
 			outputAction += ","
 		}
