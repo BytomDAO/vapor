@@ -251,16 +251,6 @@ func (c *ConsensusResult) DetachBlock(block *types.Block) error {
 
 // DetachCoinbaseReward detach coinbase reward
 func (c *ConsensusResult) DetachCoinbaseReward(block *types.Block) error {
-	if block.Height%consensus.ActiveNetParams.RoundVoteBlockNums == 0 {
-		for i, output := range block.Transactions[0].Outputs {
-			if i == 0 {
-				continue
-			}
-			program := output.ControlProgram()
-			c.CoinbaseReward[hex.EncodeToString(program)] = output.AssetAmount().Amount
-		}
-	}
-
 	reward, err := CalCoinbaseReward(block)
 	if err != nil {
 		return err
@@ -274,6 +264,17 @@ func (c *ConsensusResult) DetachCoinbaseReward(block *types.Block) error {
 
 	if c.CoinbaseReward[program] == 0 {
 		delete(c.CoinbaseReward, program)
+	}
+
+	if block.Height%consensus.ActiveNetParams.RoundVoteBlockNums == 1 {
+		c.CoinbaseReward = map[string]uint64{}
+		for i, output := range block.Transactions[0].Outputs {
+			if i == 0 {
+				continue
+			}
+			program := output.ControlProgram()
+			c.CoinbaseReward[hex.EncodeToString(program)] = output.AssetAmount().Amount
+		}
 	}
 	return nil
 }
