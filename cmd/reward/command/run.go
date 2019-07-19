@@ -18,24 +18,29 @@ const logModule = "reward"
 
 var coinBasePeriod uint64
 
-var runRewardCmd = &cobra.Command{
-	Use:   "reward",
-	Short: "Run the reward",
-	RunE:  runReward,
-}
+var (
+	RootCmd = &cobra.Command{
+		Use:   "reward",
+		Short: "distribution of reward.",
+	}
 
-var RootCmd = &cobra.Command{
-	Use:   "reward",
-	Short: "distribution of reward.",
-}
+	runRewardCmd = &cobra.Command{
+		Use:   "reward",
+		Short: "Run the reward",
+		RunE:  runReward,
+	}
+)
 
 func init() {
-
 	runRewardCmd.Flags().Uint64Var(&coinBasePeriod, "coin_base_period", 1, "Consensus cycle")
+
 	RootCmd.AddCommand(runRewardCmd)
 }
 
 func runReward(cmd *cobra.Command, args []string) error {
+	if coinBasePeriod <= 1 {
+		cmn.Exit("Counting the vote reward from the second round of consensus")
+	}
 	startTime := time.Now()
 	configFilePath := cfg.ConfigFile()
 	config := &cfg.Config{}
@@ -55,7 +60,7 @@ func runReward(cmd *cobra.Command, args []string) error {
 	go sync.Run()
 
 	quit := make(chan struct{})
-	r := reward.NewReward(db, config, coinBasePeriod, quit)
+	r := reward.NewReward(db, config, coinBasePeriod-1, quit)
 	r.Start()
 
 	select {

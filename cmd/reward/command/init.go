@@ -27,12 +27,12 @@ func initFiles(cmd *cobra.Command, args []string) {
 	//generate the reward config file
 	config := cfg.DefaultConfig(isVoteReward)
 	configFilePath := cfg.ConfigFile()
-	if _, err := os.Stat(configFilePath); os.IsNotExist(err) {
-		if err := cfg.ExportFederationFile(configFilePath, config); err != nil {
-			log.WithFields(log.Fields{"module": logModule, "config": configFilePath, "error": err}).Fatal("fail on export reward file")
-		}
-	} else {
+	if _, err := os.Stat(configFilePath); !os.IsNotExist(err) {
 		log.WithFields(log.Fields{"module": logModule, "config": configFilePath}).Fatal("Already exists config file.")
+	}
+
+	if err := cfg.ExportFederationFile(configFilePath, config); err != nil {
+		log.WithFields(log.Fields{"module": logModule, "config": configFilePath, "error": err}).Fatal("fail on export reward file")
 	}
 
 	log.WithFields(log.Fields{"module": logModule, "config": configFilePath}).Info("Initialized reward")

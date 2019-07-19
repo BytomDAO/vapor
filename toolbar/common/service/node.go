@@ -5,7 +5,7 @@ import (
 
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
-	util "github.com/vapor/toolbar/common"
+	"github.com/vapor/toolbar/common"
 )
 
 // Node can invoke the api which provide by the full node server
@@ -13,7 +13,7 @@ type Node struct {
 	hostPort string
 }
 
-// Node create a api client with target server
+// NewNode create a api client with target server
 func NewNode(hostPort string) *Node {
 	return &Node{hostPort: hostPort}
 }
@@ -66,7 +66,7 @@ type response struct {
 
 func (n *Node) request(path string, payload []byte, respData interface{}) error {
 	resp := &response{}
-	if err := util.Post(n.hostPort+path, payload, resp); err != nil {
+	if err := common.Post(n.hostPort+path, payload, resp); err != nil {
 		return err
 	}
 
