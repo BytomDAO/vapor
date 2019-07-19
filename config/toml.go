@@ -30,7 +30,7 @@ moniker = ""
 var mainNetConfigTmpl = `chain_id = "mainnet"
 [p2p]
 laddr = "tcp://0.0.0.0:56656"
-seeds = ""
+seeds = "47.103.79.68:56656,47.103.13.86:56656,47.102.193.119:56656,47.103.17.22:56656"
 `
 
 var testNetConfigTmpl = `chain_id = "testnet"
