@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/vapor/consensus"
+	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
 	"github.com/vapor/testutil"
@@ -19,10 +20,9 @@ func TestCalCoinbaseTxReward(t *testing.T) {
 	reductionInterval := uint64(840000)
 
 	cases := []struct {
-		desc            string
-		block           *types.Block
-		consensusResult *state.ConsensusResult
-		wantReward      state.CoinbaseReward
+		desc       string
+		block      *types.Block
+		wantReward state.CoinbaseReward
 	}{
 		{
 			desc: "the block height is reductionInterval - 1",
@@ -30,10 +30,14 @@ func TestCalCoinbaseTxReward(t *testing.T) {
 				BlockHeader: types.BlockHeader{
 					Height: reductionInterval - 1,
 				},
-				Transactions: []*types.Tx{nil},
-			},
-			consensusResult: &state.ConsensusResult{
-				CoinbaseReward: map[string]uint64{},
+				Transactions: []*types.Tx{
+					&types.Tx{
+						TxData: types.TxData{
+							Inputs:  []*types.TxInput{types.NewCoinbaseInput([]byte{0x01})},
+							Outputs: []*types.TxOutput{types.NewIntraChainOutput(bc.AssetID{}, 0, []byte{0x51})},
+						},
+					},
+				},
 			},
 			wantReward: state.CoinbaseReward{
 				Amount:         24,
@@ -46,10 +50,14 @@ func TestCalCoinbaseTxReward(t *testing.T) {
 				BlockHeader: types.BlockHeader{
 					Height: reductionInterval,
 				},
-				Transactions: []*types.Tx{nil},
-			},
-			consensusResult: &state.ConsensusResult{
-				CoinbaseReward: map[string]uint64{},
+				Transactions: []*types.Tx{
+					&types.Tx{
+						TxData: types.TxData{
+							Inputs:  []*types.TxInput{types.NewCoinbaseInput([]byte{0x01})},
+							Outputs: []*types.TxOutput{types.NewIntraChainOutput(bc.AssetID{}, 0, []byte{0x51})},
+						},
+					},
+				},
 			},
 			wantReward: state.CoinbaseReward{
 				Amount:         24,
@@ -62,10 +70,14 @@ func TestCalCoinbaseTxReward(t *testing.T) {
 				BlockHeader: types.BlockHeader{
 					Height: reductionInterval + 1,
 				},
-				Transactions: []*types.Tx{nil},
-			},
-			consensusResult: &state.ConsensusResult{
-				CoinbaseReward: map[string]uint64{},
+				Transactions: []*types.Tx{
+					&types.Tx{
+						TxData: types.TxData{
+							Inputs:  []*types.TxInput{types.NewCoinbaseInput([]byte{0x01})},
+							Outputs: []*types.TxOutput{types.NewIntraChainOutput(bc.AssetID{}, 0, []byte{0x51})},
+						},
+					},
+				},
 			},
 			wantReward: state.CoinbaseReward{
 				Amount:         12,
@@ -78,10 +90,14 @@ func TestCalCoinbaseTxReward(t *testing.T) {
 				BlockHeader: types.BlockHeader{
 					Height: reductionInterval * 2,
 				},
-				Transactions: []*types.Tx{nil},
-			},
-			consensusResult: &state.ConsensusResult{
-				CoinbaseReward: map[string]uint64{},
+				Transactions: []*types.Tx{
+					&types.Tx{
+						TxData: types.TxData{
+							Inputs:  []*types.TxInput{types.NewCoinbaseInput([]byte{0x01})},
+							Outputs: []*types.TxOutput{types.NewIntraChainOutput(bc.AssetID{}, 0, []byte{0x51})},
+						},
+					},
+				},
 			},
 			wantReward: state.CoinbaseReward{
 				Amount:         12,
@@ -94,10 +110,14 @@ func TestCalCoinbaseTxReward(t *testing.T) {
 				BlockHeader: types.BlockHeader{
 					Height: 2*reductionInterval + 1,
 				},
-				Transactions: []*types.Tx{nil},
-			},
-			consensusResult: &state.ConsensusResult{
-				CoinbaseReward: map[string]uint64{},
+				Transactions: []*types.Tx{
+					&types.Tx{
+						TxData: types.TxData{
+							Inputs:  []*types.TxInput{types.NewCoinbaseInput([]byte{0x01})},
+							Outputs: []*types.TxOutput{types.NewIntraChainOutput(bc.AssetID{}, 0, []byte{0x51})},
+						},
+					},
+				},
 			},
 			wantReward: state.CoinbaseReward{
 				Amount:         6,
@@ -106,13 +126,7 @@ func TestCalCoinbaseTxReward(t *testing.T) {
 		},
 	}
 
-	var err error
 	for i, c := range cases {
-		c.block.Transactions[0], err = createCoinbaseTx(nil, c.block.Height)
-		if err != nil {
-			t.Fatal(err)
-		}
-
 		gotReward, err := state.CalCoinbaseReward(c.block)
 		if err != nil {
 			t.Fatal(err)
@@ -173,18 +187,12 @@ func TestCountCoinbaseTxRewards(t *testing.T) {
 					"52": 20,
 				},
 			},
-			wantRewards: []state.CoinbaseReward{
-				state.CoinbaseReward{
-					Amount:         34,
-					ControlProgram: []byte{0x51},
-				},
-				state.CoinbaseReward{
-					Amount:         20,
-					ControlProgram: []byte{0x52},
-				},
-			},
+			wantRewards: []state.CoinbaseReward{},
 			wantConsensusResult: &state.ConsensusResult{
-				CoinbaseReward: map[string]uint64{},
+				CoinbaseReward: map[string]uint64{
+					"51": 34,
+					"52": 20,
+				},
 			},
 		},
 		{
@@ -192,6 +200,31 @@ func TestCountCoinbaseTxRewards(t *testing.T) {
 			block: &types.Block{
 				BlockHeader: types.BlockHeader{
 					Height: consensus.ActiveNetParams.RoundVoteBlockNums + 1,
+				},
+				Transactions: []*types.Tx{nil},
+			},
+			consensusResult: &state.ConsensusResult{
+				CoinbaseReward: map[string]uint64{
+					"51": 10,
+				},
+			},
+			wantRewards: []state.CoinbaseReward{
+				state.CoinbaseReward{
+					Amount:         10,
+					ControlProgram: []byte{0x51},
+				},
+			},
+			wantConsensusResult: &state.ConsensusResult{
+				CoinbaseReward: map[string]uint64{
+					"51": 24,
+				},
+			},
+		},
+		{
+			desc: "the block height is RoundVoteBlockNums * 2",
+			block: &types.Block{
+				BlockHeader: types.BlockHeader{
+					Height: consensus.ActiveNetParams.RoundVoteBlockNums * 2,
 				},
 				Transactions: []*types.Tx{nil},
 			},
@@ -208,42 +241,6 @@ func TestCountCoinbaseTxRewards(t *testing.T) {
 			},
 		},
 		{
-			desc: "the block height is RoundVoteBlockNums * 2",
-			block: &types.Block{
-				BlockHeader: types.BlockHeader{
-					Height: consensus.ActiveNetParams.RoundVoteBlockNums * 2,
-				},
-				Transactions: []*types.Tx{nil},
-			},
-			consensusResult: &state.ConsensusResult{
-				CoinbaseReward: map[string]uint64{
-					"50": 20,
-					"51": 10,
-					"52": 20,
-					"53": 30,
-				},
-			},
-			wantRewards: []state.CoinbaseReward{
-				state.CoinbaseReward{
-					Amount:         34,
-					ControlProgram: []byte{0x51},
-				},
-				state.CoinbaseReward{
-					Amount:         30,
-					ControlProgram: []byte{0x53},
-				},
-				state.CoinbaseReward{
-					Amount:         20,
-					ControlProgram: []byte{0x52},
-				},
-				state.CoinbaseReward{
-					Amount:         20,
-					ControlProgram: []byte{0x50},
-				},
-			},
-			wantConsensusResult: &state.ConsensusResult{},
-		},
-		{
 			desc: "the block height is 2*RoundVoteBlockNums + 1",
 			block: &types.Block{
 				BlockHeader: types.BlockHeader{
@@ -252,9 +249,21 @@ func TestCountCoinbaseTxRewards(t *testing.T) {
 				Transactions: []*types.Tx{nil},
 			},
 			consensusResult: &state.ConsensusResult{
-				CoinbaseReward: map[string]uint64{},
+				CoinbaseReward: map[string]uint64{
+					"51": 10,
+					"52": 20,
+				},
 			},
-			wantRewards: []state.CoinbaseReward{},
+			wantRewards: []state.CoinbaseReward{
+				state.CoinbaseReward{
+					Amount:         20,
+					ControlProgram: []byte{0x52},
+				},
+				state.CoinbaseReward{
+					Amount:         10,
+					ControlProgram: []byte{0x51},
+				},
+			},
 			wantConsensusResult: &state.ConsensusResult{
 				CoinbaseReward: map[string]uint64{
 					"51": 24,
@@ -263,19 +272,24 @@ func TestCountCoinbaseTxRewards(t *testing.T) {
 		},
 	}
 
-	var err error
 	for i, c := range cases {
-		c.block.Transactions[0], err = createCoinbaseTx(nil, c.block.Height)
-		if err != nil {
-			t.Fatal(err)
-		}
-		rewards, err := c.consensusResult.AttachCoinbaseReward(c.block)
+		rewards, err := c.consensusResult.GetCoinbaseRewards(c.block.Height - 1)
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		if !testutil.DeepEqual(rewards, c.wantRewards) {
 			t.Fatalf("test case %d: %s, the coinbase reward got: %v, want: %v", i, c.desc, rewards, c.wantRewards)
+		}
+
+		// create coinbase transaction
+		c.block.Transactions[0], err = createCoinbaseTx(nil, c.block.Height, rewards)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := c.consensusResult.AttachCoinbaseReward(c.block); err != nil {
+			t.Fatal(err)
 		}
 
 		if !testutil.DeepEqual(c.consensusResult, c.wantConsensusResult) {

@@ -265,7 +265,7 @@ func (c *Chain) saveBlock(block *types.Block) error {
 		return err
 	}
 
-	rewards, err := consensusResult.AttachCoinbaseReward(block)
+	rewards, err := consensusResult.GetCoinbaseRewards(parent.Height)
 	if err != nil {
 		return err
 	}

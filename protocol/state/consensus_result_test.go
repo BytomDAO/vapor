@@ -192,9 +192,7 @@ func TestConsensusApplyBlock(t *testing.T) {
 						TxData: types.TxData{
 							Inputs: []*types.TxInput{types.NewCoinbaseInput([]byte{0x01})},
 							Outputs: []*types.TxOutput{
-								types.NewIntraChainOutput(bc.AssetID{}, consensus.BlockSubsidy(consensus.MainNetParams.RoundVoteBlockNums)+10000000, []byte{0x51}),
-								types.NewIntraChainOutput(bc.AssetID{}, 20000000, []byte{0x53}),
-								types.NewIntraChainOutput(bc.AssetID{}, 30000000, []byte{0x52}),
+								types.NewIntraChainOutput(bc.AssetID{}, 0, []byte{0x51}),
 							},
 						},
 					},
@@ -227,9 +225,13 @@ func TestConsensusApplyBlock(t *testing.T) {
 				NumOfVote: map[string]uint64{
 					"a8018a1ba4d85fc7118bbd065612da78b2c503e61a1a093d9c659567c5d3a591b3752569fbcafa951b2304b8f576f3f220e03b957ca819840e7c29e4b7fb2c4d": 500000000,
 				},
-				CoinbaseReward: map[string]uint64{},
-				BlockHash:      testutil.MustDecodeHash("1b449ba1f9b0ae41e31238b32943b95e9ab292d0b4a93d690ef9bc689c31d362"),
-				BlockHeight:    consensus.MainNetParams.RoundVoteBlockNums,
+				CoinbaseReward: map[string]uint64{
+					"51": consensus.BlockSubsidy(consensus.MainNetParams.RoundVoteBlockNums) + 10000000,
+					"52": 20000000,
+					"53": 30000000,
+				},
+				BlockHash:   testutil.MustDecodeHash("1b449ba1f9b0ae41e31238b32943b95e9ab292d0b4a93d690ef9bc689c31d362"),
+				BlockHeight: consensus.MainNetParams.RoundVoteBlockNums,
 			},
 		},
 		{
@@ -242,17 +244,26 @@ func TestConsensusApplyBlock(t *testing.T) {
 				Transactions: []*types.Tx{
 					&types.Tx{
 						TxData: types.TxData{
-							Inputs:  []*types.TxInput{types.NewCoinbaseInput([]byte{0x01})},
-							Outputs: []*types.TxOutput{types.NewIntraChainOutput(bc.AssetID{}, 0, []byte{0x51})},
+							Inputs: []*types.TxInput{types.NewCoinbaseInput([]byte{0x01})},
+							Outputs: []*types.TxOutput{
+								types.NewIntraChainOutput(bc.AssetID{}, 0, []byte{0x51}),
+								types.NewIntraChainOutput(bc.AssetID{}, consensus.BlockSubsidy(consensus.MainNetParams.RoundVoteBlockNums)+10000000, []byte{0x51}),
+								types.NewIntraChainOutput(bc.AssetID{}, 20000000, []byte{0x53}),
+								types.NewIntraChainOutput(bc.AssetID{}, 30000000, []byte{0x52}),
+							},
 						},
 					},
 				},
 			},
 			consensusResult: &ConsensusResult{
-				NumOfVote:      map[string]uint64{},
-				CoinbaseReward: map[string]uint64{},
-				BlockHash:      bc.Hash{V0: 1},
-				BlockHeight:    consensus.MainNetParams.RoundVoteBlockNums,
+				NumOfVote: map[string]uint64{},
+				CoinbaseReward: map[string]uint64{
+					"51": consensus.BlockSubsidy(consensus.MainNetParams.RoundVoteBlockNums) + 10000000,
+					"52": 20000000,
+					"53": 30000000,
+				},
+				BlockHash:   bc.Hash{V0: 1},
+				BlockHeight: consensus.MainNetParams.RoundVoteBlockNums,
 			},
 			wantResult: &ConsensusResult{
 				Seq:       2,
@@ -262,6 +273,42 @@ func TestConsensusApplyBlock(t *testing.T) {
 				},
 				BlockHash:   testutil.MustDecodeHash("52681d209ab811359f92daaf46a771ecd0f28505ae5e0ac2f0feb80f76fdda59"),
 				BlockHeight: consensus.MainNetParams.RoundVoteBlockNums + 1,
+			},
+		},
+		{
+			desc: "normal test with block height is equal to RoundVoteBlockNums + 2",
+			block: &types.Block{
+				BlockHeader: types.BlockHeader{
+					Height:            consensus.MainNetParams.RoundVoteBlockNums + 2,
+					PreviousBlockHash: bc.Hash{V0: 1},
+				},
+				Transactions: []*types.Tx{
+					&types.Tx{
+						TxData: types.TxData{
+							Inputs: []*types.TxInput{types.NewCoinbaseInput([]byte{0x01})},
+							Outputs: []*types.TxOutput{
+								types.NewIntraChainOutput(bc.AssetID{}, 0, []byte{0x51}),
+							},
+						},
+					},
+				},
+			},
+			consensusResult: &ConsensusResult{
+				NumOfVote: map[string]uint64{},
+				CoinbaseReward: map[string]uint64{
+					"51": consensus.BlockSubsidy(consensus.MainNetParams.RoundVoteBlockNums + 1),
+				},
+				BlockHash:   bc.Hash{V0: 1},
+				BlockHeight: consensus.MainNetParams.RoundVoteBlockNums + 1,
+			},
+			wantResult: &ConsensusResult{
+				Seq:       2,
+				NumOfVote: map[string]uint64{},
+				CoinbaseReward: map[string]uint64{
+					"51": consensus.BlockSubsidy(consensus.MainNetParams.RoundVoteBlockNums+1) + consensus.BlockSubsidy(consensus.MainNetParams.RoundVoteBlockNums+2),
+				},
+				BlockHash:   testutil.MustDecodeHash("3de69f8af48b77e81232c71d30b25dd4ac482be45402a0fd417a4a040c135b76"),
+				BlockHeight: consensus.MainNetParams.RoundVoteBlockNums + 2,
 			},
 		},
 		{
@@ -419,7 +466,7 @@ func TestConsensusDetachBlock(t *testing.T) {
 					"a8018a1ba4d85fc7118bbd065612da78b2c503e61a1a093d9c659567c5d3a591b3752569fbcafa951b2304b8f576f3f220e03b957ca819840e7c29e4b7fb2c4d": 600000000,
 				},
 				CoinbaseReward: map[string]uint64{
-					"51": consensus.BlockSubsidy(1),
+					"51": consensus.BlockSubsidy(consensus.MainNetParams.RoundVoteBlockNums - 1),
 				},
 				BlockHash:   testutil.MustDecodeHash("4ebd9e7c00d3e0370931689c6eb9e2131c6700fe66e6b9718028dd75d7a4e329"),
 				BlockHeight: consensus.MainNetParams.RoundVoteBlockNums - 1,
@@ -445,9 +492,6 @@ func TestConsensusDetachBlock(t *testing.T) {
 							Inputs: []*types.TxInput{types.NewCoinbaseInput([]byte{0x01})},
 							Outputs: []*types.TxOutput{
 								types.NewIntraChainOutput(bc.AssetID{}, 0, []byte{0x51}),
-								types.NewIntraChainOutput(bc.AssetID{}, consensus.BlockSubsidy(consensus.MainNetParams.RoundVoteBlockNums)+10000000, []byte{0x51}),
-								types.NewIntraChainOutput(bc.AssetID{}, 300000000, []byte{0x53}),
-								types.NewIntraChainOutput(bc.AssetID{}, 200000000, []byte{0x52}),
 							},
 						},
 					},
@@ -457,9 +501,11 @@ func TestConsensusDetachBlock(t *testing.T) {
 				NumOfVote: map[string]uint64{
 					"a8018a1ba4d85fc7118bbd065612da78b2c503e61a1a093d9c659567c5d3a591b3752569fbcafa951b2304b8f576f3f220e03b957ca819840e7c29e4b7fb2c4d": 500000000,
 				},
-				CoinbaseReward: map[string]uint64{},
-				BlockHash:      testutil.MustDecodeHash("1b449ba1f9b0ae41e31238b32943b95e9ab292d0b4a93d690ef9bc689c31d362"),
-				BlockHeight:    consensus.MainNetParams.RoundVoteBlockNums,
+				CoinbaseReward: map[string]uint64{
+					"51": consensus.BlockSubsidy(consensus.MainNetParams.RoundVoteBlockNums) + 100000000,
+				},
+				BlockHash:   testutil.MustDecodeHash("1b449ba1f9b0ae41e31238b32943b95e9ab292d0b4a93d690ef9bc689c31d362"),
+				BlockHeight: consensus.MainNetParams.RoundVoteBlockNums,
 			},
 			wantResult: &ConsensusResult{
 				Seq: 1,
@@ -467,9 +513,7 @@ func TestConsensusDetachBlock(t *testing.T) {
 					"a8018a1ba4d85fc7118bbd065612da78b2c503e61a1a093d9c659567c5d3a591b3752569fbcafa951b2304b8f576f3f220e03b957ca819840e7c29e4b7fb2c4d": 500000000,
 				},
 				CoinbaseReward: map[string]uint64{
-					"51": 10000000,
-					"52": 200000000,
-					"53": 300000000,
+					"51": 100000000,
 				},
 				BlockHash:   bc.Hash{V0: 1},
 				BlockHeight: consensus.MainNetParams.RoundVoteBlockNums - 1,
@@ -485,8 +529,12 @@ func TestConsensusDetachBlock(t *testing.T) {
 				Transactions: []*types.Tx{
 					&types.Tx{
 						TxData: types.TxData{
-							Inputs:  []*types.TxInput{types.NewCoinbaseInput([]byte{0x01})},
-							Outputs: []*types.TxOutput{types.NewIntraChainOutput(bc.AssetID{}, 0, []byte{0x51})},
+							Inputs: []*types.TxInput{types.NewCoinbaseInput([]byte{0x01})},
+							Outputs: []*types.TxOutput{
+								types.NewIntraChainOutput(bc.AssetID{}, 0, []byte{0x51}),
+								types.NewIntraChainOutput(bc.AssetID{}, consensus.BlockSubsidy(consensus.MainNetParams.RoundVoteBlockNums)+10000000, []byte{0x51}),
+								types.NewIntraChainOutput(bc.AssetID{}, 20000000, []byte{0x52}),
+							},
 						},
 					},
 				},
@@ -494,17 +542,56 @@ func TestConsensusDetachBlock(t *testing.T) {
 			consensusResult: &ConsensusResult{
 				NumOfVote: map[string]uint64{},
 				CoinbaseReward: map[string]uint64{
-					"51": consensus.BlockSubsidy(consensus.MainNetParams.RoundVoteBlockNums),
+					"51": consensus.BlockSubsidy(consensus.MainNetParams.RoundVoteBlockNums + 1),
 				},
 				BlockHash:   testutil.MustDecodeHash("52681d209ab811359f92daaf46a771ecd0f28505ae5e0ac2f0feb80f76fdda59"),
 				BlockHeight: consensus.MainNetParams.RoundVoteBlockNums,
 			},
 			wantResult: &ConsensusResult{
-				Seq:            1,
-				NumOfVote:      map[string]uint64{},
-				CoinbaseReward: map[string]uint64{},
-				BlockHash:      bc.Hash{V0: 1},
-				BlockHeight:    consensus.MainNetParams.RoundVoteBlockNums,
+				Seq:       1,
+				NumOfVote: map[string]uint64{},
+				CoinbaseReward: map[string]uint64{
+					"51": consensus.BlockSubsidy(consensus.MainNetParams.RoundVoteBlockNums) + 10000000,
+					"52": 20000000,
+				},
+				BlockHash:   bc.Hash{V0: 1},
+				BlockHeight: consensus.MainNetParams.RoundVoteBlockNums,
+			},
+		},
+		{
+			desc: "normal test with block height is equal to RoundVoteBlockNums + 2",
+			block: &types.Block{
+				BlockHeader: types.BlockHeader{
+					Height:            consensus.MainNetParams.RoundVoteBlockNums + 2,
+					PreviousBlockHash: bc.Hash{V0: 1},
+				},
+				Transactions: []*types.Tx{
+					&types.Tx{
+						TxData: types.TxData{
+							Inputs: []*types.TxInput{types.NewCoinbaseInput([]byte{0x01})},
+							Outputs: []*types.TxOutput{
+								types.NewIntraChainOutput(bc.AssetID{}, 0, []byte{0x51}),
+							},
+						},
+					},
+				},
+			},
+			consensusResult: &ConsensusResult{
+				NumOfVote: map[string]uint64{},
+				CoinbaseReward: map[string]uint64{
+					"51": consensus.BlockSubsidy(consensus.MainNetParams.RoundVoteBlockNums+1) + 1000000,
+				},
+				BlockHash:   testutil.MustDecodeHash("3de69f8af48b77e81232c71d30b25dd4ac482be45402a0fd417a4a040c135b76"),
+				BlockHeight: consensus.MainNetParams.RoundVoteBlockNums + 1,
+			},
+			wantResult: &ConsensusResult{
+				Seq:       2,
+				NumOfVote: map[string]uint64{},
+				CoinbaseReward: map[string]uint64{
+					"51": 1000000,
+				},
+				BlockHash:   bc.Hash{V0: 1},
+				BlockHeight: consensus.MainNetParams.RoundVoteBlockNums + 1,
 			},
 		},
 		{
