@@ -28,11 +28,12 @@ func (c *Chain) ValidateTx(tx *types.Tx) (bool, error) {
 	}
 
 	c.markTransactions(tx)
-	return c.validateTx(tx)
+	bh := c.BestBlockHeader()
+	return c.validateTx(tx, bh)
 }
 
 // validateTx validates the given transaction without checking duplication.
-func (c *Chain) validateTx(tx *types.Tx) (bool, error) {
+func (c *Chain) validateTx(tx *types.Tx, bh *types.BlockHeader) (bool, error) {
 	if ok := c.txPool.HaveTransaction(&tx.ID); ok {
 		return false, c.txPool.GetErrCache(&tx.ID)
 	}
@@ -42,7 +43,6 @@ func (c *Chain) validateTx(tx *types.Tx) (bool, error) {
 		return false, ErrDustTx
 	}
 
-	bh := c.BestBlockHeader()
 	gasStatus, err := validation.ValidateTx(tx.Tx, types.MapBlock(&types.Block{BlockHeader: *bh}))
 	if !gasStatus.GasValid {
 		c.txPool.AddErrCache(&tx.ID, err)
