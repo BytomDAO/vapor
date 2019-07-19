@@ -35,7 +35,7 @@ var (
 )
 
 func init() {
-	runRewardCmd.Flags().Uint64Var(&rewardStartHeight, "reward_start_height", 1, "The starting height of the distributive income reward interval")
+	runRewardCmd.Flags().Uint64Var(&rewardStartHeight, "reward_start_height", 1200, "The starting height of the distributive income reward interval")
 	runRewardCmd.Flags().Uint64Var(&rewardEndHeight, "reward_end_height", 2400, "The end height of the distributive income reward interval")
 
 	RootCmd.AddCommand(runRewardCmd)

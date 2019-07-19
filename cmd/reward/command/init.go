@@ -29,6 +29,7 @@ func initFiles(cmd *cobra.Command, args []string) {
 	configFilePath := cfg.ConfigFile()
 	if _, err := os.Stat(configFilePath); !os.IsNotExist(err) {
 		log.WithFields(log.Fields{"module": logModule, "config": configFilePath}).Fatal("Already exists config file.")
+		return
 	}
 
 	if err := cfg.ExportFederationFile(configFilePath, config); err != nil {

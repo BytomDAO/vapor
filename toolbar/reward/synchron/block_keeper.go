@@ -24,7 +24,6 @@ type ChainKeeper struct {
 }
 
 func NewChainKeeper(db *gorm.DB, cfg *config.Config, syncHeight uint64) *ChainKeeper {
-
 	keeper := &ChainKeeper{
 		cfg:        &cfg.Chain,
 		db:         db,
@@ -55,7 +54,6 @@ func NewChainKeeper(db *gorm.DB, cfg *config.Config, syncHeight uint64) *ChainKe
 }
 
 func (c *ChainKeeper) Start() {
-
 	for {
 		blockState := &orm.BlockState{}
 		if err := c.db.First(blockState).Error; err != nil {
