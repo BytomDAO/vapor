@@ -16,7 +16,10 @@ import (
 
 const logModule = "reward"
 
-var coinBasePeriod uint64
+var (
+	rewardStartHeight uint64
+	rewardEndHeight   uint64
+)
 
 var (
 	RootCmd = &cobra.Command{
@@ -32,15 +35,13 @@ var (
 )
 
 func init() {
-	runRewardCmd.Flags().Uint64Var(&coinBasePeriod, "coin_base_period", 1, "Consensus cycle")
+	runRewardCmd.Flags().Uint64Var(&rewardStartHeight, "reward_start_height", 1, "The starting height of the distributive income reward interval")
+	runRewardCmd.Flags().Uint64Var(&rewardEndHeight, "reward_end_height", 2400, "The end height of the distributive income reward interval")
 
 	RootCmd.AddCommand(runRewardCmd)
 }
 
 func runReward(cmd *cobra.Command, args []string) error {
-	if coinBasePeriod <= 1 {
-		cmn.Exit("Counting the vote reward from the second round of consensus")
-	}
 	startTime := time.Now()
 	configFilePath := cfg.ConfigFile()
 	config := &cfg.Config{}
@@ -48,24 +49,21 @@ func runReward(cmd *cobra.Command, args []string) error {
 		cmn.Exit(cmn.Fmt("Failed to load reward information:[%s]", err.Error()))
 	}
 
+	initActiveNetParams(config)
+	if rewardStartHeight >= rewardEndHeight || rewardStartHeight%consensus.ActiveNetParams.RoundVoteBlockNums != 0 || rewardEndHeight%consensus.ActiveNetParams.RoundVoteBlockNums != 0 {
+		cmn.Exit("Please check the height range, which must be multiple of the number of block rounds")
+	}
+
 	db, err := common.NewMySQLDB(config.MySQLConfig)
 	if err != nil {
 		log.WithField("err", err).Panic("initialize mysql db error")
 	}
 
-	initActiveNetParams(config)
+	sync := synchron.NewChainKeeper(db, config, rewardEndHeight)
+	sync.Start()
 
-	sync := synchron.NewChainKeeper(db, config)
-
-	go sync.Run()
-
-	quit := make(chan struct{})
-	r := reward.NewReward(db, config, coinBasePeriod-1, quit)
+	r := reward.NewReward(db, config, rewardStartHeight, rewardEndHeight)
 	r.Start()
-
-	select {
-	case <-quit:
-	}
 
 	log.WithFields(log.Fields{
 		"module":   logModule,

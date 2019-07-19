@@ -2,7 +2,6 @@ package synchron
 
 import (
 	"encoding/hex"
-	"time"
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
@@ -18,17 +17,19 @@ import (
 )
 
 type ChainKeeper struct {
-	cfg  *config.Chain
-	db   *gorm.DB
-	node *service.Node
+	cfg        *config.Chain
+	db         *gorm.DB
+	node       *service.Node
+	syncHeight uint64
 }
 
-func NewChainKeeper(db *gorm.DB, cfg *config.Config) *ChainKeeper {
+func NewChainKeeper(db *gorm.DB, cfg *config.Config, syncHeight uint64) *ChainKeeper {
 
 	keeper := &ChainKeeper{
-		cfg:  &cfg.Chain,
-		db:   db,
-		node: service.NewNode(cfg.Chain.Upstream),
+		cfg:        &cfg.Chain,
+		db:         db,
+		node:       service.NewNode(cfg.Chain.Upstream),
+		syncHeight: syncHeight,
 	}
 
 	blockState := &orm.BlockState{}
@@ -53,29 +54,32 @@ func NewChainKeeper(db *gorm.DB, cfg *config.Config) *ChainKeeper {
 	return keeper
 }
 
-func (c *ChainKeeper) Run() {
-	ticker := time.NewTicker(time.Duration(c.cfg.SyncSeconds) * time.Second)
-	for ; true; <-ticker.C {
-		for {
-			isUpdate, err := c.syncBlock()
-			if err != nil {
-				log.WithField("error", err).Errorln("blockKeeper fail on process block")
-				break
-			}
+func (c *ChainKeeper) Start() {
 
-			if !isUpdate {
-				break
-			}
+	for {
+		blockState := &orm.BlockState{}
+		if err := c.db.First(blockState).Error; err != nil {
+			log.WithField("error", err).Errorln("query blockState fail on process block")
+			break
+		}
+
+		if blockState.Height >= c.syncHeight {
+			break
+		}
+
+		isUpdate, err := c.syncBlock(blockState)
+		if err != nil {
+			log.WithField("error", err).Errorln("blockKeeper fail on process block")
+			break
+		}
+
+		if !isUpdate {
+			break
 		}
 	}
 }
 
-func (c *ChainKeeper) syncBlock() (bool, error) {
-	blockState := &orm.BlockState{}
-	if err := c.db.First(blockState).Error; err != nil {
-		return false, errors.Wrap(err, "query blockState")
-	}
-
+func (c *ChainKeeper) syncBlock(blockState *orm.BlockState) (bool, error) {
 	height, err := c.node.GetBlockCount()
 	if err != nil {
 		return false, err
