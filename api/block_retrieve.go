@@ -72,10 +72,11 @@ func (a *API) getBlock(ins BlockReq) Response {
 	for i, w := range block.Witness {
 		witness[i] = w
 	}
-
-	blocker, err := a.chain.GetBlocker(&block.PreviousBlockHash, block.Timestamp)
-	if err != nil {
-		return NewErrorResponse(err)
+	var blocker string
+	if block.Height > 0 {
+		if blocker, err = a.chain.GetBlocker(&block.PreviousBlockHash, block.Timestamp); err != nil {
+			return NewErrorResponse(err)
+		}
 	}
 
 	resp := &GetBlockResp{
