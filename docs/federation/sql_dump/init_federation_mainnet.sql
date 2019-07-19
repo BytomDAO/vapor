@@ -22,7 +22,7 @@ VALUES
 INSERT INTO `chains`
 (`id`, `name`, `block_height`, `block_hash`, `created_at`, `updated_at`)
 VALUES
-(1,'vapor',0,'89fc0e98c5cf8a05f3eadb916542ff8a127d810d375c4023ff8fde07cc7eb982','2018-09-13 05:10:43','2018-11-27 09:42:06');
+(2,'vapor',0,'89fc0e98c5cf8a05f3eadb916542ff8a127d810d375c4023ff8fde07cc7eb982','2018-09-13 05:10:43','2018-11-27 09:42:06');
 
 /*!40000 ALTER TABLE `chains` ENABLE KEYS */;
 UNLOCK TABLES;
