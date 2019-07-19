@@ -1,13 +1,11 @@
 package proposal
 
 import (
-	"encoding/hex"
 	"testing"
 
 	"github.com/vapor/consensus"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
-	"github.com/vapor/protocol/vm/vmutil"
 	"github.com/vapor/testutil"
 )
 
@@ -115,18 +113,13 @@ func TestCalCoinbaseTxReward(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := c.consensusResult.AttachCoinbaseReward(c.block); err != nil {
+		gotReward, err := state.CalCoinbaseReward(c.block)
+		if err != nil {
 			t.Fatal(err)
 		}
 
-		defaultProgram, _ := vmutil.DefaultCoinbaseProgram()
-		gotReward := state.CoinbaseReward{
-			Amount:         c.consensusResult.CoinbaseReward[hex.EncodeToString(defaultProgram)],
-			ControlProgram: defaultProgram,
-		}
-
-		if !testutil.DeepEqual(gotReward, c.wantReward) {
-			t.Fatalf("test case %d: %s, the coinbase reward got: %v, want: %v", i, c.desc, gotReward, c.wantReward)
+		if !testutil.DeepEqual(*gotReward, c.wantReward) {
+			t.Fatalf("test case %d: %s, the coinbase reward got: %v, want: %v", i, c.desc, *gotReward, c.wantReward)
 		}
 	}
 }
@@ -140,10 +133,11 @@ func TestCountCoinbaseTxRewards(t *testing.T) {
 	}
 
 	cases := []struct {
-		desc            string
-		block           *types.Block
-		consensusResult *state.ConsensusResult
-		wantRewards     []state.CoinbaseReward
+		desc                string
+		block               *types.Block
+		consensusResult     *state.ConsensusResult
+		wantRewards         []state.CoinbaseReward
+		wantConsensusResult *state.ConsensusResult
 	}{
 		{
 			desc: "the block height is RoundVoteBlockNums - 1",
@@ -159,6 +153,11 @@ func TestCountCoinbaseTxRewards(t *testing.T) {
 				},
 			},
 			wantRewards: []state.CoinbaseReward{},
+			wantConsensusResult: &state.ConsensusResult{
+				CoinbaseReward: map[string]uint64{
+					"51": 34,
+				},
+			},
 		},
 		{
 			desc: "the block height is RoundVoteBlockNums",
@@ -184,6 +183,9 @@ func TestCountCoinbaseTxRewards(t *testing.T) {
 					ControlProgram: []byte{0x52},
 				},
 			},
+			wantConsensusResult: &state.ConsensusResult{
+				CoinbaseReward: map[string]uint64{},
+			},
 		},
 		{
 			desc: "the block height is RoundVoteBlockNums + 1",
@@ -199,6 +201,11 @@ func TestCountCoinbaseTxRewards(t *testing.T) {
 				},
 			},
 			wantRewards: []state.CoinbaseReward{},
+			wantConsensusResult: &state.ConsensusResult{
+				CoinbaseReward: map[string]uint64{
+					"51": 34,
+				},
+			},
 		},
 		{
 			desc: "the block height is RoundVoteBlockNums * 2",
@@ -234,6 +241,7 @@ func TestCountCoinbaseTxRewards(t *testing.T) {
 					ControlProgram: []byte{0x50},
 				},
 			},
+			wantConsensusResult: &state.ConsensusResult{},
 		},
 		{
 			desc: "the block height is 2*RoundVoteBlockNums + 1",
@@ -247,6 +255,11 @@ func TestCountCoinbaseTxRewards(t *testing.T) {
 				CoinbaseReward: map[string]uint64{},
 			},
 			wantRewards: []state.CoinbaseReward{},
+			wantConsensusResult: &state.ConsensusResult{
+				CoinbaseReward: map[string]uint64{
+					"51": 24,
+				},
+			},
 		},
 	}
 
@@ -256,17 +269,17 @@ func TestCountCoinbaseTxRewards(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-
-		if err := c.consensusResult.AttachCoinbaseReward(c.block); err != nil {
-			t.Fatal(err)
-		}
-
-		rewards, err := c.consensusResult.GetCoinbaseRewards(c.block.Height)
+		rewards, err := c.consensusResult.AttachCoinbaseReward(c.block)
 		if err != nil {
 			t.Fatal(err)
 		}
+
 		if !testutil.DeepEqual(rewards, c.wantRewards) {
 			t.Fatalf("test case %d: %s, the coinbase reward got: %v, want: %v", i, c.desc, rewards, c.wantRewards)
+		}
+
+		if !testutil.DeepEqual(c.consensusResult, c.wantConsensusResult) {
+			t.Fatalf("test case %d: %s, the consensusResult got: %v, want: %v", i, c.desc, c.consensusResult, c.wantConsensusResult)
 		}
 	}
 }

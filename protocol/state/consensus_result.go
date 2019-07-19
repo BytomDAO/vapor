@@ -104,7 +104,7 @@ func (c *ConsensusResult) ApplyBlock(block *types.Block) error {
 		return errors.New("block parent hash is not equals last block hash of vote result")
 	}
 
-	if err := c.AttachCoinbaseReward(block); err != nil {
+	if _, err := c.AttachCoinbaseReward(block); err != nil {
 		return err
 	}
 
@@ -154,23 +154,28 @@ func (c *ConsensusResult) ApplyTransaction(tx *types.Tx) error {
 }
 
 // AttachCoinbaseReward attach coinbase reward
-func (c *ConsensusResult) AttachCoinbaseReward(block *types.Block) error {
+func (c *ConsensusResult) AttachCoinbaseReward(block *types.Block) ([]CoinbaseReward, error) {
 	reward, err := CalCoinbaseReward(block)
 	if err != nil {
-		return err
-	}
-
-	if block.Height%consensus.ActiveNetParams.RoundVoteBlockNums == 1 {
-		c.CoinbaseReward = map[string]uint64{}
+		return nil, err
 	}
 
 	var ok bool
 	program := hex.EncodeToString(reward.ControlProgram)
 	c.CoinbaseReward[program], ok = checked.AddUint64(c.CoinbaseReward[program], reward.Amount)
 	if !ok {
-		return checked.ErrOverflow
+		return nil, checked.ErrOverflow
 	}
-	return nil
+
+	rewards, err := c.GetCoinbaseRewards(block.Height)
+	if err != nil {
+		return nil, err
+	}
+
+	if block.Height%consensus.ActiveNetParams.RoundVoteBlockNums == 0 {
+		c.CoinbaseReward = map[string]uint64{}
+	}
+	return rewards, nil
 }
 
 // ConsensusNodes returns all consensus nodes
@@ -252,6 +257,7 @@ func (c *ConsensusResult) DetachBlock(block *types.Block) error {
 // DetachCoinbaseReward detach coinbase reward
 func (c *ConsensusResult) DetachCoinbaseReward(block *types.Block) error {
 	if block.Height%consensus.ActiveNetParams.RoundVoteBlockNums == 0 {
+		c.CoinbaseReward = map[string]uint64{}
 		for i, output := range block.Transactions[0].Outputs {
 			if i == 0 {
 				continue

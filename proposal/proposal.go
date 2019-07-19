@@ -166,11 +166,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 		return nil, err
 	}
 
-	if err := consensusResult.AttachCoinbaseReward(b); err != nil {
-		return nil, err
-	}
-
-	rewards, err := consensusResult.GetCoinbaseRewards(nextBlockHeight)
+	rewards, err := consensusResult.AttachCoinbaseReward(b)
 	if err != nil {
 		return nil, err
 	}

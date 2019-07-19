@@ -265,11 +265,7 @@ func (c *Chain) saveBlock(block *types.Block) error {
 		return err
 	}
 
-	if err := consensusResult.AttachCoinbaseReward(block); err != nil {
-		return err
-	}
-
-	rewards, err := consensusResult.GetCoinbaseRewards(block.Height)
+	rewards, err := consensusResult.AttachCoinbaseReward(block)
 	if err != nil {
 		return err
 	}
