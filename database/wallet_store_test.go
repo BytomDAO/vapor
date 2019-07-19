@@ -1157,3 +1157,62 @@ func TestGetStandardUTXO(t *testing.T) {
 		os.RemoveAll("temp")
 	}
 }
+
+func TestListAccountUTXOs(t *testing.T) {
+	cases := []struct {
+		standardUTXOs   []*acc.UTXO
+		contractUTXOs   []*acc.UTXO
+		id              string
+		isSmartContract bool
+		want            []*acc.UTXO
+	}{
+		{
+			standardUTXOs:   []*acc.UTXO{},
+			contractUTXOs:   []*acc.UTXO{},
+			id:              "",
+			isSmartContract: false,
+			want:            []*acc.UTXO{},
+		},
+	}
+
+	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		accountStore := NewAccountStore(testDB)
+		as := accountStore.InitBatch()
+		// store standard utxos
+		for _, utxo := range c.standardUTXOs {
+			if err := as.SetStandardUTXO(utxo.OutputID, utxo); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		if err := as.CommitBatch(); err != nil {
+			t.Fatal(err)
+		}
+
+		// store contract utxos
+		walletStore := NewWalletStore(testDB)
+		ws := walletStore.InitBatch()
+		for _, utxo := range c.contractUTXOs {
+			if err := ws.SetContractUTXO(utxo.OutputID, utxo); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		if err := ws.CommitBatch(); err != nil {
+			t.Fatal(err)
+		}
+
+		gotUTXOs, err := ws.ListAccountUTXOs(c.id, c.isSmartContract)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !testutil.DeepEqual(gotUTXOs, c.want) {
+			t.Errorf("case %v: list account utxos, got: %v, want: %v.", i, gotUTXOs, c.want)
+		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
+	}
+}
