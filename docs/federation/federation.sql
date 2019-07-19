@@ -35,19 +35,29 @@ LOCK TABLES `chains` WRITE;
 -- chain name should be the same as BytomChainName in toolbar/federation/common/const.go --
 -------------------------------------------------------------------------------------------
 -- bytom mainnet consensus start--
--- INSERT INTO `chains`
--- (`id`, `name`, `block_height`, `block_hash`, `created_at`, `updated_at`)
--- VALUES
--- (1,'btm',0,'a75483474799ea1aa6bb910a1a5025b4372bf20bef20f246a2c2dc5e12e8a053','2018-09-13 05:10:43','2018-11-27 09:42:06');
--- bytom mainnet consensus end--
-
--- bytom testnet&solonet consensus start--
 INSERT INTO `chains`
 (`id`, `name`, `block_height`, `block_hash`, `created_at`, `updated_at`)
 VALUES
-(1,'btm',0,'ce4fe9431cd0225b3a811f8f8ec922f2b07a921bb12a8dddae9a85540072c770','2018-09-13 05:10:43','2018-11-27 09:42:06');
--- bytom testnet&solonet consensus end--
+(1,'btm',0,'a75483474799ea1aa6bb910a1a5025b4372bf20bef20f246a2c2dc5e12e8a053','2018-09-13 05:10:43','2018-11-27 09:42:06');
+-- bytom mainnet consensus end--
 
+-- bytom testnet&solonet consensus start--
+-- INSERT INTO `chains`
+-- (`id`, `name`, `block_height`, `block_hash`, `created_at`, `updated_at`)
+-- VALUES
+-- (1,'btm',0,'ce4fe9431cd0225b3a811f8f8ec922f2b07a921bb12a8dddae9a85540072c770','2018-09-13 05:10:43','2018-11-27 09:42:06');
+-- bytom testnet&solonet consensus end--
+------------------------------------ bytom consensus --------------------------------------
+------------------------------------ vapor consensus --------------------------------------
+-- chain name should be the same as VaporChainName in toolbar/federation/common/const.go --
+-------------------------------------------------------------------------------------------
+-- vapor mainnet consensus start--
+INSERT INTO `chains`
+(`id`, `name`, `block_height`, `block_hash`, `created_at`, `updated_at`)
+VALUES
+(1,'vapor',0,'89fc0e98c5cf8a05f3eadb916542ff8a127d810d375c4023ff8fde07cc7eb982','2018-09-13 05:10:43','2018-11-27 09:42:06');
+-- vapor mainnet consensus end--
+------------------------------------ vapor consensus --------------------------------------
 
 /*!40000 ALTER TABLE `chains` ENABLE KEYS */;
 UNLOCK TABLES;
