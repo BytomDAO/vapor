@@ -54,13 +54,9 @@ CREATE TABLE `cross_transactions` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `source_mux_id` (`chain_id`,`source_mux_id`),
-  UNIQUE KEY `source_tx_hash` (`chain_id`,`source_tx_hash`),
-  UNIQUE KEY `source_blockhash_txidx` (`chain_id`,`source_block_hash`,`source_tx_index`),
-  UNIQUE KEY `source_blockheight_txidx` (`chain_id`,`source_block_height`,`source_tx_index`),
-  UNIQUE KEY `dest_tx_hash` (`chain_id`,`dest_tx_hash`),
-  UNIQUE KEY `dest_blockhash_txidx` (`chain_id`,`dest_block_hash`,`dest_tx_index`),
-  UNIQUE KEY `dest_blockheight_txidx` (`chain_id`,`dest_block_height`,`dest_tx_index`),
+  UNIQUE KEY `chain_id` (`chain_id`),
+  UNIQUE KEY `source_tx_hash` (`source_tx_hash`),
+  UNIQUE KEY `dest_tx_hash` (`dest_tx_hash`),
   CONSTRAINT `cross_transactions_ibfk_1` FOREIGN KEY (`chain_id`) REFERENCES `chains` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -83,7 +79,6 @@ CREATE TABLE `cross_transaction_reqs` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `req_id` (`cross_transaction_id`,`source_pos`),
   CONSTRAINT `cross_transaction_reqs_ibfk_1` FOREIGN KEY (`cross_transaction_id`) REFERENCES `cross_transactions` (`id`),
   CONSTRAINT `cross_transaction_reqs_ibfk_2` FOREIGN KEY (`asset_id`) REFERENCES `assets` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
