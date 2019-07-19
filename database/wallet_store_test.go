@@ -1497,3 +1497,74 @@ func TestListAccountUTXOs(t *testing.T) {
 		os.RemoveAll("temp")
 	}
 }
+
+func TestListTransactions(t *testing.T) {
+	cases := []struct {
+		unconfirmedTxs []*query.AnnotatedTx
+		confirmedTxs   []*query.AnnotatedTx
+		height         uint64
+		accountID      string
+		startTxID      string
+		count          uint
+		unconfirmed    bool
+		want           []*query.AnnotatedTx
+	}{
+		{
+			unconfirmedTxs: []*query.AnnotatedTx{},
+			confirmedTxs:   []*query.AnnotatedTx{},
+			height:         uint64(0),
+			accountID:      "",
+			startTxID:      "",
+			count:          uint(0),
+			unconfirmed:    false,
+			want:           []*query.AnnotatedTx{},
+		},
+	}
+
+	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		walletStore := NewWalletStore(testDB)
+		ws := walletStore.InitBatch()
+		// store unconfirmed txs
+		for _, tx := range c.unconfirmedTxs {
+			if err := ws.SetUnconfirmedTransaction(tx.ID.String(), tx); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		// store confirmed txs
+		for _, tx := range c.confirmedTxs {
+			if err := ws.SetTransaction(c.height, tx); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		if err := ws.CommitBatch(); err != nil {
+			t.Fatal(err)
+		}
+
+		// get txs by given accountID, startID, count, unconfirmed
+		gotTxs, err := ws.ListTransactions(c.accountID, c.startTxID, c.count, c.unconfirmed)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		sort.Sort(SortAnnotatedTxs(gotTxs))
+		sort.Sort(SortAnnotatedTxs(c.want))
+
+		if !testutil.DeepEqual(gotTxs, c.want) {
+			t.Errorf("case %v: list transactions, got: %v, want: %v.", i, gotTxs, c.want)
+		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
+	}
+}
+
+type SortAnnotatedTxs []*query.AnnotatedTx
+
+func (s SortAnnotatedTxs) Len() int { return len(s) }
+func (s SortAnnotatedTxs) Less(i, j int) bool {
+	return bytes.Compare(s[i].ID.Bytes(), s[j].ID.Bytes()) < 0
+}
+func (s SortAnnotatedTxs) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
