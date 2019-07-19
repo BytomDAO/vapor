@@ -34,9 +34,9 @@ A `fed_cfg.json` would look like this:
     },
     "sidechain" : {
         "name" : "vapor",
-        "confirmations" : 100,
+        "confirmations" : 300,
         "upstream" : "http://127.0.0.1:9889",
-        "sync_seconds" : 5
+        "sync_seconds" : 150
     }
 }
 ```
