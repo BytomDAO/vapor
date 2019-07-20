@@ -88,7 +88,7 @@ func (v *Vote) Start() error {
 
 func (v *Vote) getCoinbaseReward() error {
 	for height := v.rewardStartHeight + v.roundVoteBlockNums; height <= v.rewardEndHeight; height += v.roundVoteBlockNums {
-		coinbaseTx, err := v.node.GetCoinbaseTx(height)
+		coinbaseTx, err := v.node.GetCoinbaseTx(height + 1)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err, "coinbase_height": height}).Error("get coinbase reward")
 			return errors.Wrapf(err, "get coinbase reward at coinbase_height: %d", height)
@@ -100,10 +100,12 @@ func (v *Vote) getCoinbaseReward() error {
 				log.WithFields(log.Fields{"error": err, "coinbase_height": height}).Error("Output type error")
 				return errors.New("Output type error")
 			}
-			address := common.GetAddressFromControlProgram(output.ControlProgram)
+
 			if output.Amount == 0 {
 				continue
 			}
+
+			address := common.GetAddressFromControlProgram(output.ControlProgram)
 
 			if address == v.nodeConfig.MiningAddress {
 				reward := &coinBaseReward{
