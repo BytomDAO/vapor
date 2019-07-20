@@ -89,16 +89,17 @@ func (v *Vote) Start() error {
 
 func (v *Vote) calcCoinbaseReward() error {
 	for height := v.rewardStartHeight + v.roundVoteBlockNums; height <= v.rewardEndHeight; height += v.roundVoteBlockNums {
-		coinbaseTx, err := v.node.GetCoinbaseTx(height + 1)
+		coinbaseHeight := height + 1
+		coinbaseTx, err := v.node.GetCoinbaseTx(coinbaseHeight)
 		if err != nil {
-			log.WithFields(log.Fields{"error": err, "coinbase_height": height}).Error("get coinbase reward")
-			return errors.Wrapf(err, "get coinbase reward at coinbase_height: %d", height)
+			log.WithFields(log.Fields{"error": err, "coinbase_height": coinbaseHeight}).Error("get coinbase reward")
+			return errors.Wrapf(err, "get coinbase reward at coinbase_height: %d", coinbaseHeight)
 		}
 
 		for _, output := range coinbaseTx.Outputs {
 			output, ok := output.TypedOutput.(*types.IntraChainOutput)
 			if !ok {
-				log.WithFields(log.Fields{"error": err, "coinbase_height": height}).Error("Output type error")
+				log.WithFields(log.Fields{"error": err, "coinbase_height": coinbaseHeight}).Error("Output type error")
 				return errors.New("Output type error")
 			}
 
@@ -116,7 +117,7 @@ func (v *Vote) calcCoinbaseReward() error {
 				ratioDenominator := big.NewInt(100)
 				coinBaseReward := big.NewInt(0).SetUint64(output.Amount)
 				reward.voteTotalReward = coinBaseReward.Mul(coinBaseReward, ratioNumerator).Div(coinBaseReward, ratioDenominator)
-				v.coinBaseRewards[height] = reward
+				v.coinBaseRewards[coinbaseHeight] = reward
 			}
 		}
 	}
@@ -131,12 +132,12 @@ func (v *Vote) countVotes(utxos []*orm.Utxo, coinBaseHeight uint64) (voteResults
 	}
 	for _, utxo := range utxos {
 		voteBlockNum := uint64(0)
-		if utxo.VetoHeight < (coinBaseHeight-v.roundVoteBlockNums+1) || utxo.VoteHeight > coinBaseHeight {
+		if utxo.VetoHeight == 0 {
+			voteBlockNum = coinBaseHeight - utxo.VoteHeight
+		} else if utxo.VetoHeight < (coinBaseHeight-v.roundVoteBlockNums+1) || utxo.VoteHeight > coinBaseHeight {
 			continue
 		} else if utxo.VetoHeight < coinBaseHeight {
 			voteBlockNum = utxo.VetoHeight - utxo.VoteHeight
-		} else {
-			voteBlockNum = coinBaseHeight - utxo.VoteHeight
 		}
 
 		bigBlockNum := big.NewInt(0).SetUint64(voteBlockNum)
