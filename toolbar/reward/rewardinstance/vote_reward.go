@@ -132,12 +132,12 @@ func (v *Vote) countVotes(utxos []*orm.Utxo, coinBaseHeight uint64) (voteResults
 	}
 	for _, utxo := range utxos {
 		voteBlockNum := uint64(0)
-		if utxo.VetoHeight == 0 {
+		if utxo.VetoHeight == 0 || (utxo.VetoHeight > coinBaseHeight && utxo.VoteHeight < coinBaseHeight) {
 			voteBlockNum = coinBaseHeight - utxo.VoteHeight
-		} else if utxo.VetoHeight < (coinBaseHeight-v.roundVoteBlockNums+1) || utxo.VoteHeight > coinBaseHeight {
-			continue
-		} else if utxo.VetoHeight < coinBaseHeight {
+		} else if utxo.VetoHeight > (coinBaseHeight-v.roundVoteBlockNums+1) && utxo.VetoHeight <= coinBaseHeight {
 			voteBlockNum = utxo.VetoHeight - utxo.VoteHeight
+		} else {
+			continue
 		}
 
 		bigBlockNum := big.NewInt(0).SetUint64(voteBlockNum)
