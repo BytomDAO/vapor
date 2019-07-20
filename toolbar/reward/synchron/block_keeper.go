@@ -55,17 +55,16 @@ func NewChainKeeper(db *gorm.DB, cfg *config.Config, syncHeight uint64) (*ChainK
 func (c *ChainKeeper) Start() error {
 	for {
 		blockState := &orm.BlockState{}
-		if err := c.db.First(blockState).Error; err != nil {
-			log.WithField("error", err).Errorln("query blockState fail on process block")
-			return err
+		if c.db.First(blockState).RecordNotFound() {
+			log.Errorln("The query blockState record is empty empty on process block")
+			return errors.New("The query blockState record is empty empty on process block")
 		}
 
 		if blockState.Height >= c.syncHeight {
 			break
 		}
 
-		err := c.syncBlock(blockState)
-		if err != nil {
+		if err := c.syncBlock(blockState); err != nil {
 			log.WithField("error", err).Errorln("blockKeeper fail on process block")
 			return err
 		}
@@ -217,6 +216,7 @@ func (c *ChainKeeper) DetachBlock(block *types.Block, txStatus *bc.TransactionSt
 	}
 
 	if err := c.updateBlockState(ormDB, preBlock); err != nil {
+		ormDB.Rollback()
 		return err
 	}
 
@@ -229,10 +229,8 @@ func (c *ChainKeeper) insertBlockState(db *gorm.DB, block *types.Block) error {
 		Height:    block.Height,
 		BlockHash: blockHash.String(),
 	}
-	if err := db.Save(blockState).Error; err != nil {
-		return err
-	}
-	return nil
+
+	return db.Save(blockState).Error
 }
 
 func (c *ChainKeeper) updateBlockState(db *gorm.DB, block *types.Block) error {
@@ -246,12 +244,10 @@ func (c *ChainKeeper) updateBlockState(db *gorm.DB, block *types.Block) error {
 	u := db.Model(&orm.BlockState{}).Updates(blockState)
 
 	if err := u.Error; err != nil {
-		db.Rollback()
 		return err
 	}
 
 	if u.RowsAffected != 1 {
-		db.Rollback()
 		return ErrInconsistentDB
 	}
 	return nil

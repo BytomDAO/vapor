@@ -3,6 +3,7 @@ package reward
 import (
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
@@ -66,7 +67,7 @@ func (v *Vote) getVoteByXpub(height uint64) ([]*orm.Utxo, error) {
 
 func (v *Vote) Start() error {
 	// get coinbase reward
-	if err := v.getCoinbaseReward(); err != nil {
+	if err := v.calcCoinbaseReward(); err != nil {
 		return err
 	}
 	for height := v.rewardStartHeight + v.roundVoteBlockNums; height <= v.rewardEndHeight; height += v.roundVoteBlockNums {
@@ -77,8 +78,8 @@ func (v *Vote) Start() error {
 		}
 
 		voteResults := v.countVotes(voteInfo, height)
-		if err := v.countReward(voteResults, height); err != nil {
-			return errors.Wrapf(err, "count reaward at coinbase_height: %d", height)
+		if err := v.countReward(voteResults, height+1); err != nil {
+			return errors.Wrapf(err, "count reaward at coinbase_height: %d", height+1)
 		}
 	}
 
@@ -86,14 +87,14 @@ func (v *Vote) Start() error {
 	return v.sendRewardTransaction()
 }
 
-func (v *Vote) getCoinbaseReward() error {
+func (v *Vote) calcCoinbaseReward() error {
 	for height := v.rewardStartHeight + v.roundVoteBlockNums; height <= v.rewardEndHeight; height += v.roundVoteBlockNums {
 		coinbaseTx, err := v.node.GetCoinbaseTx(height + 1)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err, "coinbase_height": height}).Error("get coinbase reward")
 			return errors.Wrapf(err, "get coinbase reward at coinbase_height: %d", height)
 		}
-	out:
+
 		for _, output := range coinbaseTx.Outputs {
 			output, ok := output.TypedOutput.(*types.IntraChainOutput)
 			if !ok {
@@ -116,7 +117,6 @@ func (v *Vote) getCoinbaseReward() error {
 				coinBaseReward := big.NewInt(0).SetUint64(output.Amount)
 				reward.voteTotalReward = coinBaseReward.Mul(coinBaseReward, ratioNumerator).Div(coinBaseReward, ratioDenominator)
 				v.coinBaseRewards[height] = reward
-				break out
 			}
 		}
 	}
@@ -183,17 +183,13 @@ func (v *Vote) countReward(votes *voteResult, height uint64) error {
 }
 
 func (v *Vote) sendRewardTransaction() error {
-	var outputAction string
+	var outputActions []string
 	inputAction := fmt.Sprintf(service.InputActionFmt, v.reward.totalCoinbaseReward, v.nodeConfig.AccountID)
-	index := 0
 	for address, amount := range v.reward.rewards {
-		index++
-		outputAction += fmt.Sprintf(service.OutputActionFmt, amount.Uint64(), address)
-		if index != len(v.reward.rewards) {
-			outputAction += ","
-		}
+		outputActions = append(outputActions, fmt.Sprintf(service.OutputActionFmt, amount.Uint64(), address))
 	}
 
+	outputAction := strings.Join(outputActions, ",")
 	txID, err := v.node.SendTransaction(inputAction, outputAction, v.nodeConfig.Passwd)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err, "node": v.nodeConfig}).Error("send reward transaction")
