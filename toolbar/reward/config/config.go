@@ -22,12 +22,10 @@ func DefaultConfig(isVoterReward bool) *Config {
 		return &Config{
 			VoteConf: DefaultVoteRewardConfig(),
 		}
-	} else {
-		return &Config{
-			OptionalNodeConf: DefaultOptionalNodeRewardConfig(),
-		}
 	}
-
+	return &Config{
+		OptionalNodeConf: DefaultOptionalNodeRewardConfig(),
+	}
 }
 
 func ConfigFile() string {
