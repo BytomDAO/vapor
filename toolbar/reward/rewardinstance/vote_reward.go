@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/vapor/toolbar/common/service"
-
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 
@@ -13,6 +11,7 @@ import (
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/toolbar/common"
+	"github.com/vapor/toolbar/common/service"
 	"github.com/vapor/toolbar/reward/config"
 	"github.com/vapor/toolbar/reward/database/orm"
 )
@@ -39,7 +38,6 @@ type Vote struct {
 	db                 *gorm.DB
 	reward             *voterReward
 	coinBaseRewards    map[uint64]*coinBaseReward
-	period             uint64
 	roundVoteBlockNums uint64
 	rewardStartHeight  uint64
 	rewardEndHeight    uint64
@@ -66,25 +64,26 @@ func (v *Vote) getVoteByXpub(height uint64) ([]*orm.Utxo, error) {
 	return utxos, nil
 }
 
-func (v *Vote) Start() {
+func (v *Vote) Start() error {
 	// get coinbase reward
-	err := v.getCoinbaseReward()
-	if err != nil {
-		return
+	if err := v.getCoinbaseReward(); err != nil {
+		return err
 	}
 	for height := v.rewardStartHeight + v.roundVoteBlockNums; height <= v.rewardEndHeight; height += v.roundVoteBlockNums {
 		voteInfo, err := v.getVoteByXpub(height)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err, "coinbase_height": height}).Error("get vote from db")
-			continue
+			return errors.Wrapf(err, "get vote from db at coinbase_height: %d", height)
 		}
 
 		voteResults := v.countVotes(voteInfo, height)
-		v.countReward(voteResults, height)
+		if err := v.countReward(voteResults, height); err != nil {
+			return errors.Wrapf(err, "count reaward at coinbase_height: %d", height)
+		}
 	}
-	// send transactions
-	v.sendRewardTransaction()
 
+	// send transactions
+	return v.sendRewardTransaction()
 }
 
 func (v *Vote) getCoinbaseReward() error {
@@ -92,7 +91,7 @@ func (v *Vote) getCoinbaseReward() error {
 		coinbaseTx, err := v.node.GetCoinbaseTx(height)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err, "coinbase_height": height}).Error("get coinbase reward")
-			return err
+			return errors.Wrapf(err, "get coinbase reward at coinbase_height: %d", height)
 		}
 	out:
 		for _, output := range coinbaseTx.Outputs {
@@ -155,11 +154,10 @@ func (v *Vote) countVotes(utxos []*orm.Utxo, coinBaseHeight uint64) (voteResults
 	return
 }
 
-func (v *Vote) countReward(votes *voteResult, height uint64) {
+func (v *Vote) countReward(votes *voteResult, height uint64) error {
 	coinBaseReward, ok := v.coinBaseRewards[height]
 	if !ok {
-		log.Errorf("Doesn't have a coinbase reward")
-		return
+		return errors.New("Doesn't have a coinbase reward")
 	}
 
 	for address, vote := range votes.votes {
@@ -179,19 +177,10 @@ func (v *Vote) countReward(votes *voteResult, height uint64) {
 			}
 		}
 	}
+	return nil
 }
 
-func (v *Vote) sendRewardTransaction() {
-	txID, err := v.sendReward()
-	if err != nil {
-		log.WithFields(log.Fields{"error": err, "node": v.nodeConfig}).Error("send reward transaction")
-		return
-	}
-	log.Info("tx_id: ", txID)
-
-}
-
-func (v *Vote) sendReward() (string, error) {
+func (v *Vote) sendRewardTransaction() error {
 	var outputAction string
 	inputAction := fmt.Sprintf(service.InputActionFmt, v.reward.totalCoinbaseReward, v.nodeConfig.AccountID)
 	index := 0
@@ -202,5 +191,14 @@ func (v *Vote) sendReward() (string, error) {
 			outputAction += ","
 		}
 	}
-	return v.node.SendTransaction(inputAction, outputAction, v.nodeConfig.Passwd)
+
+	txID, err := v.node.SendTransaction(inputAction, outputAction, v.nodeConfig.Passwd)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err, "node": v.nodeConfig}).Error("send reward transaction")
+		return err
+	}
+
+	log.Info("tx_id: ", txID)
+	return nil
+
 }

@@ -8,7 +8,7 @@ import (
 )
 
 type CountReward interface {
-	Start()
+	Start() error
 }
 
 type Reward struct {
@@ -19,8 +19,6 @@ func NewReward(db *gorm.DB, cfg *config.Config, rewardStartHeight, rewardEndHeig
 	var countReward CountReward
 	if cfg.VoteConf != nil {
 		countReward = instance.NewVote(db, cfg.VoteConf, rewardStartHeight, rewardEndHeight)
-	} else if cfg.OptionalNodeConf != nil {
-		// OptionalNode reward instance
 	}
 
 	if countReward == nil {
@@ -34,6 +32,6 @@ func NewReward(db *gorm.DB, cfg *config.Config, rewardStartHeight, rewardEndHeig
 	return reward
 }
 
-func (r *Reward) Start() {
-	r.countReward.Start()
+func (r *Reward) Start() error {
+	return r.countReward.Start()
 }
