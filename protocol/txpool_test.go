@@ -422,7 +422,7 @@ func TestExpireOrphan(t *testing.T) {
 		},
 	}
 
-	before.ExpireOrphan(time.Unix(1633479701, 0))
+	before.expireOrphan(time.Unix(1633479701, 0))
 	if !testutil.DeepEqual(before, want) {
 		t.Errorf("got %v want %v", before, want)
 	}
