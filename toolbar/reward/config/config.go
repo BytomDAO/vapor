@@ -43,8 +43,7 @@ type Chain struct {
 
 type VoteRewardConfig struct {
 	XPub          string `json:"xpub"`
-	Host          string `json:"host"`
-	Port          int    `json:"port"`
+	Upstream      string `json:"upstream"`
 	AccountID     string `json:"account_id"`
 	Passwd        string `json:"password"`
 	RewardRatio   int    `json:"reward_ratio"`
@@ -57,8 +56,7 @@ type OptionalNodeRewardConfig struct {
 
 func DefaultVoteRewardConfig() *VoteRewardConfig {
 	return &VoteRewardConfig{
-		Host: "127.0.0.1",
-		Port: 9889,
+		Upstream: "http://127.0.0.1:9889",
 	}
 }
 

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/vapor/toolbar/common/service"
+
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 
@@ -32,7 +34,8 @@ type coinBaseReward struct {
 }
 
 type Vote struct {
-	node               *config.VoteRewardConfig
+	nodeConfig         *config.VoteRewardConfig
+	node               *service.Node
 	db                 *gorm.DB
 	reward             *voterReward
 	coinBaseRewards    map[uint64]*coinBaseReward
@@ -42,10 +45,11 @@ type Vote struct {
 	rewardEndHeight    uint64
 }
 
-func NewVote(db *gorm.DB, node *config.VoteRewardConfig, rewardStartHeight, rewardEndHeight uint64) *Vote {
+func NewVote(db *gorm.DB, nodeConfig *config.VoteRewardConfig, rewardStartHeight, rewardEndHeight uint64) *Vote {
 	return &Vote{
 		db:                 db,
-		node:               node,
+		nodeConfig:         nodeConfig,
+		node:               service.NewNode(nodeConfig.Upstream),
 		reward:             &voterReward{rewards: make(map[string]*big.Int)},
 		coinBaseRewards:    make(map[uint64]*coinBaseReward),
 		roundVoteBlockNums: consensus.ActiveNetParams.DPOSConfig.RoundVoteBlockNums,
@@ -56,7 +60,7 @@ func NewVote(db *gorm.DB, node *config.VoteRewardConfig, rewardStartHeight, rewa
 
 func (v *Vote) getVoteByXpub(height uint64) ([]*orm.Utxo, error) {
 	utxos := []*orm.Utxo{}
-	if err := v.db.Where("(veto_height >= ? or veto_height = 0) and vote_height <= ? and xpub = ?", height-v.roundVoteBlockNums+1, height-v.roundVoteBlockNums, v.node.XPub).Find(&utxos).Error; err != nil {
+	if err := v.db.Where("(veto_height >= ? or veto_height = 0) and vote_height <= ? and xpub = ?", height-v.roundVoteBlockNums+1, height-v.roundVoteBlockNums, v.nodeConfig.XPub).Find(&utxos).Error; err != nil {
 		return nil, err
 	}
 	return utxos, nil
@@ -84,12 +88,8 @@ func (v *Vote) Start() {
 }
 
 func (v *Vote) getCoinbaseReward() error {
-
-	tx := Transaction{
-		ip: fmt.Sprintf("http://%s:%d", v.node.Host, v.node.Port),
-	}
 	for height := v.rewardStartHeight + v.roundVoteBlockNums; height <= v.rewardEndHeight; height += v.roundVoteBlockNums {
-		coinbaseTx, err := tx.GetCoinbaseTx(height)
+		coinbaseTx, err := v.node.GetCoinbaseTx(height)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err, "coinbase_height": height}).Error("get coinbase reward")
 			return err
@@ -106,11 +106,11 @@ func (v *Vote) getCoinbaseReward() error {
 				continue
 			}
 
-			if address == v.node.MiningAddress {
+			if address == v.nodeConfig.MiningAddress {
 				reward := &coinBaseReward{
 					totalReward: output.Amount,
 				}
-				ratioNumerator := big.NewInt(int64(v.node.RewardRatio))
+				ratioNumerator := big.NewInt(int64(v.nodeConfig.RewardRatio))
 				ratioDenominator := big.NewInt(100)
 				coinBaseReward := big.NewInt(0).SetUint64(output.Amount)
 				reward.voteTotalReward = coinBaseReward.Mul(coinBaseReward, ratioNumerator).Div(coinBaseReward, ratioDenominator)
@@ -184,7 +184,7 @@ func (v *Vote) countReward(votes *voteResult, height uint64) {
 func (v *Vote) sendRewardTransaction() {
 	txID, err := v.sendReward()
 	if err != nil {
-		log.WithFields(log.Fields{"error": err, "node": v.node}).Error("send reward transaction")
+		log.WithFields(log.Fields{"error": err, "node": v.nodeConfig}).Error("send reward transaction")
 		return
 	}
 	log.Info("tx_id: ", txID)
@@ -193,28 +193,14 @@ func (v *Vote) sendRewardTransaction() {
 
 func (v *Vote) sendReward() (string, error) {
 	var outputAction string
-	inputAction := fmt.Sprintf(inputActionFmt, v.reward.totalCoinbaseReward, v.node.AccountID)
+	inputAction := fmt.Sprintf(service.InputActionFmt, v.reward.totalCoinbaseReward, v.nodeConfig.AccountID)
 	index := 0
 	for address, amount := range v.reward.rewards {
 		index++
-		outputAction += fmt.Sprintf(outputActionFmt, amount.Uint64(), address)
+		outputAction += fmt.Sprintf(service.OutputActionFmt, amount.Uint64(), address)
 		if index != len(v.reward.rewards) {
 			outputAction += ","
 		}
 	}
-	tx := Transaction{
-		ip: fmt.Sprintf("http://%s:%d", v.node.Host, v.node.Port),
-	}
-
-	tmpl, err := tx.buildTx(inputAction, outputAction)
-	if err != nil {
-		return "", err
-	}
-
-	tmpl, err = tx.signTx(v.node.Passwd, *tmpl)
-	if err != nil {
-		return "", err
-	}
-
-	return tx.SubmitTx(tmpl.Transaction)
+	return v.node.SendTransaction(inputAction, outputAction, v.nodeConfig.Passwd)
 }
