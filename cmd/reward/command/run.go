@@ -56,14 +56,20 @@ func runReward(cmd *cobra.Command, args []string) error {
 
 	db, err := common.NewMySQLDB(config.MySQLConfig)
 	if err != nil {
-		log.WithField("err", err).Panic("initialize mysql db error")
+		cmn.Exit(cmn.Fmt("initialize mysql db error:[%s]", err.Error()))
 	}
 
-	sync := synchron.NewChainKeeper(db, config, rewardEndHeight)
+	sync, err := synchron.NewChainKeeper(db, config, rewardEndHeight)
+	if err != nil {
+		cmn.Exit(cmn.Fmt("initialize NewChainKeeper error:[%s]", err.Error()))
+	}
+
 	sync.Start()
 
 	r := reward.NewReward(db, config, rewardStartHeight, rewardEndHeight)
-	r.Start()
+	if err := r.Start(); err != nil {
+		cmn.Exit(cmn.Fmt("Failded to send reward:[%s]", err.Error()))
+	}
 
 	log.WithFields(log.Fields{
 		"module":   logModule,
