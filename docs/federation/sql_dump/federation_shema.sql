@@ -29,27 +29,6 @@ CREATE TABLE `chains` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 LOCK TABLES `chains` WRITE;
-/*!40000 ALTER TABLE `chains` DISABLE KEYS */;
-
------------------------------------- bytom consensus --------------------------------------
--- chain name should be the same as BytomChainName in toolbar/federation/common/const.go --
--------------------------------------------------------------------------------------------
--- bytom mainnet consensus start--
--- INSERT INTO `chains`
--- (`id`, `name`, `block_height`, `block_hash`, `created_at`, `updated_at`)
--- VALUES
--- (1,'btm',0,'a75483474799ea1aa6bb910a1a5025b4372bf20bef20f246a2c2dc5e12e8a053','2018-09-13 05:10:43','2018-11-27 09:42:06');
--- bytom mainnet consensus end--
-
--- bytom testnet&solonet consensus start--
-INSERT INTO `chains`
-(`id`, `name`, `block_height`, `block_hash`, `created_at`, `updated_at`)
-VALUES
-(1,'btm',0,'ce4fe9431cd0225b3a811f8f8ec922f2b07a921bb12a8dddae9a85540072c770','2018-09-13 05:10:43','2018-11-27 09:42:06');
--- bytom testnet&solonet consensus end--
-
-
-/*!40000 ALTER TABLE `chains` ENABLE KEYS */;
 UNLOCK TABLES;
 
 
@@ -75,13 +54,9 @@ CREATE TABLE `cross_transactions` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `source_mux_id` (`chain_id`,`source_mux_id`),
-  UNIQUE KEY `source_tx_hash` (`chain_id`,`source_tx_hash`),
-  UNIQUE KEY `source_blockhash_txidx` (`chain_id`,`source_block_hash`,`source_tx_index`),
-  UNIQUE KEY `source_blockheight_txidx` (`chain_id`,`source_block_height`,`source_tx_index`),
-  UNIQUE KEY `dest_tx_hash` (`chain_id`,`dest_tx_hash`),
-  UNIQUE KEY `dest_blockhash_txidx` (`chain_id`,`dest_block_hash`,`dest_tx_index`),
-  UNIQUE KEY `dest_blockheight_txidx` (`chain_id`,`dest_block_height`,`dest_tx_index`),
+  KEY `chain_id` (`chain_id`),
+  UNIQUE KEY `source_tx_hash` (`source_tx_hash`),
+  UNIQUE KEY `dest_tx_hash` (`dest_tx_hash`),
   CONSTRAINT `cross_transactions_ibfk_1` FOREIGN KEY (`chain_id`) REFERENCES `chains` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -91,6 +66,7 @@ UNLOCK TABLES;
 
 # Dump of table cross_transaction_reqs
 # ------------------------------------------------------------
+
 CREATE TABLE `cross_transaction_reqs` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `cross_transaction_id` int(11) NOT NULL,
@@ -103,7 +79,6 @@ CREATE TABLE `cross_transaction_reqs` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `req_id` (`cross_transaction_id`,`source_pos`),
   CONSTRAINT `cross_transaction_reqs_ibfk_1` FOREIGN KEY (`cross_transaction_id`) REFERENCES `cross_transactions` (`id`),
   CONSTRAINT `cross_transaction_reqs_ibfk_2` FOREIGN KEY (`asset_id`) REFERENCES `assets` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -128,18 +103,4 @@ CREATE TABLE `assets` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 LOCK TABLES `assets` WRITE;
-/*!40000 ALTER TABLE `assets` DISABLE KEYS */;
-
-INSERT INTO `assets` (`id`, `asset_id`, `issuance_program`, `vm_version`, `definition`, `created_at`, `updated_at`)
-VALUES
-  (1,'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff','',1,
-  '{
-    "decimals": 8,
-    "description": "Bytom Official Issue",
-    "name": "BTM",
-    "symbol": "BTM"
-  }',
-  '2018-09-13 05:10:43','2018-11-27 09:43:35');
-
-/*!40000 ALTER TABLE `assets` ENABLE KEYS */;
 UNLOCK TABLES;

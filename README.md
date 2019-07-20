@@ -32,7 +32,7 @@ $ make install
 Firstly, you need initialize node:
 
 ```
-$ vapord init --chain_id=vapor --home <vapor-data-path>
+$ vapord init --chain_id=mainnet --home <vapor-data-path>
 ```
 
 The default vapor data path (on the host) is:

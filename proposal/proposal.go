@@ -24,7 +24,7 @@ const logModule = "mining"
 // createCoinbaseTx returns a coinbase transaction paying an appropriate subsidy
 // based on the passed block height to the provided address.  When the address
 // is nil, the coinbase transaction will instead be redeemable by anyone.
-func createCoinbaseTx(accountManager *account.Manager, blockHeight uint64) (tx *types.Tx, err error) {
+func createCoinbaseTx(accountManager *account.Manager, blockHeight uint64, rewards []state.CoinbaseReward) (tx *types.Tx, err error) {
 	arbitrary := append([]byte{0x00}, []byte(strconv.FormatUint(blockHeight, 10))...)
 	var script []byte
 	if accountManager == nil {
@@ -49,32 +49,28 @@ func createCoinbaseTx(accountManager *account.Manager, blockHeight uint64) (tx *
 		return nil, err
 	}
 
+	for _, r := range rewards {
+		if err = builder.AddOutput(types.NewIntraChainOutput(*consensus.BTMAssetID, r.Amount, r.ControlProgram)); err != nil {
+			return nil, err
+		}
+	}
+
 	_, txData, err := builder.Build()
 	if err != nil {
 		return nil, err
 	}
 
+	byteData, err := txData.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+
+	txData.SerializedSize = uint64(len(byteData))
 	tx = &types.Tx{
 		TxData: *txData,
 		Tx:     types.MapTx(txData),
 	}
 	return tx, nil
-}
-
-// restructCoinbaseTx build coinbase transaction with aggregate outputs when it achieved the specified block height
-func restructCoinbaseTx(tx *types.Tx, rewards []state.CoinbaseReward) error {
-	for _, r := range rewards {
-		tx.Outputs = append(tx.Outputs, types.NewIntraChainOutput(*consensus.BTMAssetID, r.Amount, r.ControlProgram))
-	}
-
-	byteData, err := tx.TxData.MarshalText()
-	if err != nil {
-		return err
-	}
-
-	tx.TxData.SerializedSize = uint64(len(byteData))
-	tx.Tx = types.MapTx(&tx.TxData)
-	return nil
 }
 
 // NewBlockTemplate returns a new block template that is ready to be solved
@@ -155,28 +151,19 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 
 	}
 
-	// create coinbase transaction
-	b.Transactions[0], err = createCoinbaseTx(accountManager, nextBlockHeight)
-	if err != nil {
-		return nil, errors.Wrap(err, "fail on createCoinbaseTx")
-	}
-
 	consensusResult, err := c.GetConsensusResultByHash(&preBlockHash)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := consensusResult.AttachCoinbaseReward(b); err != nil {
-		return nil, err
-	}
-
-	rewards, err := consensusResult.GetCoinbaseRewards(nextBlockHeight)
+	rewards, err := consensusResult.GetCoinbaseRewards(preBlockHeader.Height)
 	if err != nil {
 		return nil, err
 	}
 
-	// restruct coinbase transaction
-	if err = restructCoinbaseTx(b.Transactions[0], rewards); err != nil {
+	// create coinbase transaction
+	b.Transactions[0], err = createCoinbaseTx(accountManager, nextBlockHeight, rewards)
+	if err != nil {
 		return nil, errors.Wrap(err, "fail on createCoinbaseTx")
 	}
 
