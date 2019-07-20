@@ -13,7 +13,7 @@ import (
 type Config struct {
 	MySQLConfig      common.MySQLConfig        `json:"mysql"`
 	Chain            Chain                     `json:"chain"`
-	VoteConf         []VoteRewardConfig        `json:"vote_reward"`
+	VoteConf         *VoteRewardConfig         `json:"vote_reward"`
 	OptionalNodeConf *OptionalNodeRewardConfig `json:"optional_node_reward"`
 }
 
@@ -55,12 +55,10 @@ type OptionalNodeRewardConfig struct {
 	TotalReward uint64 `json:"total_reward"`
 }
 
-func DefaultVoteRewardConfig() []VoteRewardConfig {
-	return []VoteRewardConfig{
-		VoteRewardConfig{
-			Host: "127.0.0.1",
-			Port: 9889,
-		},
+func DefaultVoteRewardConfig() *VoteRewardConfig {
+	return &VoteRewardConfig{
+		Host: "127.0.0.1",
+		Port: 9889,
 	}
 }
 

@@ -17,7 +17,7 @@ type Reward struct {
 
 func NewReward(db *gorm.DB, cfg *config.Config, rewardStartHeight, rewardEndHeight uint64) *Reward {
 	var countReward CountReward
-	if len(cfg.VoteConf) != 0 {
+	if cfg.VoteConf != nil {
 		countReward = instance.NewVote(db, cfg.VoteConf, rewardStartHeight, rewardEndHeight)
 	} else if cfg.OptionalNodeConf != nil {
 		// OptionalNode reward instance
