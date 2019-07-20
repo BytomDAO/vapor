@@ -54,7 +54,7 @@ CREATE TABLE `cross_transactions` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `chain_id` (`chain_id`),
+  KEY `chain_id` (`chain_id`),
   UNIQUE KEY `source_tx_hash` (`source_tx_hash`),
   UNIQUE KEY `dest_tx_hash` (`dest_tx_hash`),
   CONSTRAINT `cross_transactions_ibfk_1` FOREIGN KEY (`chain_id`) REFERENCES `chains` (`id`)
