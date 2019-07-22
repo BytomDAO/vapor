@@ -9,9 +9,9 @@ import (
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/toolbar/common"
-	"github.com/vapor/toolbar/common/service"
 	"github.com/vapor/toolbar/reward/config"
 	"github.com/vapor/toolbar/reward/database/orm"
+	"github.com/vapor/toolbar/reward/service"
 )
 
 type ChainKeeper struct {
@@ -30,27 +30,32 @@ func NewChainKeeper(db *gorm.DB, cfg *config.Config, syncHeight uint64) (*ChainK
 	}
 
 	blockState := &orm.BlockState{}
-	if err := db.First(blockState).Error; err == gorm.ErrRecordNotFound {
-		block, err := keeper.node.GetBlockByHeight(0)
-		if err != nil {
-			return nil, errors.Wrap(err, "Failed to get genenis block")
-		}
+	err := db.First(blockState).Error
+	if err == nil {
+		return keeper, nil
+	}
 
-		if err := keeper.initBlockState(db, block); err != nil {
-			return nil, errors.Wrap(err, "Failed to insert blockState")
-		}
-	} else if err != nil {
+	if err != gorm.ErrRecordNotFound {
 		return nil, errors.Wrap(err, "Failed to get blockState")
+	}
+
+	block, err := keeper.node.GetBlockByHeight(0)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to get genenis block")
+	}
+
+	if err := keeper.initBlockState(db, block); err != nil {
+		return nil, errors.Wrap(err, "Failed to insert blockState")
 	}
 
 	return keeper, nil
 }
 
-func (c *ChainKeeper) Start() error {
+func (c *ChainKeeper) SyncBlock() error {
 	for {
 		blockState := &orm.BlockState{}
-		if c.db.First(blockState).RecordNotFound() {
-			return errors.New("The query blockState record is empty empty on process block")
+		if err := c.db.First(blockState).Error; err != nil {
+			return errors.Wrap(err, "The query blockState record is empty empty on process block")
 		}
 
 		if blockState.Height >= c.syncHeight {
@@ -102,8 +107,7 @@ func (c *ChainKeeper) syncBlock(ormDB *gorm.DB, blockState *orm.BlockState) erro
 func (c *ChainKeeper) AttachBlock(ormDB *gorm.DB, block *types.Block) error {
 	for _, tx := range block.Transactions {
 		for _, input := range tx.Inputs {
-			vetoInput, ok := input.TypedInput.(*types.VetoInput)
-			if !ok {
+			if _, ok := input.TypedInput.(*types.VetoInput); !ok {
 				continue
 			}
 
@@ -112,8 +116,7 @@ func (c *ChainKeeper) AttachBlock(ormDB *gorm.DB, block *types.Block) error {
 				return err
 			}
 			utxo := &orm.Utxo{
-				VoterAddress: common.GetAddressFromControlProgram(vetoInput.ControlProgram),
-				OutputID:     outputID.String(),
+				OutputID: outputID.String(),
 			}
 			// update data
 			db := ormDB.Model(&orm.Utxo{}).Where(utxo).Update("veto_height", block.Height)
@@ -155,11 +158,7 @@ func (c *ChainKeeper) AttachBlock(ormDB *gorm.DB, block *types.Block) error {
 		BlockHash: blockHash.String(),
 	}
 
-	if err := c.updateBlockState(ormDB, blockState); err != nil {
-		return err
-	}
-
-	return nil
+	return c.updateBlockState(ormDB, blockState)
 }
 
 func (c *ChainKeeper) DetachBlock(ormDB *gorm.DB, block *types.Block) error {
@@ -185,11 +184,7 @@ func (c *ChainKeeper) DetachBlock(ormDB *gorm.DB, block *types.Block) error {
 		BlockHash: block.PreviousBlockHash.String(),
 	}
 
-	if err := c.updateBlockState(ormDB, blockState); err != nil {
-		return err
-	}
-
-	return nil
+	return c.updateBlockState(ormDB, blockState)
 }
 
 func (c *ChainKeeper) initBlockState(db *gorm.DB, block *types.Block) error {
