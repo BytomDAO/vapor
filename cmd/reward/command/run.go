@@ -45,32 +45,32 @@ func runReward(cmd *cobra.Command, args []string) error {
 	startTime := time.Now()
 	configFilePath := cfg.ConfigFile()
 	config := &cfg.Config{}
-	if err := cfg.LoadFederationFile(configFilePath, config); err != nil {
-		cmn.Exit(cmn.Fmt("Failed to load reward information:[%s]", err.Error()))
+	if err := cfg.LoadConfigFile(configFilePath, config); err != nil {
+		log.WithFields(log.Fields{"module": logModule, "config": configFilePath, "error": err}).Fatal("Failded to load config file.")
 	}
 
 	initActiveNetParams(config)
 	if rewardStartHeight >= rewardEndHeight || rewardStartHeight%consensus.ActiveNetParams.RoundVoteBlockNums != 0 || rewardEndHeight%consensus.ActiveNetParams.RoundVoteBlockNums != 0 {
-		cmn.Exit("Please check the height range, which must be multiple of the number of block rounds")
+		log.Fatal("Please check the height range, which must be multiple of the number of block rounds.")
 	}
 
 	db, err := common.NewMySQLDB(config.MySQLConfig)
 	if err != nil {
-		cmn.Exit(cmn.Fmt("initialize mysql db error:[%s]", err.Error()))
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Fatal("Failded to initialize mysql db.")
 	}
 
 	sync, err := synchron.NewChainKeeper(db, config, rewardEndHeight)
 	if err != nil {
-		cmn.Exit(cmn.Fmt("initialize NewChainKeeper error:[%s]", err.Error()))
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Fatal("Failded to initialize NewChainKeeper.")
 	}
 
 	if err := sync.Start(); err != nil {
-		cmn.Exit(cmn.Fmt("Failded to sync block:[%s]", err.Error()))
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Fatal("Failded to sync block.")
 	}
 
 	r := reward.NewReward(db, config, rewardStartHeight, rewardEndHeight)
 	if err := r.Start(); err != nil {
-		cmn.Exit(cmn.Fmt("Failded to send reward:[%s]", err.Error()))
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Fatal("Failded to send reward.")
 	}
 
 	log.WithFields(log.Fields{

@@ -73,7 +73,6 @@ func (v *Vote) Start() error {
 	for height := v.rewardStartHeight + v.roundVoteBlockNums; height <= v.rewardEndHeight; height += v.roundVoteBlockNums {
 		voteInfo, err := v.getVoteByXpub(height)
 		if err != nil {
-			log.WithFields(log.Fields{"error": err, "coinbase_height": height}).Error("get vote from db")
 			return errors.Wrapf(err, "get vote from db at coinbase_height: %d", height)
 		}
 
@@ -92,14 +91,12 @@ func (v *Vote) calcCoinbaseReward() error {
 		coinbaseHeight := height + 1
 		coinbaseTx, err := v.node.GetCoinbaseTx(coinbaseHeight)
 		if err != nil {
-			log.WithFields(log.Fields{"error": err, "coinbase_height": coinbaseHeight}).Error("get coinbase reward")
 			return errors.Wrapf(err, "get coinbase reward at coinbase_height: %d", coinbaseHeight)
 		}
 
 		for _, output := range coinbaseTx.Outputs {
 			output, ok := output.TypedOutput.(*types.IntraChainOutput)
 			if !ok {
-				log.WithFields(log.Fields{"error": err, "coinbase_height": coinbaseHeight}).Error("Output type error")
 				return errors.New("Output type error")
 			}
 
@@ -193,7 +190,6 @@ func (v *Vote) sendRewardTransaction() error {
 	outputAction := strings.Join(outputActions, ",")
 	txID, err := v.node.SendTransaction(inputAction, outputAction, v.nodeConfig.Passwd)
 	if err != nil {
-		log.WithFields(log.Fields{"error": err, "node": v.nodeConfig}).Error("send reward transaction")
 		return err
 	}
 

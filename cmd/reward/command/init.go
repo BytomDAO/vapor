@@ -31,7 +31,7 @@ func initFiles(cmd *cobra.Command, args []string) {
 		log.WithFields(log.Fields{"module": logModule, "config": configFilePath}).Fatal("Already exists config file.")
 	}
 
-	if err := cfg.ExportFederationFile(configFilePath, config); err != nil {
+	if err := cfg.ExportConfigFile(configFilePath, config); err != nil {
 		log.WithFields(log.Fields{"module": logModule, "config": configFilePath, "error": err}).Fatal("fail on export reward file")
 	}
 

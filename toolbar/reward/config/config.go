@@ -11,10 +11,10 @@ import (
 )
 
 type Config struct {
-	MySQLConfig      common.MySQLConfig        `json:"mysql"`
-	Chain            Chain                     `json:"chain"`
-	VoteConf         *VoteRewardConfig         `json:"vote_reward"`
-	OptionalNodeConf *OptionalNodeRewardConfig `json:"optional_node_reward"`
+	MySQLConfig         common.MySQLConfig           `json:"mysql"`
+	Chain               Chain                        `json:"chain"`
+	VoteConf            *VoteRewardConfig            `json:"vote_reward"`
+	AlternativeNodeConf *AlternativeNodeRewardConfig `json:"alternative_node_reward"`
 }
 
 func DefaultConfig(isVoterReward bool) *Config {
@@ -24,7 +24,7 @@ func DefaultConfig(isVoterReward bool) *Config {
 		}
 	}
 	return &Config{
-		OptionalNodeConf: DefaultOptionalNodeRewardConfig(),
+		AlternativeNodeConf: DefaultAlternativeNodeRewardConfig(),
 	}
 }
 
@@ -48,7 +48,7 @@ type VoteRewardConfig struct {
 	MiningAddress string `json:"mining_adress"`
 }
 
-type OptionalNodeRewardConfig struct {
+type AlternativeNodeRewardConfig struct {
 	TotalReward uint64 `json:"total_reward"`
 }
 
@@ -58,13 +58,13 @@ func DefaultVoteRewardConfig() *VoteRewardConfig {
 	}
 }
 
-func DefaultOptionalNodeRewardConfig() *OptionalNodeRewardConfig {
-	return &OptionalNodeRewardConfig{
+func DefaultAlternativeNodeRewardConfig() *AlternativeNodeRewardConfig {
+	return &AlternativeNodeRewardConfig{
 		TotalReward: 30,
 	}
 }
 
-func ExportFederationFile(fedFile string, config *Config) error {
+func ExportConfigFile(fedFile string, config *Config) error {
 	buf := new(bytes.Buffer)
 
 	encoder := json.NewEncoder(buf)
@@ -76,7 +76,7 @@ func ExportFederationFile(fedFile string, config *Config) error {
 	return ioutil.WriteFile(fedFile, buf.Bytes(), 0644)
 }
 
-func LoadFederationFile(fedFile string, config *Config) error {
+func LoadConfigFile(fedFile string, config *Config) error {
 	file, err := os.Open(fedFile)
 	if err != nil {
 		return err

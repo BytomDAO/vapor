@@ -31,22 +31,20 @@ func NewChainKeeper(db *gorm.DB, cfg *config.Config, syncHeight uint64) (*ChainK
 	}
 
 	blockState := &orm.BlockState{}
-	if err := db.First(blockState).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			blockStr, _, err := keeper.node.GetBlockByHeight(0)
-			if err != nil {
-				return nil, errors.Wrap(err, "Failed to get genenis block")
-			}
-			block := &types.Block{}
-			if err := block.UnmarshalText([]byte(blockStr)); err != nil {
-				return nil, errors.Wrap(err, "unmarshal block")
-			}
-			if err := keeper.insertBlockState(db, block); err != nil {
-				return nil, errors.Wrap(err, "Failed to insert blockState")
-			}
-		} else {
-			return nil, errors.Wrap(err, "Failed to get blockState")
+	if err := db.First(blockState).Error; err == gorm.ErrRecordNotFound {
+		blockStr, _, err := keeper.node.GetBlockByHeight(0)
+		if err != nil {
+			return nil, errors.Wrap(err, "Failed to get genenis block")
 		}
+		block := &types.Block{}
+		if err := block.UnmarshalText([]byte(blockStr)); err != nil {
+			return nil, errors.Wrap(err, "unmarshal block")
+		}
+		if err := keeper.initBlockState(db, block); err != nil {
+			return nil, errors.Wrap(err, "Failed to insert blockState")
+		}
+	} else if err != nil {
+		return nil, errors.Wrap(err, "Failed to get blockState")
 	}
 
 	return keeper, nil
@@ -56,7 +54,6 @@ func (c *ChainKeeper) Start() error {
 	for {
 		blockState := &orm.BlockState{}
 		if c.db.First(blockState).RecordNotFound() {
-			log.Errorln("The query blockState record is empty empty on process block")
 			return errors.New("The query blockState record is empty empty on process block")
 		}
 
@@ -65,7 +62,6 @@ func (c *ChainKeeper) Start() error {
 		}
 
 		if err := c.syncBlock(blockState); err != nil {
-			log.WithField("error", err).Errorln("blockKeeper fail on process block")
 			return err
 		}
 	}
@@ -224,7 +220,7 @@ func (c *ChainKeeper) DetachBlock(block *types.Block, txStatus *bc.TransactionSt
 	return ormDB.Commit().Error
 }
 
-func (c *ChainKeeper) insertBlockState(db *gorm.DB, block *types.Block) error {
+func (c *ChainKeeper) initBlockState(db *gorm.DB, block *types.Block) error {
 	blockHash := block.Hash()
 	blockState := &orm.BlockState{
 		Height:    block.Height,
