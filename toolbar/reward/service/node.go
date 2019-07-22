@@ -19,10 +19,6 @@ func NewNode(hostPort string) *Node {
 	return &Node{hostPort: hostPort}
 }
 
-func (n *Node) GetBlockByHash(hash string) (*types.Block, error) {
-	return n.getRawBlock(&getRawBlockReq{BlockHash: hash})
-}
-
 func (n *Node) GetBlockByHeight(height uint64) (*types.Block, error) {
 	return n.getRawBlock(&getRawBlockReq{BlockHeight: height})
 }

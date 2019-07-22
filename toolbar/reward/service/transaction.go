@@ -103,7 +103,7 @@ func (n *Node) signTx(passwd string, tmpl txbuilder.Template) (*txbuilder.Templa
 	}
 
 	if !resp.SignComplete {
-		return nil, errors.Wrap(err, "sign fail")
+		return nil, errors.New("sign fail")
 	}
 
 	return resp.Tx, nil
