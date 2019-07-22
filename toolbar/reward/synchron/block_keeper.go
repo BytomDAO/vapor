@@ -7,7 +7,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/errors"
-	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/toolbar/common"
 	"github.com/vapor/toolbar/common/service"
@@ -32,14 +31,11 @@ func NewChainKeeper(db *gorm.DB, cfg *config.Config, syncHeight uint64) (*ChainK
 
 	blockState := &orm.BlockState{}
 	if err := db.First(blockState).Error; err == gorm.ErrRecordNotFound {
-		blockStr, _, err := keeper.node.GetBlockByHeight(0)
+		block, err := keeper.node.GetBlockByHeight(0)
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed to get genenis block")
 		}
-		block := &types.Block{}
-		if err := block.UnmarshalText([]byte(blockStr)); err != nil {
-			return nil, errors.Wrap(err, "unmarshal block")
-		}
+
 		if err := keeper.initBlockState(db, block); err != nil {
 			return nil, errors.Wrap(err, "Failed to insert blockState")
 		}
@@ -78,49 +74,29 @@ func (c *ChainKeeper) syncBlock(blockState *orm.BlockState) error {
 		return nil
 	}
 
-	nextBlockStr, txStatus, err := c.node.GetBlockByHeight(blockState.Height + 1)
+	nextBlock, err := c.node.GetBlockByHeight(blockState.Height + 1)
 	if err != nil {
 		return err
-	}
-
-	nextBlock := &types.Block{}
-	if err := nextBlock.UnmarshalText([]byte(nextBlockStr)); err != nil {
-		return errors.New("Unmarshal nextBlock")
 	}
 
 	// Normal case, the previous hash of next block equals to the hash of current block,
 	// just sync to database directly.
 	if nextBlock.PreviousBlockHash.String() == blockState.BlockHash {
-		return c.AttachBlock(nextBlock, txStatus)
+		return c.AttachBlock(nextBlock)
 	}
 
 	log.WithField("block height", blockState.Height).Debug("the prev hash of remote is not equals the hash of current best block, must rollback")
-	currentBlockStr, txStatus, err := c.node.GetBlockByHash(blockState.BlockHash)
+	currentBlock, err := c.node.GetBlockByHash(blockState.BlockHash)
 	if err != nil {
 		return err
 	}
 
-	currentBlock := &types.Block{}
-	if err := nextBlock.UnmarshalText([]byte(currentBlockStr)); err != nil {
-		return errors.New("Unmarshal currentBlock")
-	}
-
-	return c.DetachBlock(currentBlock, txStatus)
+	return c.DetachBlock(currentBlock)
 }
 
-func (c *ChainKeeper) AttachBlock(block *types.Block, txStatus *bc.TransactionStatus) error {
+func (c *ChainKeeper) AttachBlock(block *types.Block) error {
 	ormDB := c.db.Begin()
-	for pos, tx := range block.Transactions {
-		statusFail, err := txStatus.GetStatus(pos)
-		if err != nil {
-			return err
-		}
-
-		if statusFail {
-			log.WithFields(log.Fields{"block height": block.Height, "statusFail": statusFail}).Debug("AttachBlock")
-			continue
-		}
-
+	for _, tx := range block.Transactions {
 		for _, input := range tx.Inputs {
 			vetoInput, ok := input.TypedInput.(*types.VetoInput)
 			if !ok {
@@ -172,7 +148,13 @@ func (c *ChainKeeper) AttachBlock(block *types.Block, txStatus *bc.TransactionSt
 		}
 	}
 
-	if err := c.updateBlockState(ormDB, block); err != nil {
+	blockHash := block.Hash()
+	blockState := &orm.BlockState{
+		Height:    block.Height,
+		BlockHash: blockHash.String(),
+	}
+
+	if err := c.updateBlockState(ormDB, blockState); err != nil {
 		ormDB.Rollback()
 		return err
 	}
@@ -180,7 +162,7 @@ func (c *ChainKeeper) AttachBlock(block *types.Block, txStatus *bc.TransactionSt
 	return ormDB.Commit().Error
 }
 
-func (c *ChainKeeper) DetachBlock(block *types.Block, txStatus *bc.TransactionStatus) error {
+func (c *ChainKeeper) DetachBlock(block *types.Block) error {
 	ormDB := c.db.Begin()
 
 	utxo := &orm.Utxo{
@@ -202,17 +184,12 @@ func (c *ChainKeeper) DetachBlock(block *types.Block, txStatus *bc.TransactionSt
 		return err
 	}
 
-	preBlockStr, _, err := c.node.GetBlockByHeight(block.Height + 1)
-	if err != nil {
-		return err
+	blockState := &orm.BlockState{
+		Height:    block.Height - 1,
+		BlockHash: block.PreviousBlockHash.String(),
 	}
 
-	preBlock := &types.Block{}
-	if err := preBlock.UnmarshalText([]byte(preBlockStr)); err != nil {
-		return errors.New("Unmarshal preBlock")
-	}
-
-	if err := c.updateBlockState(ormDB, preBlock); err != nil {
+	if err := c.updateBlockState(ormDB, blockState); err != nil {
 		ormDB.Rollback()
 		return err
 	}
@@ -230,16 +207,9 @@ func (c *ChainKeeper) initBlockState(db *gorm.DB, block *types.Block) error {
 	return db.Save(blockState).Error
 }
 
-func (c *ChainKeeper) updateBlockState(db *gorm.DB, block *types.Block) error {
+func (c *ChainKeeper) updateBlockState(db *gorm.DB, blockState *orm.BlockState) error {
 	// update blockState
-	blockHash := block.Hash()
-	blockState := &orm.BlockState{
-		Height:    block.Height,
-		BlockHash: blockHash.String(),
-	}
-
 	u := db.Model(&orm.BlockState{}).Updates(blockState)
-
 	if err := u.Error; err != nil {
 		return err
 	}

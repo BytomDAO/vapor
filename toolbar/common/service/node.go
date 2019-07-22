@@ -5,6 +5,7 @@ import (
 
 	"github.com/vapor/api"
 	"github.com/vapor/errors"
+	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/toolbar/common"
 )
 
@@ -18,11 +19,11 @@ func NewNode(hostPort string) *Node {
 	return &Node{hostPort: hostPort}
 }
 
-func (n *Node) GetBlockByHash(hash string) (*api.GetRawBlockResp, error) {
+func (n *Node) GetBlockByHash(hash string) (*types.Block, error) {
 	return n.getRawBlock(&getRawBlockReq{BlockHash: hash})
 }
 
-func (n *Node) GetBlockByHeight(height uint64) (*api.GetRawBlockResp, error) {
+func (n *Node) GetBlockByHeight(height uint64) (*types.Block, error) {
 	return n.getRawBlock(&getRawBlockReq{BlockHeight: height})
 }
 
@@ -41,7 +42,7 @@ type getRawBlockReq struct {
 	BlockHash   string `json:"block_hash"`
 }
 
-func (n *Node) getRawBlock(req *getRawBlockReq) (*api.GetRawBlockResp, error) {
+func (n *Node) getRawBlock(req *getRawBlockReq) (*types.Block, error) {
 	url := "/get-raw-block"
 	payload, err := json.Marshal(req)
 	if err != nil {
@@ -49,7 +50,7 @@ func (n *Node) getRawBlock(req *getRawBlockReq) (*api.GetRawBlockResp, error) {
 	}
 
 	resp := &api.GetRawBlockResp{}
-	return resp, n.request(url, payload, resp)
+	return resp.RawBlock, n.request(url, payload, resp)
 }
 
 type response struct {

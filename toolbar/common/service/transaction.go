@@ -10,7 +10,6 @@ import (
 
 type buildSpendReq struct {
 	Actions []interface{} `json:"actions"`
-	//Actions1 []interface{} `json:"actions1"`
 }
 
 type Action struct {
