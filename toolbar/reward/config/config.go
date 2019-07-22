@@ -34,7 +34,7 @@ func ExportConfigFile(fedFile string, config *Config) error {
 	return ioutil.WriteFile(fedFile, buf.Bytes(), 0644)
 }
 
-func LoadCOnfigFile(fedFile string, config *Config) error {
+func LoadConfigFile(fedFile string, config *Config) error {
 	file, err := os.Open(fedFile)
 	if err != nil {
 		return err
