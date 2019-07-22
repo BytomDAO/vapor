@@ -177,6 +177,7 @@ func (c *ChainKeeper) AttachBlock(block *types.Block, txStatus *bc.TransactionSt
 	}
 
 	if err := c.updateBlockState(ormDB, block); err != nil {
+		ormDB.Rollback()
 		return err
 	}
 
