@@ -2,28 +2,36 @@ package service
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/vapor/blockchain/txbuilder"
 	"github.com/vapor/errors"
-	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/bc"
 )
 
-var buildSpendReqFmt = `
-	{"actions": [
-		%s,
-		%s
-	]}`
+type buildSpendReq struct {
+	Actions []interface{} `json:"actions"`
+	//Actions1 []interface{} `json:"actions1"`
+}
 
-var InputActionFmt = `
-{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff","amount": %d,"account_id": "%s"}
-`
-var OutputActionFmt = `
-{"type": "control_address", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount": %d, "address": "%s"}
-`
+type Action struct {
+	InputAction
+	OutputActions []OutputAction
+}
 
-func (n *Node) SendTransaction(inputAction, outputAction, passwd string) (string, error) {
-	tmpl, err := n.buildTx(inputAction, outputAction)
+type InputAction struct {
+	Type      string `json:"type"`
+	AccountID string `json:"account_id"`
+	bc.AssetAmount
+}
+
+type OutputAction struct {
+	Type    string `json:"type"`
+	Address string `json:"address"`
+	bc.AssetAmount
+}
+
+func (n *Node) SendTransaction(inputAction InputAction, outputActions []OutputAction, passwd string) (string, error) {
+	tmpl, err := n.buildTx(inputAction, outputActions)
 	if err != nil {
 		return "", err
 	}
@@ -36,12 +44,35 @@ func (n *Node) SendTransaction(inputAction, outputAction, passwd string) (string
 	return n.SubmitTx(tmpl.Transaction)
 }
 
-func (n *Node) buildTx(inputAction, outputAction string) (*txbuilder.Template, error) {
+func (n *Node) buildRequest(inputAction InputAction, outputActions []OutputAction, req *buildSpendReq) error {
+	if len(outputActions) == 0 {
+		return errors.New("output is empty")
+	}
+	req.Actions = append(req.Actions, &inputAction)
+
+	for _, outputAction := range outputActions {
+		req.Actions = append(req.Actions, &outputAction)
+	}
+
+	return nil
+}
+
+func (n *Node) buildTx(inputAction InputAction, outputActions []OutputAction) (*txbuilder.Template, error) {
 	url := "/build-transaction"
-	buildReqStr := fmt.Sprintf(buildSpendReqFmt, inputAction, outputAction)
+
+	req := &buildSpendReq{}
+	err := n.buildRequest(inputAction, outputActions, req)
+	if err != nil {
+		return nil, errors.Wrap(err, "build spend request")
+	}
+
+	buildReq, err := json.Marshal(req)
+	if err != nil {
+		return nil, errors.Wrap(err, "Marshal spend request")
+	}
 
 	tmpl := &txbuilder.Template{}
-	return tmpl, n.request(url, []byte(buildReqStr), tmpl)
+	return tmpl, n.request(url, buildReq, tmpl)
 }
 
 type signTxReq struct {
@@ -96,28 +127,4 @@ func (n *Node) SubmitTx(tx interface{}) (string, error) {
 
 	res := &submitTxResp{}
 	return res.TxID, n.request(url, payload, res)
-}
-
-// GetCoinbaseTx return coinbase tx
-func (n *Node) GetCoinbaseTx(blockHeight uint64) (*types.Tx, error) {
-	req := &getRawBlockReq{
-		BlockHeight: blockHeight,
-	}
-
-	blockStr, _, err := n.getRawBlock(req)
-	if err != nil {
-		return nil, errors.Wrap(err, "get RawBlock")
-	}
-
-	block := &types.Block{}
-
-	if err := block.UnmarshalText([]byte(blockStr)); err != nil {
-		return nil, errors.Wrap(err, "json unmarshal block")
-	}
-
-	if len(block.Transactions) > 0 {
-		return block.Transactions[0], nil
-	}
-
-	return nil, errors.New("no coinbase")
 }
