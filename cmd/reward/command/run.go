@@ -64,7 +64,9 @@ func runReward(cmd *cobra.Command, args []string) error {
 		cmn.Exit(cmn.Fmt("initialize NewChainKeeper error:[%s]", err.Error()))
 	}
 
-	sync.Start()
+	if err := sync.Start(); err != nil {
+		cmn.Exit(cmn.Fmt("Failded to sync block:[%s]", err.Error()))
+	}
 
 	r := reward.NewReward(db, config, rewardStartHeight, rewardEndHeight)
 	if err := r.Start(); err != nil {

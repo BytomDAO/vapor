@@ -25,11 +25,10 @@ func NewReward(db *gorm.DB, cfg *config.Config, rewardStartHeight, rewardEndHeig
 		panic("There are no instances of rewards being handed out, please check the configuration")
 	}
 
-	reward := &Reward{
+	return &Reward{
 		countReward: countReward,
 	}
 
-	return reward
 }
 
 func (r *Reward) Start() error {
