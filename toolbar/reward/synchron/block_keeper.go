@@ -56,15 +56,20 @@ func (c *ChainKeeper) Start() error {
 		if blockState.Height >= c.syncHeight {
 			break
 		}
+		ormDB := c.db.Begin()
+		if err := c.syncBlock(ormDB, blockState); err != nil {
+			ormDB.Rollback()
+			return err
+		}
 
-		if err := c.syncBlock(blockState); err != nil {
+		if err := ormDB.Commit().Error; err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (c *ChainKeeper) syncBlock(blockState *orm.BlockState) error {
+func (c *ChainKeeper) syncBlock(ormDB *gorm.DB, blockState *orm.BlockState) error {
 	height, err := c.node.GetBlockCount()
 	if err != nil {
 		return err
@@ -82,7 +87,7 @@ func (c *ChainKeeper) syncBlock(blockState *orm.BlockState) error {
 	// Normal case, the previous hash of next block equals to the hash of current block,
 	// just sync to database directly.
 	if nextBlock.PreviousBlockHash.String() == blockState.BlockHash {
-		return c.AttachBlock(nextBlock)
+		return c.AttachBlock(ormDB, nextBlock)
 	}
 
 	log.WithField("block height", blockState.Height).Debug("the prev hash of remote is not equals the hash of current best block, must rollback")
@@ -91,11 +96,10 @@ func (c *ChainKeeper) syncBlock(blockState *orm.BlockState) error {
 		return err
 	}
 
-	return c.DetachBlock(currentBlock)
+	return c.DetachBlock(ormDB, currentBlock)
 }
 
-func (c *ChainKeeper) AttachBlock(block *types.Block) error {
-	ormDB := c.db.Begin()
+func (c *ChainKeeper) AttachBlock(ormDB *gorm.DB, block *types.Block) error {
 	for _, tx := range block.Transactions {
 		for _, input := range tx.Inputs {
 			vetoInput, ok := input.TypedInput.(*types.VetoInput)
@@ -114,12 +118,10 @@ func (c *ChainKeeper) AttachBlock(block *types.Block) error {
 			// update data
 			db := ormDB.Model(&orm.Utxo{}).Where(utxo).Update("veto_height", block.Height)
 			if err := db.Error; err != nil {
-				ormDB.Rollback()
 				return err
 			}
 
 			if db.RowsAffected != 1 {
-				ormDB.Rollback()
 				return ErrInconsistentDB
 			}
 
@@ -142,7 +144,6 @@ func (c *ChainKeeper) AttachBlock(block *types.Block) error {
 			}
 			// insert data
 			if err := ormDB.Save(utxo).Error; err != nil {
-				ormDB.Rollback()
 				return err
 			}
 		}
@@ -155,22 +156,18 @@ func (c *ChainKeeper) AttachBlock(block *types.Block) error {
 	}
 
 	if err := c.updateBlockState(ormDB, blockState); err != nil {
-		ormDB.Rollback()
 		return err
 	}
 
-	return ormDB.Commit().Error
+	return nil
 }
 
-func (c *ChainKeeper) DetachBlock(block *types.Block) error {
-	ormDB := c.db.Begin()
-
+func (c *ChainKeeper) DetachBlock(ormDB *gorm.DB, block *types.Block) error {
 	utxo := &orm.Utxo{
 		VoteHeight: block.Height,
 	}
 	// insert data
 	if err := ormDB.Where(utxo).Delete(&orm.Utxo{}).Error; err != nil {
-		ormDB.Rollback()
 		return err
 	}
 
@@ -180,7 +177,6 @@ func (c *ChainKeeper) DetachBlock(block *types.Block) error {
 
 	// update data
 	if err := ormDB.Where(utxo).Update("veto_height", 0).Error; err != nil {
-		ormDB.Rollback()
 		return err
 	}
 
@@ -190,11 +186,10 @@ func (c *ChainKeeper) DetachBlock(block *types.Block) error {
 	}
 
 	if err := c.updateBlockState(ormDB, blockState); err != nil {
-		ormDB.Rollback()
 		return err
 	}
 
-	return ormDB.Commit().Error
+	return nil
 }
 
 func (c *ChainKeeper) initBlockState(db *gorm.DB, block *types.Block) error {
