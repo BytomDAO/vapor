@@ -6,20 +6,12 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/toolbar/common"
 )
 
 type Config struct {
 	MySQLConfig common.MySQLConfig `json:"mysql"`
-	Chain       Chain              `json:"chain"`
-	XPubs       []chainkd.XPub     `json:"xpubs"`
-}
-
-type Chain struct {
-	Name        string `json:"name"`
-	Upstream    string `json:"upstream"`
-	SyncSeconds uint64 `json:"sync_seconds"`
+	NodeIP      string             `json:"node_ip"`
 }
 
 func ExportConfigFile(fedFile string, config *Config) error {
