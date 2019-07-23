@@ -239,7 +239,7 @@ func (p *Peer) TrySend(chID byte, msg interface{}) bool {
 		"peer":   p.Addr(),
 		"msg":    msg,
 		"type":   reflect.TypeOf(msg),
-	}).Info("send message to peer")
+	}).Debug("send message to peer")
 	return p.mconn.TrySend(chID, msg)
 }
 
