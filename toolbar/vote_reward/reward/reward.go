@@ -24,22 +24,18 @@ type voteResult struct {
 	VoteNum     uint64
 }
 
-type Vote struct {
-	rewardCfg *config.RewardConfig
-	node      *apinode.Node
-	db        *gorm.DB
-	reward    *voterReward
-	/*
-		reward             *voterReward
-		coinBaseRewards    map[uint64]*coinBaseReward
-	*/
+type Reward struct {
+	rewardCfg          *config.RewardConfig
+	node               *apinode.Node
+	db                 *gorm.DB
+	reward             *voterReward
 	roundVoteBlockNums uint64
 	rewardStartHeight  uint64
 	rewardEndHeight    uint64
 }
 
-func NewVote(db *gorm.DB, cfg *config.Config, rewardStartHeight, rewardEndHeight uint64) *Vote {
-	return &Vote{
+func NewReward(db *gorm.DB, cfg *config.Config, rewardStartHeight, rewardEndHeight uint64) *Reward {
+	return &Reward{
 		db:                 db,
 		rewardCfg:          cfg.RewardConf,
 		node:               apinode.NewNode(cfg.NodeIP),
@@ -50,48 +46,60 @@ func NewVote(db *gorm.DB, cfg *config.Config, rewardStartHeight, rewardEndHeight
 	}
 }
 
-func (v *Vote) getVote(height uint64) (voteResults []*voteResult, err error) {
-	query := v.db.Model(&orm.Utxo{}).Select("vote_address, sum(vote_num) as vote_num")
-	query.Where("(veto_height >= ? or veto_height = 0) and vote_height <= ? and xpub = ?", height-v.roundVoteBlockNums+1, height-v.roundVoteBlockNums, v.rewardCfg.XPub)
-	query.Group("vote_address")
+func (r *Reward) getVote(height uint64) (voteResults []*voteResult, err error) {
+	query := r.db.Select("vote_address, sum(vote_num) as vote_num").Model(&orm.Utxo{})
+	query = query.Where("(veto_height >= ? or veto_height = 0) and vote_height <= ? and xpub = ?", height-r.roundVoteBlockNums+1, height-r.roundVoteBlockNums, r.rewardCfg.XPub)
+	query = query.Group("vote_address")
 
 	voteResults = []*voteResult{}
-	if err = query.Scan(&voteResults).Error; err != nil {
+
+	rows, err := query.Rows()
+	if err != nil {
 		return nil, err
 	}
-
+	for rows.Next() {
+		var (
+			address string
+			voteNum uint64
+		)
+		rows.Scan(&address, &voteNum)
+		voteResults = append(voteResults, &voteResult{
+			VoteAddress: address,
+			VoteNum:     voteNum,
+		})
+	}
 	return voteResults, nil
 }
 
-func (v *Vote) Start() error {
-	for height := v.rewardStartHeight + v.roundVoteBlockNums; height <= v.rewardEndHeight; height += v.roundVoteBlockNums {
+func (r *Reward) Send() error {
+	for height := r.rewardStartHeight + r.roundVoteBlockNums; height <= r.rewardEndHeight; height += r.roundVoteBlockNums {
 		coinbaseHeight := height + 1
-		coinbaseReward, err := v.getCoinbaseReward(coinbaseHeight)
+		coinbaseReward, err := r.getCoinbaseReward(coinbaseHeight)
 		if err != nil {
 			return errors.Wrapf(err, "get coinbase reward at coinbase_height: %d", coinbaseHeight)
 		}
 
-		voteResults, err := v.getVote(height)
+		voteResults, err := r.getVote(height)
 		if err != nil {
-			return errors.Wrapf(err, "get vote from db at coinbase_height: %d", height)
+			return err
 		}
 
-		if err := v.calcVoterRewards(voteResults, coinbaseReward); err != nil {
+		if err := r.calcVoterRewards(voteResults, coinbaseReward); err != nil {
 			return errors.Wrapf(err, "calc reaward at coinbase_height: %d", height+1)
 		}
 	}
 
 	// send transactions
-	return v.node.BatchSendBTM(v.rewardCfg.AccountID, v.rewardCfg.Passwd, v.reward.rewards)
+	return r.node.BatchSendBTM(r.rewardCfg.AccountID, r.rewardCfg.Passwd, r.reward.rewards)
 }
 
-func (v *Vote) getCoinbaseReward(height uint64) (uint64, error) {
-	block, err := v.node.GetBlockByHeight(height)
+func (r *Reward) getCoinbaseReward(height uint64) (uint64, error) {
+	block, err := r.node.GetBlockByHeight(height)
 	if err != nil {
 		return 0, err
 	}
 
-	miningControl := common.GetControlProgramFromAddress(v.rewardCfg.MiningAddress)
+	miningControl := common.GetControlProgramFromAddress(r.rewardCfg.MiningAddress)
 	for _, output := range block.Transactions[0].Outputs {
 		output, ok := output.TypedOutput.(*types.IntraChainOutput)
 		if !ok {
@@ -109,7 +117,7 @@ func (v *Vote) getCoinbaseReward(height uint64) (uint64, error) {
 	return 0, errors.New("No reward found")
 }
 
-func (v *Vote) getTotalVoteNum(voteResults []*voteResult) (totalVoteNum uint64) {
+func (r *Reward) getTotalVoteNum(voteResults []*voteResult) (totalVoteNum uint64) {
 	totalVoteNum = 0
 	for _, voteResult := range voteResults {
 		totalVoteNum += voteResult.VoteNum
@@ -118,7 +126,7 @@ func (v *Vote) getTotalVoteNum(voteResults []*voteResult) (totalVoteNum uint64) 
 }
 
 // voteNum / totalVoteNum  * (coinbaseReward * rewardRatio / 100)
-func (v *Vote) calcRewardByRatio(voteNum, totalVoteNum, coinbaseReward, rewardRatio uint64) (uint64, error) {
+func (r *Reward) calcRewardByRatio(voteNum, totalVoteNum, coinbaseReward, rewardRatio uint64) (uint64, error) {
 	reward := uint64(0)
 	mul, ok := checked.MulUint64(coinbaseReward, rewardRatio)
 	if !ok {
@@ -143,16 +151,16 @@ func (v *Vote) calcRewardByRatio(voteNum, totalVoteNum, coinbaseReward, rewardRa
 	return reward, nil
 }
 
-func (v *Vote) calcVoterRewards(voteResults []*voteResult, coinbaseReward uint64) error {
-	totalVoteNum := v.getTotalVoteNum(voteResults)
-	rewardRatio := uint64(v.rewardCfg.RewardRatio)
+func (r *Reward) calcVoterRewards(voteResults []*voteResult, coinbaseReward uint64) error {
+	totalVoteNum := r.getTotalVoteNum(voteResults)
+	rewardRatio := uint64(r.rewardCfg.RewardRatio)
 	for _, voteResult := range voteResults {
-		value, err := v.calcRewardByRatio(voteResult.VoteNum, totalVoteNum, coinbaseReward, rewardRatio)
+		value, err := r.calcRewardByRatio(voteResult.VoteNum, totalVoteNum, coinbaseReward, rewardRatio)
 		if err != nil {
 			return err
 		}
 
-		v.reward.rewards[voteResult.VoteAddress] += value
+		r.reward.rewards[voteResult.VoteAddress] += value
 	}
 	return nil
 }

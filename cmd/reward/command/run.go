@@ -10,6 +10,7 @@ import (
 	"github.com/vapor/consensus"
 	"github.com/vapor/toolbar/common"
 	cfg "github.com/vapor/toolbar/vote_reward/config"
+	"github.com/vapor/toolbar/vote_reward/reward"
 	"github.com/vapor/toolbar/vote_reward/synchron"
 )
 
@@ -67,6 +68,12 @@ func runReward(cmd *cobra.Command, args []string) error {
 
 	if err := sync.SyncBlock(); err != nil {
 		log.WithFields(log.Fields{"module": logModule, "error": err}).Fatal("Failded to sync block.")
+	}
+
+	r := reward.NewReward(db, config, rewardStartHeight, rewardEndHeight)
+
+	if err := r.Send(); err != nil {
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Fatal("Failded to send reward.")
 	}
 
 	log.WithFields(log.Fields{
