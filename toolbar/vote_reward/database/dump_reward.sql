@@ -20,12 +20,12 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 
-# Dump of table chain_status
+# Dump of table chain_statuses
 # ------------------------------------------------------------
 
-DROP TABLE IF EXISTS `chain_status`;
+DROP TABLE IF EXISTS `chain_statuses`;
 
-CREATE TABLE `chain_status` (
+CREATE TABLE `chain_statuses` (
   `block_height` int(11) NOT NULL,
   `block_hash` varchar(64) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
