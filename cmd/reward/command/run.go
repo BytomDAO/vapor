@@ -9,9 +9,8 @@ import (
 
 	"github.com/vapor/consensus"
 	"github.com/vapor/toolbar/common"
-	"github.com/vapor/toolbar/reward"
-	cfg "github.com/vapor/toolbar/reward/config"
-	"github.com/vapor/toolbar/reward/synchron"
+	cfg "github.com/vapor/toolbar/vote_reward/config"
+	"github.com/vapor/toolbar/vote_reward/synchron"
 )
 
 const logModule = "reward"
@@ -19,6 +18,7 @@ const logModule = "reward"
 var (
 	rewardStartHeight uint64
 	rewardEndHeight   uint64
+	chainID           string
 )
 
 var (
@@ -37,6 +37,7 @@ var (
 func init() {
 	runRewardCmd.Flags().Uint64Var(&rewardStartHeight, "reward_start_height", 1200, "The starting height of the distributive income reward interval")
 	runRewardCmd.Flags().Uint64Var(&rewardEndHeight, "reward_end_height", 2400, "The end height of the distributive income reward interval")
+	runRewardCmd.Flags().StringVar(&chainID, "chain_id", "mainnet", "")
 
 	RootCmd.AddCommand(runRewardCmd)
 }
@@ -64,13 +65,8 @@ func runReward(cmd *cobra.Command, args []string) error {
 		log.WithFields(log.Fields{"module": logModule, "error": err}).Fatal("Failded to initialize NewChainKeeper.")
 	}
 
-	if err := sync.Start(); err != nil {
+	if err := sync.SyncBlock(); err != nil {
 		log.WithFields(log.Fields{"module": logModule, "error": err}).Fatal("Failded to sync block.")
-	}
-
-	r := reward.NewReward(db, config, rewardStartHeight, rewardEndHeight)
-	if err := r.Start(); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "error": err}).Fatal("Failded to send reward.")
 	}
 
 	log.WithFields(log.Fields{
@@ -83,8 +79,8 @@ func runReward(cmd *cobra.Command, args []string) error {
 
 func initActiveNetParams(config *cfg.Config) {
 	var exist bool
-	consensus.ActiveNetParams, exist = consensus.NetParams[config.Chain.ChainID]
+	consensus.ActiveNetParams, exist = consensus.NetParams[chainID]
 	if !exist {
-		cmn.Exit(cmn.Fmt("chain_id[%v] don't exist", config.Chain.ChainID))
+		cmn.Exit(cmn.Fmt("chain_id[%v] don't exist", chainID))
 	}
 }
