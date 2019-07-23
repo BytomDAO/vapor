@@ -349,7 +349,7 @@ func (c *Chain) blockProcesser() {
 func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	blockHash := block.Hash()
 	if c.BlockExist(&blockHash) {
-		log.WithFields(log.Fields{"module": logModule, "hash": blockHash.String(), "height": block.Height}).Info("block has been processed")
+		log.WithFields(log.Fields{"module": logModule, "hash": blockHash.String(), "height": block.Height}).Debug("block has been processed")
 		return c.orphanManage.BlockExist(&blockHash), nil
 	}
 
