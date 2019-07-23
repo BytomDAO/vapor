@@ -8,7 +8,7 @@ import (
 
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/toolbar/api_node"
+	"github.com/vapor/toolbar/apinode"
 	"github.com/vapor/toolbar/common"
 	"github.com/vapor/toolbar/vote_reward/config"
 	"github.com/vapor/toolbar/vote_reward/database/orm"
@@ -18,14 +18,14 @@ var ErrInconsistentDB = errors.New("inconsistent db status")
 
 type ChainKeeper struct {
 	db           *gorm.DB
-	node         *api_node.Node
+	node         *apinode.Node
 	targetHeight uint64
 }
 
 func NewChainKeeper(db *gorm.DB, cfg *config.Config, targetHeight uint64) (*ChainKeeper, error) {
 	keeper := &ChainKeeper{
 		db:           db,
-		node:         api_node.NewNode(cfg.NodeIP),
+		node:         apinode.NewNode(cfg.NodeIP),
 		targetHeight: targetHeight,
 	}
 

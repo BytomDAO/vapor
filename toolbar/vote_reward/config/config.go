@@ -14,7 +14,7 @@ type Config struct {
 	NodeIP      string             `json:"node_ip"`
 }
 
-func ExportConfigFile(fedFile string, config *Config) error {
+func ExportConfigFile(configFile string, config *Config) error {
 	buf := new(bytes.Buffer)
 
 	encoder := json.NewEncoder(buf)
@@ -23,11 +23,11 @@ func ExportConfigFile(fedFile string, config *Config) error {
 		return err
 	}
 
-	return ioutil.WriteFile(fedFile, buf.Bytes(), 0644)
+	return ioutil.WriteFile(configFile, buf.Bytes(), 0644)
 }
 
-func LoadConfigFile(fedFile string, config *Config) error {
-	file, err := os.Open(fedFile)
+func LoadConfigFile(configFile string, config *Config) error {
+	file, err := os.Open(configFile)
 	if err != nil {
 		return err
 	}
