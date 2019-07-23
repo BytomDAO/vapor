@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 
 	"github.com/vapor/errors"
-	"github.com/vapor/toolbar/federation/util"
 	"github.com/vapor/protocol/bc"
+	"github.com/vapor/toolbar/common"
 )
 
 // Node can invoke the api which provide by the full node server
@@ -66,7 +66,7 @@ type response struct {
 
 func (n *Node) request(path string, payload []byte, respData interface{}) error {
 	resp := &response{}
-	if err := util.Post(n.hostPort+path, payload, resp); err != nil {
+	if err := common.Post(n.hostPort+path, payload, resp); err != nil {
 		return err
 	}
 
