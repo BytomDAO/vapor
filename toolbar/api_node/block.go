@@ -56,6 +56,6 @@ func (n *Node) getVoteResult(req *getVoteResultReq) ([]voteInfo, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "json marshal")
 	}
-	resp := []voteInfo{}
-	return resp, n.request(url, payload, resp)
+	resp := &[]voteInfo{}
+	return *resp, n.request(url, payload, resp)
 }
