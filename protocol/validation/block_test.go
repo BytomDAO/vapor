@@ -318,12 +318,6 @@ func TestValidateBlock(t *testing.T) {
 	txsRoot := testutil.MustDecodeHash("001e21b9618c503d909c1e0b32bab9ccf80c538b35d49ac7fffcef98eb373b23")
 	txStatusHash := testutil.MustDecodeHash("6978a65b4ee5b6f4914fe5c05000459a803ecf59132604e5d334d64249c5e50a")
 
-	program := []byte{}
-	for i := 0; i < 1000; i++ {
-		program = append(program, 0x61)
-	}
-	program = append(program, 0x51)
-
 	txs := []*bc.Tx{
 		types.MapTx(&types.TxData{
 			Version:        1,
@@ -333,12 +327,12 @@ func TestValidateBlock(t *testing.T) {
 		}),
 	}
 
-	for i := 1; i <= 10000; i++ {
+	for i := 1; i <= 100; i++ {
 		txs = append(txs, types.MapTx(&types.TxData{
 			Version:        1,
-			SerializedSize: 528,
-			Inputs:         []*types.TxInput{types.NewSpendInput([][]byte{}, bc.Hash{V0: uint64(i)}, *consensus.BTMAssetID, 100000000, 0, program)},
-			Outputs:        []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 100000000, cp)},
+			SerializedSize: 100000,
+			Inputs:         []*types.TxInput{types.NewSpendInput([][]byte{}, bc.Hash{V0: uint64(i)}, *consensus.BTMAssetID, 10000000000, 0, cp)},
+			Outputs:        []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 9000000000, cp)},
 		}))
 	}
 
@@ -564,52 +558,6 @@ func TestValidateBlock(t *testing.T) {
 		if rootErr(err) != c.err {
 			t.Errorf("case #%d (%s) got error %s, want %s", i, c.desc, err, c.err)
 		}
-	}
-}
-
-func TestGasOverBlockLimit(t *testing.T) {
-	cp, _ := vmutil.DefaultCoinbaseProgram()
-	parent := &types.BlockHeader{
-		Version:           1,
-		Height:            0,
-		Timestamp:         1523352600000,
-		PreviousBlockHash: bc.Hash{V0: 0},
-	}
-	parentHash := parent.Hash()
-
-	block := &bc.Block{
-		ID: bc.Hash{V0: 1},
-		BlockHeader: &bc.BlockHeader{
-			Version:         1,
-			Height:          1,
-			Timestamp:       1523352601000,
-			PreviousBlockId: &parentHash,
-		},
-		Transactions: []*bc.Tx{
-			types.MapTx(&types.TxData{
-				Version:        1,
-				SerializedSize: 1,
-				Inputs:         []*types.TxInput{types.NewCoinbaseInput(nil)},
-				Outputs:        []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 0, cp)},
-			}),
-		},
-	}
-
-	for i := 0; i < 100; i++ {
-		block.Transactions = append(block.Transactions, types.MapTx(&types.TxData{
-			Version:        1,
-			SerializedSize: 100000,
-			Inputs: []*types.TxInput{
-				types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 10000000000, 0, cp),
-			},
-			Outputs: []*types.TxOutput{
-				types.NewIntraChainOutput(*consensus.BTMAssetID, 9000000000, cp),
-			},
-		}))
-	}
-
-	if err := ValidateBlock(block, parent, []state.CoinbaseReward{}); err != errOverBlockLimit {
-		t.Errorf("got error %s, want %s", err, errOverBlockLimit)
 	}
 }
 
