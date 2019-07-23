@@ -8,7 +8,7 @@ import (
 
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/toolbar/apinode"
+	apinode "github.com/vapor/toolbar/api_node"
 	"github.com/vapor/toolbar/common"
 	"github.com/vapor/toolbar/vote_reward/config"
 	"github.com/vapor/toolbar/vote_reward/database/orm"
