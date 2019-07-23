@@ -92,23 +92,96 @@ func TestCheckCoinbaseTx(t *testing.T) {
 					Inputs: []*types.TxInput{types.NewCoinbaseInput(nil)},
 					Outputs: []*types.TxOutput{
 						types.NewIntraChainOutput(*consensus.BTMAssetID, 0, []byte{0x51}),
-						types.NewIntraChainOutput(*consensus.BTMAssetID, 5000, []byte{0x51}),
+						types.NewIntraChainOutput(*consensus.BTMAssetID, 20000, []byte{0x51}),
+						types.NewIntraChainOutput(*consensus.BTMAssetID, 10000, []byte{0x52}),
 					},
 				}),
 			},
 			rewards: []state.CoinbaseReward{
 				state.CoinbaseReward{
-					Amount:         5000,
+					Amount:         20000,
 					ControlProgram: []byte{0x51},
+				},
+				state.CoinbaseReward{
+					Amount:         10000,
+					ControlProgram: []byte{0x52},
 				},
 			},
 			err: nil,
 		},
 		{
-			desc:    "wrong coinbase transaction",
+			desc:    "wrong coinbase transaction with block is empty",
 			txs:     []*types.Tx{},
 			rewards: []state.CoinbaseReward{},
 			err:     ErrWrongCoinbaseTransaction,
+		},
+		{
+			desc: "wrong coinbase transaction with dismatch number of outputs",
+			txs: []*types.Tx{
+				types.NewTx(types.TxData{
+					Inputs: []*types.TxInput{types.NewCoinbaseInput(nil)},
+					Outputs: []*types.TxOutput{
+						types.NewIntraChainOutput(*consensus.BTMAssetID, 0, []byte{0x51}),
+						types.NewIntraChainOutput(*consensus.BTMAssetID, 20000, []byte{0x51}),
+						types.NewIntraChainOutput(*consensus.BTMAssetID, 10000, []byte{0x52}),
+					},
+				}),
+			},
+			rewards: []state.CoinbaseReward{
+				state.CoinbaseReward{
+					Amount:         20000,
+					ControlProgram: []byte{0x51},
+				},
+			},
+			err: ErrWrongCoinbaseTransaction,
+		},
+		{
+			desc: "wrong coinbase transaction with dismatch output amount",
+			txs: []*types.Tx{
+				types.NewTx(types.TxData{
+					Inputs: []*types.TxInput{types.NewCoinbaseInput(nil)},
+					Outputs: []*types.TxOutput{
+						types.NewIntraChainOutput(*consensus.BTMAssetID, 0, []byte{0x51}),
+						types.NewIntraChainOutput(*consensus.BTMAssetID, 20000, []byte{0x51}),
+						types.NewIntraChainOutput(*consensus.BTMAssetID, 10000, []byte{0x52}),
+					},
+				}),
+			},
+			rewards: []state.CoinbaseReward{
+				state.CoinbaseReward{
+					Amount:         10000,
+					ControlProgram: []byte{0x51},
+				},
+				state.CoinbaseReward{
+					Amount:         10000,
+					ControlProgram: []byte{0x52},
+				},
+			},
+			err: ErrWrongCoinbaseTransaction,
+		},
+		{
+			desc: "wrong coinbase transaction with dismatch output control_program",
+			txs: []*types.Tx{
+				types.NewTx(types.TxData{
+					Inputs: []*types.TxInput{types.NewCoinbaseInput(nil)},
+					Outputs: []*types.TxOutput{
+						types.NewIntraChainOutput(*consensus.BTMAssetID, 0, []byte{0x51}),
+						types.NewIntraChainOutput(*consensus.BTMAssetID, 20000, []byte{0x51}),
+						types.NewIntraChainOutput(*consensus.BTMAssetID, 10000, []byte{0x52}),
+					},
+				}),
+			},
+			rewards: []state.CoinbaseReward{
+				state.CoinbaseReward{
+					Amount:         20000,
+					ControlProgram: []byte{0x51},
+				},
+				state.CoinbaseReward{
+					Amount:         10000,
+					ControlProgram: []byte{0x53},
+				},
+			},
+			err: ErrWrongCoinbaseTransaction,
 		},
 	}
 
