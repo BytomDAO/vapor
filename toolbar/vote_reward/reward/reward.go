@@ -15,10 +15,6 @@ import (
 	"github.com/vapor/toolbar/vote_reward/database/orm"
 )
 
-type voterReward struct {
-	rewards map[string]uint64
-}
-
 type voteResult struct {
 	VoteAddress string
 	VoteNum     uint64
@@ -28,7 +24,7 @@ type Reward struct {
 	rewardCfg          *config.RewardConfig
 	node               *apinode.Node
 	db                 *gorm.DB
-	reward             *voterReward
+	rewards            map[string]uint64
 	roundVoteBlockNums uint64
 	rewardStartHeight  uint64
 	rewardEndHeight    uint64
@@ -39,7 +35,7 @@ func NewReward(db *gorm.DB, cfg *config.Config, rewardStartHeight, rewardEndHeig
 		db:                 db,
 		rewardCfg:          cfg.RewardConf,
 		node:               apinode.NewNode(cfg.NodeIP),
-		reward:             &voterReward{rewards: make(map[string]uint64)},
+		rewards:            make(map[string]uint64),
 		roundVoteBlockNums: consensus.ActiveNetParams.DPOSConfig.RoundVoteBlockNums,
 		rewardStartHeight:  rewardStartHeight,
 		rewardEndHeight:    rewardEndHeight,
@@ -50,8 +46,6 @@ func (r *Reward) getVote(height uint64) (voteResults []*voteResult, err error) {
 	query := r.db.Select("vote_address, sum(vote_num) as vote_num").Model(&orm.Utxo{})
 	query = query.Where("(veto_height >= ? or veto_height = 0) and vote_height <= ? and xpub = ?", height-r.roundVoteBlockNums+1, height-r.roundVoteBlockNums, r.rewardCfg.XPub)
 	query = query.Group("vote_address")
-
-	voteResults = []*voteResult{}
 
 	rows, err := query.Rows()
 	if err != nil {
@@ -90,7 +84,7 @@ func (r *Reward) Send() error {
 	}
 
 	// send transactions
-	return r.node.BatchSendBTM(r.rewardCfg.AccountID, r.rewardCfg.Passwd, r.reward.rewards)
+	return r.node.BatchSendBTM(r.rewardCfg.AccountID, r.rewardCfg.Passwd, r.rewards)
 }
 
 func (r *Reward) getCoinbaseReward(height uint64) (uint64, error) {
@@ -99,7 +93,11 @@ func (r *Reward) getCoinbaseReward(height uint64) (uint64, error) {
 		return 0, err
 	}
 
-	miningControl := common.GetControlProgramFromAddress(r.rewardCfg.MiningAddress)
+	miningControl, err := common.GetControlProgramFromAddress(r.rewardCfg.MiningAddress)
+	if err != nil {
+		return 0, err
+	}
+
 	for _, output := range block.Transactions[0].Outputs {
 		output, ok := output.TypedOutput.(*types.IntraChainOutput)
 		if !ok {
@@ -153,14 +151,13 @@ func (r *Reward) calcRewardByRatio(voteNum, totalVoteNum, coinbaseReward, reward
 
 func (r *Reward) calcVoterRewards(voteResults []*voteResult, coinbaseReward uint64) error {
 	totalVoteNum := r.getTotalVoteNum(voteResults)
-	rewardRatio := uint64(r.rewardCfg.RewardRatio)
 	for _, voteResult := range voteResults {
-		value, err := r.calcRewardByRatio(voteResult.VoteNum, totalVoteNum, coinbaseReward, rewardRatio)
+		value, err := r.calcRewardByRatio(voteResult.VoteNum, totalVoteNum, coinbaseReward, r.rewardCfg.RewardRatio)
 		if err != nil {
 			return err
 		}
 
-		r.reward.rewards[voteResult.VoteAddress] += value
+		r.rewards[voteResult.VoteAddress] += value
 	}
 	return nil
 }

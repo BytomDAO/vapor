@@ -24,8 +24,8 @@ type RewardConfig struct {
 	XPub          string `json:"xpub"`
 	AccountID     string `json:"account_id"`
 	Passwd        string `json:"password"`
-	RewardRatio   int    `json:"reward_ratio"`
 	MiningAddress string `json:"mining_adress"`
+	RewardRatio   uint64 `json:"reward_ratio"`
 }
 
 func ExportConfigFile(configFile string, config *Config) error {
