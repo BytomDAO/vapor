@@ -7,6 +7,6 @@ import (
 )
 
 func main() {
-	cmd := cli.PrepareBaseCmd(command.RootCmd, "TM", "./")
+	cmd := cli.PrepareBaseCmd(command.RootCmd, "REWARD", "./")
 	cmd.Execute()
 }

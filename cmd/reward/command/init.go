@@ -9,8 +9,6 @@ import (
 	cfg "github.com/vapor/toolbar/vote_reward/config"
 )
 
-var isVoteReward bool
-
 var initFilesCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize reward",
