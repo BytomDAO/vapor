@@ -20,8 +20,6 @@ var (
 	rewardStartHeight uint64
 	rewardEndHeight   uint64
 	configFile        string
-
-	config = &cfg.Config{}
 )
 
 var RootCmd = &cobra.Command{
@@ -33,12 +31,12 @@ var RootCmd = &cobra.Command{
 func init() {
 	RootCmd.Flags().Uint64Var(&rewardStartHeight, "reward_start_height", 0, "The starting height of the distributive income reward interval, It is a multiple of the dpos consensus cycle(1200). example: 1200")
 	RootCmd.Flags().Uint64Var(&rewardEndHeight, "reward_end_height", 0, "The end height of the distributive income reward interval, It is a multiple of the dpos consensus cycle(1200). example: 2400")
-	RootCmd.Flags().StringVar(&config.ChainID, "chain_id", "mainnet", "Select [mainnet], [testnet] or [solonet]. default: mainnet")
 	RootCmd.Flags().StringVar(&configFile, "config_file", "reward.json", "config file. default: reward.json")
 }
 
 func runReward(cmd *cobra.Command, args []string) error {
 	startTime := time.Now()
+	config := &cfg.Config{}
 	if err := cfg.LoadConfigFile(configFile, config); err != nil {
 		log.WithFields(log.Fields{"module": logModule, "config": configFile, "error": err}).Fatal("Failded to load config file.")
 	}

@@ -37,7 +37,6 @@ Usage:
   reward [flags]
 
 Flags:
-      --chain_id string            Select [mainnet], [testnet] or [solonet]. default: mainnet (default "mainnet")
       --config_file string         config file. default: reward.json (default "reward.json")
   -h, --help                       help for reward
       --reward_end_height uint     The end height of the distributive income reward interval (default 2400)
