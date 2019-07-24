@@ -22,9 +22,10 @@ const (
 )
 
 var (
-	requireBlockTimeout   = 20 * time.Second
-	requireHeadersTimeout = 30 * time.Second
-	requireBlocksTimeout  = 50 * time.Second
+	requireBlockTimeout     = 20 * time.Second
+	requireHeadersTimeout   = 30 * time.Second
+	requireBlocksTimeout    = 50 * time.Second
+	waitWorkerResultTimeout = 60 * time.Second
 
 	errRequestBlocksTimeout = errors.New("request blocks timeout")
 	errRequestTimeout       = errors.New("request timeout")
@@ -78,10 +79,14 @@ func (mf *msgFetcher) addSyncPeer(peerID string) {
 
 func (mf *msgFetcher) collectResultLoop(peerCh chan string, quit chan struct{}, resultCh chan *fetchBlocksResult, workerCloseCh chan struct{}, workSize int) {
 	defer close(workerCloseCh)
+	timeout := time.NewTimer(waitWorkerResultTimeout)
+	defer timeout.Stop()
+
 	//collect fetch results
 	for resultCount := 0; resultCount < workSize && mf.syncPeers.size() > 0; resultCount++ {
 		select {
 		case result := <-resultCh:
+			timeout.Reset(waitWorkerResultTimeout)
 			if result.err != nil {
 				log.WithFields(log.Fields{"module": logModule, "startHeight": result.startHeight, "stopHeight": result.stopHeight, "err": result.err}).Error("failed on fetch blocks")
 				return
@@ -93,6 +98,9 @@ func (mf *msgFetcher) collectResultLoop(peerCh chan string, quit chan struct{}, 
 				break
 			}
 			peerCh <- peer
+		case <-timeout.C:
+			log.WithFields(log.Fields{"module": logModule}).Warn("wait request block worker result timeout")
+			return
 		case _, ok := <-quit:
 			if !ok {
 				return
