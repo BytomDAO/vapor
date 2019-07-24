@@ -22,11 +22,12 @@ func ConfigFile() string {
 }
 
 type RewardConfig struct {
-	XPub          string `json:"xpub"`
-	AccountID     string `json:"account_id"`
-	Password      string `json:"password"`
-	MiningAddress string `json:"mining_address"`
-	RewardRatio   uint64 `json:"reward_ratio"`
+	XPub                                    string `json:"xpub"`
+	AccountID                               string `json:"account_id"`
+	Password                                string `json:"password"`
+	MiningAddress                           string `json:"mining_address"`
+	RewardRatio                             uint64 `json:"reward_ratio"`
+	AlternativeNodesRewardForConsensusCycle uint64 `json:"alternative_nodes_reward_consensus_cycle"`
 }
 
 func ExportConfigFile(configFile string, config *Config) error {
