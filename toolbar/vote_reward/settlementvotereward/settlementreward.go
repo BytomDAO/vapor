@@ -40,7 +40,6 @@ func NewSettlementReward(db *gorm.DB, cfg *config.Config, startHeight, endHeight
 }
 
 func (s *SettlementReward) getVoteResultFromDB(height uint64) (voteResults []*voteResult, err error) {
-	//query := s.db.Select("vote_address, sum(vote_num) as vote_num").Model(&orm.Utxo{})
 	query := s.db.Table("utxos").Select("vote_address, sum(vote_num) as vote_num")
 	query = query.Where("(veto_height >= ? or veto_height = 0) and vote_height <= ? and xpub = ?", height-consensus.ActiveNetParams.RoundVoteBlockNums+1, height-consensus.ActiveNetParams.RoundVoteBlockNums, s.rewardCfg.XPub)
 	query = query.Group("vote_address")
