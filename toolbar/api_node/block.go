@@ -27,16 +27,15 @@ func (n *Node) getRawBlock(req *getRawBlockReq) (*types.Block, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "json marshal")
 	}
-
 	resp := &api.GetRawBlockResp{}
 	return resp.RawBlock, n.request(url, payload, resp)
 }
 
-func (n *Node) GetVoteByHash(hash string) ([]voteInfo, error) {
+func (n *Node) GetVoteByHash(hash string) ([]api.VoteInfo, error) {
 	return n.getVoteResult(&getVoteResultReq{BlockHash: hash})
 }
 
-func (n *Node) GetVoteByHeight(height uint64) ([]voteInfo, error) {
+func (n *Node) GetVoteByHeight(height uint64) ([]api.VoteInfo, error) {
 	return n.getVoteResult(&getVoteResultReq{BlockHeight: height})
 }
 
@@ -45,17 +44,12 @@ type getVoteResultReq struct {
 	BlockHash   string `json:"block_hash"`
 }
 
-type voteInfo struct {
-	Vote    string `json:"vote"`
-	VoteNum uint64 `json:"vote_number"`
-}
-
-func (n *Node) getVoteResult(req *getVoteResultReq) ([]voteInfo, error) {
+func (n *Node) getVoteResult(req *getVoteResultReq) ([]api.VoteInfo, error) {
 	url := "/get-vote-result"
 	payload, err := json.Marshal(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "json marshal")
 	}
-	resp := &[]voteInfo{}
-	return *resp, n.request(url, payload, resp)
+	resp := []api.VoteInfo{}
+	return resp, n.request(url, payload, &resp)
 }

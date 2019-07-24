@@ -6,12 +6,12 @@ import (
 	chainjson "github.com/vapor/encoding/json"
 )
 
-type voteInfo struct {
+type VoteInfo struct {
 	Vote    string `json:"vote"`
 	VoteNum uint64 `json:"vote_number"`
 }
 
-type voteInfoSlice []*voteInfo
+type voteInfoSlice []*VoteInfo
 
 func (v voteInfoSlice) Len() int           { return len(v) }
 func (v voteInfoSlice) Less(i, j int) bool { return v[i].VoteNum > v[j].VoteNum }
@@ -36,9 +36,9 @@ func (a *API) getVoteResult(req struct {
 		return NewErrorResponse(err)
 	}
 
-	voteInfos := []*voteInfo{}
+	voteInfos := []*VoteInfo{}
 	for pubKey, voteNum := range consensusResult.NumOfVote {
-		voteInfos = append(voteInfos, &voteInfo{
+		voteInfos = append(voteInfos, &VoteInfo{
 			Vote:    pubKey,
 			VoteNum: voteNum,
 		})
