@@ -2,9 +2,7 @@ package protocol
 
 import (
 	"testing"
-
-	// "fmt"
-
+	
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/database/storage"
