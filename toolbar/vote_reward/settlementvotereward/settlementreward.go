@@ -12,7 +12,6 @@ import (
 	"github.com/vapor/toolbar/apinode"
 	"github.com/vapor/toolbar/common"
 	"github.com/vapor/toolbar/vote_reward/config"
-	"github.com/vapor/toolbar/vote_reward/database/orm"
 )
 
 type voteResult struct {
@@ -41,27 +40,14 @@ func NewSettlementReward(db *gorm.DB, cfg *config.Config, startHeight, endHeight
 }
 
 func (s *SettlementReward) getVoteResultFromDB(height uint64) (voteResults []*voteResult, err error) {
-	query := s.db.Select("vote_address, sum(vote_num) as vote_num").Model(&orm.Utxo{})
+	//query := s.db.Select("vote_address, sum(vote_num) as vote_num").Model(&orm.Utxo{})
+	query := s.db.Table("utxos").Select("vote_address, sum(vote_num) as vote_num")
 	query = query.Where("(veto_height >= ? or veto_height = 0) and vote_height <= ? and xpub = ?", height-consensus.ActiveNetParams.RoundVoteBlockNums+1, height-consensus.ActiveNetParams.RoundVoteBlockNums, s.rewardCfg.XPub)
 	query = query.Group("vote_address")
-
-	rows, err := query.Rows()
-	if err != nil {
+	if err := query.Scan(&voteResults).Error; err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	for rows.Next() {
-		var (
-			address string
-			voteNum uint64
-		)
-		rows.Scan(&address, &voteNum)
-		voteResults = append(voteResults, &voteResult{
-			VoteAddress: address,
-			VoteNum:     voteNum,
-		})
-	}
 	return voteResults, nil
 }
 

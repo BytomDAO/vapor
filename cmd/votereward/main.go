@@ -43,7 +43,9 @@ func runReward(cmd *cobra.Command, args []string) error {
 		log.WithFields(log.Fields{"module": logModule, "config": configFile, "error": err}).Fatal("Failded to load config file.")
 	}
 
-	consensus.InitActiveNetParams(chainID)
+	if err := consensus.InitActiveNetParams(chainID); err != nil {
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Fatal("Init ActiveNetParams.")
+	}
 	if rewardStartHeight >= rewardEndHeight || rewardStartHeight%consensus.ActiveNetParams.RoundVoteBlockNums != 0 || rewardEndHeight%consensus.ActiveNetParams.RoundVoteBlockNums != 0 {
 		log.Fatal("Please check the height range, which must be multiple of the number of block rounds.")
 	}
