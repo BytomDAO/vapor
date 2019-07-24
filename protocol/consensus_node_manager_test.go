@@ -2,7 +2,7 @@ package protocol
 
 import (
 	"testing"
-	
+
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/database/storage"
@@ -581,7 +581,7 @@ func TestGetConsensusNodes(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		store := newMockStore()
+		store := newDummyStore()
 		for _, header := range c.storedBlockHeaders {
 			store.SaveBlockHeader(header)
 		}
@@ -625,7 +625,7 @@ type dummyStore struct {
 	consensusResults map[uint64]*state.ConsensusResult
 }
 
-func newMockStore() *dummyStore {
+func newDummyStore() *dummyStore {
 	return &dummyStore{
 		blockHeaders:     make(map[string]*types.BlockHeader),
 		consensusResults: make(map[uint64]*state.ConsensusResult),
