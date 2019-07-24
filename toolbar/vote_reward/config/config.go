@@ -5,13 +5,28 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"path"
 
 	"github.com/vapor/toolbar/common"
 )
 
 type Config struct {
-	MySQLConfig common.MySQLConfig `json:"mysql"`
 	NodeIP      string             `json:"node_ip"`
+	ChainID     string             `json:"chain_id"`
+	MySQLConfig common.MySQLConfig `json:"mysql"`
+	RewardConf  *RewardConfig      `json:"reward_config"`
+}
+
+func ConfigFile() string {
+	return path.Join("./", "reward.json")
+}
+
+type RewardConfig struct {
+	XPub          string `json:"xpub"`
+	AccountID     string `json:"account_id"`
+	Password      string `json:"password"`
+	MiningAddress string `json:"mining_address"`
+	RewardRatio   uint64 `json:"reward_ratio"`
 }
 
 func ExportConfigFile(configFile string, config *Config) error {

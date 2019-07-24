@@ -13,7 +13,7 @@ type Node struct {
 	hostPort string
 }
 
-// Node create a api client with target server
+// NewNode create a api client with target server
 func NewNode(hostPort string) *Node {
 	return &Node{hostPort: hostPort}
 }
