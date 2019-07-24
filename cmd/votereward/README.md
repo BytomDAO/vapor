@@ -39,14 +39,13 @@ Usage:
 Flags:
       --config_file string         config file. default: reward.json (default "reward.json")
   -h, --help                       help for reward
-      --reward_end_height uint     The end height of the distributive income reward interval (default 2400)
-      --reward_start_height uint   The starting height of the distributive income reward interval (default 1200)
-
+      --reward_end_height uint     The end height of the distributive income reward interval, It is a multiple of the dpos consensus cycle(1200). example: 2400
+      --reward_start_height uint   The starting height of the distributive income reward interval, It is a multiple of the dpos consensus cycle(1200). example: 1200
 ```
 
 example:
 
 ```shell
-./votereward reward --reward_start_height 6000 --reward_end_height 7200 --chain_id solonet
+./votereward reward --reward_start_height 6000 --reward_end_height 7200
 ```
 
