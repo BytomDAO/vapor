@@ -614,16 +614,6 @@ func TestGetConsensusNodes(t *testing.T) {
 	}
 }
 
-func TestAAA(t *testing.T) {
-	blockHeader := &types.BlockHeader{
-		Height:            1200,
-		PreviousBlockHash: testutil.MustDecodeHash("608d82b3660255186fb2b035cfb2ca86e986433218cd2eca2e79611e855a87d3"),
-		Timestamp:         1, // in order to make different hash
-	}
-	hash := blockHeader.Hash()
-	t.Error(hash.String())
-}
-
 func mustDecodeXPub(xpub string) chainkd.XPub {
 	bytes := testutil.MustDecodeHexString(xpub)
 	var result [64]byte
