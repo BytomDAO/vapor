@@ -76,7 +76,7 @@ func NewNode(config *cfg.Config) *Node {
 
 	initLogFile(config)
 	if err := consensus.InitActiveNetParams(config.ChainID); err != nil {
-		cmn.Exit(cmn.Fmt("Failed to init ActiveNetParams:[%s]", err.Error()))
+		log.Fatalf("Failed to init ActiveNetParams:[%s]", err.Error())
 	}
 	initCommonConfig(config)
 

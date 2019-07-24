@@ -53,7 +53,7 @@ func (s *SettlementReward) getVoteResultFromDB(height uint64) (voteResults []*vo
 func (s *SettlementReward) Settlement() error {
 	for height := s.startHeight + consensus.ActiveNetParams.RoundVoteBlockNums; height <= s.endHeight; height += consensus.ActiveNetParams.RoundVoteBlockNums {
 		coinbaseHeight := height + 1
-		totalReward, err := s.getTotalReward(coinbaseHeight)
+		totalReward, err := s.getCoinbaseReward(coinbaseHeight)
 		if err != nil {
 			return errors.Wrapf(err, "get total reward at coinbase_height: %d", coinbaseHeight)
 		}
@@ -70,7 +70,7 @@ func (s *SettlementReward) Settlement() error {
 	return s.node.BatchSendBTM(s.rewardCfg.AccountID, s.rewardCfg.Password, s.rewards)
 }
 
-func (s *SettlementReward) getTotalReward(height uint64) (uint64, error) {
+func (s *SettlementReward) getCoinbaseReward(height uint64) (uint64, error) {
 	block, err := s.node.GetBlockByHeight(height)
 	if err != nil {
 		return 0, err
@@ -116,10 +116,8 @@ func (s *SettlementReward) calcVoterRewards(voteResults []*voteResult, totalRewa
 
 		amount := voteNum.Mul(voteNum, reward).Div(voteNum, total).Uint64()
 
-		if amount == 0 {
-			continue
+		if amount != 0 {
+			s.rewards[voteResult.VoteAddress] += amount
 		}
-
-		s.rewards[voteResult.VoteAddress] += amount
 	}
 }

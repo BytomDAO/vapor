@@ -11,8 +11,9 @@ import (
 )
 
 type Config struct {
-	MySQLConfig common.MySQLConfig `json:"mysql"`
 	NodeIP      string             `json:"node_ip"`
+	ChainID     string             `json:"chain_id"`
+	MySQLConfig common.MySQLConfig `json:"mysql"`
 	RewardConf  *RewardConfig      `json:"reward_config"`
 }
 

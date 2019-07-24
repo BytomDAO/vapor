@@ -2,6 +2,8 @@ A `reward.json` would look like this:
 
 ```json
 {
+  "node_ip": "http://127.0.0.1:9889",
+  "chain_id": "solonet",
   "mysql": {
     "connection": {
       "host": "192.168.30.186",
@@ -12,7 +14,6 @@ A `reward.json` would look like this:
     },
     "log_mode": false
   },
-  "node_ip": "http://127.0.0.1:9889",
   "reward_config": {
     "xpub": "9742a39a0bcfb5b7ac8f56f1894fbb694b53ebf58f9a032c36cc22d57a06e49e94ff7199063fb7a78190624fa3530f611404b56fc9af91dcaf4639614512cb64",
     "account_id": "bd775113-49e0-4678-94bf-2b853f1afe80",
@@ -39,7 +40,6 @@ Flags:
       --chain_id string            Select [mainnet], [testnet] or [solonet]. default: mainnet (default "mainnet")
       --config_file string         config file. default: reward.json (default "reward.json")
   -h, --help                       help for reward
-      --home string                root directory for config and data
       --reward_end_height uint     The end height of the distributive income reward interval (default 2400)
       --reward_start_height uint   The starting height of the distributive income reward interval (default 1200)
 
