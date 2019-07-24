@@ -198,7 +198,7 @@ func (c *ConsensusResult) ConsensusNodes() (map[string]*ConsensusNode, error) {
 	if len(result) != 0 {
 		return result, nil
 	}
-	return federationNodes(), nil
+	return FederationNodes(), nil
 }
 
 // DetachBlock calculate the consensus result for detach block
@@ -326,7 +326,7 @@ func (c *ConsensusResult) GetCoinbaseRewards(blockHeight uint64) ([]CoinbaseRewa
 	return rewards, nil
 }
 
-func federationNodes() map[string]*ConsensusNode {
+func FederationNodes() map[string]*ConsensusNode {
 	consensusResult := map[string]*ConsensusNode{}
 	for i, xpub := range config.CommonConfig.Federation.Xpubs {
 		derivedXPub := xpub.Derive(fedConsensusPath)
