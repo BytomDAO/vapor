@@ -23,13 +23,11 @@ var (
 	configFile        string
 )
 
-var (
-	RootCmd = &cobra.Command{
-		Use:   "reward",
-		Short: "distribution of reward.",
-		RunE:  runReward,
-	}
-)
+var RootCmd = &cobra.Command{
+	Use:   "reward",
+	Short: "distribution of reward.",
+	RunE:  runReward,
+}
 
 func init() {
 	RootCmd.Flags().Uint64Var(&rewardStartHeight, "reward_start_height", 1200, "The starting height of the distributive income reward interval")
