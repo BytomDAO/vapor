@@ -15,11 +15,11 @@ func PickStandbyBPVoteResult(voteResult []api.VoteInfo) ([]api.VoteInfo, error) 
 	if high < 0 {
 		return nil, fmt.Errorf("Vote result is empty")
 	}
-	if high < 10 || voteResult[low].VoteNum < minConsensusNodeVoteNum {
+	if high < int(consensus.ActiveNetParams.NumOfConsensusNode) || voteResult[low].VoteNum < minConsensusNodeVoteNum {
 		return nil, fmt.Errorf("No Standby BP Node")
 	}
-	for low < high {
-		mid := int((low + high) / 2)
+	for low <= high {
+		mid := low + (high-low)/2
 		if voteResult[mid].VoteNum >= minConsensusNodeVoteNum {
 			low = mid + 1
 			if voteResult[low].VoteNum < minConsensusNodeVoteNum {
