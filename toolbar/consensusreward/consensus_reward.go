@@ -1,38 +1,25 @@
 package consensusreward
 
 import (
-	"fmt"
+	"sort"
 
 	"github.com/vapor/api"
 	"github.com/vapor/consensus"
 )
 
-func PickStandbyBPVoteResult(voteResult []api.VoteInfo) ([]api.VoteInfo, error) {
-	low := int(consensus.ActiveNetParams.NumOfConsensusNode)
-	high := len(voteResult) - 1
-	position := 0
+func PickStandbyBPVoteResult(voteResult []api.VoteInfo) []api.VoteInfo {
+	numOfConsensusNode := int(consensus.ActiveNetParams.NumOfConsensusNode)
 	minConsensusNodeVoteNum := consensus.ActiveNetParams.MinConsensusNodeVoteNum
-	if high < 0 {
-		return nil, fmt.Errorf("Vote result is empty")
+
+	sort.Slice(voteResult, func(i, j int) bool {
+		return voteResult[i].VoteNum > voteResult[j].VoteNum
+	})
+	if len(voteResult) <= int(numOfConsensusNode) || voteResult[numOfConsensusNode].VoteNum < minConsensusNodeVoteNum {
+		return nil
 	}
-	if high < int(consensus.ActiveNetParams.NumOfConsensusNode) || voteResult[low].VoteNum < minConsensusNodeVoteNum {
-		return nil, fmt.Errorf("No Standby BP Node")
-	}
-	for low <= high {
-		mid := low + (high-low)/2
-		if voteResult[mid].VoteNum >= minConsensusNodeVoteNum {
-			low = mid + 1
-			if voteResult[low].VoteNum < minConsensusNodeVoteNum {
-				position = low
-				break
-			}
-		} else {
-			high = mid - 1
-			if voteResult[high].VoteNum >= minConsensusNodeVoteNum {
-				position = mid
-				break
-			}
-		}
-	}
-	return voteResult[int(consensus.ActiveNetParams.NumOfConsensusNode):position], nil
+
+	position := sort.Search(len(voteResult[numOfConsensusNode:]), func(i int) bool {
+		return voteResult[i].VoteNum < minConsensusNodeVoteNum
+	})
+	return voteResult[int(consensus.ActiveNetParams.NumOfConsensusNode):position]
 }
