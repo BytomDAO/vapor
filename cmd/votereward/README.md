@@ -19,8 +19,7 @@ A `reward.json` would look like this:
     "account_id": "bd775113-49e0-4678-94bf-2b853f1afe80",
     "password": "123456",
     "reward_ratio": 20,
-    "mining_address": "sp1qfpgjve27gx0r9t7vud8vypplkzytgrvqr74rwz",
-    "alternative_nodes_reward_consensus_cycle": 0
+    "mining_address": "sp1qfpgjve27gx0r9t7vud8vypplkzytgrvqr74rwz"
   }
 }
 ```
