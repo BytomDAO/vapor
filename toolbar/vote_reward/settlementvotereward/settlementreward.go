@@ -68,7 +68,7 @@ func (s *SettlementReward) Settlement() error {
 		totalReward, err := s.getCoinbaseReward(coinbaseHeight)
 		if err == errFoundReward {
 			coinbaseHeight = height - consensus.ActiveNetParams.RoundVoteBlockNums
-			totalReward, err = s.getStandbyNodeReward(height)
+			totalReward, err = s.getStandbyNodeReward(coinbaseHeight)
 		}
 
 		if err == errNoStandbyNode {
@@ -100,6 +100,9 @@ func (s *SettlementReward) getStandbyNodeReward(height uint64) (uint64, error) {
 	if err != nil {
 		return 0, errors.Wrapf(err, "get alternative node reward")
 	}
+
+	voteInfos = common.CalcStandByNodes(voteInfos)
+
 	err = errNoStandbyNode
 	totalVoteNum := uint64(0)
 	xpubVoteNum := uint64(0)
