@@ -44,7 +44,7 @@ func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
 
 	bsj := &protocol.BlockStoreState{}
 	if err := json.Unmarshal(bytes, bsj); err != nil {
-		logrus.WithField("err", err).Panic("fail on unmarshal BlockStoreStateJSON")
+		log.BtmLog.WithField("err", err).Panic("fail on unmarshal BlockStoreStateJSON")
 	}
 	return bsj
 }

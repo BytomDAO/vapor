@@ -3,10 +3,17 @@ package node
 import (
 	"encoding/hex"
 	"errors"
+	"net"
+	"net/http"
+	_ "net/http/pprof"
+	"path/filepath"
+	"reflect"
+
 	"github.com/prometheus/prometheus/util/flock"
 	"github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
 	browser "github.com/toqueteos/webbrowser"
+
 	"github.com/vapor/accesstoken"
 	"github.com/vapor/account"
 	"github.com/vapor/api"
@@ -25,11 +32,6 @@ import (
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc/types"
 	w "github.com/vapor/wallet"
-	"net"
-	"net/http"
-	_ "net/http/pprof"
-	"path/filepath"
-	"reflect"
 )
 
 const (
@@ -74,7 +76,7 @@ func NewNode(config *cfg.Config) *Node {
 	}).Info()
 
 	if err := consensus.InitActiveNetParams(config.ChainID); err != nil {
-		logrus.Fatalf("Failed to init ActiveNetParams:[%s]", err.Error())
+		log.BtmLog.Fatalf("Failed to init ActiveNetParams:[%s]", err.Error())
 	}
 
 	initCommonConfig(config)
@@ -194,9 +196,9 @@ func initCommonConfig(config *cfg.Config) {
 // Lanch web broser or not
 func launchWebBrowser(port string) {
 	webAddress := webHost + ":" + port
-	logrus.Info("Launching System Browser with :", webAddress)
+	log.BtmLog.Info("Launching System Browser with :", webAddress)
 	if err := browser.Open(webAddress); err != nil {
-		logrus.Error(err.Error())
+		log.BtmLog.Error(err.Error())
 		return
 	}
 }
@@ -213,7 +215,7 @@ func (n *Node) OnStart() error {
 	if n.miningEnable {
 		if _, err := n.wallet.AccountMgr.GetMiningAddress(); err != nil {
 			n.miningEnable = false
-			logrus.Error(err)
+			log.BtmLog.Error(err)
 		} else {
 			n.cpuMiner.Start()
 		}
@@ -232,7 +234,7 @@ func (n *Node) OnStart() error {
 	if !n.config.Web.Closed {
 		_, port, err := net.SplitHostPort(n.config.ApiAddress)
 		if err != nil {
-			logrus.Error("Invalid api address")
+			log.BtmLog.Error("Invalid api address")
 			return err
 		}
 		launchWebBrowser(port)
