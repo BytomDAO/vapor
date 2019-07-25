@@ -103,19 +103,17 @@ func (s *SettlementReward) getStandbyNodeReward(height uint64) (uint64, error) {
 
 	voteInfos = common.CalcStandByNodes(voteInfos)
 
-	err = errNoStandbyNode
+	if len(voteInfos) == 0 {
+		return 0, errNoStandbyNode
+	}
+
 	totalVoteNum := uint64(0)
 	xpubVoteNum := uint64(0)
 	for _, voteInfo := range voteInfos {
 		totalVoteNum += voteInfo.VoteNum
 		if s.rewardCfg.XPub == voteInfo.Vote {
 			xpubVoteNum = voteInfo.VoteNum
-			err = nil
 		}
-	}
-
-	if err != nil {
-		return 0, err
 	}
 
 	amount := big.NewInt(0).SetUint64(standbyNodesRewardForConsensusCycle)
