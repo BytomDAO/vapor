@@ -117,6 +117,7 @@ func (s *SettlementReward) getStandbyNodeReward(height uint64) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	amount := big.NewInt(0).SetUint64(standbyNodesRewardForConsensusCycle)
 	rewardRatio := big.NewInt(0).SetUint64(s.rewardCfg.RewardRatio)
 	amount.Mul(amount, rewardRatio).Div(amount, big.NewInt(100))
