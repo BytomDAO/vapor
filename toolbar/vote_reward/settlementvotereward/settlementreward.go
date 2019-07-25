@@ -15,9 +15,9 @@ import (
 )
 
 var (
-	errFoundReward   = errors.New("No reward found")
-	errNoStandbyNode = errors.New("No Standby Node")
-	errNoRewardTx    = errors.New("No reward transaction")
+	errNotFoundReward = errors.New("No reward found")
+	errNotStandbyNode = errors.New("No Standby Node")
+	errNotRewardTx    = errors.New("No reward transaction")
 )
 
 const standbyNodesRewardForConsensusCycle = 7610350076 // 400000000000000 / (365 * 24 * 60 / (500 * 1200 / 1000 / 60))
@@ -61,11 +61,11 @@ func (s *SettlementReward) getVoteResultFromDB(height uint64) (voteResults []*vo
 func (s *SettlementReward) Settlement() error {
 	for height := s.startHeight + consensus.ActiveNetParams.RoundVoteBlockNums; height <= s.endHeight; height += consensus.ActiveNetParams.RoundVoteBlockNums {
 		totalReward, err := s.getCoinbaseReward(height + 1)
-		if err == errFoundReward {
+		if err == errNotFoundReward {
 			totalReward, err = s.getStandbyNodeReward(height - consensus.ActiveNetParams.RoundVoteBlockNums)
 		}
 
-		if err == errNoStandbyNode {
+		if err == errNotStandbyNode {
 			continue
 		}
 
@@ -82,7 +82,7 @@ func (s *SettlementReward) Settlement() error {
 	}
 
 	if len(s.rewards) == 0 {
-		return errNoRewardTx
+		return errNotRewardTx
 	}
 
 	// send transactions
@@ -106,7 +106,7 @@ func (s *SettlementReward) getStandbyNodeReward(height uint64) (uint64, error) {
 	}
 
 	if xpubVoteNum == 0 {
-		return 0, errNoStandbyNode
+		return 0, errNotStandbyNode
 	}
 
 	amount := big.NewInt(0).SetUint64(standbyNodesRewardForConsensusCycle)
@@ -146,7 +146,7 @@ func (s *SettlementReward) getCoinbaseReward(height uint64) (uint64, error) {
 			return amount.Uint64(), nil
 		}
 	}
-	return 0, errFoundReward
+	return 0, errNotFoundReward
 }
 
 func (s *SettlementReward) calcVoterRewards(voteResults []*voteResult, totalReward uint64) {
