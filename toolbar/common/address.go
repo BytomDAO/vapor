@@ -1,9 +1,12 @@
 package common
 
 import (
+	"errors"
+
 	"github.com/vapor/common"
 	"github.com/vapor/consensus"
 	"github.com/vapor/consensus/segwit"
+	"github.com/vapor/protocol/vm/vmutil"
 )
 
 func GetAddressFromControlProgram(prog []byte) string {
@@ -36,4 +39,26 @@ func buildP2SHAddress(scriptHash []byte) string {
 	}
 
 	return address.EncodeAddress()
+}
+
+func GetControlProgramFromAddress(address string) ([]byte, error) {
+	decodeaddress, err := common.DecodeAddress(address, &consensus.ActiveNetParams)
+	if err != nil {
+		return nil, err
+	}
+
+	redeemContract := decodeaddress.ScriptAddress()
+	program := []byte{}
+	switch decodeaddress.(type) {
+	case *common.AddressWitnessPubKeyHash:
+		program, err = vmutil.P2WPKHProgram(redeemContract)
+	case *common.AddressWitnessScriptHash:
+		program, err = vmutil.P2WSHProgram(redeemContract)
+	default:
+		return nil, errors.New("Invalid address")
+	}
+	if err != nil {
+		return nil, err
+	}
+	return program, nil
 }
