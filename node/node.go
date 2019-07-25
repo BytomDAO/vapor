@@ -3,18 +3,10 @@ package node
 import (
 	"encoding/hex"
 	"errors"
-	"net"
-	"net/http"
-	_ "net/http/pprof"
-	"os"
-	"path/filepath"
-	"reflect"
-
 	"github.com/prometheus/prometheus/util/flock"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
 	browser "github.com/toqueteos/webbrowser"
-
 	"github.com/vapor/accesstoken"
 	"github.com/vapor/account"
 	"github.com/vapor/api"
@@ -26,12 +18,18 @@ import (
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/env"
 	"github.com/vapor/event"
+	"github.com/vapor/log"
 	"github.com/vapor/net/websocket"
 	"github.com/vapor/netsync"
 	"github.com/vapor/proposal/blockproposer"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc/types"
 	w "github.com/vapor/wallet"
+	"net"
+	"net/http"
+	_ "net/http/pprof"
+	"path/filepath"
+	"reflect"
 )
 
 const (
@@ -58,6 +56,7 @@ type Node struct {
 
 // NewNode create bytom node
 func NewNode(config *cfg.Config) *Node {
+
 	if err := lockDataDirectory(config); err != nil {
 		cmn.Exit("Error: " + err.Error())
 	}
@@ -65,8 +64,8 @@ func NewNode(config *cfg.Config) *Node {
 	if err := cfg.LoadFederationFile(config.FederationFile(), config); err != nil {
 		cmn.Exit(cmn.Fmt("Failed to load federated information:[%s]", err.Error()))
 	}
-
-	log.WithFields(log.Fields{
+	log.InitLogFile(config)
+	log.BtmLog.WithFields(logrus.Fields{
 		"module":             logModule,
 		"pubkey":             config.PrivateKey().XPub(),
 		"fed_xpubs":          config.Federation.Xpubs,
@@ -74,10 +73,10 @@ func NewNode(config *cfg.Config) *Node {
 		"fed_controlprogram": hex.EncodeToString(cfg.FederationWScript(config)),
 	}).Info()
 
-	initLogFile(config)
 	if err := consensus.InitActiveNetParams(config.ChainID); err != nil {
-		log.Fatalf("Failed to init ActiveNetParams:[%s]", err.Error())
+		logrus.Fatalf("Failed to init ActiveNetParams:[%s]", err.Error())
 	}
+
 	initCommonConfig(config)
 
 	// Get store
@@ -118,7 +117,7 @@ func NewNode(config *cfg.Config) *Node {
 		assets = asset.NewRegistry(walletDB, chain)
 		wallet, err = w.NewWallet(walletStore, accounts, assets, hsm, chain, dispatcher, config.Wallet.TxIndex)
 		if err != nil {
-			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("init NewWallet")
+			log.BtmLog.WithFields(logrus.Fields{"module": logModule, "error": err}).Error("init NewWallet")
 		}
 
 		// trigger rescan wallet
@@ -188,20 +187,6 @@ func lockDataDirectory(config *cfg.Config) error {
 	return nil
 }
 
-func initLogFile(config *cfg.Config) {
-	if config.LogFile == "" {
-		return
-	}
-	cmn.EnsureDir(filepath.Dir(config.LogFile), 0700)
-	file, err := os.OpenFile(config.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err == nil {
-		log.SetOutput(file)
-	} else {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Info("using default")
-	}
-
-}
-
 func initCommonConfig(config *cfg.Config) {
 	cfg.CommonConfig = config
 }
@@ -209,9 +194,9 @@ func initCommonConfig(config *cfg.Config) {
 // Lanch web broser or not
 func launchWebBrowser(port string) {
 	webAddress := webHost + ":" + port
-	log.Info("Launching System Browser with :", webAddress)
+	logrus.Info("Launching System Browser with :", webAddress)
 	if err := browser.Open(webAddress); err != nil {
-		log.Error(err.Error())
+		logrus.Error(err.Error())
 		return
 	}
 }
@@ -228,7 +213,7 @@ func (n *Node) OnStart() error {
 	if n.miningEnable {
 		if _, err := n.wallet.AccountMgr.GetMiningAddress(); err != nil {
 			n.miningEnable = false
-			log.Error(err)
+			logrus.Error(err)
 		} else {
 			n.cpuMiner.Start()
 		}
@@ -247,7 +232,7 @@ func (n *Node) OnStart() error {
 	if !n.config.Web.Closed {
 		_, port, err := net.SplitHostPort(n.config.ApiAddress)
 		if err != nil {
-			log.Error("Invalid api address")
+			logrus.Error("Invalid api address")
 			return err
 		}
 		launchWebBrowser(port)

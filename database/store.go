@@ -7,11 +7,12 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/database/storage"
 	"github.com/vapor/errors"
+	"github.com/vapor/log"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -43,7 +44,7 @@ func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
 
 	bsj := &protocol.BlockStoreState{}
 	if err := json.Unmarshal(bytes, bsj); err != nil {
-		log.WithField("err", err).Panic("fail on unmarshal BlockStoreStateJSON")
+		logrus.WithField("err", err).Panic("fail on unmarshal BlockStoreStateJSON")
 	}
 	return bsj
 }
@@ -301,7 +302,7 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 	batch.Write()
 
 	s.cache.removeBlockHashes(block.Height)
-	log.WithFields(log.Fields{
+	log.BtmLog.WithFields(logrus.Fields{
 		"module":   logModule,
 		"height":   block.Height,
 		"hash":     blockHash.String(),
