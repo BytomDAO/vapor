@@ -7,18 +7,21 @@ import (
 
 	"github.com/vapor/errors"
 	"github.com/vapor/netsync/peers"
+	"github.com/vapor/p2p/security"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
 
 var (
-	maxNumOfSkeletonPerSync = uint64(10)
-	numOfBlocksSkeletonGap  = maxNumOfBlocksPerMsg
-	maxNumOfBlocksPerSync   = numOfBlocksSkeletonGap * maxNumOfSkeletonPerSync
-	fastSyncPivotGap        = uint64(64)
-	minGapStartFastSync     = uint64(128)
+	minSizeOfSyncSkeleton  = 2
+	maxSizeOfSyncSkeleton  = 11
+	numOfBlocksSkeletonGap = maxNumOfBlocksPerMsg
+	maxNumOfBlocksPerSync  = numOfBlocksSkeletonGap * uint64(maxSizeOfSyncSkeleton-1)
+	fastSyncPivotGap       = uint64(64)
+	minGapStartFastSync    = uint64(128)
 
-	errNoSyncPeer = errors.New("can't find sync peer")
+	errNoSyncPeer   = errors.New("can't find sync peer")
+	errSkeletonSize = errors.New("fast sync skeleton size wrong")
 )
 
 type fastSync struct {
@@ -86,6 +89,11 @@ func (fs *fastSync) createFetchBlocksTasks(stopBlock *types.Block) ([]*fetchBloc
 	mainSkeleton, ok := skeletonMap[fs.mainSyncPeer.ID()]
 	if !ok {
 		return nil, errors.New("No main skeleton found")
+	}
+
+	if len(mainSkeleton) < minSizeOfSyncSkeleton || len(mainSkeleton) > maxSizeOfSyncSkeleton {
+		fs.peers.ProcessIllegal(fs.mainSyncPeer.ID(), security.LevelMsgIllegal, errSkeletonSize.Error())
+		return nil, errSkeletonSize
 	}
 
 	// collect peers that match the skeleton of the primary sync peer
