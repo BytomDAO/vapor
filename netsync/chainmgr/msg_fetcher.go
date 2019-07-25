@@ -83,7 +83,7 @@ func (mf *msgFetcher) collectResultLoop(peerCh chan string, quit chan struct{}, 
 	defer ticker.Stop()
 
 	//collect fetch results
-	for resultCount := 0; resultCount < workSize; {
+	for resultCount := 0; resultCount < workSize && mf.syncPeers.size() > 0; {
 		select {
 		case result := <-resultCh:
 			resultCount++
