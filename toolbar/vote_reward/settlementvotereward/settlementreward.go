@@ -14,7 +14,17 @@ import (
 	"github.com/vapor/toolbar/vote_reward/config"
 )
 
-var ErrFoundReward = errors.New("No reward found")
+var (
+	errFoundReward   = errors.New("No reward found")
+	errNoStandbyNode = errors.New("No Standby Node")
+	errNoRewardTx    = errors.New("No reward transaction")
+)
+
+var (
+	consensusCycleMin                   = consensus.ActiveNetParams.BlockTimeInterval * consensus.ActiveNetParams.RoundVoteBlockNums / 1000 / 60 // the block time interval(minute) for producting 1200 block
+	consensusCycleNumPerYear            = 365 * 24 * 60 / consensusCycleMin
+	standbyNodesRewardForConsensusCycle = 400000000000000 / consensusCycleNumPerYear
+)
 
 type voteResult struct {
 	VoteAddress string
@@ -56,9 +66,13 @@ func (s *SettlementReward) Settlement() error {
 	for height := s.startHeight + consensus.ActiveNetParams.RoundVoteBlockNums; height <= s.endHeight; height += consensus.ActiveNetParams.RoundVoteBlockNums {
 		coinbaseHeight := height + 1
 		totalReward, err := s.getCoinbaseReward(coinbaseHeight)
-		if err == ErrFoundReward {
-			totalReward, err = s.getAlternativeNodeReward(height)
-			coinbaseHeight = height
+		if err == errFoundReward {
+			coinbaseHeight = height - consensus.ActiveNetParams.RoundVoteBlockNums
+			totalReward, err = s.getStandbyNodeReward(height)
+		}
+
+		if err == errNoStandbyNode {
+			continue
 		}
 
 		if err != nil {
@@ -73,29 +87,41 @@ func (s *SettlementReward) Settlement() error {
 		s.calcVoterRewards(voteResults, totalReward)
 	}
 
+	if len(s.rewards) == 0 {
+		return errNoRewardTx
+	}
+
 	// send transactions
 	return s.node.BatchSendBTM(s.rewardCfg.AccountID, s.rewardCfg.Password, s.rewards)
 }
 
-func (s *SettlementReward) getAlternativeNodeReward(height uint64) (uint64, error) {
+func (s *SettlementReward) getStandbyNodeReward(height uint64) (uint64, error) {
 	voteInfos, err := s.node.GetVoteByHeight(height)
 	if err != nil {
 		return 0, errors.Wrapf(err, "get alternative node reward")
 	}
+	err = errNoStandbyNode
 	totalVoteNum := uint64(0)
 	xpubVoteNum := uint64(0)
 	for _, voteInfo := range voteInfos {
 		totalVoteNum += voteInfo.VoteNum
 		if s.rewardCfg.XPub == voteInfo.Vote {
 			xpubVoteNum = voteInfo.VoteNum
+			err = nil
 		}
 	}
 
+	if err != nil {
+		return 0, err
+	}
+	amount := big.NewInt(0).SetUint64(standbyNodesRewardForConsensusCycle)
+	rewardRatio := big.NewInt(0).SetUint64(s.rewardCfg.RewardRatio)
+	amount.Mul(amount, rewardRatio).Div(amount, big.NewInt(100))
+
 	total := big.NewInt(0).SetUint64(totalVoteNum)
 	voteNum := big.NewInt(0).SetUint64(xpubVoteNum)
-	totalReward := big.NewInt(0).SetUint64(s.rewardCfg.AlternativeNodesRewardForConsensusCycle)
 
-	return total.Mul(total, totalReward).Div(total, voteNum).Uint64(), nil
+	return amount.Mul(amount, voteNum).Div(amount, total).Uint64(), nil
 }
 
 func (s *SettlementReward) getCoinbaseReward(height uint64) (uint64, error) {
@@ -127,7 +153,7 @@ func (s *SettlementReward) getCoinbaseReward(height uint64) (uint64, error) {
 			return amount.Uint64(), nil
 		}
 	}
-	return 0, ErrFoundReward
+	return 0, errFoundReward
 }
 
 func (s *SettlementReward) calcVoterRewards(voteResults []*voteResult, totalReward uint64) {
