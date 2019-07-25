@@ -80,19 +80,19 @@ func TestFastBlockSync(t *testing.T) {
 		os.RemoveAll(tmp)
 	}()
 
-	maxNumOfSkeletonPerSync = 10
+	maxSizeOfSyncSkeleton = 11
 	numOfBlocksSkeletonGap = 10
-	maxNumOfBlocksPerSync = maxNumOfSkeletonPerSync * maxNumOfSkeletonPerSync
+	maxNumOfBlocksPerSync = numOfBlocksSkeletonGap * uint64(maxSizeOfSyncSkeleton-1)
 	fastSyncPivotGap = uint64(5)
 	minGapStartFastSync = uint64(6)
 
 	defer func() {
-		maxNumOfSkeletonPerSync = 10
+		maxSizeOfSyncSkeleton = 11
 		numOfBlocksSkeletonGap = maxNumOfBlocksPerMsg
-		maxNumOfBlocksPerSync = maxNumOfSkeletonPerSync * maxNumOfSkeletonPerSync
+		maxNumOfBlocksPerSync = numOfBlocksSkeletonGap * uint64(maxSizeOfSyncSkeleton-1)
 		fastSyncPivotGap = uint64(64)
 		minGapStartFastSync = uint64(128)
-
+		requireHeadersTimeout = 30 * time.Second
 	}()
 
 	baseChain := mockBlocks(nil, 300)
@@ -139,6 +139,13 @@ func TestFastBlockSync(t *testing.T) {
 			want:        baseChain[:5],
 			err:         nil,
 		},
+		{
+			syncTimeout: 0 * time.Second,
+			aBlocks:     baseChain[:50],
+			bBlocks:     baseChain[:301],
+			want:        baseChain[:50],
+			err:         errSkeletonSize,
+		},
 	}
 
 	for i, c := range cases {
@@ -156,6 +163,7 @@ func TestFastBlockSync(t *testing.T) {
 		a.blockKeeper.syncPeer = a.peers.GetPeer("test node B")
 		a.blockKeeper.fastSync.setSyncPeer(a.blockKeeper.syncPeer)
 
+		requireHeadersTimeout = c.syncTimeout
 		if err := a.blockKeeper.fastSync.process(); errors.Root(err) != c.err {
 			t.Errorf("case %d: got %v want %v", i, err, c.err)
 		}
