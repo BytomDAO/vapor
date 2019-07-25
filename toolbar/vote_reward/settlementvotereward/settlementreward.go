@@ -20,11 +20,7 @@ var (
 	errNoRewardTx    = errors.New("No reward transaction")
 )
 
-var (
-	consensusCycleMin                   = consensus.ActiveNetParams.BlockTimeInterval * consensus.ActiveNetParams.RoundVoteBlockNums / 1000 / 60 // the block time interval(minute) for producting 1200 block
-	consensusCycleNumPerYear            = 365 * 24 * 60 / consensusCycleMin
-	standbyNodesRewardForConsensusCycle = 400000000000000 / consensusCycleNumPerYear
-)
+const standbyNodesRewardForConsensusCycle = 7610350076 // 400000000000000 / (365 * 24 * 60 / (500 * 1200 / 1000 / 60))
 
 type voteResult struct {
 	VoteAddress string
@@ -64,11 +60,9 @@ func (s *SettlementReward) getVoteResultFromDB(height uint64) (voteResults []*vo
 
 func (s *SettlementReward) Settlement() error {
 	for height := s.startHeight + consensus.ActiveNetParams.RoundVoteBlockNums; height <= s.endHeight; height += consensus.ActiveNetParams.RoundVoteBlockNums {
-		coinbaseHeight := height + 1
-		totalReward, err := s.getCoinbaseReward(coinbaseHeight)
+		totalReward, err := s.getCoinbaseReward(height + 1)
 		if err == errFoundReward {
-			coinbaseHeight = height - consensus.ActiveNetParams.RoundVoteBlockNums
-			totalReward, err = s.getStandbyNodeReward(coinbaseHeight)
+			totalReward, err = s.getStandbyNodeReward(height - consensus.ActiveNetParams.RoundVoteBlockNums)
 		}
 
 		if err == errNoStandbyNode {
@@ -76,7 +70,7 @@ func (s *SettlementReward) Settlement() error {
 		}
 
 		if err != nil {
-			return errors.Wrapf(err, "get total reward at coinbase_height: %d", coinbaseHeight)
+			return errors.Wrapf(err, "get total reward at height: %d", height)
 		}
 
 		voteResults, err := s.getVoteResultFromDB(height)
@@ -103,17 +97,19 @@ func (s *SettlementReward) getStandbyNodeReward(height uint64) (uint64, error) {
 
 	voteInfos = common.CalcStandByNodes(voteInfos)
 
-	if len(voteInfos) == 0 {
-		return 0, errNoStandbyNode
-	}
-
+	err = errNoStandbyNode
 	totalVoteNum := uint64(0)
 	xpubVoteNum := uint64(0)
 	for _, voteInfo := range voteInfos {
 		totalVoteNum += voteInfo.VoteNum
 		if s.rewardCfg.XPub == voteInfo.Vote {
 			xpubVoteNum = voteInfo.VoteNum
+			err = nil
 		}
+	}
+
+	if err != nil {
+		return 0, err
 	}
 
 	amount := big.NewInt(0).SetUint64(standbyNodesRewardForConsensusCycle)
