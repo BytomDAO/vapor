@@ -106,7 +106,7 @@ func (s *SettlementReward) getStandbyNodeReward(height uint64) (uint64, error) {
 		}
 	}
 
-	if xpubVoteNum != 0 {
+	if xpubVoteNum == 0 {
 		return 0, errNoStandbyNode
 	}
 
