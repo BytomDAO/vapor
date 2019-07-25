@@ -75,7 +75,9 @@ func NewNode(config *cfg.Config) *Node {
 	}).Info()
 
 	initLogFile(config)
-	initActiveNetParams(config)
+	if err := consensus.InitActiveNetParams(config.ChainID); err != nil {
+		log.Fatalf("Failed to init ActiveNetParams:[%s]", err.Error())
+	}
 	initCommonConfig(config)
 
 	// Get store
@@ -125,7 +127,7 @@ func NewNode(config *cfg.Config) *Node {
 		}
 	}
 	fastSyncDB := dbm.NewDB("fastsync", config.DBBackend, config.DBDir())
-	syncManager, err := netsync.NewSyncManager(config, chain, txPool, dispatcher,fastSyncDB)
+	syncManager, err := netsync.NewSyncManager(config, chain, txPool, dispatcher, fastSyncDB)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create sync manager: %v", err))
 	}
@@ -184,14 +186,6 @@ func lockDataDirectory(config *cfg.Config) error {
 		return errors.New("datadir already used by another process")
 	}
 	return nil
-}
-
-func initActiveNetParams(config *cfg.Config) {
-	var exist bool
-	consensus.ActiveNetParams, exist = consensus.NetParams[config.ChainID]
-	if !exist {
-		cmn.Exit(cmn.Fmt("chain_id[%v] don't exist", config.ChainID))
-	}
 }
 
 func initLogFile(config *cfg.Config) {
