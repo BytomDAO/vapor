@@ -59,7 +59,7 @@ func (s *SettlementReward) getVoteResultFromDB(height uint64) (voteResults []*vo
 }
 
 func (s *SettlementReward) Settlement() error {
-	for height := s.startHeight + consensus.ActiveNetParams.RoundVoteBlockNums; height < s.endHeight; height += consensus.ActiveNetParams.RoundVoteBlockNums {
+	for height := s.startHeight + consensus.ActiveNetParams.RoundVoteBlockNums; height <= s.endHeight; height += consensus.ActiveNetParams.RoundVoteBlockNums {
 		totalReward, err := s.getCoinbaseReward(height + 1)
 		if err == errFoundReward {
 			totalReward, err = s.getStandbyNodeReward(height - consensus.ActiveNetParams.RoundVoteBlockNums)
@@ -97,8 +97,7 @@ func (s *SettlementReward) getStandbyNodeReward(height uint64) (uint64, error) {
 
 	voteInfos = common.CalcStandByNodes(voteInfos)
 
-	totalVoteNum := uint64(0)
-	xpubVoteNum := uint64(0)
+	totalVoteNum, xpubVoteNum := uint64(0), uint64(0)
 	for _, voteInfo := range voteInfos {
 		totalVoteNum += voteInfo.VoteNum
 		if s.rewardCfg.XPub == voteInfo.Vote {
@@ -113,10 +112,8 @@ func (s *SettlementReward) getStandbyNodeReward(height uint64) (uint64, error) {
 	amount := big.NewInt(0).SetUint64(standbyNodesRewardForConsensusCycle)
 	rewardRatio := big.NewInt(0).SetUint64(s.rewardCfg.RewardRatio)
 	amount.Mul(amount, rewardRatio).Div(amount, big.NewInt(100))
-
 	total := big.NewInt(0).SetUint64(totalVoteNum)
 	voteNum := big.NewInt(0).SetUint64(xpubVoteNum)
-
 	return amount.Mul(amount, voteNum).Div(amount, total).Uint64(), nil
 }
 
