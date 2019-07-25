@@ -54,8 +54,12 @@ func TestGetConsensusNodes(t *testing.T) {
 					Height:            1203,
 					PreviousBlockHash: testutil.MustDecodeHash("559b02b183e275e79dcfab23c66004264127f461ff8b90b3a336b2f958bf96e2"),
 				},
+				{
+					Height:            1204,
+					PreviousBlockHash: testutil.MustDecodeHash("f77d1330abc1a58ce5909581e6f2059153e116e9044e284609e07efd5f0b239e"),
+				},
 			},
-			prevBlockHash:   testutil.MustDecodeHash("f77d1330abc1a58ce5909581e6f2059153e116e9044e284609e07efd5f0b239e"),
+			prevBlockHash:   testutil.MustDecodeHash("f77d1330abc1a58ce5909581e6f2059153e116e9044e284609e07efd5f0b239e"), // 1204
 			bestBlockHeight: 1230,
 			wantConsensusNodes: []*state.ConsensusNode{
 				{
@@ -115,7 +119,7 @@ func TestGetConsensusNodes(t *testing.T) {
 					PreviousBlockHash: testutil.MustDecodeHash("65a92adc3c17657e4f0f032f1de83597dbbc6c29c24626d1533c8215f81c99e6"),
 				},
 			},
-			prevBlockHash:   testutil.MustDecodeHash("65a92adc3c17657e4f0f032f1de83597dbbc6c29c24626d1533c8215f81c99e6"),
+			prevBlockHash:   testutil.MustDecodeHash("65a92adc3c17657e4f0f032f1de83597dbbc6c29c24626d1533c8215f81c99e6"), // 1201
 			bestBlockHeight: 1230,
 			wantConsensusNodes: []*state.ConsensusNode{
 				{
@@ -222,7 +226,7 @@ func TestGetConsensusNodes(t *testing.T) {
 					},
 				},
 			},
-			prevBlockHash:   testutil.MustDecodeHash("73a2a6a098727877e288a4520f2d8076d700b561277ed7c3f533e3f176496888"),
+			prevBlockHash:   testutil.MustDecodeHash("73a2a6a098727877e288a4520f2d8076d700b561277ed7c3f533e3f176496888"), // 1201
 			bestBlockHeight: 1230,
 			wantConsensusNodes: []*state.ConsensusNode{
 				{
@@ -295,7 +299,7 @@ func TestGetConsensusNodes(t *testing.T) {
 					Height:            1202,
 					PreviousBlockHash: testutil.MustDecodeHash("a5be1d1177eb027327baedb869f902f74850476d0b9432a30391a3165d3af7cc"),
 				},
-				// fork chain
+				// fork chain, fork height in 1198, rollback 1200, 1199, append 1199, 1200 
 				{
 					Height:            1199,
 					PreviousBlockHash: testutil.MustDecodeHash("ef24de31371b4d34363011b6c8b065b1acaad9264d9abae2253d584e0d3a8739"),
@@ -387,7 +391,7 @@ func TestGetConsensusNodes(t *testing.T) {
 					},
 				},
 			},
-			prevBlockHash:   testutil.MustDecodeHash("f819efb4baecbeb63aff6d4b14b549f1bd35955d461abaa0058a26f74c4f62da"),
+			prevBlockHash:   testutil.MustDecodeHash("f819efb4baecbeb63aff6d4b14b549f1bd35955d461abaa0058a26f74c4f62da"), // 1201
 			bestBlockHeight: 1230,
 			wantConsensusNodes: []*state.ConsensusNode{
 				{
@@ -429,49 +433,67 @@ func TestGetConsensusNodes(t *testing.T) {
 					"b928e46bb01e834fdf167185e31b15de7cc257af8bbdf17f9c7fefd5bb97b306d048b6bc0da2097152c1c2ff38333c756a543adbba7030a447dcc776b8ac64ef": 1228455289930297,
 					"36695997983028c279c3360ca345a90e3af1f9e3df2506119fca31cdc844be31630f9a421f4d1658e15d67a15ce29c36332dd45020d2a0147fcce4949ccd9a67": 274387690000000,
 				},
-				BlockHash:      testutil.MustDecodeHash("ef24de31371b4d34363011b6c8b065b1acaad9264d9abae2253d584e0d3a8739"),
+				BlockHash:      testutil.MustDecodeHash("a0239137437634c933fa1200f801783a532b88e9556a0746b75a5832aac09bfc"),
 				BlockHeight:    1198,
 				CoinbaseReward: map[string]uint64{"0001": 1E8},
 			},
 			storedBlockHeaders: []*types.BlockHeader{
 				// main chain
 				{
+					Height:            1197,
+					PreviousBlockHash: testutil.MustDecodeHash("dda6bc15d7de8dadbbb283e90d24bd05a9fd0f721023f53822209281c5ce1698"),
+				},
+				{
 					Height:            1198,
-					PreviousBlockHash: testutil.MustDecodeHash("4d3ecf28f3045df23764792f41af17fc20518cc8e83673dc2d0ce07bbf084d7d"),
+					PreviousBlockHash: testutil.MustDecodeHash("b9c3d0ce5eceac94b53208360c7e100bb342a00ba70c990dc48ce959295793e6"),
 				},
 				{
 					Height:            1199,
-					PreviousBlockHash: testutil.MustDecodeHash("ef24de31371b4d34363011b6c8b065b1acaad9264d9abae2253d584e0d3a8739"),
+					PreviousBlockHash: testutil.MustDecodeHash("a0239137437634c933fa1200f801783a532b88e9556a0746b75a5832aac09bfc"),
 				},
 				{
 					Height:            1200,
-					PreviousBlockHash: testutil.MustDecodeHash("608d82b3660255186fb2b035cfb2ca86e986433218cd2eca2e79611e855a87d3"),
+					PreviousBlockHash: testutil.MustDecodeHash("9e135b0372e670d02fb4a1d4af6b1a4cc1f33fcec3499a2e735f128b6b9ec144"),
 				},
 				{
 					Height:            1201,
-					PreviousBlockHash: testutil.MustDecodeHash("73a2a6a098727877e288a4520f2d8076d700b561277ed7c3f533e3f176496888"),
+					PreviousBlockHash: testutil.MustDecodeHash("c907b3e07505e0da5cbd98e8fb45f5b5a1e3645813fb855555d085c1e104cd5b"),
 				},
 				{
 					Height:            1202,
-					PreviousBlockHash: testutil.MustDecodeHash("a5be1d1177eb027327baedb869f902f74850476d0b9432a30391a3165d3af7cc"),
+					PreviousBlockHash: testutil.MustDecodeHash("99fa16d4e2a01093af987ef39080eb76ed8ded7ce22d50d76b4c3e2ac660214a"),
 				},
-				// fork chain
+				// fork chain, fork height in 1197, roll back 1198, append 1198, 1199, 1200
 				{
-					Height:            1200,
-					PreviousBlockHash: testutil.MustDecodeHash("608d82b3660255186fb2b035cfb2ca86e986433218cd2eca2e79611e855a87d3"),
+					Height:            1198,
+					PreviousBlockHash: testutil.MustDecodeHash("b9c3d0ce5eceac94b53208360c7e100bb342a00ba70c990dc48ce959295793e6"),
 					Timestamp:         1, // in order to make different hash
 				},
 				{
+					Height:            1199,
+					PreviousBlockHash: testutil.MustDecodeHash("dc209b2c1ead7794f81ac9cdafc136875ec9d3b8525f1482a430ce762685aece"),
+				},
+				{
+					Height:            1200,
+					PreviousBlockHash: testutil.MustDecodeHash("fe85f3a22c4c41b03904f19475ec265138aae57be05b0c3ade0be2773fd35eb2"),
+				},
+				{
 					Height:            1201,
-					PreviousBlockHash: testutil.MustDecodeHash("d630737ca79f70826946f29e7cad3612662edda01c28b9471ec5b04917cdbf3e"),
+					PreviousBlockHash: testutil.MustDecodeHash("01f1a4eb35af3347080497c014c3b980bcfc1c836fdbe6b95f6fa0984ac14f8a"),
 				},
 			},
 			storedBlocks: []*types.Block{
 				// main chain
 				{
 					BlockHeader: types.BlockHeader{
+						Height:            1197,
+						PreviousBlockHash: testutil.MustDecodeHash("dda6bc15d7de8dadbbb283e90d24bd05a9fd0f721023f53822209281c5ce1698"),
+					},
+				},
+				{
+					BlockHeader: types.BlockHeader{
 						Height:            1198,
-						PreviousBlockHash: testutil.MustDecodeHash("4d3ecf28f3045df23764792f41af17fc20518cc8e83673dc2d0ce07bbf084d7d"),
+						PreviousBlockHash: testutil.MustDecodeHash("b9c3d0ce5eceac94b53208360c7e100bb342a00ba70c990dc48ce959295793e6"),
 					},
 					Transactions: []*types.Tx{
 						{
@@ -489,7 +511,7 @@ func TestGetConsensusNodes(t *testing.T) {
 				{
 					BlockHeader: types.BlockHeader{
 						Height:            1199,
-						PreviousBlockHash: testutil.MustDecodeHash("ef24de31371b4d34363011b6c8b065b1acaad9264d9abae2253d584e0d3a8739"),
+						PreviousBlockHash: testutil.MustDecodeHash("a0239137437634c933fa1200f801783a532b88e9556a0746b75a5832aac09bfc"),
 					},
 					Transactions: []*types.Tx{
 						{
@@ -507,7 +529,7 @@ func TestGetConsensusNodes(t *testing.T) {
 				{
 					BlockHeader: types.BlockHeader{
 						Height:            1200,
-						PreviousBlockHash: testutil.MustDecodeHash("608d82b3660255186fb2b035cfb2ca86e986433218cd2eca2e79611e855a87d3"),
+						PreviousBlockHash: testutil.MustDecodeHash("9e135b0372e670d02fb4a1d4af6b1a4cc1f33fcec3499a2e735f128b6b9ec144"),
 					},
 					Transactions: []*types.Tx{
 						{
@@ -525,9 +547,45 @@ func TestGetConsensusNodes(t *testing.T) {
 				// fork chain
 				{
 					BlockHeader: types.BlockHeader{
-						Height:            1200,
-						PreviousBlockHash: testutil.MustDecodeHash("608d82b3660255186fb2b035cfb2ca86e986433218cd2eca2e79611e855a87d3"),
+						Height:            1198,
+						PreviousBlockHash: testutil.MustDecodeHash("b9c3d0ce5eceac94b53208360c7e100bb342a00ba70c990dc48ce959295793e6"),
 						Timestamp:         1, // in order to make different hash
+					},
+					Transactions: []*types.Tx{
+						{
+							TxData: types.TxData{
+								Inputs: []*types.TxInput{
+									types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 5E14, 0, []byte{0, 1}),
+								},
+								Outputs: []*types.TxOutput{
+									types.NewVoteOutput(*consensus.BTMAssetID, 5E14, []byte{0, 1}, testutil.MustDecodeHexString("1bec3a35da038ec7a76c40986e80b5af2dcef60341970e3fc58b4db0797bd4ca9b2cbf3d7ab820832e22a80b5b86ae1427f7f706a7780089958b2862e7bc0842")),
+								},
+							},
+						},
+					},
+				},
+				{
+					BlockHeader: types.BlockHeader{
+						Height:            1199,
+						PreviousBlockHash: testutil.MustDecodeHash("dc209b2c1ead7794f81ac9cdafc136875ec9d3b8525f1482a430ce762685aece"),
+					},
+					Transactions: []*types.Tx{
+						{
+							TxData: types.TxData{
+								Inputs: []*types.TxInput{
+									types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 3E14, 0, []byte{0, 1}),
+								},
+								Outputs: []*types.TxOutput{
+									types.NewVoteOutput(*consensus.BTMAssetID, 3E14, []byte{0, 1}, testutil.MustDecodeHexString("36695997983028c279c3360ca345a90e3af1f9e3df2506119fca31cdc844be31630f9a421f4d1658e15d67a15ce29c36332dd45020d2a0147fcce4949ccd9a67")),
+								},
+							},
+						},
+					},
+				},
+				{
+					BlockHeader: types.BlockHeader{
+						Height:            1200,
+						PreviousBlockHash: testutil.MustDecodeHash("fe85f3a22c4c41b03904f19475ec265138aae57be05b0c3ade0be2773fd35eb2"),
 					},
 					Transactions: []*types.Tx{
 						{
@@ -543,7 +601,7 @@ func TestGetConsensusNodes(t *testing.T) {
 					},
 				},
 			},
-			prevBlockHash:   testutil.MustDecodeHash("d630737ca79f70826946f29e7cad3612662edda01c28b9471ec5b04917cdbf3e"),
+			prevBlockHash:   testutil.MustDecodeHash("01f1a4eb35af3347080497c014c3b980bcfc1c836fdbe6b95f6fa0984ac14f8a"), // 1201
 			bestBlockHeight: 1230,
 			wantConsensusNodes: []*state.ConsensusNode{
 				{
@@ -552,23 +610,23 @@ func TestGetConsensusNodes(t *testing.T) {
 					Order:   0,
 				},
 				{
-					XPub:    mustDecodeXPub("0f8669abbd3cc0a167156188e428f940088d5b2f36bb3449df71d2bdc5e077814ea3f68628eef279ed435f51ee26cff00f8bd28fabfd500bedb2a9e369f5c825"),
-					VoteNum: 838063475500000,
+					XPub:    mustDecodeXPub("1bec3a35da038ec7a76c40986e80b5af2dcef60341970e3fc58b4db0797bd4ca9b2cbf3d7ab820832e22a80b5b86ae1427f7f706a7780089958b2862e7bc0842"),
+					VoteNum: 1233812985000000,
 					Order:   1,
 				},
 				{
-					XPub:    mustDecodeXPub("1bec3a35da038ec7a76c40986e80b5af2dcef60341970e3fc58b4db0797bd4ca9b2cbf3d7ab820832e22a80b5b86ae1427f7f706a7780089958b2862e7bc0842"),
-					VoteNum: 833812985000000,
+					XPub:    mustDecodeXPub("0f8669abbd3cc0a167156188e428f940088d5b2f36bb3449df71d2bdc5e077814ea3f68628eef279ed435f51ee26cff00f8bd28fabfd500bedb2a9e369f5c825"),
+					VoteNum: 838063475500000,
 					Order:   2,
+				},
+				{
+					XPub:    mustDecodeXPub("36695997983028c279c3360ca345a90e3af1f9e3df2506119fca31cdc844be31630f9a421f4d1658e15d67a15ce29c36332dd45020d2a0147fcce4949ccd9a67"),
+					VoteNum: 574387690000000,
+					Order:   3,
 				},
 				{
 					XPub:    mustDecodeXPub("e7f458ee8d2ba19b0fdc7410d1fd57e9c2e1a79377c661d66c55effe49d7ffc920e40510442d4a10b7bea06c09fb0b41f52601135adaaa7136204db36106c093"),
 					VoteNum: 474794800000000,
-					Order:   3,
-				},
-				{
-					XPub:    mustDecodeXPub("36695997983028c279c3360ca345a90e3af1f9e3df2506119fca31cdc844be31630f9a421f4d1658e15d67a15ce29c36332dd45020d2a0147fcce4949ccd9a67"),
-					VoteNum: 374387690000000,
 					Order:   4,
 				},
 				{
@@ -610,6 +668,15 @@ func TestGetConsensusNodes(t *testing.T) {
 			t.Errorf("#%d (%s) got consensus nodes:%v, want consensus nodes:%v", i, c.desc, gotConsensusNodes, wantConsensusNodes)
 		}
 	}
+}
+
+func TestAAA(t *testing.T) {
+	header := &types.BlockHeader{
+		Height:            1200,
+		PreviousBlockHash: testutil.MustDecodeHash("fe85f3a22c4c41b03904f19475ec265138aae57be05b0c3ade0be2773fd35eb2"),
+	}
+	hash := header.Hash()
+	t.Errorf("%s\n", hash.String())
 }
 
 func mustDecodeXPub(xpub string) chainkd.XPub {
