@@ -7,6 +7,7 @@ import (
 
 	"github.com/vapor/errors"
 	"github.com/vapor/netsync/peers"
+	"github.com/vapor/p2p/security"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
@@ -91,6 +92,7 @@ func (fs *fastSync) createFetchBlocksTasks(stopBlock *types.Block) ([]*fetchBloc
 	}
 
 	if len(mainSkeleton) < minSizeOfSyncSkeleton || len(mainSkeleton) > maxSizeOfSyncSkeleton {
+		fs.peers.ProcessIllegal(fs.mainSyncPeer.ID(), security.LevelMsgIllegal, errSkeletonSize.Error())
 		return nil, errSkeletonSize
 	}
 
