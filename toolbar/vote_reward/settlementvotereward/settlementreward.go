@@ -59,7 +59,7 @@ func (s *SettlementReward) getVoteResultFromDB(height uint64) (voteResults []*vo
 }
 
 func (s *SettlementReward) Settlement() error {
-	for height := s.startHeight + consensus.ActiveNetParams.RoundVoteBlockNums; height <= s.endHeight; height += consensus.ActiveNetParams.RoundVoteBlockNums {
+	for height := s.startHeight + consensus.ActiveNetParams.RoundVoteBlockNums; height < s.endHeight; height += consensus.ActiveNetParams.RoundVoteBlockNums {
 		totalReward, err := s.getCoinbaseReward(height + 1)
 		if err == errFoundReward {
 			totalReward, err = s.getStandbyNodeReward(height - consensus.ActiveNetParams.RoundVoteBlockNums)
@@ -97,19 +97,17 @@ func (s *SettlementReward) getStandbyNodeReward(height uint64) (uint64, error) {
 
 	voteInfos = common.CalcStandByNodes(voteInfos)
 
-	err = errNoStandbyNode
 	totalVoteNum := uint64(0)
 	xpubVoteNum := uint64(0)
 	for _, voteInfo := range voteInfos {
 		totalVoteNum += voteInfo.VoteNum
 		if s.rewardCfg.XPub == voteInfo.Vote {
 			xpubVoteNum = voteInfo.VoteNum
-			err = nil
 		}
 	}
 
-	if err != nil {
-		return 0, err
+	if xpubVoteNum != 0 {
+		return 0, errNoStandbyNode
 	}
 
 	amount := big.NewInt(0).SetUint64(standbyNodesRewardForConsensusCycle)
