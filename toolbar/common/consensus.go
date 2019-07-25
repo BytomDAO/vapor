@@ -7,7 +7,7 @@ import (
 	"github.com/vapor/consensus"
 )
 
-const NumOfBPNode = 33
+const NumOfBPNode = 42
 
 func CalcStandByNodes(voteResult []*api.VoteInfo) []*api.VoteInfo {
 	sort.Slice(voteResult, func(i, j int) bool {

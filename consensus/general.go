@@ -188,7 +188,7 @@ var SoloNetParams = Params{
 		CoinbaseArbitrarySizeLimit: 128,
 	},
 	DPOSConfig: DPOSConfig{
-		NumOfConsensusNode:      1,
+		NumOfConsensusNode:      10,
 		BlockNumEachNode:        12,
 		MinConsensusNodeVoteNum: uint64(100000000000000),
 		MinVoteOutputAmount:     uint64(100000000),
