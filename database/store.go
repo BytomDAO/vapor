@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
+	log1 "github.com/vapor/log"
 
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/database/storage"
@@ -301,7 +302,7 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 	batch.Write()
 
 	s.cache.removeBlockHashes(block.Height)
-	log.WithFields(log.Fields{
+	log1.BtmLog.WithFields(log.Fields{
 		"module":   logModule,
 		"height":   block.Height,
 		"hash":     blockHash.String(),
