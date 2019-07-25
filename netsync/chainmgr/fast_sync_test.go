@@ -80,16 +80,16 @@ func TestFastBlockSync(t *testing.T) {
 		os.RemoveAll(tmp)
 	}()
 
-	maxNumOfSkeletonPerSync = 10
+	maxSizeOfSyncSkeleton = 11
 	numOfBlocksSkeletonGap = 10
-	maxNumOfBlocksPerSync = maxNumOfSkeletonPerSync * maxNumOfSkeletonPerSync
+	maxNumOfBlocksPerSync = numOfBlocksSkeletonGap * uint64(maxSizeOfSyncSkeleton-1)
 	fastSyncPivotGap = uint64(5)
 	minGapStartFastSync = uint64(6)
 
 	defer func() {
-		maxNumOfSkeletonPerSync = 10
+		maxSizeOfSyncSkeleton = 11
 		numOfBlocksSkeletonGap = maxNumOfBlocksPerMsg
-		maxNumOfBlocksPerSync = maxNumOfSkeletonPerSync * maxNumOfSkeletonPerSync
+		maxNumOfBlocksPerSync = numOfBlocksSkeletonGap * uint64(maxSizeOfSyncSkeleton-1)
 		fastSyncPivotGap = uint64(64)
 		minGapStartFastSync = uint64(128)
 		requireHeadersTimeout = 30 * time.Second

@@ -12,12 +12,12 @@ import (
 )
 
 var (
-	minSizeOfSyncSkeleton   = 2
-	maxNumOfSkeletonPerSync = uint64(10)
-	numOfBlocksSkeletonGap  = maxNumOfBlocksPerMsg
-	maxNumOfBlocksPerSync   = numOfBlocksSkeletonGap * maxNumOfSkeletonPerSync
-	fastSyncPivotGap        = uint64(64)
-	minGapStartFastSync     = uint64(128)
+	minSizeOfSyncSkeleton  = 2
+	maxSizeOfSyncSkeleton  = 11
+	numOfBlocksSkeletonGap = maxNumOfBlocksPerMsg
+	maxNumOfBlocksPerSync  = numOfBlocksSkeletonGap * uint64(maxSizeOfSyncSkeleton-1)
+	fastSyncPivotGap       = uint64(64)
+	minGapStartFastSync    = uint64(128)
 
 	errNoSyncPeer   = errors.New("can't find sync peer")
 	errSkeletonSize = errors.New("fast sync skeleton size wrong")
@@ -90,7 +90,7 @@ func (fs *fastSync) createFetchBlocksTasks(stopBlock *types.Block) ([]*fetchBloc
 		return nil, errors.New("No main skeleton found")
 	}
 
-	if len(mainSkeleton) < minSizeOfSyncSkeleton {
+	if len(mainSkeleton) < minSizeOfSyncSkeleton || len(mainSkeleton) > maxSizeOfSyncSkeleton {
 		return nil, errSkeletonSize
 	}
 
