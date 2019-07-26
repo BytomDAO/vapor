@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lestrrat-go/file-rotatelogs"
+	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
 	"github.com/sirupsen/logrus"
 
 	"github.com/vapor/config"
@@ -16,49 +16,49 @@ const (
 	GENERAL_LOG="general"
 )
 var defaultFormatter = &logrus.TextFormatter{DisableColors: true}
+var defaultMaxAge int64=360  // 15 天
+var defaultRotationTime int64=168  // 7天
 var BtmLog = &logrus.Logger{}
-var ModuleLogger map[string]io.Writer
+
+
+type logModulefunc func() (io.Writer,error)
 
 func init() {
 	BtmLog = logrus.New()
 }
 
+
 func InitLogFile(config *config.Config) {
-	ModuleLogger = map[string]io.Writer{
-		"account":   newModuleWriter(config, "account"),
-		GENERAL_LOG:   newModuleWriter(config, GENERAL_LOG),
-		"txbuilder": newModuleWriter(config, "txbuilder"),
-		"leveldb":   newModuleWriter(config, "leveldb"),
-		"node":      newModuleWriter(config, "node"),
-	}
-	hook := newBtmHook(&logrus.JSONFormatter{})
+	hook := newBtmHook(config,&logrus.JSONFormatter{})
 	BtmLog.Hooks.Add(hook)
 }
 
-func newModuleWriter(config *config.Config, module string) io.Writer {
-	var DefaultMaxAge int64=360  // 15 天
-	var DefaultRotationTime int64=168  // 7天
-	logPath := filepath.Join(config.LogDir(), module)
+
+func newModuleWriter(logPath,module string) logModulefunc {
 	if module=="leveldb" {
-		DefaultRotationTime=24//levelModule产生的log很大，一天分一次，其它的7天分一次
+		defaultRotationTime=24//levelModule产生的log很大，一天分一次，其它的7天分一次
 	}
-	writer, _ := rotatelogs.New(
-		logPath+".%y%m%d",
-		//rotatelogs.WithLinkName(module),
-		rotatelogs.WithMaxAge(time.Duration(DefaultMaxAge)*time.Hour),
-		rotatelogs.WithRotationTime(time.Duration(DefaultRotationTime)*time.Hour),
-	)
-	return writer
+	return func() (io.Writer, error) {
+			return rotatelogs.New(
+				logPath+".%Y%m%d",
+				//rotatelogs.WithLinkName(module),
+				rotatelogs.WithMaxAge(time.Duration(defaultMaxAge)*time.Hour),
+				rotatelogs.WithRotationTime(time.Duration(defaultRotationTime)*time.Hour),
+			)
+	}
 }
 
+
 type BtmHook struct {
+	logPath string
 	lock      *sync.Mutex
 	formatter logrus.Formatter
 }
 
-func newBtmHook(formatter logrus.Formatter) *BtmHook {
+func newBtmHook(config *config.Config,formatter logrus.Formatter) *BtmHook {
 	hook := &BtmHook{lock: new(sync.Mutex)}
 	hook.setFormatter(formatter)
+	hook.logPath=config.LogDir()
 	return hook
 }
 
@@ -77,12 +77,6 @@ func (hook *BtmHook) setFormatter(formatter logrus.Formatter) {
 	hook.formatter = formatter
 }
 
-func (hook *BtmHook) Fire(entry *logrus.Entry) error {
-	hook.lock.Lock()
-	defer hook.lock.Unlock()
-
-	return hook.ioWrite(entry)
-}
 
 // Write a log line to an io.Writer.
 func (hook *BtmHook) ioWrite(entry *logrus.Entry) error {
@@ -91,11 +85,19 @@ func (hook *BtmHook) ioWrite(entry *logrus.Entry) error {
 		msg    []byte
 		err    error
 	)
-	module := entry.Data["module"]
-	if module==nil{
-		writer  = ModuleLogger[GENERAL_LOG]
+	module:=""
+	moduleInterface := entry.Data["module"]
+	if moduleInterface==nil{
+		module=GENERAL_LOG
 	}else {
-		writer  = ModuleLogger[module.(string)]
+		module=moduleInterface.(string)
+	}
+
+	logPath:=filepath.Join(hook.logPath,module)
+
+	writer,err=newModuleWriter(logPath,module)()
+	if err!=nil{
+		return err
 	}
 
 	// use our formatter instead of entry.String()
@@ -106,6 +108,15 @@ func (hook *BtmHook) ioWrite(entry *logrus.Entry) error {
 	}
 	_, err = writer.Write(msg)
 	return err
+}
+
+
+
+func (hook *BtmHook) Fire(entry *logrus.Entry) error {
+	hook.lock.Lock()
+	defer hook.lock.Unlock()
+
+	return hook.ioWrite(entry)
 }
 
 // Levels returns configured log levels.
