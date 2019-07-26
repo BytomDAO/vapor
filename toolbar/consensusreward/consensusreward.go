@@ -1,6 +1,7 @@
 package consensusreward
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/vapor/consensus"
@@ -31,6 +32,7 @@ func NewStandbyNodeReward(cfg *config.Config, startHeight, endHeight uint64) *St
 }
 
 func (s *StandbyNodeReward) getStandbyNodeReward(height uint64) error {
+	fmt.Println(height)
 	voteInfos, err := s.node.GetVoteByHeight(height)
 	if err != nil {
 		return errors.Wrapf(err, "get alternative node reward")
@@ -52,8 +54,8 @@ func (s *StandbyNodeReward) getStandbyNodeReward(height uint64) error {
 }
 
 func (s *StandbyNodeReward) Settlement() error {
-	for height := s.startHeight; height < s.endHeight; height += consensus.ActiveNetParams.RoundVoteBlockNums {
-		if err := s.getStandbyNodeReward(height); err != nil {
+	for height := s.startHeight + consensus.ActiveNetParams.RoundVoteBlockNums; height <= s.endHeight; height += consensus.ActiveNetParams.RoundVoteBlockNums {
+		if err := s.getStandbyNodeReward(height - consensus.ActiveNetParams.RoundVoteBlockNums); err != nil {
 			return err
 		}
 	}
