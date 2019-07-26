@@ -4,6 +4,7 @@ import (
 	"errors"
 	"math/rand"
 	"net"
+	"time"
 
 	"github.com/tendermint/go-wire"
 	"github.com/tendermint/tmlibs/flowrate"
@@ -84,6 +85,7 @@ func (p *P2PPeer) setAsync(b bool) {
 func (p *P2PPeer) postMan() {
 	for msgBytes := range p.msgCh {
 		msgType, msg, _ := decodeMessage(msgBytes)
+		time.Sleep(10 * time.Millisecond)
 		p.remoteNode.processMsg(p.srcPeer, msgType, msg)
 	}
 }
