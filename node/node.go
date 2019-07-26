@@ -10,7 +10,7 @@ import (
 	"reflect"
 
 	"github.com/prometheus/prometheus/util/flock"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
 	browser "github.com/toqueteos/webbrowser"
 
@@ -25,7 +25,7 @@ import (
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/env"
 	"github.com/vapor/event"
-	"github.com/vapor/log"
+	vaporLog "github.com/vapor/log"
 	"github.com/vapor/net/websocket"
 	"github.com/vapor/netsync"
 	"github.com/vapor/proposal/blockproposer"
@@ -66,8 +66,10 @@ func NewNode(config *cfg.Config) *Node {
 	if err := cfg.LoadFederationFile(config.FederationFile(), config); err != nil {
 		cmn.Exit(cmn.Fmt("Failed to load federated information:[%s]", err.Error()))
 	}
-	log.InitLogFile(config)
-	log.BtmLog.WithFields(logrus.Fields{
+
+	vaporLog.InitLogFile(config)
+
+	log.WithFields(log.Fields{
 		"module":             logModule,
 		"pubkey":             config.PrivateKey().XPub(),
 		"fed_xpubs":          config.Federation.Xpubs,
@@ -76,7 +78,7 @@ func NewNode(config *cfg.Config) *Node {
 	}).Info()
 
 	if err := consensus.InitActiveNetParams(config.ChainID); err != nil {
-		log.BtmLog.Fatalf("Failed to init ActiveNetParams:[%s]", err.Error())
+		log.Fatalf("Failed to init ActiveNetParams:[%s]", err.Error())
 	}
 
 	initCommonConfig(config)
@@ -119,7 +121,7 @@ func NewNode(config *cfg.Config) *Node {
 		assets = asset.NewRegistry(walletDB, chain)
 		wallet, err = w.NewWallet(walletStore, accounts, assets, hsm, chain, dispatcher, config.Wallet.TxIndex)
 		if err != nil {
-			log.BtmLog.WithFields(logrus.Fields{"module": logModule, "error": err}).Error("init NewWallet")
+			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("init NewWallet")
 		}
 
 		// trigger rescan wallet
@@ -196,9 +198,9 @@ func initCommonConfig(config *cfg.Config) {
 // Lanch web broser or not
 func launchWebBrowser(port string) {
 	webAddress := webHost + ":" + port
-	log.BtmLog.Info("Launching System Browser with :", webAddress)
+	log.Info("Launching System Browser with :", webAddress)
 	if err := browser.Open(webAddress); err != nil {
-		log.BtmLog.Error(err.Error())
+		log.Error(err.Error())
 		return
 	}
 }
@@ -215,7 +217,7 @@ func (n *Node) OnStart() error {
 	if n.miningEnable {
 		if _, err := n.wallet.AccountMgr.GetMiningAddress(); err != nil {
 			n.miningEnable = false
-			log.BtmLog.Error(err)
+			log.Error(err)
 		} else {
 			n.cpuMiner.Start()
 		}
@@ -234,7 +236,7 @@ func (n *Node) OnStart() error {
 	if !n.config.Web.Closed {
 		_, port, err := net.SplitHostPort(n.config.ApiAddress)
 		if err != nil {
-			log.BtmLog.Error("Invalid api address")
+			log.Error("Invalid api address")
 			return err
 		}
 		launchWebBrowser(port)
