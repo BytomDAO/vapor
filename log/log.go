@@ -51,11 +51,12 @@ func (hook *BtmHook) ioWrite(entry *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
+
 	msg, err := defaultFormatter.Format(entry)
 	if err != nil {
-		logrus.Println("failed to generate string for entry:", err)
 		return err
 	}
+
 	_, err = writer.Write(msg)
 	return err
 }
