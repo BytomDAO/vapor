@@ -12,16 +12,14 @@ import (
 )
 
 const (
-
 	rotationTime int64 = 86400
 	maxAge       int64 = 604800
 )
 
 var defaultFormatter = &logrus.TextFormatter{DisableColors: true}
 
-
 func InitLogFile(config *config.Config) {
-	hook := newBtmHook(config.LogFile)
+	hook := newBtmHook(config.LogDir())
 	logrus.AddHook(hook)
 }
 
