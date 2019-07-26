@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -36,18 +35,8 @@ func init() {
 func runReward(cmd *cobra.Command, args []string) error {
 	startTime := time.Now()
 	config := &cfg.Config{}
-	if _, err := os.Stat(configFile); os.IsNotExist(err) {
-		if err := cfg.ExportConfigFile(configFile, cfg.Default()); err != nil {
-			log.WithFields(log.Fields{"module": logModule, "config": configFile, "error": err}).Fatal("fail on export federation file")
-		}
-		return nil
-	}
 	if err := cfg.LoadConfigFile(configFile, config); err != nil {
 		log.WithFields(log.Fields{"module": logModule, "config": configFile, "error": err}).Fatal("Failded to load config file.")
-	}
-
-	if err := consensus.InitActiveNetParams(config.ChainID); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "error": err}).Fatal("Init ActiveNetParams.")
 	}
 	if rewardStartHeight >= rewardEndHeight || rewardStartHeight%consensus.ActiveNetParams.RoundVoteBlockNums != 0 || rewardEndHeight%consensus.ActiveNetParams.RoundVoteBlockNums != 0 {
 		log.Fatal("Please check the height range, which must be multiple of the number of block rounds.")
