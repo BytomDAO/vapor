@@ -1,7 +1,6 @@
 package consensusreward
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/vapor/consensus"
@@ -32,7 +31,6 @@ func NewStandbyNodeReward(cfg *config.Config, startHeight, endHeight uint64) *St
 }
 
 func (s *StandbyNodeReward) getStandbyNodeReward(height uint64) error {
-	fmt.Println(height)
 	voteInfos, err := s.node.GetVoteByHeight(height)
 	if err != nil {
 		return errors.Wrapf(err, "get alternative node reward")
