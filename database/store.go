@@ -11,8 +11,6 @@ import (
 
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/database/storage"
-	"github.com/vapor/errors"
-	//"github.com/vapor/log"
 	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
