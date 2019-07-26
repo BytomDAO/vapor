@@ -12,7 +12,7 @@ import (
 	cfg "github.com/vapor/toolbar/consensusreward/config"
 )
 
-const logModule = "reward"
+const logModule = "consensusereward"
 
 var (
 	rewardStartHeight uint64
