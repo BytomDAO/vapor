@@ -12,14 +12,16 @@ import (
 )
 
 const (
-	ROTATION_TIME int64 = 86400
-	MAX_AGE       int64 = 604800
+
+	rotationTime int64 = 86400
+	maxAge       int64 = 604800
 )
 
 var defaultFormatter = &logrus.TextFormatter{DisableColors: true}
 
+
 func InitLogFile(config *config.Config) {
-	hook := newBtmHook(config)
+	hook := newBtmHook(config.LogFile)
 	logrus.AddHook(hook)
 }
 
@@ -28,9 +30,9 @@ type BtmHook struct {
 	lock    *sync.Mutex
 }
 
-func newBtmHook(config *config.Config) *BtmHook {
+func newBtmHook(logPath string) *BtmHook {
 	hook := &BtmHook{lock: new(sync.Mutex)}
-	hook.logPath = config.LogDir()
+	hook.logPath = logPath
 	return hook
 }
 
@@ -45,8 +47,8 @@ func (hook *BtmHook) ioWrite(entry *logrus.Entry) error {
 
 	writer, err := rotatelogs.New(
 		logPath+".%Y%m%d",
-		rotatelogs.WithMaxAge(time.Duration(MAX_AGE)*time.Second),
-		rotatelogs.WithRotationTime(time.Duration(ROTATION_TIME)*time.Second),
+		rotatelogs.WithMaxAge(time.Duration(maxAge)*time.Second),
+		rotatelogs.WithRotationTime(time.Duration(rotationTime)*time.Second),
 	)
 	if err != nil {
 		return err
@@ -58,6 +60,7 @@ func (hook *BtmHook) ioWrite(entry *logrus.Entry) error {
 	}
 
 	_, err = writer.Write(msg)
+
 	return err
 }
 
