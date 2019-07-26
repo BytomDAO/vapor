@@ -52,8 +52,8 @@ func (s *StandbyNodeReward) getStandbyNodeReward(height uint64) error {
 }
 
 func (s *StandbyNodeReward) Settlement() error {
-	for height := s.startHeight; height <= s.endHeight; height += consensus.ActiveNetParams.RoundVoteBlockNums {
-		if err := s.getStandbyNodeReward(height - consensus.ActiveNetParams.RoundVoteBlockNums); err != nil {
+	for height := s.startHeight; height < s.endHeight; height += consensus.ActiveNetParams.RoundVoteBlockNums {
+		if err := s.getStandbyNodeReward(height); err != nil {
 			return err
 		}
 	}
