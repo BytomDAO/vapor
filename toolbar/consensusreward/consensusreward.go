@@ -15,7 +15,7 @@ const standbyNodesRewardForConsensusCycle = 7610350076 // 400000000000000 / (365
 type StandbyNodeReward struct {
 	cfg         *config.Config
 	node        *apinode.Node
-	xpubrewards map[string]uint64
+	xpubRewards map[string]uint64
 	startHeight uint64
 	endHeight   uint64
 }
@@ -24,7 +24,7 @@ func NewStandbyNodeReward(cfg *config.Config, startHeight, endHeight uint64) *St
 	return &StandbyNodeReward{
 		cfg:         cfg,
 		node:        apinode.NewNode(cfg.NodeIP),
-		xpubrewards: make(map[string]uint64),
+		xpubRewards: make(map[string]uint64),
 		startHeight: startHeight,
 		endHeight:   endHeight,
 	}
@@ -46,7 +46,7 @@ func (s *StandbyNodeReward) getStandbyNodeReward(height uint64) error {
 	for _, voteInfo := range voteInfos {
 		amount := big.NewInt(0).SetUint64(standbyNodesRewardForConsensusCycle)
 		voteNum := big.NewInt(0).SetUint64(voteInfo.VoteNum)
-		s.xpubrewards[voteInfo.Vote] += amount.Mul(amount, voteNum).Div(amount, total).Uint64()
+		s.xpubRewards[voteInfo.Vote] += amount.Mul(amount, voteNum).Div(amount, total).Uint64()
 	}
 	return nil
 }
@@ -59,7 +59,7 @@ func (s *StandbyNodeReward) Settlement() error {
 	}
 	rewards := map[string]uint64{}
 	for _, item := range s.cfg.RewardConf.Node {
-		if reward, ok := s.xpubrewards[item.XPub]; ok {
+		if reward, ok := s.xpubRewards[item.XPub]; ok {
 			rewards[item.Address] = reward
 		}
 	}
