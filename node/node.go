@@ -66,7 +66,9 @@ func NewNode(config *cfg.Config) *Node {
 		cmn.Exit(cmn.Fmt("Failed to load federated information:[%s]", err.Error()))
 	}
 
-	vaporLog.InitLogFile(config)
+	if err:=vaporLog.InitLogFile(config);err!=nil{
+		log.Warningf("Error:%s\n",err.Error())
+	}
 
 	log.WithFields(log.Fields{
 		"module":             logModule,
