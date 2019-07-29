@@ -42,7 +42,6 @@ func (hook *BtmHook) ioWrite(entry *logrus.Entry) error {
 	}
 
 	logPath := filepath.Join(hook.logPath, module)
-
 	writer, err := rotatelogs.New(
 		logPath+".%Y%m%d",
 		rotatelogs.WithMaxAge(time.Duration(maxAge)*time.Second),
@@ -58,7 +57,6 @@ func (hook *BtmHook) ioWrite(entry *logrus.Entry) error {
 	}
 
 	_, err = writer.Write(msg)
-
 	return err
 }
 

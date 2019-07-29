@@ -58,7 +58,6 @@ type Node struct {
 
 // NewNode create bytom node
 func NewNode(config *cfg.Config) *Node {
-
 	if err := lockDataDirectory(config); err != nil {
 		cmn.Exit("Error: " + err.Error())
 	}
