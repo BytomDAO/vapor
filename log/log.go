@@ -1,7 +1,11 @@
 package log
 
 import (
+	"fmt"
+	"io/ioutil"
+	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -18,9 +22,17 @@ const (
 
 var defaultFormatter = &logrus.TextFormatter{DisableColors: true}
 
-func InitLogFile(config *config.Config) {
-	hook := newBtmHook(config.LogDir())
+func InitLogFile(config *config.Config) error {
+	logPath := config.LogDir()
+	hook := newBtmHook(logPath)
 	logrus.AddHook(hook)
+	logrus.SetOutput(ioutil.Discard)
+	fmt.Printf("all logs are output in the %s directory\n", logPath)
+	if err := clearLockFiles(logPath); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type BtmHook struct {
@@ -58,6 +70,23 @@ func (hook *BtmHook) ioWrite(entry *logrus.Entry) error {
 
 	_, err = writer.Write(msg)
 	return err
+}
+
+func clearLockFiles(logPath string) error {
+	files, err := ioutil.ReadDir(logPath)
+	if err != nil {
+		return err
+	}
+
+	for _, file := range files {
+		if ok := strings.HasSuffix(file.Name(), "_lock"); ok {
+			err := os.Remove(filepath.Join(logPath, file.Name()))
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (hook *BtmHook) Fire(entry *logrus.Entry) error {
