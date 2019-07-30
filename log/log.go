@@ -81,8 +81,7 @@ func clearLockFiles(logPath string) error {
 
 	for _, file := range files {
 		if ok := strings.HasSuffix(file.Name(), "_lock"); ok {
-			err := os.Remove(filepath.Join(logPath, file.Name()))
-			if err != nil {
+			if err := os.Remove(filepath.Join(logPath, file.Name()));err!=nil{
 				return err
 			}
 		}
