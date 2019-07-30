@@ -32,7 +32,6 @@ func InitLogFile(config *config.Config) error {
 	logrus.AddHook(hook)
 	logrus.SetOutput(ioutil.Discard)//控制台不输出
 	fmt.Printf("all logs are output in the %s directory\n", logPath)
-
 	return nil
 }
 
