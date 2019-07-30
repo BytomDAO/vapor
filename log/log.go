@@ -30,7 +30,7 @@ func InitLogFile(config *config.Config) error {
 
 	hook := newBtmHook(logPath)
 	logrus.AddHook(hook)
-	logrus.SetOutput(ioutil.Discard)//控制台不输出
+	logrus.SetOutput(ioutil.Discard) //控制台不输出
 	fmt.Printf("all logs are output in the %s directory\n", logPath)
 	return nil
 }
@@ -74,13 +74,13 @@ func (hook *BtmHook) ioWrite(entry *logrus.Entry) error {
 
 func clearLockFiles(logPath string) error {
 	files, err := ioutil.ReadDir(logPath)
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
 
 	for _, file := range files {
 		if ok := strings.HasSuffix(file.Name(), "_lock"); ok {
-			if err := os.Remove(filepath.Join(logPath, file.Name()));err!=nil{
+			if err := os.Remove(filepath.Join(logPath, file.Name())); err != nil {
 				return err
 			}
 		}
