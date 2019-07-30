@@ -10,6 +10,8 @@ import (
 )
 
 func TestCreate(t *testing.T) {
+	t.Parallel()
+
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 	cs := NewStore(testDB)
@@ -33,6 +35,8 @@ func TestCreate(t *testing.T) {
 }
 
 func TestList(t *testing.T) {
+	t.Parallel()
+
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 
@@ -60,6 +64,8 @@ func TestList(t *testing.T) {
 }
 
 func TestCheck(t *testing.T) {
+	t.Parallel()
+
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 	cs := NewStore(testDB)
@@ -77,6 +83,8 @@ func TestCheck(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
+	t.Parallel()
+
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 	cs := NewStore(testDB)
@@ -96,6 +104,8 @@ func TestDelete(t *testing.T) {
 }
 
 func TestDeleteWithInvalidId(t *testing.T) {
+	t.Parallel()
+
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 	cs := NewStore(testDB)
