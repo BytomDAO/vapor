@@ -161,6 +161,33 @@ func mockBlocks(startBlock *types.Block, height uint64) []*types.Block {
 	return blocks
 }
 
+func mockErrorBlocks(startBlock *types.Block, height uint64, errBlockHeight uint64) []*types.Block {
+	blocks := []*types.Block{}
+	indexBlock := &types.Block{}
+	if startBlock == nil {
+		indexBlock = &types.Block{BlockHeader: types.BlockHeader{Version: uint64(rand.Uint32())}}
+		blocks = append(blocks, indexBlock)
+	} else {
+		indexBlock = startBlock
+	}
+
+	for indexBlock.Height < height {
+		block := &types.Block{
+			BlockHeader: types.BlockHeader{
+				Height:            indexBlock.Height + 1,
+				PreviousBlockHash: indexBlock.Hash(),
+				Version:           uint64(rand.Uint32()),
+			},
+		}
+		if block.Height == errBlockHeight {
+			block.TransactionsMerkleRoot = bc.NewHash([32]byte{0x1})
+		}
+		blocks = append(blocks, block)
+		indexBlock = block
+	}
+	return blocks
+}
+
 func mockSync(blocks []*types.Block, mempool *mock.Mempool, fastSyncDB dbm.DB) *Manager {
 	chain := mock.NewChain(mempool)
 	peers := peers.NewPeerSet(NewPeerSet())
