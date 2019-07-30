@@ -11,6 +11,8 @@ import (
 )
 
 func TestMergeSpendAction(t *testing.T) {
+	t.Parallel()
+
 	testBTM := &bc.AssetID{}
 	if err := testBTM.UnmarshalText([]byte("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")); err != nil {
 		t.Fatal(err)
@@ -355,6 +357,8 @@ func TestMergeSpendAction(t *testing.T) {
 }
 
 func TestCalcMergeGas(t *testing.T) {
+	t.Parallel()
+
 	chainTxUtxoNum = 10
 	cases := []struct {
 		utxoNum int
@@ -403,6 +407,8 @@ func TestCalcMergeGas(t *testing.T) {
 }
 
 func TestReserveBtmUtxoChain(t *testing.T) {
+	t.Parallel()
+
 	chainTxUtxoNum = 3
 	utxos := []*UTXO{}
 	m := mockAccountManager(t)
