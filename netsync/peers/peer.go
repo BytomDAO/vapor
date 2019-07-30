@@ -673,6 +673,15 @@ func (ps *PeerSet) SetStatus(peerID string, height uint64, hash *bc.Hash) {
 	peer.SetBestStatus(height, hash)
 }
 
+func (ps *PeerSet) SetIrreversibleStatus(peerID string, height uint64, hash *bc.Hash) {
+	peer := ps.GetPeer(peerID)
+	if peer == nil {
+		return
+	}
+
+	peer.SetIrreversibleStatus(height, hash)
+}
+
 func (ps *PeerSet) Size() int {
 	ps.mtx.RLock()
 	defer ps.mtx.RUnlock()
