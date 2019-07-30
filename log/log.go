@@ -24,14 +24,14 @@ var defaultFormatter = &logrus.TextFormatter{DisableColors: true}
 
 func InitLogFile(config *config.Config) error {
 	logPath := config.LogDir()
+	if err := clearLockFiles(logPath); err != nil {
+		return err
+	}
+
 	hook := newBtmHook(logPath)
 	logrus.AddHook(hook)
 	logrus.SetOutput(ioutil.Discard)//控制台不输出
 	fmt.Printf("all logs are output in the %s directory\n", logPath)
-
-	if err := clearLockFiles(logPath); err != nil {
-		return err
-	}
 
 	return nil
 }

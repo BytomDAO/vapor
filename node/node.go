@@ -67,7 +67,7 @@ func NewNode(config *cfg.Config) *Node {
 	}
 
 	if err:=vaporLog.InitLogFile(config);err!=nil{
-		log.Fatalf("Error:%s\n",err.Error())
+		log.WithField("err",err).Fatalln("InitLogFile failed")
 	}
 
 	log.WithFields(log.Fields{
