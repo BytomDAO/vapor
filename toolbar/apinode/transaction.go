@@ -44,8 +44,8 @@ func (c *ControlAddressAction) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (n *Node) BatchSendBTM(accountID, password string, outputs map[string]uint64) error {
-	totalBTM := uint64(10000000)
+func (n *Node) BatchSendBTM(accountID, password string, outputs map[string]uint64) (string, error) {
+	totalBTM := uint64(1000000)
 	actions := []interface{}{}
 	for address, amount := range outputs {
 		actions = append(actions, &ControlAddressAction{
@@ -62,16 +62,15 @@ func (n *Node) BatchSendBTM(accountID, password string, outputs map[string]uint6
 
 	tpl, err := n.buildTx(actions)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	tpl, err = n.signTx(tpl, password)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	_, err = n.SubmitTx(tpl.Transaction)
-	return err
+	return n.SubmitTx(tpl.Transaction)
 }
 
 type buildTxReq struct {
