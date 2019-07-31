@@ -86,7 +86,8 @@ func (s *SettlementReward) Settlement() error {
 	}
 
 	// send transactions
-	return s.node.BatchSendBTM(s.rewardCfg.AccountID, s.rewardCfg.Password, s.rewards)
+	_, err := s.node.BatchSendBTM(s.rewardCfg.AccountID, s.rewardCfg.Password, s.rewards)
+	return err
 }
 
 func (s *SettlementReward) getStandbyNodeReward(height uint64) (uint64, error) {
