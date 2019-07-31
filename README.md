@@ -115,7 +115,7 @@ according to the interest rate.
 
 The reward calculation rules: 
 
-​		calculate the reward (consensus reward * interest rate * voting weight) according to the weight of votes
+​	calculate the reward (consensus reward * interest rate * voting weight) according to the weight of votes
 
 cast in consensus around, and choose how many rounds of consensus to allocate the reward flexibly.
 
