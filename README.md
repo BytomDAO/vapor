@@ -109,7 +109,7 @@ $ docker rm <containerId>
 
 ### Reward distribution tool
 
-AAfter the supernode and alternative node receive the reward from the node, they will allocate the reward
+After the supernode and alternative node receive the reward from the node, they will allocate the reward
 
 according to the interest rate. 
 
