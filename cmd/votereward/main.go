@@ -35,6 +35,7 @@ func init() {
 }
 
 func runReward(cmd *cobra.Command, args []string) error {
+	log.Info("The voting reward allocation tool is an open-source project, please check the transaction carefully before sending the allocation reward, the transaction error will not be responsible!")
 	startTime := time.Now()
 	config := &cfg.Config{}
 	if err := cfg.LoadConfigFile(configFile, config); err != nil {
