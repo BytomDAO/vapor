@@ -37,23 +37,14 @@ func (m *monitor) Run() {
 }
 
 func (m *monitor) updateBootstrapNodes() error {
-	var existedNodes, newNodes []config.Node
-
-	// TODO: use affected comlumns?
-	for _, node := range m.cfg.Nodes {
-		if true {
-			existedNodes = append(existedNodes, node)
-		} else {
-			newNodes = append(newNodes, node)
-		}
-	}
-
+	// updated existed nodes
+	// add new nodes
 	return nil
 }
 
 func (m *monitor) monitorRountine() error {
 	// dail
-	// get blockhash
+	// get blockhash by height
 	// update
 	return nil
 }
