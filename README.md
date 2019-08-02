@@ -107,6 +107,20 @@ To remove a containner:
 $ docker rm <containerId>
 ```
 
+### Reward distribution tool
+
+After the supernode and alternative node receive the reward from the node, they will allocate the reward
+
+according to the interest rate. 
+
+The reward calculation rules: 
+
+ calculate the reward (consensus reward * interest rate * voting weight) according to the weight of votes
+
+cast in consensus around, and choose how many rounds of consensus to allocate the reward flexibly.
+
+[Tool usage details](./cmd/votereward/README.md)
+
 ## License
 
 [AGPL v3](./LICENSE)
