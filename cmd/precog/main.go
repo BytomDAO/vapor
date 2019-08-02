@@ -8,6 +8,7 @@ import (
 	"github.com/vapor/toolbar/common"
 	"github.com/vapor/toolbar/precog/api"
 	"github.com/vapor/toolbar/precog/config"
+	"github.com/vapor/toolbar/precog/monitor"
 )
 
 func main() {
@@ -17,6 +18,7 @@ func main() {
 		log.WithField("err", err).Panic("initialize mysql db error")
 	}
 
+	go monitor.NewMonitor(db).Run()
 	go api.NewApiServer(db).Run()
 
 	// keep the main func running in case of terminating goroutines
