@@ -31,13 +31,23 @@ func (m *monitor) Run() {
 
 	ticker := time.NewTicker(checkFreqSeconds * time.Second)
 	for ; true; <-ticker.C {
-		// TODO: use goroutine?
 		// TODO: lock?
-		go m.monitorRountine()
+		m.monitorRountine()
 	}
 }
 
 func (m *monitor) updateBootstrapNodes() error {
+	var existedNodes, newNodes []config.Node
+
+	// TODO: use affected comlumns?
+	for _, node := range m.cfg.Nodes {
+		if true {
+			existedNodes = append(existedNodes, node)
+		} else {
+			newNodes = append(newNodes, node)
+		}
+	}
+
 	return nil
 }
 
