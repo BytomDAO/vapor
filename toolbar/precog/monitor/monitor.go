@@ -25,7 +25,7 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 }
 
 func (m *monitor) Run() {
-	if err := s.updateNodesHostPort(); err != nil {
+	if err := m.updateBootstrapNodes(); err != nil {
 		log.Fatal(err)
 	}
 
@@ -33,11 +33,11 @@ func (m *monitor) Run() {
 	for ; true; <-ticker.C {
 		// TODO: use goroutine?
 		// TODO: lock?
-		go s.monitorRountine()
+		go m.monitorRountine()
 	}
 }
 
-func (m *monitor) updateNodesHostPort() error {
+func (m *monitor) updateBootstrapNodes() error {
 	return nil
 }
 

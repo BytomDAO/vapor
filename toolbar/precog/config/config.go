@@ -36,7 +36,7 @@ func NewConfigWithPath(path string) *Config {
 type Config struct {
 	MySQLConfig common.MySQLConfig `json:"mysql"`
 	Policy      Policy             `json:"policy"`
-	Nodes       []Node             `json:"nodes"`
+	Nodes       []Node             `json:"bootstrap_nodes"`
 	API         API                `json:"api"`
 }
 
