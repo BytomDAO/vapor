@@ -23,5 +23,5 @@ func (s *server) Run() {
 
 	// disable log
 
-	// bind handle
+	// set up router, bind handler
 }
