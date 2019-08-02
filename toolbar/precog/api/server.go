@@ -13,4 +13,9 @@ func NewApiServer(db *gorm.DB) *server {
 }
 
 func (s *server) Run() {
+	// setup gin
+
+	// disable log
+
+	// bind handle
 }
