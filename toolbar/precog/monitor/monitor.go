@@ -23,10 +23,7 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 }
 
 func (m *monitor) Run() {
-	if err := m.updateBootstrapNodes(); err != nil {
-		log.Error(err)
-	}
-
+	m.updateBootstrapNodes()
 	go m.discovery()
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for ; true; <-ticker.C {
@@ -36,7 +33,7 @@ func (m *monitor) Run() {
 }
 
 // create or update: https://github.com/jinzhu/gorm/issues/1307
-func (m *monitor) updateBootstrapNodes() error {
+func (m *monitor) updateBootstrapNodes() {
 	for _, node := range m.cfg.Nodes {
 		ormNode := &orm.Node{
 			PubKey: node.PubKey.String(),
@@ -44,17 +41,17 @@ func (m *monitor) updateBootstrapNodes() error {
 			Host:   node.Host,
 			Port:   node.Port,
 		}
+
 		if err := m.db.Where(&orm.Node{PubKey: ormNode.PubKey}).
 			Assign(&orm.Node{
 				Alias: node.Alias,
 				Host:  node.Host,
 				Port:  node.Port,
 			}).FirstOrCreate(ormNode).Error; err != nil {
-			return err
+			log.Error(err)
+			continue
 		}
 	}
-
-	return nil
 }
 
 // TODO:
