@@ -2,6 +2,8 @@ package monitor
 
 import (
 	"github.com/jinzhu/gorm"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type monitor struct {
@@ -13,4 +15,12 @@ func NewMonitor(db *gorm.DB) *monitor {
 }
 
 func (s *monitor) Run() {
+	if err := s.updateNodesHostPort(); err != nil {
+		// TODO: redirect output to logfile
+		log.Fatal(err)
+	}
+}
+
+func (s *monitor) updateNodesHostPort() error {
+	return nil
 }
