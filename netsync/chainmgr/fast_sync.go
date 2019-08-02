@@ -20,8 +20,10 @@ var (
 	fastSyncPivotGap       = uint64(64)
 	minGapStartFastSync    = uint64(128)
 
-	errNoSyncPeer   = errors.New("can't find sync peer")
-	errSkeletonSize = errors.New("fast sync skeleton size wrong")
+	errNoSyncPeer      = errors.New("can't find sync peer")
+	errSkeletonSize    = errors.New("fast sync skeleton size wrong")
+	errNoMainSkeleton  = errors.New("No main skeleton found")
+	errNoSkeletonFound = errors.New("No skeleton found")
 )
 
 type fastSync struct {
@@ -83,12 +85,12 @@ func (fs *fastSync) createFetchBlocksTasks(stopBlock *types.Block) ([]*fetchBloc
 	stopHash := stopBlock.Hash()
 	skeletonMap := fs.msgFetcher.parallelFetchHeaders(peers, fs.blockLocator(), &stopHash, numOfBlocksSkeletonGap-1)
 	if len(skeletonMap) == 0 {
-		return nil, errors.New("No skeleton found")
+		return nil, errNoSkeletonFound
 	}
 
 	mainSkeleton, ok := skeletonMap[fs.mainSyncPeer.ID()]
 	if !ok {
-		return nil, errors.New("No main skeleton found")
+		return nil, errNoMainSkeleton
 	}
 
 	if len(mainSkeleton) < minSizeOfSyncSkeleton || len(mainSkeleton) > maxSizeOfSyncSkeleton {
