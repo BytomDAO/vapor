@@ -34,9 +34,10 @@ func NewConfigWithPath(path string) *Config {
 }
 
 type Config struct {
-	Policy      Policy             `json:"policy"`
 	MySQLConfig common.MySQLConfig `json:"mysql"`
+	Policy      Policy             `json:"policy"`
 	Nodes       []Node             `json:"nodes"`
+	API         API                `json:"api"`
 }
 
 type Policy struct {
@@ -47,4 +48,10 @@ type Node struct {
 	Alias    string       `json:"alias"`
 	HostPort string       `json:"host_port"`
 	PubKey   chainkd.XPub `json:"pubkey"`
+}
+
+type API struct {
+	HostPort      bool   `json:"host_port"`
+	AccessToken   string `json:"access_token"`
+	IsReleaseMode bool   `json:"is_release_mode"`
 }
