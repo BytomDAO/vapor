@@ -34,14 +34,16 @@ CREATE TABLE `nodes` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `alias` varchar(128) NOT NULL DEFAULT '',
   `pub_key` char(128) NOT NULL DEFAULT '',
-  `host_port` varchar(128) NOT NULL DEFAULT '',
+  `host` varchar(128) NOT NULL DEFAULT '',
+  `port` smallint unsigned NOT NULL DEFAULT '0',
   `best_height` int(11) DEFAULT '0',
   `lantency_ms` int(11) DEFAULT NULL,
   `status` tinyint(1) NOT NULL DEFAULT '0',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `pub_key` (`pub_key`)
+  UNIQUE KEY `pub_key` (`pub_key`),
+  UNIQUE KEY `host_port` (`host`,`port`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 LOCK TABLES `nodes` WRITE;
