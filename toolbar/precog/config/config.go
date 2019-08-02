@@ -5,8 +5,8 @@ import (
 	"os"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/vapor/crypto/ed25519/chainkd"
 
-	vaporJson "github.com/vapor/encoding/json"
 	"github.com/vapor/toolbar/common"
 )
 
@@ -31,4 +31,20 @@ func NewConfigWithPath(path string) *Config {
 	}
 
 	return cfg
+}
+
+type Config struct {
+	Policy      Policy             `json:"policy"`
+	MySQLConfig common.MySQLConfig `json:"mysql"`
+	Nodes       []Node             `json:"nodes"`
+}
+
+type Policy struct {
+	LantencyMS uint64 `json:"lantency_ms"`
+}
+
+type Node struct {
+	Alias    string       `json:"alias"`
+	HostPort string       `json:"host_port"`
+	PubKey   chainkd.XPub `json:"pubkey"`
 }
