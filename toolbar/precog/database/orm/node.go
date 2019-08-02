@@ -24,29 +24,29 @@ type Node struct {
 func (n *Node) MarshalJSON() ([]byte, error) {
 	status := common.StatusMap[n.Status]
 	var lantency uint64
-	var activeTime time.Duration
+	var activeMinutes uint64
 	if n.Status != common.NodeOfflineStatus {
 		lantency = n.LantencyMS
-		activeTime = time.Since(n.ActiveBeginTime)
+		activeMinutes = uint64(time.Since(n.ActiveBeginTime).Minutes())
 	}
 
 	return json.Marshal(&struct {
-		Alias      string        `json:"alias"`
-		PubKey     chainkd.XPub  `json:"pubkey"`
-		Host       string        `json:"host"`
-		Port       uint16        `json:"port"`
-		BestHeight uint64        `json:"best_height"`
-		LantencyMS uint64        `json:"lantency_ms,omitempty"`
-		ActiveTime time.Duration `json:"active_time,omitempty"`
-		Status     string        `json:"status"`
+		Alias         string       `json:"alias"`
+		PubKey        chainkd.XPub `json:"pubkey"`
+		Host          string       `json:"host"`
+		Port          uint16       `json:"port"`
+		BestHeight    uint64       `json:"best_height"`
+		LantencyMS    uint64       `json:"lantency_ms,omitempty"`
+		ActiveMinutes uint64       `json:"active_minutes,omitempty"`
+		Status        string       `json:"status"`
 	}{
-		Alias:      n.Alias,
-		PubKey:     n.PubKey,
-		Host:       n.Host,
-		Port:       n.Port,
-		BestHeight: n.BestHeight,
-		LantencyMS: lantency,
-		activeTime: activeTime,
-		Status:     status,
+		Alias:         n.Alias,
+		PubKey:        n.PubKey,
+		Host:          n.Host,
+		Port:          n.Port,
+		BestHeight:    n.BestHeight,
+		LantencyMS:    lantency,
+		ActiveMinutes: activeMinutes,
+		Status:        status,
 	})
 }

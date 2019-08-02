@@ -35,24 +35,26 @@ func NewConfigWithPath(path string) *Config {
 
 type Config struct {
 	MySQLConfig      common.MySQLConfig `json:"mysql"`
-	CheckFreqSeconds uint64             `json:"check_seconds"`
+	CheckFreqSeconds uint64             `json:"check_frequency_seconds"`
 	Policy           Policy             `json:"policy"`
 	Nodes            []Node             `json:"bootstrap_nodes"`
 	API              API                `json:"api"`
 }
 
 type Policy struct {
-	LantencyMS uint64 `json:"lantency_ms"`
+	Confirmations      uint64 `json:"confirmations"`
+	RequiredLantencyMS uint64 `json:"required_lantency_ms"`
 }
 
 type Node struct {
-	Alias    string       `json:"alias"`
-	HostPort string       `json:"host_port"`
-	PubKey   chainkd.XPub `json:"pubkey"`
+	Alias  string       `json:"alias"`
+	PubKey chainkd.XPub `json:"pubkey"`
+	Host   string       `json:"host"`
+	Port   uint16       `json:"port"`
 }
 
 type API struct {
-	HostPort      bool   `json:"host_port"`
+	ListeningPort bool   `json:"listening_port"`
 	AccessToken   string `json:"access_token"`
 	IsReleaseMode bool   `json:"is_release_mode"`
 }
