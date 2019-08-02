@@ -1,0 +1,21 @@
+{
+    "mysql" : {
+        "connection" : {
+            "host": "127.0.0.1",
+            "port": 3306,
+            "username": "root",
+            "password": "toor",
+            "database": "precog"
+        },
+        "log_mode" : true
+    },
+    "check_frequency_seconds" : 1,
+    "bootstrap_nodes" : [
+        {
+            "alias" : "matpool",
+            "pubkey" : "0f8669abbd3cc0a167156188e428f940088d5b2f36bb3449df71d2bdc5e077814ea3f68628eef279ed435f51ee26cff00f8bd28fabfd500bedb2a9e369f5c825",
+            "host": "vapornode.matpool.io",
+            "port": 321,
+        }
+    ]
+}
