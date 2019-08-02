@@ -1,11 +1,16 @@
 package monitor
 
 import (
+	"time"
+
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/toolbar/precog/config"
 )
+
+// TODO: put in cfg?
+const checkFreqSeconds = 60
 
 type monitor struct {
 	cfg *config.Config
@@ -25,7 +30,9 @@ func (s *monitor) Run() {
 		log.Fatal(err)
 	}
 
-	// for ticker, dail nodes
+	ticker := time.NewTicker(checkFreqSeconds * time.Second)
+	for ; true; <-ticker.C {
+	}
 }
 
 func (s *monitor) updateNodesHostPort() error {
