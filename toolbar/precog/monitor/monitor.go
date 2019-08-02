@@ -2,16 +2,21 @@ package monitor
 
 import (
 	"github.com/jinzhu/gorm"
-
 	log "github.com/sirupsen/logrus"
+
+	"github.com/vapor/toolbar/precog/config"
 )
 
 type monitor struct {
-	db *gorm.DB
+	cfg *config.Config
+	db  *gorm.DB
 }
 
-func NewMonitor(db *gorm.DB) *monitor {
-	return &monitor{db: db}
+func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
+	return &monitor{
+		cfg: cfg,
+		db:  db,
+	}
 }
 
 func (s *monitor) Run() {

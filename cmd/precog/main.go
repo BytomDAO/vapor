@@ -18,8 +18,8 @@ func main() {
 		log.WithField("err", err).Panic("initialize mysql db error")
 	}
 
-	go monitor.NewMonitor(db).Run()
-	go api.NewApiServer(db).Run()
+	go monitor.NewMonitor(cfg, db).Run()
+	go api.NewApiServer(cfg, db).Run()
 
 	// keep the main func running in case of terminating goroutines
 	var wg sync.WaitGroup

@@ -2,14 +2,20 @@ package api
 
 import (
 	"github.com/jinzhu/gorm"
+
+	"github.com/vapor/toolbar/precog/config"
 )
 
 type server struct {
-	db *gorm.DB
+	cfg *config.Config
+	db  *gorm.DB
 }
 
-func NewApiServer(db *gorm.DB) *server {
-	return &server{db: db}
+func NewApiServer(cfg *config.Config, db *gorm.DB) *server {
+	return &server{
+		cfg: cfg,
+		db:  db,
+	}
 }
 
 func (s *server) Run() {
