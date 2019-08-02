@@ -37,14 +37,14 @@ func (m *monitor) Run() {
 }
 
 func (m *monitor) updateBootstrapNodes() error {
-	// updated existed nodes
-	// add new nodes
+	// TODO: updated existed nodes
+	// TODO: add new nodes
 	return nil
 }
 
 func (m *monitor) monitorRountine() error {
-	// dail
-	// get blockhash by height
-	// update
+	// TODO: dail
+	// TODO: get blockhash by height
+	// TODO: update
 	return nil
 }
