@@ -26,7 +26,6 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 
 func (s *monitor) Run() {
 	if err := s.updateNodesHostPort(); err != nil {
-		// TODO: redirect output to logfile
 		log.Fatal(err)
 	}
 
