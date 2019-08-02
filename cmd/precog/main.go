@@ -11,7 +11,7 @@ import (
 
 func main() {
 	cfg := config.NewConfig()
-	db, err := common.NewMySQLDB(cfg.MySQLConfig)
+	_, err := common.NewMySQLDB(cfg.MySQLConfig)
 	if err != nil {
 		log.WithField("err", err).Panic("initialize mysql db error")
 	}
