@@ -9,9 +9,6 @@ import (
 	"github.com/vapor/toolbar/precog/config"
 )
 
-// TODO: put in cfg?
-const checkFreqSeconds = 60
-
 type monitor struct {
 	cfg *config.Config
 	db  *gorm.DB
@@ -29,7 +26,7 @@ func (m *monitor) Run() {
 		log.Fatal(err)
 	}
 
-	ticker := time.NewTicker(checkFreqSeconds * time.Second)
+	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for ; true; <-ticker.C {
 		// TODO: lock?
 		m.monitorRountine()

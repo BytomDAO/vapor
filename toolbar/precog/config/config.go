@@ -34,10 +34,11 @@ func NewConfigWithPath(path string) *Config {
 }
 
 type Config struct {
-	MySQLConfig common.MySQLConfig `json:"mysql"`
-	Policy      Policy             `json:"policy"`
-	Nodes       []Node             `json:"bootstrap_nodes"`
-	API         API                `json:"api"`
+	MySQLConfig      common.MySQLConfig `json:"mysql"`
+	CheckFreqSeconds uint64             `json:"check_seconds"`
+	Policy           Policy             `json:"policy"`
+	Nodes            []Node             `json:"bootstrap_nodes"`
+	API              API                `json:"api"`
 }
 
 type Policy struct {
