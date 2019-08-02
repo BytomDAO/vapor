@@ -3,6 +3,8 @@ package main
 import (
 	"sync"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/vapor/toolbar/common"
 	"github.com/vapor/toolbar/precog/config"
 )
