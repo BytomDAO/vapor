@@ -69,7 +69,7 @@ func (bs *BlockSignatureMsg) BroadcastMarkSendRecord(ps *peers.PeerSet, peers []
 
 // BroadcastFilterTargetPeers filter target peers to filter the nodes that need to send messages.
 func (bs *BlockSignatureMsg) BroadcastFilterTargetPeers(ps *peers.PeerSet) []string {
-	return ps.PeersWithoutSign(bs.Signature)
+	return ps.PeersWithoutSignature(bs.Signature)
 }
 
 // BlockProposeMsg block propose message transferred between nodes.
