@@ -2,6 +2,7 @@ package peers
 
 import (
 	"net"
+	"reflect"
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
@@ -10,7 +11,6 @@ import (
 	"github.com/vapor/p2p/security"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
-	"reflect"
 )
 
 var (
