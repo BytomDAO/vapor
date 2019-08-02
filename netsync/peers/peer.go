@@ -252,32 +252,6 @@ func (p *Peer) markTransaction(hash *bc.Hash) {
 	p.knownTxs.Add(hash.String())
 }
 
-func (ps *PeerSet) PeersWithoutBlock(hash bc.Hash) []string {
-	ps.mtx.RLock()
-	defer ps.mtx.RUnlock()
-
-	var peers []string
-	for _, peer := range ps.peers {
-		if !peer.knownBlocks.Has(hash.String()) {
-			peers = append(peers, peer.ID())
-		}
-	}
-	return peers
-}
-
-func (ps *PeerSet) PeersWithoutSign(signature []byte) []string {
-	ps.mtx.RLock()
-	defer ps.mtx.RUnlock()
-
-	var peers []string
-	for _, peer := range ps.peers {
-		if !peer.knownSignatures.Has(hex.EncodeToString(signature)) {
-			peers = append(peers, peer.ID())
-		}
-	}
-	return peers
-}
-
 func (p *Peer) SendBlock(block *types.Block) (bool, error) {
 	msg, err := msgs.NewBlockMessage(block)
 	if err != nil {
@@ -544,14 +518,6 @@ func (ps *PeerSet) BroadcastTx(tx *types.Tx) error {
 	return nil
 }
 
-func (ps *PeerSet) ErrorHandler(peerID string, level byte, err error) {
-	if errors.Root(err) == ErrPeerMisbehave {
-		ps.ProcessIllegal(peerID, level, err.Error())
-	} else {
-		ps.RemovePeer(peerID)
-	}
-}
-
 // Peer retrieves the registered peer with the given id.
 func (ps *PeerSet) GetPeer(id string) *Peer {
 	ps.mtx.RLock()
@@ -618,14 +584,27 @@ func (ps *PeerSet) MarkTx(peerID string, txHash bc.Hash) {
 	peer.markTransaction(&txHash)
 }
 
-func (ps *PeerSet) peersWithoutBlock(hash *bc.Hash) []*Peer {
+func (ps *PeerSet) PeersWithoutBlock(hash bc.Hash) []string {
 	ps.mtx.RLock()
 	defer ps.mtx.RUnlock()
 
-	peers := []*Peer{}
+	var peers []string
 	for _, peer := range ps.peers {
 		if !peer.knownBlocks.Has(hash.String()) {
-			peers = append(peers, peer)
+			peers = append(peers, peer.ID())
+		}
+	}
+	return peers
+}
+
+func (ps *PeerSet) PeersWithoutSignature(signature []byte) []string {
+	ps.mtx.RLock()
+	defer ps.mtx.RUnlock()
+
+	var peers []string
+	for _, peer := range ps.peers {
+		if !peer.knownSignatures.Has(hex.EncodeToString(signature)) {
+			peers = append(peers, peer.ID())
 		}
 	}
 	return peers
@@ -680,11 +659,4 @@ func (ps *PeerSet) SetIrreversibleStatus(peerID string, height uint64, hash *bc.
 	}
 
 	peer.SetIrreversibleStatus(height, hash)
-}
-
-func (ps *PeerSet) Size() int {
-	ps.mtx.RLock()
-	defer ps.mtx.RUnlock()
-
-	return len(ps.peers)
 }

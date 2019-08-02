@@ -11,6 +11,7 @@ import (
 	dbm "github.com/vapor/database/leveldb"
 
 	"github.com/vapor/consensus"
+	"github.com/vapor/event"
 	"github.com/vapor/netsync/peers"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -197,11 +198,12 @@ func mockSync(blocks []*types.Block, mempool *mock.Mempool, fastSyncDB dbm.DB) *
 	}
 
 	return &Manager{
-		chain:       chain,
-		blockKeeper: newBlockKeeper(chain, peers, fastSyncDB),
-		peers:       peers,
-		mempool:     mempool,
-		txSyncCh:    make(chan *txSyncMsg),
+		chain:           chain,
+		blockKeeper:     newBlockKeeper(chain, peers, fastSyncDB),
+		peers:           peers,
+		mempool:         mempool,
+		txSyncCh:        make(chan *txSyncMsg),
+		eventDispatcher: event.NewDispatcher(),
 	}
 }
 

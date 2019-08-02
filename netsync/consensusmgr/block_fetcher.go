@@ -4,7 +4,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 
-	"github.com/vapor/netsync/peers"
 	"github.com/vapor/p2p/security"
 	"github.com/vapor/protocol/bc"
 )
@@ -19,7 +18,7 @@ const (
 // and scheduling them for retrieval.
 type blockFetcher struct {
 	chain Chain
-	peers *peers.PeerSet
+	peers Peers
 
 	newBlockCh chan *blockMsg
 	queue      *prque.Prque
@@ -27,7 +26,7 @@ type blockFetcher struct {
 }
 
 //NewBlockFetcher creates a block fetcher to retrieve blocks of the new propose.
-func newBlockFetcher(chain Chain, peers *peers.PeerSet) *blockFetcher {
+func newBlockFetcher(chain Chain, peers Peers) *blockFetcher {
 	f := &blockFetcher{
 		chain:      chain,
 		peers:      peers,

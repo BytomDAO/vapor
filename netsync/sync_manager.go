@@ -67,7 +67,7 @@ func NewSyncManager(config *config.Config, chain *protocol.Chain, txPool *protoc
 	if err != nil {
 		return nil, err
 	}
-	consensusMgr := consensusmgr.NewManager(sw, chain, dispatcher, peers)
+	consensusMgr := consensusmgr.NewManager(sw, chain, peers, dispatcher)
 	return &SyncManager{
 		config:       config,
 		sw:           sw,
