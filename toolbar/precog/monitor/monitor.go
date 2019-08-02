@@ -24,16 +24,26 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 	}
 }
 
-func (s *monitor) Run() {
+func (m *monitor) Run() {
 	if err := s.updateNodesHostPort(); err != nil {
 		log.Fatal(err)
 	}
 
 	ticker := time.NewTicker(checkFreqSeconds * time.Second)
 	for ; true; <-ticker.C {
+		// TODO: use goroutine?
+		// TODO: lock?
+		go s.monitorRountine()
 	}
 }
 
-func (s *monitor) updateNodesHostPort() error {
+func (m *monitor) updateNodesHostPort() error {
+	return nil
+}
+
+func (m *monitor) monitorRountine() error {
+	// dail
+	// get blockhash
+	// update
 	return nil
 }
