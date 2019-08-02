@@ -60,7 +60,7 @@ func (m *monitor) discovery() {
 }
 
 func (m *monitor) monitorRountine() error {
-	// TODO: dail, get lantency & best_height
+	// TODO: dail nodes, get lantency & best_height
 	// TODO: decide check_height("best best_height" - "confirmations")
 	// TODO: get blockhash by check_height, get latency
 	// TODO: update lantency, active_time and status
