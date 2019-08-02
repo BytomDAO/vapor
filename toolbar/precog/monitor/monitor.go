@@ -40,8 +40,8 @@ func (m *monitor) updateBootstrapNodes() error {
 }
 
 func (m *monitor) monitorRountine() error {
-	// TODO: dail
-	// TODO: get blockhash by height
-	// TODO: update
+	// TODO: dail, get lantency
+	// TODO: get blockhash by height, get latency
+	// TODO: update lantency, active_time and status
 	return nil
 }
