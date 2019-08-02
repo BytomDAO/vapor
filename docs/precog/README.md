@@ -39,7 +39,7 @@ __example response:__
     [
         {
             "alias": "cobo",
-            "pubkey": "...",
+            "pubkey": "b928e46bb01e834fdf167185e31b15de7cc257af8bbdf17f9c7fefd5bb97b306d048b6bc0da2097152c1c2ff38333c756a543adbba7030a447dcc776b8ac64ef",
             "host": "vapornode.cobo.com",
             "port": 123,
             "best_height": 1023,
@@ -49,7 +49,7 @@ __example response:__
         },
         {
             "alias": "matpool",
-            "pubkey": "...",
+            "pubkey": "0f8669abbd3cc0a167156188e428f940088d5b2f36bb3449df71d2bdc5e077814ea3f68628eef279ed435f51ee26cff00f8bd28fabfd500bedb2a9e369f5c825",
             "host": "vapornode.matpool.io",
             "port": 321,
             "best_height": 1024,
