@@ -11,3 +11,34 @@ DROP DATABASE `precog`;
 CREATE SCHEMA IF NOT EXISTS `precog`;
 
 USE `precog`;
+
+# Dump of table chains
+# ------------------------------------------------------------
+
+CREATE TABLE `chains` (
+  `id` tinyint(1) NOT NULL AUTO_INCREMENT,
+  `best_height` int(11) DEFAULT '0',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+LOCK TABLES `chains` WRITE;
+UNLOCK TABLES;
+
+
+# Dump of table nodes
+# ------------------------------------------------------------
+
+CREATE TABLE `nodes` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `pub_key` char(128) NOT NULL DEFAULT '',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `pub_key` (`pub_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+LOCK TABLES `nodes` WRITE;
+UNLOCK TABLES;
+
