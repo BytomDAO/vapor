@@ -19,6 +19,8 @@ func (s *monitor) Run() {
 		// TODO: redirect output to logfile
 		log.Fatal(err)
 	}
+
+	// for ticker, dail nodes
 }
 
 func (s *monitor) updateNodesHostPort() error {
