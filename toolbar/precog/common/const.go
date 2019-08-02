@@ -7,3 +7,10 @@ const (
 	NodeBusyStatus
 	NodeOfflineStatus
 )
+
+var StatusMap = map[uint8]string{
+	NodeHealthyStatus:   "healthy",
+	NodeCongestedStatus: "congested",
+	NodeBusyStatus:      "busy",
+	NodeOfflineStatus:   "offline",
+}
