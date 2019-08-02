@@ -1,7 +1,7 @@
 package common
 
 const (
-	_ uint8 = iota
+	NodeUnknownStatus uint8 = iota
 	NodeHealthyStatus
 	NodeCongestedStatus
 	NodeBusyStatus
@@ -9,6 +9,7 @@ const (
 )
 
 var StatusMap = map[uint8]string{
+	NodeUnknownStatus:   "unknown",
 	NodeHealthyStatus:   "healthy",
 	NodeCongestedStatus: "congested",
 	NodeBusyStatus:      "busy",
