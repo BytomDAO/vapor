@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/toolbar/precog/config"
+	"github.com/vapor/toolbar/precog/database/orm"
 )
 
 type monitor struct {
@@ -23,9 +24,10 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 
 func (m *monitor) Run() {
 	if err := m.updateBootstrapNodes(); err != nil {
-		log.Fatal(err)
+		log.Error(err)
 	}
 
+	go m.discovery()
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for ; true; <-ticker.C {
 		// TODO: lock?
@@ -33,10 +35,30 @@ func (m *monitor) Run() {
 	}
 }
 
+// create or update: https://github.com/jinzhu/gorm/issues/1307
 func (m *monitor) updateBootstrapNodes() error {
-	// TODO: updated existed nodes
-	// TODO: add new nodes
+	for _, node := range m.cfg.Nodes {
+		ormNode := &orm.Node{
+			PubKey: node.PubKey.String(),
+			Alias:  node.Alias,
+			Host:   node.Host,
+			Port:   node.Port,
+		}
+		if err := m.db.Where(&orm.Node{PubKey: ormNode.PubKey}).
+			Assign(&orm.Node{
+				Alias: node.Alias,
+				Host:  node.Host,
+				Port:  node.Port,
+			}).FirstOrCreate(ormNode).Error; err != nil {
+			return err
+		}
+	}
+
 	return nil
+}
+
+// TODO:
+func (m *monitor) discovery() {
 }
 
 func (m *monitor) monitorRountine() error {
