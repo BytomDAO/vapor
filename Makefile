@@ -38,6 +38,10 @@ fedd:
 	@echo "Building fedd to cmd/fedd/fedd"
 	@go build $(BUILD_FLAGS) -o cmd/fedd/fedd cmd/fedd/main.go
 
+precog:
+	@echo "Building precog to cmd/precog/precog"
+	@go build $(BUILD_FLAGS) -o cmd/precog/precog cmd/precog/main.go
+
 vapord:
 	@echo "Building vapord to cmd/vapord/vapord"
 	@go build $(BUILD_FLAGS) -o cmd/vapord/vapord cmd/vapord/main.go
