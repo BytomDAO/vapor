@@ -10,7 +10,7 @@ import (
 
 type Node struct {
 	Alias           string
-	PubKey          string
+	PublicKey       string
 	Host            string
 	Port            uint16
 	BestHeight      uint64
@@ -33,7 +33,7 @@ func (n *Node) MarshalJSON() ([]byte, error) {
 
 	return json.Marshal(&struct {
 		Alias         string `json:"alias"`
-		PubKey        string `json:"pubkey"`
+		PublicKey     string `json:"public_key"`
 		Host          string `json:"host"`
 		Port          uint16 `json:"port"`
 		BestHeight    uint64 `json:"best_height"`
@@ -42,7 +42,7 @@ func (n *Node) MarshalJSON() ([]byte, error) {
 		Status        string `json:"status"`
 	}{
 		Alias:         n.Alias,
-		PubKey:        n.PubKey,
+		PublicKey:     n.PublicKey,
 		Host:          n.Host,
 		Port:          n.Port,
 		BestHeight:    n.BestHeight,

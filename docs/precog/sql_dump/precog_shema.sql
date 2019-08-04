@@ -12,28 +12,13 @@ CREATE SCHEMA `precog`;
 
 USE `precog`;
 
-# Dump of table chains
-# ------------------------------------------------------------
-
-CREATE TABLE `chains` (
-  `id` tinyint(1) NOT NULL AUTO_INCREMENT,
-  `best_height` int(11) DEFAULT '0',
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-LOCK TABLES `chains` WRITE;
-UNLOCK TABLES;
-
-
 # Dump of table nodes
 # ------------------------------------------------------------
 
 CREATE TABLE `nodes` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `alias` varchar(128) NOT NULL DEFAULT '',
-  `pub_key` char(128) NOT NULL DEFAULT '',
+  `public_key` char(128) NOT NULL DEFAULT '',
   `host` varchar(128) NOT NULL DEFAULT '',
   `port` smallint unsigned NOT NULL DEFAULT '0',
   `best_height` int(11) DEFAULT '0',
@@ -43,7 +28,7 @@ CREATE TABLE `nodes` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `pub_key` (`pub_key`),
+  UNIQUE KEY `public_key` (`public_key`),
   UNIQUE KEY `host_port` (`host`,`port`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 

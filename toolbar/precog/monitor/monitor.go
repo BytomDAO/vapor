@@ -36,14 +36,14 @@ func (m *monitor) Run() {
 func (m *monitor) updateBootstrapNodes() {
 	for _, node := range m.cfg.Nodes {
 		ormNode := &orm.Node{
-			PubKey:          node.PubKey.String(),
+			PublicKey:       node.PublicKey.String(),
 			Alias:           node.Alias,
 			Host:            node.Host,
 			Port:            node.Port,
 			ActiveBeginTime: time.Now(),
 		}
 
-		if err := m.db.Where(&orm.Node{PubKey: ormNode.PubKey}).
+		if err := m.db.Where(&orm.Node{PublicKey: ormNode.PublicKey}).
 			Assign(&orm.Node{
 				Alias: node.Alias,
 				Host:  node.Host,
