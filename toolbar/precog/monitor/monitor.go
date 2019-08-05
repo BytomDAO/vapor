@@ -59,6 +59,13 @@ func (m *monitor) updateBootstrapNodes() {
 // p2p/test_util.go
 // p2p/switch_test.go
 func (m *monitor) discovery() {
+	mCfg := &cfg.Config{}
+	// testDB
+	// swPrivKey
+	// initSwitchFunc
+	sw := p2p.MakeSwitch(mCfg, testDB, swPrivKey, initSwitchFunc)
+	sw.Start()
+	defer sw.Stop()
 }
 
 func (m *monitor) monitorRountine() error {
