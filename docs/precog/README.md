@@ -5,7 +5,7 @@ Keep monitoring (leader & candidate) consensus nodes status in vapor network.
 ## Init
 
 ### Database Schema
-[federation_schema.sql](./sql_dump/federation_shema.sql)
+[precog_schema.sql](./sql_dump/precog_schema.sql)
 
 ### Config
 
