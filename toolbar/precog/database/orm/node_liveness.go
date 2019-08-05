@@ -7,8 +7,8 @@ import (
 
 type NodeLiveness struct {
 	NodeID        uint16
-	ProbeTimes    uint64
-	ResponseTimes uint64
+	PingTimes     uint64
+	PongTimes     uint64
 	AvgLantencyMS sql.NullInt64
 	Status        uint8
 	CreatedAt     time.Time

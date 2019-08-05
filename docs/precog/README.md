@@ -4,17 +4,14 @@ Keep monitoring (leader & candidate) consensus nodes status in vapor network.
 
 ## Init
 
-### Database Scheme
-[federation_shema.sql](./sql_dump/federation_shema.sql)
+### Database Schema
+[federation_schema.sql](./sql_dump/federation_shema.sql)
 
 ### Config
 
 ## API
 
-+ [/chain-status](#chain-status)
 + [/list-nodes](#list-nodes)
-
-### /chain-status
 
 ### /list-nodes
 

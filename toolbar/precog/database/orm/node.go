@@ -5,11 +5,12 @@ import (
 )
 
 type Node struct {
-	Alias      string
-	PublicKey  string
-	Host       string
-	Port       uint16
-	BestHeight uint64
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	Alias                    string
+	PublicKey                string
+	Host                     string
+	Port                     uint16
+	BestHeight               uint64
+	LatestDailyUptimeMinutes uint64
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
 }
