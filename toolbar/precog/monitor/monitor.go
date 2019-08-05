@@ -6,6 +6,7 @@ import (
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/vapor/p2p/signlib"
 	"github.com/vapor/toolbar/precog/config"
 	"github.com/vapor/toolbar/precog/database/orm"
 )
@@ -55,6 +56,7 @@ func (m *monitor) updateBootstrapNodes() {
 }
 
 // TODO:
+// implement logic first, and then refactor
 // /home/gavin/work/go/src/github.com/vapor/
 // p2p/test_util.go
 // p2p/switch_test.go
