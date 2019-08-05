@@ -55,6 +55,9 @@ func (m *monitor) updateBootstrapNodes() {
 }
 
 // TODO:
+// /home/gavin/work/go/src/github.com/vapor/
+// p2p/test_util.go
+// p2p/switch_test.go
 func (m *monitor) discovery() {
 }
 
