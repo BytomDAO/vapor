@@ -191,6 +191,7 @@ func (m *Manager) removePeer(peerID string) {
 
 //Start consensus manager service.
 func (m *Manager) Start() error {
+	go m.blockFetcher.blockProcessorLoop()
 	go m.blockProposeMsgBroadcastLoop()
 	go m.blockSignatureMsgBroadcastLoop()
 	return nil
