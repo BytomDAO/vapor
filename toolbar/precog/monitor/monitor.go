@@ -60,8 +60,22 @@ func (m *monitor) updateBootstrapNodes() {
 // p2p/switch_test.go
 func (m *monitor) discovery() {
 	mCfg := &cfg.Config{}
-	// testDB
-	// swPrivKey
+	// TODO: fix
+	dirPath, err := ioutil.TempDir(".", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dirPath)
+
+	cfg.DBPath = dirPath
+	// TODO: fix
+	cfg.P2P.ListenAddress = "127.0.1.1:0"
+	swPrivKey, err := signlib.NewPrivKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
 	// initSwitchFunc
 	sw := p2p.MakeSwitch(mCfg, testDB, swPrivKey, initSwitchFunc)
 	sw.Start()
