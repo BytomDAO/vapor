@@ -1,11 +1,16 @@
 package monitor
 
 import (
+	"io/ioutil"
+	"os"
 	"time"
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
+	dbm "github.com/vapor/database/leveldb"
 
+	cfg "github.com/vapor/config"
+	"github.com/vapor/p2p"
 	"github.com/vapor/p2p/signlib"
 	"github.com/vapor/toolbar/precog/config"
 	"github.com/vapor/toolbar/precog/database/orm"
@@ -65,16 +70,17 @@ func (m *monitor) discovery() {
 	// TODO: fix
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {
-		t.Fatal(err)
+		log.Fatal(err)
 	}
 	defer os.RemoveAll(dirPath)
 
+	// TODO: fix
 	cfg.DBPath = dirPath
 	// TODO: fix
 	cfg.P2P.ListenAddress = "127.0.1.1:0"
 	swPrivKey, err := signlib.NewPrivKey()
 	if err != nil {
-		t.Fatal(err)
+		log.Fatal(err)
 	}
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
