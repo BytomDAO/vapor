@@ -74,7 +74,7 @@ func (hook *BtmHook) ioWrite(entry *logrus.Entry) error {
 
 func clearLockFiles(logPath string) error {
 	files, err := ioutil.ReadDir(logPath)
-	if err != nil {
+	if err!=nil&&!os.IsNotExist(err){
 		return err
 	}
 
