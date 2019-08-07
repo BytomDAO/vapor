@@ -90,6 +90,22 @@ func (m *monitor) discovery() {
 	defer sw.Stop()
 }
 
+// TODO: why foo&bar
+// TODO: what is testReactor
+func initSwitchFunc(sw *Switch) *Switch {
+	// Make two reactors of two channels each
+	sw.AddReactor("foo", NewTestReactor([]*conn.ChannelDescriptor{
+		{ID: byte(0x00), Priority: 10},
+		{ID: byte(0x01), Priority: 10},
+	}, true))
+	sw.AddReactor("bar", NewTestReactor([]*conn.ChannelDescriptor{
+		{ID: byte(0x02), Priority: 10},
+		{ID: byte(0x03), Priority: 10},
+	}, true))
+
+	return sw
+}
+
 func (m *monitor) monitorRountine() error {
 	// TODO: dail nodes, get lantency & best_height
 	// TODO: decide check_height("best best_height" - "confirmations")
