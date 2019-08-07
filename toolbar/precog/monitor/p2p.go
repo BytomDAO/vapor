@@ -21,6 +21,8 @@ import (
 
 // TODO: why foo&bar
 // TODO: what is testReactor
+// TODO: listen on right port
+// TODO: why not discover
 func initSwitchFunc(sw *p2p.Switch) *p2p.Switch {
 	// Make two reactors of two channels each
 	sw.AddReactor("foo", NewTestReactor([]*conn.ChannelDescriptor{
