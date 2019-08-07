@@ -73,10 +73,9 @@ func (m *monitor) discovery() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	mCfg.DBPath = dirPath
 	defer os.RemoveAll(dirPath)
 
-	// TODO: fix
-	mCfg.DBPath = dirPath
 	// TODO: fix
 	mCfg.P2P.ListenAddress = "127.0.1.1:0"
 	swPrivKey, err := signlib.NewPrivKey()
