@@ -11,6 +11,7 @@ import (
 
 	cfg "github.com/vapor/config"
 	"github.com/vapor/p2p"
+	// conn "github.com/vapor/p2p/connection"
 	"github.com/vapor/p2p/signlib"
 	"github.com/vapor/toolbar/precog/config"
 	"github.com/vapor/toolbar/precog/database/orm"
@@ -88,22 +89,6 @@ func (m *monitor) discovery() {
 	sw := p2p.MakeSwitch(mCfg, testDB, swPrivKey, initSwitchFunc)
 	sw.Start()
 	defer sw.Stop()
-}
-
-// TODO: why foo&bar
-// TODO: what is testReactor
-func initSwitchFunc(sw *Switch) *Switch {
-	// Make two reactors of two channels each
-	sw.AddReactor("foo", NewTestReactor([]*conn.ChannelDescriptor{
-		{ID: byte(0x00), Priority: 10},
-		{ID: byte(0x01), Priority: 10},
-	}, true))
-	sw.AddReactor("bar", NewTestReactor([]*conn.ChannelDescriptor{
-		{ID: byte(0x02), Priority: 10},
-		{ID: byte(0x03), Priority: 10},
-	}, true))
-
-	return sw
 }
 
 func (m *monitor) monitorRountine() error {
