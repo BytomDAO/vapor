@@ -68,6 +68,7 @@ func (m *monitor) updateBootstrapNodes() {
 // p2p/switch_test.go
 func (m *monitor) discovery() {
 	// TODO: clean up
+	// TODO: 包一下？  common cfg 之类的？
 	mCfg := cfg.DefaultConfig()
 	// TODO: fix
 	dirPath, err := ioutil.TempDir(".", "")
