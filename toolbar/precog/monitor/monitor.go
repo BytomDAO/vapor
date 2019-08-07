@@ -67,7 +67,7 @@ func (m *monitor) updateBootstrapNodes() {
 // p2p/test_util.go
 // p2p/switch_test.go
 func (m *monitor) discovery() {
-	mCfg := &cfg.Config{}
+	mCfg := cfg.DefaultConfig()
 	// TODO: fix
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {
