@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"sync"
 	// "io/ioutil"
 	// "os"
 	// "time"
@@ -45,17 +46,17 @@ type Reactor interface {
 	cmn.Service // Start, Stop
 
 	// SetSwitch allows setting a switch.
-	SetSwitch(*Switch)
+	SetSwitch(*p2p.Switch)
 
 	// GetChannels returns the list of channel descriptors.
-	GetChannels() []*connection.ChannelDescriptor
+	GetChannels() []*conn.ChannelDescriptor
 
 	// AddPeer is called by the switch when a new peer is added.
-	AddPeer(peer *Peer) error
+	AddPeer(peer *p2p.Peer) error
 
 	// RemovePeer is called by the switch when the peer is stopped (due to error
 	// or other reason).
-	RemovePeer(peer *Peer, reason interface{})
+	RemovePeer(peer *p2p.Peer, reason interface{})
 
 	// Receive is called when msgBytes is received from peer.
 	//
@@ -63,13 +64,13 @@ type Reactor interface {
 	// copying.
 	//
 	// CONTRACT: msgBytes are not nil.
-	Receive(chID byte, peer *Peer, msgBytes []byte)
+	Receive(chID byte, peer *p2p.Peer, msgBytes []byte)
 }
 
 //BaseReactor base service of a reactor
 type BaseReactor struct {
 	cmn.BaseService // Provides Start, Stop, .Quit
-	Switch          *Switch
+	Switch          *p2p.Switch
 }
 
 //NewBaseReactor create new base Reactor
@@ -81,21 +82,21 @@ func NewBaseReactor(name string, impl Reactor) *BaseReactor {
 }
 
 //SetSwitch setting a switch for reactor
-func (br *BaseReactor) SetSwitch(sw *Switch) {
+func (br *BaseReactor) SetSwitch(sw *p2p.Switch) {
 	br.Switch = sw
 }
 
 //GetChannels returns the list of channel descriptors
-func (*BaseReactor) GetChannels() []*connection.ChannelDescriptor { return nil }
+func (*BaseReactor) GetChannels() []*conn.ChannelDescriptor { return nil }
 
 //AddPeer is called by the switch when a new peer is added
-func (*BaseReactor) AddPeer(peer *Peer) {}
+func (*BaseReactor) AddPeer(peer *p2p.Peer) {}
 
 //RemovePeer is called by the switch when the peer is stopped (due to error or other reason)
-func (*BaseReactor) RemovePeer(peer *Peer, reason interface{}) {}
+func (*BaseReactor) RemovePeer(peer *p2p.Peer, reason interface{}) {}
 
 //Receive is called when msgBytes is received from peer
-func (*BaseReactor) Receive(chID byte, peer *Peer, msgBytes []byte) {}
+func (*BaseReactor) Receive(chID byte, peer *p2p.Peer, msgBytes []byte) {}
 
 type TestReactor struct {
 	BaseReactor
@@ -135,16 +136,16 @@ func (tr *TestReactor) OnStop() {
 }
 
 // AddPeer implements Reactor by sending our state to peer.
-func (tr *TestReactor) AddPeer(peer *Peer) error {
+func (tr *TestReactor) AddPeer(peer *p2p.Peer) error {
 	return nil
 }
 
 // RemovePeer implements Reactor by removing peer from the pool.
-func (tr *TestReactor) RemovePeer(peer *Peer, reason interface{}) {
+func (tr *TestReactor) RemovePeer(peer *p2p.Peer, reason interface{}) {
 }
 
 // Receive implements Reactor by handling 4 types of messages (look below).
-func (tr *TestReactor) Receive(chID byte, peer *Peer, msgBytes []byte) {
+func (tr *TestReactor) Receive(chID byte, peer *p2p.Peer, msgBytes []byte) {
 	if tr.logMessages {
 		tr.mtx.Lock()
 		defer tr.mtx.Unlock()
