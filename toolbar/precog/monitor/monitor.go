@@ -7,12 +7,12 @@ import (
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
-	dbm "github.com/vapor/database/leveldb"
+	// dbm "github.com/vapor/database/leveldb"
 
 	cfg "github.com/vapor/config"
 	"github.com/vapor/p2p"
 	// conn "github.com/vapor/p2p/connection"
-	"github.com/vapor/p2p/signlib"
+	// "github.com/vapor/p2p/signlib"
 	"github.com/vapor/toolbar/precog/config"
 	"github.com/vapor/toolbar/precog/database/orm"
 )
@@ -71,6 +71,7 @@ func (m *monitor) discovery() {
 	mCfg := &cfg.Config{
 		BaseConfig: cfg.DefaultBaseConfig(),
 		P2P:        cfg.DefaultP2PConfig(),
+		Federation: cfg.DefaultFederationConfig(),
 	}
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {
@@ -80,14 +81,18 @@ func (m *monitor) discovery() {
 	mCfg.DBPath = dirPath
 	defer os.RemoveAll(dirPath)
 
-	swPrivKey, err := signlib.NewPrivKey()
+	// swPrivKey, err := signlib.NewPrivKey()
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	// testDB := dbm.NewDB("testdb", "leveldb", dirPath)
+	// TODO: clean up
+	sw, err := p2p.NewSwitch(mCfg)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
-	// initSwitchFunc
-	sw := p2p.MakeSwitch(mCfg, testDB, swPrivKey, initSwitchFunc)
 	sw.Start()
 	defer sw.Stop()
 }
