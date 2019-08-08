@@ -127,18 +127,18 @@ func (m *monitor) makeSwitch() (*p2p.Switch, error) {
 
 	lanDiscv := mdns.NewLANDiscover(mdns.NewProtocol(), int(l.ExternalAddress().Port))
 	sw := &p2p.Switch{
-		Config:       config,
-		peerConfig:   p2p.DefaultPeerConfig(m.nodeCfg.P2P),
-		reactors:     make(map[string]p2p.Reactor),
-		chDescs:      make([]*conn.ChannelDescriptor, 0),
-		reactorsByCh: make(map[byte]Reactor),
-		peers:        p2p.NewPeerSet(),
-		dialing:      cmn.NewCMap(),
-		nodePrivKey:  swPrivKey,
-		discv:        discv,
-		lanDiscv:     lanDiscv,
-		nodeInfo:     p2p.NewNodeInfo(m.nodeCfg, swPrivKey.XPub(), listenAddr, netID),
-		security:     security.NewSecurity(m.nodeCfg),
+		Config:       m.nodeCfg,
+		PeerConfig:   p2p.DefaultPeerConfig(m.nodeCfg.P2P),
+		Reactors:     make(map[string]p2p.Reactor),
+		ChDescs:      make([]*conn.ChannelDescriptor, 0),
+		ReactorsByCh: make(map[byte]Reactor),
+		Peers:        p2p.NewPeerSet(),
+		Dialing:      cmn.NewCMap(),
+		NodePrivKey:  swPrivKey,
+		Discv:        discv,
+		LanDiscv:     lanDiscv,
+		NodeInfo:     p2p.NewNodeInfo(m.nodeCfg, swPrivKey.XPub(), listenAddr, netID),
+		Security:     security.NewSecurity(m.nodeCfg),
 	}
 	sw.AddListener(l)
 	sw.BaseService = *cmn.NewBaseService(nil, "P2P Switch", sw)
