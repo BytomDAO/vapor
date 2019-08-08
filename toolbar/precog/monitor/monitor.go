@@ -77,6 +77,16 @@ func (m *monitor) updateBootstrapNodes() {
 // p2p/test_util.go
 // p2p/switch_test.go
 func (m *monitor) discovery() {
+	sw, err := m.makeSwitch()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	sw.Start()
+	defer sw.Stop()
+}
+
+func (m *monitor) makeSwitch() (*p2p.Switch, error) {
 	// TODO: 包一下？  common cfg 之类的？
 	mCfg := &cfg.Config{
 		BaseConfig: cfg.DefaultBaseConfig(),
@@ -96,15 +106,10 @@ func (m *monitor) discovery() {
 	// log.Println("Federation.Xpubs", mCfg.Federation.Xpubs)
 	sw, err := p2p.NewSwitch(mCfg)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
-	sw.Start()
-	defer sw.Stop()
-}
-
-func (m *monitor) makeSwitch() {
-
+	return sw, nil
 }
 
 func (m *monitor) monitorRountine() error {
