@@ -57,7 +57,7 @@ type SyncManager struct {
 
 // NewSyncManager create sync manager and set switch.
 func NewSyncManager(config *config.Config, chain *protocol.Chain, txPool *protocol.TxPool, dispatcher *event.Dispatcher, fastSyncDB dbm.DB) (*SyncManager, error) {
-	sw, err := p2p.NewSwitch(config)
+	sw, err := p2p.NewSwitchMaybeDiscover(config)
 	if err != nil {
 		return nil, err
 	}
