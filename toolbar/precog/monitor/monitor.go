@@ -22,7 +22,7 @@ import (
 	"github.com/vapor/toolbar/precog/database/orm"
 )
 
-const netID = 10817814959495988245
+const vaporNetID = 10817814959495988245
 
 type monitor struct {
 	cfg     *config.Config
@@ -109,13 +109,13 @@ func (m *monitor) makeSwitch() (*p2p.Switch, error) {
 	}
 
 	l, listenAddr := p2p.GetListener(m.nodeCfg.P2P)
-	discv, err := dht.NewDiscover(m.nodeCfg, swPrivKey, l.ExternalAddress().Port, netID)
+	discv, err := dht.NewDiscover(m.nodeCfg, swPrivKey, l.ExternalAddress().Port, vaporNetID)
 	if err != nil {
 		return nil, err
 	}
 
 	lanDiscv := mdns.NewLANDiscover(mdns.NewProtocol(), int(l.ExternalAddress().Port))
-	return p2p.NewSwitch(m.nodeCfg, discv, lanDiscv, l, swPrivKey, listenAddr, netID)
+	return p2p.NewSwitch(m.nodeCfg, discv, lanDiscv, l, swPrivKey, listenAddr, vaporNetID)
 }
 
 func (m *monitor) monitorRountine() error {
