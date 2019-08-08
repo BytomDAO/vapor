@@ -1,7 +1,7 @@
 package monitor
 
 import (
-	"encoding/binary"
+	// "encoding/binary"
 	"io/ioutil"
 	"os"
 	"time"
@@ -13,14 +13,16 @@ import (
 	vaporCfg "github.com/vapor/config"
 	"github.com/vapor/p2p"
 	// conn "github.com/vapor/p2p/connection"
-	"github.com/vapor/p2p/signlib"
 	// "github.com/vapor/consensus"
-	"github.com/vapor/crypto/sha3pool"
+	// "github.com/vapor/crypto/sha3pool"
 	"github.com/vapor/p2p/discover/dht"
 	"github.com/vapor/p2p/discover/mdns"
+	"github.com/vapor/p2p/signlib"
 	"github.com/vapor/toolbar/precog/config"
 	"github.com/vapor/toolbar/precog/database/orm"
 )
+
+const netID = 0
 
 type monitor struct {
 	cfg     *config.Config
@@ -97,18 +99,6 @@ func (m *monitor) discovery() {
 	defer sw.Stop()
 }
 
-func (m *monitor) calcNetID() uint64 {
-	var data []byte
-	var h [32]byte
-	data = append(data, vaporCfg.GenesisBlock().Hash().Bytes()...)
-	magic := make([]byte, 8)
-	magicNumber := uint64(0x054c5638)
-	binary.BigEndian.PutUint64(magic, magicNumber)
-	data = append(data, magic[:]...)
-	sha3pool.Sum256(h[:], data)
-	return binary.BigEndian.Uint64(h[:8])
-}
-
 func (m *monitor) makeSwitch() (*p2p.Switch, error) {
 	// TODO: whatz that for
 	// testDB := dbm.NewDB("testdb", "leveldb", dirPath)
@@ -119,7 +109,6 @@ func (m *monitor) makeSwitch() (*p2p.Switch, error) {
 	}
 
 	l, listenAddr := p2p.GetListener(m.nodeCfg.P2P)
-	netID := m.calcNetID()
 	discv, err := dht.NewDiscover(m.nodeCfg, swPrivKey, l.ExternalAddress().Port, netID)
 	if err != nil {
 		return nil, err
