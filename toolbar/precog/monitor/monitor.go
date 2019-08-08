@@ -13,11 +13,11 @@ import (
 	vaporCfg "github.com/vapor/config"
 	"github.com/vapor/p2p"
 	// conn "github.com/vapor/p2p/connection"
-	// "github.com/vapor/p2p/signlib"
+	"github.com/vapor/p2p/signlib"
 	// "github.com/vapor/consensus"
 	"github.com/vapor/crypto/sha3pool"
-	// "github.com/vapor/p2p/discover/dht"
-	// "github.com/vapor/p2p/discover/mdns"
+	"github.com/vapor/p2p/discover/dht"
+	"github.com/vapor/p2p/discover/mdns"
 	"github.com/vapor/toolbar/precog/config"
 	"github.com/vapor/toolbar/precog/database/orm"
 )
@@ -119,14 +119,15 @@ func (m *monitor) makeSwitch() (*p2p.Switch, error) {
 	}
 
 	l, listenAddr := p2p.GetListener(m.nodeCfg.P2P)
-	discv, err := dht.NewDiscover(config, *swPrivKey, l.ExternalAddress().Port, netID)
+	netID := m.calcNetID()
+	discv, err := dht.NewDiscover(m.nodeCfg, swPrivKey, l.ExternalAddress().Port, netID)
 	if err != nil {
 		return nil, err
 	}
 
-	lanDiscv := mdns.NewLANDiscover(mdns.NewProtocol(), int(l.ExternalAddress().Port))
-	netID := m.calcNetID()
-	return newSwitch(config, discv, lanDiscv, l, *privateKey, listenAddr, netID)
+	// lanDiscv := mdns.NewLANDiscover(mdns.NewProtocol(), int(l.ExternalAddress().Port))
+	// return newSwitch(config, discv, lanDiscv, l, *privateKey, listenAddr, netID)
+	return nil, nil
 }
 
 func (m *monitor) monitorRountine() error {
