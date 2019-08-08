@@ -100,9 +100,6 @@ func (m *monitor) discovery() {
 }
 
 func (m *monitor) makeSwitch() (*p2p.Switch, error) {
-	// TODO: whatz that for
-	// testDB := dbm.NewDB("testdb", "leveldb", dirPath)
-
 	swPrivKey, err := signlib.NewPrivKey()
 	if err != nil {
 		return nil, err
