@@ -1,5 +1,7 @@
 package monitor
 
+/*
+
 import (
 	"sync"
 	// "io/ioutil"
@@ -155,3 +157,6 @@ func (tr *TestReactor) Receive(chID byte, peer *p2p.Peer, msgBytes []byte) {
 		tr.msgsCounter++
 	}
 }
+
+
+*/
