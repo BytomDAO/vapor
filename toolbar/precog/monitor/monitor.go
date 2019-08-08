@@ -2,7 +2,7 @@ package monitor
 
 import (
 	"io/ioutil"
-	// "os"
+	"os"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -21,7 +21,7 @@ import (
 type monitor struct {
 	cfg     *config.Config
 	db      *gorm.DB
-	dirPath *os.File
+	dirPath string
 }
 
 func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
