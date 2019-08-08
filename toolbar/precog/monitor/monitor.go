@@ -22,7 +22,7 @@ import (
 	"github.com/vapor/toolbar/precog/database/orm"
 )
 
-const netID = 0
+const netID = 10817814959495988245
 
 type monitor struct {
 	cfg     *config.Config
