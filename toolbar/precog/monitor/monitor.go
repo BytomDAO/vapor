@@ -9,7 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	// dbm "github.com/vapor/database/leveldb"
 
-	cfg "github.com/vapor/config"
+	vaporCfg "github.com/vapor/config"
 	"github.com/vapor/p2p"
 	// conn "github.com/vapor/p2p/connection"
 	// "github.com/vapor/p2p/signlib"
@@ -21,7 +21,7 @@ import (
 type monitor struct {
 	cfg     *config.Config
 	db      *gorm.DB
-	dirPath string
+	nodeCfg *vaporCfg.Config
 }
 
 func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
@@ -30,15 +30,22 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 		log.Fatal(err)
 	}
 
+	nodeCfg := &vaporCfg.Config{
+		BaseConfig: vaporCfg.DefaultBaseConfig(),
+		P2P:        vaporCfg.DefaultP2PConfig(),
+		Federation: vaporCfg.DefaultFederationConfig(),
+	}
+	nodeCfg.DBPath = dirPath
+
 	return &monitor{
 		cfg:     cfg,
 		db:      db,
-		dirPath: dirPath,
+		nodeCfg: nodeCfg,
 	}
 }
 
 func (m *monitor) Run() {
-	defer os.RemoveAll(m.dirPath)
+	defer os.RemoveAll(m.nodeCfg.DBPath)
 
 	m.updateBootstrapNodes()
 	go m.discovery()
@@ -86,14 +93,26 @@ func (m *monitor) discovery() {
 	defer sw.Stop()
 }
 
+func (m *monitor) calcNetID() (*p2p.Switch, error) {
+	var data []byte
+	var h [32]byte
+	data = append(data, m.nodeCfg.GenesisBlock().Hash().Bytes()...)
+	magic := make([]byte, 8)
+	magicNumber := uint64(0x054c5638)
+	binary.BigEndian.PutUint64(magic, magicNumber)
+	data = append(data, magic[:]...)
+	sha3pool.Sum256(h[:], data)
+	return binary.BigEndian.Uint64(h[:8])
+}
+
 func (m *monitor) makeSwitch() (*p2p.Switch, error) {
 	// TODO: 包一下？  common cfg 之类的？
-	mCfg := &cfg.Config{
-		BaseConfig: cfg.DefaultBaseConfig(),
-		P2P:        cfg.DefaultP2PConfig(),
-		Federation: cfg.DefaultFederationConfig(),
-	}
-	mCfg.DBPath = m.dirPath
+
+	var err error
+	var l Listener
+	var listenAddr string
+	var discv *dht.Network
+	var lanDiscv *mdns.LANDiscover
 
 	// swPrivKey, err := signlib.NewPrivKey()
 	// if err != nil {
