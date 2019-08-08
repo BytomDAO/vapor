@@ -16,8 +16,8 @@ import (
 	// "github.com/vapor/p2p/signlib"
 	// "github.com/vapor/consensus"
 	"github.com/vapor/crypto/sha3pool"
-	"github.com/vapor/p2p/discover/dht"
-	"github.com/vapor/p2p/discover/mdns"
+	// "github.com/vapor/p2p/discover/dht"
+	// "github.com/vapor/p2p/discover/mdns"
 	"github.com/vapor/toolbar/precog/config"
 	"github.com/vapor/toolbar/precog/database/orm"
 )
@@ -110,29 +110,23 @@ func (m *monitor) calcNetID() uint64 {
 }
 
 func (m *monitor) makeSwitch() (*p2p.Switch, error) {
-	// TODO: 包一下？  common cfg 之类的？
-
-	// var err error
-	// var l p2p.Listener
-	// var listenAddr string
-	// var discv *dht.Network
-	// var lanDiscv *mdns.LANDiscover
-
-	// swPrivKey, err := signlib.NewPrivKey()
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
 	// TODO: whatz that for
 	// testDB := dbm.NewDB("testdb", "leveldb", dirPath)
-	// TODO: clean up
-	// log.Println("Federation.Xpubs", mCfg.Federation.Xpubs)
-	sw, err := p2p.NewSwitch(m.nodeCfg)
+
+	swPrivKey, err := signlib.NewPrivKey()
 	if err != nil {
 		return nil, err
 	}
 
-	return sw, nil
+	l, listenAddr := p2p.GetListener(m.nodeCfg.P2P)
+	discv, err := dht.NewDiscover(config, *swPrivKey, l.ExternalAddress().Port, netID)
+	if err != nil {
+		return nil, err
+	}
+
+	lanDiscv := mdns.NewLANDiscover(mdns.NewProtocol(), int(l.ExternalAddress().Port))
+	netID := m.calcNetID()
+	return newSwitch(config, discv, lanDiscv, l, *privateKey, listenAddr, netID)
 }
 
 func (m *monitor) monitorRountine() error {
