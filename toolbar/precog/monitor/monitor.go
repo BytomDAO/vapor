@@ -83,7 +83,6 @@ func (m *monitor) discovery() {
 		P2P:        cfg.DefaultP2PConfig(),
 		Federation: cfg.DefaultFederationConfig(),
 	}
-	// TODO: fix
 	mCfg.DBPath = m.dirPath
 
 	// swPrivKey, err := signlib.NewPrivKey()
@@ -91,6 +90,7 @@ func (m *monitor) discovery() {
 	// 	log.Fatal(err)
 	// }
 
+	// TODO: whatz that for
 	// testDB := dbm.NewDB("testdb", "leveldb", dirPath)
 	// TODO: clean up
 	// log.Println("Federation.Xpubs", mCfg.Federation.Xpubs)
