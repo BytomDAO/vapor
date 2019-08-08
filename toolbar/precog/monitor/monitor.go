@@ -2,7 +2,7 @@ package monitor
 
 import (
 	"io/ioutil"
-	"os"
+	// "os"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -13,23 +13,33 @@ import (
 	"github.com/vapor/p2p"
 	// conn "github.com/vapor/p2p/connection"
 	// "github.com/vapor/p2p/signlib"
+	// "github.com/vapor/consensus"
 	"github.com/vapor/toolbar/precog/config"
 	"github.com/vapor/toolbar/precog/database/orm"
 )
 
 type monitor struct {
-	cfg *config.Config
-	db  *gorm.DB
+	cfg     *config.Config
+	db      *gorm.DB
+	dirPath *os.File
 }
 
 func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
+	dirPath, err := ioutil.TempDir(".", "")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	return &monitor{
-		cfg: cfg,
-		db:  db,
+		cfg:     cfg,
+		db:      db,
+		dirPath: dirPath,
 	}
 }
 
 func (m *monitor) Run() {
+	defer os.RemoveAll(m.dirPath)
+
 	m.updateBootstrapNodes()
 	go m.discovery()
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
@@ -73,13 +83,8 @@ func (m *monitor) discovery() {
 		P2P:        cfg.DefaultP2PConfig(),
 		Federation: cfg.DefaultFederationConfig(),
 	}
-	dirPath, err := ioutil.TempDir(".", "")
-	if err != nil {
-		log.Fatal(err)
-	}
 	// TODO: fix
-	mCfg.DBPath = dirPath
-	defer os.RemoveAll(dirPath)
+	mCfg.DBPath = m.dirPath
 
 	// swPrivKey, err := signlib.NewPrivKey()
 	// if err != nil {
@@ -88,6 +93,7 @@ func (m *monitor) discovery() {
 
 	// testDB := dbm.NewDB("testdb", "leveldb", dirPath)
 	// TODO: clean up
+	// log.Println("Federation.Xpubs", mCfg.Federation.Xpubs)
 	sw, err := p2p.NewSwitch(mCfg)
 	if err != nil {
 		log.Fatal(err)
@@ -95,6 +101,10 @@ func (m *monitor) discovery() {
 
 	sw.Start()
 	defer sw.Stop()
+}
+
+func (m *monitor) makeSwitch() {
+
 }
 
 func (m *monitor) monitorRountine() error {
