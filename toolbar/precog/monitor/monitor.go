@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"encoding/binary"
 	"io/ioutil"
 	"os"
 	"time"
@@ -14,6 +15,9 @@ import (
 	// conn "github.com/vapor/p2p/connection"
 	// "github.com/vapor/p2p/signlib"
 	// "github.com/vapor/consensus"
+	"github.com/vapor/crypto/sha3pool"
+	"github.com/vapor/p2p/discover/dht"
+	"github.com/vapor/p2p/discover/mdns"
 	"github.com/vapor/toolbar/precog/config"
 	"github.com/vapor/toolbar/precog/database/orm"
 )
@@ -93,10 +97,10 @@ func (m *monitor) discovery() {
 	defer sw.Stop()
 }
 
-func (m *monitor) calcNetID() (*p2p.Switch, error) {
+func (m *monitor) calcNetID() uint64 {
 	var data []byte
 	var h [32]byte
-	data = append(data, m.nodeCfg.GenesisBlock().Hash().Bytes()...)
+	data = append(data, vaporCfg.GenesisBlock().Hash().Bytes()...)
 	magic := make([]byte, 8)
 	magicNumber := uint64(0x054c5638)
 	binary.BigEndian.PutUint64(magic, magicNumber)
@@ -108,11 +112,11 @@ func (m *monitor) calcNetID() (*p2p.Switch, error) {
 func (m *monitor) makeSwitch() (*p2p.Switch, error) {
 	// TODO: 包一下？  common cfg 之类的？
 
-	var err error
-	var l Listener
-	var listenAddr string
-	var discv *dht.Network
-	var lanDiscv *mdns.LANDiscover
+	// var err error
+	// var l p2p.Listener
+	// var listenAddr string
+	// var discv *dht.Network
+	// var lanDiscv *mdns.LANDiscover
 
 	// swPrivKey, err := signlib.NewPrivKey()
 	// if err != nil {
@@ -123,7 +127,7 @@ func (m *monitor) makeSwitch() (*p2p.Switch, error) {
 	// testDB := dbm.NewDB("testdb", "leveldb", dirPath)
 	// TODO: clean up
 	// log.Println("Federation.Xpubs", mCfg.Federation.Xpubs)
-	sw, err := p2p.NewSwitch(mCfg)
+	sw, err := p2p.NewSwitch(m.nodeCfg)
 	if err != nil {
 		return nil, err
 	}
