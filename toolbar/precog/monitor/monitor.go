@@ -96,7 +96,6 @@ func (m *monitor) discovery() {
 	}
 
 	sw.Start()
-	defer sw.Stop()
 }
 
 func (m *monitor) makeSwitch() (*p2p.Switch, error) {

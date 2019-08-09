@@ -160,6 +160,8 @@ func (sw *Switch) OnStart() error {
 
 // OnStop implements BaseService. It stops all listeners, peers, and reactors.
 func (sw *Switch) OnStop() {
+	log.Info(" OnStop OnStop OnStop OnStop")
+
 	if sw.Config.P2P.LANDiscover {
 		sw.lanDiscv.Stop()
 	}
