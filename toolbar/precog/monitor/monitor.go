@@ -3,7 +3,9 @@ package monitor
 import (
 	// "encoding/binary"
 	// "io/ioutil"
+	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -59,6 +61,7 @@ func (m *monitor) Run() {
 
 // create or update: https://github.com/jinzhu/gorm/issues/1307
 func (m *monitor) updateBootstrapNodes() {
+	var seeds []string
 	for _, node := range m.cfg.Nodes {
 		ormNode := &orm.Node{
 			PublicKey: node.PublicKey.String(),
@@ -66,6 +69,7 @@ func (m *monitor) updateBootstrapNodes() {
 			Host:      node.Host,
 			Port:      node.Port,
 		}
+		seeds = append(seeds, fmt.Sprintf("%s:%d", node.Host, node.Port))
 
 		if err := m.db.Where(&orm.Node{PublicKey: ormNode.PublicKey}).
 			Assign(&orm.Node{
@@ -77,6 +81,7 @@ func (m *monitor) updateBootstrapNodes() {
 			continue
 		}
 	}
+	m.nodeCfg.P2P.Seeds = strings.Join(seeds, ",")
 }
 
 // TODO:
