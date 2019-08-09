@@ -2,7 +2,7 @@ package monitor
 
 import (
 	// "encoding/binary"
-	"io/ioutil"
+	// "io/ioutil"
 	"os"
 	"time"
 
@@ -31,17 +31,12 @@ type monitor struct {
 }
 
 func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
-	dirPath, err := ioutil.TempDir(".", "")
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	nodeCfg := &vaporCfg.Config{
 		BaseConfig: vaporCfg.DefaultBaseConfig(),
 		P2P:        vaporCfg.DefaultP2PConfig(),
 		Federation: vaporCfg.DefaultFederationConfig(),
 	}
-	nodeCfg.DBPath = dirPath
+	nodeCfg.DBPath = "vapor_precog"
 
 	return &monitor{
 		cfg:     cfg,
