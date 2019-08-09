@@ -84,6 +84,8 @@ func (m *monitor) updateBootstrapNodes() {
 // /home/gavin/work/go/src/github.com/vapor/
 // p2p/test_util.go
 // p2p/switch_test.go
+// syncManager
+// notificationMgr
 func (m *monitor) discovery() {
 	sw, err := m.makeSwitch()
 	if err != nil {
