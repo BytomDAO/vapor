@@ -36,7 +36,7 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 		P2P:        vaporCfg.DefaultP2PConfig(),
 		Federation: vaporCfg.DefaultFederationConfig(),
 	}
-	nodeCfg.DBPath = "vapor_precog"
+	nodeCfg.DBPath = "vapor_precog_data"
 
 	return &monitor{
 		cfg:     cfg,
