@@ -392,7 +392,7 @@ func (sw *Switch) listenerRoutine(l Listener) {
 			break
 		}
 
-		// disconnect if we alrady have MaxNumPeers
+		// disconnect if we already have MaxNumPeers
 		if sw.peers.Size() >= sw.Config.P2P.MaxNumPeers {
 			if err := inConn.Close(); err != nil {
 				log.WithFields(log.Fields{"module": logModule, "remote peer:": inConn.RemoteAddr().String(), " err:": err}).Error("closes connection err")
@@ -417,6 +417,8 @@ func (sw *Switch) dialPeerWorker(a *NetAddress, wg *sync.WaitGroup) {
 }
 
 func (sw *Switch) dialPeers(addresses []*NetAddress) {
+	log.Info("dialPeers:", addresses)
+
 	connectedPeers := make(map[string]struct{})
 	for _, peer := range sw.Peers().List() {
 		connectedPeers[peer.RemoteAddrHost()] = struct{}{}
