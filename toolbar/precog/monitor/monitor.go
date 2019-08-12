@@ -37,6 +37,7 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 		Federation: vaporCfg.DefaultFederationConfig(),
 	}
 	nodeCfg.DBPath = "vapor_precog_data"
+	nodeCfg.ChainID = "mainnet"
 
 	return &monitor{
 		cfg:     cfg,
