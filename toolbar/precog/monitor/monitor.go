@@ -15,13 +15,13 @@ import (
 	// dbm "github.com/vapor/database/leveldb"
 
 	vaporCfg "github.com/vapor/config"
-	// "github.com/vapor/crypto/ed25519/chainkd"
+	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/p2p"
 	// conn "github.com/vapor/p2p/connection"
 	// "github.com/vapor/consensus"
 	// "github.com/vapor/crypto/sha3pool"
 	"github.com/vapor/p2p/discover/dht"
-	// "github.com/vapor/p2p/discover/mdns"
+	"github.com/vapor/p2p/discover/mdns"
 	"github.com/vapor/p2p/signlib"
 	"github.com/vapor/toolbar/precog/config"
 	"github.com/vapor/toolbar/precog/database/orm"
@@ -37,6 +37,7 @@ type monitor struct {
 	db      *gorm.DB
 	nodeCfg *vaporCfg.Config
 	discvCh chan *dht.Node
+	privKey chainkd.XPrv
 }
 
 func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
@@ -48,12 +49,17 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 	nodeCfg.DBPath = "vapor_precog_data"
 	nodeCfg.ChainID = "mainnet"
 	discvCh := make(chan *dht.Node)
+	privKey, err := signlib.NewPrivKey()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	return &monitor{
 		cfg:     cfg,
 		db:      db,
 		nodeCfg: nodeCfg,
 		discvCh: discvCh,
+		privKey: privKey.(chainkd.XPrv),
 	}
 }
 
@@ -103,13 +109,8 @@ func (m *monitor) upSertNode(node *config.Node) error {
 }
 
 func (m *monitor) discovery() {
-	swPrivKey, err := signlib.NewPrivKey()
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	l, _ := p2p.GetListener(m.nodeCfg.P2P)
-	discv, err := dht.NewDiscover(m.nodeCfg, swPrivKey, l.ExternalAddress().Port, m.cfg.NetworkID)
+	discv, err := dht.NewDiscover(m.nodeCfg, m.privKey, l.ExternalAddress().Port, m.cfg.NetworkID)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -143,10 +144,6 @@ func (m *monitor) collectDiscv() {
 }
 
 func (m *monitor) monitorRountine() error {
-	sw := &p2p.Switch{
-		// Peers: p2p.NewPeerSet(),
-	}
-
 	var nodes []*orm.Node
 	if err := m.db.Model(&orm.Node{}).Find(&nodes).Error; err != nil {
 		return err
@@ -189,21 +186,14 @@ func (m *monitor) discovery() {
 }
 */
 
-/*
 func (m *monitor) makeSwitch() (*p2p.Switch, error) {
-	swPrivKey, err := signlib.NewPrivKey()
-	if err != nil {
-		return nil, err
-	}
-
 	l, listenAddr := p2p.GetListener(m.nodeCfg.P2P)
-	discv, err := dht.NewDiscover(m.nodeCfg, swPrivKey, l.ExternalAddress().Port, m.cfg.NetworkID)
+	discv, err := dht.NewDiscover(m.nodeCfg, m.privKey, l.ExternalAddress().Port, m.cfg.NetworkID)
 	if err != nil {
 		return nil, err
 	}
 
 	// no need for lanDiscv, but passing &mdns.LANDiscover{} will cause NilPointer
 	lanDiscv := mdns.NewLANDiscover(mdns.NewProtocol(), int(l.ExternalAddress().Port))
-	return p2p.NewSwitch(m.nodeCfg, discv, lanDiscv, l, swPrivKey, listenAddr, m.cfg.NetworkID)
+	return p2p.NewSwitch(m.nodeCfg, discv, lanDiscv, l, m.privKey, listenAddr, m.cfg.NetworkID)
 }
-*/
