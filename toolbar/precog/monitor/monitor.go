@@ -5,6 +5,7 @@ import (
 	// "encoding/hex"
 	// "io/ioutil"
 	"fmt"
+	"net"
 	"os"
 	// "strings"
 	"time"
@@ -142,7 +143,9 @@ func (m *monitor) collectDiscv() {
 }
 
 func (m *monitor) monitorRountine() error {
-	sw := &p2p.Switch{}
+	sw := &p2p.Switch{
+		// Peers: p2p.NewPeerSet(),
+	}
 
 	var nodes []*orm.Node
 	if err := m.db.Model(&orm.Node{}).Find(&nodes).Error; err != nil {
@@ -151,8 +154,12 @@ func (m *monitor) monitorRountine() error {
 
 	addresses := make([]*p2p.NetAddress, 0)
 	for i := 0; i < len(nodes); i++ {
-		// TODO: Host to IP
-		address := p2p.NewNetAddressIPPort(nodes[i].Host, nodes[i].Port)
+		ip, err := net.LookupIP(nodes[i].Host)
+		if err != nil {
+			continue
+		}
+
+		address := p2p.NewNetAddressIPPort(ip[0], nodes[i].Port)
 		addresses = append(addresses, address)
 	}
 	sw.DialPeers(addresses)
