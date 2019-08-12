@@ -18,16 +18,22 @@ import (
 	// "github.com/vapor/consensus"
 	// "github.com/vapor/crypto/sha3pool"
 	"github.com/vapor/p2p/discover/dht"
-	"github.com/vapor/p2p/discover/mdns"
+	// "github.com/vapor/p2p/discover/mdns"
 	"github.com/vapor/p2p/signlib"
 	"github.com/vapor/toolbar/precog/config"
 	"github.com/vapor/toolbar/precog/database/orm"
+)
+
+var (
+	nodesToDiscv = 150
+	discvFreqSec = 1
 )
 
 type monitor struct {
 	cfg     *config.Config
 	db      *gorm.DB
 	nodeCfg *vaporCfg.Config
+	discvCh chan *dht.Node
 }
 
 func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
@@ -38,11 +44,13 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 	}
 	nodeCfg.DBPath = "vapor_precog_data"
 	nodeCfg.ChainID = "mainnet"
+	discvCh := make(chan *dht.Node)
 
 	return &monitor{
 		cfg:     cfg,
 		db:      db,
 		nodeCfg: nodeCfg,
+		discvCh: discvCh,
 	}
 }
 
@@ -51,6 +59,7 @@ func (m *monitor) Run() {
 
 	m.updateBootstrapNodes()
 	go m.discovery()
+	go m.collectDiscv()
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for ; true; <-ticker.C {
 		// TODO: lock?
@@ -83,6 +92,43 @@ func (m *monitor) updateBootstrapNodes() {
 	m.nodeCfg.P2P.Seeds = strings.Join(seeds, ",")
 }
 
+func (m *monitor) discovery() {
+	swPrivKey, err := signlib.NewPrivKey()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	l, _ := p2p.GetListener(m.nodeCfg.P2P)
+	discv, err := dht.NewDiscover(m.nodeCfg, swPrivKey, l.ExternalAddress().Port, m.cfg.NetworkID)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ticker := time.NewTicker(time.Duration(discvFreqSec) * time.Second)
+	for range ticker.C {
+		nodes := make([]*dht.Node, nodesToDiscv)
+		n := discv.ReadRandomNodes(nodes)
+		for i := 0; i < n; i++ {
+			m.discvCh <- nodes[i]
+		}
+	}
+}
+
+// whatz the pubKey?
+func (m *monitor) collectDiscv() {
+	for node := range m.discvCh {
+		log.Info(node)
+	}
+}
+
+func (m *monitor) monitorRountine() error {
+	// TODO: dail nodes, get lantency & best_height
+	// TODO: decide check_height("best best_height" - "confirmations")
+	// TODO: get blockhash by check_height, get latency
+	// TODO: update lantency, active_time and status
+	return nil
+}
+
 // TODO:
 // implement logic first, and then refactor
 // /home/gavin/work/go/src/github.com/vapor/
@@ -90,25 +136,6 @@ func (m *monitor) updateBootstrapNodes() {
 // p2p/switch_test.go
 // syncManager
 // notificationMgr
-func (m *monitor) discovery() {
-	swPrivKey, err := signlib.NewPrivKey()
-	if err != nil {
-		return
-	}
-
-	l, _ := p2p.GetListener(m.nodeCfg.P2P)
-	discv, err := dht.NewDiscover(m.nodeCfg, swPrivKey, l.ExternalAddress().Port, m.cfg.NetworkID)
-	if err != nil {
-		return
-	}
-
-	nodes := make([]*dht.Node, 100)
-	ticker := time.NewTicker(5 * time.Second)
-	for range ticker.C {
-		discv.ReadRandomNodes(nodes)
-	}
-}
-
 /*
 func (m *monitor) discovery() {
 	sw, err := m.makeSwitch()
@@ -138,11 +165,3 @@ func (m *monitor) makeSwitch() (*p2p.Switch, error) {
 	return p2p.NewSwitch(m.nodeCfg, discv, lanDiscv, l, swPrivKey, listenAddr, m.cfg.NetworkID)
 }
 */
-
-func (m *monitor) monitorRountine() error {
-	// TODO: dail nodes, get lantency & best_height
-	// TODO: decide check_height("best best_height" - "confirmations")
-	// TODO: get blockhash by check_height, get latency
-	// TODO: update lantency, active_time and status
-	return nil
-}
