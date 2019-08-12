@@ -81,6 +81,7 @@ func (m *monitor) Run() {
 	go m.discovery()
 	go m.collectDiscv()
 
+	m.cfg.CheckFreqSeconds = 60
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for ; true; <-ticker.C {
 		// TODO: lock?
@@ -173,7 +174,7 @@ func (m *monitor) monitorRountine() error {
 		address := p2p.NewNetAddressIPPort(ip[0], nodes[i].Port)
 		addresses = append(addresses, address)
 	}
-	// m.sw.DialPeers(addresses)
+	m.sw.DialPeers(addresses)
 
 	// TODO: dail nodes, get lantency & best_height
 	// TODO: decide check_height("best best_height" - "confirmations")
