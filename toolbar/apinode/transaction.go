@@ -113,7 +113,7 @@ func (n *Node) buildTx(actions []interface{}) (*txbuilder.Template, error) {
 	return result, n.request(url, payload, result)
 }
 
-func (n *Node) buildChainTxs(actions []interface{}) ([]*txbuilder.Template, error) {
+func (n *Node) BuildChainTxs(actions []interface{}) ([]*txbuilder.Template, error) {
 	url := "/build-chain-transactions"
 
 	payload, err := json.Marshal(&buildTxReq{Actions: actions})
@@ -122,7 +122,7 @@ func (n *Node) buildChainTxs(actions []interface{}) ([]*txbuilder.Template, erro
 	}
 
 	result := []*txbuilder.Template{}
-	return result, n.request(url, payload, result)
+	return result, n.request(url, payload, &result)
 }
 
 type signTxReq struct {
@@ -164,7 +164,7 @@ type signTxsResp struct {
 	SignComplete bool                  `json:"sign_complete"`
 }
 
-func (n *Node) signTxs(tpls []*txbuilder.Template, password string) ([]*txbuilder.Template, error) {
+func (n *Node) SignTxs(tpls []*txbuilder.Template, password string) ([]*txbuilder.Template, error) {
 	url := "/sign-transactions"
 	payload, err := json.Marshal(&signTxsReq{Txs: tpls, Password: password})
 	if err != nil {
