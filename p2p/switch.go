@@ -421,8 +421,6 @@ func (sw *Switch) dialPeerWorker(a *NetAddress, wg *sync.WaitGroup) {
 }
 
 func (sw *Switch) DialPeers(addresses []*NetAddress) {
-	log.Info("DialPeers:", addresses)
-
 	connectedPeers := make(map[string]struct{})
 	for _, peer := range sw.Peers().List() {
 		connectedPeers[peer.RemoteAddrHost()] = struct{}{}

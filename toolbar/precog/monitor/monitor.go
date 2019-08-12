@@ -174,6 +174,7 @@ func (m *monitor) monitorRountine() error {
 		address := p2p.NewNetAddressIPPort(ip[0], nodes[i].Port)
 		addresses = append(addresses, address)
 	}
+
 	m.sw.DialPeers(addresses)
 
 	// TODO: dail nodes, get lantency & best_height
