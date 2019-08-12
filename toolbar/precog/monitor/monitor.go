@@ -24,8 +24,6 @@ import (
 	"github.com/vapor/toolbar/precog/database/orm"
 )
 
-const vaporNetID = 10817814959495988245
-
 type monitor struct {
 	cfg     *config.Config
 	db      *gorm.DB
@@ -107,13 +105,13 @@ func (m *monitor) makeSwitch() (*p2p.Switch, error) {
 	}
 
 	l, listenAddr := p2p.GetListener(m.nodeCfg.P2P)
-	discv, err := dht.NewDiscover(m.nodeCfg, swPrivKey, l.ExternalAddress().Port, vaporNetID)
+	discv, err := dht.NewDiscover(m.nodeCfg, swPrivKey, l.ExternalAddress().Port, m.cfg.NetworkID)
 	if err != nil {
 		return nil, err
 	}
 
 	lanDiscv := mdns.NewLANDiscover(mdns.NewProtocol(), int(l.ExternalAddress().Port))
-	return p2p.NewSwitch(m.nodeCfg, discv, lanDiscv, l, swPrivKey, listenAddr, vaporNetID)
+	return p2p.NewSwitch(m.nodeCfg, discv, lanDiscv, l, swPrivKey, listenAddr, m.cfg.NetworkID)
 }
 
 func (m *monitor) monitorRountine() error {
