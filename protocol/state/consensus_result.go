@@ -4,8 +4,6 @@ import (
 	"encoding/hex"
 	"sort"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/vapor/common/arithmetic"
 	"github.com/vapor/config"
 	"github.com/vapor/consensus"
@@ -15,8 +13,6 @@ import (
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
-
-const logModule = "state/consensus"
 
 // fedConsensusPath is used to derive federation root xpubs for signing blocks
 var fedConsensusPath = [][]byte{
@@ -73,11 +69,7 @@ func CalCoinbaseReward(block *types.Block) (*CoinbaseReward, error) {
 			return nil, errors.Wrap(checked.ErrOverflow, "calculate transaction fee")
 		}
 
-		ok := false
-		result.Amount, ok = checked.AddUint64(result.Amount, txFee)
-		if !ok {
-			return nil, checked.ErrOverflow
-		}
+		result.Amount += txFee
 	}
 	return result, nil
 }
@@ -188,9 +180,7 @@ func (c *ConsensusResult) ConsensusNodes() (map[string]*ConsensusNode, error) {
 		if voteNum >= consensus.ActiveNetParams.MinConsensusNodeVoteNum {
 			var xpub chainkd.XPub
 			if err := xpub.UnmarshalText([]byte(pubkey)); err != nil {
-				log.WithFields(log.Fields{"module": logModule, "err": err, "XPub": xpub.String()}).Debug("failed on unmarshal XPub")
-				delete(c.NumOfVote, pubkey)
-				continue
+				return nil, err
 			}
 
 			nodes = append(nodes, &ConsensusNode{XPub: xpub, VoteNum: voteNum})
