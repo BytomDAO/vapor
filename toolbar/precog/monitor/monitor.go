@@ -123,7 +123,6 @@ func (m *monitor) discovery() {
 	}
 }
 
-// whatz the pubKey?
 func (m *monitor) collectDiscv() {
 	// nodeMap maps a node's public key to the node itself
 	nodeMap := make(map[string]*dht.Node)
@@ -143,6 +142,21 @@ func (m *monitor) collectDiscv() {
 }
 
 func (m *monitor) monitorRountine() error {
+	sw := &p2p.Switch{}
+
+	var nodes []*orm.Node
+	if err := m.db.Model(&orm.Node{}).Find(&nodes).Error; err != nil {
+		return err
+	}
+
+	addresses := make([]*p2p.NetAddress, 0)
+	for i := 0; i < len(nodes); i++ {
+		// TODO: Host to IP
+		address := p2p.NewNetAddressIPPort(nodes[i].Host, nodes[i].Port)
+		addresses = append(addresses, address)
+	}
+	sw.DialPeers(addresses)
+
 	// TODO: dail nodes, get lantency & best_height
 	// TODO: decide check_height("best best_height" - "confirmations")
 	// TODO: get blockhash by check_height, get latency

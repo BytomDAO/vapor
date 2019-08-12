@@ -354,7 +354,7 @@ func (sw *Switch) connectLANPeers(lanPeer mdns.LANPeerEvent) {
 	for i := 0; i < len(lanPeer.IP); i++ {
 		addresses = append(addresses, NewLANNetAddressIPPort(lanPeer.IP[i], uint16(lanPeer.Port)))
 	}
-	sw.dialPeers(addresses)
+	sw.DialPeers(addresses)
 }
 
 func (sw *Switch) connectLANPeersRoutine() {
@@ -418,8 +418,8 @@ func (sw *Switch) dialPeerWorker(a *NetAddress, wg *sync.WaitGroup) {
 	wg.Done()
 }
 
-func (sw *Switch) dialPeers(addresses []*NetAddress) {
-	log.Info("dialPeers:", addresses)
+func (sw *Switch) DialPeers(addresses []*NetAddress) {
+	log.Info("DialPeers:", addresses)
 
 	connectedPeers := make(map[string]struct{})
 	for _, peer := range sw.Peers().List() {
@@ -456,7 +456,7 @@ func (sw *Switch) ensureKeepConnectPeers() {
 		addresses = append(addresses, address)
 	}
 
-	sw.dialPeers(addresses)
+	sw.DialPeers(addresses)
 }
 
 func (sw *Switch) ensureOutboundPeers() {
@@ -474,7 +474,7 @@ func (sw *Switch) ensureOutboundPeers() {
 		address := NewNetAddressIPPort(nodes[i].IP, nodes[i].TCP)
 		addresses = append(addresses, address)
 	}
-	sw.dialPeers(addresses)
+	sw.DialPeers(addresses)
 }
 
 func (sw *Switch) ensureOutboundPeersRoutine() {
