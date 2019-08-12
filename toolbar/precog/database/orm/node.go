@@ -6,6 +6,7 @@ import (
 
 type Node struct {
 	Alias                    string
+	Xpub                     string
 	PublicKey                string
 	Host                     string
 	Port                     uint16

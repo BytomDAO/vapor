@@ -48,10 +48,11 @@ type Policy struct {
 }
 
 type Node struct {
-	Alias     string       `json:"alias"`
-	PublicKey chainkd.XPub `json:"public_key"`
-	Host      string       `json:"host"`
-	Port      uint16       `json:"port"`
+	Alias     string        `json:"alias"`
+	XPub      *chainkd.XPub `json:"xpub"`
+	PublicKey string        `json:"public_key"`
+	Host      string        `json:"host"`
+	Port      uint16        `json:"port"`
 }
 
 type API struct {

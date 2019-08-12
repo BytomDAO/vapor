@@ -18,7 +18,8 @@ USE `precog`;
 CREATE TABLE `nodes` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `alias` varchar(128) NOT NULL DEFAULT '',
-  `public_key` char(128) NOT NULL DEFAULT '',
+  `xpub` char(128) NOT NULL DEFAULT '',
+  `public_key` char(64) NOT NULL DEFAULT '',
   `host` varchar(128) NOT NULL DEFAULT '',
   `port` smallint unsigned NOT NULL DEFAULT '0',
   `best_height` int(11) DEFAULT '0',
@@ -26,8 +27,7 @@ CREATE TABLE `nodes` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `public_key` (`public_key`),
-  UNIQUE KEY `host_port` (`host`,`port`)
+  UNIQUE KEY `public_key` (`public_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 LOCK TABLES `nodes` WRITE;

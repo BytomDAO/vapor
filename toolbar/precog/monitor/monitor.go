@@ -2,10 +2,11 @@ package monitor
 
 import (
 	// "encoding/binary"
+	// "encoding/hex"
 	// "io/ioutil"
 	"fmt"
 	"os"
-	"strings"
+	// "strings"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -13,6 +14,7 @@ import (
 	// dbm "github.com/vapor/database/leveldb"
 
 	vaporCfg "github.com/vapor/config"
+	// "github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/p2p"
 	// conn "github.com/vapor/p2p/connection"
 	// "github.com/vapor/consensus"
@@ -57,9 +59,13 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 func (m *monitor) Run() {
 	defer os.RemoveAll(m.nodeCfg.DBPath)
 
-	m.updateBootstrapNodes()
+	for _, node := range m.cfg.Nodes {
+		m.upSertNode(&node)
+	}
+
 	go m.discovery()
 	go m.collectDiscv()
+
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for ; true; <-ticker.C {
 		// TODO: lock?
@@ -68,28 +74,31 @@ func (m *monitor) Run() {
 }
 
 // create or update: https://github.com/jinzhu/gorm/issues/1307
-func (m *monitor) updateBootstrapNodes() {
-	var seeds []string
-	for _, node := range m.cfg.Nodes {
-		ormNode := &orm.Node{
-			PublicKey: node.PublicKey.String(),
-			Alias:     node.Alias,
-			Host:      node.Host,
-			Port:      node.Port,
-		}
-		seeds = append(seeds, fmt.Sprintf("%s:%d", node.Host, node.Port))
-
-		if err := m.db.Where(&orm.Node{PublicKey: ormNode.PublicKey}).
-			Assign(&orm.Node{
-				Alias: node.Alias,
-				Host:  node.Host,
-				Port:  node.Port,
-			}).FirstOrCreate(ormNode).Error; err != nil {
-			log.Error(err)
-			continue
-		}
+func (m *monitor) upSertNode(node *config.Node) error {
+	if node.XPub != nil {
+		node.PublicKey = fmt.Sprintf("%v", node.XPub.PublicKey().String())
 	}
-	m.nodeCfg.P2P.Seeds = strings.Join(seeds, ",")
+
+	ormNode := &orm.Node{PublicKey: node.PublicKey}
+	if err := m.db.Where(&orm.Node{PublicKey: node.PublicKey}).First(ormNode).Error; err != nil && err != gorm.ErrRecordNotFound {
+		return err
+	}
+
+	if node.Alias != "" {
+		ormNode.Alias = node.Alias
+	}
+	if node.XPub != nil {
+		ormNode.Xpub = node.XPub.String()
+	}
+	ormNode.Host = node.Host
+	ormNode.Port = node.Port
+	return m.db.Where(&orm.Node{PublicKey: ormNode.PublicKey}).
+		Assign(&orm.Node{
+			Xpub:  ormNode.Xpub,
+			Alias: ormNode.Alias,
+			Host:  ormNode.Host,
+			Port:  ormNode.Port,
+		}).FirstOrCreate(ormNode).Error
 }
 
 func (m *monitor) discovery() {
@@ -116,8 +125,20 @@ func (m *monitor) discovery() {
 
 // whatz the pubKey?
 func (m *monitor) collectDiscv() {
+	// nodeMap maps a node's public key to the node itself
+	nodeMap := make(map[string]*dht.Node)
 	for node := range m.discvCh {
-		log.Info(node)
+		if n, ok := nodeMap[node.ID.String()]; ok && n.String() == node.String() {
+			continue
+		}
+		log.Info("discover new node: ", node)
+
+		m.upSertNode(&config.Node{
+			PublicKey: node.ID.String(),
+			Host:      node.IP.String(),
+			Port:      node.TCP,
+		})
+		nodeMap[node.ID.String()] = node
 	}
 }
 
