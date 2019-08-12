@@ -91,6 +91,26 @@ func (m *monitor) updateBootstrapNodes() {
 // syncManager
 // notificationMgr
 func (m *monitor) discovery() {
+	swPrivKey, err := signlib.NewPrivKey()
+	if err != nil {
+		return
+	}
+
+	l, _ := p2p.GetListener(m.nodeCfg.P2P)
+	discv, err := dht.NewDiscover(m.nodeCfg, swPrivKey, l.ExternalAddress().Port, m.cfg.NetworkID)
+	if err != nil {
+		return
+	}
+
+	nodes := make([]*dht.Node, 100)
+	ticker := time.NewTicker(5 * time.Second)
+	for range ticker.C {
+		discv.ReadRandomNodes(nodes)
+	}
+}
+
+/*
+func (m *monitor) discovery() {
 	sw, err := m.makeSwitch()
 	if err != nil {
 		log.Fatal(err)
@@ -98,7 +118,9 @@ func (m *monitor) discovery() {
 
 	sw.Start()
 }
+*/
 
+/*
 func (m *monitor) makeSwitch() (*p2p.Switch, error) {
 	swPrivKey, err := signlib.NewPrivKey()
 	if err != nil {
@@ -115,6 +137,7 @@ func (m *monitor) makeSwitch() (*p2p.Switch, error) {
 	lanDiscv := mdns.NewLANDiscover(mdns.NewProtocol(), int(l.ExternalAddress().Port))
 	return p2p.NewSwitch(m.nodeCfg, discv, lanDiscv, l, swPrivKey, listenAddr, m.cfg.NetworkID)
 }
+*/
 
 func (m *monitor) monitorRountine() error {
 	// TODO: dail nodes, get lantency & best_height
