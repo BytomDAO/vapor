@@ -135,6 +135,10 @@ func NewSwitch(config *cfg.Config, discv discv, lanDiscv lanDiscv, l Listener, p
 	return sw, nil
 }
 
+func (sw *Switch) GetDiscv() discv {
+	return sw.discv
+}
+
 // OnStart implements BaseService. It starts all the reactors, peers, and listeners.
 func (sw *Switch) OnStart() error {
 	for _, reactor := range sw.reactors {

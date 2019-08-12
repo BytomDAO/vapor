@@ -36,6 +36,7 @@ type monitor struct {
 	cfg     *config.Config
 	db      *gorm.DB
 	nodeCfg *vaporCfg.Config
+	sw      *p2p.Switch
 	discvCh chan *dht.Node
 	privKey chainkd.XPrv
 }
@@ -69,6 +70,13 @@ func (m *monitor) Run() {
 	for _, node := range m.cfg.Nodes {
 		m.upSertNode(&node)
 	}
+
+	sw, err := m.makeSwitch()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	m.sw = sw
 
 	go m.discovery()
 	go m.collectDiscv()
@@ -108,17 +116,23 @@ func (m *monitor) upSertNode(node *config.Node) error {
 		}).FirstOrCreate(ormNode).Error
 }
 
-func (m *monitor) discovery() {
-	l, _ := p2p.GetListener(m.nodeCfg.P2P)
+func (m *monitor) makeSwitch() (*p2p.Switch, error) {
+	l, listenAddr := p2p.GetListener(m.nodeCfg.P2P)
 	discv, err := dht.NewDiscover(m.nodeCfg, m.privKey, l.ExternalAddress().Port, m.cfg.NetworkID)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
+	// no need for lanDiscv, but passing &mdns.LANDiscover{} will cause NilPointer
+	lanDiscv := mdns.NewLANDiscover(mdns.NewProtocol(), int(l.ExternalAddress().Port))
+	return p2p.NewSwitch(m.nodeCfg, discv, lanDiscv, l, m.privKey, listenAddr, m.cfg.NetworkID)
+}
+
+func (m *monitor) discovery() {
 	ticker := time.NewTicker(time.Duration(discvFreqSec) * time.Second)
 	for range ticker.C {
 		nodes := make([]*dht.Node, nodesToDiscv)
-		n := discv.ReadRandomNodes(nodes)
+		n := m.sw.GetDiscv().ReadRandomNodes(nodes)
 		for i := 0; i < n; i++ {
 			m.discvCh <- nodes[i]
 		}
@@ -159,7 +173,7 @@ func (m *monitor) monitorRountine() error {
 		address := p2p.NewNetAddressIPPort(ip[0], nodes[i].Port)
 		addresses = append(addresses, address)
 	}
-	sw.DialPeers(addresses)
+	// m.sw.DialPeers(addresses)
 
 	// TODO: dail nodes, get lantency & best_height
 	// TODO: decide check_height("best best_height" - "confirmations")
@@ -175,25 +189,3 @@ func (m *monitor) monitorRountine() error {
 // p2p/switch_test.go
 // syncManager
 // notificationMgr
-/*
-func (m *monitor) discovery() {
-	sw, err := m.makeSwitch()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	sw.Start()
-}
-*/
-
-func (m *monitor) makeSwitch() (*p2p.Switch, error) {
-	l, listenAddr := p2p.GetListener(m.nodeCfg.P2P)
-	discv, err := dht.NewDiscover(m.nodeCfg, m.privKey, l.ExternalAddress().Port, m.cfg.NetworkID)
-	if err != nil {
-		return nil, err
-	}
-
-	// no need for lanDiscv, but passing &mdns.LANDiscover{} will cause NilPointer
-	lanDiscv := mdns.NewLANDiscover(mdns.NewProtocol(), int(l.ExternalAddress().Port))
-	return p2p.NewSwitch(m.nodeCfg, discv, lanDiscv, l, m.privKey, listenAddr, m.cfg.NetworkID)
-}
