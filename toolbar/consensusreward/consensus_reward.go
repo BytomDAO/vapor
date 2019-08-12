@@ -71,7 +71,7 @@ func (s *StandbyNodeReward) Settlement() error {
 		return nil
 	}
 
-	txID, err := s.node.BatchSendBTM(s.cfg.RewardConf.AccountID, s.cfg.RewardConf.Password, rewards, nil)
+	txID, err := s.node.BatchSendBTM(s.cfg.RewardConf.AccountID, s.cfg.RewardConf.Password, rewards, []byte{})
 	if err == nil {
 		log.WithFields(log.Fields{
 			"tx_hash":      txID,
