@@ -6,7 +6,7 @@ import (
 	cfg "github.com/vapor/config"
 )
 
-const logModule = "p2p/security"
+const logModule = "p2pSecurity"
 
 type Security struct {
 	filter        *PeerFilter
