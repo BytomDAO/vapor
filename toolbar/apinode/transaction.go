@@ -1,6 +1,7 @@
 package apinode
 
 import (
+	"encoding/hex"
 	"encoding/json"
 
 	"github.com/vapor/blockchain/txbuilder"
@@ -44,9 +45,33 @@ func (c *ControlAddressAction) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (n *Node) BatchSendBTM(accountID, password string, outputs map[string]uint64) (string, error) {
+type RetireAction struct {
+	*bc.AssetAmount
+	Arbitrary []byte
+}
+
+func (r *RetireAction) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		Type      string `json:"type"`
+		Arbitrary string `json:"arbitrary"`
+		*bc.AssetAmount
+	}{
+		Type:        "retire",
+		Arbitrary:   hex.EncodeToString(r.Arbitrary),
+		AssetAmount: r.AssetAmount,
+	})
+}
+
+func (n *Node) BatchSendBTM(accountID, password string, outputs map[string]uint64, memo []byte) (string, error) {
 	totalBTM := uint64(1000000)
 	actions := []interface{}{}
+	if len(memo) > 0 {
+		actions = append(actions, &RetireAction{
+			Arbitrary:   memo,
+			AssetAmount: &bc.AssetAmount{AssetId: consensus.BTMAssetID, Amount: 1},
+		})
+	}
+
 	for address, amount := range outputs {
 		actions = append(actions, &ControlAddressAction{
 			Address:     address,
