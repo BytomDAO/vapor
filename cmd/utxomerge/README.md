@@ -20,5 +20,5 @@ Flags:
 example:
 
 ```shell
-./votereward reward --reward_start_height 6000 --reward_end_height 7200
+./utxomerge --host_port http://127.0.0.1:9889 --account_id 9e54300d-f81d-4c5f-bef3-4e771042d394 --password 123456 --address sp1q8u7xu3e389awrnct0x4flx0h3v7mrfnmpu858p --amount 200000000000
 ```
