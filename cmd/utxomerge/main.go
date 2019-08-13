@@ -33,7 +33,7 @@ func runReward(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Info(txIDs)
+	log.Info("Merge utxo successfully. txID: ", txIDs)
 	return nil
 }
 

@@ -26,6 +26,7 @@ func MergeUTXO(hostPort, accountID, password, address string, amount uint64) ([]
 	if err != nil {
 		return []string{}, err
 	}
+
 	tpls, err = node.SignTxs(tpls, password)
 	if err != nil {
 		return []string{}, err
@@ -35,5 +36,6 @@ func MergeUTXO(hostPort, accountID, password, address string, amount uint64) ([]
 	for _, tpl := range tpls {
 		txs = append(txs, tpl.Transaction)
 	}
+
 	return node.SubmitTxs(txs)
 }
