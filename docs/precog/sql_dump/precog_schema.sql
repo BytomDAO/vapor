@@ -43,6 +43,7 @@ CREATE TABLE `node_livenesses` (
   `ping_times` int(11) DEFAULT '0',
   `pong_times` int(11) DEFAULT '0',
   `avg_lantency_ms` int(11) DEFAULT NULL,
+  `best_height` int(11) DEFAULT '0',
   `status` tinyint(1) NOT NULL DEFAULT '0',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

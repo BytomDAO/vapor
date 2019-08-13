@@ -10,6 +10,7 @@ type NodeLiveness struct {
 	PingTimes     uint64
 	PongTimes     uint64
 	AvgLantencyMS sql.NullInt64
+	BestHeight    uint64
 	Status        uint8
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
