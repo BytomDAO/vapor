@@ -68,15 +68,17 @@ func (hook *BtmHook) ioWrite(entry *logrus.Entry) error {
 		return err
 	}
 
-	_, err = writer.Write(msg)
-	return err
+	if _, err := writer.Write(msg); err != nil {
+		return err
+	}
+	return writer.Close()
 }
 
 func clearLockFiles(logPath string) error {
 	files, err := ioutil.ReadDir(logPath)
 	if os.IsNotExist(err) {
 		return nil
-	}else if err != nil {
+	} else if err != nil {
 		return err
 	}
 
