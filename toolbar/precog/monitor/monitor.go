@@ -167,7 +167,7 @@ func (m *monitor) monitorRountine() error {
 	addresses := make([]*p2p.NetAddress, 0)
 	for i := 0; i < len(nodes); i++ {
 		ip, err := net.LookupIP(nodes[i].Host)
-		if err != nil {
+		if err != nil || len(ip) == 0 {
 			continue
 		}
 
