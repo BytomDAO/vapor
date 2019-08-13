@@ -80,13 +80,7 @@ func (m *monitor) Run() {
 
 	go m.discovery()
 	go m.collectDiscv()
-
-	m.cfg.CheckFreqSeconds = 60
-	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
-	for ; true; <-ticker.C {
-		// TODO: lock?
-		m.monitorRountine()
-	}
+	go m.dialRoutine()
 }
 
 // create or update: https://github.com/jinzhu/gorm/issues/1307
@@ -158,10 +152,20 @@ func (m *monitor) collectDiscv() {
 	}
 }
 
-func (m *monitor) monitorRountine() error {
+func (m *monitor) dialRoutine() {
+	// TODO: rm hardcode
+	m.cfg.CheckFreqSeconds = 60
+	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
+	for ; true; <-ticker.C {
+		m.dialNodes()
+	}
+}
+
+func (m *monitor) dialNodes() {
 	var nodes []*orm.Node
 	if err := m.db.Model(&orm.Node{}).Find(&nodes).Error; err != nil {
-		return err
+		log.Error(err)
+		return
 	}
 
 	addresses := make([]*p2p.NetAddress, 0)
@@ -176,12 +180,6 @@ func (m *monitor) monitorRountine() error {
 	}
 
 	m.sw.DialPeers(addresses)
-
-	// TODO: dail nodes, get lantency & best_height
-	// TODO: decide check_height("best best_height" - "confirmations")
-	// TODO: get blockhash by check_height, get latency
-	// TODO: update lantency, active_time and status
-	return nil
 }
 
 // TODO:
@@ -191,3 +189,7 @@ func (m *monitor) monitorRountine() error {
 // p2p/switch_test.go
 // syncManager
 // notificationMgr
+// TODO: dail nodes, get lantency & best_height
+// TODO: decide check_height("best best_height" - "confirmations")
+// TODO: get blockhash by check_height, get latency
+// TODO: update lantency, active_time and status
