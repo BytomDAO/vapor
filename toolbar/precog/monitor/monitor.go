@@ -207,7 +207,6 @@ func (m *monitor) dialNodes() error {
 }
 
 func (m *monitor) checkStatusRoutine() {
-
 	peers := peers.NewPeerSet(m.sw)
 	dispatcher := event.NewDispatcher()
 	// consensusMgr := consensusmgr.NewManager(sw, chain, peers, dispatcher)
@@ -219,7 +218,10 @@ func (m *monitor) checkStatusRoutine() {
 	for ; true; <-ticker.C {
 		log.Debug("p2p.peer list", m.sw.GetPeers().List())
 		// TODO: SFSPV?
+		// TODO: shit......
+		log.Info("peers", peers)
 		log.Info("best", peers.BestPeer(consensus.SFFullNode))
+		log.Info("GetPeerInfos", peers.GetPeerInfos())
 	}
 }
 
