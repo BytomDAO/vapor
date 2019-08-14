@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"net"
 	"os"
-	// "strings"
+	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -42,6 +42,9 @@ type monitor struct {
 }
 
 func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
+	// for test
+	cfg.CheckFreqSeconds = 1
+
 	nodeCfg := &vaporCfg.Config{
 		BaseConfig: vaporCfg.DefaultBaseConfig(),
 		P2P:        vaporCfg.DefaultP2PConfig(),
@@ -178,11 +181,6 @@ func (m *monitor) monitorRountine() error {
 	}
 
 	m.sw.DialPeers(addresses)
-
-	// TODO: dail nodes, get lantency & best_height
-	// TODO: decide check_height("best best_height" - "confirmations")
-	// TODO: get blockhash by check_height, get latency
-	// TODO: update lantency, active_time and status
 	return nil
 }
 
@@ -193,3 +191,8 @@ func (m *monitor) monitorRountine() error {
 // p2p/switch_test.go
 // syncManager
 // notificationMgr
+
+// TODO: dail nodes, get lantency & best_height
+// TODO: decide check_height("best best_height" - "confirmations")
+// TODO: get blockhash by check_height, get latency
+// TODO: update lantency, active_time and status
