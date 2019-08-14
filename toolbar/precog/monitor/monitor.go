@@ -213,6 +213,7 @@ func (m *monitor) checkStatusRoutine() {
 	// TODO: mockchain?
 	// consensusMgr := consensusmgr.NewManager(sw, chain, peers, dispatcher)
 	consensusMgr := consensusmgr.NewManager(m.sw, nil, peers, dispatcher)
+	// TODO: ???
 	consensusMgr.Start()
 	// TODO: change name?
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
