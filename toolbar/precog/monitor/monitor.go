@@ -42,7 +42,7 @@ type monitor struct {
 }
 
 func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
-	// for test
+	//TODO: for test
 	cfg.CheckFreqSeconds = 1
 
 	nodeCfg := &vaporCfg.Config{
@@ -76,13 +76,7 @@ func (m *monitor) Run() {
 		m.upSertNode(&node)
 	}
 	m.nodeCfg.P2P.Seeds = strings.Join(seeds, ",")
-
-	sw, err := m.makeSwitch()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	m.sw = sw
+	m.makeSwitch()
 
 	go m.discovery()
 	go m.collectDiscv()
@@ -122,16 +116,21 @@ func (m *monitor) upSertNode(node *config.Node) error {
 		}).FirstOrCreate(ormNode).Error
 }
 
-func (m *monitor) makeSwitch() (*p2p.Switch, error) {
+func (m *monitor) makeSwitch() {
 	l, listenAddr := p2p.GetListener(m.nodeCfg.P2P)
 	discv, err := dht.NewDiscover(m.nodeCfg, m.privKey, l.ExternalAddress().Port, m.cfg.NetworkID)
 	if err != nil {
-		return nil, err
+		log.Fatal(err)
 	}
 
 	// no need for lanDiscv, but passing &mdns.LANDiscover{} will cause NilPointer
 	lanDiscv := mdns.NewLANDiscover(mdns.NewProtocol(), int(l.ExternalAddress().Port))
-	return p2p.NewSwitch(m.nodeCfg, discv, lanDiscv, l, m.privKey, listenAddr, m.cfg.NetworkID)
+	sw, err := p2p.NewSwitch(m.nodeCfg, discv, lanDiscv, l, m.privKey, listenAddr, m.cfg.NetworkID)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	m.sw = sw
 }
 
 func (m *monitor) discovery() {
