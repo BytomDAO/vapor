@@ -78,7 +78,7 @@ func (m *monitor) Run() {
 	m.nodeCfg.P2P.Seeds = strings.Join(seeds, ",")
 	m.makeSwitch()
 
-	go m.discovery()
+	go m.discoveryRoutine()
 	go m.collectDiscv()
 
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
@@ -133,7 +133,7 @@ func (m *monitor) makeSwitch() {
 	m.sw = sw
 }
 
-func (m *monitor) discovery() {
+func (m *monitor) discoveryRoutine() {
 	ticker := time.NewTicker(time.Duration(discvFreqSec) * time.Second)
 	for range ticker.C {
 		nodes := make([]*dht.Node, nodesToDiscv)
@@ -170,12 +170,12 @@ func (m *monitor) monitorRountine() error {
 
 	addresses := make([]*p2p.NetAddress, 0)
 	for i := 0; i < len(nodes); i++ {
-		ip, err := net.LookupIP(nodes[i].Host)
-		if err != nil || len(ip) == 0 {
+		ips, err := net.LookupIP(nodes[i].Host)
+		if err != nil || len(ips) == 0 {
 			continue
 		}
 
-		address := p2p.NewNetAddressIPPort(ip[0], nodes[i].Port)
+		address := p2p.NewNetAddressIPPort(ips[0], nodes[i].Port)
 		addresses = append(addresses, address)
 	}
 
