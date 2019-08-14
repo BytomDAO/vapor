@@ -79,7 +79,7 @@ func (m *monitor) Run() {
 	m.makeSwitch()
 
 	go m.discoveryRoutine()
-	go m.collectDiscovedNodes()
+	go m.collectDiscoveredNodes()
 
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for ; true; <-ticker.C {
@@ -144,7 +144,7 @@ func (m *monitor) discoveryRoutine() {
 	}
 }
 
-func (m *monitor) collectDiscovedNodes() {
+func (m *monitor) collectDiscoveredNodes() {
 	// nodeMap maps a node's public key to the node itself
 	nodeMap := make(map[string]*dht.Node)
 	for node := range m.discvCh {
