@@ -212,16 +212,22 @@ func (m *monitor) checkStatusRoutine() {
 	// consensusMgr := consensusmgr.NewManager(sw, chain, peers, dispatcher)
 	consensusMgr := consensusmgr.NewManager(m.sw, nil, peers, dispatcher)
 	consensusMgr.Start()
-
 	// TODO: change name?
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for ; true; <-ticker.C {
-		log.Debug("p2p.peer list", m.sw.GetPeers().List())
+		for k, v := range m.sw.GetReactors() {
+			log.Debug(k, ",", v)
+			for _, peer := range m.sw.GetPeers().List() {
+				log.Debug("AddPeer for", v, peer)
+				v.AddPeer(peer)
+			}
+		}
+
 		// TODO: SFSPV?
-		// TODO: shit......
-		log.Info("peers", peers)
 		log.Info("best", peers.BestPeer(consensus.SFFullNode))
-		log.Info("GetPeerInfos", peers.GetPeerInfos())
+		for _, peerInfo := range peers.GetPeerInfos() {
+			log.Info(peerInfo)
+		}
 	}
 }
 
