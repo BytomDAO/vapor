@@ -73,19 +73,18 @@ func (m *monitor) Run() {
 	var seeds []string
 	for _, node := range m.cfg.Nodes {
 		seeds = append(seeds, fmt.Sprintf("%s:%d", node.Host, node.Port))
-		m.upSertNode(&node)
+		if err := m.upSertNode(&node); err != nil {
+			log.Error(err)
+		}
 	}
 	m.nodeCfg.P2P.Seeds = strings.Join(seeds, ",")
-	m.makeSwitch()
+	if err := m.makeSwitch(); err != nil {
+		log.Fatal(err)
+	}
 
 	go m.discoveryRoutine()
 	go m.collectDiscoveredNodes()
-
-	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
-	for ; true; <-ticker.C {
-		// TODO: lock?
-		m.monitorRountine()
-	}
+	go m.connectNodesRoutine()
 }
 
 // create or update: https://github.com/jinzhu/gorm/issues/1307
@@ -116,21 +115,22 @@ func (m *monitor) upSertNode(node *config.Node) error {
 		}).FirstOrCreate(ormNode).Error
 }
 
-func (m *monitor) makeSwitch() {
+func (m *monitor) makeSwitch() error {
 	l, listenAddr := p2p.GetListener(m.nodeCfg.P2P)
 	discv, err := dht.NewDiscover(m.nodeCfg, m.privKey, l.ExternalAddress().Port, m.cfg.NetworkID)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// no need for lanDiscv, but passing &mdns.LANDiscover{} will cause NilPointer
 	lanDiscv := mdns.NewLANDiscover(mdns.NewProtocol(), int(l.ExternalAddress().Port))
 	sw, err := p2p.NewSwitch(m.nodeCfg, discv, lanDiscv, l, m.privKey, listenAddr, m.cfg.NetworkID)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	m.sw = sw
+	return nil
 }
 
 func (m *monitor) discoveryRoutine() {
@@ -153,16 +153,27 @@ func (m *monitor) collectDiscoveredNodes() {
 		}
 		log.Info("discover new node: ", node)
 
-		m.upSertNode(&config.Node{
+		if err := m.upSertNode(&config.Node{
 			PublicKey: node.ID.String(),
 			Host:      node.IP.String(),
 			Port:      node.TCP,
-		})
+		}); err != nil {
+			log.Error(err)
+		}
+
 		nodeMap[node.ID.String()] = node
 	}
 }
 
-func (m *monitor) monitorRountine() error {
+func (m *monitor) connectNodesRoutine() {
+	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
+	for ; true; <-ticker.C {
+		// TODO: lock?
+		m.dialNodes()
+	}
+}
+
+func (m *monitor) dialNodes() error {
 	var nodes []*orm.Node
 	if err := m.db.Model(&orm.Node{}).Find(&nodes).Error; err != nil {
 		return err
@@ -191,7 +202,7 @@ func (m *monitor) monitorRountine() error {
 // syncManager
 // notificationMgr
 
-// TODO: dail nodes, get lantency & best_height
+// TODO: dial nodes, get lantency & best_height
 // TODO: decide check_height("best best_height" - "confirmations")
 // TODO: get blockhash by check_height, get latency
 // TODO: update lantency, active_time and status
