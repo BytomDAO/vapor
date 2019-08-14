@@ -67,9 +67,12 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 func (m *monitor) Run() {
 	defer os.RemoveAll(m.nodeCfg.DBPath)
 
+	var seeds []string
 	for _, node := range m.cfg.Nodes {
+		seeds = append(seeds, fmt.Sprintf("%s:%d", node.Host, node.Port))
 		m.upSertNode(&node)
 	}
+	m.nodeCfg.P2P.Seeds = strings.Join(seeds, ",")
 
 	sw, err := m.makeSwitch()
 	if err != nil {
