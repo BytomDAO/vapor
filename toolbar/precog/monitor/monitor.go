@@ -218,6 +218,7 @@ func (m *monitor) checkStatusRoutine() {
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for ; true; <-ticker.C {
 		log.Debug("p2p.peer list", m.sw.GetPeers().List())
+		// TODO: SFSPV?
 		log.Info("best", peers.BestPeer(consensus.SFFullNode))
 	}
 }
