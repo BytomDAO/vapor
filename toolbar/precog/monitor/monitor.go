@@ -29,7 +29,7 @@ import (
 
 var (
 	nodesToDiscv = 150
-	discvFreqSec = 1
+	discvFreqSec = 60
 )
 
 type monitor struct {
@@ -85,6 +85,7 @@ func (m *monitor) Run() {
 	go m.discoveryRoutine()
 	go m.collectDiscoveredNodes()
 	go m.connectNodesRoutine()
+	go m.checkStatusRoutine()
 }
 
 // create or update: https://github.com/jinzhu/gorm/issues/1307
@@ -166,9 +167,9 @@ func (m *monitor) collectDiscoveredNodes() {
 }
 
 func (m *monitor) connectNodesRoutine() {
+	// TODO: change name?
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for ; true; <-ticker.C {
-		// TODO: lock?
 		if err := m.dialNodes(); err != nil {
 			log.Error(err)
 		}
@@ -189,7 +190,7 @@ func (m *monitor) dialNodes() error {
 			continue
 		}
 		if len(ips) == 0 {
-			log.Error("fail to look up ip")
+			log.Errorf("fail to look up ip for %s", nodes[i].Host)
 			continue
 		}
 
@@ -199,6 +200,14 @@ func (m *monitor) dialNodes() error {
 
 	m.sw.DialPeers(addresses)
 	return nil
+}
+
+func (m *monitor) checkStatusRoutine() {
+	// TODO: change name?
+	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
+	for ; true; <-ticker.C {
+		log.Info("p2p.peer lisr", m.sw.GetPeers().List())
+	}
 }
 
 // TODO:
