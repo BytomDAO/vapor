@@ -169,7 +169,9 @@ func (m *monitor) connectNodesRoutine() {
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for ; true; <-ticker.C {
 		// TODO: lock?
-		m.dialNodes()
+		if err := m.dialNodes(); err != nil {
+			log.Error(err)
+		}
 	}
 }
 
@@ -182,7 +184,12 @@ func (m *monitor) dialNodes() error {
 	addresses := make([]*p2p.NetAddress, 0)
 	for i := 0; i < len(nodes); i++ {
 		ips, err := net.LookupIP(nodes[i].Host)
-		if err != nil || len(ips) == 0 {
+		if err != nil {
+			log.Error(err)
+			continue
+		}
+		if len(ips) == 0 {
+			log.Error("fail to look up ip")
 			continue
 		}
 
