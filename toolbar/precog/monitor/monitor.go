@@ -45,6 +45,7 @@ type monitor struct {
 	privKey chainkd.XPrv
 }
 
+// TODO: set SF myself?
 func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 	//TODO: for test
 	cfg.CheckFreqSeconds = 1
@@ -209,6 +210,7 @@ func (m *monitor) dialNodes() error {
 func (m *monitor) checkStatusRoutine() {
 	peers := peers.NewPeerSet(m.sw)
 	dispatcher := event.NewDispatcher()
+	// TODO: mockchain?
 	// consensusMgr := consensusmgr.NewManager(sw, chain, peers, dispatcher)
 	consensusMgr := consensusmgr.NewManager(m.sw, nil, peers, dispatcher)
 	consensusMgr.Start()
@@ -216,17 +218,19 @@ func (m *monitor) checkStatusRoutine() {
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for ; true; <-ticker.C {
 		for k, v := range m.sw.GetReactors() {
+			v.Start()
 			log.Debug(k, ",", v)
 			for _, peer := range m.sw.GetPeers().List() {
 				log.Debug("AddPeer for", v, peer)
+				// TODO: if not in sw
 				v.AddPeer(peer)
 			}
 		}
 
 		// TODO: SFSPV?
-		log.Info("best", peers.BestPeer(consensus.SFFullNode))
+		log.Debug("best", peers.BestPeer(consensus.SFFullNode))
 		for _, peerInfo := range peers.GetPeerInfos() {
-			log.Info(peerInfo)
+			log.Debug(peerInfo)
 		}
 	}
 }
