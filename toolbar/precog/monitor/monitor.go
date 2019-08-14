@@ -15,11 +15,15 @@ import (
 	// dbm "github.com/vapor/database/leveldb"
 
 	vaporCfg "github.com/vapor/config"
+	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
+	"github.com/vapor/event"
 	"github.com/vapor/p2p"
 	// conn "github.com/vapor/p2p/connection"
+	"github.com/vapor/netsync/peers"
 	// "github.com/vapor/consensus"
 	// "github.com/vapor/crypto/sha3pool"
+	"github.com/vapor/netsync/consensusmgr"
 	"github.com/vapor/p2p/discover/dht"
 	"github.com/vapor/p2p/discover/mdns"
 	"github.com/vapor/p2p/signlib"
@@ -203,10 +207,18 @@ func (m *monitor) dialNodes() error {
 }
 
 func (m *monitor) checkStatusRoutine() {
+
+	peers := peers.NewPeerSet(m.sw)
+	dispatcher := event.NewDispatcher()
+	// consensusMgr := consensusmgr.NewManager(sw, chain, peers, dispatcher)
+	consensusMgr := consensusmgr.NewManager(m.sw, nil, peers, dispatcher)
+	consensusMgr.Start()
+
 	// TODO: change name?
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for ; true; <-ticker.C {
-		log.Info("p2p.peer lisr", m.sw.GetPeers().List())
+		log.Debug("p2p.peer list", m.sw.GetPeers().List())
+		log.Info("best", peers.BestPeer(consensus.SFFullNode))
 	}
 }
 
