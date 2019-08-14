@@ -10,7 +10,7 @@
         },
         "log_mode" : true
     },
-    "check_frequency_seconds" : 1,
+    "check_frequency_seconds" : 60,
     "bootstrap_nodes" : [
     ]
 }

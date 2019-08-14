@@ -81,7 +81,6 @@ func (m *monitor) Run() {
 	go m.discovery()
 	go m.collectDiscv()
 
-	m.cfg.CheckFreqSeconds = 60
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for ; true; <-ticker.C {
 		// TODO: lock?
