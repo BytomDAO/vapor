@@ -229,9 +229,13 @@ func (m *monitor) checkStatusRoutine() {
 // p2p/test_util.go
 // p2p/switch_test.go
 // syncManager
-// notificationMgr
+// notificationMgr???
+// mock chain????
+// mock chain????
 
-// TODO: dial nodes, get lantency & best_height
+// TODO: dial nodes
+// TODO: get lantency
+// TODO: get best_height
 // TODO: decide check_height("best best_height" - "confirmations")
 // TODO: get blockhash by check_height, get latency
 // TODO: update lantency, active_time and status
