@@ -218,8 +218,6 @@ func (m *monitor) dialNodes() error {
 }
 
 func (m *monitor) checkStatusRoutine() {
-	peers := peers.NewPeerSet(m.sw)
-	dispatcher := event.NewDispatcher()
 	// TODO: mockchain?
 	// TODO: ???
 	// consensusMgr := consensusmgr.NewManager(sw, chain, peers, dispatcher)
@@ -229,12 +227,16 @@ func (m *monitor) checkStatusRoutine() {
 
 	// chainMgr, err := chainmgr.NewManager(m.nodeCfg, m.sw, chain, txPool, dispatcher, peers, fastSyncDB)
 	txPool := &mock.Mempool{}
+	mockChain := mock.NewChain(txPool)
+	dispatcher := event.NewDispatcher()
+	peers := peers.NewPeerSet(m.sw)
 	fastSyncDB := dbm.NewDB("fastsync", m.nodeCfg.DBBackend, m.nodeCfg.DBDir())
-	chainMgr, err := chainmgr.NewManager(m.nodeCfg, m.sw, mock.NewChain(txPool), txPool, dispatcher, peers, fastSyncDB)
+	chainMgr, err := chainmgr.NewManager(m.nodeCfg, m.sw, mockChain, txPool, dispatcher, peers, fastSyncDB)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	mockChain.SetBestBlockHeader()
 	chainMgr.Start()
 
 	for k, v := range m.sw.GetReactors() {
