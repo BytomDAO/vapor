@@ -29,6 +29,7 @@ import (
 	"github.com/vapor/p2p/discover/dht"
 	"github.com/vapor/p2p/discover/mdns"
 	"github.com/vapor/p2p/signlib"
+	"github.com/vapor/test/mock"
 	"github.com/vapor/toolbar/precog/config"
 	"github.com/vapor/toolbar/precog/database/orm"
 )
@@ -220,7 +221,8 @@ func (m *monitor) checkStatusRoutine() {
 	//
 
 	// chainMgr, err := chainmgr.NewManager(m.nodeCfg, m.sw, chain, txPool, dispatcher, peers, fastSyncDB)
-	chainMgr, err := chainmgr.NewManager(m.nodeCfg, m.sw, &mockChain{}, &mockTxPool{}, dispatcher, peers, &mockFastSyncDB{})
+	txPool := &mock.Mempool{}
+	chainMgr, err := chainmgr.NewManager(m.nodeCfg, m.sw, mock.NewChain(txPool), txPool, dispatcher, peers, &mockFastSyncDB{})
 	if err != nil {
 		log.Fatal(err)
 	}
