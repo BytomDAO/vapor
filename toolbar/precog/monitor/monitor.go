@@ -253,10 +253,12 @@ func (m *monitor) checkStatusRoutine() {
 	mockChain.SetBestBlockHeader(&genesisBlock.BlockHeader)
 	chainMgr.Start()
 
-	for k, v := range m.sw.GetReactors() {
-		log.Debug("start", k, ",", v)
-		v.Start()
-	}
+	m.sw.Start()
+
+	// for k, v := range m.sw.GetReactors() {
+	// 	log.Debug("start", k, ",", v)
+	// 	v.Start()
+	// }
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for ; true; <-ticker.C {
 		for _, v := range m.sw.GetReactors() {
