@@ -19,11 +19,13 @@ import (
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/event"
 	"github.com/vapor/p2p"
+	// "github.com/vapor/protocol/bc/types"
 	// conn "github.com/vapor/p2p/connection"
 	"github.com/vapor/netsync/peers"
 	// "github.com/vapor/consensus"
 	// "github.com/vapor/crypto/sha3pool"
-	"github.com/vapor/netsync/consensusmgr"
+	// "github.com/vapor/netsync/consensusmgr"
+	"github.com/vapor/netsync/chainmgr"
 	"github.com/vapor/p2p/discover/dht"
 	"github.com/vapor/p2p/discover/mdns"
 	"github.com/vapor/p2p/signlib"
@@ -211,16 +213,25 @@ func (m *monitor) checkStatusRoutine() {
 	peers := peers.NewPeerSet(m.sw)
 	dispatcher := event.NewDispatcher()
 	// TODO: mockchain?
-	// consensusMgr := consensusmgr.NewManager(sw, chain, peers, dispatcher)
-	consensusMgr := consensusmgr.NewManager(m.sw, nil, peers, dispatcher)
 	// TODO: ???
-	consensusMgr.Start()
-	// TODO: change name?
+	// consensusMgr := consensusmgr.NewManager(sw, chain, peers, dispatcher)
+	// consensusMgr := consensusmgr.NewManager(m.sw, nil, peers, dispatcher)
+	// consensusMgr.Start()
+	//
+
+	// chainMgr, err := chainmgr.NewManager(m.nodeCfg, m.sw, chain, txPool, dispatcher, peers, fastSyncDB)
+	chainMgr, err := chainmgr.NewManager(m.nodeCfg, m.sw, &mockChain{}, &mockTxPool{}, dispatcher, peers, &mockFastSyncDB{})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for k, v := range m.sw.GetReactors() {
+		log.Debug("start", k, ",", v)
+		v.Start()
+	}
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for ; true; <-ticker.C {
-		for k, v := range m.sw.GetReactors() {
-			v.Start()
-			log.Debug(k, ",", v)
+		for _, v := range m.sw.GetReactors() {
 			for _, peer := range m.sw.GetPeers().List() {
 				log.Debug("AddPeer for", v, peer)
 				// TODO: if not in sw
