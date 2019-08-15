@@ -3,10 +3,11 @@ package monitor
 import (
 	// "encoding/binary"
 	// "encoding/hex"
-	// "io/ioutil"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
+	// "os/user"
 	"strings"
 	"time"
 
@@ -54,12 +55,17 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 	//TODO: for test
 	cfg.CheckFreqSeconds = 1
 
+	tmpDir, err := ioutil.TempDir(".", "")
+	if err != nil {
+		log.Fatalf("failed to create temporary data folder: %v", err)
+	}
+
 	nodeCfg := &vaporCfg.Config{
 		BaseConfig: vaporCfg.DefaultBaseConfig(),
 		P2P:        vaporCfg.DefaultP2PConfig(),
 		Federation: vaporCfg.DefaultFederationConfig(),
 	}
-	nodeCfg.DBPath = "vapor_precog_data"
+	nodeCfg.DBPath = tmpDir
 	nodeCfg.ChainID = "mainnet"
 	discvCh := make(chan *dht.Node)
 	privKey, err := signlib.NewPrivKey()
