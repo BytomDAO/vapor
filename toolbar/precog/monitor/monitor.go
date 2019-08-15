@@ -21,7 +21,7 @@ import (
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/event"
 	"github.com/vapor/p2p"
-	// "github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/bc/types"
 	// conn "github.com/vapor/p2p/connection"
 	"github.com/vapor/netsync/peers"
 	// "github.com/vapor/consensus"
@@ -55,7 +55,7 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 	//TODO: for test
 	cfg.CheckFreqSeconds = 1
 
-	tmpDir, err := ioutil.TempDir(".", "")
+	tmpDir, err := ioutil.TempDir(".", "vpPrecog")
 	if err != nil {
 		log.Fatalf("failed to create temporary data folder: %v", err)
 	}
@@ -236,7 +236,8 @@ func (m *monitor) checkStatusRoutine() {
 		log.Fatal(err)
 	}
 
-	mockChain.SetBestBlockHeader()
+	mockChain.SetBlockByHeight(0, &types.Block{})
+	mockChain.SetBestBlockHeader(&types.BlockHeader{})
 	chainMgr.Start()
 
 	for k, v := range m.sw.GetReactors() {
