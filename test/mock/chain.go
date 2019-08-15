@@ -28,10 +28,11 @@ type Chain struct {
 
 func NewChain(mempool *Mempool) *Chain {
 	return &Chain{
-		heightMap:   map[uint64]*types.Block{},
-		blockMap:    map[bc.Hash]*types.Block{},
-		prevOrphans: make(map[bc.Hash]*types.Block),
-		mempool:     mempool,
+		bestBlockHeader: &types.BlockHeader{},
+		heightMap:       map[uint64]*types.Block{},
+		blockMap:        map[bc.Hash]*types.Block{},
+		prevOrphans:     make(map[bc.Hash]*types.Block),
+		mempool:         mempool,
 	}
 }
 

@@ -229,6 +229,8 @@ func (m *monitor) checkStatusRoutine() {
 		log.Fatal(err)
 	}
 
+	chainMgr.Start()
+
 	for k, v := range m.sw.GetReactors() {
 		log.Debug("start", k, ",", v)
 		v.Start()
