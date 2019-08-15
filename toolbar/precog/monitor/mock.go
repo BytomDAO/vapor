@@ -43,18 +43,22 @@ import (
 // 	return &types.BlockHeader{}
 // }
 
-type mockTxPool struct{}
-type mockFastSyncDB struct{}
+// type mockTxPool struct{}
+// type mockFastSyncDB struct{}
 
-func (m *mockFastSyncDB) Close() {
-}
+// func (m *mockFastSyncDB) Close() {
+// }
 
-func (m *mockFastSyncDB) Delete([]byte) {
-}
+// func (m *mockFastSyncDB) Delete([]byte) {
+// }
 
-func (m *mockFastSyncDB) DeleteSync([]byte) {
-}
+// func (m *mockFastSyncDB) DeleteSync([]byte) {
+// }
 
-func (m *mockFastSyncDB) Get([]byte) []byte {
-	return nil
-}
+// func (m *mockFastSyncDB) Get([]byte) []byte {
+// 	return nil
+// }
+
+// func (m *mockFastSyncDB) Get([]byte) []byte {
+// 	return nil
+// }

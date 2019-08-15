@@ -17,6 +17,7 @@ import (
 	vaporCfg "github.com/vapor/config"
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
+	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/event"
 	"github.com/vapor/p2p"
 	// "github.com/vapor/protocol/bc/types"
@@ -222,7 +223,8 @@ func (m *monitor) checkStatusRoutine() {
 
 	// chainMgr, err := chainmgr.NewManager(m.nodeCfg, m.sw, chain, txPool, dispatcher, peers, fastSyncDB)
 	txPool := &mock.Mempool{}
-	chainMgr, err := chainmgr.NewManager(m.nodeCfg, m.sw, mock.NewChain(txPool), txPool, dispatcher, peers, &mockFastSyncDB{})
+	fastSyncDB := dbm.NewDB("fastsync", m.nodeCfg.DBBackend, m.nodeCfg.DBDir())
+	chainMgr, err := chainmgr.NewManager(m.nodeCfg, m.sw, mock.NewChain(txPool), txPool, dispatcher, peers, fastSyncDB)
 	if err != nil {
 		log.Fatal(err)
 	}
