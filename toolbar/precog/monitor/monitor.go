@@ -217,6 +217,15 @@ func (m *monitor) dialNodes() error {
 	return nil
 }
 
+func (m *monitor) getGenesisBlock() (*types.Block, error) {
+	genesisBlock := &types.Block{}
+	if err := genesisBlock.UnmarshalText([]byte("030100000000000000000000000000000000000000000000000000000000000000000082bfe3f4bf2d4052415e796436f587fac94677b20f027e910b70e2c220c411c0e87c37e0e1cc2ec9c377e5192668bc0a367e4a4764f11e7c725ecced1d7b6a492974fab1b6d5bc01000107010001012402220020f86826d640810eb08a2bfb706e0092273e05e9a7d3d71f9d53f4f6cc2e3d6c6a0001013b0039ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00011600148c9d063ff74ee6d9ffa88d83aeb038068366c4c400")); err != nil {
+		return nil, err
+	}
+
+	return genesisBlock, nil
+}
+
 func (m *monitor) checkStatusRoutine() {
 	// TODO: mockchain?
 	// TODO: ???
@@ -236,8 +245,12 @@ func (m *monitor) checkStatusRoutine() {
 		log.Fatal(err)
 	}
 
-	mockChain.SetBlockByHeight(0, &types.Block{})
-	mockChain.SetBestBlockHeader(&types.BlockHeader{})
+	genesisBlock, err := m.getGenesisBlock()
+	if err != nil {
+		log.Fatal(err)
+	}
+	mockChain.SetBlockByHeight(genesisBlock.BlockHeader.Height, genesisBlock)
+	mockChain.SetBestBlockHeader(&genesisBlock.BlockHeader)
 	chainMgr.Start()
 
 	for k, v := range m.sw.GetReactors() {
