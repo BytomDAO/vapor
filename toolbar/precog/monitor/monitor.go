@@ -154,11 +154,15 @@ func (m *monitor) checkStatusRoutine() {
 	bestHeight := uint64(0)
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for ; true; <-ticker.C {
+		// hui zi dong geng xin ma?
+		for _, peer := range m.sw.GetPeers().List() {
+			peer.Start()
+		}
+
 		for _, reactor := range m.sw.GetReactors() {
 			log.Debug("AddPeer for reactor", reactor)
 			for _, peer := range m.sw.GetPeers().List() {
 				log.Debug("AddPeer", peer)
-				peer.Start()
 				reactor.AddPeer(peer)
 			}
 		}
