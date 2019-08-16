@@ -154,7 +154,7 @@ func (m *monitor) checkStatusRoutine() {
 	bestHeight := uint64(0)
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for ; true; <-ticker.C {
-		// hui zi dong geng xin ma?
+		// TODO: peerSet 会自动更新吗？
 		for _, peer := range m.sw.GetPeers().List() {
 			peer.Start()
 		}
@@ -163,6 +163,7 @@ func (m *monitor) checkStatusRoutine() {
 			log.Debug("AddPeer for reactor", reactor)
 			for _, peer := range m.sw.GetPeers().List() {
 				log.Debug("AddPeer", peer)
+				// TODO: 这个还要吗
 				reactor.AddPeer(peer)
 			}
 		}
