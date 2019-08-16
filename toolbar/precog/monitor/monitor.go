@@ -16,17 +16,14 @@ import (
 	// dbm "github.com/vapor/database/leveldb"
 
 	vaporCfg "github.com/vapor/config"
-	"github.com/vapor/consensus"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/event"
 	"github.com/vapor/p2p"
 	// conn "github.com/vapor/p2p/connection"
-	"github.com/vapor/netsync/peers"
-	// "github.com/vapor/consensus"
-	// "github.com/vapor/crypto/sha3pool"
 	"github.com/vapor/netsync/chainmgr"
 	"github.com/vapor/netsync/consensusmgr"
+	"github.com/vapor/netsync/peers"
 	"github.com/vapor/p2p/discover/dht"
 	"github.com/vapor/p2p/discover/mdns"
 	"github.com/vapor/p2p/signlib"
@@ -188,16 +185,15 @@ func (m *monitor) dialNodes() error {
 	return nil
 }
 
-func (m *monitor) checkStatusRoutine() {
+func (m *monitor) prepareReactors(peers *peers.PeerSet) error {
 	dispatcher := event.NewDispatcher()
-	peers := peers.NewPeerSet(m.sw)
 	// add ConsensusReactor for consensusChannel
 	_ = consensusmgr.NewManager(m.sw, m.chain, peers, dispatcher)
 	fastSyncDB := dbm.NewDB("fastsync", m.nodeCfg.DBBackend, m.nodeCfg.DBDir())
 	// add ProtocolReactor to handle msgs
 	_, err := chainmgr.NewManager(m.nodeCfg, m.sw, m.chain, m.txPool, dispatcher, peers, fastSyncDB)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// TODO: clean up?? only start reactors??
@@ -216,18 +212,25 @@ func (m *monitor) checkStatusRoutine() {
 	// 	return
 	// }
 
+	return nil
+}
+
+func (m *monitor) checkStatusRoutine() {
+	peers := peers.NewPeerSet(m.sw)
+	if err := m.prepareReactors(peers); err != nil {
+		log.Fatal(err)
+	}
+
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for ; true; <-ticker.C {
-		for _, v := range m.sw.GetReactors() {
+		for _, reactor := range m.sw.GetReactors() {
 			for _, peer := range m.sw.GetPeers().List() {
-				log.Debug("AddPeer for", v, peer)
+				log.Debug("AddPeer %v for reactor %v", peer, reactor)
 				// TODO: if not in sw
-				v.AddPeer(peer)
+				reactor.AddPeer(peer)
 			}
 		}
 
-		// TODO: SFSPV?
-		log.Debug("best", peers.BestPeer(consensus.SFFullNode))
 		for _, peerInfo := range peers.GetPeerInfos() {
 			log.Info(peerInfo)
 		}
