@@ -99,7 +99,7 @@ func (m *monitor) Run() {
 
 	go m.discoveryRoutine()
 	go m.collectDiscoveredNodes()
-	// go m.connectNodesRoutine()
+	go m.connectNodesRoutine()
 	go m.checkStatusRoutine()
 }
 
@@ -132,21 +132,20 @@ func (m *monitor) prepareReactors(peers *peers.PeerSet) error {
 		return err
 	}
 
-	// TODO: clean up?? only start reactors??
-	m.sw.Start()
+	// TODO: move?
+	for label, reactor := range m.sw.GetReactors() {
+		log.Debug("start reactor: (%s:%v)", label, reactor)
+		if _, err := reactor.Start(); err != nil {
+			return nil
+		}
+	}
 
-	// for label, reactor := range m.sw.GetReactors() {
-	// 	log.Debug("start reactor: (%s:%v)", label, reactor)
-	// 	if _, err := reactor.Start(); err != nil {
-	// 		return
-	// 	}
-	// }
-
-	// m.sw.GetSecurity().RegisterFilter(m.sw.GetNodeInfo())
-	// m.sw.GetSecurity().RegisterFilter(m.sw.GetPeers())
-	// if err := m.sw.GetSecurity().Start(); err != nil {
-	// 	return
-	// }
+	// TODO: move?
+	m.sw.GetSecurity().RegisterFilter(m.sw.GetNodeInfo())
+	m.sw.GetSecurity().RegisterFilter(m.sw.GetPeers())
+	if err := m.sw.GetSecurity().Start(); err != nil {
+		return nil
+	}
 
 	return nil
 }
@@ -161,9 +160,11 @@ func (m *monitor) checkStatusRoutine() {
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for ; true; <-ticker.C {
 		for _, reactor := range m.sw.GetReactors() {
+			log.Debug("AddPeer for reactor", reactor)
 			for _, peer := range m.sw.GetPeers().List() {
-				log.Debug("AddPeer %v for reactor %v", peer, reactor)
-				// reactor.AddPeer(peer)
+				log.Debug("AddPeer", peer)
+				peer.Start()
+				reactor.AddPeer(peer)
 			}
 		}
 
