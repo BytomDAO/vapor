@@ -164,7 +164,6 @@ func (m *monitor) checkStatusRoutine() {
 			for _, peer := range m.sw.GetPeers().List() {
 				log.Debug("AddPeer %v for reactor %v", peer, reactor)
 				// reactor.AddPeer(peer)
-				// peer.TrySend
 			}
 		}
 
