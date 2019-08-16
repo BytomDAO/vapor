@@ -1,64 +1,28 @@
 package monitor
 
 import (
-// "github.com/vapor/protocol/bc"
-// "github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/test/mock"
 )
 
-// type mockChain struct{}
+func mockChainAndPool() (*mock.Chain, *mock.Mempool, error) {
+	txPool := &mock.Mempool{}
+	mockChain := mock.NewChain(txPool)
+	genesisBlock, err := getGenesisBlock()
+	if err != nil {
+		return nil, nil, err
+	}
 
-// func (m *mockChain) BestBlockHeader() *types.BlockHeader {
-// 	return &types.BlockHeader{}
-// }
+	mockChain.SetBlockByHeight(genesisBlock.BlockHeader.Height, genesisBlock)
+	mockChain.SetBestBlockHeader(&genesisBlock.BlockHeader)
+	return mockChain, txPool, nil
+}
 
-// func (m *mockChain) BestBlockHeight() uint64 {
-// 	return 0
-// }
+func getGenesisBlock() (*types.Block, error) {
+	genesisBlock := &types.Block{}
+	if err := genesisBlock.UnmarshalText([]byte("030100000000000000000000000000000000000000000000000000000000000000000082bfe3f4bf2d4052415e796436f587fac94677b20f027e910b70e2c220c411c0e87c37e0e1cc2ec9c377e5192668bc0a367e4a4764f11e7c725ecced1d7b6a492974fab1b6d5bc01000107010001012402220020f86826d640810eb08a2bfb706e0092273e05e9a7d3d71f9d53f4f6cc2e3d6c6a0001013b0039ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00011600148c9d063ff74ee6d9ffa88d83aeb038068366c4c400")); err != nil {
+		return nil, err
+	}
 
-// func (m *mockChain) GetBlockByHash(*bc.Hash) (*types.Block, error) {
-// 	return &types.Block{}, nil
-// }
-
-// func (m *mockChain) GetBlockByHeight(uint64) (*types.Block, error) {
-// 	return &types.Block{}, nil
-// }
-
-// func (m *mockChain) GetHeaderByHash(*bc.Hash) (*types.BlockHeader, error) {
-// 	return &types.BlockHeader{}, nil
-// }
-
-// func (m *mockChain) GetHeaderByHeight(uint64) (*types.BlockHeader, error) {
-// 	return &types.BlockHeader{}, nil
-// }
-
-// func (m *mockChain) GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error) {
-// 	return &bc.TransactionStatus{}, nil
-// }
-
-// func (m *mockChain) InMainChain(bc.Hash) bool {
-// 	return true
-// }
-
-// func (m *mockChain) LastIrreversibleHeader() *types.BlockHeader {
-// 	return &types.BlockHeader{}
-// }
-
-// type mockTxPool struct{}
-// type mockFastSyncDB struct{}
-
-// func (m *mockFastSyncDB) Close() {
-// }
-
-// func (m *mockFastSyncDB) Delete([]byte) {
-// }
-
-// func (m *mockFastSyncDB) DeleteSync([]byte) {
-// }
-
-// func (m *mockFastSyncDB) Get([]byte) []byte {
-// 	return nil
-// }
-
-// func (m *mockFastSyncDB) Get([]byte) []byte {
-// 	return nil
-// }
+	return genesisBlock, nil
+}
