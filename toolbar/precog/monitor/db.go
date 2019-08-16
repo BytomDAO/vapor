@@ -9,6 +9,18 @@ import (
 	"github.com/vapor/toolbar/precog/database/orm"
 )
 
+// TODO:
+// implement logic first, and then refactor
+// /home/gavin/work/go/src/github.com/vapor/
+// p2p/test_util.go
+// p2p/switch_test.go
+
+// TODO: get lantency
+// TODO: get best_height
+// TODO: decide check_height("best best_height" - "confirmations")
+// TODO: get blockhash by check_height, get latency
+// TODO: update lantency, active_time and status
+
 // create or update: https://github.com/jinzhu/gorm/issues/1307
 func (m *monitor) upSertNode(node *config.Node) error {
 	if node.XPub != nil {
