@@ -408,7 +408,8 @@ func (ps *PeerSet) AddPeer(peer BasePeer) {
 		ps.peers[peer.ID()] = newPeer(peer)
 		return
 	}
-	log.WithField("module", logModule).Warning("add existing peer to blockKeeper")
+	// TODO: change back to warn
+	log.WithField("module", logModule).Debug("add existing peer to blockKeeper")
 }
 
 func (ps *PeerSet) BestPeer(flag consensus.ServiceFlag) *Peer {

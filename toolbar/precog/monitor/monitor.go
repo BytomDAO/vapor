@@ -161,7 +161,6 @@ func (m *monitor) checkStatusRoutine() {
 		for _, reactor := range m.sw.GetReactors() {
 			for _, peer := range m.sw.GetPeers().List() {
 				log.Debug("AddPeer %v for reactor %v", peer, reactor)
-				// TODO: if not in sw
 				reactor.AddPeer(peer)
 			}
 		}
