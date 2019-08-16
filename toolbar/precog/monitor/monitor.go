@@ -227,17 +227,12 @@ func (m *monitor) getGenesisBlock() (*types.Block, error) {
 }
 
 func (m *monitor) checkStatusRoutine() {
-	// TODO: mockchain?
-	// TODO: ???
-	// consensusMgr := consensusmgr.NewManager(sw, chain, peers, dispatcher)
-	// consensusMgr.Start()
-	//
-
-	// chainMgr, err := chainmgr.NewManager(m.nodeCfg, m.sw, chain, txPool, dispatcher, peers, fastSyncDB)
 	txPool := &mock.Mempool{}
 	mockChain := mock.NewChain(txPool)
 	dispatcher := event.NewDispatcher()
 	peers := peers.NewPeerSet(m.sw)
+	// add ConsensusReactor for consensusChannel
+	_ = consensusmgr.NewManager(m.sw, mockChain, peers, dispatcher)
 	fastSyncDB := dbm.NewDB("fastsync", m.nodeCfg.DBBackend, m.nodeCfg.DBDir())
 	chainMgr, err := chainmgr.NewManager(m.nodeCfg, m.sw, mockChain, txPool, dispatcher, peers, fastSyncDB)
 	if err != nil {
@@ -250,9 +245,8 @@ func (m *monitor) checkStatusRoutine() {
 	}
 	mockChain.SetBlockByHeight(genesisBlock.BlockHeader.Height, genesisBlock)
 	mockChain.SetBestBlockHeader(&genesisBlock.BlockHeader)
+	// ??
 	chainMgr.Start()
-	consensusMgr := consensusmgr.NewManager(m.sw, mockChain, peers, dispatcher)
-	consensusMgr.Start()
 
 	// ??
 	m.sw.Start()
@@ -274,7 +268,7 @@ func (m *monitor) checkStatusRoutine() {
 		// TODO: SFSPV?
 		log.Debug("best", peers.BestPeer(consensus.SFFullNode))
 		for _, peerInfo := range peers.GetPeerInfos() {
-			log.Debug(peerInfo)
+			log.Info(peerInfo)
 		}
 	}
 }
@@ -286,8 +280,6 @@ func (m *monitor) checkStatusRoutine() {
 // p2p/switch_test.go
 // syncManager
 // notificationMgr???
-// mock chain????
-// mock chain????
 
 // TODO: dial nodes
 // TODO: get lantency
