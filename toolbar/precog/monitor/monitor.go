@@ -35,11 +35,6 @@ import (
 	"github.com/vapor/toolbar/precog/database/orm"
 )
 
-var (
-	nodesToDiscv = 150
-	discvFreqSec = 60
-)
-
 type monitor struct {
 	cfg     *config.Config
 	db      *gorm.DB
@@ -155,38 +150,6 @@ func (m *monitor) makeSwitch() error {
 
 	m.sw = sw
 	return nil
-}
-
-func (m *monitor) discoveryRoutine() {
-	ticker := time.NewTicker(time.Duration(discvFreqSec) * time.Second)
-	for range ticker.C {
-		nodes := make([]*dht.Node, nodesToDiscv)
-		n := m.sw.GetDiscv().ReadRandomNodes(nodes)
-		for i := 0; i < n; i++ {
-			m.discvCh <- nodes[i]
-		}
-	}
-}
-
-func (m *monitor) collectDiscoveredNodes() {
-	// nodeMap maps a node's public key to the node itself
-	nodeMap := make(map[string]*dht.Node)
-	for node := range m.discvCh {
-		if n, ok := nodeMap[node.ID.String()]; ok && n.String() == node.String() {
-			continue
-		}
-		log.Info("discover new node: ", node)
-
-		if err := m.upSertNode(&config.Node{
-			PublicKey: node.ID.String(),
-			Host:      node.IP.String(),
-			Port:      node.TCP,
-		}); err != nil {
-			log.Error(err)
-		}
-
-		nodeMap[node.ID.String()] = node
-	}
 }
 
 func (m *monitor) connectNodesRoutine() {
