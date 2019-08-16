@@ -277,7 +277,6 @@ func (m *monitor) checkStatusRoutine() {
 // p2p/test_util.go
 // p2p/switch_test.go
 // syncManager
-// notificationMgr???
 
 // TODO: dial nodes
 // TODO: get lantency
