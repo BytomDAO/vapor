@@ -175,9 +175,9 @@ func (m *monitor) checkStatusRoutine() {
 		}
 		log.Info("bestHeight", bestHeight)
 
-		msg := struct{ msgs.BlockchainMessage }{&msgs.GetBlockMessage{Height: bestHeight + 1}}
-		for _, peer := range m.sw.GetPeers().List() {
-			peers.SendMsg(peer.ID(), msgs.BlockchainChannel, msg)
-		}
+		// msg := struct{ msgs.BlockchainMessage }{&msgs.GetBlockMessage{Height: bestHeight + 1}}
+		// for _, peer := range m.sw.GetPeers().List() {
+		// 	peers.SendMsg(peer.ID(), msgs.BlockchainChannel, msg)
+		// }
 	}
 }
