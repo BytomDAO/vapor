@@ -46,6 +46,7 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 	//TODO: for test
 	cfg.CheckFreqSeconds = 1
 
+	// TODO: fix dir
 	tmpDir, err := ioutil.TempDir(".", "vpPrecog")
 	if err != nil {
 		log.Fatalf("failed to create temporary data folder: %v", err)
