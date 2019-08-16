@@ -22,7 +22,7 @@ import (
 	// conn "github.com/vapor/p2p/connection"
 	"github.com/vapor/netsync/chainmgr"
 	"github.com/vapor/netsync/consensusmgr"
-	msgs "github.com/vapor/netsync/messages"
+	// msgs "github.com/vapor/netsync/messages"
 	"github.com/vapor/netsync/peers"
 	"github.com/vapor/p2p/discover/dht"
 	"github.com/vapor/p2p/discover/mdns"
@@ -164,7 +164,16 @@ func (m *monitor) checkStatusRoutine() {
 			for _, peer := range m.sw.GetPeers().List() {
 				log.Debug("AddPeer", peer)
 				// TODO: 这个还要吗
-				reactor.AddPeer(peer)
+				// reactor.AddPeer(peer)
+
+				p := peers.GetPeer(peer.ID())
+				if p == nil {
+					continue
+				}
+
+				if err := p.SendStatus(m.chain.BestBlockHeader(), m.chain.LastIrreversibleHeader()); err != nil {
+					peers.RemovePeer(p.ID())
+				}
 			}
 		}
 
