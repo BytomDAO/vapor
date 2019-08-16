@@ -139,12 +139,20 @@ func (sw *Switch) GetDiscv() discv {
 	return sw.discv
 }
 
+func (sw *Switch) GetNodeInfo() *NodeInfo {
+	return sw.nodeInfo
+}
+
 func (sw *Switch) GetPeers() *PeerSet {
 	return sw.peers
 }
 
 func (sw *Switch) GetReactors() map[string]Reactor {
 	return sw.reactors
+}
+
+func (sw *Switch) GetSecurity() Security {
+	return sw.security
 }
 
 // OnStart implements BaseService. It starts all the reactors, peers, and listeners.

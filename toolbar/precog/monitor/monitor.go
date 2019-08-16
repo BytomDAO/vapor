@@ -250,9 +250,17 @@ func (m *monitor) checkStatusRoutine() {
 	// TODO: clean up?? only start reactors??
 	m.sw.Start()
 
-	// for k, v := range m.sw.GetReactors() {
-	// 	log.Debug("start", k, ",", v)
-	// 	v.Start()
+	// for label, reactor := range m.sw.GetReactors() {
+	// 	log.Debug("start reactor: (%s:%v)", label, reactor)
+	// 	if _, err := reactor.Start(); err != nil {
+	// 		return
+	// 	}
+	// }
+
+	// m.sw.GetSecurity().RegisterFilter(m.sw.GetNodeInfo())
+	// m.sw.GetSecurity().RegisterFilter(m.sw.GetPeers())
+	// if err := m.sw.GetSecurity().Start(); err != nil {
+	// 	return
 	// }
 
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
