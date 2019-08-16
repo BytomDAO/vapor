@@ -148,6 +148,11 @@ func (c *Chain) ProcessBlock(block *types.Block) (bool, error) {
 	return false, nil
 }
 
+// TODO:
+func (c *Chain) ProcessBlockSignature(signature, pubkey []byte, blockHash *bc.Hash) error {
+	return nil
+}
+
 func (c *Chain) SetBestBlockHeader(header *types.BlockHeader) {
 	c.bestBlockHeader = header
 }

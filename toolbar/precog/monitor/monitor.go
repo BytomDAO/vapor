@@ -26,8 +26,8 @@ import (
 	"github.com/vapor/netsync/peers"
 	// "github.com/vapor/consensus"
 	// "github.com/vapor/crypto/sha3pool"
-	// "github.com/vapor/netsync/consensusmgr"
 	"github.com/vapor/netsync/chainmgr"
+	"github.com/vapor/netsync/consensusmgr"
 	"github.com/vapor/p2p/discover/dht"
 	"github.com/vapor/p2p/discover/mdns"
 	"github.com/vapor/p2p/signlib"
@@ -230,7 +230,6 @@ func (m *monitor) checkStatusRoutine() {
 	// TODO: mockchain?
 	// TODO: ???
 	// consensusMgr := consensusmgr.NewManager(sw, chain, peers, dispatcher)
-	// consensusMgr := consensusmgr.NewManager(m.sw, nil, peers, dispatcher)
 	// consensusMgr.Start()
 	//
 
@@ -252,7 +251,10 @@ func (m *monitor) checkStatusRoutine() {
 	mockChain.SetBlockByHeight(genesisBlock.BlockHeader.Height, genesisBlock)
 	mockChain.SetBestBlockHeader(&genesisBlock.BlockHeader)
 	chainMgr.Start()
+	consensusMgr := consensusmgr.NewManager(m.sw, mockChain, peers, dispatcher)
+	consensusMgr.Start()
 
+	// ??
 	m.sw.Start()
 
 	// for k, v := range m.sw.GetReactors() {
