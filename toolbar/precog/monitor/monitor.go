@@ -132,7 +132,6 @@ func (m *monitor) prepareReactors(peers *peers.PeerSet) error {
 		return err
 	}
 
-	// TODO: move?
 	for label, reactor := range m.sw.GetReactors() {
 		log.Debug("start reactor: (%s:%v)", label, reactor)
 		if _, err := reactor.Start(); err != nil {
@@ -140,14 +139,10 @@ func (m *monitor) prepareReactors(peers *peers.PeerSet) error {
 		}
 	}
 
-	// TODO: move?
 	m.sw.GetSecurity().RegisterFilter(m.sw.GetNodeInfo())
 	m.sw.GetSecurity().RegisterFilter(m.sw.GetPeers())
-	if err := m.sw.GetSecurity().Start(); err != nil {
-		return nil
-	}
 
-	return nil
+	return m.sw.GetSecurity().Start()
 }
 
 func (m *monitor) checkStatusRoutine() {
