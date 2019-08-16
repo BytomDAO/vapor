@@ -242,17 +242,19 @@ func (m *monitor) checkStatusRoutine() {
 	_ = consensusmgr.NewManager(m.sw, mockChain, peers, dispatcher)
 	fastSyncDB := dbm.NewDB("fastsync", m.nodeCfg.DBBackend, m.nodeCfg.DBDir())
 	// add ProtocolReactor to handle msgs
-	_, err := chainmgr.NewManager(m.nodeCfg, m.sw, mockChain, txPool, dispatcher, peers, fastSyncDB)
+	_, err = chainmgr.NewManager(m.nodeCfg, m.sw, mockChain, txPool, dispatcher, peers, fastSyncDB)
 	if err != nil {
 		log.Fatal(err)
 	}
-	// ??
+
+	// TODO: clean up?? only start reactors??
 	m.sw.Start()
 
 	// for k, v := range m.sw.GetReactors() {
 	// 	log.Debug("start", k, ",", v)
 	// 	v.Start()
 	// }
+
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for ; true; <-ticker.C {
 		for _, v := range m.sw.GetReactors() {
