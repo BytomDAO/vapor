@@ -229,25 +229,23 @@ func (m *monitor) getGenesisBlock() (*types.Block, error) {
 func (m *monitor) checkStatusRoutine() {
 	txPool := &mock.Mempool{}
 	mockChain := mock.NewChain(txPool)
+	genesisBlock, err := m.getGenesisBlock()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	mockChain.SetBlockByHeight(genesisBlock.BlockHeader.Height, genesisBlock)
+	mockChain.SetBestBlockHeader(&genesisBlock.BlockHeader)
 	dispatcher := event.NewDispatcher()
 	peers := peers.NewPeerSet(m.sw)
 	// add ConsensusReactor for consensusChannel
 	_ = consensusmgr.NewManager(m.sw, mockChain, peers, dispatcher)
 	fastSyncDB := dbm.NewDB("fastsync", m.nodeCfg.DBBackend, m.nodeCfg.DBDir())
-	chainMgr, err := chainmgr.NewManager(m.nodeCfg, m.sw, mockChain, txPool, dispatcher, peers, fastSyncDB)
+	// add ProtocolReactor to handle msgs
+	_, err := chainmgr.NewManager(m.nodeCfg, m.sw, mockChain, txPool, dispatcher, peers, fastSyncDB)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	genesisBlock, err := m.getGenesisBlock()
-	if err != nil {
-		log.Fatal(err)
-	}
-	mockChain.SetBlockByHeight(genesisBlock.BlockHeader.Height, genesisBlock)
-	mockChain.SetBestBlockHeader(&genesisBlock.BlockHeader)
-	// ??
-	chainMgr.Start()
-
 	// ??
 	m.sw.Start()
 
