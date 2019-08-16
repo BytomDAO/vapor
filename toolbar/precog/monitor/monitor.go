@@ -22,6 +22,7 @@ import (
 	// conn "github.com/vapor/p2p/connection"
 	"github.com/vapor/netsync/chainmgr"
 	"github.com/vapor/netsync/consensusmgr"
+	msgs "github.com/vapor/netsync/messages"
 	"github.com/vapor/netsync/peers"
 	"github.com/vapor/p2p/discover/dht"
 	"github.com/vapor/p2p/discover/mdns"
@@ -98,7 +99,7 @@ func (m *monitor) Run() {
 
 	go m.discoveryRoutine()
 	go m.collectDiscoveredNodes()
-	go m.connectNodesRoutine()
+	// go m.connectNodesRoutine()
 	go m.checkStatusRoutine()
 }
 
@@ -156,17 +157,27 @@ func (m *monitor) checkStatusRoutine() {
 		log.Fatal(err)
 	}
 
+	bestHeight := uint64(0)
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for ; true; <-ticker.C {
 		for _, reactor := range m.sw.GetReactors() {
 			for _, peer := range m.sw.GetPeers().List() {
 				log.Debug("AddPeer %v for reactor %v", peer, reactor)
-				reactor.AddPeer(peer)
+				// reactor.AddPeer(peer)
+				// peer.TrySend
 			}
 		}
 
 		for _, peerInfo := range peers.GetPeerInfos() {
-			log.Info(peerInfo)
+			if peerInfo.Height > bestHeight {
+				bestHeight = peerInfo.Height
+			}
+		}
+		log.Info("bestHeight", bestHeight)
+
+		msg := struct{ msgs.BlockchainMessage }{&msgs.GetBlockMessage{Height: bestHeight + 1}}
+		for _, peer := range m.sw.GetPeers().List() {
+			peers.SendMsg(peer.ID(), msgs.BlockchainChannel, msg)
 		}
 	}
 }
