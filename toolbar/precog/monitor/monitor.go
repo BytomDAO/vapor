@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/user"
 	"strings"
@@ -42,14 +43,9 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 	//TODO: for test
 	cfg.CheckFreqSeconds = 1
 
-	usr, err := user.Current()
+	dir, err := makePath()
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	folderPath := usr.HomeDir + "/.precog"
-	if err := os.MkdirAll(folderPath, os.ModePerm); err != nil {
-		log.Fatalf("failed to create data folder: %v", err)
 	}
 
 	nodeCfg := &vaporCfg.Config{
@@ -57,7 +53,7 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 		P2P:        vaporCfg.DefaultP2PConfig(),
 		Federation: vaporCfg.DefaultFederationConfig(),
 	}
-	nodeCfg.DBPath = folderPath
+	nodeCfg.DBPath = dir
 	nodeCfg.ChainID = "mainnet"
 	discvCh := make(chan *dht.Node)
 	privKey, err := signlib.NewPrivKey()
@@ -79,6 +75,25 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 		chain:   chain,
 		txPool:  txPool,
 	}
+}
+
+func makePath() (string, error) {
+	usr, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+
+	dataPath := usr.HomeDir + "/.precog"
+	if err := os.MkdirAll(dataPath, os.ModePerm); err != nil {
+		return "", err
+	}
+
+	tmpDir, err := ioutil.TempDir(dataPath, "")
+	if err != nil {
+		return "", err
+	}
+
+	return tmpDir, nil
 }
 
 func (m *monitor) Run() {
