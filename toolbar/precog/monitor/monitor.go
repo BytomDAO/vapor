@@ -2,8 +2,8 @@ package monitor
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
+	"os/user"
 	"strings"
 	"time"
 
@@ -42,10 +42,14 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 	//TODO: for test
 	cfg.CheckFreqSeconds = 1
 
-	// TODO: fix dir
-	tmpDir, err := ioutil.TempDir(".", "vpPrecog")
+	usr, err := user.Current()
 	if err != nil {
-		log.Fatalf("failed to create temporary data folder: %v", err)
+		log.Fatal(err)
+	}
+
+	folderPath := usr.HomeDir + "/.precog"
+	if err := os.MkdirAll(folderPath, os.ModePerm); err != nil {
+		log.Fatalf("failed to create data folder: %v", err)
 	}
 
 	nodeCfg := &vaporCfg.Config{
@@ -53,7 +57,7 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 		P2P:        vaporCfg.DefaultP2PConfig(),
 		Federation: vaporCfg.DefaultFederationConfig(),
 	}
-	nodeCfg.DBPath = tmpDir
+	nodeCfg.DBPath = folderPath
 	nodeCfg.ChainID = "mainnet"
 	discvCh := make(chan *dht.Node)
 	privKey, err := signlib.NewPrivKey()
@@ -176,7 +180,7 @@ func (m *monitor) checkStatusRoutine() {
 				bestHeight = peerInfo.Height
 			}
 
-			m.savePeerInfo(peerInfo)
+			// m.savePeerInfo(peerInfo)
 		}
 		log.Info("bestHeight", bestHeight)
 
