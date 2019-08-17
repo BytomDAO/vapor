@@ -154,26 +154,25 @@ func (m *monitor) checkStatusRoutine() {
 	bestHeight := uint64(0)
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for ; true; <-ticker.C {
-		// TODO: peerSet 会自动更新吗？
 		for _, peer := range m.sw.GetPeers().List() {
 			peer.Start()
 		}
 
-		for _, reactor := range m.sw.GetReactors() {
-			log.Debug("AddPeer for reactor", reactor)
-			for _, peer := range m.sw.GetPeers().List() {
-				log.Debug("AddPeer", peer)
-				// TODO: 这个还要吗
-				// reactor.AddPeer(peer)
+		protocolReactor, ok := m.sw.GetReactors()["PROTOCOL"]
+		if !ok {
+			continue
+		}
 
-				p := peers.GetPeer(peer.ID())
-				if p == nil {
-					continue
-				}
+		for _, peer := range m.sw.GetPeers().List() {
+			protocolReactor.AddPeer(peer)
 
-				if err := p.SendStatus(m.chain.BestBlockHeader(), m.chain.LastIrreversibleHeader()); err != nil {
-					peers.RemovePeer(p.ID())
-				}
+			p := peers.GetPeer(peer.ID())
+			if p == nil {
+				continue
+			}
+
+			if err := p.SendStatus(m.chain.BestBlockHeader(), m.chain.LastIrreversibleHeader()); err != nil {
+				peers.RemovePeer(p.ID())
 			}
 		}
 
