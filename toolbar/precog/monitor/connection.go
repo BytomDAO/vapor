@@ -41,6 +41,7 @@ func (m *monitor) dialNodes() error {
 		addresses = append(addresses, address)
 	}
 
+	// connected peers will be skipped in switch.DialPeers()
 	m.sw.DialPeers(addresses)
 	return nil
 }
