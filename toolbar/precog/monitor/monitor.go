@@ -1,27 +1,22 @@
 package monitor
 
 import (
-	// "encoding/binary"
-	// "encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"os"
-	// "os/user"
 	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
-	// dbm "github.com/vapor/database/leveldb"
 
 	vaporCfg "github.com/vapor/config"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/event"
-	"github.com/vapor/p2p"
-	// conn "github.com/vapor/p2p/connection"
 	"github.com/vapor/netsync/chainmgr"
 	"github.com/vapor/netsync/consensusmgr"
+	"github.com/vapor/p2p"
 	// msgs "github.com/vapor/netsync/messages"
 	"github.com/vapor/netsync/peers"
 	"github.com/vapor/p2p/discover/dht"
@@ -180,6 +175,8 @@ func (m *monitor) checkStatusRoutine() {
 			if peerInfo.Height > bestHeight {
 				bestHeight = peerInfo.Height
 			}
+
+			m.savePeerInfo(peerInfo)
 		}
 		log.Info("bestHeight", bestHeight)
 

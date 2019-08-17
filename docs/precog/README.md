@@ -8,6 +8,10 @@ Keep monitoring (leader & candidate) consensus nodes status in vapor network.
 [precog_schema.sql](./sql_dump/precog_schema.sql)
 
 ### Config
+run with [config_example.json](docs/precog/config_example.json)
+```
+go run cmd/precog/main.go docs/precog/config_example.json
+```
 
 ## API
 

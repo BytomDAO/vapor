@@ -5,15 +5,10 @@ import (
 
 	"github.com/jinzhu/gorm"
 
+	"github.com/vapor/netsync/peers"
 	"github.com/vapor/toolbar/precog/config"
 	"github.com/vapor/toolbar/precog/database/orm"
 )
-
-// TODO:
-// implement logic first, and then refactor
-// /home/gavin/work/go/src/github.com/vapor/
-// p2p/test_util.go
-// p2p/switch_test.go
 
 // TODO: get lantency
 // TODO: get best_height
@@ -47,4 +42,8 @@ func (m *monitor) upSertNode(node *config.Node) error {
 			Host:  ormNode.Host,
 			Port:  ormNode.Port,
 		}).FirstOrCreate(ormNode).Error
+}
+
+func (m *monitor) savePeerInfo(peerInfo *peers.PeerInfo) error {
+	return nil
 }
