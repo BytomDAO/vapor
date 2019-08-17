@@ -41,9 +41,9 @@ type monitor struct {
 // TODO: set myself as SPV?
 func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 	//TODO: for test
-	cfg.CheckFreqSeconds = 1
+	cfg.CheckFreqSeconds = 5
 
-	dir, err := makePath()
+	dbPath, err := makePath()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -53,7 +53,7 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 		P2P:        vaporCfg.DefaultP2PConfig(),
 		Federation: vaporCfg.DefaultFederationConfig(),
 	}
-	nodeCfg.DBPath = dir
+	nodeCfg.DBPath = dbPath
 	nodeCfg.ChainID = "mainnet"
 	discvCh := make(chan *dht.Node)
 	privKey, err := signlib.NewPrivKey()
@@ -165,21 +165,20 @@ func (m *monitor) checkStatusRoutine() {
 		log.Fatal(err)
 	}
 
+	protocolReactor, ok := m.sw.GetReactors()["PROTOCOL"]
+	if !ok {
+		log.Fatal("protocolReactor not found")
+	}
+
 	bestHeight := uint64(0)
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for ; true; <-ticker.C {
 		for _, peer := range m.sw.GetPeers().List() {
 			peer.Start()
-		}
-
-		protocolReactor, ok := m.sw.GetReactors()["PROTOCOL"]
-		if !ok {
-			continue
+			protocolReactor.AddPeer(peer)
 		}
 
 		for _, peer := range m.sw.GetPeers().List() {
-			protocolReactor.AddPeer(peer)
-
 			p := peers.GetPeer(peer.ID())
 			if p == nil {
 				continue
@@ -198,6 +197,15 @@ func (m *monitor) checkStatusRoutine() {
 			// m.savePeerInfo(peerInfo)
 		}
 		log.Info("bestHeight", bestHeight)
+
+		for _, peer := range m.sw.GetPeers().List() {
+			p := peers.GetPeer(peer.ID())
+			if p == nil {
+				continue
+			}
+
+			peers.RemovePeer(p.ID())
+		}
 
 		// msg := struct{ msgs.BlockchainMessage }{&msgs.GetBlockMessage{Height: bestHeight + 1}}
 		// for _, peer := range m.sw.GetPeers().List() {
