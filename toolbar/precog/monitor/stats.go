@@ -74,13 +74,9 @@ func (m *monitor) savePeerInfo(peerInfo *peers.PeerInfo) error {
 		// PingTimes     uint64
 		// PongTimes     uint64
 	}
-	if err := m.db.Model(&orm.NodeLiveness{}).Where("node_id = ? AND status != ?", ormNode.ID, common.NodeOfflineStatus).
+	return m.db.Model(&orm.NodeLiveness{}).Where("node_id = ? AND status != ?", ormNode.ID, common.NodeOfflineStatus).
 		UpdateColumn(&orm.NodeLiveness{
 			BestHeight:    ormNodeLiveness.BestHeight,
 			AvgLantencyMS: ormNodeLiveness.AvgLantencyMS,
-		}).FirstOrCreate(ormNodeLiveness).Error; err != nil {
-		return err
-	}
-
-	return nil
+		}).FirstOrCreate(ormNodeLiveness).Error
 }

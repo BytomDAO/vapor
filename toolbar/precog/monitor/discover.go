@@ -33,16 +33,18 @@ func (m *monitor) collectDiscoveredNodes() {
 			continue
 		}
 		log.Info("discover new node: ", node)
-		// m.Lock()
+		m.Lock()
+
 		if err := m.upSertNode(&config.Node{
 			PublicKey: node.ID.String(),
 			Host:      node.IP.String(),
 			Port:      node.TCP,
-		}); err != nil {
+		}); err == nil {
+			nodeMap[node.ID.String()] = node
+		} else {
 			log.Error(err)
 		}
 
-		nodeMap[node.ID.String()] = node
-		// m.Unlock()
+		m.Unlock()
 	}
 }

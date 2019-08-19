@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/user"
 	"strings"
-	// "sync"
+	"sync"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -29,7 +29,7 @@ import (
 )
 
 type monitor struct {
-	// *sync.RWMutex
+	*sync.RWMutex
 	cfg       *config.Config
 	db        *gorm.DB
 	nodeCfg   *vaporCfg.Config
@@ -70,7 +70,7 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 	}
 
 	return &monitor{
-		// RWMutex: &sync.RWMutex{},
+		RWMutex: &sync.RWMutex{},
 		cfg:     cfg,
 		db:      db,
 		nodeCfg: nodeCfg,
@@ -177,7 +177,7 @@ func (m *monitor) checkStatusRoutine() {
 	bestHeight := uint64(0)
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for range ticker.C {
-		// m.Lock()
+		m.Lock()
 		log.Info("connected peers: ", m.sw.GetPeers().List())
 
 		for _, peer := range m.sw.GetPeers().List() {
@@ -220,6 +220,6 @@ func (m *monitor) checkStatusRoutine() {
 			peers.RemovePeer(p.ID())
 		}
 		log.Info("Disonnect all peers.")
-		// m.Unlock()
+		m.Unlock()
 	}
 }
