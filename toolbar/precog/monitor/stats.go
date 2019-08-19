@@ -47,13 +47,15 @@ func (m *monitor) upSertNode(node *config.Node) error {
 
 func (m *monitor) savePeerInfo(peerInfo *peers.PeerInfo) error {
 	xPub := &chainkd.XPub{}
-	if err := xPub.UnmarshalText([]peerInfo.ID()); err != nil {
+	if err := xPub.UnmarshalText([]byte(peerInfo.ID)); err != nil {
 		return err
 	}
 
 	ormNode := &orm.Node{}
-	if err := m.db.Model(&orm.Node{}).Where(&orm.Node{PublicKey: xPub.PublicKey.String()}).
+	if err := m.db.Model(&orm.Node{}).Where(&orm.Node{PublicKey: xPub.PublicKey().String()}).
 		UpdateColumn(&orm.Node{
+			Alias:      peerInfo.Moniker,
+			Xpub:       peerInfo.ID,
 			BestHeight: peerInfo.Height,
 			// LatestDailyUptimeMinutes uint64
 		}).First(ormNode).Error; err != nil {
