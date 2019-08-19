@@ -11,7 +11,7 @@ import (
 
 func (m *monitor) connectNodesRoutine() {
 	// TODO: change name?
-	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
+	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds*2) * time.Second)
 	for ; true; <-ticker.C {
 		if err := m.dialNodes(); err != nil {
 			log.Error(err)
