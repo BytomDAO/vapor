@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/jinzhu/gorm"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/netsync/peers"
@@ -63,6 +64,8 @@ func (m *monitor) savePeerInfo(peerInfo *peers.PeerInfo) error {
 		}).First(ormNode).Error; err != nil {
 		return err
 	}
+
+	log.Debug("peerInfo.Ping:", peerInfo.Ping)
 
 	ormNodeLiveness := &orm.NodeLiveness{
 		NodeID:        ormNode.ID,
