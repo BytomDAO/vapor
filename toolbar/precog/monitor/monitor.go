@@ -180,7 +180,7 @@ func (m *monitor) checkStatusRoutine() {
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for range ticker.C {
 		for !m.isConnected() {
-			time.Sleep(5 * time.Second)
+			time.Sleep(1 * time.Second)
 		}
 		log.Info("connected peers: ", m.sw.GetPeers().List())
 
@@ -207,7 +207,7 @@ func (m *monitor) checkStatusRoutine() {
 
 			m.savePeerInfo(peerInfo)
 		}
-		log.Info("bestHeight", bestHeight)
+		log.Info("bestHeight: ", bestHeight)
 
 		// TODO:
 		// msg := struct{ msgs.BlockchainMessage }{&msgs.GetBlockMessage{Height: bestHeight + 1}}

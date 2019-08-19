@@ -34,6 +34,9 @@ func (m *monitor) collectDiscoveredNodes() {
 		}
 		log.Info("discover new node: ", node)
 
+		for m.isConnected() {
+			time.Sleep(1 * time.Second)
+		}
 		if err := m.upSertNode(&config.Node{
 			PublicKey: node.ID.String(),
 			Host:      node.IP.String(),
