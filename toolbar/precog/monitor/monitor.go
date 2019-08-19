@@ -172,7 +172,8 @@ func (m *monitor) checkStatusRoutine() {
 
 	bestHeight := uint64(0)
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
-	for ; true; <-ticker.C {
+	// TODO: change back to start immediately
+	for range ticker.C {
 		for _, peer := range m.sw.GetPeers().List() {
 			peer.Start()
 			protocolReactor.AddPeer(peer)
@@ -194,7 +195,7 @@ func (m *monitor) checkStatusRoutine() {
 				bestHeight = peerInfo.Height
 			}
 
-			// m.savePeerInfo(peerInfo)
+			m.savePeerInfo(peerInfo)
 		}
 		log.Info("bestHeight", bestHeight)
 
@@ -207,6 +208,7 @@ func (m *monitor) checkStatusRoutine() {
 			peers.RemovePeer(p.ID())
 		}
 
+		// TODO:
 		// msg := struct{ msgs.BlockchainMessage }{&msgs.GetBlockMessage{Height: bestHeight + 1}}
 		// for _, peer := range m.sw.GetPeers().List() {
 		// 	peers.SendMsg(peer.ID(), msgs.BlockchainChannel, msg)
