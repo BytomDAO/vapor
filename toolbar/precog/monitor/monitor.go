@@ -159,6 +159,10 @@ func (m *monitor) prepareReactors(peers *peers.PeerSet) error {
 	return m.sw.GetSecurity().Start()
 }
 
+// TODO:
+// 现象是，时间区间过小时，  会一直有 dial ，但是不能 send业务层 msg
+// 还不确定是不是死锁，时间调大一点比如10s 就可以正确运行
+// 想法，自己再另外加锁，或者找到锁住的真正原因
 func (m *monitor) checkStatusRoutine() {
 	peers := peers.NewPeerSet(m.sw)
 	if err := m.prepareReactors(peers); err != nil {
