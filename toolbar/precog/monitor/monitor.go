@@ -103,16 +103,13 @@ func makePath() (string, error) {
 func (m *monitor) Run() {
 	defer os.RemoveAll(m.nodeCfg.DBPath)
 
-	dbTx := m.db.Begin()
 	var seeds []string
 	for _, node := range m.cfg.Nodes {
 		seeds = append(seeds, fmt.Sprintf("%s:%d", node.Host, node.Port))
-		if err := m.upSertNode(dbTx, &node); err != nil {
-			dbTx.Rollback()
+		if err := m.upSertNode(&node); err != nil {
 			log.Error(err)
 		}
 	}
-	dbTx.Commit()
 	m.nodeCfg.P2P.Seeds = strings.Join(seeds, ",")
 	if err := m.makeSwitch(); err != nil {
 		log.Fatal(err)
@@ -180,7 +177,7 @@ func (m *monitor) checkStatusRoutine() {
 	bestHeight := uint64(0)
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for range ticker.C {
-		dbTx := m.db.Begin()
+		// m.Lock()
 		log.Info("connected peers: ", m.sw.GetPeers().List())
 
 		for _, peer := range m.sw.GetPeers().List() {
@@ -203,6 +200,8 @@ func (m *monitor) checkStatusRoutine() {
 			if peerInfo.Height > bestHeight {
 				bestHeight = peerInfo.Height
 			}
+
+			m.savePeerInfo(peerInfo)
 		}
 		log.Info("bestHeight: ", bestHeight)
 
@@ -221,14 +220,6 @@ func (m *monitor) checkStatusRoutine() {
 			peers.RemovePeer(p.ID())
 		}
 		log.Info("Disonnect all peers.")
-
-		for _, peerInfo := range peers.GetPeerInfos() {
-			if err := m.savePeerInfo(dbTx, peerInfo); err != nil {
-				dbTx.Rollback()
-				log.Error(err)
-				break
-			}
-		}
-		dbTx.Commit()
+		// m.Unlock()
 	}
 }

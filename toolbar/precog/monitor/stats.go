@@ -21,13 +21,13 @@ import (
 // TODO: update lantency, active_time and status
 
 // create or update: https://github.com/jinzhu/gorm/issues/1307
-func (m *monitor) upSertNode(dbTx *gorm.DB, node *config.Node) error {
+func (m *monitor) upSertNode(node *config.Node) error {
 	if node.XPub != nil {
 		node.PublicKey = fmt.Sprintf("%v", node.XPub.PublicKey().String())
 	}
 
 	ormNode := &orm.Node{PublicKey: node.PublicKey}
-	if err := dbTx.Where(&orm.Node{PublicKey: node.PublicKey}).First(ormNode).Error; err != nil && err != gorm.ErrRecordNotFound {
+	if err := m.db.Where(&orm.Node{PublicKey: node.PublicKey}).First(ormNode).Error; err != nil && err != gorm.ErrRecordNotFound {
 		return err
 	}
 
@@ -39,7 +39,7 @@ func (m *monitor) upSertNode(dbTx *gorm.DB, node *config.Node) error {
 	}
 	ormNode.Host = node.Host
 	ormNode.Port = node.Port
-	return dbTx.Where(&orm.Node{PublicKey: ormNode.PublicKey}).
+	return m.db.Where(&orm.Node{PublicKey: ormNode.PublicKey}).
 		Assign(&orm.Node{
 			Xpub:  ormNode.Xpub,
 			Alias: ormNode.Alias,
@@ -48,14 +48,14 @@ func (m *monitor) upSertNode(dbTx *gorm.DB, node *config.Node) error {
 		}).FirstOrCreate(ormNode).Error
 }
 
-func (m *monitor) savePeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error {
+func (m *monitor) savePeerInfo(peerInfo *peers.PeerInfo) error {
 	xPub := &chainkd.XPub{}
 	if err := xPub.UnmarshalText([]byte(peerInfo.ID)); err != nil {
 		return err
 	}
 
 	ormNode := &orm.Node{}
-	if err := dbTx.Model(&orm.Node{}).Where(&orm.Node{PublicKey: xPub.PublicKey().String()}).
+	if err := m.db.Model(&orm.Node{}).Where(&orm.Node{PublicKey: xPub.PublicKey().String()}).
 		UpdateColumn(&orm.Node{
 			Alias:      peerInfo.Moniker,
 			Xpub:       peerInfo.ID,
@@ -74,7 +74,7 @@ func (m *monitor) savePeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error {
 		// PingTimes     uint64
 		// PongTimes     uint64
 	}
-	if err := dbTx.Model(&orm.NodeLiveness{}).Where("node_id = ? AND status != ?", ormNode.ID, common.NodeOfflineStatus).
+	if err := m.db.Model(&orm.NodeLiveness{}).Where("node_id = ? AND status != ?", ormNode.ID, common.NodeOfflineStatus).
 		UpdateColumn(&orm.NodeLiveness{
 			BestHeight:    ormNodeLiveness.BestHeight,
 			AvgLantencyMS: ormNodeLiveness.AvgLantencyMS,

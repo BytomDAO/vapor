@@ -20,11 +20,10 @@ func (m *monitor) connectNodesRoutine() {
 }
 
 func (m *monitor) dialNodes() error {
+	// m.Lock()
 	log.Info("Start to reconnect to nodes...")
-	dbTx := m.db.Begin()
 	var nodes []*orm.Node
-	if err := dbTx.Model(&orm.Node{}).Find(&nodes).Error; err != nil {
-		dbTx.Rollback()
+	if err := m.db.Model(&orm.Node{}).Find(&nodes).Error; err != nil {
 		return err
 	}
 
@@ -47,6 +46,6 @@ func (m *monitor) dialNodes() error {
 	// connected peers will be skipped in switch.DialPeers()
 	m.sw.DialPeers(addresses)
 	log.Info("DialPeers done.")
-	dbTx.Commit()
+	// m.Unlock()
 	return nil
 }
