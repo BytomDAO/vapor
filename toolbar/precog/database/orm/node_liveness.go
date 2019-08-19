@@ -6,6 +6,7 @@ import (
 )
 
 type NodeLiveness struct {
+	ID            uint64 `gorm:"primary_key"`
 	NodeID        uint16
 	PingTimes     uint64
 	PongTimes     uint64

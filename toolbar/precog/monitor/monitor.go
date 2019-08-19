@@ -41,7 +41,7 @@ type monitor struct {
 // TODO: set myself as SPV?
 func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 	//TODO: for test
-	cfg.CheckFreqSeconds = 10
+	cfg.CheckFreqSeconds = 15
 
 	dbPath, err := makePath()
 	if err != nil {
@@ -161,7 +161,7 @@ func (m *monitor) prepareReactors(peers *peers.PeerSet) error {
 
 // TODO:
 // 现象是，时间区间过小时，  会一直有 dial ，但是不能 send业务层 msg
-// 还不确定是不是死锁，时间调大一点比如10s 就可以正确运行
+// 还不确定是不是死锁，时间调大一点比如15s 就可以正确运行
 // 想法，自己再另外加锁，或者找到锁住的真正原因
 func (m *monitor) checkStatusRoutine() {
 	peers := peers.NewPeerSet(m.sw)

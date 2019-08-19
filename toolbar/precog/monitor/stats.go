@@ -1,12 +1,14 @@
 package monitor
 
 import (
+	"database/sql"
 	"fmt"
 
 	"github.com/jinzhu/gorm"
 
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/netsync/peers"
+	"github.com/vapor/toolbar/precog/common"
 	"github.com/vapor/toolbar/precog/config"
 	"github.com/vapor/toolbar/precog/database/orm"
 )
@@ -59,6 +61,21 @@ func (m *monitor) savePeerInfo(peerInfo *peers.PeerInfo) error {
 			BestHeight: peerInfo.Height,
 			// LatestDailyUptimeMinutes uint64
 		}).First(ormNode).Error; err != nil {
+		return err
+	}
+
+	ormNodeLiveness := &orm.NodeLiveness{
+		NodeID:        ormNode.ID,
+		BestHeight:    ormNode.BestHeight,
+		AvgLantencyMS: sql.NullInt64{Int64: 1, Valid: true},
+		// PingTimes     uint64
+		// PongTimes     uint64
+	}
+	if err := m.db.Model(&orm.NodeLiveness{}).Where("node_id = ?, status is NOT ?", ormNode.ID, common.NodeOfflineStatus).
+		UpdateColumn(&orm.NodeLiveness{
+			BestHeight:    ormNodeLiveness.BestHeight,
+			AvgLantencyMS: ormNodeLiveness.AvgLantencyMS,
+		}).FirstOrCreate(ormNodeLiveness).Error; err != nil {
 		return err
 	}
 

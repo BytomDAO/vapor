@@ -5,6 +5,7 @@ import (
 )
 
 type Node struct {
+	ID                       uint16 `gorm:"primary_key"`
 	Alias                    string
 	Xpub                     string
 	PublicKey                string
