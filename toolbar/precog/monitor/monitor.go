@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/user"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -28,20 +29,21 @@ import (
 )
 
 type monitor struct {
-	cfg     *config.Config
-	db      *gorm.DB
-	nodeCfg *vaporCfg.Config
-	sw      *p2p.Switch
-	discvCh chan *dht.Node
-	privKey chainkd.XPrv
-	chain   *mock.Chain
-	txPool  *mock.Mempool
+	cfg       *config.Config
+	db        *gorm.DB
+	nodeCfg   *vaporCfg.Config
+	sw        *p2p.Switch
+	discvCh   chan *dht.Node
+	privKey   chainkd.XPrv
+	chain     *mock.Chain
+	txPool    *mock.Mempool
+	connected uint32
 }
 
 // TODO: set myself as SPV?
 func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 	//TODO: for test
-	cfg.CheckFreqSeconds = 15
+	cfg.CheckFreqSeconds = 30
 
 	dbPath, err := makePath()
 	if err != nil {
@@ -177,7 +179,10 @@ func (m *monitor) checkStatusRoutine() {
 	bestHeight := uint64(0)
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for range ticker.C {
-		log.Info("m.sw.GetPeers().List()", m.sw.GetPeers().List())
+		for !m.isConnected() {
+			time.Sleep(5 * time.Second)
+		}
+		log.Info("connected peers: ", m.sw.GetPeers().List())
 
 		for _, peer := range m.sw.GetPeers().List() {
 			peer.Start()
@@ -213,10 +218,26 @@ func (m *monitor) checkStatusRoutine() {
 			peers.RemovePeer(p.ID())
 		}
 
+		m.setDisonnected()
+		log.Info("Disonnect all peers.")
+
 		// TODO:
 		// msg := struct{ msgs.BlockchainMessage }{&msgs.GetBlockMessage{Height: bestHeight + 1}}
 		// for _, peer := range m.sw.GetPeers().List() {
 		// 	peers.SendMsg(peer.ID(), msgs.BlockchainChannel, msg)
 		// }
 	}
+}
+
+func (m *monitor) isConnected() bool {
+	atomic.LoadUint32(&m.connected)
+	return m.connected == uint32(1)
+}
+
+func (m *monitor) setConnected() {
+	atomic.StoreUint32(&m.connected, 1)
+}
+
+func (m *monitor) setDisonnected() {
+	atomic.StoreUint32(&m.connected, 0)
 }

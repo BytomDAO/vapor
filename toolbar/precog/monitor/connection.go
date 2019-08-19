@@ -20,6 +20,10 @@ func (m *monitor) connectNodesRoutine() {
 }
 
 func (m *monitor) dialNodes() error {
+	for m.isConnected() {
+		time.Sleep(5 * time.Second)
+	}
+	log.Info("Start to reconnect to peers...")
 	var nodes []*orm.Node
 	if err := m.db.Model(&orm.Node{}).Find(&nodes).Error; err != nil {
 		return err
@@ -43,5 +47,7 @@ func (m *monitor) dialNodes() error {
 
 	// connected peers will be skipped in switch.DialPeers()
 	m.sw.DialPeers(addresses)
+	m.setConnected()
+	log.Info("DialPeers done.")
 	return nil
 }
