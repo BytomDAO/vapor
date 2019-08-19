@@ -33,10 +33,7 @@ func (m *monitor) collectDiscoveredNodes() {
 			continue
 		}
 		log.Info("discover new node: ", node)
-
-		for m.isConnected() {
-			time.Sleep(1 * time.Second)
-		}
+		// m.Lock()
 		if err := m.upSertNode(&config.Node{
 			PublicKey: node.ID.String(),
 			Host:      node.IP.String(),
@@ -46,5 +43,6 @@ func (m *monitor) collectDiscoveredNodes() {
 		}
 
 		nodeMap[node.ID.String()] = node
+		// m.Unlock()
 	}
 }

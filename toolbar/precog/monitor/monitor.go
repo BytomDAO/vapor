@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/user"
 	"strings"
-	"sync/atomic"
+	// "sync"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -29,6 +29,7 @@ import (
 )
 
 type monitor struct {
+	// *sync.RWMutex
 	cfg       *config.Config
 	db        *gorm.DB
 	nodeCfg   *vaporCfg.Config
@@ -69,6 +70,7 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 	}
 
 	return &monitor{
+		// RWMutex: &sync.RWMutex{},
 		cfg:     cfg,
 		db:      db,
 		nodeCfg: nodeCfg,
@@ -161,10 +163,6 @@ func (m *monitor) prepareReactors(peers *peers.PeerSet) error {
 	return m.sw.GetSecurity().Start()
 }
 
-// TODO:
-// 现象是，时间区间过小时，  会一直有 dial ，但是不能 send业务层 msg
-// 还不确定是不是死锁，时间调大一点比如15s 就可以正确运行
-// 想法，自己再另外加锁，或者找到锁住的真正原因
 func (m *monitor) checkStatusRoutine() {
 	peers := peers.NewPeerSet(m.sw)
 	if err := m.prepareReactors(peers); err != nil {
@@ -179,9 +177,7 @@ func (m *monitor) checkStatusRoutine() {
 	bestHeight := uint64(0)
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for range ticker.C {
-		for !m.isConnected() {
-			time.Sleep(1 * time.Second)
-		}
+		// m.Lock()
 		log.Info("connected peers: ", m.sw.GetPeers().List())
 
 		for _, peer := range m.sw.GetPeers().List() {
@@ -223,21 +219,7 @@ func (m *monitor) checkStatusRoutine() {
 
 			peers.RemovePeer(p.ID())
 		}
-
-		m.setDisonnected()
 		log.Info("Disonnect all peers.")
+		// m.Unlock()
 	}
-}
-
-func (m *monitor) isConnected() bool {
-	atomic.LoadUint32(&m.connected)
-	return m.connected == uint32(1)
-}
-
-func (m *monitor) setConnected() {
-	atomic.StoreUint32(&m.connected, 1)
-}
-
-func (m *monitor) setDisonnected() {
-	atomic.StoreUint32(&m.connected, 0)
 }
