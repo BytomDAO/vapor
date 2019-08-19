@@ -209,6 +209,12 @@ func (m *monitor) checkStatusRoutine() {
 		}
 		log.Info("bestHeight", bestHeight)
 
+		// TODO:
+		// msg := struct{ msgs.BlockchainMessage }{&msgs.GetBlockMessage{Height: bestHeight + 1}}
+		// for _, peer := range m.sw.GetPeers().List() {
+		// 	peers.SendMsg(peer.ID(), msgs.BlockchainChannel, msg)
+		// }
+
 		for _, peer := range m.sw.GetPeers().List() {
 			p := peers.GetPeer(peer.ID())
 			if p == nil {
@@ -220,12 +226,6 @@ func (m *monitor) checkStatusRoutine() {
 
 		m.setDisonnected()
 		log.Info("Disonnect all peers.")
-
-		// TODO:
-		// msg := struct{ msgs.BlockchainMessage }{&msgs.GetBlockMessage{Height: bestHeight + 1}}
-		// for _, peer := range m.sw.GetPeers().List() {
-		// 	peers.SendMsg(peer.ID(), msgs.BlockchainChannel, msg)
-		// }
 	}
 }
 
