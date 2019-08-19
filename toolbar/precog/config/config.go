@@ -38,7 +38,7 @@ type Config struct {
 	MySQLConfig      common.MySQLConfig `json:"mysql"`
 	CheckFreqSeconds uint64             `json:"check_frequency_seconds"`
 	Policy           Policy             `json:"policy"`
-	Nodes            []Node             `json:"bootstrap_nodes"`
+	Nodes            []Node             `json:"seeds"`
 	API              API                `json:"api"`
 }
 

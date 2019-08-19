@@ -28,14 +28,16 @@ import (
 )
 
 type monitor struct {
-	cfg     *config.Config
-	db      *gorm.DB
-	nodeCfg *vaporCfg.Config
-	sw      *p2p.Switch
-	discvCh chan *dht.Node
-	privKey chainkd.XPrv
-	chain   *mock.Chain
-	txPool  *mock.Mempool
+	cfg               *config.Config
+	db                *gorm.DB
+	nodeCfg           *vaporCfg.Config
+	sw                *p2p.Switch
+	discvCh           chan *dht.Node
+	privKey           chainkd.XPrv
+	chain             *mock.Chain
+	txPool            *mock.Mempool
+	tryConnectStartCh chan struct{}
+	tryConnectEndCh   chan struct{}
 }
 
 // TODO: set myself as SPV?
@@ -67,13 +69,15 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 	}
 
 	return &monitor{
-		cfg:     cfg,
-		db:      db,
-		nodeCfg: nodeCfg,
-		discvCh: discvCh,
-		privKey: privKey.(chainkd.XPrv),
-		chain:   chain,
-		txPool:  txPool,
+		cfg:               cfg,
+		db:                db,
+		nodeCfg:           nodeCfg,
+		discvCh:           discvCh,
+		privKey:           privKey.(chainkd.XPrv),
+		chain:             chain,
+		txPool:            txPool,
+		tryConnectStartCh: make(chan struct{}, 1),
+		tryConnectEndCh:   make(chan struct{}, 1),
 	}
 }
 
