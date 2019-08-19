@@ -5,6 +5,7 @@ import (
 
 	"github.com/jinzhu/gorm"
 
+	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/netsync/peers"
 	"github.com/vapor/toolbar/precog/config"
 	"github.com/vapor/toolbar/precog/database/orm"
@@ -45,5 +46,19 @@ func (m *monitor) upSertNode(node *config.Node) error {
 }
 
 func (m *monitor) savePeerInfo(peerInfo *peers.PeerInfo) error {
+	xPub := &chainkd.XPub{}
+	if err := xPub.UnmarshalText([]peerInfo.ID()); err != nil {
+		return err
+	}
+
+	ormNode := &orm.Node{}
+	if err := m.db.Model(&orm.Node{}).Where(&orm.Node{PublicKey: xPub.PublicKey.String()}).
+		UpdateColumn(&orm.Node{
+			BestHeight: peerInfo.Height,
+			// LatestDailyUptimeMinutes uint64
+		}).First(ormNode).Error; err != nil {
+		return err
+	}
+
 	return nil
 }
