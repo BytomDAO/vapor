@@ -7,7 +7,7 @@ import (
 	"os/user"
 	"strings"
 	"sync"
-	"time"
+	// "time"
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
@@ -30,21 +30,21 @@ import (
 
 type monitor struct {
 	*sync.RWMutex
-	cfg       *config.Config
-	db        *gorm.DB
-	nodeCfg   *vaporCfg.Config
-	sw        *p2p.Switch
-	discvCh   chan *dht.Node
-	privKey   chainkd.XPrv
-	chain     *mock.Chain
-	txPool    *mock.Mempool
-	connected uint32
+	cfg           *config.Config
+	db            *gorm.DB
+	nodeCfg       *vaporCfg.Config
+	sw            *p2p.Switch
+	discvCh       chan *dht.Node
+	privKey       chainkd.XPrv
+	chain         *mock.Chain
+	txPool        *mock.Mempool
+	checkStatusCh chan struct{}
 }
 
 // TODO: set myself as SPV?
 func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 	//TODO: for test
-	cfg.CheckFreqSeconds = 15
+	cfg.CheckFreqSeconds = 180
 
 	dbPath, err := makePath()
 	if err != nil {
@@ -70,14 +70,15 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 	}
 
 	return &monitor{
-		RWMutex: &sync.RWMutex{},
-		cfg:     cfg,
-		db:      db,
-		nodeCfg: nodeCfg,
-		discvCh: discvCh,
-		privKey: privKey.(chainkd.XPrv),
-		chain:   chain,
-		txPool:  txPool,
+		RWMutex:       &sync.RWMutex{},
+		cfg:           cfg,
+		db:            db,
+		nodeCfg:       nodeCfg,
+		discvCh:       discvCh,
+		privKey:       privKey.(chainkd.XPrv),
+		chain:         chain,
+		txPool:        txPool,
+		checkStatusCh: make(chan struct{}, 1),
 	}
 }
 
@@ -175,9 +176,8 @@ func (m *monitor) checkStatusRoutine() {
 	}
 
 	bestHeight := uint64(0)
-	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
-	for range ticker.C {
-		m.Lock()
+	for range m.checkStatusCh {
+		// m.Lock()
 		log.Info("connected peers: ", m.sw.GetPeers().List())
 
 		for _, peer := range m.sw.GetPeers().List() {
@@ -220,6 +220,6 @@ func (m *monitor) checkStatusRoutine() {
 			peers.RemovePeer(p.ID())
 		}
 		log.Info("Disonnect all peers.")
-		m.Unlock()
+		// m.Unlock()
 	}
 }

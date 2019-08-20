@@ -56,6 +56,32 @@ func (m *monitor) savePeerInfo(peerInfo *peers.PeerInfo) error {
 	}
 
 	ormNode := &orm.Node{}
+	if err := m.db.Model(&orm.Node{}).Where(&orm.Node{PublicKey: xPub.PublicKey().String()}).First(ormNode).Error; err != nil {
+		return err
+	}
+
+	log.Debugf("peerInfo.Ping: %v", peerInfo.Ping)
+	ping, err := time.ParseDuration(peerInfo.Ping)
+	if err != nil {
+		log.Debugf("Parse ping time err: %v", err)
+	}
+
+	// TODO: preload?
+	ormNodeLiveness := &orm.NodeLiveness{
+		NodeID:        ormNode.ID,
+		BestHeight:    ormNode.BestHeight,
+		AvgLantencyMS: sql.NullInt64{Int64: ping.Nanoseconds() / 1000, Valid: true},
+		// PingTimes     uint64
+		// PongTimes     uint64
+	}
+	if err := m.db.Model(&orm.NodeLiveness{}).Where("node_id = ? AND status != ?", ormNode.ID, common.NodeOfflineStatus).
+		UpdateColumn(&orm.NodeLiveness{
+			BestHeight:    ormNodeLiveness.BestHeight,
+			AvgLantencyMS: ormNodeLiveness.AvgLantencyMS,
+		}).FirstOrCreate(ormNodeLiveness).Error; err != nil {
+		return err
+	}
+
 	if err := m.db.Model(&orm.Node{}).Where(&orm.Node{PublicKey: xPub.PublicKey().String()}).
 		UpdateColumn(&orm.Node{
 			Alias:      peerInfo.Moniker,
@@ -66,22 +92,5 @@ func (m *monitor) savePeerInfo(peerInfo *peers.PeerInfo) error {
 		return err
 	}
 
-	log.Debugf("peerInfo.Ping: %v", peerInfo.Ping)
-	ping, err := time.ParseDuration(peerInfo.Ping)
-	if err != nil {
-		log.Debugf("Parse ping time err: %v", err)
-	}
-
-	ormNodeLiveness := &orm.NodeLiveness{
-		NodeID:        ormNode.ID,
-		BestHeight:    ormNode.BestHeight,
-		AvgLantencyMS: sql.NullInt64{Int64: ping.Nanoseconds() / 1000, Valid: true},
-		// PingTimes     uint64
-		// PongTimes     uint64
-	}
-	return m.db.Model(&orm.NodeLiveness{}).Where("node_id = ? AND status != ?", ormNode.ID, common.NodeOfflineStatus).
-		UpdateColumn(&orm.NodeLiveness{
-			BestHeight:    ormNodeLiveness.BestHeight,
-			AvgLantencyMS: ormNodeLiveness.AvgLantencyMS,
-		}).FirstOrCreate(ormNodeLiveness).Error
+	return nil
 }

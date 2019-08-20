@@ -11,7 +11,7 @@ import (
 
 func (m *monitor) connectNodesRoutine() {
 	// TODO: change name?
-	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds+15) * time.Second)
+	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for ; true; <-ticker.C {
 		if err := m.dialNodes(); err != nil {
 			log.Error(err)
@@ -20,7 +20,7 @@ func (m *monitor) connectNodesRoutine() {
 }
 
 func (m *monitor) dialNodes() error {
-	m.Lock()
+	// m.Lock()
 	log.Info("Start to reconnect to nodes...")
 	var nodes []*orm.Node
 	if err := m.db.Model(&orm.Node{}).Find(&nodes).Error; err != nil {
@@ -46,6 +46,7 @@ func (m *monitor) dialNodes() error {
 	// connected peers will be skipped in switch.DialPeers()
 	m.sw.DialPeers(addresses)
 	log.Info("DialPeers done.")
-	m.Unlock()
+	m.checkStatusCh <- struct{}{}
+	// m.Unlock()
 	return nil
 }

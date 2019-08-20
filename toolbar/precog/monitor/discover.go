@@ -33,7 +33,7 @@ func (m *monitor) collectDiscoveredNodes() {
 			continue
 		}
 		log.Info("discover new node: ", node)
-		m.Lock()
+		// m.Lock()
 
 		if err := m.upSertNode(&config.Node{
 			PublicKey: node.ID.String(),
@@ -45,6 +45,6 @@ func (m *monitor) collectDiscoveredNodes() {
 			log.Error(err)
 		}
 
-		m.Unlock()
+		// m.Unlock()
 	}
 }
