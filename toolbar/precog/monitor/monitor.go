@@ -44,7 +44,7 @@ type monitor struct {
 // TODO: set myself as SPV?
 func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 	//TODO: for test
-	cfg.CheckFreqSeconds = 120
+	cfg.CheckFreqSeconds = 15
 
 	dbPath, err := makePath()
 	if err != nil {
