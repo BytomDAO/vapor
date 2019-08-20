@@ -3,6 +3,7 @@ package monitor
 import (
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
@@ -65,12 +66,16 @@ func (m *monitor) savePeerInfo(peerInfo *peers.PeerInfo) error {
 		return err
 	}
 
-	log.Debug("peerInfo.Ping:", peerInfo.Ping)
+	log.Debugf("peerInfo.Ping: %v", peerInfo.Ping)
+	ping, err := time.ParseDuration(peerInfo.Ping)
+	if err != nil {
+		log.Debugf("Parse ping time err: %v", err)
+	}
 
 	ormNodeLiveness := &orm.NodeLiveness{
 		NodeID:        ormNode.ID,
 		BestHeight:    ormNode.BestHeight,
-		AvgLantencyMS: sql.NullInt64{Int64: 1, Valid: true},
+		AvgLantencyMS: sql.NullInt64{Int64: ping.Nanoseconds() / 1000, Valid: true},
 		// PingTimes     uint64
 		// PongTimes     uint64
 	}
