@@ -38,6 +38,7 @@ type monitor struct {
 	privKey       chainkd.XPrv
 	chain         *mock.Chain
 	txPool        *mock.Mempool
+	dialCh        chan struct{}
 	checkStatusCh chan struct{}
 }
 
@@ -78,6 +79,7 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 		privKey:       privKey.(chainkd.XPrv),
 		chain:         chain,
 		txPool:        txPool,
+		dialCh:        make(chan struct{}, 1),
 		checkStatusCh: make(chan struct{}, 1),
 	}
 }
@@ -116,6 +118,7 @@ func (m *monitor) Run() {
 		log.Fatal(err)
 	}
 
+	m.dialCh <- struct{}{}
 	go m.discoveryRoutine()
 	go m.collectDiscoveredNodes()
 	go m.connectNodesRoutine()
@@ -221,5 +224,6 @@ func (m *monitor) checkStatusRoutine() {
 		}
 		log.Info("Disonnect all peers.")
 		// m.Unlock()
+		m.dialCh <- struct{}{}
 	}
 }
