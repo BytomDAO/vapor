@@ -49,10 +49,10 @@ func (m *monitor) upSertNode(node *config.Node) error {
 		}).FirstOrCreate(ormNode).Error
 }
 
-func (m *monitor) savePeerInfos(peerInfos []*peers.PeerInfo) error {
+func (m *monitor) processPeerInfos(peerInfos []*peers.PeerInfo) error {
 	for _, peerInfo := range peerInfos {
 		dbTx := m.db.Begin()
-		if err := m.savePeerInfo(dbTx, peerInfo); err != nil {
+		if err := m.processPeerInfo(dbTx, peerInfo); err != nil {
 			log.Error(err)
 			dbTx.Rollback()
 		} else {
@@ -63,7 +63,7 @@ func (m *monitor) savePeerInfos(peerInfos []*peers.PeerInfo) error {
 	return nil
 }
 
-func (m *monitor) savePeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error {
+func (m *monitor) processPeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error {
 	xPub := &chainkd.XPub{}
 	if err := xPub.UnmarshalText([]byte(peerInfo.ID)); err != nil {
 		return err

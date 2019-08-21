@@ -198,7 +198,7 @@ func (m *monitor) checkStatusRoutine() {
 			}
 		}
 		log.Info("bestHeight: ", bestHeight)
-		m.savePeerInfos(peers.GetPeerInfos())
+		m.processPeerInfos(peers.GetPeerInfos())
 
 		// TODO:
 		// msg := struct{ msgs.BlockchainMessage }{&msgs.GetBlockMessage{Height: bestHeight + 1}}
