@@ -50,20 +50,25 @@ func (m *monitor) upSertNode(node *config.Node) error {
 }
 
 func (m *monitor) savePeerInfos(peerInfos []*peers.PeerInfo) error {
+	dbTx := m.db.Begin()
 	for _, peerInfo := range peerInfos {
-		m.savePeerInfo(peerInfo)
+		if err := m.savePeerInfo(dbTx, peerInfo); err != nil {
+			dbTx.Rollback()
+			return err
+		}
 	}
-	return nil
+
+	return dbTx.Commit().Error
 }
 
-func (m *monitor) savePeerInfo(peerInfo *peers.PeerInfo) error {
+func (m *monitor) savePeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error {
 	xPub := &chainkd.XPub{}
 	if err := xPub.UnmarshalText([]byte(peerInfo.ID)); err != nil {
 		return err
 	}
 
 	ormNode := &orm.Node{}
-	if err := m.db.Model(&orm.Node{}).Where(&orm.Node{PublicKey: xPub.PublicKey().String()}).First(ormNode).Error; err != nil {
+	if err := dbTx.Model(&orm.Node{}).Where(&orm.Node{PublicKey: xPub.PublicKey().String()}).First(ormNode).Error; err != nil {
 		return err
 	}
 
@@ -81,7 +86,7 @@ func (m *monitor) savePeerInfo(peerInfo *peers.PeerInfo) error {
 		// PingTimes     uint64
 		// PongTimes     uint64
 	}
-	if err := m.db.Model(&orm.NodeLiveness{}).Where("node_id = ? AND status != ?", ormNode.ID, common.NodeOfflineStatus).
+	if err := dbTx.Model(&orm.NodeLiveness{}).Where("node_id = ? AND status != ?", ormNode.ID, common.NodeOfflineStatus).
 		UpdateColumn(&orm.NodeLiveness{
 			BestHeight:    ormNodeLiveness.BestHeight,
 			AvgLantencyMS: ormNodeLiveness.AvgLantencyMS,
@@ -89,7 +94,7 @@ func (m *monitor) savePeerInfo(peerInfo *peers.PeerInfo) error {
 		return err
 	}
 
-	if err := m.db.Model(&orm.Node{}).Where(&orm.Node{PublicKey: xPub.PublicKey().String()}).
+	if err := dbTx.Model(&orm.Node{}).Where(&orm.Node{PublicKey: xPub.PublicKey().String()}).
 		UpdateColumn(&orm.Node{
 			Alias:      peerInfo.Moniker,
 			Xpub:       peerInfo.ID,
