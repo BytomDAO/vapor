@@ -50,15 +50,17 @@ func (m *monitor) upSertNode(node *config.Node) error {
 }
 
 func (m *monitor) savePeerInfos(peerInfos []*peers.PeerInfo) error {
-	dbTx := m.db.Begin()
 	for _, peerInfo := range peerInfos {
+		dbTx := m.db.Begin()
 		if err := m.savePeerInfo(dbTx, peerInfo); err != nil {
+			log.Error(err)
 			dbTx.Rollback()
-			return err
+		} else {
+			dbTx.Commit()
 		}
 	}
 
-	return dbTx.Commit().Error
+	return nil
 }
 
 func (m *monitor) savePeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error {
