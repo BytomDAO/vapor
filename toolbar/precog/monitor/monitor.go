@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/user"
 	"strings"
-	"sync"
+	// "sync"
 	// "time"
 
 	"github.com/jinzhu/gorm"
@@ -29,7 +29,7 @@ import (
 )
 
 type monitor struct {
-	*sync.RWMutex
+	// *sync.RWMutex
 	cfg           *config.Config
 	db            *gorm.DB
 	nodeCfg       *vaporCfg.Config
@@ -72,7 +72,7 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 	}
 
 	return &monitor{
-		RWMutex:       &sync.RWMutex{},
+		// RWMutex:       &sync.RWMutex{},
 		cfg:           cfg,
 		db:            db,
 		nodeCfg:       nodeCfg,
@@ -169,7 +169,6 @@ func (m *monitor) prepareReactors(peers *peers.PeerSet) error {
 }
 
 func (m *monitor) checkStatusRoutine() {
-	// TODO: peers problem????
 	peers := peers.NewPeerSet(m.sw)
 	if err := m.prepareReactors(peers); err != nil {
 		log.Fatal(err)
@@ -185,13 +184,10 @@ func (m *monitor) checkStatusRoutine() {
 		// m.Lock()
 
 		for _, peer := range m.sw.GetPeers().List() {
-			peers.AddPeer(peer)
 			peer.Start()
 			protocolReactor.AddPeer(peer)
 		}
-		log.Info("connected peers: ", m.sw.GetPeers().List())
-		log.Info("peers: ", peers)
-
+		log.Infof("%d connected peers: %v", len(m.sw.GetPeers().List()), m.sw.GetPeers().List())
 		for _, peer := range m.sw.GetPeers().List() {
 			p := peers.GetPeer(peer.ID())
 			if p == nil {
@@ -199,8 +195,8 @@ func (m *monitor) checkStatusRoutine() {
 			}
 
 			if err := p.SendStatus(m.chain.BestBlockHeader(), m.chain.LastIrreversibleHeader()); err != nil {
-				// log.Error(err)
-				// peers.RemovePeer(p.ID())
+				log.Error(err)
+				peers.RemovePeer(p.ID())
 			}
 		}
 
