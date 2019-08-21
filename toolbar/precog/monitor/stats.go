@@ -49,6 +49,10 @@ func (m *monitor) upSertNode(node *config.Node) error {
 		}).FirstOrCreate(ormNode).Error
 }
 
+func (m *monitor) processDialResult() error {
+	return nil
+}
+
 func (m *monitor) processPeerInfos(peerInfos []*peers.PeerInfo) error {
 	for _, peerInfo := range peerInfos {
 		dbTx := m.db.Begin()

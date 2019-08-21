@@ -45,6 +45,7 @@ func (m *monitor) dialNodes() error {
 	// connected peers will be skipped in switch.DialPeers()
 	m.sw.DialPeers(addresses)
 	log.Info("DialPeers done.")
+	m.processDialResult()
 	m.checkStatusCh <- struct{}{}
 	return nil
 }
