@@ -40,12 +40,13 @@ type monitor struct {
 	txPool        *mock.Mempool
 	dialCh        chan struct{}
 	checkStatusCh chan struct{}
+	// peers         *peers.PeerSet
 }
 
 // TODO: set myself as SPV?
 func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 	//TODO: for test
-	cfg.CheckFreqSeconds = 180
+	cfg.CheckFreqSeconds = 15
 
 	dbPath, err := makePath()
 	if err != nil {
@@ -168,6 +169,7 @@ func (m *monitor) prepareReactors(peers *peers.PeerSet) error {
 }
 
 func (m *monitor) checkStatusRoutine() {
+	// TODO: peers problem????
 	peers := peers.NewPeerSet(m.sw)
 	if err := m.prepareReactors(peers); err != nil {
 		log.Fatal(err)
@@ -181,12 +183,14 @@ func (m *monitor) checkStatusRoutine() {
 	bestHeight := uint64(0)
 	for range m.checkStatusCh {
 		// m.Lock()
-		log.Info("connected peers: ", m.sw.GetPeers().List())
 
 		for _, peer := range m.sw.GetPeers().List() {
+			peers.AddPeer(peer)
 			peer.Start()
 			protocolReactor.AddPeer(peer)
 		}
+		log.Info("connected peers: ", m.sw.GetPeers().List())
+		log.Info("peers: ", peers)
 
 		for _, peer := range m.sw.GetPeers().List() {
 			p := peers.GetPeer(peer.ID())
@@ -195,7 +199,8 @@ func (m *monitor) checkStatusRoutine() {
 			}
 
 			if err := p.SendStatus(m.chain.BestBlockHeader(), m.chain.LastIrreversibleHeader()); err != nil {
-				peers.RemovePeer(p.ID())
+				// log.Error(err)
+				// peers.RemovePeer(p.ID())
 			}
 		}
 
