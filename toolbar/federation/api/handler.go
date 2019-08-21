@@ -57,3 +57,12 @@ func (s *Server) ListCrosschainTxs(c *gin.Context, listTxsReq *listCrosschainTxs
 
 	return ormTxs, nil
 }
+
+func (s *Server) ListChains(c *gin.Context) ([]*orm.Chain, error) {
+	var chains []*orm.Chain
+	if err := s.db.Find(&chains).Error; err != nil {
+		return nil, err
+	}
+
+	return chains, nil
+}
