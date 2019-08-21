@@ -174,10 +174,10 @@ func (m *monitor) checkStatusRoutine() {
 		log.Fatal(err)
 	}
 
-	protocolReactor, ok := m.sw.GetReactors()["PROTOCOL"]
-	if !ok {
-		log.Fatal("protocolReactor not found")
-	}
+	// protocolReactor, ok := m.sw.GetReactors()["PROTOCOL"]
+	// if !ok {
+	// 	log.Fatal("protocolReactor not found")
+	// }
 
 	bestHeight := uint64(0)
 	for range m.checkStatusCh {
@@ -185,7 +185,9 @@ func (m *monitor) checkStatusRoutine() {
 
 		for _, peer := range m.sw.GetPeers().List() {
 			peer.Start()
-			protocolReactor.AddPeer(peer)
+			peers.AddPeer(peer)
+			// protocolReactor.AddPeer(peer)
+			// protocolReactor.AddPeer(peer)
 		}
 		log.Infof("%d connected peers: %v", len(m.sw.GetPeers().List()), m.sw.GetPeers().List())
 		for _, peer := range m.sw.GetPeers().List() {
