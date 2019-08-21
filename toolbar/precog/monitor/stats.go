@@ -49,6 +49,13 @@ func (m *monitor) upSertNode(node *config.Node) error {
 		}).FirstOrCreate(ormNode).Error
 }
 
+func (m *monitor) savePeerInfos(peerInfos []*peers.PeerInfo) error {
+	for _, peerInfo := range peerInfos {
+		m.savePeerInfo(peerInfo)
+	}
+	return nil
+}
+
 func (m *monitor) savePeerInfo(peerInfo *peers.PeerInfo) error {
 	xPub := &chainkd.XPub{}
 	if err := xPub.UnmarshalText([]byte(peerInfo.ID)); err != nil {

@@ -196,10 +196,9 @@ func (m *monitor) checkStatusRoutine() {
 			if peerInfo.Height > bestHeight {
 				bestHeight = peerInfo.Height
 			}
-
-			m.savePeerInfo(peerInfo)
 		}
 		log.Info("bestHeight: ", bestHeight)
+		m.savePeerInfos(peers.GetPeerInfos())
 
 		// TODO:
 		// msg := struct{ msgs.BlockchainMessage }{&msgs.GetBlockMessage{Height: bestHeight + 1}}
