@@ -40,7 +40,6 @@ type monitor struct {
 	txPool        *mock.Mempool
 	dialCh        chan struct{}
 	checkStatusCh chan struct{}
-	// peers         *peers.PeerSet
 }
 
 // TODO: set myself as SPV?
@@ -180,6 +179,7 @@ func (m *monitor) checkStatusRoutine() {
 			peers.AddPeer(peer)
 		}
 		log.Infof("%d connected peers: %v", len(m.sw.GetPeers().List()), m.sw.GetPeers().List())
+
 		for _, peer := range m.sw.GetPeers().List() {
 			p := peers.GetPeer(peer.ID())
 			if p == nil {
