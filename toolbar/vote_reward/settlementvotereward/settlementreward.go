@@ -2,6 +2,7 @@ package settlementvotereward
 
 import (
 	"bytes"
+	"encoding/json"
 	"math/big"
 
 	"github.com/jinzhu/gorm"
@@ -34,6 +35,13 @@ type SettlementReward struct {
 	rewards     map[string]uint64
 	startHeight uint64
 	endHeight   uint64
+}
+
+type memo struct {
+	StartHeight uint64 `json:"start_height"`
+	EndHeight   uint64 `json:"end_height"`
+	NodePubkey  string `json:"node_pubkey"`
+	RewardRatio uint64 `json:"reward_ratio"`
 }
 
 func NewSettlementReward(db *gorm.DB, cfg *config.Config, startHeight, endHeight uint64) *SettlementReward {
@@ -85,8 +93,19 @@ func (s *SettlementReward) Settlement() error {
 		return errNotRewardTx
 	}
 
+	data, err := json.Marshal(&memo{
+		StartHeight: s.startHeight,
+		EndHeight:   s.endHeight,
+		NodePubkey:  s.rewardCfg.XPub,
+		RewardRatio: s.rewardCfg.RewardRatio,
+	})
+	if err != nil {
+		return err
+	}
+
 	// send transactions
-	return s.node.BatchSendBTM(s.rewardCfg.AccountID, s.rewardCfg.Password, s.rewards)
+	_, err = s.node.BatchSendBTM(s.rewardCfg.AccountID, s.rewardCfg.Password, s.rewards, data)
+	return err
 }
 
 func (s *SettlementReward) getStandbyNodeReward(height uint64) (uint64, error) {

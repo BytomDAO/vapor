@@ -3,6 +3,8 @@ package consensusreward
 import (
 	"math/big"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
 	"github.com/vapor/toolbar/apinode"
@@ -57,6 +59,7 @@ func (s *StandbyNodeReward) Settlement() error {
 			return err
 		}
 	}
+
 	rewards := map[string]uint64{}
 	for _, item := range s.cfg.RewardConf.Node {
 		if reward, ok := s.xpubRewards[item.XPub]; ok {
@@ -67,5 +70,14 @@ func (s *StandbyNodeReward) Settlement() error {
 	if len(rewards) == 0 {
 		return nil
 	}
-	return s.node.BatchSendBTM(s.cfg.RewardConf.AccountID, s.cfg.RewardConf.Password, rewards)
+
+	txID, err := s.node.BatchSendBTM(s.cfg.RewardConf.AccountID, s.cfg.RewardConf.Password, rewards, []byte{})
+	if err == nil {
+		log.WithFields(log.Fields{
+			"tx_hash":      txID,
+			"start_height": s.startHeight,
+			"end_height":   s.endHeight,
+		}).Info("success on submit consensus reward transaction")
+	}
+	return err
 }

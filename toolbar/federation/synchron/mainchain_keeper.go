@@ -141,6 +141,10 @@ func locateSideChainTx(output *types.TxOutput) string {
 		return ""
 	}
 
+	if insts[0].Op != vm.OP_FAIL {
+		return ""
+	}
+
 	return string(insts[1].Data)
 }
 
