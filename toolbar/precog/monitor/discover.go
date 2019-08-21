@@ -19,7 +19,6 @@ func (m *monitor) discoveryRoutine() {
 	for range ticker.C {
 		nodes := make([]*dht.Node, nodesToDiscv)
 		n := m.sw.GetDiscv().ReadRandomNodes(nodes)
-		// TODO: improve
 		for i := 0; i < n; i++ {
 			m.discvCh <- nodes[i]
 		}
@@ -34,9 +33,6 @@ func (m *monitor) collectDiscoveredNodes() {
 			continue
 		}
 		log.Info("discover new node: ", node)
-		// m.Lock()
-
-		return
 
 		if err := m.upSertNode(&config.Node{
 			PublicKey: node.ID.String(),
@@ -47,7 +43,5 @@ func (m *monitor) collectDiscoveredNodes() {
 		} else {
 			log.Error(err)
 		}
-
-		// m.Unlock()
 	}
 }

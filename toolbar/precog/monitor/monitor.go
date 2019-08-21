@@ -175,8 +175,6 @@ func (m *monitor) checkStatusRoutine() {
 
 	bestHeight := uint64(0)
 	for range m.checkStatusCh {
-		// m.Lock()
-
 		for _, peer := range m.sw.GetPeers().List() {
 			peer.Start()
 			peers.AddPeer(peer)
@@ -218,7 +216,6 @@ func (m *monitor) checkStatusRoutine() {
 			peers.RemovePeer(p.ID())
 		}
 		log.Info("Disonnect all peers.")
-		// m.Unlock()
 		m.dialCh <- struct{}{}
 	}
 }

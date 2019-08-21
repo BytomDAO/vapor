@@ -10,7 +10,6 @@ import (
 )
 
 func (m *monitor) connectNodesRoutine() {
-	// TODO: change name?
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for ; true; <-ticker.C {
 		<-m.dialCh
@@ -21,7 +20,6 @@ func (m *monitor) connectNodesRoutine() {
 }
 
 func (m *monitor) dialNodes() error {
-	// m.Lock()
 	log.Info("Start to reconnect to nodes...")
 	var nodes []*orm.Node
 	if err := m.db.Model(&orm.Node{}).Find(&nodes).Error; err != nil {
@@ -48,6 +46,5 @@ func (m *monitor) dialNodes() error {
 	m.sw.DialPeers(addresses)
 	log.Info("DialPeers done.")
 	m.checkStatusCh <- struct{}{}
-	// m.Unlock()
 	return nil
 }
