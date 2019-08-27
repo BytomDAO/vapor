@@ -13,6 +13,7 @@ func (m *monitor) connectNodesRoutine() {
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqSeconds) * time.Second)
 	for ; true; <-ticker.C {
 		<-m.dialCh
+		m.Lock()
 		if err := m.dialNodes(); err != nil {
 			log.Error(err)
 		}

@@ -24,8 +24,9 @@ func (m *monitor) discoveryRoutine(discvWg *sync.WaitGroup) {
 		m.Lock()
 		for i := 0; i < n; i++ {
 			m.discvCh <- nodes[i]
-			// wg.Add(1)
+			discvWg.Add(1)
 		}
+		discvWg.Wait()
 		m.Unlock()
 	}
 }
@@ -48,5 +49,7 @@ func (m *monitor) collectDiscoveredNodes(discvWg *sync.WaitGroup) {
 		} else {
 			log.Error(err)
 		}
+
+		discvWg.Done()
 	}
 }
