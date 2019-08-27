@@ -51,10 +51,9 @@ func (m *monitor) processDialResults() error {
 		return err
 	}
 
-	// connected peers
 	xPub := &chainkd.XPub{}
 	connMap := make(map[string]bool, len(ormNodes))
-	log.Info(connMap)
+	// connected peers
 	for _, peer := range m.sw.GetPeers().List() {
 		if err := xPub.UnmarshalText([]byte(peer.Key)); err != nil {
 			log.Error(err)
@@ -74,7 +73,7 @@ func (m *monitor) processDialResults() error {
 			continue
 		}
 
-		if err := m.processOfflinePeer(ormNode.PublicKey); err != nil {
+		if err := m.processOfflinePeer(ormNode); err != nil {
 			log.Error(err)
 		}
 	}
@@ -94,8 +93,12 @@ func (m *monitor) processConnectedPeer(publicKey string, peer *p2p.Peer) error {
 	return nil
 }
 
-// TODO:
-func (m *monitor) processOfflinePeer(publicKey string) error {
+func (m *monitor) processOfflinePeer(ormNode *orm.Node) error {
+	return m.db.Model(&orm.NodeLiveness{}).
+		Where(&orm.NodeLiveness{NodeID: ormNode.ID}).
+		UpdateColumn(&orm.NodeLiveness{
+			Status: common.NodeOfflineStatus,
+		}).Error
 }
 
 func (m *monitor) processPeerInfos(peerInfos []*peers.PeerInfo) error {
