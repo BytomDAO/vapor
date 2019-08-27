@@ -157,7 +157,9 @@ func (m *monitor) processPeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error
 		}
 	}
 	ormNodeLiveness.PongTimes += 1
-	ormNodeLiveness.BestHeight = peerInfo.Height
+	if peerInfo.Height != 0 {
+		ormNodeLiveness.BestHeight = peerInfo.Height
+	}
 	if err := dbTx.Save(ormNodeLiveness).Error; err != nil {
 		return err
 	}
