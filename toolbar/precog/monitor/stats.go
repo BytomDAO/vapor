@@ -16,12 +16,6 @@ import (
 	"github.com/vapor/toolbar/precog/database/orm"
 )
 
-// TODO: get lantency
-// TODO: get best_height
-// TODO: decide check_height("best best_height" - "confirmations")
-// TODO: get blockhash by check_height, get latency
-// TODO: update lantency, active_time and status
-
 // create or update: https://github.com/jinzhu/gorm/issues/1307
 func (m *monitor) upSertNode(node *config.Node) error {
 	if node.XPub != nil {
@@ -50,7 +44,6 @@ func (m *monitor) upSertNode(node *config.Node) error {
 		}).FirstOrCreate(ormNode).Error
 }
 
-// TODO: add start time here
 func (m *monitor) processDialResults() error {
 	for _, peer := range m.sw.GetPeers().List() {
 		if err := m.processDialResult(peer); err != nil {
@@ -60,7 +53,20 @@ func (m *monitor) processDialResults() error {
 	return nil
 }
 
+// TODO: add start time here
 func (m *monitor) processDialResult(peer *p2p.Peer) error {
+	xPub := &chainkd.XPub{}
+	if err := xPub.UnmarshalText([]byte(peer.Key)); err != nil {
+		return err
+	}
+
+	ormNodeLiveness := &orm.NodeLiveness{}
+	if err := m.db.Model(&orm.NodeLiveness{}).
+		Joins("join nodes on nodes.id = node_livenesses.node_id").
+		Where("nodes.public_key = ?", xPub.PublicKey().String()).First(ormNodeLiveness).Error; err != nil {
+		return err
+	}
+
 	return nil
 }
 
