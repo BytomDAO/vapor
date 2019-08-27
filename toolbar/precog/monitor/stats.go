@@ -45,16 +45,20 @@ func (m *monitor) upSertNode(node *config.Node) error {
 }
 
 func (m *monitor) processDialResults() error {
-	log.Info("================================================================")
 	var ormNodes []*orm.Node
 	if err := m.db.Model(&orm.Node{}).Find(&ormNodes).Error; err != nil {
 		return err
 	}
 
-	xPub := &chainkd.XPub{}
+	publicKeyMap := make(map[string]*orm.Node, len(ormNodes))
+	for _, ormNode := range ormNodes {
+		publicKeyMap[ormNode.PublicKey] = ormNode
+	}
+
 	connMap := make(map[string]bool, len(ormNodes))
 	// connected peers
 	for _, peer := range m.sw.GetPeers().List() {
+		xPub := &chainkd.XPub{}
 		if err := xPub.UnmarshalText([]byte(peer.Key)); err != nil {
 			log.Error(err)
 			continue
@@ -62,7 +66,7 @@ func (m *monitor) processDialResults() error {
 
 		publicKey := xPub.PublicKey().String()
 		connMap[publicKey] = true
-		if err := m.processConnectedPeer(publicKey, peer); err != nil {
+		if err := m.processConnectedPeer(publicKeyMap[publicKey], peer); err != nil {
 			log.Error(err)
 		}
 	}
@@ -81,16 +85,24 @@ func (m *monitor) processDialResults() error {
 	return nil
 }
 
-// TODO: add start time here
-func (m *monitor) processConnectedPeer(publicKey string, peer *p2p.Peer) error {
+func (m *monitor) processConnectedPeer(ormNode *orm.Node, peer *p2p.Peer) error {
 	ormNodeLiveness := &orm.NodeLiveness{}
-	if err := m.db.Model(&orm.NodeLiveness{}).
-		Joins("join nodes on nodes.id = node_livenesses.node_id").
-		Where("nodes.public_key = ?", publicKey).First(ormNodeLiveness).Error; err != nil {
+	err := m.db.Model(&orm.NodeLiveness{}).Joins("join nodes on nodes.id = node_livenesses.node_id").
+		Where("nodes.public_key = ? AND status != ?", ormNode.PublicKey, common.NodeOfflineStatus).Last(ormNodeLiveness).Error
+	if err == nil {
+		return m.db.Model(&orm.NodeLiveness{}).Where(ormNodeLiveness).UpdateColumn(&orm.NodeLiveness{
+			PingTimes: ormNodeLiveness.PingTimes + 1,
+		}).Error
+	} else if err != gorm.ErrRecordNotFound {
 		return err
 	}
 
-	return nil
+	// gorm.ErrRecordNotFound
+	return m.db.Create(&orm.NodeLiveness{
+		NodeID:    ormNode.ID,
+		PingTimes: 1,
+		Status:    common.NodeUnknownStatus,
+	}).Error
 }
 
 func (m *monitor) processOfflinePeer(ormNode *orm.Node) error {
@@ -115,6 +127,7 @@ func (m *monitor) processPeerInfos(peerInfos []*peers.PeerInfo) error {
 	return nil
 }
 
+// TODO: fix pong time
 func (m *monitor) processPeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error {
 	xPub := &chainkd.XPub{}
 	if err := xPub.UnmarshalText([]byte(peerInfo.ID)); err != nil {
@@ -126,7 +139,7 @@ func (m *monitor) processPeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error
 		return err
 	}
 
-	log.Debugf("peerInfo.Ping: %v", peerInfo.Ping)
+	log.Debugf("peerInfo Ping: %v", peerInfo.Ping)
 	ping, err := time.ParseDuration(peerInfo.Ping)
 	if err != nil {
 		log.Debugf("Parse ping time err: %v", err)
