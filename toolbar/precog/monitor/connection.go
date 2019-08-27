@@ -42,6 +42,7 @@ func (m *monitor) dialNodes() error {
 		addresses = append(addresses, address)
 	}
 
+	// TODO: add start time here
 	// connected peers will be skipped in switch.DialPeers()
 	m.sw.DialPeers(addresses)
 	log.Info("DialPeers done.")

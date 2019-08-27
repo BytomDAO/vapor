@@ -32,7 +32,7 @@ func (m *monitor) collectDiscoveredNodes() {
 		if n, ok := nodeMap[node.ID.String()]; ok && n.String() == node.String() {
 			continue
 		}
-		log.Info("discover new node: ", node)
+		log.Infof("discover new node: %v", node)
 
 		if err := m.upSertNode(&config.Node{
 			PublicKey: node.ID.String(),

@@ -155,7 +155,7 @@ func (m *monitor) prepareReactors(peers *peers.PeerSet) error {
 	}
 
 	for label, reactor := range m.sw.GetReactors() {
-		log.Debug("start reactor: (%s:%v)", label, reactor)
+		log.Debugf("start reactor: (%s:%v)", label, reactor)
 		if _, err := reactor.Start(); err != nil {
 			return nil
 		}
