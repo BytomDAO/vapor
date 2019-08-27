@@ -127,7 +127,6 @@ func (m *monitor) processPeerInfos(peerInfos []*peers.PeerInfo) error {
 	return nil
 }
 
-// TODO: fix pong time
 func (m *monitor) processPeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error {
 	xPub := &chainkd.XPub{}
 	if err := xPub.UnmarshalText([]byte(peerInfo.ID)); err != nil {
@@ -145,19 +144,21 @@ func (m *monitor) processPeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error
 		log.Debugf("Parse ping time err: %v", err)
 	}
 
-	// TODO: preload?
-	ormNodeLiveness := &orm.NodeLiveness{
-		NodeID:        ormNode.ID,
-		BestHeight:    ormNode.BestHeight,
-		AvgLantencyMS: sql.NullInt64{Int64: ping.Nanoseconds() / 1000, Valid: true},
-		// PingTimes     uint64
-		// PongTimes     uint64
+	ormNodeLiveness := &orm.NodeLiveness{}
+	if err := dbTx.Model(&orm.NodeLiveness{}).Where("node_id = ? AND status != ?", ormNode.ID, common.NodeOfflineStatus).Last(ormNodeLiveness).Error; err != nil {
+		return err
 	}
-	if err := dbTx.Model(&orm.NodeLiveness{}).Where("node_id = ? AND status != ?", ormNode.ID, common.NodeOfflineStatus).
-		UpdateColumn(&orm.NodeLiveness{
-			BestHeight:    ormNodeLiveness.BestHeight,
-			AvgLantencyMS: ormNodeLiveness.AvgLantencyMS,
-		}).FirstOrCreate(ormNodeLiveness).Error; err != nil {
+
+	lantencyMS := ping.Nanoseconds() / 1000
+	if lantencyMS != 0 {
+		ormNodeLiveness.AvgLantencyMS = sql.NullInt64{
+			Int64: (ormNodeLiveness.AvgLantencyMS.Int64*int64(ormNodeLiveness.PongTimes) + lantencyMS) / int64(ormNodeLiveness.PongTimes+1),
+			Valid: true,
+		}
+	}
+	ormNodeLiveness.PongTimes += 1
+	ormNodeLiveness.BestHeight = peerInfo.Height
+	if err := dbTx.Save(ormNodeLiveness).Error; err != nil {
 		return err
 	}
 
