@@ -10,6 +10,7 @@ import (
 
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/netsync/peers"
+	"github.com/vapor/p2p"
 	"github.com/vapor/toolbar/precog/common"
 	"github.com/vapor/toolbar/precog/config"
 	"github.com/vapor/toolbar/precog/database/orm"
@@ -49,7 +50,20 @@ func (m *monitor) upSertNode(node *config.Node) error {
 		}).FirstOrCreate(ormNode).Error
 }
 
-func (m *monitor) processDialResult() error {
+func (m *monitor) processDialResults() error {
+	for _, peer := range m.sw.GetPeers().List() {
+		dbTx := m.db.Begin()
+		if err := m.processDialResult(dbTx, peer); err != nil {
+			log.Error(err)
+			dbTx.Rollback()
+		} else {
+			dbTx.Commit()
+		}
+	}
+	return nil
+}
+
+func (m *monitor) processDialResult(dbTx *gorm.DB, peer *p2p.Peer) error {
 	return nil
 }
 
