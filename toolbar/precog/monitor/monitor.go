@@ -119,8 +119,9 @@ func (m *monitor) Run() {
 	}
 
 	m.dialCh <- struct{}{}
-	go m.discoveryRoutine()
-	go m.collectDiscoveredNodes()
+	var discvWg sync.WaitGroup
+	go m.discoveryRoutine(&discvWg)
+	go m.collectDiscoveredNodes(&discvWg)
 	go m.connectNodesRoutine()
 	go m.checkStatusRoutine()
 }

@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -14,20 +15,22 @@ var (
 	discvFreqSec = 60
 )
 
-func (m *monitor) discoveryRoutine() {
+func (m *monitor) discoveryRoutine(discvWg *sync.WaitGroup) {
 	ticker := time.NewTicker(time.Duration(discvFreqSec) * time.Second)
+
 	for range ticker.C {
 		nodes := make([]*dht.Node, nodesToDiscv)
 		n := m.sw.GetDiscv().ReadRandomNodes(nodes)
 		m.Lock()
 		for i := 0; i < n; i++ {
 			m.discvCh <- nodes[i]
+			// wg.Add(1)
 		}
 		m.Unlock()
 	}
 }
 
-func (m *monitor) collectDiscoveredNodes() {
+func (m *monitor) collectDiscoveredNodes(discvWg *sync.WaitGroup) {
 	// nodeMap maps a node's public key to the node itself
 	nodeMap := make(map[string]*dht.Node)
 	for node := range m.discvCh {
