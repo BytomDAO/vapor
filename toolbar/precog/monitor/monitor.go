@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/user"
 	"strings"
-	// "sync"
+	"sync"
 	// "time"
 
 	"github.com/jinzhu/gorm"
@@ -29,7 +29,7 @@ import (
 )
 
 type monitor struct {
-	// *sync.RWMutex
+	*sync.RWMutex
 	cfg           *config.Config
 	db            *gorm.DB
 	nodeCfg       *vaporCfg.Config
@@ -71,7 +71,7 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 	}
 
 	return &monitor{
-		// RWMutex:       &sync.RWMutex{},
+		RWMutex:       &sync.RWMutex{},
 		cfg:           cfg,
 		db:            db,
 		nodeCfg:       nodeCfg,
