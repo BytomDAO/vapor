@@ -7,7 +7,6 @@ import (
 	"os/user"
 	"strings"
 	"sync"
-	// "time"
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
@@ -18,9 +17,8 @@ import (
 	"github.com/vapor/event"
 	"github.com/vapor/netsync/chainmgr"
 	"github.com/vapor/netsync/consensusmgr"
-	"github.com/vapor/p2p"
-	// msgs "github.com/vapor/netsync/messages"
 	"github.com/vapor/netsync/peers"
+	"github.com/vapor/p2p"
 	"github.com/vapor/p2p/discover/dht"
 	"github.com/vapor/p2p/discover/mdns"
 	"github.com/vapor/p2p/signlib"
@@ -200,12 +198,6 @@ func (m *monitor) checkStatusRoutine() {
 		}
 		log.Info("bestHeight: ", bestHeight)
 		m.processPeerInfos(peers.GetPeerInfos())
-
-		// TODO:
-		// msg := struct{ msgs.BlockchainMessage }{&msgs.GetBlockMessage{Height: bestHeight + 1}}
-		// for _, peer := range m.sw.GetPeers().List() {
-		// 	peers.SendMsg(peer.ID(), msgs.BlockchainChannel, msg)
-		// }
 
 		for _, peer := range m.sw.GetPeers().List() {
 			p := peers.GetPeer(peer.ID())
