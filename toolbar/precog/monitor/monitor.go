@@ -28,14 +28,15 @@ import (
 
 type monitor struct {
 	*sync.RWMutex
-	cfg           *config.Config
-	db            *gorm.DB
-	nodeCfg       *vaporCfg.Config
-	sw            *p2p.Switch
-	discvCh       chan *dht.Node
-	privKey       chainkd.XPrv
-	chain         *mock.Chain
-	txPool        *mock.Mempool
+	cfg     *config.Config
+	db      *gorm.DB
+	nodeCfg *vaporCfg.Config
+	sw      *p2p.Switch
+	privKey chainkd.XPrv
+	chain   *mock.Chain
+	txPool  *mock.Mempool
+	// nodeMap maps a node's public key to the node itself
+	nodeMap       map[string]*dht.Node
 	dialCh        chan struct{}
 	checkStatusCh chan struct{}
 }
@@ -57,7 +58,6 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 	}
 	nodeCfg.DBPath = dbPath
 	nodeCfg.ChainID = "mainnet"
-	discvCh := make(chan *dht.Node)
 	privKey, err := signlib.NewPrivKey()
 	if err != nil {
 		log.Fatal(err)
@@ -73,10 +73,10 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 		cfg:           cfg,
 		db:            db,
 		nodeCfg:       nodeCfg,
-		discvCh:       discvCh,
 		privKey:       privKey.(chainkd.XPrv),
 		chain:         chain,
 		txPool:        txPool,
+		nodeMap:       make(map[string]*dht.Node),
 		dialCh:        make(chan struct{}, 1),
 		checkStatusCh: make(chan struct{}, 1),
 	}
@@ -117,9 +117,9 @@ func (m *monitor) Run() {
 	}
 
 	m.dialCh <- struct{}{}
-	var discvWg sync.WaitGroup
-	go m.discoveryRoutine(&discvWg)
-	go m.collectDiscoveredNodes(&discvWg)
+	// var discvWg sync.WaitGroup
+	go m.discoveryRoutine( /*&discvWg*/ )
+	// go m.collectDiscoveredNodes(&discvWg)
 	go m.connectNodesRoutine()
 	go m.checkStatusRoutine()
 }

@@ -1,7 +1,6 @@
 package monitor
 
 import (
-	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -15,27 +14,18 @@ var (
 	discvFreqSec = 60
 )
 
-func (m *monitor) discoveryRoutine(discvWg *sync.WaitGroup) {
+func (m *monitor) discoveryRoutine( /*discvWg *sync.WaitGroup*/ ) {
 	ticker := time.NewTicker(time.Duration(discvFreqSec) * time.Second)
-
 	for range ticker.C {
 		nodes := make([]*dht.Node, nodesToDiscv)
 		n := m.sw.GetDiscv().ReadRandomNodes(nodes)
-		m.Lock()
-		for i := 0; i < n; i++ {
-			m.discvCh <- nodes[i]
-			discvWg.Add(1)
-		}
-		discvWg.Wait()
-		m.Unlock()
+		m.collectDiscoveredNodes(nodes[:n])
 	}
 }
 
-func (m *monitor) collectDiscoveredNodes(discvWg *sync.WaitGroup) {
-	// nodeMap maps a node's public key to the node itself
-	nodeMap := make(map[string]*dht.Node)
-	for node := range m.discvCh {
-		if n, ok := nodeMap[node.ID.String()]; ok && n.String() == node.String() {
+func (m *monitor) collectDiscoveredNodes(nodes []*dht.Node) {
+	for _, node := range nodes {
+		if n, ok := m.nodeMap[node.ID.String()]; ok && n.String() == node.String() {
 			continue
 		}
 		log.Infof("discover new node: %v", node)
@@ -45,11 +35,9 @@ func (m *monitor) collectDiscoveredNodes(discvWg *sync.WaitGroup) {
 			Host:      node.IP.String(),
 			Port:      node.TCP,
 		}); err == nil {
-			nodeMap[node.ID.String()] = node
+			m.nodeMap[node.ID.String()] = node
 		} else {
 			log.Error(err)
 		}
-
-		discvWg.Done()
 	}
 }
