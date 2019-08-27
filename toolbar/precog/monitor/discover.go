@@ -19,12 +19,14 @@ func (m *monitor) discoveryRoutine( /*discvWg *sync.WaitGroup*/ ) {
 	for range ticker.C {
 		nodes := make([]*dht.Node, nodesToDiscv)
 		n := m.sw.GetDiscv().ReadRandomNodes(nodes)
-		m.collectDiscoveredNodes(nodes[:n])
+		for i := 0; i < n; i++ {
+			m.discvCh <- nodes[i]
+		}
 	}
 }
 
-func (m *monitor) collectDiscoveredNodes(nodes []*dht.Node) {
-	for _, node := range nodes {
+func (m *monitor) collectDiscoveredNodes() {
+	for node := range m.discvCh {
 		if n, ok := m.nodeMap[node.ID.String()]; ok && n.String() == node.String() {
 			continue
 		}

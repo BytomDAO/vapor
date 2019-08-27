@@ -35,6 +35,7 @@ type monitor struct {
 	privKey chainkd.XPrv
 	chain   *mock.Chain
 	txPool  *mock.Mempool
+	discvCh chan *dht.Node
 	// nodeMap maps a node's public key to the node itself
 	nodeMap       map[string]*dht.Node
 	dialCh        chan struct{}
@@ -76,6 +77,7 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 		privKey:       privKey.(chainkd.XPrv),
 		chain:         chain,
 		txPool:        txPool,
+		discvCh:       make(chan *dht.Node),
 		nodeMap:       make(map[string]*dht.Node),
 		dialCh:        make(chan struct{}, 1),
 		checkStatusCh: make(chan struct{}, 1),
