@@ -14,7 +14,7 @@ var (
 	discvFreqSec = 60
 )
 
-func (m *monitor) discoveryRoutine( /*discvWg *sync.WaitGroup*/ ) {
+func (m *monitor) discoveryRoutine() {
 	ticker := time.NewTicker(time.Duration(discvFreqSec) * time.Second)
 	for range ticker.C {
 		nodes := make([]*dht.Node, nodesToDiscv)
@@ -26,8 +26,10 @@ func (m *monitor) discoveryRoutine( /*discvWg *sync.WaitGroup*/ ) {
 }
 
 func (m *monitor) collectDiscoveredNodes() {
+	// nodeMap maps a node's public key to the node itself
+	nodeMap := make(map[string]*dht.Node)
 	for node := range m.discvCh {
-		if n, ok := m.nodeMap[node.ID.String()]; ok && n.String() == node.String() {
+		if n, ok := nodeMap[node.ID.String()]; ok && n.String() == node.String() {
 			continue
 		}
 		log.Infof("discover new node: %v", node)
@@ -37,7 +39,7 @@ func (m *monitor) collectDiscoveredNodes() {
 			Host:      node.IP.String(),
 			Port:      node.TCP,
 		}); err == nil {
-			m.nodeMap[node.ID.String()] = node
+			nodeMap[node.ID.String()] = node
 		} else {
 			log.Error(err)
 		}
