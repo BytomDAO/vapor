@@ -1,4 +1,7 @@
 {
+    "api" : {
+        "listening_port" : 3009
+    }, 
     "network_id": 10817814959495988245,
     "mysql" : {
         "connection" : {

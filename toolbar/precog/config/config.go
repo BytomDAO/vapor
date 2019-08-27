@@ -56,7 +56,7 @@ type Node struct {
 }
 
 type API struct {
-	ListeningPort bool   `json:"listening_port"`
+	ListeningPort uint64 `json:"listening_port"`
 	AccessToken   string `json:"access_token"`
 	IsReleaseMode bool   `json:"is_release_mode"`
 }
