@@ -45,29 +45,57 @@ func (m *monitor) upSertNode(node *config.Node) error {
 }
 
 func (m *monitor) processDialResults() error {
+	log.Info("================================================================")
+	var ormNodes []*orm.Node
+	if err := m.db.Model(&orm.Node{}).Find(&ormNodes).Error; err != nil {
+		return err
+	}
+
+	// connected peers
+	xPub := &chainkd.XPub{}
+	connMap := make(map[string]bool, len(ormNodes))
+	log.Info(connMap)
 	for _, peer := range m.sw.GetPeers().List() {
-		if err := m.processDialResult(peer); err != nil {
+		if err := xPub.UnmarshalText([]byte(peer.Key)); err != nil {
+			log.Error(err)
+			continue
+		}
+
+		publicKey := xPub.PublicKey().String()
+		connMap[publicKey] = true
+		if err := m.processConnectedPeer(publicKey, peer); err != nil {
 			log.Error(err)
 		}
 	}
+
+	// offline peers
+	for _, ormNode := range ormNodes {
+		if _, ok := connMap[ormNode.PublicKey]; ok {
+			continue
+		}
+
+		if err := m.processOfflinePeer(ormNode.PublicKey); err != nil {
+			log.Error(err)
+		}
+	}
+
 	return nil
 }
 
 // TODO: add start time here
-func (m *monitor) processDialResult(peer *p2p.Peer) error {
-	xPub := &chainkd.XPub{}
-	if err := xPub.UnmarshalText([]byte(peer.Key)); err != nil {
-		return err
-	}
-
+func (m *monitor) processConnectedPeer(publicKey string, peer *p2p.Peer) error {
 	ormNodeLiveness := &orm.NodeLiveness{}
 	if err := m.db.Model(&orm.NodeLiveness{}).
 		Joins("join nodes on nodes.id = node_livenesses.node_id").
-		Where("nodes.public_key = ?", xPub.PublicKey().String()).First(ormNodeLiveness).Error; err != nil {
+		Where("nodes.public_key = ?", publicKey).First(ormNodeLiveness).Error; err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// TODO:
+func (m *monitor) processOfflinePeer(publicKey string) error {
 }
 
 func (m *monitor) processPeerInfos(peerInfos []*peers.PeerInfo) error {
