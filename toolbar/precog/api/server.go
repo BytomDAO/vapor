@@ -25,7 +25,7 @@ func NewApiServer(cfg *config.Config, db *gorm.DB) *server {
 func (s *server) Run() {
 	router := gin.Default()
 
-	router.POST("/list-nodes", listNodes)
+	// router.POST("/list-nodes", listNodes)
 
 	router.Run(fmt.Sprintf(":%d", s.cfg.API.ListeningPort))
 }
