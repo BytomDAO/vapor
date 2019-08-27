@@ -1,9 +1,13 @@
 package api
 
 import (
+	"fmt"
+
+	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 
 	"github.com/vapor/toolbar/precog/config"
+	"github.com/vapor/toolbar/precog/database/orm"
 )
 
 type server struct {
@@ -19,9 +23,14 @@ func NewApiServer(cfg *config.Config, db *gorm.DB) *server {
 }
 
 func (s *server) Run() {
-	// setup gin
+	router := gin.Default()
 
-	// disable log
+	router.POST("/list-nodes", listNodes)
 
-	// set up router, bind handler
+	router.Run(fmt.Sprintf(":%d", s.cfg.API.ListeningPort))
+}
+
+// TODO: cannot use listNodes (type func(*gin.Context) ([]*orm.Node, error)) as type gin.HandlerFunc in argument to router.RouterGroup.POST
+func listNodes(_ *gin.Context) ([]*orm.Node, error) {
+	return nil, nil
 }
