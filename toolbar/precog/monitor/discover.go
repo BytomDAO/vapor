@@ -22,13 +22,14 @@ func (m *monitor) discoveryRoutine(discvWg *sync.WaitGroup) {
 		nodes := make([]*dht.Node, nodesToDiscv)
 		num := m.sw.GetDiscv().ReadRandomNodes(nodes)
 		for i := 0; i < num; i++ {
-			if n, ok := m.discvMap[nodes[i].ID.String()]; ok && n.String() == nodes[i].String() {
+			node := nodes[i]
+			if n, ok := m.discvMap[node.ID.String()]; ok && n.String() == node.String() {
 				continue
 			}
 
-			log.Infof("discover new node: %v", nodes[i])
+			log.Infof("discover new node: %v", node)
 			discvWg.Add(1)
-			m.discvCh <- nodes[i]
+			m.discvCh <- node
 		}
 		discvWg.Wait()
 		m.Unlock()

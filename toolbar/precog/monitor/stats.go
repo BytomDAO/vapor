@@ -50,20 +50,17 @@ func (m *monitor) upSertNode(node *config.Node) error {
 		}).FirstOrCreate(ormNode).Error
 }
 
+// TODO: add start time here
 func (m *monitor) processDialResults() error {
 	for _, peer := range m.sw.GetPeers().List() {
-		dbTx := m.db.Begin()
-		if err := m.processDialResult(dbTx, peer); err != nil {
+		if err := m.processDialResult(peer); err != nil {
 			log.Error(err)
-			dbTx.Rollback()
-		} else {
-			dbTx.Commit()
 		}
 	}
 	return nil
 }
 
-func (m *monitor) processDialResult(dbTx *gorm.DB, peer *p2p.Peer) error {
+func (m *monitor) processDialResult(peer *p2p.Peer) error {
 	return nil
 }
 
