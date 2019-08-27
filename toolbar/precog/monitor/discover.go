@@ -19,9 +19,11 @@ func (m *monitor) discoveryRoutine() {
 	for range ticker.C {
 		nodes := make([]*dht.Node, nodesToDiscv)
 		n := m.sw.GetDiscv().ReadRandomNodes(nodes)
+		m.Lock()
 		for i := 0; i < n; i++ {
 			m.discvCh <- nodes[i]
 		}
+		m.Unlock()
 	}
 }
 
