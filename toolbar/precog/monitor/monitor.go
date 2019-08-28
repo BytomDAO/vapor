@@ -35,9 +35,8 @@ type monitor struct {
 	chain   *mock.Chain
 	txPool  *mock.Mempool
 	// discvMap maps a node's public key to the node itself
-	discvMap map[string]*dht.Node
-	dialCh   chan struct{}
-	// TODO: maybe remove?
+	discvMap      map[string]*dht.Node
+	dialCh        chan struct{}
 	checkStatusCh chan struct{}
 }
 
