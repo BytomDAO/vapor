@@ -1,7 +1,6 @@
 package monitor
 
 import (
-	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -15,38 +14,34 @@ var (
 	discvFreqSec = 60
 )
 
-func (m *monitor) discoveryRoutine(discvWg *sync.WaitGroup) {
+func (m *monitor) discoveryRoutine() {
 	ticker := time.NewTicker(time.Duration(discvFreqSec) * time.Second)
 	for range ticker.C {
 		m.Lock()
+
 		nodes := make([]*dht.Node, nodesToDiscv)
 		num := m.sw.GetDiscv().ReadRandomNodes(nodes)
-		for i := 0; i < num; i++ {
-			node := nodes[i]
+		for _, node := range nodes[:num] {
 			if n, ok := m.discvMap[node.ID.String()]; ok && n.String() == node.String() {
 				continue
 			}
 
 			log.Infof("discover new node: %v", node)
-			discvWg.Add(1)
-			m.discvCh <- node
+			m.saveDiscoveredNode(node)
 		}
-		discvWg.Wait()
+
 		m.Unlock()
 	}
 }
 
-func (m *monitor) collectDiscoveredNodes(discvWg *sync.WaitGroup) {
-	for node := range m.discvCh {
-		if err := m.upSertNode(&config.Node{
-			PublicKey: node.ID.String(),
-			Host:      node.IP.String(),
-			Port:      node.TCP,
-		}); err == nil {
-			m.discvMap[node.ID.String()] = node
-		} else {
-			log.Error(err)
-		}
-		discvWg.Done()
+func (m *monitor) saveDiscoveredNode(node *dht.Node) {
+	if err := m.upSertNode(&config.Node{
+		PublicKey: node.ID.String(),
+		Host:      node.IP.String(),
+		Port:      node.TCP,
+	}); err == nil {
+		m.discvMap[node.ID.String()] = node
+	} else {
+		log.Error(err)
 	}
 }

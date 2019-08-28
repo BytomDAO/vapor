@@ -36,7 +36,6 @@ type monitor struct {
 	txPool  *mock.Mempool
 	// discvMap maps a node's public key to the node itself
 	discvMap map[string]*dht.Node
-	discvCh  chan *dht.Node
 	dialCh   chan struct{}
 	// TODO: maybe remove?
 	checkStatusCh chan struct{}
@@ -78,7 +77,6 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 		chain:         chain,
 		txPool:        txPool,
 		discvMap:      make(map[string]*dht.Node),
-		discvCh:       make(chan *dht.Node),
 		dialCh:        make(chan struct{}, 1),
 		checkStatusCh: make(chan struct{}, 1),
 	}
@@ -112,9 +110,7 @@ func (m *monitor) Run() {
 	}
 
 	m.dialCh <- struct{}{}
-	var discvWg sync.WaitGroup
-	go m.discoveryRoutine(&discvWg)
-	go m.collectDiscoveredNodes(&discvWg)
+	go m.discoveryRoutine()
 	go m.connectNodesRoutine()
 	go m.checkStatusRoutine()
 }
