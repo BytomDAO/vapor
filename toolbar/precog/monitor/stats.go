@@ -144,40 +144,54 @@ func (m *monitor) processPeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error
 		log.Debugf("parse ping time err: %v", err)
 	}
 
+	now := time.Now()
+	yesterday := now.Add(-24 * time.Hour)
 	var ormNodeLivenesses []*orm.NodeLiveness
 	if err := dbTx.Model(&orm.NodeLiveness{}).
-		Where("node_id = ? AND updated_at > ?", ormNode.ID, time.Now().Add(-24*time.Hour)).
+		Where("node_id = ? AND updated_at >= ?", ormNode.ID, yesterday).
 		Order(fmt.Sprintf("created_at %s", "DESC")).
 		Find(&ormNodeLivenesses).Error; err != nil {
 		return err
 	}
 
-	lastLiveness := ormNodeLivenesses[0]
-	if lastLiveness.Status == common.NodeOfflineStatus {
+	// update latest liveness
+	latestLiveness := ormNodeLivenesses[0]
+	if latestLiveness.Status == common.NodeOfflineStatus {
 		return fmt.Errorf("node %s latest liveness status error", ormNode.PublicKey)
 	}
 
 	lantencyMS := ping.Nanoseconds() / 1000
 	if lantencyMS != 0 {
-		lastLiveness.AvgLantencyMS = sql.NullInt64{
-			Int64: (lastLiveness.AvgLantencyMS.Int64*int64(lastLiveness.PongTimes) + lantencyMS) / int64(lastLiveness.PongTimes+1),
+		latestLiveness.AvgLantencyMS = sql.NullInt64{
+			Int64: (latestLiveness.AvgLantencyMS.Int64*int64(latestLiveness.PongTimes) + lantencyMS) / int64(latestLiveness.PongTimes+1),
 			Valid: true,
 		}
 	}
-	lastLiveness.PongTimes += 1
+	latestLiveness.PongTimes += 1
 	if peerInfo.Height != 0 {
-		lastLiveness.BestHeight = peerInfo.Height
+		latestLiveness.BestHeight = peerInfo.Height
 	}
-	if err := dbTx.Save(lastLiveness).Error; err != nil {
+	if err := dbTx.Save(latestLiveness).Error; err != nil {
 		return err
+	}
+
+	// calc LatestDailyUptimeMinutes
+	total := 0 * time.Minute
+	ormNodeLivenesses[0].UpdatedAt = now
+	for _, ormNodeLiveness := range ormNodeLivenesses {
+		if ormNodeLiveness.CreatedAt.Before(yesterday) {
+			ormNodeLiveness.CreatedAt = yesterday
+		}
+
+		total += ormNodeLiveness.UpdatedAt.Sub(ormNodeLiveness.CreatedAt)
 	}
 
 	if err := dbTx.Model(&orm.Node{}).Where(&orm.Node{PublicKey: xPub.PublicKey().String()}).
 		UpdateColumn(&orm.Node{
-			Alias:      peerInfo.Moniker,
-			Xpub:       peerInfo.ID,
-			BestHeight: peerInfo.Height,
-			// LatestDailyUptimeMinutes uint64
+			Alias:                    peerInfo.Moniker,
+			Xpub:                     peerInfo.ID,
+			BestHeight:               peerInfo.Height,
+			LatestDailyUptimeMinutes: uint64(total.Minutes()),
 		}).First(ormNode).Error; err != nil {
 		return err
 	}
