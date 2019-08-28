@@ -186,15 +186,11 @@ func (m *monitor) processPeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error
 		total += ormNodeLiveness.UpdatedAt.Sub(ormNodeLiveness.CreatedAt)
 	}
 
-	if err := dbTx.Model(&orm.Node{}).Where(&orm.Node{PublicKey: xPub.PublicKey().String()}).
+	return dbTx.Model(&orm.Node{}).Where(&orm.Node{PublicKey: xPub.PublicKey().String()}).
 		UpdateColumn(&orm.Node{
 			Alias:                    peerInfo.Moniker,
 			Xpub:                     peerInfo.ID,
 			BestHeight:               peerInfo.Height,
 			LatestDailyUptimeMinutes: uint64(total.Minutes()),
-		}).First(ormNode).Error; err != nil {
-		return err
-	}
-
-	return nil
+		}).First(ormNode).Error
 }
