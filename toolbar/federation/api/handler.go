@@ -10,11 +10,12 @@ import (
 	"github.com/vapor/errors"
 	"github.com/vapor/toolbar/federation/common"
 	"github.com/vapor/toolbar/federation/database/orm"
+	serverCommon "github.com/vapor/toolbar/server"
 )
 
-type listCrosschainTxsReq struct{ Display }
+type listCrosschainTxsReq struct{ serverCommon.Display }
 
-func (s *Server) ListCrosschainTxs(c *gin.Context, listTxsReq *listCrosschainTxsReq, query *PaginationQuery) ([]*orm.CrossTransaction, error) {
+func (s *Server) ListCrosschainTxs(c *gin.Context, listTxsReq *listCrosschainTxsReq, query *serverCommon.PaginationQuery) ([]*orm.CrossTransaction, error) {
 	var ormTxs []*orm.CrossTransaction
 	txFilter := &orm.CrossTransaction{}
 
