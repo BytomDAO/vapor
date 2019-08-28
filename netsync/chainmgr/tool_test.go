@@ -38,6 +38,7 @@ func NewP2PPeer(addr, id string, flag consensus.ServiceFlag) *P2PPeer {
 		async: false,
 	}
 }
+
 func (p *P2PPeer) Addr() net.Addr {
 	return p.ip
 }
