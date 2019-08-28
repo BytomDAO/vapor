@@ -99,8 +99,6 @@ func makePath() (string, error) {
 }
 
 func (m *monitor) Run() {
-	defer os.RemoveAll(m.nodeCfg.DBPath)
-
 	var seeds []string
 	for _, node := range m.cfg.Nodes {
 		seeds = append(seeds, fmt.Sprintf("%s:%d", node.Host, node.Port))
