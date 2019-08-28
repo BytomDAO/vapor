@@ -38,6 +38,10 @@ func (bp *basePeer) ID() string {
 	return bp.id
 }
 
+func (bp *basePeer) Moniker() string {
+	return ""
+}
+
 func (bp *basePeer) RemoteAddrHost() string {
 	switch bp.ID() {
 	case peer1ID:

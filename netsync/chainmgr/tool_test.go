@@ -38,7 +38,6 @@ func NewP2PPeer(addr, id string, flag consensus.ServiceFlag) *P2PPeer {
 		async: false,
 	}
 }
-
 func (p *P2PPeer) Addr() net.Addr {
 	return p.ip
 }
@@ -49,6 +48,10 @@ func (p *P2PPeer) ID() string {
 
 func (p *P2PPeer) IsLAN() bool {
 	return false
+}
+
+func (p *P2PPeer) Moniker() string {
+	return ""
 }
 
 func (p *P2PPeer) RemoteAddrHost() string {
