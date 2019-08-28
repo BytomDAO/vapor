@@ -147,7 +147,7 @@ func (m *monitor) processPeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error
 	var ormNodeLivenesses []*orm.NodeLiveness
 	if err := dbTx.Model(&orm.NodeLiveness{}).
 		Where("node_id = ? AND updated_at > ?", ormNode.ID, time.Now().Add(-24*time.Hour)).
-		Order(fmt.Sprintf("created_at", "DESC")).
+		Order(fmt.Sprintf("created_at %s", "DESC")).
 		Find(&ormNodeLivenesses).Error; err != nil {
 		return err
 	}
