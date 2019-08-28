@@ -84,7 +84,6 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 	}
 }
 
-// TODO: need to fix temp and "discover"
 func makePath() (string, error) {
 	usr, err := user.Current()
 	if err != nil {
