@@ -5,7 +5,7 @@ import (
 	"github.com/jinzhu/gorm"
 
 	"github.com/vapor/toolbar/federation/config"
-	"github.com/vapor/toolbar/server"
+	serverCommon "github.com/vapor/toolbar/server"
 )
 
 type Server struct {
@@ -28,11 +28,11 @@ func NewServer(db *gorm.DB, cfg *config.Config) *Server {
 
 func (s *Server) setupRouter() {
 	r := gin.Default()
-	r.Use(server.Middleware(s))
+	r.Use(serverCommon.Middleware(s))
 
 	v1 := r.Group("/api/v1")
-	v1.POST("/federation/list-crosschain-txs", server.HandlerMiddleware(s.ListCrosschainTxs))
-	v1.GET("/federation/list-chains", server.HandlerMiddleware(s.ListChains))
+	v1.POST("/federation/list-crosschain-txs", serverCommon.HandlerMiddleware(s.ListCrosschainTxs))
+	v1.GET("/federation/list-chains", serverCommon.HandlerMiddleware(s.ListChains))
 
 	s.engine = r
 }
