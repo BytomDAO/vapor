@@ -138,29 +138,37 @@ func (m *monitor) processPeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error
 		return err
 	}
 
-	log.Debugf("peerInfo Ping: %v", peerInfo.Ping)
+	log.Debugf("peerInfo ping: %v", peerInfo.Ping)
 	ping, err := time.ParseDuration(peerInfo.Ping)
 	if err != nil {
-		log.Debugf("Parse ping time err: %v", err)
+		log.Debugf("parse ping time err: %v", err)
 	}
 
-	ormNodeLiveness := &orm.NodeLiveness{}
-	if err := dbTx.Model(&orm.NodeLiveness{}).Where("node_id = ? AND status != ?", ormNode.ID, common.NodeOfflineStatus).Last(ormNodeLiveness).Error; err != nil {
+	var ormNodeLivenesses []*orm.NodeLiveness
+	if err := dbTx.Model(&orm.NodeLiveness{}).
+		Where("node_id = ? AND updated_at > ?", ormNode.ID, time.Now().Add(-24*time.Hour)).
+		Order(fmt.Sprintf("created_at", "DESC")).
+		Find(ormNodeLivenesses).Error; err != nil {
 		return err
+	}
+
+	lastLiveness := ormNodeLivenesses[0]
+	if lastLiveness.Status == common.NodeOfflineStatus {
+		return fmt.Errorf("node %s latest liveness status error", ormNode.PublicKey)
 	}
 
 	lantencyMS := ping.Nanoseconds() / 1000
 	if lantencyMS != 0 {
-		ormNodeLiveness.AvgLantencyMS = sql.NullInt64{
-			Int64: (ormNodeLiveness.AvgLantencyMS.Int64*int64(ormNodeLiveness.PongTimes) + lantencyMS) / int64(ormNodeLiveness.PongTimes+1),
+		lastLiveness.AvgLantencyMS = sql.NullInt64{
+			Int64: (lastLiveness.AvgLantencyMS.Int64*int64(lastLiveness.PongTimes) + lantencyMS) / int64(lastLiveness.PongTimes+1),
 			Valid: true,
 		}
 	}
-	ormNodeLiveness.PongTimes += 1
+	lastLiveness.PongTimes += 1
 	if peerInfo.Height != 0 {
-		ormNodeLiveness.BestHeight = peerInfo.Height
+		lastLiveness.BestHeight = peerInfo.Height
 	}
-	if err := dbTx.Save(ormNodeLiveness).Error; err != nil {
+	if err := dbTx.Save(lastLiveness).Error; err != nil {
 		return err
 	}
 
