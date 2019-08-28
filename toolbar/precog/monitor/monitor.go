@@ -198,6 +198,7 @@ func (m *monitor) checkStatusRoutine() {
 			peers.RemovePeer(p.ID())
 		}
 		log.Info("Disonnect all peers.")
+
 		m.Unlock()
 		m.dialCh <- struct{}{}
 	}
