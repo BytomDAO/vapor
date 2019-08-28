@@ -36,7 +36,7 @@ func NewConfigWithPath(path string) *Config {
 type Config struct {
 	NetworkID        uint64             `json:"network_id"`
 	MySQLConfig      common.MySQLConfig `json:"mysql"`
-	CheckFreqSeconds uint64             `json:"check_frequency_seconds"`
+	CheckFreqMinutes uint64             `json:"check_frequency_minutes"`
 	Policy           Policy             `json:"policy"`
 	Nodes            []Node             `json:"seeds"`
 	API              API                `json:"api"`
