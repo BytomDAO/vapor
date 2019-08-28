@@ -2,7 +2,6 @@ package monitor
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/user"
 	"strings"
@@ -97,12 +96,7 @@ func makePath() (string, error) {
 		return "", err
 	}
 
-	tmpDir, err := ioutil.TempDir(dataPath, "")
-	if err != nil {
-		return "", err
-	}
-
-	return tmpDir, nil
+	return dataPath, nil
 }
 
 func (m *monitor) Run() {
