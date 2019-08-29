@@ -123,11 +123,7 @@ func (m *monitor) makeSwitch() error {
 	}
 
 	m.peers = peers.NewPeerSet(m.sw)
-	if err := m.prepareReactors(m.peers); err != nil {
-		return errors.Wrap(err, "prepareReactors")
-	}
-
-	return nil
+	return m.prepareReactors(m.peers)
 }
 
 func (m *monitor) prepareReactors(peers *peers.PeerSet) error {
@@ -143,7 +139,7 @@ func (m *monitor) prepareReactors(peers *peers.PeerSet) error {
 	for label, reactor := range m.sw.GetReactors() {
 		log.WithFields(log.Fields{"label": label, "reactor": reactor}).Debug("start reactor")
 		if _, err := reactor.Start(); err != nil {
-			return nil
+			return err
 		}
 	}
 
