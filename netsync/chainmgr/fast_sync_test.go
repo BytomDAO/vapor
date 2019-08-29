@@ -99,7 +99,9 @@ func TestFastBlockSync(t *testing.T) {
 	}()
 
 	baseChain := mockBlocks(nil, 300)
-
+	chainX := []*types.Block{}
+	chainX = append(chainX, baseChain[:30]...)
+	chainX = append(chainX, mockBlocks(baseChain[30], 500)...)
 	cases := []struct {
 		syncTimeout time.Duration
 		aBlocks     []*types.Block
@@ -148,6 +150,13 @@ func TestFastBlockSync(t *testing.T) {
 			bBlocks:     baseChain[:301],
 			want:        baseChain[:50],
 			err:         errSkeletonSize,
+		},
+		{
+			syncTimeout: 30 * time.Second,
+			aBlocks:     chainX[:50],
+			bBlocks:     baseChain[:301],
+			want:        baseChain[:128],
+			err:         nil,
 		},
 	}
 
