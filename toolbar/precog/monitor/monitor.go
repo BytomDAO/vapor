@@ -92,6 +92,7 @@ func makePath() (string, error) {
 
 func (m *monitor) Run() {
 	var seeds []string
+	// TODO: should I save in db?
 	for _, node := range m.cfg.Nodes {
 		seeds = append(seeds, fmt.Sprintf("%s:%d", node.IP, node.Port))
 		if err := m.upsertNode(&node); err != nil {
