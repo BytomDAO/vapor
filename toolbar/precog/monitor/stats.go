@@ -141,7 +141,7 @@ func (m *monitor) processPeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error
 	log.Debugf("peerInfo ping: %v", peerInfo.Ping)
 	ping, err := time.ParseDuration(peerInfo.Ping)
 	if err != nil {
-		log.Debugf("parse ping time err: %v", err)
+		return err
 	}
 
 	now := time.Now()
