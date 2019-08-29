@@ -9,7 +9,7 @@ type Node struct {
 	Alias                    string
 	Xpub                     string
 	PublicKey                string
-	Host                     string
+	IP                       string
 	Port                     uint16
 	BestHeight               uint64
 	LatestDailyUptimeMinutes uint64

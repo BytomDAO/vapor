@@ -20,7 +20,7 @@ CREATE TABLE `nodes` (
   `alias` varchar(128) NOT NULL DEFAULT '',
   `xpub` char(128) NOT NULL DEFAULT '',
   `public_key` char(64) NOT NULL DEFAULT '',
-  `host` varchar(128) NOT NULL DEFAULT '',
+  `ip` varchar(128) NOT NULL DEFAULT '',
   `port` smallint unsigned NOT NULL DEFAULT '0',
   `best_height` int(11) DEFAULT '0',
   `latest_daily_uptime_minutes` int(11) DEFAULT '0',

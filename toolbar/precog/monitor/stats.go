@@ -33,13 +33,13 @@ func (m *monitor) upSertNode(node *config.Node) error {
 	if node.XPub != nil {
 		ormNode.Xpub = node.XPub.String()
 	}
-	ormNode.Host = node.Host
+	ormNode.IP = node.IP
 	ormNode.Port = node.Port
 	return m.db.Where(&orm.Node{PublicKey: ormNode.PublicKey}).
 		Assign(&orm.Node{
 			Xpub:  ormNode.Xpub,
 			Alias: ormNode.Alias,
-			Host:  ormNode.Host,
+			IP:    ormNode.IP,
 			Port:  ormNode.Port,
 		}).FirstOrCreate(ormNode).Error
 }

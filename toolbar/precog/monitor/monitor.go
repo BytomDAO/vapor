@@ -94,7 +94,7 @@ func makePath() (string, error) {
 func (m *monitor) Run() {
 	var seeds []string
 	for _, node := range m.cfg.Nodes {
-		seeds = append(seeds, fmt.Sprintf("%s:%d", node.Host, node.Port))
+		seeds = append(seeds, fmt.Sprintf("%s:%d", node.IP, node.Port))
 		if err := m.upSertNode(&node); err != nil {
 			log.Error(err)
 		}

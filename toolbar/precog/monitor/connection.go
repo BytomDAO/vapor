@@ -30,17 +30,7 @@ func (m *monitor) dialNodes() error {
 
 	addresses := make([]*p2p.NetAddress, 0)
 	for i := 0; i < len(nodes); i++ {
-		ips, err := net.LookupIP(nodes[i].Host)
-		if err != nil {
-			log.Error(err)
-			continue
-		}
-		if len(ips) == 0 {
-			log.Errorf("fail to look up ip for %s", nodes[i].Host)
-			continue
-		}
-
-		address := p2p.NewNetAddressIPPort(ips[0], nodes[i].Port)
+		address := p2p.NewNetAddressIPPort(net.ParseIP(nodes[i].IP), nodes[i].Port)
 		addresses = append(addresses, address)
 	}
 

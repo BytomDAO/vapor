@@ -51,7 +51,7 @@ type Node struct {
 	Alias     string        `json:"alias"`
 	XPub      *chainkd.XPub `json:"xpub"`
 	PublicKey string        `json:"public_key"`
-	Host      string        `json:"host"`
+	IP        string        `json:"ip"`
 	Port      uint16        `json:"port"`
 }
 

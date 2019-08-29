@@ -37,7 +37,7 @@ func (m *monitor) discoveryRoutine() {
 func (m *monitor) saveDiscoveredNode(node *dht.Node) {
 	if err := m.upSertNode(&config.Node{
 		PublicKey: node.ID.String(),
-		Host:      node.IP.String(),
+		IP:        node.IP.String(),
 		Port:      node.TCP,
 	}); err == nil {
 		m.discvMap[node.ID.String()] = node
