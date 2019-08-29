@@ -9,12 +9,11 @@ import (
 	"github.com/vapor/toolbar/precog/database/orm"
 )
 
-func (m *monitor) connectNodesRoutine() {
+func (m *monitor) connectionRoutine() {
 	// TODO: fix
 	// ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqMinutes) * time.Minute)
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqMinutes) * time.Second)
 	for ; true; <-ticker.C {
-		<-m.dialCh
 		m.Lock()
 
 		if err := m.dialNodes(); err != nil {
@@ -40,6 +39,46 @@ func (m *monitor) dialNodes() error {
 	m.sw.DialPeers(addresses)
 	log.Info("DialPeers done.")
 	m.processDialResults()
-	m.checkStatusCh <- struct{}{}
+	m.checkStatus()
 	return nil
+}
+
+func (m *monitor) checkStatus() {
+	for _, peer := range m.sw.GetPeers().List() {
+		peer.Start()
+		m.peers.AddPeer(peer)
+	}
+	log.WithFields(log.Fields{"num": len(m.sw.GetPeers().List()), "peers": m.sw.GetPeers().List()}).Info("connected peers")
+
+	for _, peer := range m.sw.GetPeers().List() {
+		p := m.peers.GetPeer(peer.ID())
+		if p == nil {
+			continue
+		}
+
+		if err := p.SendStatus(m.chain.BestBlockHeader(), m.chain.LastIrreversibleHeader()); err != nil {
+			log.WithFields(log.Fields{"peer": p, "err": err}).Error("SendStatus")
+			m.peers.RemovePeer(p.ID())
+		}
+	}
+
+	for _, peerInfo := range m.peers.GetPeerInfos() {
+		if peerInfo.Height > m.bestHeightSeen {
+			m.bestHeightSeen = peerInfo.Height
+		}
+	}
+	log.WithFields(log.Fields{"bestHeight": m.bestHeightSeen}).Info("peersInfo")
+	m.processPeerInfos(m.peers.GetPeerInfos())
+
+	for _, peer := range m.sw.GetPeers().List() {
+		p := m.peers.GetPeer(peer.ID())
+		if p == nil {
+			continue
+		}
+
+		m.peers.RemovePeer(p.ID())
+	}
+	log.Info("Disonnect all peers.")
+
+	m.Unlock()
 }

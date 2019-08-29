@@ -37,8 +37,6 @@ type monitor struct {
 	txPool  *mock.Mempool
 	// discvMap maps a node's public key to the node itself
 	discvMap       map[string]*dht.Node
-	dialCh         chan struct{}
-	checkStatusCh  chan struct{}
 	bestHeightSeen uint64
 	peers          *peers.PeerSet
 }
@@ -75,8 +73,6 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 		chain:          chain,
 		txPool:         txPool,
 		discvMap:       make(map[string]*dht.Node),
-		dialCh:         make(chan struct{}, 1),
-		checkStatusCh:  make(chan struct{}, 1),
 		bestHeightSeen: uint64(0),
 	}
 }
@@ -108,10 +104,8 @@ func (m *monitor) Run() {
 		log.WithFields(log.Fields{"err": err}).Fatal("makeSwitch")
 	}
 
-	m.dialCh <- struct{}{}
 	go m.discoveryRoutine()
-	go m.connectNodesRoutine()
-	go m.checkStatusRoutine()
+	go m.connectionRoutine()
 }
 
 func (m *monitor) makeSwitch() error {
@@ -156,47 +150,4 @@ func (m *monitor) prepareReactors(peers *peers.PeerSet) error {
 	m.sw.GetSecurity().RegisterFilter(m.sw.GetNodeInfo())
 	m.sw.GetSecurity().RegisterFilter(m.sw.GetPeers())
 	return m.sw.GetSecurity().Start()
-}
-
-func (m *monitor) checkStatusRoutine() {
-	for range m.checkStatusCh {
-		for _, peer := range m.sw.GetPeers().List() {
-			peer.Start()
-			m.peers.AddPeer(peer)
-		}
-		log.WithFields(log.Fields{"num": len(m.sw.GetPeers().List()), "peers": m.sw.GetPeers().List()}).Info("connected peers")
-
-		for _, peer := range m.sw.GetPeers().List() {
-			p := m.peers.GetPeer(peer.ID())
-			if p == nil {
-				continue
-			}
-
-			if err := p.SendStatus(m.chain.BestBlockHeader(), m.chain.LastIrreversibleHeader()); err != nil {
-				log.WithFields(log.Fields{"peer": p, "err": err}).Error("SendStatus")
-				m.peers.RemovePeer(p.ID())
-			}
-		}
-
-		for _, peerInfo := range m.peers.GetPeerInfos() {
-			if peerInfo.Height > m.bestHeightSeen {
-				m.bestHeightSeen = peerInfo.Height
-			}
-		}
-		log.WithFields(log.Fields{"bestHeight": m.bestHeightSeen}).Info("peersInfo")
-		m.processPeerInfos(m.peers.GetPeerInfos())
-
-		for _, peer := range m.sw.GetPeers().List() {
-			p := m.peers.GetPeer(peer.ID())
-			if p == nil {
-				continue
-			}
-
-			m.peers.RemovePeer(p.ID())
-		}
-		log.Info("Disonnect all peers.")
-
-		m.Unlock()
-		m.dialCh <- struct{}{}
-	}
 }
