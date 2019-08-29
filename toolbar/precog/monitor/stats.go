@@ -60,7 +60,7 @@ func (m *monitor) processDialResults() error {
 	for _, peer := range m.sw.GetPeers().List() {
 		xPub := &chainkd.XPub{}
 		if err := xPub.UnmarshalText([]byte(peer.Key)); err != nil {
-			log.Error(err)
+			log.WithFields(log.Fields{"xpub": peer.Key}).Error("unmarshal xpub")
 			continue
 		}
 
