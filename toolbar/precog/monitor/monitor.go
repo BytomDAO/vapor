@@ -26,7 +26,7 @@ import (
 )
 
 // TODO:
-// 1. 理论是安全的，只是记得测试一下，这么改不会让vapor node出坑
+// 1. moniker 理论是安全的，只是记得测试一下，这么改不会让vapor node出坑
 // 2. StatusMap 感觉没什么问题，double check一下别的出名项目是不是也是这么叫的
 // 3. toolbar/precog/monitor/stats.go FirstOrCreate&Update 弱弱的问一下，直接save会出事么？
 // 4. 碰到一个玄学问题，究竟是以ip为单位，还是pubkey为单位。 如果同一个pubkey出现在2个不同的ip，会不会让数据混乱？
