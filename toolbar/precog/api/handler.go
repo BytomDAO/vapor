@@ -10,5 +10,11 @@ import (
 type listNodesReq struct{ serverCommon.Display }
 
 func (s *Server) ListNodes(c *gin.Context, listNodesReq *listNodesReq, query *serverCommon.PaginationQuery) ([]*orm.Node, error) {
-	return nil, nil
+	var ormNodes []*orm.Node
+
+	if err := s.db.Find(&ormNodes).Error; err != nil {
+		return nil, err
+	}
+
+	return ormNodes, nil
 }
