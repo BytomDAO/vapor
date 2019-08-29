@@ -135,13 +135,15 @@ func (m *monitor) prepareReactors(peers *peers.PeerSet) error {
 	_ = consensusmgr.NewManager(m.sw, m.chain, peers, dispatcher)
 	fastSyncDB := dbm.NewDB("fastsync", m.nodeCfg.DBBackend, m.nodeCfg.DBDir())
 	// add ProtocolReactor to handle msgs
-	_, err := chainmgr.NewManager(m.nodeCfg, m.sw, m.chain, m.txPool, dispatcher, peers, fastSyncDB)
-	if err != nil {
+	if _, err := chainmgr.NewManager(m.nodeCfg, m.sw, m.chain, m.txPool, dispatcher, peers, fastSyncDB); err != nil {
 		return err
 	}
 
 	for label, reactor := range m.sw.GetReactors() {
-		log.Debugf("start reactor: (%s:%v)", label, reactor)
+		log.WithFields(log.Fields{
+			"label":   label,
+			"reactor": reactor,
+		}).Debug("start reactor")
 		if _, err := reactor.Start(); err != nil {
 			return nil
 		}
