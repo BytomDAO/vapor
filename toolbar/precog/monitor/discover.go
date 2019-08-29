@@ -27,24 +27,18 @@ func (m *monitor) discoveryRoutine() {
 			}
 
 			log.WithFields(log.Fields{"new node": node}).Info("discover")
-			m.saveDiscoveredNode(node)
+
+			if err := m.upSertNode(&config.Node{
+				PublicKey: node.ID.String(),
+				IP:        node.IP.String(),
+				Port:      node.TCP,
+			}); err != nil {
+				log.WithFields(log.Fields{"node": node, "err": err}).Error("upSertNode")
+			} else {
+				m.discvMap[node.ID.String()] = node
+			}
 		}
 
 		m.Unlock()
-	}
-}
-
-func (m *monitor) saveDiscoveredNode(node *dht.Node) {
-	if err := m.upSertNode(&config.Node{
-		PublicKey: node.ID.String(),
-		IP:        node.IP.String(),
-		Port:      node.TCP,
-	}); err == nil {
-		m.discvMap[node.ID.String()] = node
-	} else {
-		log.WithFields(log.Fields{
-			"node": node,
-			"err":  err,
-		}).Error("upSertNode")
 	}
 }
