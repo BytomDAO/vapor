@@ -85,7 +85,7 @@ func makePath() (string, error) {
 		return "", err
 	}
 
-	dataPath := usr.HomeDir + "/.precog"
+	dataPath := usr.HomeDir + "/.vapor/precog"
 	if err := os.MkdirAll(dataPath, os.ModePerm); err != nil {
 		return "", err
 	}
