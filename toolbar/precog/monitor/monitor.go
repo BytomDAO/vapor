@@ -35,9 +35,10 @@ type monitor struct {
 	chain   *mock.Chain
 	txPool  *mock.Mempool
 	// discvMap maps a node's public key to the node itself
-	discvMap      map[string]*dht.Node
-	dialCh        chan struct{}
-	checkStatusCh chan struct{}
+	discvMap       map[string]*dht.Node
+	dialCh         chan struct{}
+	checkStatusCh  chan struct{}
+	bestHeightSeen uint64
 }
 
 func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
@@ -64,16 +65,17 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 	}
 
 	return &monitor{
-		RWMutex:       &sync.RWMutex{},
-		cfg:           cfg,
-		db:            db,
-		nodeCfg:       nodeCfg,
-		privKey:       privKey.(chainkd.XPrv),
-		chain:         chain,
-		txPool:        txPool,
-		discvMap:      make(map[string]*dht.Node),
-		dialCh:        make(chan struct{}, 1),
-		checkStatusCh: make(chan struct{}, 1),
+		RWMutex:        &sync.RWMutex{},
+		cfg:            cfg,
+		db:             db,
+		nodeCfg:        nodeCfg,
+		privKey:        privKey.(chainkd.XPrv),
+		chain:          chain,
+		txPool:         txPool,
+		discvMap:       make(map[string]*dht.Node),
+		dialCh:         make(chan struct{}, 1),
+		checkStatusCh:  make(chan struct{}, 1),
+		bestHeightSeen: uint64(0),
 	}
 }
 
@@ -157,7 +159,6 @@ func (m *monitor) checkStatusRoutine() {
 		log.Fatal(err)
 	}
 
-	bestHeight := uint64(0)
 	for range m.checkStatusCh {
 		for _, peer := range m.sw.GetPeers().List() {
 			peer.Start()
@@ -178,11 +179,11 @@ func (m *monitor) checkStatusRoutine() {
 		}
 
 		for _, peerInfo := range peers.GetPeerInfos() {
-			if peerInfo.Height > bestHeight {
-				bestHeight = peerInfo.Height
+			if peerInfo.Height > m.bestHeightSeen {
+				m.bestHeightSeen = peerInfo.Height
 			}
 		}
-		log.Info("bestHeight: ", bestHeight)
+		log.Info("bestHeight: ", m.bestHeightSeen)
 		m.processPeerInfos(peers.GetPeerInfos())
 
 		for _, peer := range m.sw.GetPeers().List() {
