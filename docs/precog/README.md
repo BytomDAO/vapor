@@ -21,6 +21,10 @@ go run cmd/precog/main.go docs/precog/config_example.json
 
 __method:__ POST
 
+```
+curl -X POST 127.0.0.1:3009/api/v1/list-nodes -d '{}'
+```
+
 __example response:__
 ```
 {
