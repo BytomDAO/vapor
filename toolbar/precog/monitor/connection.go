@@ -10,7 +10,9 @@ import (
 )
 
 func (m *monitor) connectNodesRoutine() {
-	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqMinutes) * time.Minute)
+	// TODO: fix
+	// ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqMinutes) * time.Minute)
+	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqMinutes) * time.Second)
 	for ; true; <-ticker.C {
 		<-m.dialCh
 		m.Lock()
