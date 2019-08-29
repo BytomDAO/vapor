@@ -13,6 +13,7 @@ import (
 	vaporCfg "github.com/vapor/config"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	dbm "github.com/vapor/database/leveldb"
+	"github.com/vapor/errors"
 	"github.com/vapor/event"
 	"github.com/vapor/netsync/chainmgr"
 	"github.com/vapor/netsync/consensusmgr"
@@ -39,6 +40,7 @@ type monitor struct {
 	dialCh         chan struct{}
 	checkStatusCh  chan struct{}
 	bestHeightSeen uint64
+	peers          *peers.PeerSet
 }
 
 func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
@@ -126,6 +128,11 @@ func (m *monitor) makeSwitch() error {
 		return err
 	}
 
+	m.peers = peers.NewPeerSet(m.sw)
+	if err := m.prepareReactors(m.peers); err != nil {
+		return errors.Wrap(err, "prepareReactors")
+	}
+
 	return nil
 }
 
@@ -152,45 +159,40 @@ func (m *monitor) prepareReactors(peers *peers.PeerSet) error {
 }
 
 func (m *monitor) checkStatusRoutine() {
-	peers := peers.NewPeerSet(m.sw)
-	if err := m.prepareReactors(peers); err != nil {
-		log.WithFields(log.Fields{"err": err}).Fatal("prepareReactors")
-	}
-
 	for range m.checkStatusCh {
 		for _, peer := range m.sw.GetPeers().List() {
 			peer.Start()
-			peers.AddPeer(peer)
+			m.peers.AddPeer(peer)
 		}
 		log.WithFields(log.Fields{"num": len(m.sw.GetPeers().List()), "peers": m.sw.GetPeers().List()}).Info("connected peers")
 
 		for _, peer := range m.sw.GetPeers().List() {
-			p := peers.GetPeer(peer.ID())
+			p := m.peers.GetPeer(peer.ID())
 			if p == nil {
 				continue
 			}
 
 			if err := p.SendStatus(m.chain.BestBlockHeader(), m.chain.LastIrreversibleHeader()); err != nil {
 				log.WithFields(log.Fields{"peer": p, "err": err}).Error("SendStatus")
-				peers.RemovePeer(p.ID())
+				m.peers.RemovePeer(p.ID())
 			}
 		}
 
-		for _, peerInfo := range peers.GetPeerInfos() {
+		for _, peerInfo := range m.peers.GetPeerInfos() {
 			if peerInfo.Height > m.bestHeightSeen {
 				m.bestHeightSeen = peerInfo.Height
 			}
 		}
-		log.Info("bestHeight: ", m.bestHeightSeen)
-		m.processPeerInfos(peers.GetPeerInfos())
+		log.WithFields(log.Fields{"bestHeight": m.bestHeightSeen}).Info("peersInfo")
+		m.processPeerInfos(m.peers.GetPeerInfos())
 
 		for _, peer := range m.sw.GetPeers().List() {
-			p := peers.GetPeer(peer.ID())
+			p := m.peers.GetPeer(peer.ID())
 			if p == nil {
 				continue
 			}
 
-			peers.RemovePeer(p.ID())
+			m.peers.RemovePeer(p.ID())
 		}
 		log.Info("Disonnect all peers.")
 
