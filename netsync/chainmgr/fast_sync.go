@@ -93,7 +93,7 @@ func (fs *fastSync) createFetchBlocksTasks(stopBlock *types.Block) ([]*fetchBloc
 		return nil, errNoMainSkeleton
 	}
 
-	if len(mainSkeleton) < minSizeOfSyncSkeleton || len(mainSkeleton) > maxSizeOfSyncSkeleton {
+	if len(mainSkeleton) < minSizeOfSyncSkeleton {
 		fs.peers.ProcessIllegal(fs.mainSyncPeer.ID(), security.LevelMsgIllegal, errSkeletonSize.Error())
 		return nil, errSkeletonSize
 	}
@@ -118,7 +118,7 @@ func (fs *fastSync) createFetchBlocksTasks(stopBlock *types.Block) ([]*fetchBloc
 
 	blockFetchTasks := make([]*fetchBlocksWork, 0)
 	// create download task
-	for i := 0; i < len(mainSkeleton)-1; i++ {
+	for i := 0; i < len(mainSkeleton)-1 && i < maxSizeOfSyncSkeleton-1; i++ {
 		blockFetchTasks = append(blockFetchTasks, &fetchBlocksWork{startHeader: mainSkeleton[i], stopHeader: mainSkeleton[i+1]})
 	}
 
