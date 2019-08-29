@@ -98,10 +98,7 @@ func (m *monitor) Run() {
 	for _, node := range m.cfg.Nodes {
 		seeds = append(seeds, fmt.Sprintf("%s:%d", node.IP, node.Port))
 		if err := m.upSertNode(&node); err != nil {
-			log.WithFields(log.Fields{
-				"node": node,
-				"err":  err,
-			}).Error("upSertNode")
+			log.WithFields(log.Fields{"node": node, "err": err}).Error("upSertNode")
 		}
 	}
 	m.nodeCfg.P2P.Seeds = strings.Join(seeds, ",")
@@ -143,10 +140,7 @@ func (m *monitor) prepareReactors(peers *peers.PeerSet) error {
 	}
 
 	for label, reactor := range m.sw.GetReactors() {
-		log.WithFields(log.Fields{
-			"label":   label,
-			"reactor": reactor,
-		}).Debug("start reactor")
+		log.WithFields(log.Fields{"label": label, "reactor": reactor}).Debug("start reactor")
 		if _, err := reactor.Start(); err != nil {
 			return nil
 		}
@@ -168,10 +162,7 @@ func (m *monitor) checkStatusRoutine() {
 			peer.Start()
 			peers.AddPeer(peer)
 		}
-		log.WithFields(log.Fields{
-			"num":   len(m.sw.GetPeers().List()),
-			"peers": m.sw.GetPeers().List(),
-		}).Info("connected peers")
+		log.WithFields(log.Fields{"num": len(m.sw.GetPeers().List()), "peers": m.sw.GetPeers().List()}).Info("connected peers")
 
 		for _, peer := range m.sw.GetPeers().List() {
 			p := peers.GetPeer(peer.ID())
@@ -180,10 +171,7 @@ func (m *monitor) checkStatusRoutine() {
 			}
 
 			if err := p.SendStatus(m.chain.BestBlockHeader(), m.chain.LastIrreversibleHeader()); err != nil {
-				log.WithFields(log.Fields{
-					"peer": p,
-					"err":  err,
-				}).Error("SendStatus")
+				log.WithFields(log.Fields{"peer": p, "err": err}).Error("SendStatus")
 				peers.RemovePeer(p.ID())
 			}
 		}
