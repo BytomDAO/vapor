@@ -13,7 +13,6 @@ import (
 	vaporCfg "github.com/vapor/config"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/errors"
 	"github.com/vapor/event"
 	"github.com/vapor/netsync/chainmgr"
 	"github.com/vapor/netsync/consensusmgr"
