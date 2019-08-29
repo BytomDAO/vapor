@@ -115,7 +115,7 @@ func (m *monitor) processOfflinePeer(ormNode *orm.Node) error {
 	return m.db.Model(&orm.NodeLiveness{}).Where(&orm.NodeLiveness{NodeID: ormNode.ID}).UpdateColumn(&orm.NodeLiveness{Status: common.NodeOfflineStatus}).Error
 }
 
-func (m *monitor) processPeerInfos(peerInfos []*peers.PeerInfo) error {
+func (m *monitor) processPeerInfos(peerInfos []*peers.PeerInfo) {
 	for _, peerInfo := range peerInfos {
 		dbTx := m.db.Begin()
 		if err := m.processPeerInfo(dbTx, peerInfo); err != nil {
@@ -128,8 +128,6 @@ func (m *monitor) processPeerInfos(peerInfos []*peers.PeerInfo) error {
 			dbTx.Commit()
 		}
 	}
-
-	return nil
 }
 
 func (m *monitor) processPeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error {

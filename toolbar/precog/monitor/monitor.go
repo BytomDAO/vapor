@@ -179,11 +179,11 @@ func (m *monitor) checkStatusRoutine() {
 				continue
 			}
 
-			if err := p.(m.chain.BestBlockHeader(), m.chain.LastIrreversibleHeader()); err != nil {
+			if err := p.SendStatus(m.chain.BestBlockHeader(), m.chain.LastIrreversibleHeader()); err != nil {
 				log.WithFields(log.Fields{
 					"peer": p,
-					"err": err,
-					}).Error("SendStatus")
+					"err":  err,
+				}).Error("SendStatus")
 				peers.RemovePeer(p.ID())
 			}
 		}
