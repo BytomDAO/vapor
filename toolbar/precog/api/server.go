@@ -7,30 +7,37 @@ import (
 	"github.com/jinzhu/gorm"
 
 	"github.com/vapor/toolbar/precog/config"
-	"github.com/vapor/toolbar/precog/database/orm"
+	serverCommon "github.com/vapor/toolbar/server"
 )
 
-type server struct {
-	cfg *config.Config
-	db  *gorm.DB
+type Server struct {
+	cfg    *config.Config
+	db     *gorm.DB
+	engine *gin.Engine
 }
 
-func NewApiServer(cfg *config.Config, db *gorm.DB) *server {
-	return &server{
+func NewApiServer(cfg *config.Config, db *gorm.DB) *Server {
+	server := &Server{
 		cfg: cfg,
 		db:  db,
 	}
+	if cfg.API.IsReleaseMode {
+		gin.SetMode(gin.ReleaseMode)
+	}
+	server.setupRouter()
+	return server
 }
 
-func (s *server) Run() {
-	router := gin.Default()
+func (s *Server) setupRouter() {
+	r := gin.Default()
+	r.Use(serverCommon.Middleware(s))
 
-	// router.POST("/list-nodes", listNodes)
+	v1 := r.Group("/api/v1")
+	v1.POST("/list-nodes", serverCommon.HandlerMiddleware(s.ListNodes))
 
-	router.Run(fmt.Sprintf(":%d", s.cfg.API.ListeningPort))
+	s.engine = r
 }
 
-// TODO: cannot use listNodes (type func(*gin.Context) ([]*orm.Node, error)) as type gin.HandlerFunc in argument to router.RouterGroup.POST
-func listNodes(_ *gin.Context) ([]*orm.Node, error) {
-	return nil, nil
+func (s *Server) Run() {
+	s.engine.Run(fmt.Sprintf(":%d", s.cfg.API.ListeningPort))
 }
