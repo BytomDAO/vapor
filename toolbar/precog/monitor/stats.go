@@ -112,11 +112,7 @@ func (m *monitor) processConnectedPeer(ormNode *orm.Node, peer *p2p.Peer) error 
 }
 
 func (m *monitor) processOfflinePeer(ormNode *orm.Node) error {
-	return m.db.Model(&orm.NodeLiveness{}).
-		Where(&orm.NodeLiveness{NodeID: ormNode.ID}).
-		UpdateColumn(&orm.NodeLiveness{
-			Status: common.NodeOfflineStatus,
-		}).Error
+	return m.db.Model(&orm.NodeLiveness{}).Where(&orm.NodeLiveness{NodeID: ormNode.ID}).UpdateColumn(&orm.NodeLiveness{Status: common.NodeOfflineStatus}).Error
 }
 
 func (m *monitor) processPeerInfos(peerInfos []*peers.PeerInfo) error {
