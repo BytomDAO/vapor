@@ -91,15 +91,6 @@ func makePath() (string, error) {
 }
 
 func (m *monitor) Run() {
-	var seeds []string
-	// TODO: should I save in db?
-	for _, node := range m.cfg.Nodes {
-		seeds = append(seeds, fmt.Sprintf("%s:%d", node.IP, node.Port))
-		if err := m.upsertNode(&node); err != nil {
-			log.WithFields(log.Fields{"node": node, "err": err}).Error("upsertNode")
-		}
-	}
-	m.nodeCfg.P2P.Seeds = strings.Join(seeds, ",")
 	if err := m.makeSwitch(); err != nil {
 		log.WithFields(log.Fields{"err": err}).Fatal("makeSwitch")
 	}
@@ -109,6 +100,12 @@ func (m *monitor) Run() {
 }
 
 func (m *monitor) makeSwitch() error {
+	var seeds []string
+	for _, node := range m.cfg.Nodes {
+		seeds = append(seeds, fmt.Sprintf("%s:%d", node.IP, node.Port))
+	}
+	m.nodeCfg.P2P.Seeds = strings.Join(seeds, ",")
+
 	l, listenAddr := p2p.GetListener(m.nodeCfg.P2P)
 	discv, err := dht.NewDiscover(m.nodeCfg, m.privKey, l.ExternalAddress().Port, m.cfg.NetworkID)
 	if err != nil {
