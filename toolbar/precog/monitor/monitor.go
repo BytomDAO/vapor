@@ -44,7 +44,7 @@ type monitor struct {
 func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 	dbPath, err := makePath()
 	if err != nil {
-		log.Fatal(err)
+		log.WithFields(log.Fields{"err": err}).Fatal("makePath")
 	}
 
 	nodeCfg := &vaporCfg.Config{
@@ -56,12 +56,12 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 	nodeCfg.ChainID = "mainnet"
 	privKey, err := signlib.NewPrivKey()
 	if err != nil {
-		log.Fatal(err)
+		log.WithFields(log.Fields{"err": err}).Fatal("NewPrivKey")
 	}
 
 	chain, txPool, err := mockChainAndPool()
 	if err != nil {
-		log.Fatal(err)
+		log.WithFields(log.Fields{"err": err}).Fatal("mockChainAndPool")
 	}
 
 	return &monitor{
@@ -98,12 +98,15 @@ func (m *monitor) Run() {
 	for _, node := range m.cfg.Nodes {
 		seeds = append(seeds, fmt.Sprintf("%s:%d", node.IP, node.Port))
 		if err := m.upSertNode(&node); err != nil {
-			log.Error(err)
+			log.WithFields(log.Fields{
+				"node": node,
+				"err":  err,
+			}).Error("upSertNode")
 		}
 	}
 	m.nodeCfg.P2P.Seeds = strings.Join(seeds, ",")
 	if err := m.makeSwitch(); err != nil {
-		log.Fatal(err)
+		log.WithFields(log.Fields{"err": err}).Fatal("makeSwitch")
 	}
 
 	m.dialCh <- struct{}{}
@@ -157,7 +160,7 @@ func (m *monitor) prepareReactors(peers *peers.PeerSet) error {
 func (m *monitor) checkStatusRoutine() {
 	peers := peers.NewPeerSet(m.sw)
 	if err := m.prepareReactors(peers); err != nil {
-		log.Fatal(err)
+		log.WithFields(log.Fields{"err": err}).Fatal("prepareReactors")
 	}
 
 	for range m.checkStatusCh {
@@ -165,7 +168,10 @@ func (m *monitor) checkStatusRoutine() {
 			peer.Start()
 			peers.AddPeer(peer)
 		}
-		log.Infof("%d connected peers: %v", len(m.sw.GetPeers().List()), m.sw.GetPeers().List())
+		log.WithFields(log.Fields{
+			"num":   len(m.sw.GetPeers().List()),
+			"peers": m.sw.GetPeers().List(),
+		}).Info("connected peers")
 
 		for _, peer := range m.sw.GetPeers().List() {
 			p := peers.GetPeer(peer.ID())
@@ -173,8 +179,11 @@ func (m *monitor) checkStatusRoutine() {
 				continue
 			}
 
-			if err := p.SendStatus(m.chain.BestBlockHeader(), m.chain.LastIrreversibleHeader()); err != nil {
-				log.Error(err)
+			if err := p.(m.chain.BestBlockHeader(), m.chain.LastIrreversibleHeader()); err != nil {
+				log.WithFields(log.Fields{
+					"peer": p,
+					"err": err,
+					}).Error("SendStatus")
 				peers.RemovePeer(p.ID())
 			}
 		}

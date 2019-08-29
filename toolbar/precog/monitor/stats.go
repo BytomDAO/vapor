@@ -67,7 +67,10 @@ func (m *monitor) processDialResults() error {
 		publicKey := xPub.PublicKey().String()
 		connMap[publicKey] = true
 		if err := m.processConnectedPeer(publicKeyMap[publicKey], peer); err != nil {
-			log.WithFields(log.Fields{"err": err}).Error("processConnectedPeer")
+			log.WithFields(log.Fields{
+				"peer publicKey": publicKey,
+				"err":            err,
+			}).Error("processConnectedPeer")
 		}
 	}
 
@@ -78,7 +81,10 @@ func (m *monitor) processDialResults() error {
 		}
 
 		if err := m.processOfflinePeer(ormNode); err != nil {
-			log.WithFields(log.Fields{"err": err}).Error("processOfflinePeer")
+			log.WithFields(log.Fields{
+				"peer publicKey": ormNode.PublicKey,
+				"err":            err,
+			}).Error("processOfflinePeer")
 		}
 	}
 
@@ -117,7 +123,10 @@ func (m *monitor) processPeerInfos(peerInfos []*peers.PeerInfo) error {
 	for _, peerInfo := range peerInfos {
 		dbTx := m.db.Begin()
 		if err := m.processPeerInfo(dbTx, peerInfo); err != nil {
-			log.WithFields(log.Fields{"err": err}).Error("processPeerInfo")
+			log.WithFields(log.Fields{
+				"peerInfo": peerInfo,
+				"err":      err,
+			}).Error("processPeerInfo")
 			dbTx.Rollback()
 		} else {
 			dbTx.Commit()

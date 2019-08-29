@@ -26,7 +26,7 @@ func (m *monitor) discoveryRoutine() {
 				continue
 			}
 
-			log.Infof("discover new node: %v", node)
+			log.WithFields(log.Fields{"new node": node}).Info("discover")
 			m.saveDiscoveredNode(node)
 		}
 
@@ -42,6 +42,9 @@ func (m *monitor) saveDiscoveredNode(node *dht.Node) {
 	}); err == nil {
 		m.discvMap[node.ID.String()] = node
 	} else {
-		log.Error(err)
+		log.WithFields(log.Fields{
+			"node": node,
+			"err":  err,
+		}).Error("upSertNode")
 	}
 }

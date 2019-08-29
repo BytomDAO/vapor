@@ -18,7 +18,7 @@ func (m *monitor) connectNodesRoutine() {
 		m.Lock()
 
 		if err := m.dialNodes(); err != nil {
-			log.Error(err)
+			log.WithFields(log.Fields{"err": err}).Error("dialNodes")
 		}
 	}
 }
