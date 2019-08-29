@@ -28,12 +28,12 @@ func (m *monitor) discoveryRoutine() {
 
 			log.WithFields(log.Fields{"new node": node}).Info("discover")
 
-			if err := m.upSertNode(&config.Node{
+			if err := m.upsertNode(&config.Node{
 				PublicKey: node.ID.String(),
 				IP:        node.IP.String(),
 				Port:      node.TCP,
 			}); err != nil {
-				log.WithFields(log.Fields{"node": node, "err": err}).Error("upSertNode")
+				log.WithFields(log.Fields{"node": node, "err": err}).Error("upsertNode")
 			} else {
 				m.discvMap[node.ID.String()] = node
 			}

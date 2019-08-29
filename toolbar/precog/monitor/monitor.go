@@ -95,8 +95,8 @@ func (m *monitor) Run() {
 	var seeds []string
 	for _, node := range m.cfg.Nodes {
 		seeds = append(seeds, fmt.Sprintf("%s:%d", node.IP, node.Port))
-		if err := m.upSertNode(&node); err != nil {
-			log.WithFields(log.Fields{"node": node, "err": err}).Error("upSertNode")
+		if err := m.upsertNode(&node); err != nil {
+			log.WithFields(log.Fields{"node": node, "err": err}).Error("upsertNode")
 		}
 	}
 	m.nodeCfg.P2P.Seeds = strings.Join(seeds, ",")

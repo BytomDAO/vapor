@@ -48,7 +48,6 @@ type Policy struct {
 }
 
 type Node struct {
-	Alias     string        `json:"alias"`
 	XPub      *chainkd.XPub `json:"xpub"`
 	PublicKey string        `json:"public_key"`
 	IP        string        `json:"ip"`

@@ -17,7 +17,7 @@ import (
 )
 
 // create or update: https://github.com/jinzhu/gorm/issues/1307
-func (m *monitor) upSertNode(node *config.Node) error {
+func (m *monitor) upsertNode(node *config.Node) error {
 	if node.XPub != nil {
 		node.PublicKey = fmt.Sprintf("%v", node.XPub.PublicKey().String())
 	}
@@ -27,9 +27,6 @@ func (m *monitor) upSertNode(node *config.Node) error {
 		return err
 	}
 
-	if node.Alias != "" {
-		ormNode.Alias = node.Alias
-	}
 	if node.XPub != nil {
 		ormNode.Xpub = node.XPub.String()
 	}
@@ -37,10 +34,9 @@ func (m *monitor) upSertNode(node *config.Node) error {
 	ormNode.Port = node.Port
 	return m.db.Where(&orm.Node{PublicKey: ormNode.PublicKey}).
 		Assign(&orm.Node{
-			Xpub:  ormNode.Xpub,
-			Alias: ormNode.Alias,
-			IP:    ormNode.IP,
-			Port:  ormNode.Port,
+			Xpub: ormNode.Xpub,
+			IP:   ormNode.IP,
+			Port: ormNode.Port,
 		}).FirstOrCreate(ormNode).Error
 }
 
