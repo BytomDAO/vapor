@@ -29,7 +29,6 @@ import (
 // 2. StatusMap 感觉没什么问题，double check一下别的出名项目是不是也是这么叫的
 // 3. toolbar/precog/monitor/stats.go FirstOrCreate&Update 弱弱的问一下，直接save会出事么？
 // 4. 碰到一个玄学问题，究竟是以ip为单位，还是pubkey为单位。 如果同一个pubkey出现在2个不同的ip，会不会让数据混乱？
-// 5. toolbar/precog/monitor/stats.go  err := m.db.Model(&orm.NodeLiveness{}).Joins("join nodes on nodes.id = node_livenesses.node_id"). 那什么既然都传ormNode进来了，是不是直接有node id了
 // 6. NodeLiveness应该是存每次的通讯记录？至于一些统计数据之类的都丢node上去？
 // 7. m这个为什么需要锁呀？一个是节点发现，一个是生命探测，中间交互都是数据库把？
 
