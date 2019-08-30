@@ -79,7 +79,12 @@ func (c *ChainKeeper) syncChainStatus(db *gorm.DB, chainStatus *orm.ChainStatus)
 	}
 
 	log.WithField("block height", chainStatus.BlockHeight).Debug("the prev hash of remote is not equals the hash of current best block, must rollback")
-	preBlock, err := c.node.GetBlockByHeight(chainStatus.BlockHeight - 1)
+	currentBlock, err := c.node.GetBlockByHash(chainStatus.BlockHash)
+	if err != nil {
+		return err
+	}
+
+	preBlock, err := c.node.GetBlockByHash(currentBlock.PreviousBlockHash.String())
 	if err != nil {
 		return err
 	}
