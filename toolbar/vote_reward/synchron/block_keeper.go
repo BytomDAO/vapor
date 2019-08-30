@@ -135,7 +135,7 @@ func (c *ChainKeeper) DetachBlock(db *gorm.DB, chainStatus *orm.ChainStatus, blo
 		return err
 	}
 
-	if err := db.Where(&orm.Utxo{VetoHeight: block.Height}).Update("veto_height", 0).Error; err != nil {
+	if err := db.Model(&orm.Utxo{}).Where(&orm.Utxo{VetoHeight: block.Height}).Update("veto_height", 0).Error; err != nil {
 		return err
 	}
 
