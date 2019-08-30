@@ -84,7 +84,12 @@ func (c *ChainKeeper) syncChainStatus(db *gorm.DB, chainStatus *orm.ChainStatus)
 		return err
 	}
 
-	return c.DetachBlock(db, chainStatus, currentBlock)
+	preBlock, err := c.node.GetBlockByHash(currentBlock.PreviousBlockHash.String())
+	if err != nil {
+		return err
+	}
+
+	return c.DetachBlock(db, chainStatus, preBlock)
 }
 
 func (c *ChainKeeper) AttachBlock(db *gorm.DB, chainStatus *orm.ChainStatus, block *types.Block) error {
@@ -131,11 +136,11 @@ func (c *ChainKeeper) AttachBlock(db *gorm.DB, chainStatus *orm.ChainStatus, blo
 }
 
 func (c *ChainKeeper) DetachBlock(db *gorm.DB, chainStatus *orm.ChainStatus, block *types.Block) error {
-	if err := db.Where(&orm.Utxo{VoteHeight: block.Height}).Delete(&orm.Utxo{}).Error; err != nil {
+	if err := db.Where(&orm.Utxo{VoteHeight: chainStatus.BlockHeight}).Delete(&orm.Utxo{}).Error; err != nil {
 		return err
 	}
 
-	if err := db.Where(&orm.Utxo{VetoHeight: block.Height}).Update("veto_height", 0).Error; err != nil {
+	if err := db.Model(&orm.Utxo{}).Where(&orm.Utxo{VetoHeight: chainStatus.BlockHeight}).Update("veto_height", 0).Error; err != nil {
 		return err
 	}
 
