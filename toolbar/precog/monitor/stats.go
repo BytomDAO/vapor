@@ -40,6 +40,7 @@ func (m *monitor) upsertNode(node *config.Node) error {
 		}).FirstOrCreate(ormNode).Error
 }
 
+// TODO: maybe return connected nodes here for checkStatus
 func (m *monitor) processDialResults() error {
 	var ormNodes []*orm.Node
 	if err := m.db.Model(&orm.Node{}).Find(&ormNodes).Error; err != nil {
