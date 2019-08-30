@@ -62,7 +62,7 @@ func (m *monitor) processDialResults() error {
 
 		publicKey := xPub.PublicKey().String()
 		connMap[publicKey] = true
-		if err := m.processConnectedPeer(publicKeyMap[publicKey], peer); err != nil {
+		if err := m.processConnectedPeer(publicKeyMap[publicKey]); err != nil {
 			log.WithFields(log.Fields{"peer publicKey": publicKey, "err": err}).Error("processConnectedPeer")
 		}
 	}
@@ -81,14 +81,16 @@ func (m *monitor) processDialResults() error {
 	return nil
 }
 
-func (m *monitor) processConnectedPeer(ormNode *orm.Node, peer *p2p.Peer) error {
+func (m *monitor) processConnectedPeer(ormNode *orm.Node) error {
 	ormNodeLiveness := &orm.NodeLiveness{NodeID: ormNode.ID}
-	err := m.db.Where(ormNodeLiveness).Last(ormNodeLiveness).Error
+	err := m.db.Preload("Node").Where(ormNodeLiveness).Last(ormNodeLiveness).Error
 	if err != nil && err != gorm.ErrRecordNotFound {
 		return err
 	}
 
 	ormNodeLiveness.PongTimes += 1
+	ormNode.Status = common.NodeUnknownStatus
+	ormNodeLiveness.Node = ormNode
 	return m.db.Save(ormNodeLiveness).Error
 }
 
@@ -129,7 +131,7 @@ func (m *monitor) processPeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error
 	now := time.Now()
 	yesterday := now.Add(-24 * time.Hour)
 	var ormNodeLivenesses []*orm.NodeLiveness
-	if err := dbTx.Model(&orm.NodeLiveness{}).
+	if err := dbTx.Preload("Node").Model(&orm.NodeLiveness{}).
 		Where("node_id = ? AND updated_at >= ?", ormNode.ID, yesterday).
 		Order(fmt.Sprintf("created_at %s", "DESC")).
 		Find(&ormNodeLivenesses).Error; err != nil {
@@ -138,9 +140,9 @@ func (m *monitor) processPeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error
 
 	// update latest liveness
 	latestLiveness := ormNodeLivenesses[0]
-	if latestLiveness.Status == common.NodeOfflineStatus {
-		return fmt.Errorf("node %s latest liveness status error", ormNode.PublicKey)
-	}
+	// if latestLiveness.Status == common.NodeOfflineStatus {
+	// 	return fmt.Errorf("node %s latest liveness status error", ormNode.PublicKey)
+	// }
 
 	lantencyMS := ping.Nanoseconds() / 1000
 	if lantencyMS != 0 {
