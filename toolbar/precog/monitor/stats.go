@@ -82,27 +82,19 @@ func (m *monitor) processDialResults() error {
 }
 
 func (m *monitor) processConnectedPeer(ormNode *orm.Node, peer *p2p.Peer) error {
-	ormNodeLiveness := &orm.NodeLiveness{}
-	err := m.db.Model(&orm.NodeLiveness{}).Joins("join nodes on nodes.id = node_livenesses.node_id").
-		Where("nodes.public_key = ? AND status != ?", ormNode.PublicKey, common.NodeOfflineStatus).Last(ormNodeLiveness).Error
-	if err == nil {
-		return m.db.Model(&orm.NodeLiveness{}).Where(ormNodeLiveness).UpdateColumn(&orm.NodeLiveness{
-			PingTimes: ormNodeLiveness.PingTimes + 1,
-		}).Error
-	} else if err != gorm.ErrRecordNotFound {
+	ormNodeLiveness := &orm.NodeLiveness{NodeID: ormNode.ID}
+	err := m.db.Where(ormNodeLiveness).Last(ormNodeLiveness).Error
+	if err != nil && err != gorm.ErrRecordNotFound {
 		return err
 	}
 
-	// gorm.ErrRecordNotFound
-	return m.db.Create(&orm.NodeLiveness{
-		NodeID:    ormNode.ID,
-		PingTimes: 1,
-		Status:    common.NodeUnknownStatus,
-	}).Error
+	ormNodeLiveness.PongTimes += 1
+	return m.db.Save(ormNodeLiveness).Error
 }
 
 func (m *monitor) processOfflinePeer(ormNode *orm.Node) error {
-	return m.db.Model(&orm.NodeLiveness{}).Where(&orm.NodeLiveness{NodeID: ormNode.ID}).UpdateColumn(&orm.NodeLiveness{Status: common.NodeOfflineStatus}).Error
+	ormNode.Status = common.NodeOfflineStatus
+	return m.db.Save(ormNode).Error
 }
 
 func (m *monitor) processPeerInfos(peerInfos []*peers.PeerInfo) {
