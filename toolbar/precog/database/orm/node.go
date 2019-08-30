@@ -2,8 +2,11 @@ package orm
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
+
+	"github.com/vapor/toolbar/precog/common"
 )
 
 type Node struct {
@@ -21,16 +24,10 @@ type Node struct {
 }
 
 func (n *Node) MarshalJSON() ([]byte, error) {
-	var status string
-	// TODO:
-	// switch c.Status {
-	// case common.CrossTxPendingStatus:
-	// 	status = common.CrossTxPendingStatusLabel
-	// case common.CrossTxCompletedStatus:
-	// 	status = common.CrossTxCompletedStatusLabel
-	// default:
-	// 	return nil, errors.New("unknown cross-chain tx status")
-	// }
+	status, ok := common.StatusMap[n.Status]
+	if !ok {
+		return nil, errors.New("fail to look up status")
+	}
 
 	return json.Marshal(&struct {
 		Alias                    string    `json:"alias"`
