@@ -19,8 +19,6 @@ func (m *monitor) discoveryRoutine() {
 	discvMap := make(map[string]*dht.Node)
 	ticker := time.NewTicker(time.Duration(discvFreqSec) * time.Second)
 	for range ticker.C {
-		m.Lock()
-
 		nodes := make([]*dht.Node, nodesToDiscv)
 		num := m.sw.GetDiscv().ReadRandomNodes(nodes)
 		for _, node := range nodes[:num] {
@@ -40,7 +38,5 @@ func (m *monitor) discoveryRoutine() {
 				discvMap[node.ID.String()] = node
 			}
 		}
-
-		m.Unlock()
 	}
 }

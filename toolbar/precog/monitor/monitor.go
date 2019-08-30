@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/user"
 	"strings"
-	"sync"
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
@@ -35,7 +34,6 @@ import (
 // 7. m这个为什么需要锁呀？一个是节点发现，一个是生命探测，中间交互都是数据库把？
 
 type monitor struct {
-	*sync.RWMutex
 	cfg            *config.Config
 	db             *gorm.DB
 	nodeCfg        *vaporCfg.Config
@@ -71,7 +69,6 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 	}
 
 	return &monitor{
-		RWMutex:        &sync.RWMutex{},
 		cfg:            cfg,
 		db:             db,
 		nodeCfg:        nodeCfg,

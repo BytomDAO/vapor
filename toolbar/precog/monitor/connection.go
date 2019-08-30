@@ -14,8 +14,6 @@ func (m *monitor) connectionRoutine() {
 	// ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqMinutes) * time.Minute)
 	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqMinutes) * time.Second)
 	for ; true; <-ticker.C {
-		m.Lock()
-
 		if err := m.dialNodes(); err != nil {
 			log.WithFields(log.Fields{"err": err}).Error("dialNodes")
 		}
@@ -79,6 +77,4 @@ func (m *monitor) checkStatus() {
 		m.peers.RemovePeer(p.ID())
 	}
 	log.Info("Disonnect all peers.")
-
-	m.Unlock()
 }
