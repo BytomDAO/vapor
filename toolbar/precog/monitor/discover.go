@@ -15,6 +15,8 @@ var (
 )
 
 func (m *monitor) discoveryRoutine() {
+	// discvMap maps a node's public key to the node itself
+	discvMap := make(map[string]*dht.Node)
 	ticker := time.NewTicker(time.Duration(discvFreqSec) * time.Second)
 	for range ticker.C {
 		m.Lock()
@@ -22,7 +24,7 @@ func (m *monitor) discoveryRoutine() {
 		nodes := make([]*dht.Node, nodesToDiscv)
 		num := m.sw.GetDiscv().ReadRandomNodes(nodes)
 		for _, node := range nodes[:num] {
-			if n, ok := m.discvMap[node.ID.String()]; ok && n.String() == node.String() {
+			if n, ok := discvMap[node.ID.String()]; ok && n.String() == node.String() {
 				continue
 			}
 
@@ -35,7 +37,7 @@ func (m *monitor) discoveryRoutine() {
 			}); err != nil {
 				log.WithFields(log.Fields{"node": node, "err": err}).Error("upsertNode")
 			} else {
-				m.discvMap[node.ID.String()] = node
+				discvMap[node.ID.String()] = node
 			}
 		}
 

@@ -36,15 +36,13 @@ import (
 
 type monitor struct {
 	*sync.RWMutex
-	cfg     *config.Config
-	db      *gorm.DB
-	nodeCfg *vaporCfg.Config
-	sw      *p2p.Switch
-	privKey chainkd.XPrv
-	chain   *mock.Chain
-	txPool  *mock.Mempool
-	// discvMap maps a node's public key to the node itself
-	discvMap       map[string]*dht.Node
+	cfg            *config.Config
+	db             *gorm.DB
+	nodeCfg        *vaporCfg.Config
+	sw             *p2p.Switch
+	privKey        chainkd.XPrv
+	chain          *mock.Chain
+	txPool         *mock.Mempool
 	bestHeightSeen uint64
 	peers          *peers.PeerSet
 }
@@ -80,7 +78,6 @@ func NewMonitor(cfg *config.Config, db *gorm.DB) *monitor {
 		privKey:        privKey.(chainkd.XPrv),
 		chain:          chain,
 		txPool:         txPool,
-		discvMap:       make(map[string]*dht.Node),
 		bestHeightSeen: uint64(0),
 	}
 }
