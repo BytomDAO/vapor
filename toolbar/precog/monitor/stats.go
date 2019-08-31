@@ -15,12 +15,7 @@ import (
 	"github.com/vapor/toolbar/precog/database/orm"
 )
 
-// TODO: simplify
 func (m *monitor) upsertNode(node *config.Node) error {
-	if node.XPub != nil {
-		node.PublicKey = fmt.Sprintf("%v", node.XPub.PublicKey().String())
-	}
-
 	ormNode := &orm.Node{
 		IP:   node.IP,
 		Port: node.Port,
@@ -32,6 +27,7 @@ func (m *monitor) upsertNode(node *config.Node) error {
 	ormNode.PublicKey = node.PublicKey
 	if node.XPub != nil {
 		ormNode.Xpub = node.XPub.String()
+		ormNode.PublicKey = fmt.Sprintf("%v", node.XPub.PublicKey().String())
 	}
 	return m.db.Save(ormNode).Error
 }
