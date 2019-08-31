@@ -1,6 +1,7 @@
 package orm
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -30,9 +31,9 @@ func (n *Node) MarshalJSON() ([]byte, error) {
 		return nil, errors.New("fail to look up status")
 	}
 
-	avgLantencyMS := 0
+	avgLantencyMS := uint64(0)
 	if n.AvgLantencyMS.Valid {
-		avgLantencyMS = n.AvgLantencyMS.Int64
+		avgLantencyMS = uint64(n.AvgLantencyMS.Int64)
 	}
 
 	return json.Marshal(&struct {
@@ -40,7 +41,7 @@ func (n *Node) MarshalJSON() ([]byte, error) {
 		PublicKey                string    `json:"publickey"`
 		Address                  string    `json:"address"`
 		BestHeight               uint64    `json:"best_height"`
-		AvgLantencyMS            int64     `json:"avg_lantency_ms"`
+		AvgLantencyMS            uint64    `json:"avg_lantency_ms"`
 		LatestDailyUptimeMinutes uint64    `json:"latest_daily_uptime_minutes"`
 		Status                   string    `json:"status"`
 		UpdatedAt                time.Time `json:"updated_at"`
