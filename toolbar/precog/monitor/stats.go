@@ -15,7 +15,6 @@ import (
 	"github.com/vapor/toolbar/precog/database/orm"
 )
 
-// create or update: https://github.com/jinzhu/gorm/issues/1307
 func (m *monitor) upsertNode(node *config.Node) error {
 	if node.XPub != nil {
 		node.PublicKey = fmt.Sprintf("%v", node.XPub.PublicKey().String())
