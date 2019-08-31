@@ -33,12 +33,7 @@ func (m *monitor) upsertNode(node *config.Node) error {
 	return m.db.Save(ormNode).Error
 }
 
-// TODO: maybe return connected nodes here for checkStatus
 func (m *monitor) processDialResults(peerList []*p2p.Peer) error {
-	return nil
-}
-
-func (m *monitor) processDialResults1() error {
 	var ormNodes []*orm.Node
 	if err := m.db.Model(&orm.Node{}).Find(&ormNodes).Error; err != nil {
 		return err
@@ -51,7 +46,7 @@ func (m *monitor) processDialResults1() error {
 
 	connMap := make(map[string]bool, len(ormNodes))
 	// connected peers
-	for _, peer := range m.sw.GetPeers().List() {
+	for _, peer := range peerList {
 		connMap[peer.ListenAddr] = true
 		if err := m.processConnectedPeer(addressMap[peer.ListenAddr]); err != nil {
 			log.WithFields(log.Fields{"peer listenAddr": peer.ListenAddr, "err": err}).Error("processConnectedPeer")
@@ -60,7 +55,7 @@ func (m *monitor) processDialResults1() error {
 
 	// offline peers
 	for _, ormNode := range ormNodes {
-		if _, ok := connMap[ormNode.PublicKey]; ok {
+		if _, ok := connMap[peer.ListenAddr]; ok {
 			continue
 		}
 
