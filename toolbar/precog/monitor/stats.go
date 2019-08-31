@@ -33,7 +33,6 @@ func (m *monitor) upsertNode(node *config.Node) error {
 	if node.XPub != nil {
 		ormNode.Xpub = node.XPub.String()
 	}
-	log.Info("======================================================================")
 	return m.db.Save(ormNode).Error
 }
 
