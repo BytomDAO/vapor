@@ -25,7 +25,6 @@ import (
 )
 
 // TODO:
-// 3. toolbar/precog/monitor/stats.go FirstOrCreate&Update 弱弱的问一下，直接save会出事么？
 // 4. 碰到一个玄学问题，究竟是以ip为单位，还是pubkey为单位。 如果同一个pubkey出现在2个不同的ip，会不会让数据混乱？
 // 7. m这个为什么需要锁呀？一个是节点发现，一个是生命探测，中间交互都是数据库把？
 
