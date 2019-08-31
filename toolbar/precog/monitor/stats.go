@@ -124,6 +124,10 @@ func (m *monitor) processPeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error
 		return err
 	}
 
+	if ormNode.Status == common.NodeOfflineStatus {
+		return fmt.Errorf("node %s status error", ormNode.PublicKey)
+	}
+
 	log.WithFields(log.Fields{"ping": peerInfo.Ping}).Debug("peerInfo")
 	ping, err := time.ParseDuration(peerInfo.Ping)
 	if err != nil {
@@ -142,10 +146,6 @@ func (m *monitor) processPeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error
 
 	// update latest liveness
 	latestLiveness := ormNodeLivenesses[0]
-	// if latestLiveness.Status == common.NodeOfflineStatus {
-	// 	return fmt.Errorf("node %s latest liveness status error", ormNode.PublicKey)
-	// }
-
 	lantencyMS := ping.Nanoseconds() / 1000
 	if lantencyMS != 0 {
 		latestLiveness.AvgLantencyMS = sql.NullInt64{
