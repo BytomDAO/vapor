@@ -27,9 +27,10 @@ import (
 // TODO:
 // 1. moniker 理论是安全的，只是记得测试一下，这么改不会让vapor node出坑
 // 2. StatusMap 感觉没什么问题，double check一下别的出名项目是不是也是这么叫的
+
 // 3. toolbar/precog/monitor/stats.go FirstOrCreate&Update 弱弱的问一下，直接save会出事么？
 // 4. 碰到一个玄学问题，究竟是以ip为单位，还是pubkey为单位。 如果同一个pubkey出现在2个不同的ip，会不会让数据混乱？
-// 6. NodeLiveness应该是存每次的通讯记录？至于一些统计数据之类的都丢node上去？
+// 6. ***NodeLiveness应该是存每次的通讯记录？至于一些统计数据之类的都丢node上去？
 // 7. m这个为什么需要锁呀？一个是节点发现，一个是生命探测，中间交互都是数据库把？
 
 type monitor struct {
@@ -122,16 +123,16 @@ func (m *monitor) makeSwitch() error {
 	}
 
 	m.peers = peers.NewPeerSet(m.sw)
-	return m.prepareReactors(m.peers)
+	return m.prepareReactors()
 }
 
-func (m *monitor) prepareReactors(peers *peers.PeerSet) error {
+func (m *monitor) prepareReactors() error {
 	dispatcher := event.NewDispatcher()
 	// add ConsensusReactor for consensusChannel
-	_ = consensusmgr.NewManager(m.sw, m.chain, peers, dispatcher)
+	_ = consensusmgr.NewManager(m.sw, m.chain, m.peers, dispatcher)
 	fastSyncDB := dbm.NewDB("fastsync", m.nodeCfg.DBBackend, m.nodeCfg.DBDir())
 	// add ProtocolReactor to handle msgs
-	if _, err := chainmgr.NewManager(m.nodeCfg, m.sw, m.chain, m.txPool, dispatcher, peers, fastSyncDB); err != nil {
+	if _, err := chainmgr.NewManager(m.nodeCfg, m.sw, m.chain, m.txPool, dispatcher, m.peers, fastSyncDB); err != nil {
 		return err
 	}
 

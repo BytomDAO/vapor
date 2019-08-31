@@ -24,7 +24,7 @@ type Node struct {
 }
 
 func (n *Node) MarshalJSON() ([]byte, error) {
-	status, ok := common.StatusMap[n.Status]
+	status, ok := common.StatusLookupTable[n.Status]
 	if !ok {
 		return nil, errors.New("fail to look up status")
 	}

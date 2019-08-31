@@ -10,7 +10,6 @@ import (
 
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/netsync/peers"
-	"github.com/vapor/p2p"
 	"github.com/vapor/toolbar/precog/common"
 	"github.com/vapor/toolbar/precog/config"
 	"github.com/vapor/toolbar/precog/database/orm"
@@ -90,7 +89,9 @@ func (m *monitor) processConnectedPeer(ormNode *orm.Node) error {
 	}
 
 	ormNodeLiveness.PongTimes += 1
-	ormNode.Status = common.NodeUnknownStatus
+	if ormNode.Status == common.NodeOfflineStatus {
+		ormNode.Status = common.NodeUnknownStatus
+	}
 	ormNodeLiveness.Node = ormNode
 	return m.db.Save(ormNodeLiveness).Error
 }

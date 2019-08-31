@@ -8,7 +8,7 @@ const (
 	NodeOfflineStatus
 )
 
-var StatusMap = map[uint8]string{
+var StatusLookupTable = map[uint8]string{
 	NodeUnknownStatus:   "unknown",
 	NodeHealthyStatus:   "healthy",
 	NodeCongestedStatus: "congested",
