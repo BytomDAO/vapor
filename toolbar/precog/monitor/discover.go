@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -15,15 +16,14 @@ var (
 )
 
 func (m *monitor) discoveryRoutine() {
-	// TODO: ip & port?
-	// discvMap maps a node's public key to the node itself
 	discvMap := make(map[string]*dht.Node)
 	ticker := time.NewTicker(time.Duration(discvFreqSec) * time.Second)
 	for range ticker.C {
 		nodes := make([]*dht.Node, nodesToDiscv)
 		num := m.sw.GetDiscv().ReadRandomNodes(nodes)
 		for _, node := range nodes[:num] {
-			if n, ok := discvMap[node.ID.String()]; ok && n.String() == node.String() {
+			address := fmt.Sprintf("%s:%d", node.IP.String(), node.TCP)
+			if n, ok := discvMap[address]; ok && n.String() == node.String() {
 				continue
 			}
 
@@ -36,7 +36,7 @@ func (m *monitor) discoveryRoutine() {
 			}); err != nil {
 				log.WithFields(log.Fields{"node": node, "err": err}).Error("upsertNode")
 			} else {
-				discvMap[node.ID.String()] = node
+				discvMap[address] = node
 			}
 		}
 	}
