@@ -15,6 +15,7 @@ import (
 	"github.com/vapor/toolbar/precog/database/orm"
 )
 
+// TODO: simplify
 func (m *monitor) upsertNode(node *config.Node) error {
 	if node.XPub != nil {
 		node.PublicKey = fmt.Sprintf("%v", node.XPub.PublicKey().String())
@@ -42,6 +43,7 @@ func (m *monitor) processDialResults() error {
 		return err
 	}
 
+	// TODO: ???
 	publicKeyMap := make(map[string]*orm.Node, len(ormNodes))
 	for _, ormNode := range ormNodes {
 		publicKeyMap[ormNode.PublicKey] = ormNode
