@@ -36,19 +36,20 @@ func (m *monitor) dialNodes() error {
 	// connected peers will be skipped in switch.DialPeers()
 	m.sw.DialPeers(addresses)
 	log.Info("DialPeers done.")
-	m.processDialResults()
-	m.checkStatus()
+	peerList := m.sw.GetPeers().List()
+	m.processDialResults(peerList)
+	m.checkStatus(peerList)
 	return nil
 }
 
-func (m *monitor) checkStatus() {
-	for _, peer := range m.sw.GetPeers().List() {
+func (m *monitor) checkStatus(peerList []*p2p.Peer) {
+	for _, peer := range peerList {
 		peer.Start()
 		m.peers.AddPeer(peer)
 	}
 	log.WithFields(log.Fields{"num": len(m.sw.GetPeers().List()), "peers": m.sw.GetPeers().List()}).Info("connected peers")
 
-	for _, peer := range m.sw.GetPeers().List() {
+	for _, peer := range peerList {
 		p := m.peers.GetPeer(peer.ID())
 		if p == nil {
 			continue
@@ -68,7 +69,7 @@ func (m *monitor) checkStatus() {
 	log.WithFields(log.Fields{"bestHeight": m.bestHeightSeen}).Info("peersInfo")
 	m.processPeerInfos(m.peers.GetPeerInfos())
 
-	for _, peer := range m.sw.GetPeers().List() {
+	for _, peer := range peerList {
 		p := m.peers.GetPeer(peer.ID())
 		if p == nil {
 			continue

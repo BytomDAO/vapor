@@ -10,6 +10,7 @@ import (
 
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/netsync/peers"
+	"github.com/vapor/p2p"
 	"github.com/vapor/toolbar/precog/common"
 	"github.com/vapor/toolbar/precog/config"
 	"github.com/vapor/toolbar/precog/database/orm"
@@ -33,31 +34,27 @@ func (m *monitor) upsertNode(node *config.Node) error {
 }
 
 // TODO: maybe return connected nodes here for checkStatus
-func (m *monitor) processDialResults() error {
+func (m *monitor) processDialResults(peerList []*p2p.Peer) error {
+	return nil
+}
+
+func (m *monitor) processDialResults1() error {
 	var ormNodes []*orm.Node
 	if err := m.db.Model(&orm.Node{}).Find(&ormNodes).Error; err != nil {
 		return err
 	}
 
-	// TODO: ???
-	publicKeyMap := make(map[string]*orm.Node, len(ormNodes))
+	addressMap := make(map[string]*orm.Node, len(ormNodes))
 	for _, ormNode := range ormNodes {
-		publicKeyMap[ormNode.PublicKey] = ormNode
+		addressMap[fmt.Sprintf("%s:%d", ormNode.IP, ormNode.Port)] = ormNode
 	}
 
 	connMap := make(map[string]bool, len(ormNodes))
 	// connected peers
 	for _, peer := range m.sw.GetPeers().List() {
-		xPub := &chainkd.XPub{}
-		if err := xPub.UnmarshalText([]byte(peer.Key)); err != nil {
-			log.WithFields(log.Fields{"xpub": peer.Key}).Error("unmarshal xpub")
-			continue
-		}
-
-		publicKey := xPub.PublicKey().String()
-		connMap[publicKey] = true
-		if err := m.processConnectedPeer(publicKeyMap[publicKey]); err != nil {
-			log.WithFields(log.Fields{"peer publicKey": publicKey, "err": err}).Error("processConnectedPeer")
+		connMap[peer.ListenAddr] = true
+		if err := m.processConnectedPeer(addressMap[peer.ListenAddr]); err != nil {
+			log.WithFields(log.Fields{"peer listenAddr": peer.ListenAddr, "err": err}).Error("processConnectedPeer")
 		}
 	}
 
