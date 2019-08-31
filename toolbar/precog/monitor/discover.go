@@ -15,7 +15,7 @@ var (
 )
 
 func (m *monitor) discoveryRoutine() {
-	// TODO: ip&port?
+	// TODO: ip & port?
 	// discvMap maps a node's public key to the node itself
 	discvMap := make(map[string]*dht.Node)
 	ticker := time.NewTicker(time.Duration(discvFreqSec) * time.Second)
