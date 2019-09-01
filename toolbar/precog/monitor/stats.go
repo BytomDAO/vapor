@@ -147,16 +147,16 @@ func (m *monitor) processPeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error
 	// update latest liveness
 	latestLiveness := ormNodeLivenesses[0]
 	rttMS := ping.Nanoseconds() / 1000000
+	if rttMS > 0 && rttMS < 2000 {
+		ormNode.Status = common.NodeHealthyStatus
+	} else if rttMS > 2000 {
+		ormNode.Status = common.NodeCongestedStatus
+	}
 	if rttMS != 0 {
 		ormNode.AvgRttMS = sql.NullInt64{
 			Int64: (ormNode.AvgRttMS.Int64*int64(latestLiveness.PongTimes) + rttMS) / int64(latestLiveness.PongTimes+1),
 			Valid: true,
 		}
-	}
-	if rttMS > 0 && rttMs < 2000 {
-		ormNode.Status = common.NodeHealthyStatus
-	} else if rttMS > 2000 {
-		ormNode.Status = common.NodeCongestedStatus
 	}
 	latestLiveness.PongTimes += 1
 	if peerInfo.Height != 0 {
