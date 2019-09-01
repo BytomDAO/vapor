@@ -48,9 +48,9 @@ func (m *monitor) processDialResults(peerList []*p2p.Peer) error {
 	connMap := make(map[string]bool, len(ormNodes))
 	// connected peers
 	for _, peer := range peerList {
-		connMap[peer.ListenAddr] = true
-		if err := m.processConnectedPeer(addressMap[peer.ListenAddr]); err != nil {
-			log.WithFields(log.Fields{"peer listenAddr": peer.ListenAddr, "err": err}).Error("processConnectedPeer")
+		connMap[peer.RemoteAddr] = true
+		if err := m.processConnectedPeer(addressMap[peer.RemoteAddr]); err != nil {
+			log.WithFields(log.Fields{"peer remoteAddr": peer.RemoteAddr, "err": err}).Error("processConnectedPeer")
 		}
 	}
 
@@ -68,11 +68,7 @@ func (m *monitor) processDialResults(peerList []*p2p.Peer) error {
 	return nil
 }
 
-// TODO: fix???
 func (m *monitor) processConnectedPeer(ormNode *orm.Node) error {
-	if ormNode == nil {
-		ormNode = &orm.Node{}
-	}
 	ormNodeLiveness := &orm.NodeLiveness{NodeID: ormNode.ID}
 	err := m.db.Preload("Node").Where(ormNodeLiveness).Last(ormNodeLiveness).Error
 	if err != nil && err != gorm.ErrRecordNotFound {
