@@ -24,9 +24,6 @@ import (
 	"github.com/vapor/toolbar/precog/config"
 )
 
-// TODO:
-// 4. 碰到一个玄学问题，究竟是以ip为单位，还是pubkey为单位。 如果同一个pubkey出现在2个不同的ip，会不会让数据混乱？
-
 type monitor struct {
 	cfg            *config.Config
 	db             *gorm.DB
