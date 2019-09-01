@@ -146,7 +146,7 @@ func (m *monitor) processPeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error
 
 	// update latest liveness
 	latestLiveness := ormNodeLivenesses[0]
-	lantencyMS := ping.Nanoseconds() / 1000
+	lantencyMS := ping.Nanoseconds() / 1000000
 	if lantencyMS != 0 {
 		ormNode.AvgLantencyMS = sql.NullInt64{
 			Int64: (ormNode.AvgLantencyMS.Int64*int64(latestLiveness.PongTimes) + lantencyMS) / int64(latestLiveness.PongTimes+1),
