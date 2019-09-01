@@ -43,8 +43,8 @@ type Config struct {
 }
 
 type Policy struct {
-	Confirmations      uint64 `json:"confirmations"`
-	RequiredLantencyMS uint64 `json:"required_lantency_ms"`
+	Confirmations uint64 `json:"confirmations"`
+	RequiredRttMS uint64 `json:"required_rtt_ms"`
 }
 
 type Node struct {
