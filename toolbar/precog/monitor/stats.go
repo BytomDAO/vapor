@@ -156,6 +156,7 @@ func (m *monitor) processPeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error
 	latestLiveness.PongTimes += 1
 	if peerInfo.Height != 0 {
 		latestLiveness.BestHeight = peerInfo.Height
+		ormNode.BestHeight = peerInfo.Height
 	}
 	if err := dbTx.Save(latestLiveness).Error; err != nil {
 		return err
@@ -174,6 +175,5 @@ func (m *monitor) processPeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error
 	ormNode.LatestDailyUptimeMinutes = uint64(total.Minutes())
 	ormNode.Alias = peerInfo.Moniker
 	ormNode.Xpub = peerInfo.ID
-	ormNode.BestHeight = peerInfo.Height
 	return dbTx.Save(ormNode).Error
 }
