@@ -34,6 +34,20 @@ func (m *monitor) upsertNode(node *config.Node) error {
 	return m.db.Save(ormNode).Error
 }
 
+func parseRemoteAddr(remoteAddr string) (string, uint16, error) {
+	host, portStr, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		return "", 0, err
+	}
+
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		return "", 0, err
+	}
+
+	return host, uint16(port), nil
+}
+
 func (m *monitor) processDialResults(peerList []*p2p.Peer) error {
 	var ormNodes []*orm.Node
 	if err := m.db.Model(&orm.Node{}).Find(&ormNodes).Error; err != nil {
@@ -100,20 +114,6 @@ func (m *monitor) processPeerInfos(peerInfos []*peers.PeerInfo) {
 	}
 }
 
-func parseRemoteAddr(remoteAddr string) (string, uint16, error) {
-	host, portStr, err := net.SplitHostPort(remoteAddr)
-	if err != nil {
-		return "", 0, err
-	}
-
-	port, err := strconv.Atoi(portStr)
-	if err != nil {
-		return "", 0, err
-	}
-
-	return host, uint16(port), nil
-}
-
 func (m *monitor) processPeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error {
 	ip, port, err := parseRemoteAddr(peerInfo.RemoteAddr)
 	if err != nil {
@@ -148,8 +148,8 @@ func (m *monitor) processPeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error
 	latestLiveness := ormNodeLivenesses[0]
 	lantencyMS := ping.Nanoseconds() / 1000000
 	if lantencyMS != 0 {
-		ormNode.AvgLantencyMS = sql.NullInt64{
-			Int64: (ormNode.AvgLantencyMS.Int64*int64(latestLiveness.PongTimes) + lantencyMS) / int64(latestLiveness.PongTimes+1),
+		ormNode.AvgRttMS = sql.NullInt64{
+			Int64: (ormNode.AvgRttMS.Int64*int64(latestLiveness.PongTimes) + lantencyMS) / int64(latestLiveness.PongTimes+1),
 			Valid: true,
 		}
 	}

@@ -23,7 +23,7 @@ CREATE TABLE `nodes` (
   `ip` varchar(128) NOT NULL DEFAULT '',
   `port` smallint unsigned NOT NULL DEFAULT '0',
   `best_height` int(11) DEFAULT '0',
-  `avg_lantency_ms` int(11) DEFAULT NULL,
+  `avg_rtt_ms` int(11) DEFAULT NULL,
   `latest_daily_uptime_minutes` int(11) DEFAULT '0',
   `status` tinyint(1) NOT NULL DEFAULT '0',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,

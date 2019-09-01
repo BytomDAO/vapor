@@ -18,7 +18,7 @@ type Node struct {
 	IP                       string
 	Port                     uint16
 	BestHeight               uint64
-	AvgLantencyMS            sql.NullInt64
+	AvgRttMS                 sql.NullInt64
 	LatestDailyUptimeMinutes uint64
 	Status                   uint8
 	CreatedAt                time.Time `json:"alias"`
@@ -31,9 +31,9 @@ func (n *Node) MarshalJSON() ([]byte, error) {
 		return nil, errors.New("fail to look up status")
 	}
 
-	avgLantencyMS := uint64(0)
-	if n.AvgLantencyMS.Valid {
-		avgLantencyMS = uint64(n.AvgLantencyMS.Int64)
+	avgRttMS := uint64(0)
+	if n.AvgRttMS.Valid {
+		avgRttMS = uint64(n.AvgRttMS.Int64)
 	}
 
 	return json.Marshal(&struct {
@@ -41,7 +41,7 @@ func (n *Node) MarshalJSON() ([]byte, error) {
 		PublicKey                string    `json:"publickey"`
 		Address                  string    `json:"address"`
 		BestHeight               uint64    `json:"best_height"`
-		AvgLantencyMS            uint64    `json:"avg_lantency_ms"`
+		AvgRttMS                 uint64    `json:"avg_rtt_ms"`
 		LatestDailyUptimeMinutes uint64    `json:"latest_daily_uptime_minutes"`
 		Status                   string    `json:"status"`
 		UpdatedAt                time.Time `json:"updated_at"`
@@ -50,7 +50,7 @@ func (n *Node) MarshalJSON() ([]byte, error) {
 		PublicKey:                n.PublicKey,
 		Address:                  fmt.Sprintf("%s:%d", n.IP, n.Port),
 		BestHeight:               n.BestHeight,
-		AvgLantencyMS:            avgLantencyMS,
+		AvgRttMS:                 avgRttMS,
 		LatestDailyUptimeMinutes: n.LatestDailyUptimeMinutes,
 		Status:    status,
 		UpdatedAt: time.Now(),
