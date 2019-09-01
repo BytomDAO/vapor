@@ -3,12 +3,13 @@ package monitor
 import (
 	"database/sql"
 	"fmt"
+	"net"
+	"strconv"
 	"time"
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/netsync/peers"
 	"github.com/vapor/p2p"
 	"github.com/vapor/toolbar/precog/common"
@@ -55,7 +56,7 @@ func (m *monitor) processDialResults(peerList []*p2p.Peer) error {
 
 	// offline peers
 	for _, ormNode := range ormNodes {
-		if _, ok := connMap[peer.ListenAddr]; ok {
+		if _, ok := connMap[fmt.Sprintf("%s:%d", ormNode.IP, ormNode.Port)]; ok {
 			continue
 		}
 
@@ -67,7 +68,11 @@ func (m *monitor) processDialResults(peerList []*p2p.Peer) error {
 	return nil
 }
 
+// TODO: fix???
 func (m *monitor) processConnectedPeer(ormNode *orm.Node) error {
+	if ormNode == nil {
+		ormNode = &orm.Node{}
+	}
 	ormNodeLiveness := &orm.NodeLiveness{NodeID: ormNode.ID}
 	err := m.db.Preload("Node").Where(ormNodeLiveness).Last(ormNodeLiveness).Error
 	if err != nil && err != gorm.ErrRecordNotFound {
@@ -99,19 +104,33 @@ func (m *monitor) processPeerInfos(peerInfos []*peers.PeerInfo) {
 	}
 }
 
+func parseRemoteAddr(remoteAddr string) (string, uint16, error) {
+	host, portStr, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		return "", 0, err
+	}
+
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		return "", 0, err
+	}
+
+	return host, uint16(port), nil
+}
+
 func (m *monitor) processPeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error {
-	xPub := &chainkd.XPub{}
-	if err := xPub.UnmarshalText([]byte(peerInfo.ID)); err != nil {
+	ip, port, err := parseRemoteAddr(peerInfo.RemoteAddr)
+	if err != nil {
 		return err
 	}
 
-	ormNode := &orm.Node{}
-	if err := dbTx.Model(&orm.Node{}).Where(&orm.Node{PublicKey: xPub.PublicKey().String()}).First(ormNode).Error; err != nil {
+	ormNode := &orm.Node{IP: ip, Port: uint16(port)}
+	if err := dbTx.Where(ormNode).First(ormNode).Error; err != nil {
 		return err
 	}
 
 	if ormNode.Status == common.NodeOfflineStatus {
-		return fmt.Errorf("node %s status error", ormNode.PublicKey)
+		return fmt.Errorf("node %s:%d status error", ormNode.IP, ormNode.Port)
 	}
 
 	log.WithFields(log.Fields{"ping": peerInfo.Ping}).Debug("peerInfo")
@@ -125,8 +144,7 @@ func (m *monitor) processPeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error
 	var ormNodeLivenesses []*orm.NodeLiveness
 	if err := dbTx.Preload("Node").Model(&orm.NodeLiveness{}).
 		Where("node_id = ? AND updated_at >= ?", ormNode.ID, yesterday).
-		Order(fmt.Sprintf("created_at %s", "DESC")).
-		Find(&ormNodeLivenesses).Error; err != nil {
+		Order(fmt.Sprintf("created_at %s", "DESC")).Find(&ormNodeLivenesses).Error; err != nil {
 		return err
 	}
 
@@ -157,12 +175,9 @@ func (m *monitor) processPeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error
 
 		total += ormNodeLiveness.UpdatedAt.Sub(ormNodeLiveness.CreatedAt)
 	}
-
-	return dbTx.Model(&orm.Node{}).Where(&orm.Node{PublicKey: xPub.PublicKey().String()}).
-		UpdateColumn(&orm.Node{
-			Alias:                    peerInfo.Moniker,
-			Xpub:                     peerInfo.ID,
-			BestHeight:               peerInfo.Height,
-			LatestDailyUptimeMinutes: uint64(total.Minutes()),
-		}).First(ormNode).Error
+	ormNode.LatestDailyUptimeMinutes = uint64(total.Minutes())
+	ormNode.Alias = peerInfo.Moniker
+	ormNode.Xpub = peerInfo.ID
+	ormNode.BestHeight = peerInfo.Height
+	return dbTx.Save(ormNode).Error
 }
