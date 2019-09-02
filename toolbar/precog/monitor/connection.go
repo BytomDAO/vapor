@@ -10,9 +10,7 @@ import (
 )
 
 func (m *monitor) connectionRoutine() {
-	// TODO: fix
-	// ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqMinutes) * time.Minute)
-	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqMinutes) * time.Second)
+	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqMinutes) * time.Minute)
 	for ; true; <-ticker.C {
 		if err := m.dialNodes(); err != nil {
 			log.WithFields(log.Fields{"err": err}).Error("dialNodes")
