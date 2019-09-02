@@ -54,6 +54,8 @@ func runReward(cmd *cobra.Command, args []string) error {
 		log.WithFields(log.Fields{"module": logModule, "error": err}).Fatal("Failded to initialize mysql db.")
 	}
 
+	db.LogMode(true)
+
 	sync, err := synchron.NewChainKeeper(db, config, rewardEndHeight)
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "error": err}).Fatal("Failded to initialize NewChainKeeper.")
