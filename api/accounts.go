@@ -60,10 +60,7 @@ type AccountInfo struct {
 }
 
 // POST /delete-account
-func (a *API) deleteAccount(ctx context.Context, filter struct {
-	AccountID    string `json:"account_id"`
-	AccountAlias string `json:"account_alias"`
-}) Response {
+func (a *API) deleteAccount(ctx context.Context, filter AccountFilter) Response {
 	accountID := filter.AccountID
 	if filter.AccountAlias != "" {
 		acc, err := a.wallet.AccountMgr.FindByAlias(filter.AccountAlias)

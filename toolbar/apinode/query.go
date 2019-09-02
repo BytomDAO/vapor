@@ -10,10 +10,9 @@ import (
 	"github.com/vapor/wallet"
 )
 
-func (n *Node) ListAddresses(accountID, accountAlias string, from, count uint) (*[]api.AddressResp, error) {
+func (n *Node) ListAddresses(accountAlias string, from, count uint) (*[]api.AddressResp, error) {
 	url := "/list-addresses"
 	payload, err := json.Marshal(api.AddressReq{
-		AccountID:    accountID,
 		AccountAlias: accountAlias,
 		From:         from,
 		Count:        count,
@@ -26,13 +25,9 @@ func (n *Node) ListAddresses(accountID, accountAlias string, from, count uint) (
 	return res, n.request(url, payload, res)
 }
 
-func (n *Node) ListBalances(accountID, accountAlias string) (*[]wallet.AccountBalance, error) {
+func (n *Node) ListBalances(accountAlias string) (*[]wallet.AccountBalance, error) {
 	url := "/list-balances"
-	payload, err := json.Marshal(struct {
-		AccountID    string `json:"account_id"`
-		AccountAlias string `json:"account_alias"`
-	}{
-		AccountID:    accountID,
+	payload, err := json.Marshal(api.AccountFilter{
 		AccountAlias: accountAlias,
 	})
 	if err != nil {
@@ -43,14 +38,10 @@ func (n *Node) ListBalances(accountID, accountAlias string) (*[]wallet.AccountBa
 	return res, n.request(url, payload, res)
 }
 
-func (n *Node) ListUtxos(accountID, accountAlias, id string, unconfirmed, smartContract bool, from, count uint) (*[]query.AnnotatedUTXO, error) {
+func (n *Node) ListUtxos(accountAlias string,from, count uint) (*[]query.AnnotatedUTXO, error) {
 	url := "/list-unspent-outputs"
 	payload, err := json.Marshal(api.ListUtxosReq{
-		AccountID:     accountID,
 		AccountAlias:  accountAlias,
-		ID:            id,
-		Unconfirmed:   unconfirmed,
-		SmartContract: smartContract,
 		From:          from,
 		Count:         count,
 	})
