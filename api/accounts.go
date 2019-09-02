@@ -15,12 +15,14 @@ import (
 	"github.com/vapor/protocol/vm/vmutil"
 )
 
-// POST /create-account
-func (a *API) createAccount(ctx context.Context, ins struct {
+type CreateAccountReq struct {
 	RootXPubs []chainkd.XPub `json:"root_xpubs"`
 	Quorum    int            `json:"quorum"`
 	Alias     string         `json:"alias"`
-}) Response {
+}
+
+// POST /create-account
+func (a *API) createAccount(ctx context.Context, ins CreateAccountReq) Response {
 	acc, err := a.wallet.AccountMgr.Create(ins.RootXPubs, ins.Quorum, ins.Alias, signers.BIP0044)
 	if err != nil {
 		return NewErrorResponse(err)

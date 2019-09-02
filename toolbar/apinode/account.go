@@ -3,57 +3,30 @@ package apinode
 import (
 	"encoding/json"
 
+	"github.com/vapor/api"
+	"github.com/vapor/blockchain/query"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/errors"
 )
 
-type createKeyReq struct {
-	Alias    string `json:"alias"`
-	Password string `json:"password"`
-	Mnemonic string `json:"mnemonic"`
-	Language string `json:"language"`
-}
-
-type createKeyResp struct {
-	Alias    string       `json:"alias"`
-	XPub     chainkd.XPub `json:"xpub"`
-	File     string       `json:"file"`
-	Mnemonic string       `json:"mnemonic,omitempty"`
-}
-
-func (n *Node) CreateKey(alias, password, mnemonic, language string) (*createKeyResp, error) {
+func (n *Node) CreateKey(alias, password, mnemonic, language string) (*api.CreateKeyResp, error) {
 	url := "/create-key"
-	payload, err := json.Marshal(createKeyReq{Alias: alias, Password: password, Mnemonic: mnemonic, Language: language})
+	payload, err := json.Marshal(api.CreateKeyReq{Alias: alias, Password: password, Mnemonic: mnemonic, Language: language})
 	if err != nil {
 		return nil, errors.Wrap(err, "json marshal")
 	}
 
-	res := &createKeyResp{}
+	res := &api.CreateKeyResp{}
 	return res, n.request(url, payload, res)
 }
 
-type createAccountReq struct {
-	RootXPubs []chainkd.XPub `json:"root_xpubs"`
-	Quorum    int            `json:"quorum"`
-	Alias     string         `json:"alias"`
-}
-
-type createAccountResp struct {
-	ID         string         `json:"id"`
-	Alias      string         `json:"alias,omitempty"`
-	XPubs      []chainkd.XPub `json:"xpubs"`
-	Quorum     int            `json:"quorum"`
-	KeyIndex   uint64         `json:"key_index"`
-	DeriveRule uint8          `json:"derive_rule"`
-}
-
-func (n *Node) CreateAccount(rootXPubs []chainkd.XPub, quorum int, alias string) (*createAccountResp, error) {
+func (n *Node) CreateAccount(rootXPubs []chainkd.XPub, quorum int, alias string) (*query.AnnotatedAccount, error) {
 	url := "/create-account"
-	payload, err := json.Marshal(createAccountReq{RootXPubs: rootXPubs, Quorum: quorum, Alias: alias})
+	payload, err := json.Marshal(api.CreateAccountReq{RootXPubs: rootXPubs, Quorum: quorum, Alias: alias})
 	if err != nil {
 		return nil, errors.Wrap(err, "json marshal")
 	}
 
-	res := &createAccountResp{}
+	res := &query.AnnotatedAccount{}
 	return res, n.request(url, payload, res)
 }

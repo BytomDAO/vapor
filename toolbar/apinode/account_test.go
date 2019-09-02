@@ -1,3 +1,5 @@
+//+build external
+
 package apinode
 
 import (
@@ -9,7 +11,7 @@ import (
 
 func TestCreateKey(t *testing.T) {
 	n:=NewNode("http://127.0.0.1:9889")
-	resp,err:=n.CreateKey("test4","123456","","")
+	resp,err:=n.CreateKey("test6","123456","","")
 	if err!=nil{
 		t.Fatal(err)
 	}
@@ -18,6 +20,6 @@ func TestCreateKey(t *testing.T) {
 	if err!=nil{
 		t.Fatal(err)
 	}
-
 	fmt.Println(respAccount)
 }
+
