@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestNode_ListAddresses(t *testing.T) {
+func TestNodeListAddresses(t *testing.T) {
 	res, err := n.ListAddresses("test10", 0, 10)
 	if err != nil {
 		t.Fatal(err)
@@ -15,7 +15,7 @@ func TestNode_ListAddresses(t *testing.T) {
 	fmt.Println(res)
 }
 
-func TestNode_ListBalances(t *testing.T) {
+func TestNodeListBalances(t *testing.T) {
 	res, err := n.ListBalances("test10")
 	if err != nil {
 		t.Fatal(err)
@@ -23,7 +23,7 @@ func TestNode_ListBalances(t *testing.T) {
 	fmt.Println(res)
 }
 
-func TestNode_ListUtxos(t *testing.T) {
+func TestNodeListUtxos(t *testing.T) {
 	res, err := n.ListUtxos("test10", 0, 10)
 	if err != nil {
 		t.Fatal(err)
@@ -31,7 +31,7 @@ func TestNode_ListUtxos(t *testing.T) {
 	fmt.Println(res)
 }
 
-func TestNode_WalletInfo(t *testing.T) {
+func TestNodeWalletInfo(t *testing.T) {
 	res, err := n.WalletInfo()
 	if err != nil {
 		t.Fatal(err)
@@ -39,7 +39,7 @@ func TestNode_WalletInfo(t *testing.T) {
 	fmt.Println(res)
 }
 
-func TestNode_NetInfo(t *testing.T) {
+func TestNodeNetInfo(t *testing.T) {
 	res, err := n.NetInfo()
 	if err != nil {
 		t.Fatal(err)
@@ -47,7 +47,7 @@ func TestNode_NetInfo(t *testing.T) {
 	fmt.Println(res)
 }
 
-func TestNode_ListPeers(t *testing.T) {
+func TestNodeListPeers(t *testing.T) {
 	res, err := n.ListPeers()
 	if err != nil {
 		t.Fatal(err)

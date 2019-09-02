@@ -14,7 +14,7 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
-func TestNode_CreateKey(t *testing.T) {
+func TestNodeCreateKey(t *testing.T) {
 	res, err := n.CreateKey("test10", "123456")
 	if err != nil {
 		t.Fatal(err)
@@ -23,7 +23,7 @@ func TestNode_CreateKey(t *testing.T) {
 	fmt.Println(res)
 }
 
-func TestNode_CreateAccount(t *testing.T) {
+func TestNodeCreateAccount(t *testing.T) {
 	res, err := n.CreateAccount("test10")
 	if err != nil {
 		t.Fatal(err)
@@ -32,7 +32,7 @@ func TestNode_CreateAccount(t *testing.T) {
 	fmt.Println(res)
 }
 
-func TestNode_CreateAccountReceiver(t *testing.T) {
+func TestNodeCreateAccountReceiver(t *testing.T) {
 	res, err := n.CreateAccountReceiver("test10")
 	if err != nil {
 		t.Fatal(err)

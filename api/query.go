@@ -360,12 +360,6 @@ func getPubkey(account *account.Account, change bool, index uint64) (*ed25519.Pu
 	return &pubkey, path, nil
 }
 
-type ListPubKeysReq struct {
-	AccountID    string `json:"account_id"`
-	AccountAlias string `json:"account_alias"`
-	PublicKey    string `json:"public_key"`
-}
-
 // POST /list-pubkeys
 func (a *API) listPubKeys(ctx context.Context, ins struct {
 	AccountID    string `json:"account_id"`
