@@ -147,9 +147,9 @@ func (m *monitor) processPeerInfo(dbTx *gorm.DB, peerInfo *peers.PeerInfo) error
 	// update latest liveness
 	latestLiveness := ormNodeLivenesses[0]
 	rttMS := ping.Nanoseconds() / 1000000
-	if rttMS > 0 && rttMS < 2000 {
+	if rttMS > 0 && uint64(rttMS) <= m.cfg.Policy.RequiredRttMS {
 		ormNode.Status = common.NodeHealthyStatus
-	} else if rttMS > 2000 {
+	} else if uint64(rttMS) > m.cfg.Policy.RequiredRttMS {
 		ormNode.Status = common.NodeCongestedStatus
 	}
 	if rttMS != 0 {
