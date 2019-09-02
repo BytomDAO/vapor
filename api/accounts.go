@@ -116,7 +116,14 @@ func (a *API) validateAddress(ctx context.Context, ins struct {
 	return NewSuccessResponse(resp)
 }
 
-type addressResp struct {
+type AddressReq struct {
+	AccountID    string `json:"account_id"`
+	AccountAlias string `json:"account_alias"`
+	From         uint   `json:"from"`
+	Count        uint   `json:"count"`
+}
+
+type AddressResp struct {
 	AccountAlias   string `json:"account_alias"`
 	AccountID      string `json:"account_id"`
 	Address        string `json:"address"`
@@ -126,18 +133,13 @@ type addressResp struct {
 }
 
 // SortByIndex implements sort.Interface for addressResp slices
-type SortByIndex []addressResp
+type SortByIndex []AddressResp
 
 func (a SortByIndex) Len() int           { return len(a) }
 func (a SortByIndex) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a SortByIndex) Less(i, j int) bool { return a[i].KeyIndex < a[j].KeyIndex }
 
-func (a *API) listAddresses(ctx context.Context, ins struct {
-	AccountID    string `json:"account_id"`
-	AccountAlias string `json:"account_alias"`
-	From         uint   `json:"from"`
-	Count        uint   `json:"count"`
-}) Response {
+func (a *API) listAddresses(ctx context.Context, ins AddressReq) Response {
 	accountID := ins.AccountID
 	var target *account.Account
 	if ins.AccountAlias != "" {
@@ -159,12 +161,12 @@ func (a *API) listAddresses(ctx context.Context, ins struct {
 		return NewErrorResponse(err)
 	}
 
-	addresses := []addressResp{}
+	addresses := []AddressResp{}
 	for _, cp := range cps {
 		if cp.Address == "" || cp.AccountID != target.ID {
 			continue
 		}
-		addresses = append(addresses, addressResp{
+		addresses = append(addresses, AddressResp{
 			AccountAlias:   target.Alias,
 			AccountID:      cp.AccountID,
 			Address:        cp.Address,
