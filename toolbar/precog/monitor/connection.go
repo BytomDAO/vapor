@@ -5,6 +5,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+
 	"github.com/vapor/p2p"
 	"github.com/vapor/toolbar/precog/database/orm"
 )
