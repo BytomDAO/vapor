@@ -48,18 +48,6 @@ func (m *monitor) checkStatus(peerList []*p2p.Peer) {
 	}
 	log.WithFields(log.Fields{"num": len(m.sw.GetPeers().List()), "peers": m.sw.GetPeers().List()}).Info("connected peers")
 
-	for _, peer := range peerList {
-		p := m.peers.GetPeer(peer.ID())
-		if p == nil {
-			continue
-		}
-
-		if err := p.SendStatus(m.chain.BestBlockHeader(), m.chain.LastIrreversibleHeader()); err != nil {
-			log.WithFields(log.Fields{"peer": p, "err": err}).Error("SendStatus")
-			m.peers.RemovePeer(p.ID())
-		}
-	}
-
 	for _, peerInfo := range m.peers.GetPeerInfos() {
 		if peerInfo.Height > m.bestHeightSeen {
 			m.bestHeightSeen = peerInfo.Height
