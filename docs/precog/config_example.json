@@ -15,7 +15,7 @@
     },
     "check_frequency_minutes" : 30,
     "policy" : {
-        "required_rtt_ms" : 2000,
+        "required_rtt_ms" : 2000
     },
     "seeds" : [
         {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/user"
+	"path"
 	"strings"
 
 	"github.com/jinzhu/gorm"
@@ -76,7 +77,7 @@ func makePath() (string, error) {
 		return "", err
 	}
 
-	dataPath := usr.HomeDir + "/.vapor/precog"
+	dataPath := path.Join(usr.HomeDir, "/.vapor_precog")
 	if err := os.MkdirAll(dataPath, os.ModePerm); err != nil {
 		return "", err
 	}
