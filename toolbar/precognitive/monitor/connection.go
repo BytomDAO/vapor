@@ -11,7 +11,7 @@ import (
 )
 
 func (m *monitor) connectionRoutine() {
-	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqMinutes) * time.Minute)
+	ticker := time.NewTicker(time.Duration(m.cfg.CheckFreqMinutes/3) * time.Second)
 	for ; true; <-ticker.C {
 		if err := m.dialNodes(); err != nil {
 			log.WithFields(log.Fields{"err": err}).Error("dialNodes")
