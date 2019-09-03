@@ -24,7 +24,7 @@ func TestNodeCreateKey(t *testing.T) {
 }
 
 func TestNodeCreateAccount(t *testing.T) {
-	res, err := n.CreateAccount("test10")
+	res, err := n.CreateAccount("test3", "test12")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,6 +34,15 @@ func TestNodeCreateAccount(t *testing.T) {
 
 func TestNodeCreateAccountReceiver(t *testing.T) {
 	res, err := n.CreateAccountReceiver("test10")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println(res)
+}
+
+func TestNodeListAccounts(t *testing.T) {
+	res, err := n.ListAccounts()
 	if err != nil {
 		t.Fatal(err)
 	}

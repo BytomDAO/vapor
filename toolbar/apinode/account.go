@@ -29,25 +29,40 @@ func (n *Node) ListKeys() (*[]pseudohsm.XPub, error) {
 }
 
 //默认创建单签账户
-func (n *Node) CreateAccount(alias string) (*query.AnnotatedAccount, error) {
+func (n *Node) CreateAccount(keyAlias, accountAlias string) (*query.AnnotatedAccount, error) {
 	xPub, err := n.ListKeys()
 	if err != nil {
 		return nil, err
 	}
 
-	rootXpub := chainkd.XPub{}
+	rootXPub := chainkd.XPub{}
+	found := false
 	for _, x := range *xPub {
-		if x.Alias == alias {
-			rootXpub = x.XPub
+		if x.Alias == keyAlias {
+			found = true
+			rootXPub = x.XPub
 			break
 		}
 	}
 
+	if !found {
+		return nil, errors.New("keyAlias not found!")
+	}
+
+	return n.postCreateAccount(accountAlias, 1, []chainkd.XPub{rootXPub})
+}
+
+//多签账户
+func (n *Node) CreateMultiSignAccount(alias string, quorum int, rootXPubs []chainkd.XPub) (*query.AnnotatedAccount, error) {
+	return n.postCreateAccount(alias, quorum, rootXPubs)
+}
+
+func (n *Node) postCreateAccount(alias string, quorum int, rootXPubs []chainkd.XPub) (*query.AnnotatedAccount, error) {
 	url := "/create-account"
 	payload, err := json.Marshal(api.CreateAccountReq{
 		Alias:     alias,
-		Quorum:    1,
-		RootXPubs: []chainkd.XPub{rootXpub},
+		Quorum:    quorum,
+		RootXPubs: rootXPubs,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "json marshal")
@@ -59,10 +74,7 @@ func (n *Node) CreateAccount(alias string) (*query.AnnotatedAccount, error) {
 
 func (n *Node) ListAccounts() (*[]query.AnnotatedAccount, error) {
 	url := "/list-accounts"
-	payload, err := json.Marshal(struct {
-		ID    string `json:"id"`
-		Alias string `json:"alias"`
-	}{})
+	payload, err := json.Marshal(struct{}{})
 	if err != nil {
 		return nil, errors.Wrap(err, "json marshal")
 	}
