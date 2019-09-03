@@ -35,21 +35,19 @@ func (n *Node) CreateAccount(keyAlias, accountAlias string) (*query.AnnotatedAcc
 		return nil, err
 	}
 
-	rootXPub := chainkd.XPub{}
-	found := false
+	var rootXPub *chainkd.XPub
 	for _, x := range *xPub {
 		if x.Alias == keyAlias {
-			found = true
-			rootXPub = x.XPub
+			rootXPub = &x.XPub
 			break
 		}
 	}
 
-	if !found {
+	if rootXPub == nil {
 		return nil, errors.New("keyAlias not found!")
 	}
 
-	return n.postCreateAccount(accountAlias, 1, []chainkd.XPub{rootXPub})
+	return n.postCreateAccount(accountAlias, 1, []chainkd.XPub{*rootXPub})
 }
 
 //多签账户

@@ -24,7 +24,7 @@ func TestNodeCreateKey(t *testing.T) {
 }
 
 func TestNodeCreateAccount(t *testing.T) {
-	res, err := n.CreateAccount("test3", "test12")
+	res, err := n.CreateAccount("test10", "test11")
 	if err != nil {
 		t.Fatal(err)
 	}
