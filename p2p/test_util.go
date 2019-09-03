@@ -92,7 +92,7 @@ func MakeSwitch(cfg *cfg.Config, testdb dbm.DB, privKey signlib.PrivKey, initSwi
 	// new switch, add reactors
 	l, listenAddr := GetListener(cfg.P2P)
 	cfg.P2P.LANDiscover = false
-	sw, err := newSwitch(cfg, new(mockDiscv), nil, l, privKey, listenAddr, 0)
+	sw, err := NewSwitch(cfg, new(mockDiscv), nil, l, privKey, listenAddr, 0)
 	if err != nil {
 		log.Errorf("create switch error: %s", err)
 		return nil

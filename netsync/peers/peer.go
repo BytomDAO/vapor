@@ -35,6 +35,7 @@ var (
 
 //BasePeer is the interface for connection level peer
 type BasePeer interface {
+	Moniker() string
 	Addr() net.Addr
 	ID() string
 	RemoteAddrHost() string
@@ -61,6 +62,7 @@ type BroadcastMsg interface {
 // PeerInfo indicate peer status snap
 type PeerInfo struct {
 	ID                  string `json:"peer_id"`
+	Moniker             string `json:"moniker"`
 	RemoteAddr          string `json:"remote_addr"`
 	Height              uint64 `json:"height"`
 	Ping                string `json:"ping"`
@@ -169,6 +171,7 @@ func (p *Peer) GetPeerInfo() *PeerInfo {
 
 	return &PeerInfo{
 		ID:                  p.ID(),
+		Moniker:             p.BasePeer.Moniker(),
 		RemoteAddr:          p.Addr().String(),
 		Height:              p.bestHeight,
 		Ping:                ping.String(),
