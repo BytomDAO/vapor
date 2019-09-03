@@ -7,7 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/vapor/toolbar/precognitive/common"
+	"github.com/vapor/toolbar/common"
+	precogCommon "github.com/vapor/toolbar/precognitive/common"
 )
 
 type Node struct {
@@ -21,12 +22,12 @@ type Node struct {
 	AvgRttMS                 sql.NullInt64
 	LatestDailyUptimeMinutes uint64
 	Status                   uint8
-	CreatedAt                time.Time `json:"alias"`
-	UpdatedAt                time.Time `json:"alias"`
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
 }
 
 func (n *Node) MarshalJSON() ([]byte, error) {
-	status, ok := common.StatusLookupTable[n.Status]
+	status, ok := precogCommon.StatusLookupTable[n.Status]
 	if !ok {
 		return nil, errors.New("fail to look up status")
 	}
@@ -37,14 +38,14 @@ func (n *Node) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(&struct {
-		Alias                    string    `json:"alias"`
-		PublicKey                string    `json:"publickey"`
-		Address                  string    `json:"address"`
-		BestHeight               uint64    `json:"best_height"`
-		AvgRttMS                 uint64    `json:"avg_rtt_ms"`
-		LatestDailyUptimeMinutes uint64    `json:"latest_daily_uptime_minutes"`
-		Status                   string    `json:"status"`
-		UpdatedAt                time.Time `json:"updated_at"`
+		Alias                    string           `json:"alias"`
+		PublicKey                string           `json:"publickey"`
+		Address                  string           `json:"address"`
+		BestHeight               uint64           `json:"best_height"`
+		AvgRttMS                 uint64           `json:"avg_rtt_ms"`
+		LatestDailyUptimeMinutes uint64           `json:"latest_daily_uptime_minutes"`
+		Status                   string           `json:"status"`
+		UpdatedAt                common.Timestamp `json:"updated_at"`
 	}{
 		Alias:                    n.Alias,
 		PublicKey:                n.PublicKey,
@@ -53,6 +54,6 @@ func (n *Node) MarshalJSON() ([]byte, error) {
 		AvgRttMS:                 avgRttMS,
 		LatestDailyUptimeMinutes: n.LatestDailyUptimeMinutes,
 		Status:    status,
-		UpdatedAt: time.Now(),
+		UpdatedAt: common.Timestamp(n.UpdatedAt),
 	})
 }
