@@ -6,9 +6,9 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/vapor/toolbar/common"
-	"github.com/vapor/toolbar/precog/api"
-	"github.com/vapor/toolbar/precog/config"
-	"github.com/vapor/toolbar/precog/monitor"
+	"github.com/vapor/toolbar/precognitive/api"
+	"github.com/vapor/toolbar/precognitive/config"
+	"github.com/vapor/toolbar/precognitive/monitor"
 )
 
 func main() {

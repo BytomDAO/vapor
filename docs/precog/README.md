@@ -1,16 +1,16 @@
-# Precog
+# Precognitive
 
 Keep monitoring (leader & candidate) consensus nodes status in vapor network.
 
 ## Init
 
 ### Database Schema
-[precog_schema.sql](./sql_dump/precog_schema.sql)
+[precognitive_schema.sql](./sql_dump/precognitive_schema.sql)
 
 ### Config
-run with [config_example.json](docs/precog/config_example.json)
+run with [config_example.json](docs/precognitive/config_example.json)
 ```
-go run cmd/precog/main.go docs/precog/config_example.json
+go run cmd/precognitive/main.go docs/precognitive/config_example.json
 ```
 
 ## API

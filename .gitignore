@@ -21,7 +21,7 @@ _cgo_export.*
 _testmain.go
 
 cmd/fedd/fedd
-cmd/precog/precog
+cmd/precognitive/precognitive
 cmd/vapord/vapord
 cmd/vapord/.vapord
 cmd/vaporcli/vaporcli

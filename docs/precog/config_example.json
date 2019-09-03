@@ -9,7 +9,7 @@
             "port": 3306,
             "username": "root",
             "password": "toor",
-            "database": "precog"
+            "database": "precognitive"
         },
         "log_mode" : true
     },
