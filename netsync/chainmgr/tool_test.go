@@ -51,6 +51,10 @@ func (p *P2PPeer) IsLAN() bool {
 	return false
 }
 
+func (p *P2PPeer) Moniker() string {
+	return ""
+}
+
 func (p *P2PPeer) RemoteAddrHost() string {
 	return ""
 }

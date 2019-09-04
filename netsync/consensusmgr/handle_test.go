@@ -28,6 +28,10 @@ func (p *p2peer) ID() string {
 	return ""
 }
 
+func (p *p2peer) Moniker() string {
+	return ""
+}
+
 func (p *p2peer) RemoteAddrHost() string {
 	return ""
 }

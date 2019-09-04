@@ -28,10 +28,11 @@ type Chain struct {
 
 func NewChain(mempool *Mempool) *Chain {
 	return &Chain{
-		heightMap:   map[uint64]*types.Block{},
-		blockMap:    map[bc.Hash]*types.Block{},
-		prevOrphans: make(map[bc.Hash]*types.Block),
-		mempool:     mempool,
+		bestBlockHeader: &types.BlockHeader{},
+		heightMap:       map[uint64]*types.Block{},
+		blockMap:        map[bc.Hash]*types.Block{},
+		prevOrphans:     make(map[bc.Hash]*types.Block),
+		mempool:         mempool,
 	}
 }
 
@@ -145,6 +146,11 @@ func (c *Chain) ProcessBlock(block *types.Block) (bool, error) {
 		block = c.blockMap[block.PreviousBlockHash]
 	}
 	return false, nil
+}
+
+// TODO:
+func (c *Chain) ProcessBlockSignature(signature, pubkey []byte, blockHash *bc.Hash) error {
+	return nil
 }
 
 func (c *Chain) SetBestBlockHeader(header *types.BlockHeader) {
