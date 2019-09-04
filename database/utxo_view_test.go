@@ -99,6 +99,7 @@ func TestGetTransactionsUtxo(t *testing.T) {
 	for i := 0; i <= 2; i++ {
 		inputView.Entries[bc.Hash{V0: uint64(i)}] = storage.NewUtxoEntry(storage.NormalUTXOType, uint64(i), false)
 	}
+	inputView.Entries[bc.Hash{V0: uint64(3)}] = storage.NewUtxoEntry(storage.CrosschainUTXOType, uint64(3), true)
 	saveUtxoView(batch, inputView)
 	batch.Write()
 
@@ -118,6 +119,24 @@ func TestGetTransactionsUtxo(t *testing.T) {
 			inputView: state.NewUtxoViewpoint(),
 			fetchView: state.NewUtxoViewpoint(),
 			err:       false,
+		},
+		{
+			txs: []*bc.Tx{
+				&bc.Tx{
+					MainchainOutputIDs: []bc.Hash{
+						bc.Hash{V0: 10},
+						bc.Hash{V0: 3},
+					},
+				},
+			},
+			inputView: state.NewUtxoViewpoint(),
+			fetchView: &state.UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 10}: storage.NewUtxoEntry(storage.CrosschainUTXOType, 0, false),
+					bc.Hash{V0: 3}:  storage.NewUtxoEntry(storage.CrosschainUTXOType, 3, true),
+				},
+			},
+			err: false,
 		},
 		{
 			txs: []*bc.Tx{
