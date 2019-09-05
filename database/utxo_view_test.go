@@ -92,7 +92,10 @@ func TestSaveUtxoView(t *testing.T) {
 
 func TestGetTransactionsUtxo(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer os.RemoveAll("temp")
+	defer func() {
+		testDB.Close()
+		os.RemoveAll("temp")
+	}()
 
 	batch := testDB.NewBatch()
 	inputView := state.NewUtxoViewpoint()
