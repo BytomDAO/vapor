@@ -68,6 +68,47 @@ func TestEntryID(t *testing.T) {
 			expectEntryID: "538c367f7b6e1e9bf205ed0a29def84a1467c477b19812a6934e831c78c4da62",
 		},
 		{
+			entry: NewCrossChainInput(
+				&Hash{V0: 0, V1: 1, V2: 2, V3: 3},
+				&Program{VmVersion: 1, Code: []byte{5, 5, 5, 5}},
+				1,
+				&AssetDefinition{
+					IssuanceProgram: &Program{VmVersion: 1, Code: []byte{1, 2, 3, 4}},
+					Data:            &Hash{V0: 0, V1: 1, V2: 2, V3: 3},
+				},
+			),
+			expectEntryID: "14bb3f6e68f37d037b1f1539a21ab41e182b8d59d703a1af6c426d52cfc775d9",
+		},
+		{
+			entry: NewCrossChainOutput(
+				&ValueSource{
+					Ref:      &Hash{V0: 4, V1: 5, V2: 6, V3: 7},
+					Value:    &AssetAmount{&AssetID{V0: 1, V1: 1, V2: 1, V3: 1}, 10},
+					Position: 10,
+				},
+				&Program{VmVersion: 1, Code: []byte{5, 5, 5, 5}},
+				1,
+			),
+			expectEntryID: "8e212555174bb8b725d7023cbe1864408c6a586389875ea0143257c2402b3be9",
+		},
+		{
+			entry: NewVoteOutput(
+				&ValueSource{
+					Ref:      &Hash{V0: 4, V1: 5, V2: 6, V3: 7},
+					Value:    &AssetAmount{&AssetID{V0: 1, V1: 1, V2: 1, V3: 1}, 10},
+					Position: 10,
+				},
+				&Program{VmVersion: 1, Code: []byte{5, 5, 5, 5}},
+				1,
+				[]byte("vote"),
+			),
+			expectEntryID: "67e722b339e58604e46b5a08b9684ab8b6dcb3e6218954db133c05eb2b76f0e8",
+		},
+		{
+			entry:         NewVetoInput(&Hash{V0: 0, V1: 1, V2: 2, V3: 3}, 1),
+			expectEntryID: "a4f4909f947977b50bdd978fcd320161b66a266833546b6399f4709b8dd6ad59",
+		},
+		{
 			entry:         NewSpend(&Hash{V0: 0, V1: 1, V2: 2, V3: 3}, 1),
 			expectEntryID: "2761dbb13967af8944620c134e0f336bbbb26f61eb4ecd154bc034ad6155b9e8",
 		},
