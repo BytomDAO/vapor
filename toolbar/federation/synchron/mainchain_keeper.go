@@ -125,10 +125,9 @@ func (m *mainchainKeeper) isWithdrawalTx(tx *types.Tx) bool {
 		}
 	}
 
-	if sourceTxHash := locateSideChainTx(tx.Outputs[len(tx.Outputs)-1]); sourceTxHash == "" {
-		return false
-	}
-	return true
+	sourceTxHash := locateSideChainTx(tx.Outputs[len(tx.Outputs)-1])
+	_, err := hex.DecodeString(sourceTxHash)
+	return err == nil && len(sourceTxHash) == 64
 }
 
 func locateSideChainTx(output *types.TxOutput) string {
@@ -257,7 +256,7 @@ func (m *mainchainKeeper) processWithdrawalTx(db *gorm.DB, block *types.Block, t
 	blockHash := block.Hash()
 	tx := block.Transactions[txIndex]
 
-	stmt := db.Model(&orm.CrossTransaction{}).Where(&orm.CrossTransaction{
+	return db.Model(&orm.CrossTransaction{}).Where(&orm.CrossTransaction{
 		SourceTxHash: locateSideChainTx(tx.Outputs[len(tx.Outputs)-1]),
 		Status:       common.CrossTxPendingStatus,
 	}).UpdateColumn(&orm.CrossTransaction{
@@ -267,15 +266,7 @@ func (m *mainchainKeeper) processWithdrawalTx(db *gorm.DB, block *types.Block, t
 		DestTxIndex:        sql.NullInt64{int64(txIndex), true},
 		DestTxHash:         sql.NullString{tx.ID.String(), true},
 		Status:             common.CrossTxCompletedStatus,
-	})
-	if stmt.Error != nil {
-		return stmt.Error
-	}
-
-	if stmt.RowsAffected != 1 {
-		return ErrInconsistentDB
-	}
-	return nil
+	}).Error
 }
 
 func (m *mainchainKeeper) syncBlock() (bool, error) {
