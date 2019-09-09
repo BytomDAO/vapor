@@ -276,7 +276,7 @@ func (m *mainchainKeeper) processWithdrawalTx(db *gorm.DB, block *types.Block, t
 	}
 
 	if stmt.RowsAffected != 1 {
-		log.WithField("sourceTxHash", crossTx.SourceTxHash).WithField("destTxHash", tx.ID.String()).Errorf("fail to update withdrawal transaction")
+		log.WithFields(log.Fields{"sourceTxHash": crossTx.SourceTxHash, "destTxHash": tx.ID.String()}).Error("fail to update withdrawal transaction")
 	}
 	return nil
 }
