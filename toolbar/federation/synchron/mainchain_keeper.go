@@ -126,8 +126,7 @@ func (m *mainchainKeeper) isWithdrawalTx(tx *types.Tx) bool {
 	}
 
 	sourceTxHash := locateSideChainTx(tx.Outputs[len(tx.Outputs)-1])
-	_, err := hex.DecodeString(sourceTxHash)
-	return err == nil && len(sourceTxHash) == 64
+	return sourceTxHash != ""
 }
 
 func locateSideChainTx(output *types.TxOutput) string {
@@ -144,7 +143,11 @@ func locateSideChainTx(output *types.TxOutput) string {
 		return ""
 	}
 
-	return string(insts[1].Data)
+	sourceTxHash := string(insts[1].Data)
+	if _, err = hex.DecodeString(sourceTxHash); err == nil && len(sourceTxHash) == 64 {
+		return sourceTxHash
+	}
+	return ""
 }
 
 func (m *mainchainKeeper) processBlock(db *gorm.DB, block *types.Block, txStatus *bc.TransactionStatus) error {
@@ -256,17 +259,26 @@ func (m *mainchainKeeper) processWithdrawalTx(db *gorm.DB, block *types.Block, t
 	blockHash := block.Hash()
 	tx := block.Transactions[txIndex]
 
-	return db.Model(&orm.CrossTransaction{}).Where(&orm.CrossTransaction{
+	crossTx := &orm.CrossTransaction{
 		SourceTxHash: locateSideChainTx(tx.Outputs[len(tx.Outputs)-1]),
 		Status:       common.CrossTxPendingStatus,
-	}).UpdateColumn(&orm.CrossTransaction{
+	}
+	stmt := db.Model(&orm.CrossTransaction{}).Where(crossTx).UpdateColumn(&orm.CrossTransaction{
 		DestBlockHeight:    sql.NullInt64{int64(block.Height), true},
 		DestBlockTimestamp: sql.NullInt64{int64(block.Timestamp), true},
 		DestBlockHash:      sql.NullString{blockHash.String(), true},
 		DestTxIndex:        sql.NullInt64{int64(txIndex), true},
 		DestTxHash:         sql.NullString{tx.ID.String(), true},
 		Status:             common.CrossTxCompletedStatus,
-	}).Error
+	})
+	if stmt.Error != nil {
+		return stmt.Error
+	}
+
+	if stmt.RowsAffected != 1 {
+		log.WithField("sourceTxHash", crossTx.SourceTxHash).WithField("destTxHash", tx.ID.String()).Errorf("fail to update withdrawal transaction")
+	}
+	return nil
 }
 
 func (m *mainchainKeeper) syncBlock() (bool, error) {
