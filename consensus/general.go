@@ -144,7 +144,7 @@ var MainNetParams = Params{
 	ProducerSubsidys: []ProducerSubsidy{
 		{BeginBlock: 1, EndBlock: 63072000, Subsidy: 9512938},
 	},
-	SoftForkPoint: map[uint64]uint64{SoftFork001: 10454400},
+	SoftForkPoint: map[uint64]uint64{SoftFork001: 10460592},
 }
 
 // TestNetParams is the config for vapor-testnet
