@@ -366,9 +366,11 @@ func (s *Store) SaveChainStatus(blockHeader, irrBlockHeader *types.BlockHeader, 
 		s.cache.removeMainChainHash(bh.Height)
 	}
 
-	for i := blockHeader.Height + 1; i <= currentStatus.Height; i++ {
-		batch.Delete(calcMainChainIndexPrefix(i))
-		s.cache.removeMainChainHash(i)
+	if currentStatus != nil {
+		for i := blockHeader.Height + 1; i <= currentStatus.Height; i++ {
+			batch.Delete(calcMainChainIndexPrefix(i))
+			s.cache.removeMainChainHash(i)
+		}
 	}
 	batch.Write()
 	return nil
