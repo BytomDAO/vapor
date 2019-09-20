@@ -162,7 +162,7 @@ func (bk *blockKeeper) regularBlockSync() error {
 		targetHeight = peerHeight
 	}
 
-	for i := bestHeight + 1; i <= targetHeight; i = bestHeight + 1 {
+	for i := bestHeight + 1; i <= targetHeight; {
 		block, err := bk.msgFetcher.requireBlock(bk.syncPeer.ID(), i)
 		if err != nil {
 			bk.peers.ProcessIllegal(bk.syncPeer.ID(), security.LevelConnException, err.Error())
@@ -185,6 +185,8 @@ func (bk *blockKeeper) regularBlockSync() error {
 			log.WithFields(log.Fields{"module": logModule, "height": i}).Warn("stop regular sync due to loop sync same height")
 			return nil
 		}
+
+		i = bestHeight + 1
 	}
 	log.WithFields(log.Fields{"module": logModule, "height": bk.chain.BestBlockHeight()}).Info("regular sync success")
 	return nil
