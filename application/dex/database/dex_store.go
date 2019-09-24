@@ -40,37 +40,39 @@ type DexTradeOrderDB struct {
 	db dbm.DB
 }
 
-func (d *DexTradeOrderDB) GetTradePairsWithStart(start []byte) []common.TradePair {
+func (d *DexTradeOrderDB) GetTradePairsWithStart(start []byte) (error, []common.TradePair) {
+	return nil, nil
+}
+
+func (d *DexTradeOrderDB) addTradePair() error {
 	return nil
 }
 
-func (d *DexTradeOrderDB) addTradePair() {
-
-}
-
-func (d *DexTradeOrderDB) deleteTradePair() {
-
-}
-
-func (d *DexTradeOrderDB) ProcessOrders(orders []*common.Order, delOreders []*common.Order, height uint64, blockHash *bc.Hash) {
-
-}
-
-func (d *DexTradeOrderDB) addOrders(orders []*common.Order) {
-
-}
-
-func (d *DexTradeOrderDB) deleteOrder(orders []*common.Order) {
-
-}
-
-func (d *DexTradeOrderDB) ListOrders(fromAssetID, toAssetID string, rateAfter float64) []*common.Order {
+func (d *DexTradeOrderDB) deleteTradePair() error {
 	return nil
 }
 
-func (d *DexTradeOrderDB) GetDexDatabaseState() *common.DexDatabaseState {
+func (d *DexTradeOrderDB) ProcessOrders(orders []*common.Order, delOreders []*common.Order, height uint64, blockHash *bc.Hash) error {
+
 	return nil
 }
 
-func (d *DexTradeOrderDB) saveDexDatabaseState(state *common.DexDatabaseState) {
+func (d *DexTradeOrderDB) addOrders(orders []*common.Order) error {
+	return nil
+}
+
+func (d *DexTradeOrderDB) deleteOrder(orders []*common.Order) error {
+	return nil
+}
+
+func (d *DexTradeOrderDB) ListOrders(fromAssetID, toAssetID string, rateAfter float64) (error, []*common.Order) {
+	return nil, nil
+}
+
+func (d *DexTradeOrderDB) GetDexDatabaseState() (error, *common.DexDatabaseState) {
+	return nil, nil
+}
+
+func (d *DexTradeOrderDB) saveDexDatabaseState(state *common.DexDatabaseState) error {
+	return nil
 }
