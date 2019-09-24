@@ -52,25 +52,25 @@ func (d *DexTradeOrderDB) deleteTradePair() {
 
 }
 
-func (d *DexTradeOrderDB) ProcessOrders(orders []common.Order, delOreders []common.Order, height uint64, blockHash *bc.Hash) {
+func (d *DexTradeOrderDB) ProcessOrders(orders []*common.Order, delOreders []*common.Order, height uint64, blockHash *bc.Hash) {
 
 }
 
-func (d *DexTradeOrderDB) addOrders(orders []common.Order) {
+func (d *DexTradeOrderDB) addOrders(orders []*common.Order) {
 
 }
 
-func (d *DexTradeOrderDB) deleteOrder(orders []common.Order) {
+func (d *DexTradeOrderDB) deleteOrder(orders []*common.Order) {
 
 }
 
-func (d *DexTradeOrderDB) ListOrders(fromAssetID, toAssetID string, rateAfter float64) []common.Order {
+func (d *DexTradeOrderDB) ListOrders(fromAssetID, toAssetID string, rateAfter float64) []*common.Order {
 	return nil
 }
 
-func (d *DexTradeOrderDB) GetMatchState() *common.MatchState {
+func (d *DexTradeOrderDB) GetDexDatabaseState() *common.DexDatabaseState {
 	return nil
 }
 
-func (d *DexTradeOrderDB) SaveMatchState(state *common.MatchState) {
+func (d *DexTradeOrderDB) saveDexDatabaseState(state *common.DexDatabaseState) {
 }

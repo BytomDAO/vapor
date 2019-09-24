@@ -43,176 +43,176 @@ func TestOrderKey(t *testing.T) {
 		{
 			orders: []common.Order{
 				common.Order{
-					ToAssetID: bc.AssetID{V0: 0},
-					Rate:      1.00090,
-					Utxo: common.DexUtxo{
-						SourceID:       bc.Hash{V0: 21},
-						AssetID:        bc.AssetID{V0: 1},
+					FromAssetID: &bc.AssetID{V0: 1},
+					ToAssetID:   &bc.AssetID{V0: 0},
+					Rate:        1.00090,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 21},
 						Amount:         1,
 						SourcePos:      0,
 						ControlProgram: []byte("aa"),
 					},
 				},
 				common.Order{
-					ToAssetID: bc.AssetID{V0: 0},
-					Rate:      0.00090,
-					Utxo: common.DexUtxo{
-						SourceID:       bc.Hash{V0: 22},
-						AssetID:        bc.AssetID{V0: 1},
+					FromAssetID: &bc.AssetID{V0: 1},
+					ToAssetID:   &bc.AssetID{V0: 0},
+					Rate:        0.00090,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 22},
 						Amount:         1,
 						SourcePos:      0,
 						ControlProgram: []byte("aa"),
 					},
 				},
 				common.Order{
-					ToAssetID: bc.AssetID{V0: 0},
-					Rate:      0.00097,
-					Utxo: common.DexUtxo{
-						SourceID:       bc.Hash{V0: 23},
-						AssetID:        bc.AssetID{V0: 1},
+					FromAssetID: &bc.AssetID{V0: 1},
+					ToAssetID:   &bc.AssetID{V0: 0},
+					Rate:        0.00097,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 23},
 						Amount:         1,
 						SourcePos:      0,
 						ControlProgram: []byte("aa"),
 					},
 				},
 				common.Order{
-					ToAssetID: bc.AssetID{V0: 0},
-					Rate:      0.00098,
-					Utxo: common.DexUtxo{
-						SourceID:       bc.Hash{V0: 13},
-						AssetID:        bc.AssetID{V0: 1},
+					FromAssetID: &bc.AssetID{V0: 1},
+					ToAssetID:   &bc.AssetID{V0: 0},
+					Rate:        0.00098,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 13},
 						Amount:         1,
 						SourcePos:      0,
 						ControlProgram: []byte("aa"),
 					},
 				},
 				common.Order{
-					ToAssetID: bc.AssetID{V0: 0},
-					Rate:      0.00098,
-					Utxo: common.DexUtxo{
-						SourceID:       bc.Hash{V0: 24},
-						AssetID:        bc.AssetID{V0: 1},
+					FromAssetID: &bc.AssetID{V0: 1},
+					ToAssetID:   &bc.AssetID{V0: 0},
+					Rate:        0.00098,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 24},
 						Amount:         10,
 						SourcePos:      1,
 						ControlProgram: []byte("aa"),
 					},
 				},
 				common.Order{
-					ToAssetID: bc.AssetID{V0: 0},
-					Rate:      0.00099,
-					Utxo: common.DexUtxo{
-						SourceID:       bc.Hash{V0: 24},
-						AssetID:        bc.AssetID{V0: 1},
+					FromAssetID: &bc.AssetID{V0: 1},
+					ToAssetID:   &bc.AssetID{V0: 0},
+					Rate:        0.00099,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 24},
 						Amount:         1,
 						SourcePos:      0,
 						ControlProgram: []byte("aa"),
 					},
 				},
 				common.Order{
-					ToAssetID: bc.AssetID{V0: 0},
-					Rate:      0.00096,
-					Utxo: common.DexUtxo{
-						SourceID:       bc.Hash{V0: 25},
-						AssetID:        bc.AssetID{V0: 1},
+					FromAssetID: &bc.AssetID{V0: 1},
+					ToAssetID:   &bc.AssetID{V0: 0},
+					Rate:        0.00096,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 25},
 						Amount:         1,
 						SourcePos:      0,
 						ControlProgram: []byte("aa"),
 					},
 				},
 				common.Order{
-					ToAssetID: bc.AssetID{V0: 0},
-					Rate:      0.00095,
-					Utxo: common.DexUtxo{
-						SourceID:       bc.Hash{V0: 26},
-						AssetID:        bc.AssetID{V0: 1},
+					FromAssetID: &bc.AssetID{V0: 1},
+					ToAssetID:   &bc.AssetID{V0: 0},
+					Rate:        0.00095,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 26},
 						Amount:         1,
 						SourcePos:      0,
 						ControlProgram: []byte("aa"),
 					},
 				},
 				common.Order{
-					ToAssetID: bc.AssetID{V0: 0},
-					Rate:      0.00091,
-					Utxo: common.DexUtxo{
-						SourceID:       bc.Hash{V0: 26},
-						AssetID:        bc.AssetID{V0: 1},
+					FromAssetID: &bc.AssetID{V0: 1},
+					ToAssetID:   &bc.AssetID{V0: 0},
+					Rate:        0.00091,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 26},
 						Amount:         1,
 						SourcePos:      0,
 						ControlProgram: []byte("aa"),
 					},
 				},
 				common.Order{
-					ToAssetID: bc.AssetID{V0: 0},
-					Rate:      0.00092,
-					Utxo: common.DexUtxo{
-						SourceID:       bc.Hash{V0: 27},
-						AssetID:        bc.AssetID{V0: 1},
+					FromAssetID: &bc.AssetID{V0: 1},
+					ToAssetID:   &bc.AssetID{V0: 0},
+					Rate:        0.00092,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 27},
 						Amount:         1,
 						SourcePos:      0,
 						ControlProgram: []byte("aa"),
 					},
 				},
 				common.Order{
-					ToAssetID: bc.AssetID{V0: 0},
-					Rate:      0.00093,
-					Utxo: common.DexUtxo{
-						SourceID:       bc.Hash{V0: 28},
-						AssetID:        bc.AssetID{V0: 1},
+					FromAssetID: &bc.AssetID{V0: 1},
+					ToAssetID:   &bc.AssetID{V0: 0},
+					Rate:        0.00093,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 28},
 						Amount:         1,
 						SourcePos:      0,
 						ControlProgram: []byte("aa"),
 					},
 				},
 				common.Order{
-					ToAssetID: bc.AssetID{V0: 0},
-					Rate:      0.00094,
-					Utxo: common.DexUtxo{
-						SourceID:       bc.Hash{V0: 29},
-						AssetID:        bc.AssetID{V0: 1},
+					FromAssetID: &bc.AssetID{V0: 1},
+					ToAssetID:   &bc.AssetID{V0: 0},
+					Rate:        0.00094,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 29},
 						Amount:         1,
 						SourcePos:      0,
 						ControlProgram: []byte("aa"),
 					},
 				},
 				common.Order{
-					ToAssetID: bc.AssetID{V0: 0},
-					Rate:      0.00077,
-					Utxo: common.DexUtxo{
-						SourceID:       bc.Hash{V0: 30},
-						AssetID:        bc.AssetID{V0: 1},
+					FromAssetID: &bc.AssetID{V0: 1},
+					ToAssetID:   &bc.AssetID{V0: 0},
+					Rate:        0.00077,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 30},
 						Amount:         1,
 						SourcePos:      0,
 						ControlProgram: []byte("aa"),
 					},
 				},
 				common.Order{
-					ToAssetID: bc.AssetID{V0: 0},
-					Rate:      0.00088,
-					Utxo: common.DexUtxo{
-						SourceID:       bc.Hash{V0: 31},
-						AssetID:        bc.AssetID{V0: 1},
+					FromAssetID: &bc.AssetID{V0: 1},
+					ToAssetID:   &bc.AssetID{V0: 0},
+					Rate:        0.00088,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 31},
 						Amount:         1,
 						SourcePos:      0,
 						ControlProgram: []byte("aa"),
 					},
 				},
 				common.Order{
-					ToAssetID: bc.AssetID{V0: 0},
-					Rate:      999999.9521,
-					Utxo: common.DexUtxo{
-						SourceID:       bc.Hash{V0: 32},
-						AssetID:        bc.AssetID{V0: 1},
+					FromAssetID: &bc.AssetID{V0: 1},
+					ToAssetID:   &bc.AssetID{V0: 0},
+					Rate:        999999.9521,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 32},
 						Amount:         1,
 						SourcePos:      0,
 						ControlProgram: []byte("aa"),
 					},
 				},
 				common.Order{
-					ToAssetID: bc.AssetID{V0: 0},
-					Rate:      888888.7954,
-					Utxo: common.DexUtxo{
-						SourceID:       bc.Hash{V0: 33},
-						AssetID:        bc.AssetID{V0: 1},
+					FromAssetID: &bc.AssetID{V0: 1},
+					ToAssetID:   &bc.AssetID{V0: 0},
+					Rate:        888888.7954,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 33},
 						Amount:         1,
 						SourcePos:      0,
 						ControlProgram: []byte("aa"),
@@ -222,67 +222,67 @@ func TestOrderKey(t *testing.T) {
 			want: []expectedData{
 				expectedData{
 					rate:     0.00077,
-					utxoHash: "1a347f38978f4116667880cd650f90f7117f9e5fa664bf35a762b7542521ecfd",
+					utxoHash: "7967bb8c4cca951749553e9c7787255d35a032d9e1acecefe4011c8095dc8e6f",
 				},
 				expectedData{
 					rate:     0.00088,
-					utxoHash: "390f96ae1f453bc9b8274b4e309853df9821f09e73e5d4294a21de94a3e82c9d",
+					utxoHash: "215a6e7e3a5006151bd0b81c54fcccda0381f3a22e7b6646ed201c35f9fa6c5a",
 				},
 				expectedData{
 					rate:     0.00090,
-					utxoHash: "9b6906500e0468b46b05d1cc389e987503d8ff8f6521a9b3cb2e34812edd7e8b",
+					utxoHash: "cb373d3a383d30eb2863317ea2cfb5b4b269772fbc0fb8413a2be7d7b69ec2b9",
 				},
 				expectedData{
 					rate:     0.00091,
-					utxoHash: "6be9a8fe98dc3d9404a163d6c25d4c86c07725b2b5274792e3d3991a183b916d",
+					utxoHash: "298c39d327cb4b0dcefcf701aa8d1b559f1de0148e9bcbe14da48cfa268c01ea",
 				},
 				expectedData{
 					rate:     0.00092,
-					utxoHash: "a8c1cca596b76468f52a4559c468e865781e82a39b68fb337f4fe8cae84df38f",
+					utxoHash: "b2c59190fb0d948c9545c146a69b1f17503b2d280b2f3f45ecc0a7b7e2cd1784",
 				},
 				expectedData{
 					rate:     0.00093,
-					utxoHash: "675344ad2a35fed61ef4028c89a9bd757b5c2d77a0151cf9e7077231d70a5768",
+					utxoHash: "80b44aae2b2cf57bd2cf77cb88f0d8363066f5f16a17a3e85224ecbbc6387d8b",
 				},
 				expectedData{
 					rate:     0.00094,
-					utxoHash: "98efa3949171cb01fef826d02fb995351ee833380e34dbe186a663bfe514aeec",
+					utxoHash: "4843adc8c4a50672a022e5f377dfd2ac11119364dc0a547be45b4a5edacef33b",
 				},
 				expectedData{
 					rate:     0.00095,
-					utxoHash: "6be9a8fe98dc3d9404a163d6c25d4c86c07725b2b5274792e3d3991a183b916d",
+					utxoHash: "298c39d327cb4b0dcefcf701aa8d1b559f1de0148e9bcbe14da48cfa268c01ea",
 				},
 				expectedData{
 					rate:     0.00096,
-					utxoHash: "617f55abaaca68f3f4967823448fd6351b84c8104890b1091db070670e456c21",
+					utxoHash: "d8d1a85303e9ac738e675b874b866e5ffbfa10e05201113404dde544055a18b9",
 				},
 				expectedData{
 					rate:     0.00097,
-					utxoHash: "c4ccb9843d0bb1dbf20d441b3f5c4374421dbfe505d1fb7f3fe551f63e2244d2",
+					utxoHash: "2305be66ab9648b713a58e3807fa1cba1f84e5d11359b316e967d98e9a7667da",
 				},
 				expectedData{
 					rate:     0.00098,
-					utxoHash: "658ad7a433b689bd1b2d167c66eb065b5cc16015bfc0bbc122a8e3c370274ead",
+					utxoHash: "030dc8a868a3e534799d465ebc8209eb32d9465985dc8c35e731b124bf3ffbcf",
 				},
 				expectedData{
 					rate:     0.00098,
-					utxoHash: "9dcde7ab0f2f88ed5203e4156160cedc21d68defee6f0e41413757b13da2535c",
+					utxoHash: "8222a9a43b3951f247612ddce2fe36f96cd843bc0dfef86c7d0ef5335331f11f",
 				},
 				expectedData{
 					rate:     0.00099,
-					utxoHash: "f2484ada2a12220b20f54552f7a329efdfa455fe062c6247dbe33453c9ff9f3e",
+					utxoHash: "a40bd183cd2ff2b52faac5ebc2cfc1e36104cbc92bcebac011b45792b39e380e",
 				},
 				expectedData{
 					rate:     1.0009,
-					utxoHash: "f39ed5eaba9d9e4913a9ae32f6922c056c905d9d0bdc628ae6378fe6cb5196a2",
+					utxoHash: "118b2c40848887614d99b0e7eb6c88a10b47196e6aca3ff2eeab452bfdb9cfcb",
 				},
 				expectedData{
 					rate:     888888.7954,
-					utxoHash: "08001794e5ad54d5ee70adfdff186996876b7595d205ca7565d8b6131d36a88a",
+					utxoHash: "545a5c6f7ff9be19ed07a7246277c67d661f9cc7d8956bb81ce9a4045fba3720",
 				},
 				expectedData{
 					rate:     999999.9521,
-					utxoHash: "cc6dfe6629db9694026ccf8058fc2d4fb251367e2c38c359342976183e58f4f5",
+					utxoHash: "d9f7725d908510268c7bdecd29cb2031baab93b9bfa69108eb0a926ba7ae18f9",
 				},
 			},
 		},
@@ -295,7 +295,7 @@ func TestOrderKey(t *testing.T) {
 				t.Fatal(err)
 			}
 			utxoHash := bc.NewHash(sha3.Sum256(data))
-			key := calcOrdersPrefix(&order.Utxo.AssetID, &order.ToAssetID, &utxoHash, order.Rate)
+			key := calcOrdersPrefix(order.FromAssetID, order.ToAssetID, &utxoHash, order.Rate)
 			db.SetSync(key, data)
 		}
 
