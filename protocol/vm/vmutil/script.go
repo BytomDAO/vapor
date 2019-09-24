@@ -1,8 +1,11 @@
 package vmutil
 
 import (
+	"strings"
+
 	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/errors"
+	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/vm"
 )
 
@@ -132,4 +135,159 @@ func checkMultiSigParams(nrequired, npubkeys int64) error {
 		return errors.WithDetail(ErrBadValue, "quorum empty with non-empty pubkey list")
 	}
 	return nil
+}
+
+// DexContractArgs is a struct for dex contract arguments
+type DexContractArgs struct {
+	RequestedAsset   bc.AssetID
+	RatioMolecule    int64
+	RatioDenominator int64
+	SellerProgram    []byte
+	SellerKey        ed25519.PublicKey
+}
+
+// P2WDCProgram return the segwit pay to dex contract
+func P2WDCProgram(dexContractArgs DexContractArgs, lockedAssetID bc.AssetID) ([]byte, error) {
+	builder := NewBuilder()
+	builder.AddInt64(0)
+	builder.AddData(dexContractArgs.RequestedAsset.Bytes())
+	builder.AddInt64(dexContractArgs.RatioMolecule)
+	builder.AddInt64(dexContractArgs.RatioDenominator)
+	builder.AddData(dexContractArgs.SellerProgram)
+	builder.AddData(dexContractArgs.SellerKey)
+	return builder.Build()
+}
+
+// P2DCProgram generates the script for control with dex contract
+func P2DCProgram(dexContractArgs DexContractArgs, lockedAssetID bc.AssetID) ([]byte, error) {
+	standardProgram, err := P2WDCProgram(dexContractArgs, lockedAssetID)
+	if err != nil {
+		return nil, err
+	}
+
+	dexProgram, err := DexProgram(strings.Compare(dexContractArgs.RequestedAsset.String(), lockedAssetID.String()))
+	if err != nil {
+		return nil, err
+	}
+
+	builder := NewBuilder()
+	builder.AddData(dexContractArgs.SellerKey)
+	builder.AddData(standardProgram)
+	builder.AddData(dexContractArgs.SellerProgram)
+	builder.AddInt64(dexContractArgs.RatioDenominator)
+	builder.AddInt64(dexContractArgs.RatioMolecule)
+	builder.AddData(dexContractArgs.RequestedAsset.Bytes())
+	builder.AddOp(vm.OP_DEPTH)
+	builder.AddData(dexProgram)
+	builder.AddOp(vm.OP_FALSE)
+	builder.AddOp(vm.OP_CHECKPREDICATE)
+	return builder.Build()
+}
+
+// DexProgram is the actual execute dex program which not contain arguments
+func DexProgram(assetComparedResult int) ([]byte, error) {
+	var firstPositionOP, secondPostionOP vm.Op
+	if assetComparedResult == 0 {
+		return nil, errors.WithDetail(ErrBadValue, "the requestAssetID is same as lockedAssetID")
+	} else if assetComparedResult > 0 {
+		firstPositionOP = vm.OP_0
+		secondPostionOP = vm.OP_1
+	} else {
+		firstPositionOP = vm.OP_2
+		secondPostionOP = vm.OP_3
+	}
+
+	builder := NewBuilder()
+	builder.AddOp(vm.OP_6)
+	builder.AddOp(vm.OP_ROLL)
+	builder.AddJumpIf(0)
+	builder.AddOp(vm.OP_AMOUNT)
+	builder.AddOp(vm.OP_2)
+	builder.AddOp(vm.OP_PICK)
+	builder.AddOp(vm.OP_MUL)
+	builder.AddOp(vm.OP_3)
+	builder.AddOp(vm.OP_PICK)
+	builder.AddOp(vm.OP_DIV)
+	builder.AddOp(vm.OP_7)
+	builder.AddOp(vm.OP_PICK)
+	builder.AddOp(vm.OP_0)
+	builder.AddOp(vm.OP_GREATERTHAN)
+	builder.AddOp(vm.OP_8)
+	builder.AddOp(vm.OP_PICK)
+	builder.AddOp(vm.OP_2)
+	builder.AddOp(vm.OP_PICK)
+	builder.AddOp(vm.OP_LESSTHANOREQUAL)
+	builder.AddOp(vm.OP_BOOLAND)
+	builder.AddOp(vm.OP_VERIFY)
+	builder.AddOp(vm.OP_7)
+	builder.AddOp(vm.OP_PICK)
+	builder.AddOp(vm.OP_4)
+	builder.AddOp(vm.OP_ROLL)
+	builder.AddOp(vm.OP_MUL)
+	builder.AddOp(vm.OP_3)
+	builder.AddOp(vm.OP_ROLL)
+	builder.AddOp(vm.OP_DIV)
+	builder.AddOp(vm.OP_AMOUNT)
+	builder.AddOp(vm.OP_OVER)
+	builder.AddOp(vm.OP_0)
+	builder.AddOp(vm.OP_GREATERTHAN)
+	builder.AddOp(vm.OP_2)
+	builder.AddOp(vm.OP_PICK)
+	builder.AddOp(vm.OP_ROT)
+	builder.AddOp(vm.OP_LESSTHANOREQUAL)
+	builder.AddOp(vm.OP_BOOLAND)
+	builder.AddOp(vm.OP_VERIFY)
+	builder.AddOp(vm.OP_6)
+	builder.AddOp(vm.OP_PICK)
+	builder.AddOp(vm.OP_2)
+	builder.AddOp(vm.OP_PICK)
+	builder.AddOp(vm.OP_LESSTHAN)
+	builder.AddOp(vm.OP_NOT)
+	builder.AddOp(vm.OP_NOP)
+	builder.AddJumpIf(1)
+	builder.AddOp(firstPositionOP)
+	builder.AddOp(vm.OP_7)
+	builder.AddOp(vm.OP_PICK)
+	builder.AddOp(vm.OP_4)
+	builder.AddOp(vm.OP_PICK)
+	builder.AddOp(vm.OP_1)
+	builder.AddOp(vm.OP_7)
+	builder.AddOp(vm.OP_PICK)
+	builder.AddOp(vm.OP_CHECKOUTPUT)
+	builder.AddOp(vm.OP_VERIFY)
+	builder.AddOp(secondPostionOP)
+	builder.AddOp(vm.OP_AMOUNT)
+	builder.AddOp(vm.OP_2)
+	builder.AddOp(vm.OP_PICK)
+	builder.AddOp(vm.OP_SUB)
+	builder.AddOp(vm.OP_ASSET)
+	builder.AddOp(vm.OP_1)
+	builder.AddOp(vm.OP_8)
+	builder.AddOp(vm.OP_PICK)
+	builder.AddOp(vm.OP_CHECKOUTPUT)
+	builder.AddOp(vm.OP_VERIFY)
+	builder.AddJump(2)
+	builder.SetJumpTarget(1)
+	builder.AddOp(firstPositionOP)
+	builder.AddOp(vm.OP_2)
+	builder.AddOp(vm.OP_PICK)
+	builder.AddOp(vm.OP_4)
+	builder.AddOp(vm.OP_PICK)
+	builder.AddOp(vm.OP_1)
+	builder.AddOp(vm.OP_7)
+	builder.AddOp(vm.OP_PICK)
+	builder.AddOp(vm.OP_CHECKOUTPUT)
+	builder.AddOp(vm.OP_VERIFY)
+	builder.SetJumpTarget(2)
+	builder.AddJump(3)
+	builder.SetJumpTarget(0)
+	builder.AddOp(vm.OP_6)
+	builder.AddOp(vm.OP_ROLL)
+	builder.AddOp(vm.OP_6)
+	builder.AddOp(vm.OP_ROLL)
+	builder.AddOp(vm.OP_TXSIGHASH)
+	builder.AddOp(vm.OP_SWAP)
+	builder.AddOp(vm.OP_CHECKSIG)
+	builder.SetJumpTarget(3)
+	return builder.Build()
 }
