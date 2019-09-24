@@ -12,8 +12,8 @@ type DexUtxo struct {
 type Order struct {
 	FromAssetID *bc.AssetID
 	ToAssetID   *bc.AssetID
-	Rate        float64
 	Utxo        *DexUtxo
+	Rate        float64
 }
 
 type TradePair struct {
