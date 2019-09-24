@@ -1,4 +1,4 @@
-package dex
+package common
 
 import "github.com/vapor/protocol/bc"
 

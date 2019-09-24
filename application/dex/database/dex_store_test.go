@@ -1,4 +1,4 @@
-package dex
+package database
 
 import (
 	"encoding/binary"
@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
+	"github.com/vapor/application/dex/common"
 	"github.com/vapor/database/leveldb"
-	"github.com/vapor/dex"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/testutil"
 )
@@ -37,15 +37,15 @@ func TestOrderKey(t *testing.T) {
 	}
 
 	cases := []struct {
-		orders []dex.Order
+		orders []common.Order
 		want   []expectedData
 	}{
 		{
-			orders: []dex.Order{
-				dex.Order{
+			orders: []common.Order{
+				common.Order{
 					ToAssetID: bc.AssetID{V0: 0},
 					Rate:      1.00090,
-					Utxo: dex.DexUtxo{
+					Utxo: common.DexUtxo{
 						SourceID:       bc.Hash{V0: 21},
 						AssetID:        bc.AssetID{V0: 1},
 						Amount:         1,
@@ -53,10 +53,10 @@ func TestOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				dex.Order{
+				common.Order{
 					ToAssetID: bc.AssetID{V0: 0},
 					Rate:      0.00090,
-					Utxo: dex.DexUtxo{
+					Utxo: common.DexUtxo{
 						SourceID:       bc.Hash{V0: 22},
 						AssetID:        bc.AssetID{V0: 1},
 						Amount:         1,
@@ -64,10 +64,10 @@ func TestOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				dex.Order{
+				common.Order{
 					ToAssetID: bc.AssetID{V0: 0},
 					Rate:      0.00097,
-					Utxo: dex.DexUtxo{
+					Utxo: common.DexUtxo{
 						SourceID:       bc.Hash{V0: 23},
 						AssetID:        bc.AssetID{V0: 1},
 						Amount:         1,
@@ -75,10 +75,10 @@ func TestOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				dex.Order{
+				common.Order{
 					ToAssetID: bc.AssetID{V0: 0},
 					Rate:      0.00098,
-					Utxo: dex.DexUtxo{
+					Utxo: common.DexUtxo{
 						SourceID:       bc.Hash{V0: 13},
 						AssetID:        bc.AssetID{V0: 1},
 						Amount:         1,
@@ -86,10 +86,10 @@ func TestOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				dex.Order{
+				common.Order{
 					ToAssetID: bc.AssetID{V0: 0},
 					Rate:      0.00098,
-					Utxo: dex.DexUtxo{
+					Utxo: common.DexUtxo{
 						SourceID:       bc.Hash{V0: 24},
 						AssetID:        bc.AssetID{V0: 1},
 						Amount:         10,
@@ -97,10 +97,10 @@ func TestOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				dex.Order{
+				common.Order{
 					ToAssetID: bc.AssetID{V0: 0},
 					Rate:      0.00099,
-					Utxo: dex.DexUtxo{
+					Utxo: common.DexUtxo{
 						SourceID:       bc.Hash{V0: 24},
 						AssetID:        bc.AssetID{V0: 1},
 						Amount:         1,
@@ -108,10 +108,10 @@ func TestOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				dex.Order{
+				common.Order{
 					ToAssetID: bc.AssetID{V0: 0},
 					Rate:      0.00096,
-					Utxo: dex.DexUtxo{
+					Utxo: common.DexUtxo{
 						SourceID:       bc.Hash{V0: 25},
 						AssetID:        bc.AssetID{V0: 1},
 						Amount:         1,
@@ -119,10 +119,10 @@ func TestOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				dex.Order{
+				common.Order{
 					ToAssetID: bc.AssetID{V0: 0},
 					Rate:      0.00095,
-					Utxo: dex.DexUtxo{
+					Utxo: common.DexUtxo{
 						SourceID:       bc.Hash{V0: 26},
 						AssetID:        bc.AssetID{V0: 1},
 						Amount:         1,
@@ -130,10 +130,10 @@ func TestOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				dex.Order{
+				common.Order{
 					ToAssetID: bc.AssetID{V0: 0},
 					Rate:      0.00091,
-					Utxo: dex.DexUtxo{
+					Utxo: common.DexUtxo{
 						SourceID:       bc.Hash{V0: 26},
 						AssetID:        bc.AssetID{V0: 1},
 						Amount:         1,
@@ -141,10 +141,10 @@ func TestOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				dex.Order{
+				common.Order{
 					ToAssetID: bc.AssetID{V0: 0},
 					Rate:      0.00092,
-					Utxo: dex.DexUtxo{
+					Utxo: common.DexUtxo{
 						SourceID:       bc.Hash{V0: 27},
 						AssetID:        bc.AssetID{V0: 1},
 						Amount:         1,
@@ -152,10 +152,10 @@ func TestOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				dex.Order{
+				common.Order{
 					ToAssetID: bc.AssetID{V0: 0},
 					Rate:      0.00093,
-					Utxo: dex.DexUtxo{
+					Utxo: common.DexUtxo{
 						SourceID:       bc.Hash{V0: 28},
 						AssetID:        bc.AssetID{V0: 1},
 						Amount:         1,
@@ -163,10 +163,10 @@ func TestOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				dex.Order{
+				common.Order{
 					ToAssetID: bc.AssetID{V0: 0},
 					Rate:      0.00094,
-					Utxo: dex.DexUtxo{
+					Utxo: common.DexUtxo{
 						SourceID:       bc.Hash{V0: 29},
 						AssetID:        bc.AssetID{V0: 1},
 						Amount:         1,
@@ -174,10 +174,10 @@ func TestOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				dex.Order{
+				common.Order{
 					ToAssetID: bc.AssetID{V0: 0},
 					Rate:      0.00077,
-					Utxo: dex.DexUtxo{
+					Utxo: common.DexUtxo{
 						SourceID:       bc.Hash{V0: 30},
 						AssetID:        bc.AssetID{V0: 1},
 						Amount:         1,
@@ -185,10 +185,10 @@ func TestOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				dex.Order{
+				common.Order{
 					ToAssetID: bc.AssetID{V0: 0},
 					Rate:      0.00088,
-					Utxo: dex.DexUtxo{
+					Utxo: common.DexUtxo{
 						SourceID:       bc.Hash{V0: 31},
 						AssetID:        bc.AssetID{V0: 1},
 						Amount:         1,
@@ -196,10 +196,10 @@ func TestOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				dex.Order{
+				common.Order{
 					ToAssetID: bc.AssetID{V0: 0},
 					Rate:      999999.9521,
-					Utxo: dex.DexUtxo{
+					Utxo: common.DexUtxo{
 						SourceID:       bc.Hash{V0: 32},
 						AssetID:        bc.AssetID{V0: 1},
 						Amount:         1,
@@ -207,10 +207,10 @@ func TestOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				dex.Order{
+				common.Order{
 					ToAssetID: bc.AssetID{V0: 0},
 					Rate:      888888.7954,
-					Utxo: dex.DexUtxo{
+					Utxo: common.DexUtxo{
 						SourceID:       bc.Hash{V0: 33},
 						AssetID:        bc.AssetID{V0: 1},
 						Amount:         1,
