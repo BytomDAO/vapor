@@ -94,7 +94,7 @@ func ConvertP2DCProgram(prog []byte, lockedAssetID bc.AssetID) ([]byte, error) {
 		return nil, err
 	}
 
-	if insts[0].Op == vm.OP_0 {
+	if len(insts) == 6 && insts[0].Op == vm.OP_0 {
 		dexContractArgs := vmutil.DexContractArgs{}
 		var requestedAsset [32]byte
 		copy(requestedAsset[:], insts[1].Data)

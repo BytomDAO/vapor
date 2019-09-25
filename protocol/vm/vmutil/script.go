@@ -147,7 +147,7 @@ type DexContractArgs struct {
 }
 
 // P2WDCProgram return the segwit pay to dex contract
-func P2WDCProgram(dexContractArgs DexContractArgs, lockedAssetID bc.AssetID) ([]byte, error) {
+func P2WDCProgram(dexContractArgs DexContractArgs) ([]byte, error) {
 	builder := NewBuilder()
 	builder.AddInt64(0)
 	builder.AddData(dexContractArgs.RequestedAsset.Bytes())
@@ -160,7 +160,7 @@ func P2WDCProgram(dexContractArgs DexContractArgs, lockedAssetID bc.AssetID) ([]
 
 // P2DCProgram generates the script for control with dex contract
 func P2DCProgram(dexContractArgs DexContractArgs, lockedAssetID bc.AssetID) ([]byte, error) {
-	standardProgram, err := P2WDCProgram(dexContractArgs, lockedAssetID)
+	standardProgram, err := P2WDCProgram(dexContractArgs)
 	if err != nil {
 		return nil, err
 	}
