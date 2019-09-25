@@ -15,6 +15,15 @@ var (
 	ErrMultisigFormat = errors.New("bad multisig program format")
 )
 
+// DexContractArgs is a struct for dex contract arguments
+type DexContractArgs struct {
+	RequestedAsset   bc.AssetID
+	RatioMolecule    int64
+	RatioDenominator int64
+	SellerProgram    []byte
+	SellerKey        ed25519.PublicKey
+}
+
 // IsUnspendable checks if a contorl program is absolute failed
 func IsUnspendable(prog []byte) bool {
 	return len(prog) > 0 && prog[0] == byte(vm.OP_FAIL)
@@ -135,15 +144,6 @@ func checkMultiSigParams(nrequired, npubkeys int64) error {
 		return errors.WithDetail(ErrBadValue, "quorum empty with non-empty pubkey list")
 	}
 	return nil
-}
-
-// DexContractArgs is a struct for dex contract arguments
-type DexContractArgs struct {
-	RequestedAsset   bc.AssetID
-	RatioMolecule    int64
-	RatioDenominator int64
-	SellerProgram    []byte
-	SellerKey        ed25519.PublicKey
 }
 
 // P2WDCProgram return the segwit pay to dex contract
