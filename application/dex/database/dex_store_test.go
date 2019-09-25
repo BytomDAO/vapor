@@ -17,7 +17,7 @@ import (
 	"github.com/vapor/testutil"
 )
 
-func TestOrderKey(t *testing.T) {
+func TestSortOrderKey(t *testing.T) {
 	dirname, err := ioutil.TempDir("", "db_common_test")
 	require.Nil(t, err)
 
@@ -304,7 +304,7 @@ func TestOrderKey(t *testing.T) {
 		itr := db.IteratorPrefixWithStart(nil, nil, false)
 		for itr.Next() {
 			key := itr.Key()
-			pos := len(OrdersPreFix) + 32*2
+			pos := len(ordersPreFix) + 32*2
 			b := [32]byte{}
 			copy(b[:], key[pos+8:])
 			utxoHash := bc.NewHash(b)
