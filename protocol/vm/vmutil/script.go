@@ -185,6 +185,127 @@ func P2DCProgram(dexContractArgs DexContractArgs, lockedAssetID bc.AssetID) ([]b
 }
 
 // DexProgram is the actual execute dex program which not contain arguments
+//
+// DexContract source code:
+// contract DexContract(requestedAsset: Asset,
+// 	                    ratioMolecule: Integer,
+// 		                ratioDenominator: Integer,
+// 		                sellerProgram: Program,
+// 		                standardProgram: Program,
+// 		                sellerKey: PublicKey) locks valueAmount of valueAsset {
+// clause trade(exchangeAmount: Amount) {
+//     define availableAmount: Integer = valueAmount * ratioMolecule / ratioDenominator
+//     verify exchangeAmount > 0 && exchangeAmount <= availableAmount
+//     define actualAmount: Integer = exchangeAmount * ratioDenominator / ratioMolecule
+//     verify actualAmount > 0 && actualAmount <= valueAmount
+//     if exchangeAmount < availableAmount {
+//         lock exchangeAmount of requestedAsset with sellerProgram
+//         lock valueAmount-actualAmount of valueAsset with standardProgram
+//         unlock actualAmount of valueAsset
+//     } else {
+//         lock availableAmount of requestedAsset with sellerProgram
+//         unlock valueAmount of valueAsset
+//     }
+//   }
+// clause cancel(sellerSig: Signature) {
+//     verify checkTxSig(sellerKey, sellerSig)
+//     unlock valueAmount of valueAsset
+//   }
+// }
+//
+// contract stack flow:
+// 6                        [... <clause selector> sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset 6]
+// ROLL                     [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset <clause selector>]
+// JUMPIF:$cancel           [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset]
+// $trade                   [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset]
+// AMOUNT                   [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset valueAmount]
+// 2                        [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset valueAmount 2]
+// PICK                     [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset valueAmount ratioMolecule]
+// MUL                      [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset (valueAmount * ratioMolecule)]
+// 3                        [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset (valueAmount * ratioMolecule) 3]
+// PICK                     [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset (valueAmount * ratioMolecule) ratioDenominator]
+// DIV                      [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset availableAmount]
+// 7                        [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset availableAmount 7]
+// PICK                     [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset availableAmount exchangeAmount]
+// 0                        [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset availableAmount exchangeAmount 0]
+// GREATERTHAN              [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset availableAmount (exchangeAmount > 0)]
+// 8                        [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset availableAmount (exchangeAmount > 0) 8]
+// PICK                     [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset availableAmount (exchangeAmount > 0) exchangeAmount]
+// 2                        [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset availableAmount (exchangeAmount > 0) exchangeAmount 2]
+// PICK                     [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset availableAmount (exchangeAmount > 0) exchangeAmount availableAmount]
+// LESSTHANOREQUAL          [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset availableAmount (exchangeAmount > 0) (exchangeAmount <= availableAmount)]
+// BOOLAND                  [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset availableAmount ((exchangeAmount > 0) && (exchangeAmount <= availableAmount))]
+// VERIFY                   [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset availableAmount]
+// 7                        [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset availableAmount 7]
+// PICK                     [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset availableAmount exchangeAmount]
+// 4                        [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset availableAmount exchangeAmount 4]
+// ROLL                     [... exchangeAmount sellerKey standardProgram sellerProgram ratioMolecule requestedAsset availableAmount exchangeAmount ratioDenominator]
+// MUL                      [... exchangeAmount sellerKey standardProgram sellerProgram ratioMolecule requestedAsset availableAmount (exchangeAmount * ratioDenominator)]
+// 3                        [... exchangeAmount sellerKey standardProgram sellerProgram ratioMolecule requestedAsset availableAmount (exchangeAmount * ratioDenominator) 3]
+// ROLL                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount (exchangeAmount * ratioDenominator) ratioMolecule]
+// DIV                      [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount]
+// AMOUNT                   [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount valueAmount]
+// OVER                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount valueAmount actualAmount]
+// 0                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount valueAmount actualAmount 0]
+// GREATERTHAN              [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount valueAmount (actualAmount > 0)]
+// 2                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount valueAmount (actualAmount > 0) 2]
+// PICK                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount valueAmount (actualAmount > 0) actualAmount]
+// 2                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount valueAmount (actualAmount > 0) actualAmount 2]
+// ROLL                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount (actualAmount > 0) actualAmount valueAmount]
+// LESSTHANOREQUAL          [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount (actualAmount > 0) (actualAmount <= valueAmount)]
+// BOOLAND                  [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount ((actualAmount > 0) && (actualAmount <= valueAmount))]
+// VERIFY                   [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount]
+// 6                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount 6]
+// PICK                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount exchangeAmount]
+// 2                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount exchangeAmount 2]
+// PICK                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount exchangeAmount availableAmount]
+// LESSTHAN                 [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount (exchangeAmount < availableAmount)]
+// NOT                      [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount !(exchangeAmount < availableAmount)]
+// NOP                      [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount !(exchangeAmount < availableAmount)]
+// JUMPIF:$else_1           [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount]
+// $if_1                    [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount]
+// 0                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount 0]
+// 7                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount 0 7]
+// PICK                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount 0 exchangeAmount]
+// 4                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount 0 exchangeAmount 4]
+// PICK                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount 0 exchangeAmount requestedAsset]
+// 1                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount 0 exchangeAmount requestedAsset 1]
+// 7                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount 0 exchangeAmount requestedAsset 1 7]
+// PICK                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount 0 exchangeAmount requestedAsset 1 sellerProgram]
+// CHECKOUTPUT              [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount checkOutput(exchangeAmount, requestedAsset, sellerProgram)]
+// VERIFY                   [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount]
+// 1                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount 1]
+// AMOUNT                   [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount 1 valueAmount]
+// 2                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount 1 valueAmount 2]
+// PICK                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount 1 valueAmount actualAmount]
+// SUB                      [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount 1 (valueAmount - actualAmount)]
+// ASSET                    [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount 1 (valueAmount - actualAmount) valueAsset]
+// 1                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount 1 (valueAmount - actualAmount) valueAsset 1]
+// 8                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount 1 (valueAmount - actualAmount) valueAsset 1 8]
+// PICK                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount 1 (valueAmount - actualAmount) valueAsset 1 standardProgram]
+// CHECKOUTPUT              [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount checkOutput((valueAmount - actualAmount), valueAsset, standardProgram)]
+// VERIFY                   [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount]
+// JUMP:$endif_1            [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount]
+// $else_1                  [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount]
+// 0                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount 0]
+// 2                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount 0 2]
+// PICK                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount 0 availableAmount]
+// 4                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount 0 availableAmount 4]
+// PICK                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount 0 availableAmount requestedAsset]
+// 1                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount 0 availableAmount requestedAsset 1]
+// 7                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount 0 availableAmount requestedAsset 1 7]
+// PICK                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount 0 availableAmount requestedAsset 1 sellerProgram]
+// CHECKOUTPUT              [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount checkOutput(availableAmount, requestedAsset, sellerProgram)]
+// VERIFY                   [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount]
+// $endif_1                 [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset availableAmount actualAmount]
+// JUMP:$_end               [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset]
+// $cancel                  [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset]
+// 6                        [... sellerSig sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset 6]
+// ROLL                     [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset sellerSig]
+// 6                        [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset sellerSig 6]
+// ROLL                     [... standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset sellerSig sellerKey]
+// TXSIGHASH SWAP CHECKSIG  [... standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset checkTxSig(sellerKey, sellerSig)]
+// $_end                    [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset]
 func DexProgram(assetComparedResult int) ([]byte, error) {
 	var firstPositionOP, secondPostionOP vm.Op
 	if assetComparedResult == 0 {
