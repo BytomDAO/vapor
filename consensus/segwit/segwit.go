@@ -89,30 +89,40 @@ func ConvertP2SHProgram(prog []byte) ([]byte, error) {
 }
 
 func ConvertP2DCProgram(prog []byte, lockedAssetID bc.AssetID) ([]byte, error) {
+	dexContractArgs, err := DecodeP2DCProgram(prog)
+	if err != nil {
+		return nil, err
+	}
+
+	return vmutil.P2DCProgram(*dexContractArgs, lockedAssetID)
+}
+
+func DecodeP2DCProgram(prog []byte) (*vmutil.DexContractArgs, error) {
 	insts, err := vm.ParseProgram(prog)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(insts) == 6 && insts[0].Op == vm.OP_0 {
-		dexContractArgs := vmutil.DexContractArgs{}
-		var requestedAsset [32]byte
-		copy(requestedAsset[:], insts[1].Data)
-		dexContractArgs.RequestedAsset = bc.NewAssetID(requestedAsset)
-
-		if dexContractArgs.RatioMolecule, err = vm.AsInt64(insts[2].Data); err != nil {
-			return nil, err
-		}
-
-		if dexContractArgs.RatioDenominator, err = vm.AsInt64(insts[3].Data); err != nil {
-			return nil, err
-		}
-
-		dexContractArgs.SellerProgram = insts[4].Data
-		dexContractArgs.SellerKey = insts[5].Data
-		return vmutil.P2DCProgram(dexContractArgs, lockedAssetID)
+	if !(len(insts) == 6 && insts[0].Op == vm.OP_0) {
+		return nil, errors.New("Invalid P2DC program")
 	}
-	return nil, errors.New("unknow P2DC version number")
+
+	dexContractArgs := &vmutil.DexContractArgs{}
+	requestedAsset := [32]byte{}
+	copy(requestedAsset[:], insts[1].Data)
+	dexContractArgs.RequestedAsset = bc.NewAssetID(requestedAsset)
+
+	if dexContractArgs.RatioMolecule, err = vm.AsInt64(insts[2].Data); err != nil {
+		return nil, err
+	}
+
+	if dexContractArgs.RatioDenominator, err = vm.AsInt64(insts[3].Data); err != nil {
+		return nil, err
+	}
+
+	dexContractArgs.SellerProgram = insts[4].Data
+	dexContractArgs.SellerKey = insts[5].Data
+	return dexContractArgs, nil
 }
 
 func GetHashFromStandardProg(prog []byte) ([]byte, error) {
