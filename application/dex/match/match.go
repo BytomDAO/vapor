@@ -1,4 +1,4 @@
-package combination
+package match
 
 import (
 	"encoding/hex"
@@ -8,6 +8,7 @@ import (
 	vprCommon "github.com/vapor/common"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
+	"github.com/vapor/protocol/vm"
 )
 
 const (
@@ -15,12 +16,12 @@ const (
 	sellOrderOutputIndex = 2
 )
 
-type combination struct {}
+type matchEngine struct {}
 
-// GenerateCombinationTxs combine two opposite pending orders.
+// GenerateMatchedTxs match two opposite pending orders.
 // for example, the ordersX want change A with B, then the ordersY must change B with A.
 // the input order's rate must in descending order.
-func (c *combination) GenerateCombinationTxs(ordersX, ordersY []*common.Order) ([]*types.Tx, error) {
+func (c *matchEngine) GenerateMatchedTxs(ordersX, ordersY []*common.Order) ([]*types.Tx, error) {
 	buyOrders := vprCommon.NewStack()
 	for i := len(ordersX) - 1; i >= 0; i-- {
 		buyOrders.Push(ordersX[i])
@@ -31,17 +32,17 @@ func (c *combination) GenerateCombinationTxs(ordersX, ordersY []*common.Order) (
 		sellOrders.Push(ordersY[i])
 	}
 
-	combinationTxs := []*types.Tx{}
+	matchedTxs := []*types.Tx{}
 	for buyOrders.Len() > 0 && sellOrders.Len() > 0 {
 		buyOrder := buyOrders.Peek().(*common.Order)
 		sellOrder := sellOrders.Peek().(*common.Order)
-		if canBeCombined(buyOrder, sellOrder) {
-			tx, err := buildCombinationTx(buyOrder, sellOrder)
+		if canBeMatched(buyOrder, sellOrder) {
+			tx, err := buildMatchTx(buyOrder, sellOrder)
 			if err != nil {
 				return nil, err
 			}
 
-			combinationTxs = append(combinationTxs, tx)
+			matchedTxs = append(matchedTxs, tx)
 			if err := adjustOrderTable(tx, buyOrders, sellOrders); err != nil {
 				return nil, err
 			}
@@ -49,17 +50,17 @@ func (c *combination) GenerateCombinationTxs(ordersX, ordersY []*common.Order) (
 			break
 		}
 	}
-	return combinationTxs, nil
+	return matchedTxs, nil
 }
 
-func canBeCombined(buyOrder, sellOrder *common.Order) bool {
+func canBeMatched(buyOrder, sellOrder *common.Order) bool {
 	if buyOrder.ToAssetID != sellOrder.FromAssetID || sellOrder.ToAssetID != buyOrder.FromAssetID {
 		return false
 	}
 	return 1/buyOrder.Rate >= sellOrder.Rate
 }
 
-func buildCombinationTx(buyOrder, sellOrder *common.Order) (*types.Tx, error) {
+func buildMatchTx(buyOrder, sellOrder *common.Order) (*types.Tx, error) {
 	txData := types.TxData{}
 	txData.Inputs = append(txData.Inputs, types.NewSpendInput(nil, *buyOrder.Utxo.SourceID, *buyOrder.FromAssetID, buyOrder.Utxo.Amount, buyOrder.Utxo.SourcePos, buyOrder.Utxo.ControlProgram))
 	txData.Inputs = append(txData.Inputs, types.NewSpendInput(nil, *sellOrder.Utxo.SourceID, *sellOrder.FromAssetID, sellOrder.Utxo.Amount, sellOrder.Utxo.SourcePos, sellOrder.Utxo.ControlProgram))
@@ -92,7 +93,11 @@ func buildCombinationTx(buyOrder, sellOrder *common.Order) (*types.Tx, error) {
 	if sellShouldPayAmount > buyReceiveAmount {
 		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*buyOrder.ToAssetID, sellShouldPayAmount-buyReceiveAmount, []byte{ /** node address */ }))
 	}
-	return types.NewTx(txData), nil
+
+	tx := types.NewTx(txData)
+	tx.SetInputArguments(0, [][]byte{vm.Int64Bytes(int64(buyReceiveAmount)), vm.Int64Bytes(0)})
+	tx.SetInputArguments(1, [][]byte{vm.Int64Bytes(int64(sellReceiveAmount)), vm.Int64Bytes(0)})
+	return tx, nil
 }
 
 func adjustOrderTable(tx *types.Tx, buyOrders, sellOrders *vprCommon.Stack) error {

@@ -27,7 +27,7 @@ func (d *DexCore) DetachBlock(block *types.Block) error {
 	return nil
 }
 
-func (d *DexCore) DBeforeProposalBlock(txs []*types.Tx, num int) ([]*types.Tx,error) {
+func (d *DexCore) BeforeProposalBlock(txs []*types.Tx, num int) ([]*types.Tx,error) {
 	return nil, nil
 }
 
