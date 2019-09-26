@@ -13,6 +13,7 @@ import (
 
 	"github.com/vapor/application/dex/common"
 	"github.com/vapor/database/leveldb"
+	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/testutil"
 )
@@ -295,7 +296,7 @@ func TestSortOrderKey(t *testing.T) {
 				t.Fatal(err)
 			}
 			utxoHash := bc.NewHash(sha3.Sum256(data))
-			key := calcOrdersPrefix(order.FromAssetID, order.ToAssetID, &utxoHash, order.Rate)
+			key := calcOrdersKey(order.FromAssetID, order.ToAssetID, &utxoHash, order.Rate)
 			db.SetSync(key, data)
 		}
 
@@ -319,5 +320,623 @@ func TestSortOrderKey(t *testing.T) {
 			t.Errorf("case %v: got recovery status, got: %v, want: %v.", i, got, c.want)
 		}
 
+	}
+}
+
+func TestDexStore(t *testing.T) {
+
+	assetID1 := &bc.AssetID{V0: 1}
+	assetID2 := &bc.AssetID{V0: 2}
+
+	cases := []struct {
+		desc           string
+		beforeOrders   []*common.Order
+		addOrders      []*common.Order
+		delOrders      []*common.Order
+		Height         uint64
+		blockHash      *bc.Hash
+		wantOrders     []*common.Order
+		wantTradePairs []*common.TradePair
+	}{
+		{
+			desc: "add order",
+			addOrders: []*common.Order{
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        1.00090,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 21},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00090,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 22},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00097,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 23},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 13},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         10,
+						SourcePos:      1,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00099,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00096,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 25},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00095,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 26},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+			},
+			Height:    10,
+			blockHash: &bc.Hash{},
+			wantOrders: []*common.Order{
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00090,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 22},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00095,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 26},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00096,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 25},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00097,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 23},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 13},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         10,
+						SourcePos:      1,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00099,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        1.00090,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 21},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+			},
+			wantTradePairs: []*common.TradePair{
+				&common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2, Count: 8},
+			},
+		},
+		{
+			desc: "del some order",
+			beforeOrders: []*common.Order{
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        1.00090,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 21},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00090,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 22},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00097,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 23},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 13},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         10,
+						SourcePos:      1,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00099,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00096,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 25},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00095,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 26},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+			},
+			delOrders: []*common.Order{
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        1.00090,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 21},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00090,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 22},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00097,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 23},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+			},
+			Height:    10,
+			blockHash: &bc.Hash{},
+			wantOrders: []*common.Order{
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00095,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 26},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00096,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 25},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 13},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         10,
+						SourcePos:      1,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00099,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+			},
+			wantTradePairs: []*common.TradePair{
+				&common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2, Count: 5},
+			},
+		},
+
+		{
+			desc: "del all order",
+			beforeOrders: []*common.Order{
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        1.00090,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 21},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00090,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 22},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00097,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 23},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 13},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         10,
+						SourcePos:      1,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00099,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00096,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 25},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00095,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 26},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+			},
+			delOrders: []*common.Order{
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        1.00090,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 21},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00090,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 22},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00097,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 23},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 13},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         10,
+						SourcePos:      1,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00099,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00096,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 25},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00095,
+					Utxo: &common.DexUtxo{
+						SourceID:       &bc.Hash{V0: 26},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+			},
+			Height:         10,
+			blockHash:      &bc.Hash{},
+			wantOrders:     []*common.Order{},
+			wantTradePairs: []*common.TradePair{},
+		},
+	}
+	defer os.RemoveAll("temp")
+	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		dexStore := NewDexStore(testDB)
+
+		batch := dexStore.db.NewBatch()
+		dexStore.addOrders(batch, c.beforeOrders)
+		batch.Write()
+
+		if err := dexStore.ProcessOrders(c.addOrders, c.delOrders, c.Height, c.blockHash); err != nil {
+			t.Fatalf("case %v: ProcessOrders error %v.", i, err)
+		}
+
+		gotOrders, err := dexStore.ListOrders(assetID1, assetID2, 0)
+		if err != nil {
+			t.Fatalf("case %v: ListOrders error %v.", i, err)
+		}
+
+		if !testutil.DeepEqual(gotOrders, c.wantOrders) {
+			t.Fatalf("case %v: got orders , gotOrders: %v, wantOrders: %v.", i, gotOrders, c.wantOrders)
+		}
+
+		gotTradePairs, err := dexStore.ListTradePairsWithStart(nil, nil)
+		if err != nil {
+			t.Fatalf("case %v: GetDexDatabaseState error %v.", i, err)
+		}
+
+		if !testutil.DeepEqual(gotTradePairs, c.wantTradePairs) {
+			t.Fatalf("case %v: got tradePairs, gotTradePairs: %v, wantTradePairs: %v.", i, gotTradePairs, c.wantTradePairs)
+		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
 	}
 }

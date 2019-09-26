@@ -6,10 +6,11 @@ import (
 	"errors"
 	"math"
 
+	"golang.org/x/crypto/sha3"
+
 	"github.com/vapor/application/dex/common"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol/bc"
-	"golang.org/x/crypto/sha3"
 )
 
 const (
@@ -38,144 +39,35 @@ func calcOrdersKey(fromAssetID, toAssetID *bc.AssetID, utxoHash *bc.Hash, rate f
 }
 
 func calcTradePairKey(fromAssetID, toAssetID *bc.AssetID) []byte {
-	key := append(ordersPreFix, fromAssetID.Bytes()...)
+	key := append(tradePairPreFix, fromAssetID.Bytes()...)
 	return append(key, toAssetID.Bytes()...)
 }
 
-type DexTradeOrderDB struct {
+type DexStore struct {
 	db dbm.DB
 }
 
-func (d *DexTradeOrderDB) GetTradePairsWithStart(fromAssetID, toAssetID *bc.AssetID) ([]*common.TradePair, error) {
-	startKey := []byte{}
-	if fromAssetID != nil && toAssetID != nil {
-		startKey = calcTradePairKey(fromAssetID, toAssetID)
-	}
-
-	tradePairs := []*common.TradePair{}
-	preFixLen := len(tradePairPreFix)
-	itr := d.db.IteratorPrefixWithStart(tradePairPreFix, startKey, false)
-	defer itr.Release()
-
-	for txNum := tradePairsNum; itr.Next() && txNum > 0; {
-		key := itr.Key()
-		b := [32]byte{}
-		fromAssetIDPos := preFixLen
-		copy(b[:], key[fromAssetIDPos:fromAssetIDPos+32])
-		fromAssetID := bc.NewAssetID(b)
-
-		toAssetIDPos := preFixLen + 32
-		copy(b[:], key[toAssetIDPos:toAssetIDPos+32])
-		toAssetID := bc.NewAssetID(b)
-
-		count := binary.BigEndian.Uint64(itr.Value())
-
-		tradePairs = append(tradePairs, &common.TradePair{FromAssetID: &fromAssetID, ToAssetID: &toAssetID, Count: count})
-
-		txNum--
-	}
-
-	return tradePairs, nil
+func NewDexStore(db dbm.DB) *DexStore {
+	return &DexStore{db: db}
 }
 
-func (d *DexTradeOrderDB) addTradePair(fromAssetID, toAssetID *bc.AssetID) error {
-	count := uint64(0)
-	key := calcTradePairKey(fromAssetID, toAssetID)
-	if value := d.db.Get(key); value != nil {
-		count = binary.BigEndian.Uint64(value)
+func (d *DexStore) ListOrders(fromAssetID, toAssetID *bc.AssetID, rateAfter float64) ([]*common.Order, error) {
+	if fromAssetID == nil || toAssetID == nil {
+		return nil, errors.New("assetID is nil")
 	}
-
-	count++
-
-	value := [8]byte{}
-	binary.BigEndian.PutUint64(value[:], count)
-	d.db.Set(key, value[:])
-	return nil
-}
-
-func (d *DexTradeOrderDB) deleteTradePair(fromAssetID, toAssetID *bc.AssetID) error {
-	key := calcTradePairKey(fromAssetID, toAssetID)
-	if value := d.db.Get(key); value != nil {
-		count := binary.BigEndian.Uint64(value) - 1
-
-		if count > 0 {
-			value := [8]byte{}
-			binary.BigEndian.PutUint64(value[:], count)
-			d.db.Set(key, value[:])
-		} else {
-			d.db.Delete(key)
-		}
-		return nil
-	}
-
-	return errors.New("don't find trade pair")
-}
-
-func (d *DexTradeOrderDB) ProcessOrders(addOrders []*common.Order, delOreders []*common.Order, height uint64, blockHash *bc.Hash) error {
-	batch := d.db.NewBatch()
-
-	if err := d.addOrders(batch, addOrders); err != nil {
-		return err
-	}
-
-	if err := d.deleteOrder(batch, delOreders); err != nil {
-		return err
-	}
-
-	if err := d.saveDexDatabaseState(batch, &common.DexDatabaseState{Height: height, Hash: blockHash}); err != nil {
-		return err
-	}
-
-	batch.Write()
-	return nil
-}
-
-func (d *DexTradeOrderDB) addOrders(batch dbm.Batch, orders []*common.Order) error {
-	for _, order := range orders {
-		data, err := json.Marshal(order.Utxo)
-		if err != nil {
-			return err
-		}
-		utxoHash := bc.NewHash(sha3.Sum256(data))
-		key := calcOrdersKey(order.FromAssetID, order.ToAssetID, &utxoHash, order.Rate)
-		batch.Set(key, data)
-
-		if err := d.addTradePair(order.FromAssetID, order.ToAssetID); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (d *DexTradeOrderDB) deleteOrder(batch dbm.Batch, orders []*common.Order) error {
-	for _, order := range orders {
-		data, err := json.Marshal(order.Utxo)
-		if err != nil {
-			return err
-		}
-		utxoHash := bc.NewHash(sha3.Sum256(data))
-		key := calcOrdersKey(order.FromAssetID, order.ToAssetID, &utxoHash, order.Rate)
-		batch.Delete(key)
-
-		if err := d.deleteTradePair(order.FromAssetID, order.ToAssetID); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (d *DexTradeOrderDB) ListOrders(fromAssetID, toAssetID *bc.AssetID, rateAfter float64) ([]*common.Order, error) {
 	ordersPreFixLen := len(ordersPreFix)
 	orders := []*common.Order{}
 
 	orderPreFix := append(ordersPreFix, fromAssetID.Bytes()...)
 	orderPreFix = append(orderPreFix, toAssetID.Bytes()...)
 
-	startKey := []byte{}
-	buf := make([]byte, 8)
-	binary.BigEndian.PutUint64(buf, math.Float64bits(rateAfter))
-	copy(startKey, orderPreFix)
-	startKey = append(startKey, buf...)
+	var startKey []byte
+	if rateAfter > 0 {
+		buf := make([]byte, 8)
+		binary.BigEndian.PutUint64(buf, math.Float64bits(rateAfter))
+		copy(startKey, orderPreFix)
+		startKey = append(startKey, buf...)
+	}
 
 	itr := d.db.IteratorPrefixWithStart(orderPreFix, startKey, false)
 	defer itr.Release()
@@ -213,7 +105,75 @@ func (d *DexTradeOrderDB) ListOrders(fromAssetID, toAssetID *bc.AssetID, rateAft
 	return orders, nil
 }
 
-func (d *DexTradeOrderDB) GetDexDatabaseState() (*common.DexDatabaseState, error) {
+func (d *DexStore) ProcessOrders(addOrders []*common.Order, delOreders []*common.Order, height uint64, blockHash *bc.Hash) error {
+	batch := d.db.NewBatch()
+
+	if err := d.addOrders(batch, addOrders); err != nil {
+		return err
+	}
+
+	if err := d.deleteOrder(batch, delOreders); err != nil {
+		return err
+	}
+
+	if err := d.saveDexDatabaseState(batch, &common.DexDatabaseState{Height: height, Hash: blockHash}); err != nil {
+		return err
+	}
+
+	batch.Write()
+	return nil
+}
+
+func (d *DexStore) addOrders(batch dbm.Batch, orders []*common.Order) error {
+	tradePairMap := make(map[common.TradePair]uint64)
+	for _, order := range orders {
+		data, err := json.Marshal(order.Utxo)
+		if err != nil {
+			return err
+		}
+
+		utxoHash := bc.NewHash(sha3.Sum256(data))
+		key := calcOrdersKey(order.FromAssetID, order.ToAssetID, &utxoHash, order.Rate)
+		batch.Set(key, data)
+
+		tradePair := common.TradePair{
+			FromAssetID: order.FromAssetID,
+			ToAssetID:   order.ToAssetID,
+		}
+		tradePairMap[tradePair] += 1
+	}
+
+	if err := d.addTradePair(batch, tradePairMap); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *DexStore) deleteOrder(batch dbm.Batch, orders []*common.Order) error {
+	tradePairMap := make(map[common.TradePair]uint64)
+	for _, order := range orders {
+		data, err := json.Marshal(order.Utxo)
+		if err != nil {
+			return err
+		}
+
+		utxoHash := bc.NewHash(sha3.Sum256(data))
+		key := calcOrdersKey(order.FromAssetID, order.ToAssetID, &utxoHash, order.Rate)
+		batch.Delete(key)
+		tradePair := common.TradePair{
+			FromAssetID: order.FromAssetID,
+			ToAssetID:   order.ToAssetID,
+		}
+		tradePairMap[tradePair] += 1
+	}
+
+	if err := d.deleteTradePair(batch, tradePairMap); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *DexStore) GetDexDatabaseState() (*common.DexDatabaseState, error) {
 	value := d.db.Get(bestMatchStore)
 	if value != nil {
 		return nil, errors.New("don't find state of dex-database")
@@ -227,7 +187,77 @@ func (d *DexTradeOrderDB) GetDexDatabaseState() (*common.DexDatabaseState, error
 	return state, nil
 }
 
-func (d *DexTradeOrderDB) saveDexDatabaseState(batch dbm.Batch, state *common.DexDatabaseState) error {
+func (d *DexStore) ListTradePairsWithStart(fromAssetID, toAssetID *bc.AssetID) ([]*common.TradePair, error) {
+	var startKey []byte
+	if fromAssetID != nil && toAssetID != nil {
+		startKey = calcTradePairKey(fromAssetID, toAssetID)
+	}
+
+	tradePairs := []*common.TradePair{}
+	preFixLen := len(tradePairPreFix)
+	itr := d.db.IteratorPrefixWithStart(tradePairPreFix, startKey, false)
+	defer itr.Release()
+
+	for txNum := tradePairsNum; itr.Next() && txNum > 0; {
+		key := itr.Key()
+		b := [32]byte{}
+		fromAssetIDPos := preFixLen
+		copy(b[:], key[fromAssetIDPos:fromAssetIDPos+32])
+		fromAssetID := bc.NewAssetID(b)
+
+		toAssetIDPos := preFixLen + 32
+		copy(b[:], key[toAssetIDPos:toAssetIDPos+32])
+		toAssetID := bc.NewAssetID(b)
+
+		count := binary.BigEndian.Uint64(itr.Value())
+
+		tradePairs = append(tradePairs, &common.TradePair{FromAssetID: &fromAssetID, ToAssetID: &toAssetID, Count: count})
+
+		txNum--
+	}
+
+	return tradePairs, nil
+}
+
+func (d *DexStore) addTradePair(batch dbm.Batch, tradePairMap map[common.TradePair]uint64) error {
+	for k, v := range tradePairMap {
+		count := uint64(0)
+		key := calcTradePairKey(k.FromAssetID, k.ToAssetID)
+		if value := d.db.Get(key); value != nil {
+			count = binary.BigEndian.Uint64(value)
+		}
+
+		count += v
+
+		value := [8]byte{}
+		binary.BigEndian.PutUint64(value[:], count)
+		batch.Set(key, value[:])
+	}
+	return nil
+}
+
+func (d *DexStore) deleteTradePair(batch dbm.Batch, tradePairMap map[common.TradePair]uint64) error {
+	for k, v := range tradePairMap {
+		key := calcTradePairKey(k.FromAssetID, k.ToAssetID)
+		value := d.db.Get(key)
+		if value == nil {
+			return errors.New("don't find trade pair")
+		}
+		count := binary.BigEndian.Uint64(value) - v
+
+		if count > 0 {
+			value := [8]byte{}
+			binary.BigEndian.PutUint64(value[:], count)
+			batch.Set(key, value[:])
+		} else {
+			batch.Delete(key)
+		}
+	}
+
+	return nil
+}
+
+func (d *DexStore) saveDexDatabaseState(batch dbm.Batch, state *common.DexDatabaseState) error {
 	value, err := json.Marshal(state)
 	if err != nil {
 		return err
