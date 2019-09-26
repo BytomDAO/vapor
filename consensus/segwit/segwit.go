@@ -105,13 +105,22 @@ func ConvertP2SHProgram(prog []byte) ([]byte, error) {
 }
 
 // ConvertP2DCProgram convert standard P2WDC program into P2DC program
-func ConvertP2DCProgram(prog []byte, lockedAssetID bc.AssetID) ([]byte, error) {
+func ConvertP2DCProgram(prog []byte, lockedAssetID bc.AssetID, args [][]byte) ([]byte, error) {
 	dexContractArgs, err := DecodeP2DCProgram(prog)
 	if err != nil {
 		return nil, err
 	}
 
-	return vmutil.P2DCProgram(*dexContractArgs, lockedAssetID)
+	if len(args) != 2 {
+		errors.New("Invalid P2DC arguments")
+	}
+
+	clauseSelector, err := vm.AsInt64(args[1])
+	if err != nil {
+		return nil, err
+	}
+
+	return vmutil.P2DCProgram(*dexContractArgs, lockedAssetID, clauseSelector)
 }
 
 // DecodeP2DCProgram parse standard P2WDC arguments to DexContractArgs
