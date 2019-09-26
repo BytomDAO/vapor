@@ -187,10 +187,10 @@ func (d *DexStore) GetDexDatabaseState() (*common.DexDatabaseState, error) {
 	return state, nil
 }
 
-func (d *DexStore) ListTradePairsWithStart(fromAssetID, toAssetID *bc.AssetID) ([]*common.TradePair, error) {
+func (d *DexStore) ListTradePairsWithStart(fromAssetIDAfter, toAssetIDAfter *bc.AssetID) ([]*common.TradePair, error) {
 	var startKey []byte
-	if fromAssetID != nil && toAssetID != nil {
-		startKey = calcTradePairKey(fromAssetID, toAssetID)
+	if fromAssetIDAfter != nil && toAssetIDAfter != nil {
+		startKey = calcTradePairKey(fromAssetIDAfter, toAssetIDAfter)
 	}
 
 	tradePairs := []*common.TradePair{}
