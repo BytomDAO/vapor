@@ -74,15 +74,6 @@ func (d *DexStore) ListOrders(fromAssetID, toAssetID *bc.AssetID, rateAfter floa
 
 	for txNum := ordersNum; itr.Next() && txNum > 0; {
 		key := itr.Key()
-		b := [32]byte{}
-		fromAssetIDPos := ordersPreFixLen
-		copy(b[:], key[fromAssetIDPos:fromAssetIDPos+32])
-		fromAssetID := bc.NewAssetID(b)
-
-		toAssetIDPos := ordersPreFixLen + 32
-		copy(b[:], key[toAssetIDPos:toAssetIDPos+32])
-		toAssetID := bc.NewAssetID(b)
-
 		ratePos := ordersPreFixLen + 32*2
 		rate := math.Float64frombits(binary.BigEndian.Uint64(key[ratePos : ratePos+8]))
 
@@ -92,8 +83,8 @@ func (d *DexStore) ListOrders(fromAssetID, toAssetID *bc.AssetID, rateAfter floa
 		}
 
 		order := &common.Order{
-			FromAssetID: &fromAssetID,
-			ToAssetID:   &toAssetID,
+			FromAssetID: fromAssetID,
+			ToAssetID:   toAssetID,
 			Rate:        rate,
 			Utxo:        dexUtxo,
 		}
