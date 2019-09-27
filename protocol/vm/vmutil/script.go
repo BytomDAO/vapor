@@ -9,8 +9,8 @@ import (
 	"github.com/vapor/protocol/vm"
 )
 
-// DexClauseSelector is the global selector for the dex transaction
-var DexClauseSelector = 0
+// MagneticClauseSelector is the global selector for the magnetic transaction
+var MagneticClauseSelector = 0
 
 // pre-define errors
 var (
@@ -18,8 +18,8 @@ var (
 	ErrMultisigFormat = errors.New("bad multisig program format")
 )
 
-// DexContractArgs is a struct for dex contract arguments
-type DexContractArgs struct {
+// MagneticContractArgs is a struct for magnetic contract arguments
+type MagneticContractArgs struct {
 	RequestedAsset   bc.AssetID
 	RatioMolecule    int64
 	RatioDenominator int64
@@ -149,54 +149,54 @@ func checkMultiSigParams(nrequired, npubkeys int64) error {
 	return nil
 }
 
-// P2WDCProgram return the segwit pay to dex contract
-func P2WDCProgram(dexContractArgs DexContractArgs) ([]byte, error) {
+// P2WMCProgram return the segwit pay to magnetic contract
+func P2WMCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 	builder := NewBuilder()
 	builder.AddInt64(0)
-	builder.AddData(dexContractArgs.RequestedAsset.Bytes())
-	builder.AddInt64(dexContractArgs.RatioMolecule)
-	builder.AddInt64(dexContractArgs.RatioDenominator)
-	builder.AddData(dexContractArgs.SellerProgram)
-	builder.AddData(dexContractArgs.SellerKey)
+	builder.AddData(magneticContractArgs.RequestedAsset.Bytes())
+	builder.AddInt64(magneticContractArgs.RatioMolecule)
+	builder.AddInt64(magneticContractArgs.RatioDenominator)
+	builder.AddData(magneticContractArgs.SellerProgram)
+	builder.AddData(magneticContractArgs.SellerKey)
 	return builder.Build()
 }
 
-// P2DCProgram generates the script for control with dex contract
-func P2DCProgram(dexContractArgs DexContractArgs, lockedAssetID bc.AssetID, clauseSelector int64) ([]byte, error) {
-	standardProgram, err := P2WDCProgram(dexContractArgs)
+// P2MCProgram generates the script for control with magnetic contract
+func P2MCProgram(magneticContractArgs MagneticContractArgs, lockedAssetID bc.AssetID, clauseSelector int64) ([]byte, error) {
+	standardProgram, err := P2WMCProgram(magneticContractArgs)
 	if err != nil {
 		return nil, err
 	}
 
-	assetComparedResult := strings.Compare(dexContractArgs.RequestedAsset.String(), lockedAssetID.String())
-	dexProgram, err := DexProgram(assetComparedResult, clauseSelector)
+	assetComparedResult := strings.Compare(magneticContractArgs.RequestedAsset.String(), lockedAssetID.String())
+	magneticProgram, err := MagneticProgram(assetComparedResult, clauseSelector)
 	if err != nil {
 		return nil, err
 	}
 
 	builder := NewBuilder()
-	builder.AddData(dexContractArgs.SellerKey)
+	builder.AddData(magneticContractArgs.SellerKey)
 	builder.AddData(standardProgram)
-	builder.AddData(dexContractArgs.SellerProgram)
-	builder.AddInt64(dexContractArgs.RatioDenominator)
-	builder.AddInt64(dexContractArgs.RatioMolecule)
-	builder.AddData(dexContractArgs.RequestedAsset.Bytes())
+	builder.AddData(magneticContractArgs.SellerProgram)
+	builder.AddInt64(magneticContractArgs.RatioDenominator)
+	builder.AddInt64(magneticContractArgs.RatioMolecule)
+	builder.AddData(magneticContractArgs.RequestedAsset.Bytes())
 	builder.AddOp(vm.OP_DEPTH)
-	builder.AddData(dexProgram)
+	builder.AddData(magneticProgram)
 	builder.AddOp(vm.OP_FALSE)
 	builder.AddOp(vm.OP_CHECKPREDICATE)
 	return builder.Build()
 }
 
-// DexProgram is the actual execute dex program which not contain arguments
+// MagneticProgram is the actual execute magnetic program which not contain arguments
 //
-// DexContract source code:
-// contract DexContract(requestedAsset: Asset,
-//                      ratioMolecule: Integer,
-//                      ratioDenominator: Integer,
-//                      sellerProgram: Program,
-//                      standardProgram: Program,
-//                      sellerKey: PublicKey) locks valueAmount of valueAsset {
+// MagneticContract source code:
+// contract MagneticContract(requestedAsset: Asset,
+//                           ratioMolecule: Integer,
+//                           ratioDenominator: Integer,
+//                           sellerProgram: Program,
+//                           standardProgram: Program,
+//                           sellerKey: PublicKey) locks valueAmount of valueAsset {
 // clause partialTrade(exchangeAmount: Amount) {
 // 	 define actualAmount: Integer = exchangeAmount * ratioDenominator / ratioMolecule
 // 	 verify actualAmount > 0 && actualAmount < valueAmount
@@ -302,23 +302,23 @@ func P2DCProgram(dexContractArgs DexContractArgs, lockedAssetID bc.AssetID, clau
 // ROLL                     [... standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset sellerSig sellerKey]
 // TXSIGHASH SWAP CHECKSIG  [... standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset checkTxSig(sellerKey, sellerSig)]
 // $_end                    [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset]
-func DexProgram(assetComparedResult int, clauseSelector int64) ([]byte, error) {
+func MagneticProgram(assetComparedResult int, clauseSelector int64) ([]byte, error) {
 	var firstPositionOP, secondPostionOP vm.Op
 	switch {
 	case assetComparedResult > 0:
 		firstPositionOP = vm.OP_0
 		secondPostionOP = vm.OP_1
 
-		// the composition of dex transaction must comply with the rules:
+		// the composition of magnetic contract transaction must comply with the rules:
 		// the first input requestAsset must greater than lockedAsset,
 		// and the second input requestAsset must less than lockedAsset
-		DexClauseSelector = 0
+		MagneticClauseSelector = 0
 		if clauseSelector == 1 {
-			DexClauseSelector = 1
+			MagneticClauseSelector = 1
 		}
 
 	case assetComparedResult < 0:
-		if DexClauseSelector == 1 {
+		if MagneticClauseSelector == 1 {
 			firstPositionOP = vm.OP_1
 			secondPostionOP = vm.OP_2
 		} else {

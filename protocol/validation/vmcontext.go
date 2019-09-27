@@ -111,8 +111,8 @@ func witnessProgram(prog []byte, lockedAssetID bc.AssetID, args [][]byte) []byte
 		if witnessProg, err := segwit.ConvertP2SHProgram(prog); err == nil {
 			return witnessProg
 		}
-	case segwit.IsP2WDCScript(prog):
-		if witnessProg, err := segwit.ConvertP2DCProgram(prog, lockedAssetID, args); err == nil {
+	case segwit.IsP2WMCScript(prog):
+		if witnessProg, err := segwit.ConvertP2MCProgram(prog, lockedAssetID, args); err == nil {
 			return witnessProg
 		}
 	}

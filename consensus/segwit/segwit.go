@@ -56,8 +56,8 @@ func IsP2WSHScript(prog []byte) bool {
 	return insts[1].Op == vm.OP_DATA_32 && len(insts[1].Data) == consensus.PayToWitnessScriptHashDataSize
 }
 
-// IsP2WDCScript is used to determine whether it is a P2WDC script or not
-func IsP2WDCScript(prog []byte) bool {
+// IsP2WMCScript is used to determine whether it is a P2WMC script or not
+func IsP2WMCScript(prog []byte) bool {
 	insts, err := vm.ParseProgram(prog)
 	if err != nil {
 		return false
@@ -104,15 +104,15 @@ func ConvertP2SHProgram(prog []byte) ([]byte, error) {
 	return nil, errors.New("unknow P2SHP version number")
 }
 
-// ConvertP2DCProgram convert standard P2WDC program into P2DC program
-func ConvertP2DCProgram(prog []byte, lockedAssetID bc.AssetID, args [][]byte) ([]byte, error) {
-	dexContractArgs, err := DecodeP2DCProgram(prog)
+// ConvertP2MCProgram convert standard P2WMC program into P2MC program
+func ConvertP2MCProgram(prog []byte, lockedAssetID bc.AssetID, args [][]byte) ([]byte, error) {
+	magneticContractArgs, err := DecodeP2MCProgram(prog)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(args) != 2 {
-		return nil, errors.New("Invalid P2DC arguments")
+		return nil, errors.New("Invalid P2MC arguments")
 	}
 
 	clauseSelector, err := vm.AsInt64(args[1])
@@ -120,36 +120,36 @@ func ConvertP2DCProgram(prog []byte, lockedAssetID bc.AssetID, args [][]byte) ([
 		return nil, err
 	}
 
-	return vmutil.P2DCProgram(*dexContractArgs, lockedAssetID, clauseSelector)
+	return vmutil.P2MCProgram(*magneticContractArgs, lockedAssetID, clauseSelector)
 }
 
-// DecodeP2DCProgram parse standard P2WDC arguments to DexContractArgs
-func DecodeP2DCProgram(prog []byte) (*vmutil.DexContractArgs, error) {
+// DecodeP2MCProgram parse standard P2WMC arguments to magneticContractArgs
+func DecodeP2MCProgram(prog []byte) (*vmutil.MagneticContractArgs, error) {
 	insts, err := vm.ParseProgram(prog)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(insts) != 6 || insts[0].Op != vm.OP_0 {
-		return nil, errors.New("Invalid P2DC program")
+		return nil, errors.New("Invalid P2MC program")
 	}
 
-	dexContractArgs := &vmutil.DexContractArgs{}
+	magneticContractArgs := &vmutil.MagneticContractArgs{}
 	requestedAsset := [32]byte{}
 	copy(requestedAsset[:], insts[1].Data)
-	dexContractArgs.RequestedAsset = bc.NewAssetID(requestedAsset)
+	magneticContractArgs.RequestedAsset = bc.NewAssetID(requestedAsset)
 
-	if dexContractArgs.RatioMolecule, err = vm.AsInt64(insts[2].Data); err != nil {
+	if magneticContractArgs.RatioMolecule, err = vm.AsInt64(insts[2].Data); err != nil {
 		return nil, err
 	}
 
-	if dexContractArgs.RatioDenominator, err = vm.AsInt64(insts[3].Data); err != nil {
+	if magneticContractArgs.RatioDenominator, err = vm.AsInt64(insts[3].Data); err != nil {
 		return nil, err
 	}
 
-	dexContractArgs.SellerProgram = insts[4].Data
-	dexContractArgs.SellerKey = insts[5].Data
-	return dexContractArgs, nil
+	magneticContractArgs.SellerProgram = insts[4].Data
+	magneticContractArgs.SellerKey = insts[5].Data
+	return magneticContractArgs, nil
 }
 
 // GetHashFromStandardProg get hash from standard program
