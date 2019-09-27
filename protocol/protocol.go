@@ -21,7 +21,6 @@ const (
 
 type Protocoler interface {
 	Name() string
-	SyncStatus() error
 	Status() (uint64, *bc.Hash)
 	ValidateBlock(block *bc.Block) error
 	ValidateTxs(txs []*bc.Tx) error

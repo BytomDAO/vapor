@@ -6,18 +6,23 @@ import (
 )
 
 const (
-	name = "MOV"
+	protocolName = "MOV"
 	// startHeight mov protocol startup height.
 	startHeight = 0
 )
 
-type combination interface {
+type matchEnginer interface {
 	ApplyBlock(block *types.Block) error
 	BeforeProposalBlock(txs []*types.Tx) ([]*types.Tx, error)
+	ChainStatus() (uint64, *bc.Hash)
+	DetachBlock(block *types.Block) error
+	IsDust(tx *types.Tx) bool
+	ValidateBlock(block *bc.Block) error
+	ValidateTxs(txs []*bc.Tx) error
 }
 
 type MOV struct {
-	combination combination
+	engine matchEnginer
 }
 
 func NewMOV() *MOV {
@@ -25,41 +30,37 @@ func NewMOV() *MOV {
 }
 
 func (m MOV) ApplyBlock(block *types.Block) error {
-	return m.combination.ApplyBlock(block)
+	return m.engine.ApplyBlock(block)
 }
 
 func (m MOV) BeforeProposalBlock(txs []*types.Tx) ([]*types.Tx, error) {
-	return m.combination.BeforeProposalBlock(txs)
+	return m.engine.BeforeProposalBlock(txs)
 }
 
 func (m MOV) ChainStatus() (uint64, *bc.Hash) {
-	return 0, nil
+	return m.engine.ChainStatus()
 }
 
 func (m MOV) DetachBlock(block *types.Block) error {
-	return nil
+	return m.engine.DetachBlock(block)
 }
 
 func (m MOV) IsDust(tx *types.Tx) bool {
-	return false
+	return m.engine.IsDust(tx)
 }
 
 func (m MOV) Name() string {
-	return name
+	return protocolName
 }
 
 func (m MOV) ValidateBlock(block *bc.Block) error {
-	return nil
+	return m.engine.ValidateBlock(block)
 }
 
 func (m MOV) ValidateTxs(txs []*bc.Tx) error {
-	return nil
+	return m.engine.ValidateTxs(txs)
 }
 
 func (m MOV) Status() (uint64, *bc.Hash) {
-	return 0, nil
-}
-
-func (m MOV) SyncStatus() error {
-	return nil
+	return m.engine.ChainStatus()
 }
