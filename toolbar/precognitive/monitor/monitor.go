@@ -108,7 +108,7 @@ func (m *monitor) makeSwitch() error {
 	}
 
 	// no need for lanDiscv, but passing &mdns.LANDiscover{} will cause NilPointer
-	lanDiscv := mdns.NewLANDiscover(mdns.NewProtocol(), int(l.ExternalAddress().Port))
+	lanDiscv := mdns.NewLANDiscover(mdns.NewProtocol("mainnet"), int(l.ExternalAddress().Port))
 	m.sw, err = p2p.NewSwitch(m.nodeCfg, discv, lanDiscv, l, m.privKey, listenAddr, m.cfg.NetworkID)
 	if err != nil {
 		return err
