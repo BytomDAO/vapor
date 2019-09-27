@@ -9,8 +9,8 @@ import (
 	"github.com/vapor/protocol/vm"
 )
 
-// MagneticClauseSelector is the global selector for the magnetic transaction
-var MagneticClauseSelector = 0
+// magneticClauseSelector is the global selector for the magnetic transaction
+var magneticClauseSelector = 0
 
 // pre-define errors
 var (
@@ -312,13 +312,13 @@ func MagneticProgram(assetComparedResult int, clauseSelector int64) ([]byte, err
 		// the composition of magnetic contract transaction must comply with the rules:
 		// the first input requestAsset must greater than lockedAsset,
 		// and the second input requestAsset must less than lockedAsset
-		MagneticClauseSelector = 0
+		magneticClauseSelector = 0
 		if clauseSelector == 1 {
-			MagneticClauseSelector = 1
+			magneticClauseSelector = 1
 		}
 
 	case assetComparedResult < 0:
-		if MagneticClauseSelector == 1 {
+		if magneticClauseSelector == 1 {
 			firstPositionOP = vm.OP_1
 			secondPostionOP = vm.OP_2
 		} else {
