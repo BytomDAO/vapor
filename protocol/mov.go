@@ -7,8 +7,6 @@ import (
 
 const (
 	protocolName = "MOV"
-	// startHeight mov protocol startup height.
-	startHeight = 0
 )
 
 type matchEnginer interface {
