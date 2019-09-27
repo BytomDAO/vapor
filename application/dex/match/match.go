@@ -2,7 +2,6 @@ package match
 
 import (
 	"math/big"
-	"big"
 	"encoding/hex"
 	"errors"
 
