@@ -68,36 +68,55 @@ func buildMatchTx(buyOrder, sellOrder *common.Order) (*types.Tx, error) {
 	buyContractArgs := DecodeDexProgram(buyOrder.Utxo.ControlProgram)
 	buyRequestAmount := calcToAmountByFromAmount(buyOrder.Utxo.Amount, buyContractArgs)
 	buyReceiveAmount := min(buyRequestAmount, sellOrder.Utxo.Amount)
-	txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*buyOrder.ToAssetID, buyReceiveAmount, buyContractArgs.SellerProgram))
-
 	buyShouldPayAmount := calcFromAmountByToAmount(buyReceiveAmount, buyContractArgs)
-	if buyOrder.Utxo.Amount > buyShouldPayAmount {
-		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*buyOrder.FromAssetID, buyOrder.Utxo.Amount-buyShouldPayAmount, buyOrder.Utxo.ControlProgram))
-	}
-
+	
 	sellContractArgs := DecodeDexProgram(sellOrder.Utxo.ControlProgram)
 	sellRequestAmount := calcToAmountByFromAmount(sellOrder.Utxo.Amount, sellContractArgs)
 	sellReceiveAmount := min(sellRequestAmount, buyOrder.Utxo.Amount)
-	txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*sellOrder.ToAssetID, sellReceiveAmount, sellContractArgs.SellerProgram))
-
 	sellShouldPayAmount := calcFromAmountByToAmount(sellReceiveAmount, sellContractArgs)
-	if sellOrder.Utxo.Amount > sellShouldPayAmount {
-		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*sellOrder.FromAssetID, sellOrder.Utxo.Amount-sellShouldPayAmount, sellOrder.Utxo.ControlProgram))
+
+	partialTradeStatus := make([]bool, 2)
+	if buyOrder.ToAssetID.String() > buyOrder.FromAssetID.String() {
+		partialTradeStatus[0] = addMatchTxOutput(&txData, buyOrder, buyReceiveAmount, buyShouldPayAmount, buyContractArgs.SellerProgram)
+		partialTradeStatus[1] = addMatchTxOutput(&txData, sellOrder, sellReceiveAmount, sellShouldPayAmount, sellContractArgs.SellerProgram)
+	} else {
+		partialTradeStatus[1] = addMatchTxOutput(&txData, sellOrder, sellReceiveAmount, sellShouldPayAmount, sellContractArgs.SellerProgram)
+		partialTradeStatus[0] = addMatchTxOutput(&txData, buyOrder, buyReceiveAmount, buyShouldPayAmount, buyContractArgs.SellerProgram)
 	}
 
-	// fee output
-	if buyShouldPayAmount > sellReceiveAmount {
-		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*sellOrder.ToAssetID, buyShouldPayAmount-sellRequestAmount, []byte{ /** node address */ }))
-	}
-
-	if sellShouldPayAmount > buyReceiveAmount {
-		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*buyOrder.ToAssetID, sellShouldPayAmount-buyReceiveAmount, []byte{ /** node address */ }))
-	}
+	addMatchTxFeeOutput(&txData, buyShouldPayAmount, sellReceiveAmount, *buyOrder.ToAssetID)
+	addMatchTxFeeOutput(&txData, sellShouldPayAmount, buyReceiveAmount, *sellOrder.ToAssetID)
 
 	tx := types.NewTx(txData)
-	tx.SetInputArguments(0, [][]byte{vm.Int64Bytes(int64(buyReceiveAmount)), vm.Int64Bytes(0)})
-	tx.SetInputArguments(1, [][]byte{vm.Int64Bytes(int64(sellReceiveAmount)), vm.Int64Bytes(0)})
+	setMatchTxArguments(tx, buyReceiveAmount, sellReceiveAmount, partialTradeStatus)
 	return tx, nil
+}
+
+// addMatchTxOutput return whether partial matched
+func addMatchTxOutput(txData *types.TxData, order *common.Order, receiveAmount, shouldPayAmount uint64, receiveProgram []byte) bool {
+	txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*order.ToAssetID, receiveAmount, receiveProgram))
+	if order.Utxo.Amount > shouldPayAmount {
+		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*order.FromAssetID, order.Utxo.Amount-shouldPayAmount, order.Utxo.ControlProgram))
+		return true
+	}
+	return false
+}
+
+func addMatchTxFeeOutput(txData *types.TxData, shouldPayAmount, oppositeReceiveAmount uint64, toAssetID bc.AssetID) {
+	if shouldPayAmount > oppositeReceiveAmount {
+		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(toAssetID, shouldPayAmount-oppositeReceiveAmount, []byte{ /** node address */ }))
+	}
+}
+
+func setMatchTxArguments(tx *types.Tx, buyReceiveAmount, sellReceiveAmount uint64, partialTradeStatus []bool) {
+	clauseSelectors := make([][]byte, 2)
+	for i, isPartial := range partialTradeStatus {
+		if !isPartial {
+			clauseSelectors[i] = vm.Int64Bytes(1)
+		}
+	}
+	tx.SetInputArguments(0, [][]byte{vm.Int64Bytes(int64(buyReceiveAmount)), clauseSelectors[0]})
+	tx.SetInputArguments(1, [][]byte{vm.Int64Bytes(int64(sellReceiveAmount)), clauseSelectors[1]})
 }
 
 func adjustOrderTable(tx *types.Tx, buyOrders, sellOrders *vprCommon.Stack) error {
