@@ -112,7 +112,7 @@ func ConvertP2DCProgram(prog []byte, lockedAssetID bc.AssetID, args [][]byte) ([
 	}
 
 	if len(args) != 2 {
-		errors.New("Invalid P2DC arguments")
+		return nil, errors.New("Invalid P2DC arguments")
 	}
 
 	clauseSelector, err := vm.AsInt64(args[1])
@@ -130,7 +130,7 @@ func DecodeP2DCProgram(prog []byte) (*vmutil.DexContractArgs, error) {
 		return nil, err
 	}
 
-	if !(len(insts) == 6 && insts[0].Op == vm.OP_0) {
+	if len(insts) != 6 || insts[0].Op != vm.OP_0 {
 		return nil, errors.New("Invalid P2DC program")
 	}
 

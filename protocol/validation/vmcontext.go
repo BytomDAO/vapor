@@ -102,15 +102,16 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 }
 
 func witnessProgram(prog []byte, lockedAssetID bc.AssetID, args [][]byte) []byte {
-	if segwit.IsP2WPKHScript(prog) {
+	switch {
+	case segwit.IsP2WPKHScript(prog):
 		if witnessProg, err := segwit.ConvertP2PKHSigProgram(prog); err == nil {
 			return witnessProg
 		}
-	} else if segwit.IsP2WSHScript(prog) {
+	case segwit.IsP2WSHScript(prog):
 		if witnessProg, err := segwit.ConvertP2SHProgram(prog); err == nil {
 			return witnessProg
 		}
-	} else if segwit.IsP2WDCScript(prog) {
+	case segwit.IsP2WDCScript(prog):
 		if witnessProg, err := segwit.ConvertP2DCProgram(prog, lockedAssetID, args); err == nil {
 			return witnessProg
 		}

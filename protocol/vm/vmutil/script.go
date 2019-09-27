@@ -192,11 +192,11 @@ func P2DCProgram(dexContractArgs DexContractArgs, lockedAssetID bc.AssetID, clau
 //
 // DexContract source code:
 // contract DexContract(requestedAsset: Asset,
-// 						ratioMolecule: Integer,
-// 						ratioDenominator: Integer,
-// 						sellerProgram: Program,
-// 						standardProgram: Program,
-// 						sellerKey: PublicKey) locks valueAmount of valueAsset {
+//                      ratioMolecule: Integer,
+//                      ratioDenominator: Integer,
+//                      sellerProgram: Program,
+//                      standardProgram: Program,
+//                      sellerKey: PublicKey) locks valueAmount of valueAsset {
 // clause partialTrade(exchangeAmount: Amount) {
 // 	 define actualAmount: Integer = exchangeAmount * ratioDenominator / ratioMolecule
 // 	 verify actualAmount > 0 && actualAmount < valueAmount
