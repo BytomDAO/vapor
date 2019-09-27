@@ -5,8 +5,11 @@ import (
 	"github.com/vapor/protocol/bc/types"
 )
 
-// startHeight mov protocol startup height.
-const startHeight = 0
+const (
+	name = "MOV"
+	// startHeight mov protocol startup height.
+	startHeight = 0
+)
 
 type combination interface {
 	ApplyBlock(block *types.Block) error
@@ -42,7 +45,7 @@ func (m MOV) IsDust(tx *types.Tx) bool {
 }
 
 func (m MOV) Name() string {
-	return "MOV"
+	return name
 }
 
 func (m MOV) ValidateBlock(block *bc.Block) error {
@@ -53,8 +56,8 @@ func (m MOV) ValidateTxs(txs []*bc.Tx) error {
 	return nil
 }
 
-func (m MOV) Status() (uint64, *bc.Hash){
-	return 0,nil
+func (m MOV) Status() (uint64, *bc.Hash) {
+	return 0, nil
 }
 
 func (m MOV) SyncStatus() error {

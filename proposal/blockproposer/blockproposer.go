@@ -31,7 +31,7 @@ type BlockProposer struct {
 	chain           *protocol.Chain
 	accountManager  *account.Manager
 	txPool          *protocol.TxPool
-	Preprocessors   []Preprocessor
+	preprocessors   []Preprocessor
 	started         bool
 	quit            chan struct{}
 	eventDispatcher *event.Dispatcher
@@ -88,7 +88,7 @@ func (b *BlockProposer) generateBlocks() {
 			packageTxs = append(packageTxs, txDesc.Tx)
 		}
 
-		for i, p := range b.Preprocessors {
+		for i, p := range b.preprocessors {
 			txs, err := p.BeforeProposalBlock(packageTxs)
 			if err != nil {
 				log.WithFields(log.Fields{"module": logModule, "index": i, "error": err}).Error("failed on sub protocol txs package")
@@ -175,7 +175,7 @@ func NewBlockProposer(c *protocol.Chain, accountManager *account.Manager, txPool
 		chain:           c,
 		accountManager:  accountManager,
 		txPool:          txPool,
-		Preprocessors:   preprocessors,
+		preprocessors:   preprocessors,
 		eventDispatcher: dispatcher,
 	}
 }
