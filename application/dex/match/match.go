@@ -1,6 +1,8 @@
 package match
 
 import (
+	"math/big"
+	"big"
 	"encoding/hex"
 	"errors"
 
@@ -57,7 +59,12 @@ func canBeMatched(buyOrder, sellOrder *common.Order) bool {
 	if buyOrder.ToAssetID != sellOrder.FromAssetID || sellOrder.ToAssetID != buyOrder.FromAssetID {
 		return false
 	}
-	return 1/buyOrder.Rate >= sellOrder.Rate
+
+	buyContractArgs := DecodeDexProgram(buyOrder.Utxo.ControlProgram)
+	sellContractArgs := DecodeDexProgram(sellOrder.Utxo.ControlProgram)
+	buyRate := big.NewFloat(0).Quo(big.NewFloat(0).SetUint64(buyContractArgs.RatioDenominator), big.NewFloat(0).SetUint64(buyContractArgs.RatioMolecule))
+	sellRate := big.NewFloat(0).Quo(big.NewFloat(0).SetUint64(sellContractArgs.RatioMolecule), big.NewFloat(0).SetUint64(buyContractArgs.RatioDenominator))
+	return buyRate.Cmp(sellRate) >= 0
 }
 
 func buildMatchTx(buyOrder, sellOrder *common.Order) (*types.Tx, error) {
