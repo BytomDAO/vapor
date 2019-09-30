@@ -17,20 +17,25 @@ const (
 	sellOrderOutputIndex = 2
 )
 
-type matchEngine struct {}
+type MatchEngine struct{}
+
+type OrderTable struct {
+	BuyOrders  []*common.Order
+	SellOrders []*common.Order
+}
 
 // GenerateMatchedTxs match two opposite pending orders.
-// for example, the ordersX want change A with B, then the ordersY must change B with A.
+// for example, the buy orders want change A with B, then the sell orders must change B with A.
 // the input order's rate must in descending order.
-func (c *matchEngine) GenerateMatchedTxs(ordersX, ordersY []*common.Order) ([]*types.Tx, error) {
+func (c *MatchEngine) GenerateMatchedTxs(orderTable *OrderTable) ([]*types.Tx, error) {
 	buyOrders := vprCommon.NewStack()
-	for i := len(ordersX) - 1; i >= 0; i-- {
-		buyOrders.Push(ordersX[i])
+	for i := len(orderTable.BuyOrders) - 1; i >= 0; i-- {
+		buyOrders.Push(orderTable.BuyOrders[i])
 	}
 
 	sellOrders := vprCommon.NewStack()
-	for i := len(ordersY) - 1; i >= 0; i-- {
-		sellOrders.Push(ordersY[i])
+	for i := len(orderTable.SellOrders) - 1; i >= 0; i-- {
+		sellOrders.Push(orderTable.SellOrders[i])
 	}
 
 	matchedTxs := []*types.Tx{}
@@ -130,45 +135,24 @@ func adjustOrderTable(tx *types.Tx, buyOrders, sellOrders *vprCommon.Stack) erro
 	sellOrder := sellOrders.Pop().(*common.Order)
 
 	if hex.EncodeToString(tx.Outputs[buyOrderOutputIndex].ControlProgram()) == hex.EncodeToString(tx.Inputs[0].ControlProgram()) {
-		utxo, err := outputToUTXO(tx, buyOrderOutputIndex)
+		order, err := common.OutputToOrder(tx, buyOrderOutputIndex)
 		if err != nil {
 			return err
 		}
 
-		buyOrders.Push(&common.Order{FromAssetID: buyOrder.FromAssetID, ToAssetID: buyOrder.ToAssetID, Rate: buyOrder.Rate, Utxo: utxo})
+		buyOrders.Push(order)
 		return nil
 	}
 
 	if hex.EncodeToString(tx.Outputs[sellOrderOutputIndex].ControlProgram()) == hex.EncodeToString(tx.Inputs[1].ControlProgram()) {
-		utxo, err := outputToUTXO(tx, sellOrderOutputIndex)
+		order, err := common.OutputToOrder(tx, sellOrderOutputIndex)
 		if err != nil {
 			return err
 		}
 
-		sellOrders.Push(&common.Order{FromAssetID: sellOrder.FromAssetID, ToAssetID: sellOrder.ToAssetID, Rate: sellOrder.Rate, Utxo: utxo})
+		sellOrders.Push(order)
 	}
 	return nil
-}
-
-func outputToUTXO(tx *types.Tx, outputIndex int) (*common.DexUtxo, error) {
-	outputID := tx.OutputID(outputIndex)
-	entry, err := tx.Entry(*outputID)
-	if err != nil {
-		return nil, err
-	}
-
-	output, ok := entry.(*bc.IntraChainOutput)
-	if !ok {
-		return nil, errors.New("output is not type of intra chain output")
-	}
-
-	assetAmount := tx.Outputs[outputIndex].AssetAmount()
-	return &common.DexUtxo{
-		SourceID:       output.Source.Ref,
-		Amount:         assetAmount.Amount,
-		SourcePos:      uint64(outputIndex),
-		ControlProgram: output.ControlProgram.Code,
-	}, nil
 }
 
 func calcToAmountByFromAmount(fromAmount uint64, contractArg *DexContractArgs) uint64 {
