@@ -2,46 +2,49 @@ package mdns
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/grandcat/zeroconf"
 )
 
 const (
 	instanceName = "vapord"
-	serviceName  = "lanDiscover"
+	serviceName  = "vapor%sLanDiscover"
 	domainName   = "local"
 )
 
 // Protocol decoration ZeroConf,which is a pure Golang library
 // that employs Multicast DNS-SD.
 type Protocol struct {
-	entries chan *zeroconf.ServiceEntry
-	server  *zeroconf.Server
-	quite   chan struct{}
+	entries     chan *zeroconf.ServiceEntry
+	server      *zeroconf.Server
+	serviceName string
+	quite       chan struct{}
 }
 
 // NewProtocol create a specific Protocol.
-func NewProtocol() *Protocol {
+func NewProtocol(chainID string) *Protocol {
 	return &Protocol{
-		entries: make(chan *zeroconf.ServiceEntry),
-		quite:   make(chan struct{}),
+		entries:     make(chan *zeroconf.ServiceEntry),
+		serviceName: fmt.Sprintf(serviceName, chainID),
+		quite:       make(chan struct{}),
 	}
 }
 
-func (m *Protocol) getLanPeerLoop(event chan LANPeerEvent) {
+func (p *Protocol) getLanPeerLoop(event chan LANPeerEvent) {
 	for {
 		select {
-		case entry := <-m.entries:
+		case entry := <-p.entries:
 			event <- LANPeerEvent{IP: entry.AddrIPv4, Port: entry.Port}
-		case <-m.quite:
+		case <-p.quite:
 			return
 		}
 	}
 }
 
-func (m *Protocol) registerService(port int) error {
+func (p *Protocol) registerService(port int) error {
 	var err error
-	m.server, err = zeroconf.Register(instanceName, serviceName, domainName, port, nil, nil)
+	p.server, err = zeroconf.Register(instanceName, p.serviceName, domainName, port, nil, nil)
 	return err
 }
 
@@ -52,15 +55,15 @@ func (m *Protocol) registerResolver(event chan LANPeerEvent) error {
 		return err
 	}
 
-	return resolver.Browse(context.Background(), serviceName, domainName, m.entries)
+	return resolver.Browse(context.Background(), m.serviceName, domainName, m.entries)
 }
 
-func (m *Protocol) stopResolver() {
-	close(m.quite)
+func (p *Protocol) stopResolver() {
+	close(p.quite)
 }
 
-func (m *Protocol) stopService() {
-	if m.server != nil {
-		m.server.Shutdown()
+func (p *Protocol) stopService() {
+	if p.server != nil {
+		p.server.Shutdown()
 	}
 }
