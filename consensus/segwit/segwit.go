@@ -69,6 +69,14 @@ func IsP2WMCScript(prog []byte) bool {
 		return false
 	}
 
+	if insts[1].Op != vm.OP_DATA_20 || len(insts[1].Data) != 32 {
+		return false
+	}
+
+	if !(insts[2].IsPushdata() && insts[3].IsPushdata() && insts[4].IsPushdata()) {
+		return false
+	}
+
 	if _, err = vm.AsInt64(insts[2].Data); err != nil {
 		return false
 	}
@@ -76,8 +84,7 @@ func IsP2WMCScript(prog []byte) bool {
 	if _, err = vm.AsInt64(insts[3].Data); err != nil {
 		return false
 	}
-
-	return insts[1].Op == vm.OP_DATA_20 && len(insts[1].Data) == 32 && insts[5].Op == vm.OP_DATA_20 && len(insts[5].Data) == 32
+	return insts[5].Op == vm.OP_DATA_20 && len(insts[5].Data) == 32
 }
 
 // ConvertP2PKHSigProgram convert standard P2WPKH program into P2PKH program
@@ -105,22 +112,12 @@ func ConvertP2SHProgram(prog []byte) ([]byte, error) {
 }
 
 // ConvertP2MCProgram convert standard P2WMC program into P2MC program
-func ConvertP2MCProgram(prog []byte, lockedAssetID bc.AssetID, args [][]byte) ([]byte, error) {
+func ConvertP2MCProgram(prog []byte) ([]byte, error) {
 	magneticContractArgs, err := DecodeP2MCProgram(prog)
 	if err != nil {
 		return nil, err
 	}
-
-	if len(args) != 2 {
-		return nil, errors.New("Invalid P2MC arguments")
-	}
-
-	clauseSelector, err := vm.AsInt64(args[1])
-	if err != nil {
-		return nil, err
-	}
-
-	return vmutil.P2MCProgram(*magneticContractArgs, lockedAssetID, clauseSelector)
+	return vmutil.P2MCProgram(*magneticContractArgs)
 }
 
 // DecodeP2MCProgram parse standard P2WMC arguments to magneticContractArgs

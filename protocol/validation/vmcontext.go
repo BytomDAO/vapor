@@ -18,8 +18,7 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 		numResults  = uint64(len(tx.ResultIds))
 		entryID     = bc.EntryID(entry) // TODO(bobg): pass this in, don't recompute it
 
-		assetID       *bc.AssetID
-		assetIDBytes  *[]byte
+		assetID       *[]byte
 		amount        *uint64
 		destPos       *uint64
 		spentOutputID *[]byte
@@ -28,9 +27,8 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 	switch e := entry.(type) {
 	case *bc.CrossChainInput:
 		mainchainOutput := tx.Entries[*e.MainchainOutputId].(*bc.IntraChainOutput)
-		assetID = mainchainOutput.Source.Value.AssetId
-		a1 := assetID.Bytes()
-		assetIDBytes = &a1
+		a1 := mainchainOutput.Source.Value.AssetId.Bytes()
+		assetID = &a1
 		amount = &mainchainOutput.Source.Value.Amount
 		destPos = &e.WitnessDestination.Position
 		s := e.MainchainOutputId.Bytes()
@@ -38,9 +36,8 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 
 	case *bc.Spend:
 		spentOutput := tx.Entries[*e.SpentOutputId].(*bc.IntraChainOutput)
-		assetID = spentOutput.Source.Value.AssetId
-		a1 := assetID.Bytes()
-		assetIDBytes = &a1
+		a1 := spentOutput.Source.Value.AssetId.Bytes()
+		assetID = &a1
 		amount = &spentOutput.Source.Value.Amount
 		destPos = &e.WitnessDestination.Position
 		s := e.SpentOutputId.Bytes()
@@ -48,9 +45,8 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 
 	case *bc.VetoInput:
 		voteOutput := tx.Entries[*e.SpentOutputId].(*bc.VoteOutput)
-		assetID = voteOutput.Source.Value.AssetId
-		a1 := assetID.Bytes()
-		assetIDBytes = &a1
+		a1 := voteOutput.Source.Value.AssetId.Bytes()
+		assetID = &a1
 		amount = &voteOutput.Source.Value.Amount
 		destPos = &e.WitnessDestination.Position
 		s := e.SpentOutputId.Bytes()
@@ -81,7 +77,7 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 
 	result := &vm.Context{
 		VMVersion: prog.VmVersion,
-		Code:      witnessProgram(prog.Code, *assetID, args),
+		Code:      witnessProgram(prog.Code),
 		Arguments: args,
 
 		EntryID: entryID.Bytes(),
@@ -91,7 +87,7 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 
 		TxSigHash:     txSigHashFn,
 		NumResults:    &numResults,
-		AssetID:       assetIDBytes,
+		AssetID:       assetID,
 		Amount:        amount,
 		DestPos:       destPos,
 		SpentOutputID: spentOutputID,
@@ -101,7 +97,7 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 	return result
 }
 
-func witnessProgram(prog []byte, lockedAssetID bc.AssetID, args [][]byte) []byte {
+func witnessProgram(prog []byte) []byte {
 	switch {
 	case segwit.IsP2WPKHScript(prog):
 		if witnessProg, err := segwit.ConvertP2PKHSigProgram(prog); err == nil {
@@ -112,7 +108,7 @@ func witnessProgram(prog []byte, lockedAssetID bc.AssetID, args [][]byte) []byte
 			return witnessProg
 		}
 	case segwit.IsP2WMCScript(prog):
-		if witnessProg, err := segwit.ConvertP2MCProgram(prog, lockedAssetID, args); err == nil {
+		if witnessProg, err := segwit.ConvertP2MCProgram(prog); err == nil {
 			return witnessProg
 		}
 	}

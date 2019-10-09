@@ -1,8 +1,6 @@
 package vmutil
 
 import (
-	"strings"
-
 	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
@@ -24,7 +22,7 @@ type MagneticContractArgs struct {
 	RatioMolecule    int64
 	RatioDenominator int64
 	SellerProgram    []byte
-	SellerKey        ed25519.PublicKey
+	SellerKey        []byte
 }
 
 // IsUnspendable checks if a contorl program is absolute failed
@@ -162,33 +160,6 @@ func P2WMCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 }
 
 // P2MCProgram generates the script for control with magnetic contract
-func P2MCProgram(magneticContractArgs MagneticContractArgs, lockedAssetID bc.AssetID, clauseSelector int64) ([]byte, error) {
-	standardProgram, err := P2WMCProgram(magneticContractArgs)
-	if err != nil {
-		return nil, err
-	}
-
-	assetComparedResult := strings.Compare(magneticContractArgs.RequestedAsset.String(), lockedAssetID.String())
-	magneticProgram, err := MagneticProgram(assetComparedResult, clauseSelector)
-	if err != nil {
-		return nil, err
-	}
-
-	builder := NewBuilder()
-	builder.AddData(magneticContractArgs.SellerKey)
-	builder.AddData(standardProgram)
-	builder.AddData(magneticContractArgs.SellerProgram)
-	builder.AddInt64(magneticContractArgs.RatioDenominator)
-	builder.AddInt64(magneticContractArgs.RatioMolecule)
-	builder.AddData(magneticContractArgs.RequestedAsset.Bytes())
-	builder.AddOp(vm.OP_DEPTH)
-	builder.AddData(magneticProgram)
-	builder.AddOp(vm.OP_FALSE)
-	builder.AddOp(vm.OP_CHECKPREDICATE)
-	return builder.Build()
-}
-
-// MagneticProgram is the actual execute magnetic program which not contain arguments
 //
 // MagneticContract source code:
 // contract MagneticContract(requestedAsset: Asset,
@@ -204,10 +175,10 @@ func P2MCProgram(magneticContractArgs MagneticContractArgs, lockedAssetID bc.Ass
 //   lock valueAmount-actualAmount of valueAsset with standardProgram
 //   unlock actualAmount of valueAsset
 // }
-// clause fullTrade(exchangeAmount: Amount) {
-//   define actualAmount: Integer = exchangeAmount * ratioDenominator / ratioMolecule
-//   verify actualAmount > 0 && actualAmount == valueAmount
-//   lock exchangeAmount of requestedAsset with sellerProgram
+// clause fullTrade() {
+//   define requestedAmount: Integer = valueAmount * ratioMolecule / ratioDenominator
+//   verify requestedAmount > 0
+//   lock requestedAmount of requestedAsset with sellerProgram
 //   unlock valueAmount of valueAsset
 // }
 // clause cancel(sellerSig: Signature) {
@@ -216,6 +187,9 @@ func P2MCProgram(magneticContractArgs MagneticContractArgs, lockedAssetID bc.Ass
 // }
 //
 // contract stack flow:
+// 7                        [... <position> <clause selector> sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset 7]
+// ROLL                     [... <clause selector> sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset <position>]
+// TOALTSTACK               [... <clause selector> sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset]
 // 6                        [... <clause selector> sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset 6]
 // ROLL                     [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset <clause selector>]
 // DUP                      [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset <clause selector> <clause selector>]
@@ -243,56 +217,51 @@ func P2MCProgram(magneticContractArgs MagneticContractArgs, lockedAssetID bc.Ass
 // LESSTHAN                 [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount (actualAmount > 0) (actualAmount < valueAmount)]
 // BOOLAND                  [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount ((actualAmount > 0) && (actualAmount < valueAmount))]
 // VERIFY                   [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount]
-// 0                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount 0]
-// 6                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount 0 6]
-// ROLL                     [... sellerKey standardProgram sellerProgram requestedAsset actualAmount 0 exchangeAmount]
-// 3                        [... sellerKey standardProgram sellerProgram requestedAsset actualAmount 0 exchangeAmount 3]
-// ROLL                     [... sellerKey standardProgram sellerProgram actualAmount 0 exchangeAmount requestedAsset]
-// 1                        [... sellerKey standardProgram sellerProgram actualAmount 0 exchangeAmount requestedAsset 1]
-// 5                        [... sellerKey standardProgram sellerProgram actualAmount 0 exchangeAmount requestedAsset 1 5]
-// ROLL                     [... sellerKey standardProgram actualAmount 0 exchangeAmount requestedAsset 1 sellerProgram]
+// FROMALTSTACK             [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount <position>]
+// DUP                      [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount <position> <position>]
+// TOALTSTACK               [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount <position>]
+// 6                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount <position> 6]
+// ROLL                     [... sellerKey standardProgram sellerProgram requestedAsset actualAmount <position> exchangeAmount]
+// 3                        [... sellerKey standardProgram sellerProgram requestedAsset actualAmount <position> exchangeAmount 3]
+// ROLL                     [... sellerKey standardProgram sellerProgram actualAmount <position> exchangeAmount requestedAsset]
+// 1                        [... sellerKey standardProgram sellerProgram actualAmount <position> exchangeAmount requestedAsset 1]
+// 5                        [... sellerKey standardProgram sellerProgram actualAmount <position> exchangeAmount requestedAsset 1 5]
+// ROLL                     [... sellerKey standardProgram actualAmount <position> exchangeAmount requestedAsset 1 sellerProgram]
 // CHECKOUTPUT              [... sellerKey standardProgram actualAmount checkOutput(exchangeAmount, requestedAsset, sellerProgram)]
 // VERIFY                   [... sellerKey standardProgram actualAmount]
-// 1                        [... sellerKey standardProgram actualAmount 1]
-// AMOUNT                   [... sellerKey standardProgram actualAmount 1 valueAmount]
-// 2                        [... sellerKey standardProgram actualAmount 1 valueAmount 2]
-// ROLL                     [... sellerKey standardProgram 1 valueAmount actualAmount]
-// SUB                      [... sellerKey standardProgram 1 (valueAmount - actualAmount)]
-// ASSET                    [... sellerKey standardProgram 1 (valueAmount - actualAmount) valueAsset]
-// 1                        [... sellerKey standardProgram 1 (valueAmount - actualAmount) valueAsset 1]
-// 4                        [... sellerKey standardProgram 1 (valueAmount - actualAmount) valueAsset 1 4]
-// ROLL                     [... sellerKey 1 (valueAmount - actualAmount) valueAsset 1 standardProgram]
+// FROMALTSTACK             [... sellerKey standardProgram actualAmount <position>]
+// 1                        [... sellerKey standardProgram actualAmount <position> 1]
+// ADD                      [... sellerKey standardProgram actualAmount (<position> + 1)]
+// AMOUNT                   [... sellerKey standardProgram actualAmount (<position> + 1) valueAmount]
+// 2                        [... sellerKey standardProgram actualAmount (<position> + 1) valueAmount 2]
+// ROLL                     [... sellerKey standardProgram (<position> + 1) valueAmount actualAmount]
+// SUB                      [... sellerKey standardProgram (<position> + 1) (valueAmount - actualAmount)]
+// ASSET                    [... sellerKey standardProgram (<position> + 1) (valueAmount - actualAmount) valueAsset]
+// 1                        [... sellerKey standardProgram (<position> + 1) (valueAmount - actualAmount) valueAsset 1]
+// 4                        [... sellerKey standardProgram (<position> + 1) (valueAmount - actualAmount) valueAsset 1 4]
+// ROLL                     [... sellerKey (<position> + 1) (valueAmount - actualAmount) valueAsset 1 standardProgram]
 // CHECKOUTPUT              [... sellerKey checkOutput((valueAmount - actualAmount), valueAsset, standardProgram)]
 // JUMP:$_end               [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset]
 // $fullTrade               [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset]
-// 6                        [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset 6]
-// PICK                     [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset exchangeAmount]
-// 3                        [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset exchangeAmount 3]
-// ROLL                     [... exchangeAmount sellerKey standardProgram sellerProgram ratioMolecule requestedAsset exchangeAmount ratioDenominator]
-// MUL                      [... exchangeAmount sellerKey standardProgram sellerProgram ratioMolecule requestedAsset (exchangeAmount * ratioDenominator)]
-// 2                        [... exchangeAmount sellerKey standardProgram sellerProgram ratioMolecule requestedAsset (exchangeAmount * ratioDenominator) 2]
-// ROLL                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset (exchangeAmount * ratioDenominator) ratioMolecule]
-// DIV                      [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount]
-// AMOUNT                   [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount valueAmount]
-// OVER                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount valueAmount actualAmount]
-// 0                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount valueAmount actualAmount 0]
-// GREATERTHAN              [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount valueAmount (actualAmount > 0)]
-// 2                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount valueAmount (actualAmount > 0) 2]
-// ROLL                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset valueAmount (actualAmount > 0) actualAmount]
-// 2                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset valueAmount (actualAmount > 0) actualAmount 2]
-// ROLL                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset (actualAmount > 0) actualAmount valueAmount]
-// EQUAL                    [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset (actualAmount > 0) (actualAmount == valueAmount)]
-// BOOLAND                  [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset ((actualAmount > 0) && (actualAmount == valueAmount))]
-// VERIFY                   [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset]
-// 0                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset 0]
-// 5                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset 0 5]
-// ROLL                     [... sellerKey standardProgram sellerProgram requestedAsset 0 exchangeAmount]
-// 2                        [... sellerKey standardProgram sellerProgram requestedAsset 0 exchangeAmount 2]
-// ROLL                     [... sellerKey standardProgram sellerProgram 0 exchangeAmount requestedAsset]
-// 1                        [... sellerKey standardProgram sellerProgram 0 exchangeAmount requestedAsset 1]
-// 4                        [... sellerKey standardProgram sellerProgram 0 exchangeAmount requestedAsset 1 4]
-// ROLL                     [... sellerKey standardProgram 0 exchangeAmount requestedAsset 1 sellerProgram]
-// CHECKOUTPUT              [... sellerKey standardProgram checkOutput(exchangeAmount, requestedAsset, sellerProgram)]
+// AMOUNT                   [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset valueAmount]
+// 2                        [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset valueAmount 2]
+// ROLL                     [... sellerKey standardProgram sellerProgram ratioDenominator requestedAsset valueAmount ratioMolecule]
+// MUL                      [... sellerKey standardProgram sellerProgram ratioDenominator requestedAsset (valueAmount * ratioMolecule)]
+// 2                        [... sellerKey standardProgram sellerProgram ratioDenominator requestedAsset (valueAmount * ratioMolecule) 2]
+// ROLL                     [... sellerKey standardProgram sellerProgram requestedAsset (valueAmount * ratioMolecule) ratioDenominator]
+// DIV                      [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount]
+// DUP                      [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount requestedAmount]
+// 0                        [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount requestedAmount 0]
+// GREATERTHAN              [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount (requestedAmount > 0)]
+// VERIFY                   [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount]
+// FROMALTSTACK             [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount <position>]
+// SWAP                     [... sellerKey standardProgram sellerProgram requestedAsset <position> requestedAmount]
+// 2                        [... sellerKey standardProgram sellerProgram requestedAsset <position> requestedAmount 2]
+// ROLL                     [... sellerKey standardProgram sellerProgram <position> requestedAmount requestedAsset]
+// 1                        [... sellerKey standardProgram sellerProgram <position> requestedAmount requestedAsset 1]
+// 4                        [... sellerKey standardProgram sellerProgram <position> requestedAmount requestedAsset 1 4]
+// ROLL                     [... sellerKey standardProgram <position> requestedAmount requestedAsset 1 sellerProgram]
+// CHECKOUTPUT              [... sellerKey standardProgram checkOutput(requestedAmount, requestedAsset, sellerProgram)]
 // JUMP:$_end               [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset]
 // $cancel                  [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset <clause selector>]
 // DROP                     [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset]
@@ -302,35 +271,25 @@ func P2MCProgram(magneticContractArgs MagneticContractArgs, lockedAssetID bc.Ass
 // ROLL                     [... standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset sellerSig sellerKey]
 // TXSIGHASH SWAP CHECKSIG  [... standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset checkTxSig(sellerKey, sellerSig)]
 // $_end                    [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset]
-func MagneticProgram(assetComparedResult int, clauseSelector int64) ([]byte, error) {
-	var firstPositionOP, secondPostionOP vm.Op
-	switch {
-	case assetComparedResult > 0:
-		firstPositionOP = vm.OP_0
-		secondPostionOP = vm.OP_1
-
-		// the composition of magnetic contract transaction must comply with the rules:
-		// the first input requestAsset must greater than lockedAsset,
-		// and the second input requestAsset must less than lockedAsset
-		magneticClauseSelector = 0
-		if clauseSelector == 1 {
-			magneticClauseSelector = 1
-		}
-
-	case assetComparedResult < 0:
-		if magneticClauseSelector == 1 {
-			firstPositionOP = vm.OP_1
-			secondPostionOP = vm.OP_2
-		} else {
-			firstPositionOP = vm.OP_2
-			secondPostionOP = vm.OP_3
-		}
-
-	default:
-		return nil, errors.WithDetail(ErrBadValue, "the requestAssetID is same as lockedAssetID")
+func P2MCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
+	standardProgram, err := P2WMCProgram(magneticContractArgs)
+	if err != nil {
+		return nil, err
 	}
 
 	builder := NewBuilder()
+	// contract arguments
+	builder.AddData(magneticContractArgs.SellerKey)
+	builder.AddData(standardProgram)
+	builder.AddData(magneticContractArgs.SellerProgram)
+	builder.AddInt64(magneticContractArgs.RatioDenominator)
+	builder.AddInt64(magneticContractArgs.RatioMolecule)
+	builder.AddData(magneticContractArgs.RequestedAsset.Bytes())
+
+	// contract instructions
+	builder.AddOp(vm.OP_7)
+	builder.AddOp(vm.OP_ROLL)
+	builder.AddOp(vm.OP_TOALTSTACK)
 	builder.AddOp(vm.OP_6)
 	builder.AddOp(vm.OP_ROLL)
 	builder.AddOp(vm.OP_DUP)
@@ -355,7 +314,9 @@ func MagneticProgram(assetComparedResult int, clauseSelector int64) ([]byte, err
 	builder.AddOp(vm.OP_LESSTHAN)
 	builder.AddOp(vm.OP_BOOLAND)
 	builder.AddOp(vm.OP_VERIFY)
-	builder.AddOp(firstPositionOP)
+	builder.AddOp(vm.OP_FROMALTSTACK)
+	builder.AddOp(vm.OP_DUP)
+	builder.AddOp(vm.OP_TOALTSTACK)
 	builder.AddOp(vm.OP_6)
 	builder.AddOp(vm.OP_ROLL)
 	builder.AddOp(vm.OP_3)
@@ -365,7 +326,9 @@ func MagneticProgram(assetComparedResult int, clauseSelector int64) ([]byte, err
 	builder.AddOp(vm.OP_ROLL)
 	builder.AddOp(vm.OP_CHECKOUTPUT)
 	builder.AddOp(vm.OP_VERIFY)
-	builder.AddOp(secondPostionOP)
+	builder.AddOp(vm.OP_FROMALTSTACK)
+	builder.AddOp(vm.OP_1)
+	builder.AddOp(vm.OP_ADD)
 	builder.AddOp(vm.OP_AMOUNT)
 	builder.AddOp(vm.OP_ROT)
 	builder.AddOp(vm.OP_SUB)
@@ -376,25 +339,17 @@ func MagneticProgram(assetComparedResult int, clauseSelector int64) ([]byte, err
 	builder.AddOp(vm.OP_CHECKOUTPUT)
 	builder.AddJump(2)
 	builder.SetJumpTarget(1)
-	builder.AddOp(vm.OP_6)
-	builder.AddOp(vm.OP_PICK)
-	builder.AddOp(vm.OP_3)
-	builder.AddOp(vm.OP_ROLL)
+	builder.AddOp(vm.OP_AMOUNT)
+	builder.AddOp(vm.OP_ROT)
 	builder.AddOp(vm.OP_MUL)
 	builder.AddOp(vm.OP_ROT)
 	builder.AddOp(vm.OP_DIV)
-	builder.AddOp(vm.OP_AMOUNT)
-	builder.AddOp(vm.OP_OVER)
+	builder.AddOp(vm.OP_DUP)
 	builder.AddOp(vm.OP_0)
 	builder.AddOp(vm.OP_GREATERTHAN)
-	builder.AddOp(vm.OP_ROT)
-	builder.AddOp(vm.OP_ROT)
-	builder.AddOp(vm.OP_EQUAL)
-	builder.AddOp(vm.OP_BOOLAND)
 	builder.AddOp(vm.OP_VERIFY)
-	builder.AddOp(firstPositionOP)
-	builder.AddOp(vm.OP_5)
-	builder.AddOp(vm.OP_ROLL)
+	builder.AddOp(vm.OP_FROMALTSTACK)
+	builder.AddOp(vm.OP_SWAP)
 	builder.AddOp(vm.OP_ROT)
 	builder.AddOp(vm.OP_1)
 	builder.AddOp(vm.OP_4)
