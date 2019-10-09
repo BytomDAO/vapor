@@ -55,16 +55,16 @@ func calcUTXOHash(order *common.Order) bc.Hash {
 	return bc.EntryID(o)
 }
 
-func getAssetIDFromKey(key []byte, preFix []byte, posIndex int) *bc.AssetID {
+func getAssetIDFromTradePairKey(key []byte, prefix []byte, posIndex int) *bc.AssetID {
 	b := [32]byte{}
-	pos := len(preFix) + assetIDLen*posIndex
+	pos := len(prefix) + assetIDLen*posIndex
 	copy(b[:], key[pos:pos+assetIDLen])
 	assetID := bc.NewAssetID(b)
 	return &assetID
 }
 
-func getRateFromKey(key []byte, preFix []byte) float64 {
-	ratePos := len(preFix) + assetIDLen*2
+func getRateFromOrderKey(key []byte, prefix []byte) float64 {
+	ratePos := len(prefix) + assetIDLen*2
 	return math.Float64frombits(binary.BigEndian.Uint64(key[ratePos : ratePos+rateByteLen]))
 }
 
@@ -77,8 +77,7 @@ type MovStore struct {
 }
 
 func NewMovStore(db dbm.DB, height uint64, hash *bc.Hash) (*MovStore, error) {
-	value := db.Get(bestMatchStore)
-	if value == nil {
+	if value := db.Get(bestMatchStore); value == nil {
 		state := &common.MovDatabaseState{Height: height, Hash: hash}
 		value, err := json.Marshal(state)
 		if err != nil {
@@ -91,13 +90,13 @@ func NewMovStore(db dbm.DB, height uint64, hash *bc.Hash) (*MovStore, error) {
 	return &MovStore{db: db}, nil
 }
 
-func (d *MovStore) ListOrders(orderAfter *common.Order) ([]*common.Order, error) {
+func (m *MovStore) ListOrders(orderAfter *common.Order) ([]*common.Order, error) {
 	if orderAfter.FromAssetID == nil || orderAfter.ToAssetID == nil {
 		return nil, errors.New("assetID is nil")
 	}
 
-	orderPreFix := append(ordersPrefix, orderAfter.FromAssetID.Bytes()...)
-	orderPreFix = append(orderPreFix, orderAfter.ToAssetID.Bytes()...)
+	orderPrefix := append(ordersPrefix, orderAfter.FromAssetID.Bytes()...)
+	orderPrefix = append(orderPrefix, orderAfter.ToAssetID.Bytes()...)
 
 	var startKey []byte
 	if orderAfter.Rate > 0 {
@@ -105,12 +104,12 @@ func (d *MovStore) ListOrders(orderAfter *common.Order) ([]*common.Order, error)
 		startKey = calcOrderKey(orderAfter.FromAssetID, orderAfter.ToAssetID, &h, orderAfter.Rate)
 	}
 
-	itr := d.db.IteratorPrefixWithStart(orderPreFix, startKey, false)
+	itr := m.db.IteratorPrefixWithStart(orderPrefix, startKey, false)
 	defer itr.Release()
 
 	var orders []*common.Order
 	for txNum := ordersNum; itr.Next() && txNum > 0; txNum-- {
-		rate := getRateFromKey(itr.Key(), ordersPrefix)
+		rate := getRateFromOrderKey(itr.Key(), ordersPrefix)
 
 		movUtxo := &common.MovUtxo{}
 		if err := json.Unmarshal(itr.Value(), movUtxo); err != nil {
@@ -130,23 +129,23 @@ func (d *MovStore) ListOrders(orderAfter *common.Order) ([]*common.Order, error)
 	return orders, nil
 }
 
-func (d *MovStore) ProcessOrders(addOrders []*common.Order, delOreders []*common.Order, blockHeader *types.BlockHeader) error {
-	if err := d.checkMovDatabaseState(blockHeader); err != nil {
+func (m *MovStore) ProcessOrders(addOrders []*common.Order, delOreders []*common.Order, blockHeader *types.BlockHeader) error {
+	if err := m.checkMovDatabaseState(blockHeader); err != nil {
 		return err
 	}
 
-	batch := d.db.NewBatch()
+	batch := m.db.NewBatch()
 
-	if err := d.addOrders(batch, addOrders); err != nil {
+	if err := m.addOrders(batch, addOrders); err != nil {
 		return err
 	}
 
-	if err := d.deleteOrders(batch, delOreders); err != nil {
+	if err := m.deleteOrders(batch, delOreders); err != nil {
 		return err
 	}
 
 	hash := blockHeader.Hash()
-	if err := d.saveMovDatabaseState(batch, &common.MovDatabaseState{Height: blockHeader.Height, Hash: &hash}); err != nil {
+	if err := m.saveMovDatabaseState(batch, &common.MovDatabaseState{Height: blockHeader.Height, Hash: &hash}); err != nil {
 		return err
 	}
 
@@ -154,7 +153,7 @@ func (d *MovStore) ProcessOrders(addOrders []*common.Order, delOreders []*common
 	return nil
 }
 
-func (d *MovStore) addOrders(batch dbm.Batch, orders []*common.Order) error {
+func (m *MovStore) addOrders(batch dbm.Batch, orders []*common.Order) error {
 	tradePairsCnt := make(map[common.TradePair]int)
 	for _, order := range orders {
 		utxoHash := calcUTXOHash(order)
@@ -174,11 +173,11 @@ func (d *MovStore) addOrders(batch dbm.Batch, orders []*common.Order) error {
 		tradePairsCnt[tradePair] += 1
 	}
 
-	return d.updateTradePairs(batch, tradePairsCnt)
+	return m.updateTradePairs(batch, tradePairsCnt)
 }
 
-func (d *MovStore) deleteOrders(batch dbm.Batch, orders []*common.Order) error {
-	tradePairs := make(map[common.TradePair]int)
+func (m *MovStore) deleteOrders(batch dbm.Batch, orders []*common.Order) error {
+	tradePairsCnt := make(map[common.TradePair]int)
 	for _, order := range orders {
 		utxoHash := calcUTXOHash(order)
 		key := calcOrderKey(order.FromAssetID, order.ToAssetID, &utxoHash, order.Rate)
@@ -188,14 +187,14 @@ func (d *MovStore) deleteOrders(batch dbm.Batch, orders []*common.Order) error {
 			FromAssetID: order.FromAssetID,
 			ToAssetID:   order.ToAssetID,
 		}
-		tradePairs[tradePair] -= 1
+		tradePairsCnt[tradePair] -= 1
 	}
 
-	return d.updateTradePairs(batch, tradePairs)
+	return m.updateTradePairs(batch, tradePairsCnt)
 }
 
-func (d *MovStore) GetMovDatabaseState() (*common.MovDatabaseState, error) {
-	if value := d.db.Get(bestMatchStore); value != nil {
+func (m *MovStore) GetMovDatabaseState() (*common.MovDatabaseState, error) {
+	if value := m.db.Get(bestMatchStore); value != nil {
 		state := &common.MovDatabaseState{}
 		return state, json.Unmarshal(value, state)
 	}
@@ -203,20 +202,20 @@ func (d *MovStore) GetMovDatabaseState() (*common.MovDatabaseState, error) {
 	return nil, errors.New("don't find state of mov-database")
 }
 
-func (d *MovStore) ListTradePairsWithStart(fromAssetIDAfter, toAssetIDAfter *bc.AssetID) ([]*common.TradePair, error) {
+func (m *MovStore) ListTradePairsWithStart(fromAssetIDAfter, toAssetIDAfter *bc.AssetID) ([]*common.TradePair, error) {
 	var startKey []byte
 	if fromAssetIDAfter != nil && toAssetIDAfter != nil {
 		startKey = calcTradePairKey(fromAssetIDAfter, toAssetIDAfter)
 	}
 
-	itr := d.db.IteratorPrefixWithStart(tradePairsPrefix, startKey, false)
+	itr := m.db.IteratorPrefixWithStart(tradePairsPrefix, startKey, false)
 	defer itr.Release()
 
 	var tradePairs []*common.TradePair
 	for txNum := tradePairsNum; itr.Next() && txNum > 0; txNum-- {
 		key := itr.Key()
-		fromAssetID := getAssetIDFromKey(key, tradePairsPrefix, 0)
-		toAssetID := getAssetIDFromKey(key, tradePairsPrefix, 1)
+		fromAssetID := getAssetIDFromTradePairKey(key, tradePairsPrefix, 0)
+		toAssetID := getAssetIDFromTradePairKey(key, tradePairsPrefix, 1)
 
 		tradePairData := &tradePairData{}
 		if err := json.Unmarshal(itr.Value(), tradePairData); err != nil {
@@ -229,11 +228,11 @@ func (d *MovStore) ListTradePairsWithStart(fromAssetIDAfter, toAssetIDAfter *bc.
 	return tradePairs, nil
 }
 
-func (d *MovStore) updateTradePairs(batch dbm.Batch, tradePairs map[common.TradePair]int) error {
+func (m *MovStore) updateTradePairs(batch dbm.Batch, tradePairs map[common.TradePair]int) error {
 	for k, v := range tradePairs {
 		key := calcTradePairKey(k.FromAssetID, k.ToAssetID)
 		tradePairData := &tradePairData{}
-		if value := d.db.Get(key); value != nil {
+		if value := m.db.Get(key); value != nil {
 			if err := json.Unmarshal(value, tradePairData); err != nil {
 				return err
 			}
@@ -256,8 +255,8 @@ func (d *MovStore) updateTradePairs(batch dbm.Batch, tradePairs map[common.Trade
 	return nil
 }
 
-func (d *MovStore) checkMovDatabaseState(header *types.BlockHeader) error {
-	state, err := d.GetMovDatabaseState()
+func (m *MovStore) checkMovDatabaseState(header *types.BlockHeader) error {
+	state, err := m.GetMovDatabaseState()
 	if err != nil {
 		return err
 	}
@@ -269,7 +268,7 @@ func (d *MovStore) checkMovDatabaseState(header *types.BlockHeader) error {
 	return errors.New("the status of the block is inconsistent with that of mov-database")
 }
 
-func (d *MovStore) saveMovDatabaseState(batch dbm.Batch, state *common.MovDatabaseState) error {
+func (m *MovStore) saveMovDatabaseState(batch dbm.Batch, state *common.MovDatabaseState) error {
 	value, err := json.Marshal(state)
 	if err != nil {
 		return err

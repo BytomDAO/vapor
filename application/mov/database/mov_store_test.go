@@ -321,7 +321,7 @@ func TestSortOrderKey(t *testing.T) {
 			copy(b[:], key[pos+8:])
 			utxoHash := bc.NewHash(b)
 
-			rate := getRateFromKey(key, ordersPrefix)
+			rate := getRateFromOrderKey(key, ordersPrefix)
 			got = append(got, expectedData{
 				rate:     rate,
 				utxoHash: utxoHash.String(),
