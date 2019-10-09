@@ -44,15 +44,15 @@ func calcTradePairKey(fromAssetID, toAssetID *bc.AssetID) []byte {
 	return append(key, toAssetID.Bytes()...)
 }
 
-func calcUTXOHash(order *common.Order) bc.Hash {
+func calcUTXOHash(order *common.Order) *bc.Hash {
 	prog := &bc.Program{VmVersion: 1, Code: order.Utxo.ControlProgram}
 	src := &bc.ValueSource{
 		Ref:      order.Utxo.SourceID,
 		Value:    &bc.AssetAmount{AssetId: order.FromAssetID, Amount: order.Utxo.Amount},
 		Position: order.Utxo.SourcePos,
 	}
-	o := bc.NewIntraChainOutput(src, prog, 0)
-	return bc.EntryID(o)
+	hash := bc.EntryID(bc.NewIntraChainOutput(src, prog, 0))
+	return &hash
 }
 
 func getAssetIDFromTradePairKey(key []byte, prefix []byte, posIndex int) *bc.AssetID {
@@ -100,17 +100,14 @@ func (m *MovStore) ListOrders(orderAfter *common.Order) ([]*common.Order, error)
 
 	var startKey []byte
 	if orderAfter.Rate > 0 {
-		h := calcUTXOHash(orderAfter)
-		startKey = calcOrderKey(orderAfter.FromAssetID, orderAfter.ToAssetID, &h, orderAfter.Rate)
+		startKey = calcOrderKey(orderAfter.FromAssetID, orderAfter.ToAssetID, calcUTXOHash(orderAfter), orderAfter.Rate)
 	}
 
 	itr := m.db.IteratorPrefixWithStart(orderPrefix, startKey, false)
 	defer itr.Release()
 
 	var orders []*common.Order
-	for txNum := ordersNum; itr.Next() && txNum > 0; txNum-- {
-		rate := getRateFromOrderKey(itr.Key(), ordersPrefix)
-
+	for txNum := 0; txNum < ordersNum && itr.Next(); txNum++ {
 		movUtxo := &common.MovUtxo{}
 		if err := json.Unmarshal(itr.Value(), movUtxo); err != nil {
 			return nil, err
@@ -119,7 +116,7 @@ func (m *MovStore) ListOrders(orderAfter *common.Order) ([]*common.Order, error)
 		order := &common.Order{
 			FromAssetID: orderAfter.FromAssetID,
 			ToAssetID:   orderAfter.ToAssetID,
-			Rate:        rate,
+			Rate:        getRateFromOrderKey(itr.Key(), ordersPrefix),
 			Utxo:        movUtxo,
 		}
 
@@ -135,12 +132,14 @@ func (m *MovStore) ProcessOrders(addOrders []*common.Order, delOreders []*common
 	}
 
 	batch := m.db.NewBatch()
-
-	if err := m.addOrders(batch, addOrders); err != nil {
+	tradePairsCnt := make(map[common.TradePair]int)
+	if err := m.addOrders(batch, addOrders, tradePairsCnt); err != nil {
 		return err
 	}
 
-	if err := m.deleteOrders(batch, delOreders); err != nil {
+	m.deleteOrders(batch, delOreders, tradePairsCnt)
+
+	if err := m.updateTradePairs(batch, tradePairsCnt); err != nil {
 		return err
 	}
 
@@ -153,11 +152,9 @@ func (m *MovStore) ProcessOrders(addOrders []*common.Order, delOreders []*common
 	return nil
 }
 
-func (m *MovStore) addOrders(batch dbm.Batch, orders []*common.Order) error {
-	tradePairsCnt := make(map[common.TradePair]int)
+func (m *MovStore) addOrders(batch dbm.Batch, orders []*common.Order, tradePairsCnt map[common.TradePair]int) error {
 	for _, order := range orders {
-		utxoHash := calcUTXOHash(order)
-		key := calcOrderKey(order.FromAssetID, order.ToAssetID, &utxoHash, order.Rate)
+		key := calcOrderKey(order.FromAssetID, order.ToAssetID, calcUTXOHash(order), order.Rate)
 
 		data, err := json.Marshal(order.Utxo)
 		if err != nil {
@@ -172,15 +169,12 @@ func (m *MovStore) addOrders(batch dbm.Batch, orders []*common.Order) error {
 		}
 		tradePairsCnt[tradePair] += 1
 	}
-
-	return m.updateTradePairs(batch, tradePairsCnt)
+	return nil
 }
 
-func (m *MovStore) deleteOrders(batch dbm.Batch, orders []*common.Order) error {
-	tradePairsCnt := make(map[common.TradePair]int)
+func (m *MovStore) deleteOrders(batch dbm.Batch, orders []*common.Order, tradePairsCnt map[common.TradePair]int) {
 	for _, order := range orders {
-		utxoHash := calcUTXOHash(order)
-		key := calcOrderKey(order.FromAssetID, order.ToAssetID, &utxoHash, order.Rate)
+		key := calcOrderKey(order.FromAssetID, order.ToAssetID, calcUTXOHash(order), order.Rate)
 		batch.Delete(key)
 
 		tradePair := common.TradePair{
@@ -189,8 +183,6 @@ func (m *MovStore) deleteOrders(batch dbm.Batch, orders []*common.Order) error {
 		}
 		tradePairsCnt[tradePair] -= 1
 	}
-
-	return m.updateTradePairs(batch, tradePairsCnt)
 }
 
 func (m *MovStore) GetMovDatabaseState() (*common.MovDatabaseState, error) {
@@ -212,7 +204,7 @@ func (m *MovStore) ListTradePairsWithStart(fromAssetIDAfter, toAssetIDAfter *bc.
 	defer itr.Release()
 
 	var tradePairs []*common.TradePair
-	for txNum := tradePairsNum; itr.Next() && txNum > 0; txNum-- {
+	for txNum := 0; txNum < tradePairsNum && itr.Next(); txNum++ {
 		key := itr.Key()
 		fromAssetID := getAssetIDFromTradePairKey(key, tradePairsPrefix, 0)
 		toAssetID := getAssetIDFromTradePairKey(key, tradePairsPrefix, 1)
@@ -261,7 +253,8 @@ func (m *MovStore) checkMovDatabaseState(header *types.BlockHeader) error {
 		return err
 	}
 
-	if (state.Hash.String() == header.PreviousBlockHash.String() && (state.Height+1) == header.Height) || state.Height == (header.Height+1) {
+	blockHash := header.Hash()
+	if (state.Hash.String() == header.PreviousBlockHash.String() && (state.Height+1) == header.Height) || state.Hash.String() == blockHash.String() {
 		return nil
 	}
 
