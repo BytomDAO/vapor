@@ -19,7 +19,7 @@ type Order struct {
 type TradePair struct {
 	FromAssetID *bc.AssetID
 	ToAssetID   *bc.AssetID
-	Count       uint64
+	Count       int
 }
 
 type MovDatabaseState struct {

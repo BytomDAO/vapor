@@ -1,10 +1,9 @@
 package database
 
 import (
-	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
-	"math"
 	"os"
 	"testing"
 
@@ -15,7 +14,19 @@ import (
 	"github.com/vapor/database/leveldb"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/protocol/bc"
+	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/testutil"
+)
+
+var (
+	assetID1 = &bc.AssetID{V0: 1}
+	assetID2 = &bc.AssetID{V0: 2}
+	assetID3 = &bc.AssetID{V0: 3}
+	assetID4 = &bc.AssetID{V0: 4}
+	assetID5 = &bc.AssetID{V0: 5}
+	assetID6 = &bc.AssetID{V0: 6}
+	assetID7 = &bc.AssetID{V0: 7}
+	assetID8 = &bc.AssetID{V0: 8}
 )
 
 func TestSortOrderKey(t *testing.T) {
@@ -296,7 +307,7 @@ func TestSortOrderKey(t *testing.T) {
 				t.Fatal(err)
 			}
 			utxoHash := bc.NewHash(sha3.Sum256(data))
-			key := calcOrdersKey(order.FromAssetID, order.ToAssetID, &utxoHash, order.Rate)
+			key := calcOrderKey(order.FromAssetID, order.ToAssetID, &utxoHash, order.Rate)
 			db.SetSync(key, data)
 		}
 
@@ -305,12 +316,14 @@ func TestSortOrderKey(t *testing.T) {
 		itr := db.IteratorPrefixWithStart(nil, nil, false)
 		for itr.Next() {
 			key := itr.Key()
-			pos := len(ordersPreFix) + 32*2
+			pos := len(ordersPrefix) + assetIDLen*2
 			b := [32]byte{}
 			copy(b[:], key[pos+8:])
 			utxoHash := bc.NewHash(b)
+
+			rate := getRateFromKey(key, ordersPrefix)
 			got = append(got, expectedData{
-				rate:     math.Float64frombits(binary.BigEndian.Uint64(key[pos : pos+8])),
+				rate:     rate,
 				utxoHash: utxoHash.String(),
 			})
 		}
@@ -324,19 +337,17 @@ func TestSortOrderKey(t *testing.T) {
 }
 
 func TestDexStore(t *testing.T) {
-
-	assetID1 := &bc.AssetID{V0: 1}
-	assetID2 := &bc.AssetID{V0: 2}
-
 	cases := []struct {
-		desc           string
-		beforeOrders   []*common.Order
-		addOrders      []*common.Order
-		delOrders      []*common.Order
-		Height         uint64
-		blockHash      *bc.Hash
-		wantOrders     []*common.Order
-		wantTradePairs []*common.TradePair
+		desc             string
+		beforeOrders     []*common.Order
+		beforeTradePairs []*common.TradePair
+		beforeDBStatus   *common.MovDatabaseState
+		addOrders        []*common.Order
+		delOrders        []*common.Order
+		blockHeader      *types.BlockHeader
+		wantOrders       []*common.Order
+		wantTradePairs   []*common.TradePair
+		wantDBState      *common.MovDatabaseState
 	}{
 		{
 			desc: "add order",
@@ -430,8 +441,7 @@ func TestDexStore(t *testing.T) {
 					},
 				},
 			},
-			Height:    10,
-			blockHash: &bc.Hash{},
+			blockHeader: &types.BlockHeader{Height: 1, PreviousBlockHash: bc.Hash{V0: 524821139490765641, V1: 2484214155808702787, V2: 9108473449351508820, V3: 7972721253564512122}},
 			wantOrders: []*common.Order{
 				&common.Order{
 					FromAssetID: assetID1,
@@ -525,6 +535,7 @@ func TestDexStore(t *testing.T) {
 			wantTradePairs: []*common.TradePair{
 				&common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2, Count: 8},
 			},
+			wantDBState: &common.MovDatabaseState{Height: 1, Hash: &bc.Hash{V0: 14213576368347360351, V1: 16287398171800437029, V2: 9513543230620030445, V3: 8534035697182508177}},
 		},
 		{
 			desc: "del some order",
@@ -618,6 +629,14 @@ func TestDexStore(t *testing.T) {
 					},
 				},
 			},
+			beforeTradePairs: []*common.TradePair{
+				&common.TradePair{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Count:       8,
+				},
+			},
+			beforeDBStatus: &common.MovDatabaseState{Height: 1, Hash: &bc.Hash{V0: 14213576368347360351, V1: 16287398171800437029, V2: 9513543230620030445, V3: 8534035697182508177}},
 			delOrders: []*common.Order{
 				&common.Order{
 					FromAssetID: assetID1,
@@ -653,8 +672,7 @@ func TestDexStore(t *testing.T) {
 					},
 				},
 			},
-			Height:    10,
-			blockHash: &bc.Hash{},
+			blockHeader: &types.BlockHeader{Height: 2, PreviousBlockHash: bc.Hash{V0: 14213576368347360351, V1: 16287398171800437029, V2: 9513543230620030445, V3: 8534035697182508177}},
 			wantOrders: []*common.Order{
 				&common.Order{
 					FromAssetID: assetID1,
@@ -715,8 +733,8 @@ func TestDexStore(t *testing.T) {
 			wantTradePairs: []*common.TradePair{
 				&common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2, Count: 5},
 			},
+			wantDBState: &common.MovDatabaseState{Height: 2, Hash: &bc.Hash{V0: 3724755213446347384, V1: 158878632373345042, V2: 18283800951484248781, V3: 7520797730449067221}},
 		},
-
 		{
 			desc: "del all order",
 			beforeOrders: []*common.Order{
@@ -809,6 +827,14 @@ func TestDexStore(t *testing.T) {
 					},
 				},
 			},
+			beforeTradePairs: []*common.TradePair{
+				&common.TradePair{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Count:       8,
+				},
+			},
+			beforeDBStatus: &common.MovDatabaseState{Height: 1, Hash: &bc.Hash{V0: 14213576368347360351, V1: 16287398171800437029, V2: 9513543230620030445, V3: 8534035697182508177}},
 			delOrders: []*common.Order{
 				&common.Order{
 					FromAssetID: assetID1,
@@ -899,26 +925,44 @@ func TestDexStore(t *testing.T) {
 					},
 				},
 			},
-			Height:         10,
-			blockHash:      &bc.Hash{},
+			blockHeader:    &types.BlockHeader{Height: 2, PreviousBlockHash: bc.Hash{V0: 14213576368347360351, V1: 16287398171800437029, V2: 9513543230620030445, V3: 8534035697182508177}},
 			wantOrders:     []*common.Order{},
 			wantTradePairs: []*common.TradePair{},
+			wantDBState:    &common.MovDatabaseState{Height: 2, Hash: &bc.Hash{V0: 3724755213446347384, V1: 158878632373345042, V2: 18283800951484248781, V3: 7520797730449067221}},
 		},
 	}
+
+	initBlockHeader := &types.BlockHeader{
+		Height:  0,
+		Version: 1,
+	}
+
+	height := initBlockHeader.Height
+	hash := initBlockHeader.Hash()
+
 	defer os.RemoveAll("temp")
 	for i, c := range cases {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
-		dexStore := NewMovStore(testDB)
+		dexStore, err := NewMovStore(testDB, height, &hash)
+		if err != nil {
+			t.Fatalf("case %d: NewMovStore error %v.", i, err)
+		}
 
 		batch := dexStore.db.NewBatch()
 		dexStore.addOrders(batch, c.beforeOrders)
+		if len(c.beforeOrders) > 0 {
+			tradePairs := make(map[common.TradePair]int)
+			tradePairs[*c.beforeTradePairs[0]] = c.beforeTradePairs[0].Count
+			dexStore.updateTradePairs(batch, tradePairs)
+			dexStore.saveMovDatabaseState(batch, c.beforeDBStatus)
+		}
 		batch.Write()
 
-		if err := dexStore.ProcessOrders(c.addOrders, c.delOrders, c.Height, c.blockHash); err != nil {
+		if err := dexStore.ProcessOrders(c.addOrders, c.delOrders, c.blockHeader); err != nil {
 			t.Fatalf("case %d: ProcessOrders error %v.", i, err)
 		}
 
-		gotOrders, err := dexStore.ListOrders(assetID1, assetID2, 0)
+		gotOrders, err := dexStore.ListOrders(&common.Order{FromAssetID: assetID1, ToAssetID: assetID2, Rate: 0})
 		if err != nil {
 			t.Fatalf("case %d: ListOrders error %v.", i, err)
 		}
@@ -936,7 +980,1402 @@ func TestDexStore(t *testing.T) {
 			t.Fatalf("case %d: got tradePairs, gotTradePairs: %v, wantTradePairs: %v.", i, gotTradePairs, c.wantTradePairs)
 		}
 
+		gotDBState, err := dexStore.GetMovDatabaseState()
+		if err != nil {
+			t.Fatalf("case %d: GetMovDatabaseState error %v.", i, err)
+		}
+
+		if !testutil.DeepEqual(gotDBState, c.wantDBState) {
+			t.Fatalf("case %d: got tradePairs, gotDBState: %v, wantDBStatus: %v.", i, gotDBState, c.wantDBState)
+		}
+
 		testDB.Close()
 		os.RemoveAll("temp")
 	}
+}
+
+func TestListOrders(t *testing.T) {
+	cases := []struct {
+		desc        string
+		storeOrders []*common.Order
+		query       *common.Order
+		wantOrders  []*common.Order
+	}{
+		{
+			desc:       "empty",
+			query:      &common.Order{FromAssetID: assetID1, ToAssetID: assetID2},
+			wantOrders: []*common.Order{},
+		},
+		{
+			desc: "query from first",
+			storeOrders: []*common.Order{
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        1.00090,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 21},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00090,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 22},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00097,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 23},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 13},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         10,
+						SourcePos:      1,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00099,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00096,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 25},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00095,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 26},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+			},
+			query: &common.Order{FromAssetID: assetID1, ToAssetID: assetID2},
+			wantOrders: []*common.Order{
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00090,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 22},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00095,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 26},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00096,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 25},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00097,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 23},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 13},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         10,
+						SourcePos:      1,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00099,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        1.00090,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 21},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+			},
+		},
+		{
+			desc: "query from middle",
+			storeOrders: []*common.Order{
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        1.00090,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 21},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00090,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 22},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00097,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 23},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 13},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         10,
+						SourcePos:      1,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00099,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00096,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 25},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00095,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 26},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+			},
+			query: &common.Order{
+				FromAssetID: assetID1,
+				ToAssetID:   assetID2,
+				Rate:        0.00098,
+				Utxo: &common.MovUtxo{
+					SourceID:       &bc.Hash{V0: 13},
+					Amount:         1,
+					SourcePos:      0,
+					ControlProgram: []byte("aa"),
+				},
+			},
+			wantOrders: []*common.Order{
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         10,
+						SourcePos:      1,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00099,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        1.00090,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 21},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+			},
+		},
+	}
+
+	initBlockHeader := &types.BlockHeader{
+		Height:  0,
+		Version: 1,
+	}
+
+	height := initBlockHeader.Height
+	hash := initBlockHeader.Hash()
+
+	defer os.RemoveAll("temp")
+	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		dexStore, err := NewMovStore(testDB, height, &hash)
+		if err != nil {
+			t.Fatalf("case %d: NewMovStore error %v.", i, err)
+		}
+
+		batch := dexStore.db.NewBatch()
+		dexStore.addOrders(batch, c.storeOrders)
+		batch.Write()
+
+		gotOrders, err := dexStore.ListOrders(c.query)
+		if err != nil {
+			t.Fatalf("case %d: ListOrders error %v.", i, err)
+		}
+
+		if !testutil.DeepEqual(gotOrders, c.wantOrders) {
+			t.Fatalf("case %d: got orders , gotOrders: %v, wantOrders: %v.", i, gotOrders, c.wantOrders)
+		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
+	}
+}
+
+func TestAddOrders(t *testing.T) {
+	cases := []struct {
+		desc         string
+		beforeOrders []*common.Order
+		addOrders    []*common.Order
+		wantOrders   []*common.Order
+	}{
+		{
+			desc: "empty",
+			addOrders: []*common.Order{
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        1.00090,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 21},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00090,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 22},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00097,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 23},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 13},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         10,
+						SourcePos:      1,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00099,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00096,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 25},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00095,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 26},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+			},
+			wantOrders: []*common.Order{
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00090,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 22},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00095,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 26},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00096,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 25},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00097,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 23},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 13},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         10,
+						SourcePos:      1,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00099,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        1.00090,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 21},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+			},
+		},
+		{
+			desc: "Stored data already exists",
+			beforeOrders: []*common.Order{
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        1.00090,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 21},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00090,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 22},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00097,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 23},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 13},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+			},
+			addOrders: []*common.Order{
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         10,
+						SourcePos:      1,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00099,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00096,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 25},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00095,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 26},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+			},
+			wantOrders: []*common.Order{
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00090,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 22},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00095,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 26},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00096,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 25},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00097,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 23},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 13},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         10,
+						SourcePos:      1,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00099,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        1.00090,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 21},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+			},
+		},
+	}
+
+	initBlockHeader := &types.BlockHeader{
+		Height:  0,
+		Version: 1,
+	}
+
+	height := initBlockHeader.Height
+	hash := initBlockHeader.Hash()
+
+	defer os.RemoveAll("temp")
+	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		dexStore, err := NewMovStore(testDB, height, &hash)
+		if err != nil {
+			t.Fatalf("case %d: NewMovStore error %v.", i, err)
+		}
+
+		batch := dexStore.db.NewBatch()
+		dexStore.addOrders(batch, c.beforeOrders)
+		batch.Write()
+
+		dexStore.addOrders(batch, c.addOrders)
+		batch.Write()
+
+		gotOrders, err := dexStore.ListOrders(&common.Order{FromAssetID: assetID1, ToAssetID: assetID2})
+		if err != nil {
+			t.Fatalf("case %d: ListOrders error %v.", i, err)
+		}
+
+		if !testutil.DeepEqual(gotOrders, c.wantOrders) {
+			t.Fatalf("case %d: got orders , gotOrders: %v, wantOrders: %v.", i, gotOrders, c.wantOrders)
+		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
+	}
+}
+
+func TestDelOrders(t *testing.T) {
+	cases := []struct {
+		desc         string
+		beforeOrders []*common.Order
+		delOrders    []*common.Order
+		wantOrders   []*common.Order
+		err          error
+	}{
+		{
+			desc: "empty",
+			delOrders: []*common.Order{
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        1.00090,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 21},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00090,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 22},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+			},
+			wantOrders: []*common.Order{},
+			err:        errors.New("don't find trade pair"),
+		},
+		{
+			desc: "Delete existing data",
+			beforeOrders: []*common.Order{
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00090,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 22},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00095,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 26},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00096,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 25},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00097,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 23},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 13},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         10,
+						SourcePos:      1,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00099,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        1.00090,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 21},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+			},
+			delOrders: []*common.Order{
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         10,
+						SourcePos:      1,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00099,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00096,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 25},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00095,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 26},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+			},
+			wantOrders: []*common.Order{
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00090,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 22},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00097,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 23},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00098,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 13},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        1.00090,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 21},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+			},
+			err: nil,
+		},
+		{
+			desc: "Delete all data",
+			beforeOrders: []*common.Order{
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00095,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 26},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00096,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 25},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00099,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+			},
+			delOrders: []*common.Order{
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00099,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 24},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00096,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 25},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID1,
+					ToAssetID:   assetID2,
+					Rate:        0.00095,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 26},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+			},
+			wantOrders: []*common.Order{},
+			err:        nil,
+		},
+	}
+
+	initBlockHeader := &types.BlockHeader{
+		Height:  0,
+		Version: 1,
+	}
+
+	height := initBlockHeader.Height
+	hash := initBlockHeader.Hash()
+
+	defer os.RemoveAll("temp")
+	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		dexStore, err := NewMovStore(testDB, height, &hash)
+		if err != nil {
+			t.Fatalf("case %d: NewMovStore error %v.", i, err)
+		}
+
+		batch := dexStore.db.NewBatch()
+		dexStore.addOrders(batch, c.beforeOrders)
+		batch.Write()
+
+		if err := dexStore.deleteOrders(batch, c.delOrders); c.err != nil && err.Error() != c.err.Error() {
+			t.Fatalf("case %d: deleteOrder error %v.", i, err)
+		}
+		batch.Write()
+
+		gotOrders, err := dexStore.ListOrders(&common.Order{FromAssetID: assetID1, ToAssetID: assetID2})
+		if err != nil {
+			t.Fatalf("case %d: ListOrders error %v.", i, err)
+		}
+
+		if !testutil.DeepEqual(gotOrders, c.wantOrders) {
+			t.Fatalf("case %d: got orders , gotOrders: %v, wantOrders: %v.", i, gotOrders, c.wantOrders)
+		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
+	}
+}
+
+func TestListTradePairsWithStart(t *testing.T) {
+	cases := []struct {
+		desc            string
+		storeTradePairs map[common.TradePair]int
+		query           *common.TradePair
+		wantTradePairs  []*common.TradePair
+	}{
+		{
+			desc:           "empty",
+			query:          &common.TradePair{},
+			wantTradePairs: []*common.TradePair{},
+		},
+		{
+			desc: "query from first",
+			storeTradePairs: map[common.TradePair]int{
+				common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}: 1,
+				common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3}: 2,
+				common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4}: 3,
+				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}: 4,
+				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}: 5,
+				common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}: 6,
+			},
+			query: &common.TradePair{},
+			wantTradePairs: []*common.TradePair{
+				&common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2, Count: 1},
+				&common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3, Count: 2},
+				&common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4, Count: 3},
+				&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5, Count: 4},
+				&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6, Count: 5},
+				&common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7, Count: 6},
+			},
+		},
+		{
+			desc: "query from middle",
+			storeTradePairs: map[common.TradePair]int{
+				common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}: 1,
+				common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3}: 2,
+				common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4}: 3,
+				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}: 4,
+				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}: 5,
+				common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}: 6,
+				common.TradePair{FromAssetID: assetID6, ToAssetID: assetID8}: 7,
+			},
+			query: &common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4, Count: 3},
+			wantTradePairs: []*common.TradePair{
+				&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5, Count: 4},
+				&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6, Count: 5},
+				&common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7, Count: 6},
+				&common.TradePair{FromAssetID: assetID6, ToAssetID: assetID8, Count: 7},
+			},
+		},
+	}
+
+	initBlockHeader := &types.BlockHeader{
+		Height:  0,
+		Version: 1,
+	}
+
+	height := initBlockHeader.Height
+	hash := initBlockHeader.Hash()
+
+	defer os.RemoveAll("temp")
+	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		dexStore, err := NewMovStore(testDB, height, &hash)
+		if err != nil {
+			t.Fatalf("case %d: NewMovStore error %v.", i, err)
+		}
+
+		batch := dexStore.db.NewBatch()
+		dexStore.updateTradePairs(batch, c.storeTradePairs)
+		batch.Write()
+
+		gotTradePairs, err := dexStore.ListTradePairsWithStart(c.query.FromAssetID, c.query.ToAssetID)
+		if err != nil {
+			t.Fatalf("case %d: ListTradePairsWithStart error %v.", i, err)
+		}
+
+		if !testutil.DeepEqual(gotTradePairs, c.wantTradePairs) {
+			t.Fatalf("case %d: got TradePairs , gotTradePairs: %v, wantTradePairs: %v.", i, gotTradePairs, c.wantTradePairs)
+		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
+	}
+}
+
+func TestUpdateTradePairs(t *testing.T) {
+	cases := []struct {
+		desc             string
+		beforeTradePairs map[common.TradePair]int
+		addTradePairs    map[common.TradePair]int
+		delTradePairs    map[common.TradePair]int
+		wantTradePairs   []*common.TradePair
+	}{
+		{
+			desc: "empty",
+			addTradePairs: map[common.TradePair]int{
+				common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}: 1,
+				common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3}: 2,
+				common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4}: 3,
+				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}: 4,
+				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}: 5,
+				common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}: 6,
+			},
+			wantTradePairs: []*common.TradePair{
+				&common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2, Count: 1},
+				&common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3, Count: 2},
+				&common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4, Count: 3},
+				&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5, Count: 4},
+				&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6, Count: 5},
+				&common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7, Count: 6},
+			},
+		},
+		{
+			desc: "Stored data already exists",
+			beforeTradePairs: map[common.TradePair]int{
+				common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}: 1,
+				common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3}: 2,
+				common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4}: 3,
+			},
+			addTradePairs: map[common.TradePair]int{
+				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}: 4,
+				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}: 5,
+				common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}: 6,
+			},
+			wantTradePairs: []*common.TradePair{
+				&common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2, Count: 1},
+				&common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3, Count: 2},
+				&common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4, Count: 3},
+				&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5, Count: 4},
+				&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6, Count: 5},
+				&common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7, Count: 6},
+			},
+		},
+		{
+			desc: "delete some data",
+			beforeTradePairs: map[common.TradePair]int{
+				common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}: 1,
+				common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3}: 2,
+				common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4}: 3,
+				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}: 4,
+				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}: 5,
+				common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}: 6,
+			},
+			delTradePairs: map[common.TradePair]int{
+				common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}: -1,
+				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}: -4,
+				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}: -2,
+				common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}: -4,
+			},
+			wantTradePairs: []*common.TradePair{
+				&common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3, Count: 2},
+				&common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4, Count: 3},
+				&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6, Count: 3},
+				&common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7, Count: 2},
+			},
+		},
+	}
+
+	initBlockHeader := &types.BlockHeader{
+		Height:  0,
+		Version: 1,
+	}
+
+	height := initBlockHeader.Height
+	hash := initBlockHeader.Hash()
+
+	defer os.RemoveAll("temp")
+	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		dexStore, err := NewMovStore(testDB, height, &hash)
+		if err != nil {
+			t.Fatalf("case %d: NewMovStore error %v.", i, err)
+		}
+
+		batch := dexStore.db.NewBatch()
+		dexStore.updateTradePairs(batch, c.beforeTradePairs)
+		batch.Write()
+
+		dexStore.updateTradePairs(batch, c.addTradePairs)
+		dexStore.updateTradePairs(batch, c.delTradePairs)
+		batch.Write()
+
+		gotTradePairs, err := dexStore.ListTradePairsWithStart(nil, nil)
+		if err != nil {
+			t.Fatalf("case %d: ListTradePairsWithStart error %v.", i, err)
+		}
+
+		if !testutil.DeepEqual(gotTradePairs, c.wantTradePairs) {
+			t.Fatalf("case %d: got TradePairs , gotTradePairs: %v, wantTradePairs: %v.", i, gotTradePairs, c.wantTradePairs)
+		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
+	}
+}
+
+func TestCheckMovDatabaseState(t *testing.T) {
+	cases := []struct {
+		desc           string
+		beforeDBStatus *common.MovDatabaseState
+		blockHeader    *types.BlockHeader
+		err            error
+	}{
+		{
+			desc:           "attach Block",
+			beforeDBStatus: &common.MovDatabaseState{Height: 1, Hash: &bc.Hash{V0: 14213576368347360351, V1: 16287398171800437029, V2: 9513543230620030445, V3: 8534035697182508177}},
+			blockHeader:    &types.BlockHeader{Height: 2, PreviousBlockHash: bc.Hash{V0: 14213576368347360351, V1: 16287398171800437029, V2: 9513543230620030445, V3: 8534035697182508177}},
+			err:            nil,
+		},
+		{
+			desc:           "error attach Block",
+			beforeDBStatus: &common.MovDatabaseState{Height: 1, Hash: &bc.Hash{V0: 14213576368347360351, V1: 16287398171800437029, V2: 9513543230620030445, V3: 8534035697182508177}},
+			blockHeader:    &types.BlockHeader{Height: 2, PreviousBlockHash: bc.Hash{}},
+			err:            errors.New("the status of the block is inconsistent with that of mov-database"),
+		},
+
+		{
+			desc:           "detach Block",
+			beforeDBStatus: &common.MovDatabaseState{Height: 5, Hash: &bc.Hash{V0: 3724755213446347384, V1: 158878632373345042, V2: 18283800951484248781, V3: 7520797730449067221}},
+			blockHeader:    &types.BlockHeader{Height: 4},
+			err:            nil,
+		},
+		{
+			desc:           "error detach Block",
+			beforeDBStatus: &common.MovDatabaseState{Height: 5, Hash: &bc.Hash{V0: 3724755213446347384, V1: 158878632373345042, V2: 18283800951484248781, V3: 7520797730449067221}},
+			blockHeader:    &types.BlockHeader{Height: 3},
+			err:            errors.New("the status of the block is inconsistent with that of mov-database"),
+		},
+	}
+
+	initBlockHeader := &types.BlockHeader{
+		Height:  0,
+		Version: 1,
+	}
+
+	height := initBlockHeader.Height
+	hash := initBlockHeader.Hash()
+
+	defer os.RemoveAll("temp")
+	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		dexStore, err := NewMovStore(testDB, height, &hash)
+		if err != nil {
+			t.Fatalf("case %d: NewMovStore error %v.", i, err)
+		}
+
+		batch := dexStore.db.NewBatch()
+		dexStore.saveMovDatabaseState(batch, c.beforeDBStatus)
+		batch.Write()
+
+		if err := dexStore.checkMovDatabaseState(c.blockHeader); c.err != nil && c.err.Error() != err.Error() {
+			t.Fatalf("case %d: checkMovDatabaseState error %v.", i, err)
+		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
+	}
+
 }
