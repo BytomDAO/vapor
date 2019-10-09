@@ -336,7 +336,7 @@ func TestSortOrderKey(t *testing.T) {
 	}
 }
 
-func TestDexStore(t *testing.T) {
+func TestMovStore(t *testing.T) {
 	cases := []struct {
 		desc             string
 		beforeOrders     []*common.Order
@@ -943,26 +943,26 @@ func TestDexStore(t *testing.T) {
 	defer os.RemoveAll("temp")
 	for i, c := range cases {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
-		dexStore, err := NewMovStore(testDB, height, &hash)
+		movStore, err := NewMovStore(testDB, height, &hash)
 		if err != nil {
 			t.Fatalf("case %d: NewMovStore error %v.", i, err)
 		}
 
-		batch := dexStore.db.NewBatch()
-		dexStore.addOrders(batch, c.beforeOrders)
+		batch := movStore.db.NewBatch()
+		movStore.addOrders(batch, c.beforeOrders)
 		if len(c.beforeOrders) > 0 {
 			tradePairs := make(map[common.TradePair]int)
 			tradePairs[*c.beforeTradePairs[0]] = c.beforeTradePairs[0].Count
-			dexStore.updateTradePairs(batch, tradePairs)
-			dexStore.saveMovDatabaseState(batch, c.beforeDBStatus)
+			movStore.updateTradePairs(batch, tradePairs)
+			movStore.saveMovDatabaseState(batch, c.beforeDBStatus)
 		}
 		batch.Write()
 
-		if err := dexStore.ProcessOrders(c.addOrders, c.delOrders, c.blockHeader); err != nil {
+		if err := movStore.ProcessOrders(c.addOrders, c.delOrders, c.blockHeader); err != nil {
 			t.Fatalf("case %d: ProcessOrders error %v.", i, err)
 		}
 
-		gotOrders, err := dexStore.ListOrders(&common.Order{FromAssetID: assetID1, ToAssetID: assetID2, Rate: 0})
+		gotOrders, err := movStore.ListOrders(&common.Order{FromAssetID: assetID1, ToAssetID: assetID2, Rate: 0})
 		if err != nil {
 			t.Fatalf("case %d: ListOrders error %v.", i, err)
 		}
@@ -971,16 +971,16 @@ func TestDexStore(t *testing.T) {
 			t.Fatalf("case %d: got orders , gotOrders: %v, wantOrders: %v.", i, gotOrders, c.wantOrders)
 		}
 
-		gotTradePairs, err := dexStore.ListTradePairsWithStart(nil, nil)
+		gotTradePairs, err := movStore.ListTradePairsWithStart(nil, nil)
 		if err != nil {
-			t.Fatalf("case %d: GetDexDatabaseState error %v.", i, err)
+			t.Fatalf("case %d: ListTradePairsWithStart error %v.", i, err)
 		}
 
 		if !testutil.DeepEqual(gotTradePairs, c.wantTradePairs) {
 			t.Fatalf("case %d: got tradePairs, gotTradePairs: %v, wantTradePairs: %v.", i, gotTradePairs, c.wantTradePairs)
 		}
 
-		gotDBState, err := dexStore.GetMovDatabaseState()
+		gotDBState, err := movStore.GetMovDatabaseState()
 		if err != nil {
 			t.Fatalf("case %d: GetMovDatabaseState error %v.", i, err)
 		}
@@ -1342,16 +1342,16 @@ func TestListOrders(t *testing.T) {
 	defer os.RemoveAll("temp")
 	for i, c := range cases {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
-		dexStore, err := NewMovStore(testDB, height, &hash)
+		movStore, err := NewMovStore(testDB, height, &hash)
 		if err != nil {
 			t.Fatalf("case %d: NewMovStore error %v.", i, err)
 		}
 
-		batch := dexStore.db.NewBatch()
-		dexStore.addOrders(batch, c.storeOrders)
+		batch := movStore.db.NewBatch()
+		movStore.addOrders(batch, c.storeOrders)
 		batch.Write()
 
-		gotOrders, err := dexStore.ListOrders(c.query)
+		gotOrders, err := movStore.ListOrders(c.query)
 		if err != nil {
 			t.Fatalf("case %d: ListOrders error %v.", i, err)
 		}
@@ -1753,19 +1753,19 @@ func TestAddOrders(t *testing.T) {
 	defer os.RemoveAll("temp")
 	for i, c := range cases {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
-		dexStore, err := NewMovStore(testDB, height, &hash)
+		movStore, err := NewMovStore(testDB, height, &hash)
 		if err != nil {
 			t.Fatalf("case %d: NewMovStore error %v.", i, err)
 		}
 
-		batch := dexStore.db.NewBatch()
-		dexStore.addOrders(batch, c.beforeOrders)
+		batch := movStore.db.NewBatch()
+		movStore.addOrders(batch, c.beforeOrders)
 		batch.Write()
 
-		dexStore.addOrders(batch, c.addOrders)
+		movStore.addOrders(batch, c.addOrders)
 		batch.Write()
 
-		gotOrders, err := dexStore.ListOrders(&common.Order{FromAssetID: assetID1, ToAssetID: assetID2})
+		gotOrders, err := movStore.ListOrders(&common.Order{FromAssetID: assetID1, ToAssetID: assetID2})
 		if err != nil {
 			t.Fatalf("case %d: ListOrders error %v.", i, err)
 		}
@@ -2090,21 +2090,21 @@ func TestDelOrders(t *testing.T) {
 	defer os.RemoveAll("temp")
 	for i, c := range cases {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
-		dexStore, err := NewMovStore(testDB, height, &hash)
+		movStore, err := NewMovStore(testDB, height, &hash)
 		if err != nil {
 			t.Fatalf("case %d: NewMovStore error %v.", i, err)
 		}
 
-		batch := dexStore.db.NewBatch()
-		dexStore.addOrders(batch, c.beforeOrders)
+		batch := movStore.db.NewBatch()
+		movStore.addOrders(batch, c.beforeOrders)
 		batch.Write()
 
-		if err := dexStore.deleteOrders(batch, c.delOrders); c.err != nil && err.Error() != c.err.Error() {
+		if err := movStore.deleteOrders(batch, c.delOrders); c.err != nil && err.Error() != c.err.Error() {
 			t.Fatalf("case %d: deleteOrder error %v.", i, err)
 		}
 		batch.Write()
 
-		gotOrders, err := dexStore.ListOrders(&common.Order{FromAssetID: assetID1, ToAssetID: assetID2})
+		gotOrders, err := movStore.ListOrders(&common.Order{FromAssetID: assetID1, ToAssetID: assetID2})
 		if err != nil {
 			t.Fatalf("case %d: ListOrders error %v.", i, err)
 		}
@@ -2182,16 +2182,16 @@ func TestListTradePairsWithStart(t *testing.T) {
 	defer os.RemoveAll("temp")
 	for i, c := range cases {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
-		dexStore, err := NewMovStore(testDB, height, &hash)
+		movStore, err := NewMovStore(testDB, height, &hash)
 		if err != nil {
 			t.Fatalf("case %d: NewMovStore error %v.", i, err)
 		}
 
-		batch := dexStore.db.NewBatch()
-		dexStore.updateTradePairs(batch, c.storeTradePairs)
+		batch := movStore.db.NewBatch()
+		movStore.updateTradePairs(batch, c.storeTradePairs)
 		batch.Write()
 
-		gotTradePairs, err := dexStore.ListTradePairsWithStart(c.query.FromAssetID, c.query.ToAssetID)
+		gotTradePairs, err := movStore.ListTradePairsWithStart(c.query.FromAssetID, c.query.ToAssetID)
 		if err != nil {
 			t.Fatalf("case %d: ListTradePairsWithStart error %v.", i, err)
 		}
@@ -2289,20 +2289,20 @@ func TestUpdateTradePairs(t *testing.T) {
 	defer os.RemoveAll("temp")
 	for i, c := range cases {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
-		dexStore, err := NewMovStore(testDB, height, &hash)
+		movStore, err := NewMovStore(testDB, height, &hash)
 		if err != nil {
 			t.Fatalf("case %d: NewMovStore error %v.", i, err)
 		}
 
-		batch := dexStore.db.NewBatch()
-		dexStore.updateTradePairs(batch, c.beforeTradePairs)
+		batch := movStore.db.NewBatch()
+		movStore.updateTradePairs(batch, c.beforeTradePairs)
 		batch.Write()
 
-		dexStore.updateTradePairs(batch, c.addTradePairs)
-		dexStore.updateTradePairs(batch, c.delTradePairs)
+		movStore.updateTradePairs(batch, c.addTradePairs)
+		movStore.updateTradePairs(batch, c.delTradePairs)
 		batch.Write()
 
-		gotTradePairs, err := dexStore.ListTradePairsWithStart(nil, nil)
+		gotTradePairs, err := movStore.ListTradePairsWithStart(nil, nil)
 		if err != nil {
 			t.Fatalf("case %d: ListTradePairsWithStart error %v.", i, err)
 		}
@@ -2361,16 +2361,16 @@ func TestCheckMovDatabaseState(t *testing.T) {
 	defer os.RemoveAll("temp")
 	for i, c := range cases {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
-		dexStore, err := NewMovStore(testDB, height, &hash)
+		movStore, err := NewMovStore(testDB, height, &hash)
 		if err != nil {
 			t.Fatalf("case %d: NewMovStore error %v.", i, err)
 		}
 
-		batch := dexStore.db.NewBatch()
-		dexStore.saveMovDatabaseState(batch, c.beforeDBStatus)
+		batch := movStore.db.NewBatch()
+		movStore.saveMovDatabaseState(batch, c.beforeDBStatus)
 		batch.Write()
 
-		if err := dexStore.checkMovDatabaseState(c.blockHeader); c.err != nil && c.err.Error() != err.Error() {
+		if err := movStore.checkMovDatabaseState(c.blockHeader); c.err != nil && c.err.Error() != err.Error() {
 			t.Fatalf("case %d: checkMovDatabaseState error %v.", i, err)
 		}
 
