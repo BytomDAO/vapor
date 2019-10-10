@@ -71,7 +71,7 @@ func IsP2WMCScript(prog []byte) bool {
 		return false
 	}
 
-	if insts[1].Op != vm.OP_DATA_20 || len(insts[1].Data) != 32 {
+	if insts[1].Op != vm.OP_DATA_32 || len(insts[1].Data) != 32 {
 		return false
 	}
 
@@ -86,7 +86,7 @@ func IsP2WMCScript(prog []byte) bool {
 	if _, err = vm.AsInt64(insts[3].Data); err != nil {
 		return false
 	}
-	return insts[5].Op == vm.OP_DATA_20 && len(insts[5].Data) == 32
+	return insts[5].Op == vm.OP_DATA_32 && len(insts[5].Data) == 32
 }
 
 // ConvertP2PKHSigProgram convert standard P2WPKH program into P2PKH program
