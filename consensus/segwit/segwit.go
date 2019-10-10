@@ -62,9 +62,11 @@ func IsP2WMCScript(prog []byte) bool {
 	if err != nil {
 		return false
 	}
+
 	if len(insts) != 6 {
 		return false
 	}
+
 	if insts[0].Op > vm.OP_16 {
 		return false
 	}
@@ -131,7 +133,10 @@ func DecodeP2MCProgram(prog []byte) (*vmutil.MagneticContractArgs, error) {
 		return nil, errors.New("invalid P2MC program")
 	}
 
-	magneticContractArgs := &vmutil.MagneticContractArgs{}
+	magneticContractArgs := &vmutil.MagneticContractArgs{
+		SellerProgram: insts[4].Data,
+		SellerKey:     insts[5].Data,
+	}
 	requestedAsset := [32]byte{}
 	copy(requestedAsset[:], insts[1].Data)
 	magneticContractArgs.RequestedAsset = bc.NewAssetID(requestedAsset)
@@ -143,9 +148,6 @@ func DecodeP2MCProgram(prog []byte) (*vmutil.MagneticContractArgs, error) {
 	if magneticContractArgs.RatioDenominator, err = vm.AsInt64(insts[3].Data); err != nil {
 		return nil, err
 	}
-
-	magneticContractArgs.SellerProgram = insts[4].Data
-	magneticContractArgs.SellerKey = insts[5].Data
 	return magneticContractArgs, nil
 }
 
