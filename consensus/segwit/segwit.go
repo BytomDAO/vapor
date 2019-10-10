@@ -128,7 +128,7 @@ func DecodeP2MCProgram(prog []byte) (*vmutil.MagneticContractArgs, error) {
 	}
 
 	if len(insts) != 6 || insts[0].Op != vm.OP_0 {
-		return nil, errors.New("Invalid P2MC program")
+		return nil, errors.New("invalid P2MC program")
 	}
 
 	magneticContractArgs := &vmutil.MagneticContractArgs{}
