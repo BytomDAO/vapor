@@ -7,9 +7,6 @@ import (
 	"github.com/vapor/protocol/vm"
 )
 
-// magneticClauseSelector is the global selector for the magnetic transaction
-var magneticClauseSelector = 0
-
 // pre-define errors
 var (
 	ErrBadValue       = errors.New("bad value")
