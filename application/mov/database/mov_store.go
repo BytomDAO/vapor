@@ -86,7 +86,6 @@ func NewMovStore(db dbm.DB, height uint64, hash *bc.Hash) (*MovStore, error) {
 
 		db.Set(bestMatchStore, value)
 	}
-
 	return &MovStore{db: db}, nil
 }
 
@@ -119,10 +118,8 @@ func (m *MovStore) ListOrders(orderAfter *common.Order) ([]*common.Order, error)
 			Rate:        getRateFromOrderKey(itr.Key(), ordersPrefix),
 			Utxo:        movUtxo,
 		}
-
 		orders = append(orders, order)
 	}
-
 	return orders, nil
 }
 
@@ -154,13 +151,12 @@ func (m *MovStore) ProcessOrders(addOrders []*common.Order, delOreders []*common
 
 func (m *MovStore) addOrders(batch dbm.Batch, orders []*common.Order, tradePairsCnt map[common.TradePair]int) error {
 	for _, order := range orders {
-		key := calcOrderKey(order.FromAssetID, order.ToAssetID, calcUTXOHash(order), order.Rate)
-
 		data, err := json.Marshal(order.Utxo)
 		if err != nil {
 			return err
 		}
 
+		key := calcOrderKey(order.FromAssetID, order.ToAssetID, calcUTXOHash(order), order.Rate)
 		batch.Set(key, data)
 
 		tradePair := common.TradePair{
@@ -216,7 +212,6 @@ func (m *MovStore) ListTradePairsWithStart(fromAssetIDAfter, toAssetIDAfter *bc.
 
 		tradePairs = append(tradePairs, &common.TradePair{FromAssetID: fromAssetID, ToAssetID: toAssetID, Count: tradePairData.Count})
 	}
-
 	return tradePairs, nil
 }
 
