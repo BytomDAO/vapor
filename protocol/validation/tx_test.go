@@ -1020,8 +1020,8 @@ func TestMagneticContractTx(t *testing.T) {
 						},
 						Outputs: []*types.TxOutput{
 							types.NewIntraChainOutput(sellerArgs.RequestedAsset, 200000000, sellerArgs.SellerProgram),
-							types.NewIntraChainOutput(buyerArgs.RequestedAsset, 90000000, buyerArgs.SellerProgram),
-							types.NewIntraChainOutput(buyerArgs.RequestedAsset, 10000000, buyerArgs.SellerProgram),
+							types.NewIntraChainOutput(buyerArgs.RequestedAsset, 50000000, buyerArgs.SellerProgram),
+							types.NewIntraChainOutput(buyerArgs.RequestedAsset, 50000000, []byte{0x55}),
 						},
 					}),
 				},
