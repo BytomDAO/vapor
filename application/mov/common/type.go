@@ -2,7 +2,7 @@ package common
 
 import "github.com/vapor/protocol/bc"
 
-type DexUtxo struct {
+type MovUtxo struct {
 	SourceID       *bc.Hash
 	SourcePos      uint64
 	Amount         uint64
@@ -12,17 +12,17 @@ type DexUtxo struct {
 type Order struct {
 	FromAssetID *bc.AssetID
 	ToAssetID   *bc.AssetID
-	Utxo        *DexUtxo
+	Utxo        *MovUtxo
 	Rate        float64
 }
 
 type TradePair struct {
 	FromAssetID *bc.AssetID
 	ToAssetID   *bc.AssetID
-	Count       uint64
+	Count       int
 }
 
-type DexDatabaseState struct {
+type MovDatabaseState struct {
 	Height uint64
 	Hash   *bc.Hash
 }
