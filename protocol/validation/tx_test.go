@@ -1021,11 +1021,12 @@ func TestMagneticContractTx(t *testing.T) {
 						Outputs: []*types.TxOutput{
 							types.NewIntraChainOutput(sellerArgs.RequestedAsset, 200000000, sellerArgs.SellerProgram),
 							types.NewIntraChainOutput(buyerArgs.RequestedAsset, 90000000, buyerArgs.SellerProgram),
+							types.NewIntraChainOutput(buyerArgs.RequestedAsset, 10000000, buyerArgs.SellerProgram),
 						},
 					}),
 				},
 			},
-			err: ErrUnbalanced,
+			err: vm.ErrFalseVMResult,
 		},
 		{
 			desc: "wrong output assetID with contracts all full trade",
@@ -1037,15 +1038,17 @@ func TestMagneticContractTx(t *testing.T) {
 						Inputs: []*types.TxInput{
 							types.NewSpendInput([][]byte{vm.Int64Bytes(0), vm.Int64Bytes(1)}, bc.Hash{V0: 10}, buyerArgs.RequestedAsset, 100000000, 1, programSeller),
 							types.NewSpendInput([][]byte{vm.Int64Bytes(1), vm.Int64Bytes(1)}, bc.Hash{V0: 20}, sellerArgs.RequestedAsset, 200000000, 0, programBuyer),
+							types.NewSpendInput(nil, bc.Hash{V0: 30}, bc.AssetID{V0: 1}, 200000000, 0, []byte{0x51}),
 						},
 						Outputs: []*types.TxOutput{
 							types.NewIntraChainOutput(bc.AssetID{V0: 1}, 200000000, sellerArgs.SellerProgram),
 							types.NewIntraChainOutput(buyerArgs.RequestedAsset, 100000000, buyerArgs.SellerProgram),
+							types.NewIntraChainOutput(sellerArgs.RequestedAsset, 200000000, []byte{0x55}),
 						},
 					}),
 				},
 			},
-			err: ErrUnbalanced,
+			err: vm.ErrFalseVMResult,
 		},
 		{
 			desc: "wrong output change program with first contract partial trade and second contract full trade",
