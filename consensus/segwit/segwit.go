@@ -115,15 +115,15 @@ func ConvertP2SHProgram(prog []byte) ([]byte, error) {
 
 // ConvertP2MCProgram convert standard P2WMC program into P2MC program
 func ConvertP2MCProgram(prog []byte) ([]byte, error) {
-	magneticContractArgs, err := DecodeP2MCProgram(prog)
+	magneticContractArgs, err := DecodeP2WMCProgram(prog)
 	if err != nil {
 		return nil, err
 	}
 	return vmutil.P2MCProgram(*magneticContractArgs)
 }
 
-// DecodeP2MCProgram parse standard P2WMC arguments to magneticContractArgs
-func DecodeP2MCProgram(prog []byte) (*vmutil.MagneticContractArgs, error) {
+// DecodeP2WMCProgram parse standard P2WMC arguments to magneticContractArgs
+func DecodeP2WMCProgram(prog []byte) (*vmutil.MagneticContractArgs, error) {
 	if !IsP2WMCScript(prog) {
 		return nil, errors.New("invalid P2MC program")
 	}
