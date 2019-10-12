@@ -2,76 +2,57 @@ package match
 
 import (
 	"math/big"
-	"encoding/hex"
-	"errors"
 
-	"github.com/vapor/application/dex/common"
-	vprCommon "github.com/vapor/common"
+	"github.com/vapor/application/mov/common"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/vm"
 )
 
 const (
-	buyOrderOutputIndex  = 1
-	sellOrderOutputIndex = 2
+	partialBuyOrderOutputIdx  = 1
+	partialSellOrderOutputIdx = 2
 )
-
-type MatchEngine struct{}
-
-type OrderTable struct {
-	BuyOrders  []*common.Order
-	SellOrders []*common.Order
-}
 
 // GenerateMatchedTxs match two opposite pending orders.
 // for example, the buy orders want change A with B, then the sell orders must change B with A.
 // the input order's rate must in descending order.
-func (c *MatchEngine) GenerateMatchedTxs(orderTable *OrderTable) ([]*types.Tx, error) {
-	buyOrders := vprCommon.NewStack()
-	for i := len(orderTable.BuyOrders) - 1; i >= 0; i-- {
-		buyOrders.Push(orderTable.BuyOrders[i])
-	}
-
-	sellOrders := vprCommon.NewStack()
-	for i := len(orderTable.SellOrders) - 1; i >= 0; i-- {
-		sellOrders.Push(orderTable.SellOrders[i])
-	}
-
-	matchedTxs := []*types.Tx{}
-	for buyOrders.Len() > 0 && sellOrders.Len() > 0 {
-		buyOrder := buyOrders.Peek().(*common.Order)
-		sellOrder := sellOrders.Peek().(*common.Order)
-		if canBeMatched(buyOrder, sellOrder) {
-			tx, err := buildMatchTx(buyOrder, sellOrder)
-			if err != nil {
-				return nil, err
-			}
-
-			matchedTxs = append(matchedTxs, tx)
-			if err := adjustOrderTable(tx, buyOrders, sellOrders); err != nil {
-				return nil, err
-			}
-		} else {
+func GenerateMatchedTxs(orderTable *OrderTable) ([]*types.Tx, error) {
+	var matchedTxs []*types.Tx
+	for orderTable.HasNextOrder() {
+		buyOrder, sellOrder := orderTable.PeekOrder()
+		if canNotBeMatched(buyOrder, sellOrder) {
 			break
+		}
+
+		tx, partialTradeStatus := buildMatchTx(buyOrder, sellOrder)
+		matchedTxs = append(matchedTxs, tx)
+		orderTable.PopOrder()
+		if err := addPartialTradeOrder(tx, partialTradeStatus, orderTable); err != nil {
+			return nil, err
 		}
 	}
 	return matchedTxs, nil
 }
 
-func canBeMatched(buyOrder, sellOrder *common.Order) bool {
+func canNotBeMatched(buyOrder, sellOrder *common.Order) bool {
 	if buyOrder.ToAssetID != sellOrder.FromAssetID || sellOrder.ToAssetID != buyOrder.FromAssetID {
 		return false
 	}
 
 	buyContractArgs := DecodeDexProgram(buyOrder.Utxo.ControlProgram)
 	sellContractArgs := DecodeDexProgram(sellOrder.Utxo.ControlProgram)
+
+	if buyContractArgs.RatioMolecule == 0 || sellContractArgs.RatioDenominator == 0 {
+		return false
+	}
+
 	buyRate := big.NewFloat(0).Quo(big.NewFloat(0).SetUint64(buyContractArgs.RatioDenominator), big.NewFloat(0).SetUint64(buyContractArgs.RatioMolecule))
 	sellRate := big.NewFloat(0).Quo(big.NewFloat(0).SetUint64(sellContractArgs.RatioMolecule), big.NewFloat(0).SetUint64(buyContractArgs.RatioDenominator))
-	return buyRate.Cmp(sellRate) >= 0
+	return buyRate.Cmp(sellRate) < 0
 }
 
-func buildMatchTx(buyOrder, sellOrder *common.Order) (*types.Tx, error) {
+func buildMatchTx(buyOrder, sellOrder *common.Order) (*types.Tx, []bool) {
 	txData := types.TxData{}
 	txData.Inputs = append(txData.Inputs, types.NewSpendInput(nil, *buyOrder.Utxo.SourceID, *buyOrder.FromAssetID, buyOrder.Utxo.Amount, buyOrder.Utxo.SourcePos, buyOrder.Utxo.ControlProgram))
 	txData.Inputs = append(txData.Inputs, types.NewSpendInput(nil, *sellOrder.Utxo.SourceID, *sellOrder.FromAssetID, sellOrder.Utxo.Amount, sellOrder.Utxo.SourcePos, sellOrder.Utxo.ControlProgram))
@@ -80,27 +61,22 @@ func buildMatchTx(buyOrder, sellOrder *common.Order) (*types.Tx, error) {
 	buyRequestAmount := calcToAmountByFromAmount(buyOrder.Utxo.Amount, buyContractArgs)
 	buyReceiveAmount := min(buyRequestAmount, sellOrder.Utxo.Amount)
 	buyShouldPayAmount := calcFromAmountByToAmount(buyReceiveAmount, buyContractArgs)
-	
+
 	sellContractArgs := DecodeDexProgram(sellOrder.Utxo.ControlProgram)
 	sellRequestAmount := calcToAmountByFromAmount(sellOrder.Utxo.Amount, sellContractArgs)
 	sellReceiveAmount := min(sellRequestAmount, buyOrder.Utxo.Amount)
 	sellShouldPayAmount := calcFromAmountByToAmount(sellReceiveAmount, sellContractArgs)
 
 	partialTradeStatus := make([]bool, 2)
-	if buyOrder.ToAssetID.String() > buyOrder.FromAssetID.String() {
-		partialTradeStatus[0] = addMatchTxOutput(&txData, buyOrder, buyReceiveAmount, buyShouldPayAmount, buyContractArgs.SellerProgram)
-		partialTradeStatus[1] = addMatchTxOutput(&txData, sellOrder, sellReceiveAmount, sellShouldPayAmount, sellContractArgs.SellerProgram)
-	} else {
-		partialTradeStatus[1] = addMatchTxOutput(&txData, sellOrder, sellReceiveAmount, sellShouldPayAmount, sellContractArgs.SellerProgram)
-		partialTradeStatus[0] = addMatchTxOutput(&txData, buyOrder, buyReceiveAmount, buyShouldPayAmount, buyContractArgs.SellerProgram)
-	}
+	partialTradeStatus[0] = addMatchTxOutput(&txData, buyOrder, buyReceiveAmount, buyShouldPayAmount, buyContractArgs.SellerProgram)
+	partialTradeStatus[1] = addMatchTxOutput(&txData, sellOrder, sellReceiveAmount, sellShouldPayAmount, sellContractArgs.SellerProgram)
 
 	addMatchTxFeeOutput(&txData, buyShouldPayAmount, sellReceiveAmount, *buyOrder.ToAssetID)
 	addMatchTxFeeOutput(&txData, sellShouldPayAmount, buyReceiveAmount, *sellOrder.ToAssetID)
 
 	tx := types.NewTx(txData)
 	setMatchTxArguments(tx, buyReceiveAmount, sellReceiveAmount, partialTradeStatus)
-	return tx, nil
+	return tx, partialTradeStatus
 }
 
 // addMatchTxOutput return whether partial matched
@@ -120,37 +96,38 @@ func addMatchTxFeeOutput(txData *types.TxData, shouldPayAmount, oppositeReceiveA
 }
 
 func setMatchTxArguments(tx *types.Tx, buyReceiveAmount, sellReceiveAmount uint64, partialTradeStatus []bool) {
-	clauseSelectors := make([][]byte, 2)
+	receiveAmounts := []uint64{buyReceiveAmount, sellReceiveAmount}
+	arguments := make([][][]byte, 2)
+	var position int64 = 0
+
 	for i, isPartial := range partialTradeStatus {
-		if !isPartial {
-			clauseSelectors[i] = vm.Int64Bytes(1)
+		if isPartial {
+			arguments[i] = [][]byte{vm.Int64Bytes(int64(receiveAmounts[i])), vm.Int64Bytes(position), vm.Int64Bytes(0)}
+			position += 2
+		} else {
+			arguments[i] = [][]byte{vm.Int64Bytes(position), vm.Int64Bytes(1)}
+			position += 1
 		}
+		tx.SetInputArguments(uint32(i), arguments[i])
 	}
-	tx.SetInputArguments(0, [][]byte{vm.Int64Bytes(int64(buyReceiveAmount)), clauseSelectors[0]})
-	tx.SetInputArguments(1, [][]byte{vm.Int64Bytes(int64(sellReceiveAmount)), clauseSelectors[1]})
 }
 
-func adjustOrderTable(tx *types.Tx, buyOrders, sellOrders *vprCommon.Stack) error {
-	buyOrder := buyOrders.Pop().(*common.Order)
-	sellOrder := sellOrders.Pop().(*common.Order)
-
-	if hex.EncodeToString(tx.Outputs[buyOrderOutputIndex].ControlProgram()) == hex.EncodeToString(tx.Inputs[0].ControlProgram()) {
-		order, err := common.OutputToOrder(tx, buyOrderOutputIndex)
+func addPartialTradeOrder(tx *types.Tx, partialTradeStatus []bool, orderTable *OrderTable) error {
+	if partialTradeStatus[0] {
+		order, err := common.OutputToOrder(tx, partialBuyOrderOutputIdx)
 		if err != nil {
 			return err
 		}
 
-		buyOrders.Push(order)
-		return nil
+		orderTable.AddBuyOrder(order)
 	}
-
-	if hex.EncodeToString(tx.Outputs[sellOrderOutputIndex].ControlProgram()) == hex.EncodeToString(tx.Inputs[1].ControlProgram()) {
-		order, err := common.OutputToOrder(tx, sellOrderOutputIndex)
+	if partialTradeStatus[1] {
+		order, err := common.OutputToOrder(tx, partialSellOrderOutputIdx)
 		if err != nil {
 			return err
 		}
 
-		sellOrders.Push(order)
+		orderTable.AddSellOrder(order)
 	}
 	return nil
 }

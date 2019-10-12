@@ -24,7 +24,7 @@ func OutputToOrder(tx *types.Tx, outputIndex int) (*Order, error) {
 		FromAssetID: assetAmount.AssetId,
 		ToAssetID:   &contractArgs.RequestedAsset,
 		Rate:        float64(contractArgs.RatioMolecule) / float64(contractArgs.RatioDenominator),
-		Utxo: &DexUtxo{
+		Utxo: &MovUtxo{
 			SourceID:       output.Source.Ref,
 			Amount:         assetAmount.Amount,
 			SourcePos:      uint64(outputIndex),
@@ -44,7 +44,7 @@ func InputToOrder(txInput *types.TxInput) (*Order, error) {
 		FromAssetID: input.AssetId,
 		ToAssetID:   &contractArgs.RequestedAsset,
 		Rate:        float64(contractArgs.RatioMolecule) / float64(contractArgs.RatioDenominator),
-		Utxo: &DexUtxo{
+		Utxo: &MovUtxo{
 			SourceID:       &input.SourceID,
 			Amount:         input.Amount,
 			SourcePos:     	input.SourcePosition,
