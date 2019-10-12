@@ -165,22 +165,23 @@ func P2WMCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 //                           sellerProgram: Program,
 //                           standardProgram: Program,
 //                           sellerKey: PublicKey) locks valueAmount of valueAsset {
-// clause partialTrade(exchangeAmount: Amount) {
+//  clause partialTrade(exchangeAmount: Amount) {
 // 	 define actualAmount: Integer = exchangeAmount * ratioDenominator / ratioMolecule
 // 	 verify actualAmount > 0 && actualAmount < valueAmount
 //   lock exchangeAmount of requestedAsset with sellerProgram
 //   lock valueAmount-actualAmount of valueAsset with standardProgram
 //   unlock actualAmount of valueAsset
-// }
-// clause fullTrade() {
+//  }
+//  clause fullTrade() {
 //   define requestedAmount: Integer = valueAmount * ratioMolecule / ratioDenominator
 //   verify requestedAmount > 0
 //   lock requestedAmount of requestedAsset with sellerProgram
 //   unlock valueAmount of valueAsset
-// }
-// clause cancel(sellerSig: Signature) {
+//  }
+//  clause cancel(sellerSig: Signature) {
 //   verify checkTxSig(sellerKey, sellerSig)
 //   unlock valueAmount of valueAsset
+//  }
 // }
 //
 // contract stack flow:
