@@ -354,54 +354,6 @@ func TestMergeSpendAction(t *testing.T) {
 	}
 }
 
-func TestCalcMergeGas(t *testing.T) {
-	chainTxUtxoNum = 10
-	cases := []struct {
-		utxoNum int
-		gas     uint64
-	}{
-		{
-			utxoNum: 0,
-			gas:     0,
-		},
-		{
-			utxoNum: 1,
-			gas:     0,
-		},
-		{
-			utxoNum: 9,
-			gas:     chainTxMergeGas,
-		},
-		{
-			utxoNum: 10,
-			gas:     chainTxMergeGas,
-		},
-		{
-			utxoNum: 11,
-			gas:     chainTxMergeGas * 2,
-		},
-		{
-			utxoNum: 20,
-			gas:     chainTxMergeGas * 3,
-		},
-		{
-			utxoNum: 21,
-			gas:     chainTxMergeGas * 3,
-		},
-		{
-			utxoNum: 74,
-			gas:     chainTxMergeGas * 9,
-		},
-	}
-
-	for i, c := range cases {
-		gas := calcMergeGas(c.utxoNum)
-		if gas != c.gas {
-			t.Fatalf("case %d got %d want %d", i, gas, c.gas)
-		}
-	}
-}
-
 func TestReserveBtmUtxoChain(t *testing.T) {
 	chainTxUtxoNum = 3
 	utxos := []*UTXO{}
@@ -411,7 +363,7 @@ func TestReserveBtmUtxoChain(t *testing.T) {
 			OutputID:  bc.Hash{V0: i},
 			AccountID: "TestAccountID",
 			AssetID:   *consensus.BTMAssetID,
-			Amount:    i * chainTxMergeGas,
+			Amount:    i,
 		}
 		utxos = append(utxos, utxo)
 
@@ -424,25 +376,25 @@ func TestReserveBtmUtxoChain(t *testing.T) {
 		err    bool
 	}{
 		{
-			amount: 1 * chainTxMergeGas,
+			amount: 1,
 			want:   []uint64{1},
 		},
 		{
-			amount: 888888 * chainTxMergeGas,
+			amount: 888888,
 			want:   []uint64{},
 			err:    true,
 		},
 		{
-			amount: 7 * chainTxMergeGas,
-			want:   []uint64{4, 3, 1},
+			amount: 7,
+			want:   []uint64{4, 3},
 		},
 		{
-			amount: 15 * chainTxMergeGas,
-			want:   []uint64{5, 4, 3, 2, 1, 6},
+			amount: 15,
+			want:   []uint64{5, 4, 3, 2, 1},
 		},
 		{
-			amount: 163 * chainTxMergeGas,
-			want:   []uint64{20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 2, 1, 3},
+			amount: 163,
+			want:   []uint64{20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10},
 		},
 	}
 
@@ -456,7 +408,7 @@ func TestReserveBtmUtxoChain(t *testing.T) {
 
 		got := []uint64{}
 		for _, utxo := range utxos {
-			got = append(got, utxo.Amount/chainTxMergeGas)
+			got = append(got, utxo.Amount)
 		}
 
 		if !testutil.DeepEqual(got, c.want) {
