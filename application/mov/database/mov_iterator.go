@@ -1,7 +1,7 @@
 package database
 
 import (
-	"fmt"
+	"container/list"
 	"sort"
 
 	"github.com/vapor/application/mov/common"
@@ -78,7 +78,7 @@ func (o *OrderIterator) HasNext() bool {
 		}
 
 		o.orders = orders
-		o.lastOrder = o.orders[len(o.orders) - 1]
+		o.lastOrder = o.orders[len(o.orders)-1]
 	}
 	return true
 }
@@ -94,44 +94,59 @@ func (o *OrderIterator) NextBatch() []*common.Order {
 }
 
 type DeltaOrders struct {
-	AddOrders    []*common.Order
-	DeleteOrders []*common.Order
+	addOrders    *list.List
+	deleteOrders map[string]*common.Order
+}
+
+func NewDeltaOrders() *DeltaOrders {
+	return &DeltaOrders{
+		addOrders:    list.New(),
+		deleteOrders: make(map[string]*common.Order),
+	}
+}
+
+func (d *DeltaOrders) AppendAddOrder(orders... *common.Order) {
+	for _, order := range orders {
+		d.addOrders.PushBack(order)
+	}
+}
+
+func (d *DeltaOrders) AppendDeleteOrder(orders... *common.Order) {
+	for _, order := range orders {
+		d.deleteOrders[order.ID()] = order
+	}
 }
 
 func (d *DeltaOrders) mergeOrders(orders []*common.Order) []*common.Order {
-	var tempOrders, newAddOrders, newDeleteOrders []*common.Order
-	tempOrders = append(tempOrders, orders...)
-
-	for _, addOrder := range d.AddOrders {
-		if addOrder.Rate <= orders[len(orders) - 1].Rate {
-			tempOrders = append(tempOrders, addOrder)
-		} else {
-			newAddOrders = append(newAddOrders, addOrder)
-		}
+	orderList := list.New()
+	for _, order := range orders {
+		orderList.PushBack(order)
 	}
 
-	deleteOrderMap := make(map[string]*common.Order)
-	for _, deleteOrder := range d.DeleteOrders {
-		key := fmt.Sprintf("%s:%d", deleteOrder.Utxo.SourceID, deleteOrder.Utxo.SourcePos)
-		deleteOrderMap[key] = deleteOrder
+	for element := d.addOrders.Front(); element != nil; {
+		next := element.Next()
+		addOrder := element.Value.(*common.Order)
+		if addOrder.Rate <= orders[len(orders)-1].Rate {
+			orderList.PushBack(addOrder)
+			d.addOrders.Remove(element)
+		}
+		element = next
+	}
+
+	for element := orderList.Front(); element != nil; {
+		next := element.Next()
+		order := element.Value.(*common.Order)
+		if d.deleteOrders[order.ID()] != nil {
+			orderList.Remove(element)
+			delete(d.deleteOrders, order.ID())
+		}
+		element = next
 	}
 
 	var result []*common.Order
-	for _, order := range tempOrders {
-		key := fmt.Sprintf("%s:%d", order.Utxo.SourceID, order.Utxo.SourcePos)
-		if deleteOrderMap[key] == nil {
-			result = append(result, order)
-		} else {
-			delete(deleteOrderMap, key)
-		}
+	for element := orderList.Front(); element != nil; element = element.Next() {
+		result = append(result, element.Value.(*common.Order))
 	}
-
-	for _, deleteOrder := range deleteOrderMap {
-		newDeleteOrders = append(newDeleteOrders, deleteOrder)
-	}
-
-	d.AddOrders = newAddOrders
-	d.DeleteOrders = newDeleteOrders
 	sort.Sort(common.OrderSlice(result))
 	return result
 }

@@ -1,6 +1,10 @@
 package common
 
-import "github.com/vapor/protocol/bc"
+import (
+	"fmt"
+
+	"github.com/vapor/protocol/bc"
+)
 
 type MovUtxo struct {
 	SourceID       *bc.Hash
@@ -14,6 +18,10 @@ type Order struct {
 	ToAssetID   *bc.AssetID
 	Utxo        *MovUtxo
 	Rate        float64
+}
+
+func (o *Order) ID() string {
+	return fmt.Sprintf("%s:%d", o.Utxo.SourceID, o.Utxo.SourcePos)
 }
 
 type OrderSlice []*Order
@@ -32,6 +40,17 @@ type TradePair struct {
 	FromAssetID *bc.AssetID
 	ToAssetID   *bc.AssetID
 	Count       int
+}
+
+func (t *TradePair) Reverse() *TradePair {
+	return &TradePair{
+		FromAssetID: t.ToAssetID,
+		ToAssetID:   t.FromAssetID,
+	}
+}
+
+func (t *TradePair) ID() string {
+	return fmt.Sprintf("%s:%s", t.FromAssetID, t.ToAssetID)
 }
 
 type MovDatabaseState struct {

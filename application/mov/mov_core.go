@@ -2,7 +2,6 @@ package mov
 
 import (
 	"encoding/hex"
-	"fmt"
 	"github.com/vapor/protocol"
 
 	"github.com/vapor/application/mov/common"
@@ -19,7 +18,7 @@ type MovCore struct {
 	chain    *protocol.Chain
 }
 
-// ChainStatus return the current block hegiht and block hash in dex core
+// ChainStatus return the current block height and block hash in dex core
 func (m *MovCore) ChainStatus() (uint64, *bc.Hash, error) {
 	state, err := m.movStore.GetMovDatabaseState()
 	if err != nil {
@@ -136,24 +135,28 @@ func (m *MovCore) getDeltaOrdersHelper(attachBlockHeaders, detachBlockHeaders []
 		deleteOrders = append(deleteOrders, subDeleteOrders...)
 	}
 
+	return groupDeltaOrders(addOrders, deleteOrders), nil
+}
+
+func groupDeltaOrders(addOrders, deleteOrders []*common.Order) map[string]*database.DeltaOrders {
 	deltaOrderMap := make(map[string]*database.DeltaOrders)
 
 	for _, addOrder := range addOrders {
-		key := fmt.Sprintf("%s:%s", addOrder.FromAssetID, addOrder.ToAssetID)
-		if _, ok := deltaOrderMap[key]; !ok {
-			deltaOrderMap[key] = &database.DeltaOrders{}
+		tradePair := &common.TradePair{FromAssetID: addOrder.FromAssetID, ToAssetID: addOrder.ToAssetID}
+		if _, ok := deltaOrderMap[tradePair.ID()]; !ok {
+			deltaOrderMap[tradePair.ID()] = database.NewDeltaOrders()
 		}
-		deltaOrderMap[key].AddOrders = append(deltaOrderMap[key].AddOrders, addOrder)
+		deltaOrderMap[tradePair.ID()].AppendAddOrder(addOrder)
 	}
 
 	for _, deleteOrder := range deleteOrders {
-		key := fmt.Sprintf("%s:%s", deleteOrder.FromAssetID, deleteOrder.ToAssetID)
-		if _, ok := deltaOrderMap[key]; !ok {
-			deltaOrderMap[key] = &database.DeltaOrders{}
+		tradePair := &common.TradePair{FromAssetID: deleteOrder.FromAssetID, ToAssetID: deleteOrder.ToAssetID}
+		if _, ok := deltaOrderMap[tradePair.ID()]; !ok {
+			deltaOrderMap[tradePair.ID()] = database.NewDeltaOrders()
 		}
-		deltaOrderMap[key].DeleteOrders = append(deltaOrderMap[key].DeleteOrders, deleteOrder)
+		deltaOrderMap[tradePair.ID()].AppendDeleteOrder(deleteOrder)
 	}
-	return deltaOrderMap, nil
+	return deltaOrderMap
 }
 
 // ApplyBlock parse pending order and cancel from the the transactions of block
@@ -212,63 +215,33 @@ func (m *MovCore) IsDust(tx *types.Tx) bool {
 }
 
 func applyTransactions(txs []*types.Tx) ([]*common.Order, []*common.Order, error) {
-	var addOrders []*common.Order
-	var deleteOrders []*common.Order
-	var matchedTxs []*types.Tx
-	for _, tx := range txs {
-		subAddOrders, err := getPendingOrderIfPresent(tx)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		addOrders = append(addOrders, subAddOrders...)
-
-		subDeleteOrders, err := getCancelOrderIfPresent(tx)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		deleteOrders = append(deleteOrders, subDeleteOrders...)
-
-		if isMatchedTx(tx) {
-			matchedTxs = append(matchedTxs, tx)
-		}
-	}
-	subAddOrders, subDeleteOrders, err := applyMatchedTxs(matchedTxs)
-	if err != nil {
-		return nil, nil, nil
-	}
-
-	addOrders = append(addOrders, subAddOrders...)
-	deleteOrders = append(deleteOrders, subDeleteOrders...)
-	return addOrders, deleteOrders, nil
-}
-
-func applyMatchedTxs(txs []*types.Tx) ([]*common.Order, []*common.Order, error) {
 	deleteOrderMap := make(map[string]*common.Order)
 	addOrderMap := make(map[string]*common.Order)
 	for _, tx := range txs {
-		tradeOrders, err := getTradeOrderIfPresent(tx)
+		addOrders, err := getAddOrdersIfPresent(tx)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		for _, order := range tradeOrders {
-			orderID := fmt.Sprintf("%s:%d", order.Utxo.SourceID, order.Utxo.SourcePos)
-			deleteOrderMap[orderID] = order
+		for _, order := range addOrders {
+			addOrderMap[order.ID()] = order
 		}
 
-		pendingOrders, err := getPendingOrderIfPresent(tx)
+		deleteOrders, err := getDeleteOrdersIfPresent(tx)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		for _, order := range pendingOrders {
-			orderID := fmt.Sprintf("%s:%d", order.Utxo.SourceID, order.Utxo.SourcePos)
-			addOrderMap[orderID] = order
+		for _, order := range deleteOrders {
+			deleteOrderMap[order.ID()] = order
 		}
 	}
 
+	addOrders, deleteOrders := mergeOrders(addOrderMap, deleteOrderMap)
+	return addOrders, deleteOrders, nil
+}
+
+func mergeOrders(addOrderMap, deleteOrderMap map[string]*common.Order) ([]*common.Order, []*common.Order) {
 	var deleteOrders, addOrders []*common.Order
 	for orderID, order := range addOrderMap {
 		if deleteOrderMap[orderID] != nil {
@@ -277,13 +250,14 @@ func applyMatchedTxs(txs []*types.Tx) ([]*common.Order, []*common.Order, error) 
 		}
 		addOrders = append(addOrders, order)
 	}
+
 	for _, order := range deleteOrderMap {
 		deleteOrders = append(deleteOrders, order)
 	}
-	return addOrders, deleteOrders, nil
+	return addOrders, deleteOrders
 }
 
-func getPendingOrderIfPresent(tx *types.Tx) ([]*common.Order, error) {
+func getAddOrdersIfPresent(tx *types.Tx) ([]*common.Order, error) {
 	var orders []*common.Order
 	for i, output := range tx.Outputs {
 		if output.OutputType() == types.IntraChainOutputType && IsP2WMCScript(output.ControlProgram()) {
@@ -298,22 +272,14 @@ func getPendingOrderIfPresent(tx *types.Tx) ([]*common.Order, error) {
 	return orders, nil
 }
 
-func getTradeOrderIfPresent(tx *types.Tx) ([]*common.Order, error) {
-	return getInputOrderByClauseSelector(tx, isTradeClauseSelector)
-}
-
-func getCancelOrderIfPresent(tx *types.Tx) ([]*common.Order, error) {
-	return getInputOrderByClauseSelector(tx, isCancelClauseSelector)
-}
-
-func getInputOrderByClauseSelector(tx *types.Tx, checkClauseSelector func(*types.TxInput) bool) ([]*common.Order, error) {
+func getDeleteOrdersIfPresent(tx *types.Tx) ([]*common.Order, error) {
 	var orders []*common.Order
 	for _, input := range tx.Inputs {
 		if input.InputType() != types.SpendInputType || IsP2WMCScript(input.ControlProgram()) {
 			continue
 		}
 
-		if checkClauseSelector(input) {
+		if isCancelClauseSelector(input) || isTradeClauseSelector(input) {
 			order, err := common.InputToOrder(input)
 			if err != nil {
 				return nil, err
@@ -338,24 +304,16 @@ func isMatchedTx(tx *types.Tx) bool {
 		return false
 	}
 
-	if !isTradeClauseSelector(tx.Inputs[0]) {
-		return false
-	}
-
-	return isTradeClauseSelector(tx.Inputs[1])
+	return isTradeClauseSelector(tx.Inputs[0]) && isTradeClauseSelector(tx.Inputs[1])
 }
 
-// TODO
 func isCancelClauseSelector(input *types.TxInput) bool {
-	return len(input.Arguments()) >= 2 && hex.EncodeToString(input.Arguments()[1]) == hex.EncodeToString(vm.Int64Bytes(2))
+	return len(input.Arguments()) == 3 && hex.EncodeToString(input.Arguments()[2]) == hex.EncodeToString(vm.Int64Bytes(2))
 }
 
-// TODO
 func isTradeClauseSelector(input *types.TxInput) bool {
-	if len(input.Arguments()) < 2 {
-		return false
-	}
-	clauseSelector := hex.EncodeToString(input.Arguments()[1])
+	arguments := input.Arguments()
+	clauseSelector := hex.EncodeToString(arguments[len(arguments) - 1])
 	return clauseSelector == hex.EncodeToString(vm.Int64Bytes(0)) || clauseSelector == hex.EncodeToString(vm.Int64Bytes(1))
 }
 
