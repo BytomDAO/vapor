@@ -1,9 +1,10 @@
 package match
 
 import (
+	"math/big"
+
 	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/protocol/vm/vmutil"
-	"math/big"
 
 	"github.com/vapor/application/mov/common"
 	"github.com/vapor/protocol/bc"
