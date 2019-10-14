@@ -356,6 +356,8 @@ func TestMergeSpendAction(t *testing.T) {
 
 func TestReserveBtmUtxoChain(t *testing.T) {
 	chainTxUtxoNum = 3
+	chainTxMergeGas = uint64(10000000)
+
 	utxos := []*UTXO{}
 	m := mockAccountManager(t)
 	for i := uint64(1); i <= 20; i++ {
@@ -363,7 +365,7 @@ func TestReserveBtmUtxoChain(t *testing.T) {
 			OutputID:  bc.Hash{V0: i},
 			AccountID: "TestAccountID",
 			AssetID:   *consensus.BTMAssetID,
-			Amount:    i,
+			Amount:    i * chainTxMergeGas,
 		}
 		utxos = append(utxos, utxo)
 
@@ -376,25 +378,25 @@ func TestReserveBtmUtxoChain(t *testing.T) {
 		err    bool
 	}{
 		{
-			amount: 1,
+			amount: 1 * chainTxMergeGas,
 			want:   []uint64{1},
 		},
 		{
-			amount: 888888,
+			amount: 888888 * chainTxMergeGas,
 			want:   []uint64{},
 			err:    true,
 		},
 		{
-			amount: 7,
-			want:   []uint64{4, 3},
+			amount: 7 * chainTxMergeGas,
+			want:   []uint64{4, 3, 1},
 		},
 		{
-			amount: 15,
-			want:   []uint64{5, 4, 3, 2, 1},
+			amount: 15 * chainTxMergeGas,
+			want:   []uint64{5, 4, 3, 2, 1, 6},
 		},
 		{
-			amount: 163,
-			want:   []uint64{20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10},
+			amount: 163 * chainTxMergeGas,
+			want:   []uint64{20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 2, 1, 3},
 		},
 	}
 
@@ -408,7 +410,7 @@ func TestReserveBtmUtxoChain(t *testing.T) {
 
 		got := []uint64{}
 		for _, utxo := range utxos {
-			got = append(got, utxo.Amount)
+			got = append(got, utxo.Amount/chainTxMergeGas)
 		}
 
 		if !testutil.DeepEqual(got, c.want) {
