@@ -1,6 +1,7 @@
 package common
 
 import (
+	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -18,7 +19,11 @@ func OutputToOrder(tx *types.Tx, outputIndex int) (*Order, error) {
 		return nil, errors.New("output is not type of intra chain output")
 	}
 
-	contractArgs := DecodeDexProgram(tx.Outputs[outputIndex].ControlProgram())
+	contractArgs, err := segwit.DecodeP2WMCProgram(tx.Outputs[outputIndex].ControlProgram())
+	if err != nil {
+		return nil, err
+	}
+
 	assetAmount := tx.Outputs[outputIndex].AssetAmount()
 	return &Order{
 		FromAssetID: assetAmount.AssetId,
@@ -39,7 +44,11 @@ func InputToOrder(txInput *types.TxInput) (*Order, error) {
 		return nil, errors.New("input is not type of spend input")
 	}
 
-	contractArgs := DecodeDexProgram(input.ControlProgram)
+	contractArgs, err := segwit.DecodeP2WMCProgram(input.ControlProgram)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Order{
 		FromAssetID: input.AssetId,
 		ToAssetID:   &contractArgs.RequestedAsset,
@@ -53,17 +62,3 @@ func InputToOrder(txInput *types.TxInput) (*Order, error) {
 	}, nil
 }
 
-
-// ------------- mock -------------------
-
-type DexContractArgs struct {
-	RequestedAsset   bc.AssetID
-	RatioMolecule    uint64
-	RatioDenominator uint64
-	SellerProgram    []byte
-	SellerKey        []byte
-}
-
-func DecodeDexProgram(program []byte) *DexContractArgs {
-	return nil
-}

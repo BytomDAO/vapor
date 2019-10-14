@@ -2,8 +2,9 @@ package mov
 
 import (
 	"encoding/hex"
-	"github.com/vapor/protocol"
 
+	"github.com/vapor/consensus/segwit"
+	"github.com/vapor/protocol"
 	"github.com/vapor/application/mov/common"
 	"github.com/vapor/application/mov/database"
 	"github.com/vapor/application/mov/match"
@@ -260,7 +261,7 @@ func mergeOrders(addOrderMap, deleteOrderMap map[string]*common.Order) ([]*commo
 func getAddOrdersIfPresent(tx *types.Tx) ([]*common.Order, error) {
 	var orders []*common.Order
 	for i, output := range tx.Outputs {
-		if output.OutputType() == types.IntraChainOutputType && IsP2WMCScript(output.ControlProgram()) {
+		if output.OutputType() == types.IntraChainOutputType && segwit.IsP2WMCScript(output.ControlProgram()) {
 			order, err := common.OutputToOrder(tx, i)
 			if err != nil {
 				return nil, err
@@ -275,7 +276,7 @@ func getAddOrdersIfPresent(tx *types.Tx) ([]*common.Order, error) {
 func getDeleteOrdersIfPresent(tx *types.Tx) ([]*common.Order, error) {
 	var orders []*common.Order
 	for _, input := range tx.Inputs {
-		if input.InputType() != types.SpendInputType || IsP2WMCScript(input.ControlProgram()) {
+		if input.InputType() != types.SpendInputType || segwit.IsP2WMCScript(input.ControlProgram()) {
 			continue
 		}
 
@@ -296,7 +297,7 @@ func isMatchedTx(tx *types.Tx) bool {
 		return false
 	}
 
-	if !IsP2WMCScript(tx.Inputs[0].ControlProgram()) || !IsP2WMCScript(tx.Inputs[1].ControlProgram()) {
+	if !segwit.IsP2WMCScript(tx.Inputs[0].ControlProgram()) || !segwit.IsP2WMCScript(tx.Inputs[1].ControlProgram()) {
 		return false
 	}
 
@@ -317,8 +318,3 @@ func isTradeClauseSelector(input *types.TxInput) bool {
 	return clauseSelector == hex.EncodeToString(vm.Int64Bytes(0)) || clauseSelector == hex.EncodeToString(vm.Int64Bytes(1))
 }
 
-// -------------------- mock -------------------
-
-func IsP2WMCScript(prog []byte) bool {
-	return false
-}

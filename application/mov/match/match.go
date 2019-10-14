@@ -1,6 +1,8 @@
 package match
 
 import (
+	"github.com/vapor/consensus/segwit"
+	"github.com/vapor/protocol/vm/vmutil"
 	"math/big"
 
 	"github.com/vapor/application/mov/common"
@@ -21,11 +23,21 @@ func GenerateMatchedTxs(orderTable *OrderTable) ([]*types.Tx, error) {
 	var matchedTxs []*types.Tx
 	for orderTable.HasNextOrder() {
 		buyOrder, sellOrder := orderTable.PeekOrder()
-		if canNotBeMatched(buyOrder, sellOrder) {
+		buyContractArgs, err := segwit.DecodeP2WMCProgram(buyOrder.Utxo.ControlProgram)
+		if err != nil {
+			return nil, err
+		}
+
+		sellContractArgs, err := segwit.DecodeP2WMCProgram(sellOrder.Utxo.ControlProgram)
+		if err != nil {
+			return nil, err
+		}
+
+		if canNotBeMatched(buyOrder, sellOrder, buyContractArgs, sellContractArgs) {
 			break
 		}
 
-		tx, partialTradeStatus := buildMatchTx(buyOrder, sellOrder)
+		tx, partialTradeStatus := buildMatchTx(buyOrder, sellOrder, buyContractArgs, sellContractArgs)
 		matchedTxs = append(matchedTxs, tx)
 		orderTable.PopOrder()
 		if err := addPartialTradeOrder(tx, partialTradeStatus, orderTable); err != nil {
@@ -35,34 +47,29 @@ func GenerateMatchedTxs(orderTable *OrderTable) ([]*types.Tx, error) {
 	return matchedTxs, nil
 }
 
-func canNotBeMatched(buyOrder, sellOrder *common.Order) bool {
+func canNotBeMatched(buyOrder, sellOrder *common.Order, buyContractArgs, sellContractArgs *vmutil.MagneticContractArgs) bool {
 	if buyOrder.ToAssetID != sellOrder.FromAssetID || sellOrder.ToAssetID != buyOrder.FromAssetID {
 		return false
 	}
-
-	buyContractArgs := DecodeDexProgram(buyOrder.Utxo.ControlProgram)
-	sellContractArgs := DecodeDexProgram(sellOrder.Utxo.ControlProgram)
 
 	if buyContractArgs.RatioMolecule == 0 || sellContractArgs.RatioDenominator == 0 {
 		return false
 	}
 
-	buyRate := big.NewFloat(0).Quo(big.NewFloat(0).SetUint64(buyContractArgs.RatioDenominator), big.NewFloat(0).SetUint64(buyContractArgs.RatioMolecule))
-	sellRate := big.NewFloat(0).Quo(big.NewFloat(0).SetUint64(sellContractArgs.RatioMolecule), big.NewFloat(0).SetUint64(buyContractArgs.RatioDenominator))
+	buyRate := big.NewFloat(0).Quo(big.NewFloat(0).SetInt64(buyContractArgs.RatioDenominator), big.NewFloat(0).SetInt64(buyContractArgs.RatioMolecule))
+	sellRate := big.NewFloat(0).Quo(big.NewFloat(0).SetInt64(sellContractArgs.RatioMolecule), big.NewFloat(0).SetInt64(buyContractArgs.RatioDenominator))
 	return buyRate.Cmp(sellRate) < 0
 }
 
-func buildMatchTx(buyOrder, sellOrder *common.Order) (*types.Tx, []bool) {
+func buildMatchTx(buyOrder, sellOrder *common.Order, buyContractArgs, sellContractArgs *vmutil.MagneticContractArgs) (*types.Tx, []bool) {
 	txData := types.TxData{}
 	txData.Inputs = append(txData.Inputs, types.NewSpendInput(nil, *buyOrder.Utxo.SourceID, *buyOrder.FromAssetID, buyOrder.Utxo.Amount, buyOrder.Utxo.SourcePos, buyOrder.Utxo.ControlProgram))
 	txData.Inputs = append(txData.Inputs, types.NewSpendInput(nil, *sellOrder.Utxo.SourceID, *sellOrder.FromAssetID, sellOrder.Utxo.Amount, sellOrder.Utxo.SourcePos, sellOrder.Utxo.ControlProgram))
 
-	buyContractArgs := DecodeDexProgram(buyOrder.Utxo.ControlProgram)
 	buyRequestAmount := calcToAmountByFromAmount(buyOrder.Utxo.Amount, buyContractArgs)
 	buyReceiveAmount := min(buyRequestAmount, sellOrder.Utxo.Amount)
 	buyShouldPayAmount := calcFromAmountByToAmount(buyReceiveAmount, buyContractArgs)
 
-	sellContractArgs := DecodeDexProgram(sellOrder.Utxo.ControlProgram)
 	sellRequestAmount := calcToAmountByFromAmount(sellOrder.Utxo.Amount, sellContractArgs)
 	sellReceiveAmount := min(sellRequestAmount, buyOrder.Utxo.Amount)
 	sellShouldPayAmount := calcFromAmountByToAmount(sellReceiveAmount, sellContractArgs)
@@ -132,12 +139,12 @@ func addPartialTradeOrder(tx *types.Tx, partialTradeStatus []bool, orderTable *O
 	return nil
 }
 
-func calcToAmountByFromAmount(fromAmount uint64, contractArg *DexContractArgs) uint64 {
-	return fromAmount * contractArg.RatioMolecule / contractArg.RatioDenominator
+func calcToAmountByFromAmount(fromAmount uint64, contractArg *vmutil.MagneticContractArgs) uint64 {
+	return uint64(int64(fromAmount) * contractArg.RatioMolecule / contractArg.RatioDenominator)
 }
 
-func calcFromAmountByToAmount(toAmount uint64, contractArg *DexContractArgs) uint64 {
-	return toAmount * contractArg.RatioDenominator / contractArg.RatioMolecule
+func calcFromAmountByToAmount(toAmount uint64, contractArg *vmutil.MagneticContractArgs) uint64 {
+	return uint64(int64(toAmount) * contractArg.RatioDenominator / contractArg.RatioMolecule)
 }
 
 func min(x, y uint64) uint64 {
@@ -145,18 +152,4 @@ func min(x, y uint64) uint64 {
 		return x
 	}
 	return y
-}
-
-// ------------- mock -------------------
-
-type DexContractArgs struct {
-	RequestedAsset   bc.Hash
-	RatioMolecule    uint64
-	RatioDenominator uint64
-	SellerProgram    []byte
-	SellerKey        []byte
-}
-
-func DecodeDexProgram(program []byte) *DexContractArgs {
-	return nil
 }
