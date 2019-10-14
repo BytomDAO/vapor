@@ -293,19 +293,13 @@ func getDeleteOrdersIfPresent(tx *types.Tx) ([]*common.Order, error) {
 }
 
 func isMatchedTx(tx *types.Tx) bool {
-	if len(tx.Inputs) != 2 {
-		return false
+	p2wmCount := 0
+	for _, input := range tx.Inputs {
+		if segwit.IsP2WMCScript(input.ControlProgram()) && isTradeClauseSelector(input) && input.InputType() == types.SpendInputType {
+			p2wmCount++
+		}
 	}
-
-	if !segwit.IsP2WMCScript(tx.Inputs[0].ControlProgram()) || !segwit.IsP2WMCScript(tx.Inputs[1].ControlProgram()) {
-		return false
-	}
-
-	if tx.Inputs[0].InputType() != types.SpendInputType || tx.Inputs[1].InputType() != types.SpendInputType {
-		return false
-	}
-
-	return isTradeClauseSelector(tx.Inputs[0]) && isTradeClauseSelector(tx.Inputs[1])
+	return p2wmCount >= 2
 }
 
 func isCancelClauseSelector(input *types.TxInput) bool {
