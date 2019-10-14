@@ -3,13 +3,13 @@ package match
 import (
 	"math/big"
 
-	"github.com/vapor/consensus/segwit"
-	"github.com/vapor/protocol/vm/vmutil"
-
 	"github.com/vapor/application/mov/common"
+	"github.com/vapor/consensus/segwit"
+	"github.com/vapor/math"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/vm"
+	"github.com/vapor/protocol/vm/vmutil"
 )
 
 const (
@@ -68,11 +68,11 @@ func buildMatchTx(buyOrder, sellOrder *common.Order, buyContractArgs, sellContra
 	txData.Inputs = append(txData.Inputs, types.NewSpendInput(nil, *sellOrder.Utxo.SourceID, *sellOrder.FromAssetID, sellOrder.Utxo.Amount, sellOrder.Utxo.SourcePos, sellOrder.Utxo.ControlProgram))
 
 	buyRequestAmount := calcToAmountByFromAmount(buyOrder.Utxo.Amount, buyContractArgs)
-	buyReceiveAmount := min(buyRequestAmount, sellOrder.Utxo.Amount)
+	buyReceiveAmount := math.MinUint64(buyRequestAmount, sellOrder.Utxo.Amount)
 	buyShouldPayAmount := calcFromAmountByToAmount(buyReceiveAmount, buyContractArgs)
 
 	sellRequestAmount := calcToAmountByFromAmount(sellOrder.Utxo.Amount, sellContractArgs)
-	sellReceiveAmount := min(sellRequestAmount, buyOrder.Utxo.Amount)
+	sellReceiveAmount := math.MinUint64(sellRequestAmount, buyOrder.Utxo.Amount)
 	sellShouldPayAmount := calcFromAmountByToAmount(sellReceiveAmount, sellContractArgs)
 
 	partialTradeStatus := make([]bool, 2)
@@ -106,7 +106,7 @@ func addMatchTxFeeOutput(txData *types.TxData, shouldPayAmount, oppositeReceiveA
 func setMatchTxArguments(tx *types.Tx, buyReceiveAmount, sellReceiveAmount uint64, partialTradeStatus []bool) {
 	receiveAmounts := []uint64{buyReceiveAmount, sellReceiveAmount}
 	arguments := make([][][]byte, 2)
-	var position int64 = 0
+	var position int64
 
 	for i, isPartial := range partialTradeStatus {
 		if isPartial {
@@ -114,7 +114,7 @@ func setMatchTxArguments(tx *types.Tx, buyReceiveAmount, sellReceiveAmount uint6
 			position += 2
 		} else {
 			arguments[i] = [][]byte{vm.Int64Bytes(position), vm.Int64Bytes(1)}
-			position += 1
+			position++
 		}
 		tx.SetInputArguments(uint32(i), arguments[i])
 	}
@@ -146,11 +146,4 @@ func calcToAmountByFromAmount(fromAmount uint64, contractArg *vmutil.MagneticCon
 
 func calcFromAmountByToAmount(toAmount uint64, contractArg *vmutil.MagneticContractArgs) uint64 {
 	return uint64(int64(toAmount) * contractArg.RatioDenominator / contractArg.RatioMolecule)
-}
-
-func min(x, y uint64) uint64 {
-	if x < y {
-		return x
-	}
-	return y
 }
