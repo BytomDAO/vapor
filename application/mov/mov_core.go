@@ -3,12 +3,12 @@ package mov
 import (
 	"encoding/hex"
 
-	"github.com/vapor/consensus/segwit"
-	"github.com/vapor/protocol"
 	"github.com/vapor/application/mov/common"
 	"github.com/vapor/application/mov/database"
 	"github.com/vapor/application/mov/match"
+	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/errors"
+	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/vm"
