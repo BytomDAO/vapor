@@ -313,7 +313,7 @@ func isCancelClauseSelector(input *types.TxInput) bool {
 
 func isTradeClauseSelector(input *types.TxInput) bool {
 	arguments := input.Arguments()
-	clauseSelector := hex.EncodeToString(arguments[len(arguments) - 1])
+	clauseSelector := hex.EncodeToString(arguments[len(arguments)-1])
 	return clauseSelector == hex.EncodeToString(vm.Int64Bytes(0)) || clauseSelector == hex.EncodeToString(vm.Int64Bytes(1))
 }
 

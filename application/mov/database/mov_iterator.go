@@ -4,6 +4,7 @@ import (
 	"container/list"
 	"sort"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/vapor/application/mov/common"
 	"github.com/vapor/protocol/bc"
 )
@@ -11,15 +12,15 @@ import (
 type TradePairIterator struct {
 	movStore       *MovStore
 	tradePairs     []*common.TradePair
+	tradePairMap   map[string]bool
 	tradePairIndex int
 }
 
 func NewTradePairIterator(movStore *MovStore) *TradePairIterator {
-	return &TradePairIterator{movStore: movStore}
+	return &TradePairIterator{movStore: movStore, tradePairMap: make(map[string]bool)}
 }
 
 func (t *TradePairIterator) HasNext() bool {
-	// TODO tradePair重复的过滤
 	tradePairSize := len(t.tradePairs)
 	if t.tradePairIndex >= tradePairSize {
 		var fromAssetID, toAssetID *bc.AssetID
@@ -29,13 +30,22 @@ func (t *TradePairIterator) HasNext() bool {
 		}
 
 		tradePairs, err := t.movStore.ListTradePairsWithStart(fromAssetID, toAssetID)
-		if err != nil || len(tradePairs) == 0 {
-			// TODO log or return error
+		if err != nil {
+			log.WithField("err", err).Error("fail to list trade pair")
+			return false
+		}
+
+		if len(tradePairs) == 0 {
 			return false
 		}
 
 		t.tradePairs = tradePairs
 		t.tradePairIndex = 0
+	}
+
+	if t.tradePairMap[t.tradePairs[t.tradePairIndex].ID()] {
+		t.tradePairIndex++
+		return t.HasNext()
 	}
 	return true
 }
@@ -46,6 +56,8 @@ func (t *TradePairIterator) Next() *common.TradePair {
 	}
 
 	tradePair := t.tradePairs[t.tradePairIndex]
+	t.tradePairMap[tradePair.ID()] = true
+	t.tradePairMap[tradePair.Reverse().ID()] = true
 	t.tradePairIndex++
 	return tradePair
 }
@@ -68,8 +80,12 @@ func NewOrderIterator(movStore *MovStore, tradePair *common.TradePair, deltaOrde
 func (o *OrderIterator) HasNext() bool {
 	if o.orders == nil {
 		orders, err := o.movStore.ListOrders(o.lastOrder)
-		if err != nil || len(orders) == 0 {
-			// TODO log or return err?
+		if err != nil {
+			log.WithField("err", err).Error("fail to list orders")
+			return false
+		}
+
+		if len(orders) == 0 {
 			return false
 		}
 
