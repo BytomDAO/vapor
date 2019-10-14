@@ -78,7 +78,7 @@ func NewOrderIterator(movStore *MovStore, tradePair *common.TradePair, deltaOrde
 }
 
 func (o *OrderIterator) HasNext() bool {
-	if o.orders == nil {
+	if len(o.orders) == 0 {
 		orders, err := o.movStore.ListOrders(o.lastOrder)
 		if err != nil {
 			log.WithField("err", err).Error("fail to list orders")
@@ -89,12 +89,15 @@ func (o *OrderIterator) HasNext() bool {
 			return false
 		}
 
+		o.lastOrder = o.orders[len(o.orders)-1]
 		if o.deltaOrders != nil {
 			orders = o.deltaOrders.mergeOrders(orders)
 		}
-
+		
 		o.orders = orders
-		o.lastOrder = o.orders[len(o.orders)-1]
+		if len(o.orders) == 0 {
+			return o.HasNext()
+		}
 	}
 	return true
 }
