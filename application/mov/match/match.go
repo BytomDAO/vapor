@@ -40,6 +40,7 @@ func GenerateMatchedTxs(orderTable *OrderTable) ([]*types.Tx, error) {
 
 		tx, partialTradeStatus := buildMatchTx(buyOrder, sellOrder, buyContractArgs, sellContractArgs)
 		matchedTxs = append(matchedTxs, tx)
+
 		orderTable.PopOrder()
 		if err := addPartialTradeOrder(tx, partialTradeStatus, orderTable); err != nil {
 			return nil, err
@@ -122,20 +123,24 @@ func setMatchTxArguments(tx *types.Tx, buyReceiveAmount, sellReceiveAmount uint6
 
 func addPartialTradeOrder(tx *types.Tx, partialTradeStatus []bool, orderTable *OrderTable) error {
 	if partialTradeStatus[0] {
-		order, err := common.OutputToOrder(tx, partialBuyOrderOutputIdx)
+		order, err := common.NewOrderFromOutput(tx, partialBuyOrderOutputIdx)
 		if err != nil {
 			return err
 		}
 
-		orderTable.AddBuyOrder(order)
+		if err := orderTable.AddBuyOrder(order); err != nil {
+			return err
+		}
 	}
 	if partialTradeStatus[1] {
-		order, err := common.OutputToOrder(tx, partialSellOrderOutputIdx)
+		order, err := common.NewOrderFromOutput(tx, partialSellOrderOutputIdx)
 		if err != nil {
 			return err
 		}
 
-		orderTable.AddSellOrder(order)
+		if err := orderTable.AddSellOrder(order); err != nil {
+			return err
+		}
 	}
 	return nil
 }

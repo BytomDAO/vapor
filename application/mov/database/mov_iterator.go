@@ -21,8 +21,7 @@ func NewTradePairIterator(movStore *MovStore) *TradePairIterator {
 }
 
 func (t *TradePairIterator) HasNext() bool {
-	tradePairSize := len(t.tradePairs)
-	if t.tradePairIndex >= tradePairSize {
+	if tradePairSize := len(t.tradePairs); t.tradePairIndex >= tradePairSize {
 		var fromAssetID, toAssetID *bc.AssetID
 		if len(t.tradePairs) > 0 {
 			lastTradePair := t.tradePairs[tradePairSize-1]
@@ -43,7 +42,7 @@ func (t *TradePairIterator) HasNext() bool {
 		t.tradePairIndex = 0
 	}
 
-	if t.tradePairMap[t.tradePairs[t.tradePairIndex].ID()] {
+	if t.tradePairMap[t.tradePairs[t.tradePairIndex].String()] {
 		t.tradePairIndex++
 		return t.HasNext()
 	}
@@ -56,8 +55,8 @@ func (t *TradePairIterator) Next() *common.TradePair {
 	}
 
 	tradePair := t.tradePairs[t.tradePairIndex]
-	t.tradePairMap[tradePair.ID()] = true
-	t.tradePairMap[tradePair.Reverse().ID()] = true
+	t.tradePairMap[tradePair.String()] = true
+	t.tradePairMap[tradePair.Reverse().String()] = true
 	t.tradePairIndex++
 	return tradePair
 }
@@ -85,15 +84,11 @@ func (o *OrderIterator) HasNext() bool {
 			return false
 		}
 
-		if len(orders) == 0 {
-			return false
-		}
-
 		o.lastOrder = o.orders[len(o.orders)-1]
 		if o.deltaOrders != nil {
 			orders = o.deltaOrders.mergeOrders(orders)
 		}
-		
+
 		o.orders = orders
 		if len(o.orders) == 0 {
 			return o.HasNext()

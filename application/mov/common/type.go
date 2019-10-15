@@ -2,8 +2,11 @@ package common
 
 import (
 	"fmt"
+	"github.com/vapor/consensus/segwit"
 
+	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
+	"github.com/vapor/protocol/bc/types"
 )
 
 type MovUtxo struct {
@@ -18,6 +21,56 @@ type Order struct {
 	ToAssetID   *bc.AssetID
 	Utxo        *MovUtxo
 	Rate        float64
+}
+
+func NewOrderFromOutput(tx *types.Tx, outputIndex int) (*Order, error) {
+	outputID := tx.OutputID(outputIndex)
+	output, err := tx.IntraChainOutput(*outputID)
+	if err != nil {
+		return nil, err
+	}
+
+	contractArgs, err := segwit.DecodeP2WMCProgram(tx.Outputs[outputIndex].ControlProgram())
+	if err != nil {
+		return nil, err
+	}
+
+	assetAmount := tx.Outputs[outputIndex].AssetAmount()
+	return &Order{
+		FromAssetID: assetAmount.AssetId,
+		ToAssetID:   &contractArgs.RequestedAsset,
+		Rate:        float64(contractArgs.RatioMolecule) / float64(contractArgs.RatioDenominator),
+		Utxo: &MovUtxo{
+			SourceID:       output.Source.Ref,
+			Amount:         assetAmount.Amount,
+			SourcePos:      uint64(outputIndex),
+			ControlProgram: output.ControlProgram.Code,
+		},
+	}, nil
+}
+
+func NewOrderFromInput(txInput *types.TxInput) (*Order, error) {
+	input, ok := txInput.TypedInput.(*types.SpendInput)
+	if !ok {
+		return nil, errors.New("input is not type of spend input")
+	}
+
+	contractArgs, err := segwit.DecodeP2WMCProgram(input.ControlProgram)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Order{
+		FromAssetID: input.AssetId,
+		ToAssetID:   &contractArgs.RequestedAsset,
+		Rate:        float64(contractArgs.RatioMolecule) / float64(contractArgs.RatioDenominator),
+		Utxo: &MovUtxo{
+			SourceID:       &input.SourceID,
+			Amount:         input.Amount,
+			SourcePos:     	input.SourcePosition,
+			ControlProgram: input.ControlProgram,
+		},
+	}, nil
 }
 
 func (o *Order) ID() string {
@@ -49,7 +102,7 @@ func (t *TradePair) Reverse() *TradePair {
 	}
 }
 
-func (t *TradePair) ID() string {
+func (t *TradePair) String() string {
 	return fmt.Sprintf("%s:%s", t.FromAssetID, t.ToAssetID)
 }
 

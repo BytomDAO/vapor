@@ -1,69 +1,79 @@
 package match
 
 import (
-	"container/list"
-
 	"github.com/vapor/application/mov/common"
 	"github.com/vapor/application/mov/database"
+	"github.com/vapor/errors"
 )
 
+var errOrderRate = errors.New("rate of order must less than the min order in order table")
+
 type OrderTable struct {
-	buyOrderList      *list.List
-	sellOrderList     *list.List
+	buyOrders         []*common.Order
+	sellOrders        []*common.Order
 	buyOrderIterator  *database.OrderIterator
 	sellOrderIterator *database.OrderIterator
 }
 
 func NewOrderTable(movStore *database.MovStore, buyTradePair *common.TradePair, deltaOrderMap map[string]*database.DeltaOrders) *OrderTable {
 	sellTradePair := buyTradePair.Reverse()
-	buyOrderIterator := database.NewOrderIterator(movStore, buyTradePair, deltaOrderMap[buyTradePair.ID()])
-	sellOrderIterator := database.NewOrderIterator(movStore, sellTradePair, deltaOrderMap[sellTradePair.ID()])
+	buyOrderIterator := database.NewOrderIterator(movStore, buyTradePair, deltaOrderMap[buyTradePair.String()])
+	sellOrderIterator := database.NewOrderIterator(movStore, sellTradePair, deltaOrderMap[sellTradePair.String()])
 
 	return &OrderTable{
-		buyOrderList:      list.New(),
-		sellOrderList:     list.New(),
 		buyOrderIterator:  buyOrderIterator,
 		sellOrderIterator: sellOrderIterator,
 	}
 }
 
 func (o *OrderTable) PeekOrder() (*common.Order, *common.Order) {
-	return o.buyOrderList.Front().Value.(*common.Order), o.sellOrderList.Front().Value.(*common.Order)
+	if !o.HasNextOrder() {
+		return nil, nil
+	}
+	return o.buyOrders[len(o.buyOrders)-1], o.sellOrders[len(o.sellOrders)-1]
 }
 
 func (o *OrderTable) PopOrder() {
-	o.buyOrderList.Remove(o.buyOrderList.Front())
-	o.sellOrderList.Remove(o.sellOrderList.Front())
+	o.buyOrders = o.buyOrders[0 : len(o.buyOrders)-1]
+	o.sellOrders = o.sellOrders[0: len(o.sellOrders)-1]
 }
 
-func (o *OrderTable) AddBuyOrder(order *common.Order) {
-	o.buyOrderList.PushFront(order)
+func (o *OrderTable) AddBuyOrder(order *common.Order) error {
+	if len(o.buyOrders) > 0 && order.Rate > o.buyOrders[len(o.buyOrders) - 1].Rate {
+		return errOrderRate
+	}
+	o.buyOrders = append(o.buyOrders, order)
+	return nil
 }
 
-func (o *OrderTable) AddSellOrder(order *common.Order) {
-	o.sellOrderList.PushFront(order)
+func (o *OrderTable) AddSellOrder(order *common.Order) error {
+	if len(o.sellOrders) > 0 && order.Rate > o.sellOrders[len(o.sellOrders) - 1].Rate {
+		return errOrderRate
+	}
+	o.sellOrders = append(o.sellOrders, order)
+	return nil
 }
 
 func (o *OrderTable) HasNextOrder() bool {
-	if o.buyOrderList.Len() == 0 {
+	if len(o.buyOrders) == 0 {
 		if !o.buyOrderIterator.HasNext() {
 			return false
 		}
 
 		orders := o.buyOrderIterator.NextBatch()
-		for _, order := range orders {
-			o.buyOrderList.PushBack(order)
+		for i := len(orders) - 1; i >= 0; i-- {
+			o.buyOrders = append(o.buyOrders, orders[i])
 		}
 	}
 
-	if o.sellOrderList.Len() == 0 {
+	if len(o.sellOrders) == 0 {
 		if !o.sellOrderIterator.HasNext() {
 			return false
 		}
 
-		orders := o.buyOrderIterator.NextBatch()
-		for _, order := range orders {
-			o.sellOrderList.PushBack(order)
+		orders := o.sellOrderIterator.NextBatch()
+		for i := len(orders) - 1; i >= 0; i-- {
+			o.sellOrders = append(o.sellOrders, orders[i])
 		}
 	}
 	return true
