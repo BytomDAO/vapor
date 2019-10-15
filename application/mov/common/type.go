@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/vapor/consensus/segwit"
-
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
