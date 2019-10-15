@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+
 	"github.com/vapor/consensus/segwit"
 
 	"github.com/vapor/errors"
