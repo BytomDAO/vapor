@@ -39,6 +39,21 @@ func (m *MovCore) ValidateTxs(txs []*types.Tx) error {
 	return nil
 }
 
+// ApplyBlock parse pending order and cancel from the the transactions of block
+// and add pending order to the dex db, remove cancel order from dex db.
+func (m *MovCore) ApplyBlock(block *types.Block) error {
+	if err := m.validateMatchedTxs(block.Transactions); err != nil {
+		return err
+	}
+
+	addOrders, deleteOrders, err := applyTransactions(block.Transactions)
+	if err != nil {
+		return err
+	}
+
+	return m.movStore.ProcessOrders(addOrders, deleteOrders, &block.BlockHeader)
+}
+
 func (m *MovCore) validateMatchedTxs(txs []*types.Tx) error {
 	matchedTxMap := groupMatchedTx(txs)
 	for _, packagedMatchedTxs := range matchedTxMap {
@@ -79,21 +94,6 @@ func getTradePairFromMatchedTx(tx *types.Tx) *common.TradePair {
 	return &common.TradePair{FromAssetID: &toAssetID, ToAssetID: &fromAssetID}
 }
 
-// ApplyBlock parse pending order and cancel from the the transactions of block
-// and add pending order to the dex db, remove cancel order from dex db.
-func (m *MovCore) ApplyBlock(block *types.Block) error {
-	if err := m.validateMatchedTxs(block.Transactions); err != nil {
-		return err
-	}
-
-	addOrders, deleteOrders, err := applyTransactions(block.Transactions)
-	if err != nil {
-		return err
-	}
-
-	return m.movStore.ProcessOrders(addOrders, deleteOrders, &block.BlockHeader)
-}
-
 // DetachBlock parse pending order and cancel from the the transactions of block
 // and add cancel order to the dex db, remove pending order from dex db.
 func (m *MovCore) DetachBlock(block *types.Block) error {
@@ -109,7 +109,7 @@ func (m *MovCore) DetachBlock(block *types.Block) error {
 
 // BeforeProposalBlock get all pending orders from the dex db, parse pending orders and cancel orders from transactions
 // Then merge the two, use match engine to generate matched transactions, finally return them.
-func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, numOfPackage int) ([]*types.Tx, error) {
+func (m *MovCore) BeforeProposalBlock(capacity int) ([]*types.Tx, error) {
 	var packagedTxs []*types.Tx
 	tradePairIterator := database.NewTradePairIterator(m.movStore)
 
@@ -121,8 +121,8 @@ func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, numOfPackage int) ([]*typ
 		}
 
 		num := len(matchedTxs)
-		if len(packagedTxs)+len(matchedTxs) > numOfPackage {
-			num = numOfPackage - len(packagedTxs)
+		if len(packagedTxs)+len(matchedTxs) > capacity {
+			num = capacity - len(packagedTxs)
 		}
 		for i := 0; i < num; i++ {
 			packagedTxs = append(packagedTxs, matchedTxs[i])

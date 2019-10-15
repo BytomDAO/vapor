@@ -56,7 +56,7 @@ func (c *Chain) GetHeaderByHeight(height uint64) (*types.BlockHeader, error) {
 	return c.store.GetBlockHeader(hash)
 }
 
-func (c *Chain) CalcReorganizeChain(beginAttach *types.BlockHeader, beginDetach *types.BlockHeader) ([]*types.BlockHeader, []*types.BlockHeader, error) {
+func (c *Chain) calcReorganizeChain(beginAttach *types.BlockHeader, beginDetach *types.BlockHeader) ([]*types.BlockHeader, []*types.BlockHeader, error) {
 	var err error
 	var attachBlockHeaders []*types.BlockHeader
 	var detachBlockHeaders []*types.BlockHeader
@@ -126,7 +126,7 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 }
 
 func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
-	attachBlockHeaders, detachBlockHeaders, err := c.CalcReorganizeChain(blockHeader, c.bestBlockHeader)
+	attachBlockHeaders, detachBlockHeaders, err := c.calcReorganizeChain(blockHeader, c.bestBlockHeader)
 	if err != nil {
 		return err
 	}

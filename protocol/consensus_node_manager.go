@@ -104,7 +104,7 @@ func (c *Chain) reorganizeConsensusResult(consensusResult *state.ConsensusResult
 		return err
 	}
 
-	attachBlockHeaders, detachBlockHeaders, err := c.CalcReorganizeChain(blockHeader, mainChainBlockHeader)
+	attachBlockHeaders, detachBlockHeaders, err := c.calcReorganizeChain(blockHeader, mainChainBlockHeader)
 	if err != nil {
 		return err
 	}
