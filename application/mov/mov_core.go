@@ -27,31 +27,23 @@ func (m *MovCore) ChainStatus() (uint64, *bc.Hash, error) {
 	return state.Height, state.Hash, nil
 }
 
-func (m *MovCore) ValidateBlock(block *types.Block, attachBlocks, detachBlocks []*types.Block) error {
-	if err := m.ValidateTxs(block, attachBlocks, detachBlocks); err != nil {
+func (m *MovCore) ValidateBlock(block *types.Block) error {
+	if err := m.ValidateTxs(block.Transactions); err != nil {
 		return err
 	}
 	return nil
 }
 
 // ValidateTxs validate the matched transactions is generated according to the matching rule.
-func (m *MovCore) ValidateTxs(block *types.Block, attachBlocks, detachBlocks []*types.Block) error {
-	deltaOrderMap, err := m.getDeltaOrders(attachBlocks, detachBlocks)
-	if err != nil {
-		return err
-	}
-
-	if err := m.validateMatchedTxs(block.Transactions, deltaOrderMap); err != nil {
-		return err
-	}
+func (m *MovCore) ValidateTxs(txs []*types.Tx) error {
 	return nil
 }
 
-func (m *MovCore) validateMatchedTxs(txs []*types.Tx, deltaOrderMap map[string]*database.DeltaOrders) error {
+func (m *MovCore) validateMatchedTxs(txs []*types.Tx) error {
 	matchedTxMap := groupMatchedTx(txs)
 	for _, packagedMatchedTxs := range matchedTxMap {
 		tradePair := getTradePairFromMatchedTx(packagedMatchedTxs[0])
-		realMatchedTxs, err := match.GenerateMatchedTxs(match.NewOrderTable(m.movStore, tradePair, deltaOrderMap))
+		realMatchedTxs, err := match.GenerateMatchedTxs(match.NewOrderTable(m.movStore, tradePair))
 		if err != nil {
 			return err
 		}
@@ -81,58 +73,19 @@ func groupMatchedTx(txs []*types.Tx) map[string][]*types.Tx {
 func getTradePairFromMatchedTx(tx *types.Tx) *common.TradePair {
 	fromAssetID := tx.Inputs[0].AssetID()
 	toAssetID := tx.Inputs[1].AssetID()
-	return &common.TradePair{FromAssetID: &fromAssetID, ToAssetID: &toAssetID}
-}
-
-func (m *MovCore) getDeltaOrders(attachBlocks, detachBlocks []*types.Block) (map[string]*database.DeltaOrders, error) {
-	var deleteOrders, addOrders []*common.Order
-	for _, block := range detachBlocks {
-		subDeleteOrders, subAddOrders, err := applyTransactions(block.Transactions)
-		if err != nil {
-			return nil, err
-		}
-
-		addOrders = append(addOrders, subAddOrders...)
-		deleteOrders = append(deleteOrders, subDeleteOrders...)
+	if fromAssetID.String() > toAssetID.String() {
+		return &common.TradePair{FromAssetID: &fromAssetID, ToAssetID: &toAssetID}
 	}
-
-	for _, block := range attachBlocks {
-		subAddOrders, subDeleteOrders, err := applyTransactions(block.Transactions)
-		if err != nil {
-			return nil, err
-		}
-
-		addOrders = append(addOrders, subAddOrders...)
-		deleteOrders = append(deleteOrders, subDeleteOrders...)
-	}
-
-	return groupDeltaOrders(addOrders, deleteOrders), nil
-}
-
-func groupDeltaOrders(addOrders, deleteOrders []*common.Order) map[string]*database.DeltaOrders {
-	deltaOrderMap := make(map[string]*database.DeltaOrders)
-
-	for _, addOrder := range addOrders {
-		tradePair := &common.TradePair{FromAssetID: addOrder.FromAssetID, ToAssetID: addOrder.ToAssetID}
-		if _, ok := deltaOrderMap[tradePair.String()]; !ok {
-			deltaOrderMap[tradePair.String()] = database.NewDeltaOrders()
-		}
-		deltaOrderMap[tradePair.String()].AppendAddOrder(addOrder)
-	}
-
-	for _, deleteOrder := range deleteOrders {
-		tradePair := &common.TradePair{FromAssetID: deleteOrder.FromAssetID, ToAssetID: deleteOrder.ToAssetID}
-		if _, ok := deltaOrderMap[tradePair.String()]; !ok {
-			deltaOrderMap[tradePair.String()] = database.NewDeltaOrders()
-		}
-		deltaOrderMap[tradePair.String()].AppendDeleteOrder(deleteOrder)
-	}
-	return deltaOrderMap
+	return &common.TradePair{FromAssetID: &toAssetID, ToAssetID: &fromAssetID}
 }
 
 // ApplyBlock parse pending order and cancel from the the transactions of block
 // and add pending order to the dex db, remove cancel order from dex db.
 func (m *MovCore) ApplyBlock(block *types.Block) error {
+	if err := m.validateMatchedTxs(block.Transactions); err != nil {
+		return err
+	}
+
 	addOrders, deleteOrders, err := applyTransactions(block.Transactions)
 	if err != nil {
 		return err
@@ -161,12 +114,7 @@ func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, numOfPackage int) ([]*typ
 	tradePairIterator := database.NewTradePairIterator(m.movStore)
 
 	for tradePairIterator.HasNext() {
-		addOrders, deleteOrders, err := applyTransactions(txs)
-		if err != nil {
-			return nil, err
-		}
-
-		orderTable := match.NewOrderTable(m.movStore, tradePairIterator.Next(), groupDeltaOrders(addOrders, deleteOrders))
+		orderTable := match.NewOrderTable(m.movStore, tradePairIterator.Next())
 		matchedTxs, err := match.GenerateMatchedTxs(orderTable)
 		if err != nil {
 			return nil, err

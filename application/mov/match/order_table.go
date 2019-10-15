@@ -15,10 +15,10 @@ type OrderTable struct {
 	sellOrderIterator *database.OrderIterator
 }
 
-func NewOrderTable(movStore *database.MovStore, buyTradePair *common.TradePair, deltaOrderMap map[string]*database.DeltaOrders) *OrderTable {
+func NewOrderTable(movStore *database.MovStore, buyTradePair *common.TradePair) *OrderTable {
 	sellTradePair := buyTradePair.Reverse()
-	buyOrderIterator := database.NewOrderIterator(movStore, buyTradePair, deltaOrderMap[buyTradePair.String()])
-	sellOrderIterator := database.NewOrderIterator(movStore, sellTradePair, deltaOrderMap[sellTradePair.String()])
+	buyOrderIterator := database.NewOrderIterator(movStore, buyTradePair)
+	sellOrderIterator := database.NewOrderIterator(movStore, sellTradePair)
 
 	return &OrderTable{
 		buyOrderIterator:  buyOrderIterator,
