@@ -140,8 +140,12 @@ func (m *MovStore) ProcessOrders(addOrders []*common.Order, delOreders []*common
 		return err
 	}
 
-	hash := blockHeader.Hash()
-	if err := m.saveMovDatabaseState(batch, &common.MovDatabaseState{Height: blockHeader.Height, Hash: &hash}); err != nil {
+	state, err := m.getCurrentState(blockHeader)
+	if err != nil {
+		return err
+	}
+
+	if err := m.saveMovDatabaseState(batch, state); err != nil {
 		return err
 	}
 
@@ -264,4 +268,20 @@ func (m *MovStore) saveMovDatabaseState(batch dbm.Batch, state *common.MovDataba
 
 	batch.Set(bestMatchStore, value)
 	return nil
+}
+
+func (m *MovStore) getCurrentState(blockHeader *types.BlockHeader) (*common.MovDatabaseState, error) {
+	hash := blockHeader.Hash()
+	height := blockHeader.Height
+
+	state, err := m.GetMovDatabaseState()
+	if err != nil {
+		return nil, err
+	}
+
+	if state.Hash.String() == hash.String() {
+		hash = blockHeader.PreviousBlockHash
+		height = blockHeader.Height - 1
+	}
+	return &common.MovDatabaseState{Height: height, Hash: &hash}, nil
 }
