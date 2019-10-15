@@ -283,5 +283,6 @@ func (m *MovStore) getCurrentState(blockHeader *types.BlockHeader) (*common.MovD
 		hash = blockHeader.PreviousBlockHash
 		height = blockHeader.Height - 1
 	}
+
 	return &common.MovDatabaseState{Height: height, Hash: &hash}, nil
 }
