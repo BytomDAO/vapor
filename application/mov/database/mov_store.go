@@ -252,8 +252,7 @@ func (m *MovStore) checkMovDatabaseState(header *types.BlockHeader) error {
 		return err
 	}
 
-	blockHash := header.Hash()
-	if (state.Hash.String() == header.PreviousBlockHash.String() && (state.Height+1) == header.Height) || state.Hash.String() == blockHash.String() {
+	if (*state.Hash == header.PreviousBlockHash && (state.Height+1) == header.Height) || *state.Hash == header.Hash() {
 		return nil
 	}
 
@@ -279,7 +278,7 @@ func (m *MovStore) calcNextDatabaseState(blockHeader *types.BlockHeader) (*commo
 		return nil, err
 	}
 
-	if state.Hash.String() == hash.String() {
+	if *state.Hash == hash {
 		hash = blockHeader.PreviousBlockHash
 		height = blockHeader.Height - 1
 	}
