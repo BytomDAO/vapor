@@ -880,7 +880,7 @@ func TestValidateTxVersion(t *testing.T) {
 func TestMagneticContractTx(t *testing.T) {
 	buyerArgs := vmutil.MagneticContractArgs{
 		RequestedAsset:   bc.AssetID{V0: 1},
-		RatioMolecule:    1,
+		RatioNumerator:   1,
 		RatioDenominator: 2,
 		SellerProgram:    []byte{0x51},
 		SellerKey:        testutil.MustDecodeHexString("960ecabafb88ba460a40912841afecebf0e84884178611ac97210e327c0d1173"),
@@ -888,7 +888,7 @@ func TestMagneticContractTx(t *testing.T) {
 
 	sellerArgs := vmutil.MagneticContractArgs{
 		RequestedAsset:   bc.AssetID{V0: 2},
-		RatioMolecule:    2,
+		RatioNumerator:   2,
 		RatioDenominator: 1,
 		SellerProgram:    []byte{0x52},
 		SellerKey:        testutil.MustDecodeHexString("ad79ec6bd3a6d6dbe4d0ee902afc99a12b9702fb63edce5f651db3081d868b75"),
@@ -1083,7 +1083,7 @@ func TestMagneticContractTx(t *testing.T) {
 func TestRingMagneticContractTx(t *testing.T) {
 	aliceArgs := vmutil.MagneticContractArgs{
 		RequestedAsset:   bc.AssetID{V0: 1},
-		RatioMolecule:    2,
+		RatioNumerator:   2,
 		RatioDenominator: 1,
 		SellerProgram:    []byte{0x51},
 		SellerKey:        testutil.MustDecodeHexString("960ecabafb88ba460a40912841afecebf0e84884178611ac97210e327c0d1173"),
@@ -1091,7 +1091,7 @@ func TestRingMagneticContractTx(t *testing.T) {
 
 	bobArgs := vmutil.MagneticContractArgs{
 		RequestedAsset:   bc.AssetID{V0: 2},
-		RatioMolecule:    2,
+		RatioNumerator:   2,
 		RatioDenominator: 1,
 		SellerProgram:    []byte{0x52},
 		SellerKey:        testutil.MustDecodeHexString("ad79ec6bd3a6d6dbe4d0ee902afc99a12b9702fb63edce5f651db3081d868b75"),
@@ -1099,7 +1099,7 @@ func TestRingMagneticContractTx(t *testing.T) {
 
 	jackArgs := vmutil.MagneticContractArgs{
 		RequestedAsset:   bc.AssetID{V0: 3},
-		RatioMolecule:    1,
+		RatioNumerator:   1,
 		RatioDenominator: 4,
 		SellerProgram:    []byte{0x53},
 		SellerKey:        testutil.MustDecodeHexString("9c19a91988c62046c2767bd7e9999b0c142891b9ebf467bfa59210b435cb0de7"),
