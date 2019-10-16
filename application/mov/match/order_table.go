@@ -15,7 +15,7 @@ type OrderTable struct {
 	sellOrderIterator *database.OrderIterator
 }
 
-func NewOrderTable(movStore *database.MovStore, buyTradePair *common.TradePair) *OrderTable {
+func NewOrderTable(movStore database.MovStore, buyTradePair *common.TradePair) *OrderTable {
 	sellTradePair := buyTradePair.Reverse()
 	buyOrderIterator := database.NewOrderIterator(movStore, buyTradePair)
 	sellOrderIterator := database.NewOrderIterator(movStore, sellTradePair)

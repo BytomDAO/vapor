@@ -1,11 +1,12 @@
 package match
 
 import (
+	"math"
 	"math/big"
 
 	"github.com/vapor/application/mov/common"
 	"github.com/vapor/consensus/segwit"
-	"github.com/vapor/math"
+	vprMath "github.com/vapor/math"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/vm"
@@ -59,32 +60,32 @@ func canNotBeMatched(buyOrder, sellOrder *common.Order, buyContractArgs, sellCon
 	}
 
 	buyRate := big.NewFloat(0).Quo(big.NewFloat(0).SetInt64(buyContractArgs.RatioDenominator), big.NewFloat(0).SetInt64(buyContractArgs.RatioMolecule))
-	sellRate := big.NewFloat(0).Quo(big.NewFloat(0).SetInt64(sellContractArgs.RatioMolecule), big.NewFloat(0).SetInt64(buyContractArgs.RatioDenominator))
+	sellRate := big.NewFloat(0).Quo(big.NewFloat(0).SetInt64(sellContractArgs.RatioMolecule), big.NewFloat(0).SetInt64(sellContractArgs.RatioDenominator))
 	return buyRate.Cmp(sellRate) < 0
 }
 
 func buildMatchTx(buyOrder, sellOrder *common.Order, buyContractArgs, sellContractArgs *vmutil.MagneticContractArgs) (*types.Tx, []bool) {
-	txData := types.TxData{}
+	txData := &types.TxData{}
 	txData.Inputs = append(txData.Inputs, types.NewSpendInput(nil, *buyOrder.Utxo.SourceID, *buyOrder.FromAssetID, buyOrder.Utxo.Amount, buyOrder.Utxo.SourcePos, buyOrder.Utxo.ControlProgram))
 	txData.Inputs = append(txData.Inputs, types.NewSpendInput(nil, *sellOrder.Utxo.SourceID, *sellOrder.FromAssetID, sellOrder.Utxo.Amount, sellOrder.Utxo.SourcePos, sellOrder.Utxo.ControlProgram))
 
-	buyRequestAmount := calcToAmountByFromAmount(buyOrder.Utxo.Amount, buyContractArgs)
-	buyReceiveAmount := math.MinUint64(buyRequestAmount, sellOrder.Utxo.Amount)
-	buyShouldPayAmount := calcFromAmountByToAmount(buyReceiveAmount, buyContractArgs)
+	buyRequestAmount := calcRequestAmount(buyOrder.Utxo.Amount, buyContractArgs)
+	buyReceiveAmount := vprMath.MinUint64(buyRequestAmount, sellOrder.Utxo.Amount)
+	buyShouldPayAmount := calcShouldPayAmount(buyReceiveAmount, buyContractArgs)
 
-	sellRequestAmount := calcToAmountByFromAmount(sellOrder.Utxo.Amount, sellContractArgs)
-	sellReceiveAmount := math.MinUint64(sellRequestAmount, buyOrder.Utxo.Amount)
-	sellShouldPayAmount := calcFromAmountByToAmount(sellReceiveAmount, sellContractArgs)
+	sellRequestAmount := calcRequestAmount(sellOrder.Utxo.Amount, sellContractArgs)
+	sellReceiveAmount := vprMath.MinUint64(sellRequestAmount, buyOrder.Utxo.Amount)
+	sellShouldPayAmount := calcShouldPayAmount(sellReceiveAmount, sellContractArgs)
 
 	partialTradeStatus := make([]bool, 2)
-	partialTradeStatus[0] = addMatchTxOutput(&txData, buyOrder, buyReceiveAmount, buyShouldPayAmount, buyContractArgs.SellerProgram)
-	partialTradeStatus[1] = addMatchTxOutput(&txData, sellOrder, sellReceiveAmount, sellShouldPayAmount, sellContractArgs.SellerProgram)
+	partialTradeStatus[0] = addMatchTxOutput(txData, buyOrder, buyReceiveAmount, buyShouldPayAmount, buyContractArgs.SellerProgram)
+	partialTradeStatus[1] = addMatchTxOutput(txData, sellOrder, sellReceiveAmount, sellShouldPayAmount, sellContractArgs.SellerProgram)
 
-	addMatchTxFeeOutput(&txData, buyShouldPayAmount, sellReceiveAmount, *buyOrder.ToAssetID)
-	addMatchTxFeeOutput(&txData, sellShouldPayAmount, buyReceiveAmount, *sellOrder.ToAssetID)
+	addMatchTxFeeOutput(txData, buyShouldPayAmount, sellReceiveAmount, *buyOrder.FromAssetID)
+	addMatchTxFeeOutput(txData, sellShouldPayAmount, buyReceiveAmount, *sellOrder.FromAssetID)
 
-	tx := types.NewTx(txData)
-	setMatchTxArguments(tx, buyReceiveAmount, sellReceiveAmount, partialTradeStatus)
+	setMatchTxArguments(txData, buyReceiveAmount, sellReceiveAmount, partialTradeStatus)
+	tx := types.NewTx(*txData)
 	return tx, partialTradeStatus
 }
 
@@ -98,13 +99,13 @@ func addMatchTxOutput(txData *types.TxData, order *common.Order, receiveAmount, 
 	return false
 }
 
-func addMatchTxFeeOutput(txData *types.TxData, shouldPayAmount, oppositeReceiveAmount uint64, toAssetID bc.AssetID) {
+func addMatchTxFeeOutput(txData *types.TxData, shouldPayAmount, oppositeReceiveAmount uint64, fromAssetID bc.AssetID) {
 	if shouldPayAmount > oppositeReceiveAmount {
-		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(toAssetID, shouldPayAmount-oppositeReceiveAmount, []byte{ /** node address */ }))
+		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(fromAssetID, shouldPayAmount-oppositeReceiveAmount, []byte{ /** node address */ }))
 	}
 }
 
-func setMatchTxArguments(tx *types.Tx, buyReceiveAmount, sellReceiveAmount uint64, partialTradeStatus []bool) {
+func setMatchTxArguments(txData *types.TxData, buyReceiveAmount, sellReceiveAmount uint64, partialTradeStatus []bool) {
 	receiveAmounts := []uint64{buyReceiveAmount, sellReceiveAmount}
 	arguments := make([][][]byte, 2)
 	var position int64
@@ -117,7 +118,7 @@ func setMatchTxArguments(tx *types.Tx, buyReceiveAmount, sellReceiveAmount uint6
 			arguments[i] = [][]byte{vm.Int64Bytes(position), vm.Int64Bytes(1)}
 			position++
 		}
-		tx.SetInputArguments(uint32(i), arguments[i])
+		txData.Inputs[i].SetArguments(arguments[i])
 	}
 }
 
@@ -145,10 +146,10 @@ func addPartialTradeOrder(tx *types.Tx, partialTradeStatus []bool, orderTable *O
 	return nil
 }
 
-func calcToAmountByFromAmount(fromAmount uint64, contractArg *vmutil.MagneticContractArgs) uint64 {
+func calcRequestAmount(fromAmount uint64, contractArg *vmutil.MagneticContractArgs) uint64 {
 	return uint64(int64(fromAmount) * contractArg.RatioMolecule / contractArg.RatioDenominator)
 }
 
-func calcFromAmountByToAmount(toAmount uint64, contractArg *vmutil.MagneticContractArgs) uint64 {
-	return uint64(int64(toAmount) * contractArg.RatioDenominator / contractArg.RatioMolecule)
+func calcShouldPayAmount(receiveAmount uint64, contractArg *vmutil.MagneticContractArgs) uint64 {
+	return uint64(math.Ceil(float64(receiveAmount) * float64(contractArg.RatioDenominator) / float64(contractArg.RatioMolecule)))
 }

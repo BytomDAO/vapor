@@ -14,7 +14,7 @@ import (
 )
 
 type MovCore struct {
-	movStore *database.MovStore
+	movStore database.MovStore
 }
 
 // ChainStatus return the current block height and block hash in dex core

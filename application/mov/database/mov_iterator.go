@@ -7,13 +7,13 @@ import (
 )
 
 type TradePairIterator struct {
-	movStore       *MovStore
+	movStore       MovStore
 	tradePairs     []*common.TradePair
 	tradePairMap   map[string]bool
 	tradePairIndex int
 }
 
-func NewTradePairIterator(movStore *MovStore) *TradePairIterator {
+func NewTradePairIterator(movStore MovStore) *TradePairIterator {
 	return &TradePairIterator{movStore: movStore, tradePairMap: make(map[string]bool)}
 }
 
@@ -59,12 +59,12 @@ func (t *TradePairIterator) Next() *common.TradePair {
 }
 
 type OrderIterator struct {
-	movStore    *MovStore
+	movStore    MovStore
 	lastOrder   *common.Order
 	orders      []*common.Order
 }
 
-func NewOrderIterator(movStore *MovStore, tradePair *common.TradePair) *OrderIterator {
+func NewOrderIterator(movStore MovStore, tradePair *common.TradePair) *OrderIterator {
 	return &OrderIterator{
 		movStore:    movStore,
 		lastOrder:   &common.Order{FromAssetID: tradePair.FromAssetID, ToAssetID: tradePair.ToAssetID},
