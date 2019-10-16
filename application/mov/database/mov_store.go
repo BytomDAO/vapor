@@ -140,7 +140,7 @@ func (m *MovStore) ProcessOrders(addOrders []*common.Order, delOreders []*common
 		return err
 	}
 
-	state, err := m.getCurrentState(blockHeader)
+	state, err := m.getCurrentOrdersBlockState(blockHeader)
 	if err != nil {
 		return err
 	}
@@ -270,7 +270,7 @@ func (m *MovStore) saveMovDatabaseState(batch dbm.Batch, state *common.MovDataba
 	return nil
 }
 
-func (m *MovStore) getCurrentState(blockHeader *types.BlockHeader) (*common.MovDatabaseState, error) {
+func (m *MovStore) getCurrentOrdersBlockState(blockHeader *types.BlockHeader) (*common.MovDatabaseState, error) {
 	hash := blockHeader.Hash()
 	height := blockHeader.Height
 
