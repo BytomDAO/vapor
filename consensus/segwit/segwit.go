@@ -141,7 +141,7 @@ func DecodeP2WMCProgram(prog []byte) (*vmutil.MagneticContractArgs, error) {
 	copy(requestedAsset[:], insts[1].Data)
 	magneticContractArgs.RequestedAsset = bc.NewAssetID(requestedAsset)
 
-	if magneticContractArgs.RatioMolecule, err = vm.AsInt64(insts[2].Data); err != nil {
+	if magneticContractArgs.RatioNumerator, err = vm.AsInt64(insts[2].Data); err != nil {
 		return nil, err
 	}
 
