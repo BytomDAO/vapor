@@ -102,9 +102,7 @@ func (m *MovCore) DetachBlock(block *types.Block) error {
 		return err
 	}
 
-	var prevBlockHeader *types.BlockHeader
-
-	return m.movStore.ProcessOrders(addOrders, deleteOrders, prevBlockHeader)
+	return m.movStore.ProcessOrders(addOrders, deleteOrders, &block.BlockHeader)
 }
 
 // BeforeProposalBlock get all pending orders from the dex db, parse pending orders and cancel orders from transactions
