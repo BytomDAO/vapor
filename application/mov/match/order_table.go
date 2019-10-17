@@ -6,8 +6,6 @@ import (
 	"github.com/vapor/errors"
 )
 
-var errOrderRate = errors.New("rate of order must less than the min order in order table")
-
 type OrderTable struct {
 	movStore    database.MovStore
 	orderMap    map[string][]*common.Order
@@ -57,7 +55,7 @@ func (o *OrderTable) PopOrder(tradePair *common.TradePair) {
 func (o *OrderTable) AddOrder(tradePair *common.TradePair, order *common.Order) error {
 	orders := o.orderMap[tradePair.Key()]
 	if len(orders) > 0 && order.Rate > orders[len(orders)-1].Rate {
-		return errOrderRate
+		return errors.New("rate of order must less than the min order in order table")
 	}
 
 	o.orderMap[tradePair.Key()] = append(orders, order)

@@ -121,7 +121,7 @@ func TestTradePairIterator(t *testing.T) {
 			gotTradePairs = append(gotTradePairs, tradePair)
 		}
 		if !testutil.DeepEqual(c.wantTradePairs, gotTradePairs) {
-			t.Errorf("#%d(%s):got trade pairs it not equals want trade pairs", i, c.desc)
+			t.Errorf("#%d(%s):got trade pairs is not equals want trade pairs", i, c.desc)
 		}
 	}
 }

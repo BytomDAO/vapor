@@ -89,8 +89,7 @@ func (m *MovCore) DetachBlock(block *types.Block) error {
 	return m.movStore.ProcessOrders(addOrders, deleteOrders, &block.BlockHeader)
 }
 
-// BeforeProposalBlock get all pending orders from the dex db, parse pending orders and cancel orders from transactions
-// Then merge the two, use match engine to generate matched transactions, finally return them.
+// BeforeProposalBlock return all transactions than can be matched, and the number of transactions cannot exceed the given capacity.
 func (m *MovCore) BeforeProposalBlock(capacity int) ([]*types.Tx, error) {
 	matchEngine := match.NewEngine(m.movStore)
 	tradePairMap := make(map[string]bool)
@@ -198,14 +197,12 @@ func getDeleteOrdersFromTx(tx *types.Tx) ([]*common.Order, error) {
 			continue
 		}
 
-		if util.IsCancelClauseSelector(input) || util.IsTradeClauseSelector(input) {
-			order, err := common.NewOrderFromInput(input)
-			if err != nil {
-				return nil, err
-			}
-
-			orders = append(orders, order)
+		order, err := common.NewOrderFromInput(input)
+		if err != nil {
+			return nil, err
 		}
+
+		orders = append(orders, order)
 	}
 	return orders, nil
 }

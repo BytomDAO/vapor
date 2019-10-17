@@ -16,7 +16,7 @@ type MovStore interface {
 	GetMovDatabaseState() (*common.MovDatabaseState, error)
 	ListOrders(orderAfter *common.Order) ([]*common.Order, error)
 	ListTradePairsWithStart(fromAssetIDAfter, toAssetIDAfter *bc.AssetID) ([]*common.TradePair, error)
-	ProcessOrders(addOrders []*common.Order, delOreders []*common.Order, blockHeader *types.BlockHeader) error
+	ProcessOrders(addOrders []*common.Order, delOrders []*common.Order, blockHeader *types.BlockHeader) error
 }
 
 const (
@@ -130,7 +130,7 @@ func (m *LevelDBMovStore) ListOrders(orderAfter *common.Order) ([]*common.Order,
 	return orders, nil
 }
 
-func (m *LevelDBMovStore) ProcessOrders(addOrders []*common.Order, delOreders []*common.Order, blockHeader *types.BlockHeader) error {
+func (m *LevelDBMovStore) ProcessOrders(addOrders []*common.Order, delOrders []*common.Order, blockHeader *types.BlockHeader) error {
 	if err := m.checkMovDatabaseState(blockHeader); err != nil {
 		return err
 	}
@@ -141,7 +141,7 @@ func (m *LevelDBMovStore) ProcessOrders(addOrders []*common.Order, delOreders []
 		return err
 	}
 
-	m.deleteOrders(batch, delOreders, tradePairsCnt)
+	m.deleteOrders(batch, delOrders, tradePairsCnt)
 
 	if err := m.updateTradePairs(batch, tradePairsCnt); err != nil {
 		return err
