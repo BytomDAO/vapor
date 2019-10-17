@@ -49,7 +49,9 @@ func (o *OrderTable) PeekOrder(tradePair *common.TradePair) (*common.Order, erro
 
 func (o *OrderTable) PopOrder(tradePair *common.TradePair) {
 	orders := o.orderMap[tradePair.Key()]
-	o.orderMap[tradePair.Key()] = orders[0 : len(orders)-1]
+	if len(orders) > 0 {
+		o.orderMap[tradePair.Key()] = orders[0 : len(orders)-1]
+	}
 }
 
 func (o *OrderTable) AddOrder(tradePair *common.TradePair, order *common.Order) error {
@@ -57,6 +59,7 @@ func (o *OrderTable) AddOrder(tradePair *common.TradePair, order *common.Order) 
 	if len(orders) > 0 && order.Rate > orders[len(orders)-1].Rate {
 		return errOrderRate
 	}
+
 	o.orderMap[tradePair.Key()] = append(orders, order)
 	return nil
 }

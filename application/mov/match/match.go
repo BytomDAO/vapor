@@ -4,9 +4,9 @@ import (
 	"math"
 	"math/big"
 
+	"github.com/vapor/application/mov/common"
 	"github.com/vapor/application/mov/database"
 	"github.com/vapor/application/mov/util"
-	"github.com/vapor/application/mov/common"
 	"github.com/vapor/consensus/segwit"
 	vprMath "github.com/vapor/math"
 	"github.com/vapor/protocol/bc"
@@ -84,10 +84,6 @@ func canNotBeMatched(buyOrder, sellOrder *common.Order, buyContractArgs, sellCon
 }
 
 func buildMatchTx(buyOrder, sellOrder *common.Order, buyContractArgs, sellContractArgs *vmutil.MagneticContractArgs) *types.Tx {
-	txData := &types.TxData{}
-	txData.Inputs = append(txData.Inputs, types.NewSpendInput(nil, *buyOrder.Utxo.SourceID, *buyOrder.FromAssetID, buyOrder.Utxo.Amount, buyOrder.Utxo.SourcePos, buyOrder.Utxo.ControlProgram))
-	txData.Inputs = append(txData.Inputs, types.NewSpendInput(nil, *sellOrder.Utxo.SourceID, *sellOrder.FromAssetID, sellOrder.Utxo.Amount, sellOrder.Utxo.SourcePos, sellOrder.Utxo.ControlProgram))
-
 	buyRequestAmount := calcRequestAmount(buyOrder.Utxo.Amount, buyContractArgs)
 	buyReceiveAmount := vprMath.MinUint64(buyRequestAmount, sellOrder.Utxo.Amount)
 	buyShouldPayAmount := calcShouldPayAmount(buyReceiveAmount, buyContractArgs)
@@ -95,6 +91,10 @@ func buildMatchTx(buyOrder, sellOrder *common.Order, buyContractArgs, sellContra
 	sellRequestAmount := calcRequestAmount(sellOrder.Utxo.Amount, sellContractArgs)
 	sellReceiveAmount := vprMath.MinUint64(sellRequestAmount, buyOrder.Utxo.Amount)
 	sellShouldPayAmount := calcShouldPayAmount(sellReceiveAmount, sellContractArgs)
+
+	txData := &types.TxData{}
+	txData.Inputs = append(txData.Inputs, types.NewSpendInput(nil, *buyOrder.Utxo.SourceID, *buyOrder.FromAssetID, buyOrder.Utxo.Amount, buyOrder.Utxo.SourcePos, buyOrder.Utxo.ControlProgram))
+	txData.Inputs = append(txData.Inputs, types.NewSpendInput(nil, *sellOrder.Utxo.SourceID, *sellOrder.FromAssetID, sellOrder.Utxo.Amount, sellOrder.Utxo.SourcePos, sellOrder.Utxo.ControlProgram))
 
 	addMatchTxOutput(txData, buyOrder, buyReceiveAmount, buyShouldPayAmount, buyContractArgs.SellerProgram)
 	addMatchTxOutput(txData, sellOrder, sellReceiveAmount, sellShouldPayAmount, sellContractArgs.SellerProgram)
