@@ -16,7 +16,7 @@ var (
 // MagneticContractArgs is a struct for magnetic contract arguments
 type MagneticContractArgs struct {
 	RequestedAsset   bc.AssetID
-	RatioMolecule    int64
+	RatioNumerator   int64
 	RatioDenominator int64
 	SellerProgram    []byte
 	SellerKey        []byte
@@ -149,7 +149,7 @@ func P2WMCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 	builder := NewBuilder()
 	builder.AddInt64(0)
 	builder.AddData(magneticContractArgs.RequestedAsset.Bytes())
-	builder.AddInt64(magneticContractArgs.RatioMolecule)
+	builder.AddInt64(magneticContractArgs.RatioNumerator)
 	builder.AddInt64(magneticContractArgs.RatioDenominator)
 	builder.AddData(magneticContractArgs.SellerProgram)
 	builder.AddData(magneticContractArgs.SellerKey)
@@ -160,20 +160,20 @@ func P2WMCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 //
 // MagneticContract source code:
 // contract MagneticContract(requestedAsset: Asset,
-//                           ratioMolecule: Integer,
+//                           ratioNumerator: Integer,
 //                           ratioDenominator: Integer,
 //                           sellerProgram: Program,
 //                           standardProgram: Program,
 //                           sellerKey: PublicKey) locks valueAmount of valueAsset {
 //  clause partialTrade(exchangeAmount: Amount) {
-// 	 define actualAmount: Integer = exchangeAmount * ratioDenominator / ratioMolecule
+// 	 define actualAmount: Integer = exchangeAmount * ratioDenominator / ratioNumerator
 // 	 verify actualAmount > 0 && actualAmount < valueAmount
 //   lock exchangeAmount of requestedAsset with sellerProgram
 //   lock valueAmount-actualAmount of valueAsset with standardProgram
 //   unlock actualAmount of valueAsset
 //  }
 //  clause fullTrade() {
-//   define requestedAmount: Integer = valueAmount * ratioMolecule / ratioDenominator
+//   define requestedAmount: Integer = valueAmount * ratioNumerator / ratioDenominator
 //   verify requestedAmount > 0
 //   lock requestedAmount of requestedAsset with sellerProgram
 //   unlock valueAmount of valueAsset
@@ -185,24 +185,24 @@ func P2WMCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 // }
 //
 // contract stack flow:
-// 7                        [... <position> <clause selector> sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset 7]
-// ROLL                     [... <clause selector> sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset <position>]
-// TOALTSTACK               [... <clause selector> sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset]
-// 6                        [... <clause selector> sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset 6]
-// ROLL                     [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset <clause selector>]
-// DUP                      [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset <clause selector> <clause selector>]
-// 2                        [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset <clause selector> <clause selector> 2]
-// NUMEQUAL                 [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset <clause selector> (<clause selector> == 2)]
-// JUMPIF:$cancel           [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset <clause selector>]
-// JUMPIF:$fullTrade        [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset]
-// $partialTrade            [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset]
-// 6                        [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset 6]
-// PICK                     [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset exchangeAmount]
-// 3                        [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset exchangeAmount 3]
-// ROLL                     [... exchangeAmount sellerKey standardProgram sellerProgram ratioMolecule requestedAsset exchangeAmount ratioDenominator]
-// MUL                      [... exchangeAmount sellerKey standardProgram sellerProgram ratioMolecule requestedAsset (exchangeAmount * ratioDenominator)]
-// 2                        [... exchangeAmount sellerKey standardProgram sellerProgram ratioMolecule requestedAsset (exchangeAmount * ratioDenominator) 2]
-// ROLL                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset (exchangeAmount * ratioDenominator) ratioMolecule]
+// 7                        [... <position> <clause selector> sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset 7]
+// ROLL                     [... <clause selector> sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset <position>]
+// TOALTSTACK               [... <clause selector> sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset]
+// 6                        [... <clause selector> sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset 6]
+// ROLL                     [... sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset <clause selector>]
+// DUP                      [... sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset <clause selector> <clause selector>]
+// 2                        [... sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset <clause selector> <clause selector> 2]
+// NUMEQUAL                 [... sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset <clause selector> (<clause selector> == 2)]
+// JUMPIF:$cancel           [... sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset <clause selector>]
+// JUMPIF:$fullTrade        [... sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset]
+// $partialTrade            [... sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset]
+// 6                        [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset 6]
+// PICK                     [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset exchangeAmount]
+// 3                        [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset exchangeAmount 3]
+// ROLL                     [... exchangeAmount sellerKey standardProgram sellerProgram ratioNumerator requestedAsset exchangeAmount ratioDenominator]
+// MUL                      [... exchangeAmount sellerKey standardProgram sellerProgram ratioNumerator requestedAsset (exchangeAmount * ratioDenominator)]
+// 2                        [... exchangeAmount sellerKey standardProgram sellerProgram ratioNumerator requestedAsset (exchangeAmount * ratioDenominator) 2]
+// ROLL                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset (exchangeAmount * ratioDenominator) ratioNumerator]
 // DIV                      [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount]
 // AMOUNT                   [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount valueAmount]
 // OVER                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount valueAmount actualAmount]
@@ -239,14 +239,14 @@ func P2WMCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 // 4                        [... sellerKey standardProgram (<position> + 1) (valueAmount - actualAmount) valueAsset 1 4]
 // ROLL                     [... sellerKey (<position> + 1) (valueAmount - actualAmount) valueAsset 1 standardProgram]
 // CHECKOUTPUT              [... sellerKey checkOutput((valueAmount - actualAmount), valueAsset, standardProgram)]
-// JUMP:$_end               [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset]
-// $fullTrade               [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset]
-// AMOUNT                   [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset valueAmount]
-// 2                        [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset valueAmount 2]
-// ROLL                     [... sellerKey standardProgram sellerProgram ratioDenominator requestedAsset valueAmount ratioMolecule]
-// MUL                      [... sellerKey standardProgram sellerProgram ratioDenominator requestedAsset (valueAmount * ratioMolecule)]
-// 2                        [... sellerKey standardProgram sellerProgram ratioDenominator requestedAsset (valueAmount * ratioMolecule) 2]
-// ROLL                     [... sellerKey standardProgram sellerProgram requestedAsset (valueAmount * ratioMolecule) ratioDenominator]
+// JUMP:$_end               [... sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset]
+// $fullTrade               [... sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset]
+// AMOUNT                   [... sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset valueAmount]
+// 2                        [... sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset valueAmount 2]
+// ROLL                     [... sellerKey standardProgram sellerProgram ratioDenominator requestedAsset valueAmount ratioNumerator]
+// MUL                      [... sellerKey standardProgram sellerProgram ratioDenominator requestedAsset (valueAmount * ratioNumerator)]
+// 2                        [... sellerKey standardProgram sellerProgram ratioDenominator requestedAsset (valueAmount * ratioNumerator) 2]
+// ROLL                     [... sellerKey standardProgram sellerProgram requestedAsset (valueAmount * ratioNumerator) ratioDenominator]
 // DIV                      [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount]
 // DUP                      [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount requestedAmount]
 // 0                        [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount requestedAmount 0]
@@ -260,15 +260,15 @@ func P2WMCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 // 4                        [... sellerKey standardProgram sellerProgram <position> requestedAmount requestedAsset 1 4]
 // ROLL                     [... sellerKey standardProgram <position> requestedAmount requestedAsset 1 sellerProgram]
 // CHECKOUTPUT              [... sellerKey standardProgram checkOutput(requestedAmount, requestedAsset, sellerProgram)]
-// JUMP:$_end               [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset]
-// $cancel                  [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset <clause selector>]
-// DROP                     [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset]
-// 6                        [... sellerSig sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset 6]
-// ROLL                     [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset sellerSig]
-// 6                        [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset sellerSig 6]
-// ROLL                     [... standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset sellerSig sellerKey]
-// TXSIGHASH SWAP CHECKSIG  [... standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset checkTxSig(sellerKey, sellerSig)]
-// $_end                    [... sellerKey standardProgram sellerProgram ratioDenominator ratioMolecule requestedAsset]
+// JUMP:$_end               [... sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset]
+// $cancel                  [... sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset <clause selector>]
+// DROP                     [... sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset]
+// 6                        [... sellerSig sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset 6]
+// ROLL                     [... sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset sellerSig]
+// 6                        [... sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset sellerSig 6]
+// ROLL                     [... standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset sellerSig sellerKey]
+// TXSIGHASH SWAP CHECKSIG  [... standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset checkTxSig(sellerKey, sellerSig)]
+// $_end                    [... sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset]
 func P2MCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 	standardProgram, err := P2WMCProgram(magneticContractArgs)
 	if err != nil {
@@ -281,7 +281,7 @@ func P2MCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 	builder.AddData(standardProgram)
 	builder.AddData(magneticContractArgs.SellerProgram)
 	builder.AddInt64(magneticContractArgs.RatioDenominator)
-	builder.AddInt64(magneticContractArgs.RatioMolecule)
+	builder.AddInt64(magneticContractArgs.RatioNumerator)
 	builder.AddData(magneticContractArgs.RequestedAsset.Bytes())
 
 	// contract instructions
