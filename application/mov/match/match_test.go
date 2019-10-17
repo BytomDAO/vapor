@@ -94,8 +94,8 @@ func TestGenerateMatchedTxs(t *testing.T) {
 			desc:      "full matched",
 			tradePair: &common.TradePair{FromAssetID: &btc, ToAssetID: &eth},
 			storeOrderMap: map[string][]*common.Order{
-				btc2eth.String(): {orders[0], orders[1]},
-				eth2btc.String(): {orders[2], orders[3]},
+				btc2eth.Key(): {orders[0], orders[1]},
+				eth2btc.Key(): {orders[2], orders[3]},
 			},
 			wantMatchedTxs: []*types.TxData{
 				{
@@ -115,8 +115,8 @@ func TestGenerateMatchedTxs(t *testing.T) {
 			desc:      "partial matched",
 			tradePair: &common.TradePair{FromAssetID: &btc, ToAssetID: &eth},
 			storeOrderMap: map[string][]*common.Order{
-				btc2eth.String(): {orders[0], orders[1]},
-				eth2btc.String(): {orders[3]},
+				btc2eth.Key(): {orders[0], orders[1]},
+				eth2btc.Key(): {orders[3]},
 			},
 			wantMatchedTxs: []*types.TxData{
 				{
@@ -128,9 +128,9 @@ func TestGenerateMatchedTxs(t *testing.T) {
 						types.NewIntraChainOutput(*orders[0].ToAssetID, 416, testutil.MustDecodeHexString("51")),
 						// re-order
 						types.NewIntraChainOutput(*orders[0].FromAssetID, 1, orders[0].Utxo.ControlProgram),
-						types.NewIntraChainOutput(*orders[2].ToAssetID, 8, testutil.MustDecodeHexString("54")),
+						types.NewIntraChainOutput(*orders[3].ToAssetID, 8, testutil.MustDecodeHexString("54")),
 						// fee
-						types.NewIntraChainOutput(*orders[2].ToAssetID, 1, nil),
+						types.NewIntraChainOutput(*orders[3].ToAssetID, 1, nil),
 					},
 				},
 			},
@@ -139,8 +139,8 @@ func TestGenerateMatchedTxs(t *testing.T) {
 			desc:      "partial matched and continue to match",
 			tradePair: &common.TradePair{FromAssetID: &btc, ToAssetID: &eth},
 			storeOrderMap: map[string][]*common.Order{
-				btc2eth.String(): {orders[0], orders[1]},
-				eth2btc.String(): {orders[4]},
+				btc2eth.Key(): {orders[0], orders[1]},
+				eth2btc.Key(): {orders[4]},
 			},
 			wantMatchedTxs: []*types.TxData{
 				{
@@ -176,10 +176,17 @@ func TestGenerateMatchedTxs(t *testing.T) {
 
 	for i, c := range cases {
 		movStore := &database.MockMovStore{OrderMap: c.storeOrderMap}
-		orderTable := NewOrderTable(movStore, c.tradePair)
-		gotMatchedTxs, err := GenerateMatchedTxs(orderTable)
-		if err != nil {
-			t.Fatal(err)
+		matchEngine := NewEngine(movStore)
+		var gotMatchedTxs []*types.Tx
+		for {
+			matchedTx, err := matchEngine.NextMatchedTx(c.tradePair, c.tradePair.Reverse())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if matchedTx == nil {
+				break
+			}
+			gotMatchedTxs = append(gotMatchedTxs, matchedTx)
 		}
 
 		if len(c.wantMatchedTxs) != len(gotMatchedTxs) {
@@ -208,7 +215,7 @@ func TestGenerateMatchedTxs(t *testing.T) {
 func mustCreateP2WMCProgram(requestAsset bc.AssetID, sellerProgram []byte, ratioMolecule, ratioDenominator int64) []byte {
 	contractArgs := vmutil.MagneticContractArgs{
 		RequestedAsset:   requestAsset,
-		RatioMolecule:    ratioMolecule,
+		RatioNumerator:   ratioMolecule,
 		RatioDenominator: ratioDenominator,
 		SellerProgram:    sellerProgram,
 		SellerKey:        testutil.MustDecodeHexString("ad79ec6bd3a6d6dbe4d0ee902afc99a12b9702fb63edce5f651db3081d868b75"),

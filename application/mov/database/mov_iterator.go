@@ -1,7 +1,6 @@
 package database
 
 import (
-	log "github.com/sirupsen/logrus"
 	"github.com/vapor/application/mov/common"
 	"github.com/vapor/protocol/bc"
 )
@@ -9,15 +8,14 @@ import (
 type TradePairIterator struct {
 	movStore       MovStore
 	tradePairs     []*common.TradePair
-	tradePairMap   map[string]bool
 	tradePairIndex int
 }
 
 func NewTradePairIterator(movStore MovStore) *TradePairIterator {
-	return &TradePairIterator{movStore: movStore, tradePairMap: make(map[string]bool)}
+	return &TradePairIterator{movStore: movStore}
 }
 
-func (t *TradePairIterator) HasNext() bool {
+func (t *TradePairIterator) hasNext() (bool, error) {
 	if tradePairSize := len(t.tradePairs); t.tradePairIndex >= tradePairSize {
 		var fromAssetID, toAssetID *bc.AssetID
 		if len(t.tradePairs) > 0 {
@@ -27,41 +25,37 @@ func (t *TradePairIterator) HasNext() bool {
 
 		tradePairs, err := t.movStore.ListTradePairsWithStart(fromAssetID, toAssetID)
 		if err != nil {
-			log.WithField("err", err).Error("fail to list trade pair")
-			return false
+			return false, err
 		}
 
 		if len(tradePairs) == 0 {
-			return false
+			return false, nil
 		}
 
 		t.tradePairs = tradePairs
 		t.tradePairIndex = 0
 	}
-
-	if t.tradePairMap[t.tradePairs[t.tradePairIndex].String()] {
-		t.tradePairIndex++
-		return t.HasNext()
-	}
-	return true
+	return true, nil
 }
 
-func (t *TradePairIterator) Next() *common.TradePair {
-	if !t.HasNext() {
-		return nil
+func (t *TradePairIterator) Next() (*common.TradePair, error) {
+	hasNext, err := t.hasNext()
+	if err != nil {
+		return nil, err
+	}
+
+	if !hasNext {
+		return nil, nil
 	}
 
 	tradePair := t.tradePairs[t.tradePairIndex]
-	t.tradePairMap[tradePair.String()] = true
-	t.tradePairMap[tradePair.Reverse().String()] = true
 	t.tradePairIndex++
-	return tradePair
+	return tradePair, nil
 }
 
 type OrderIterator struct {
 	movStore    MovStore
 	lastOrder   *common.Order
-	orders      []*common.Order
 }
 
 func NewOrderIterator(movStore MovStore, tradePair *common.TradePair) *OrderIterator {
@@ -71,30 +65,16 @@ func NewOrderIterator(movStore MovStore, tradePair *common.TradePair) *OrderIter
 	}
 }
 
-func (o *OrderIterator) HasNext() bool {
-	if len(o.orders) == 0 {
-		orders, err := o.movStore.ListOrders(o.lastOrder)
-		if err != nil {
-			log.WithField("err", err).Error("fail to list orders")
-			return false
-		}
-
-		if len(orders) == 0 {
-			return false
-		}
-
-		o.orders = orders
-		o.lastOrder = o.orders[len(o.orders)-1]
-	}
-	return true
-}
-
-func (o *OrderIterator) NextBatch() []*common.Order {
-	if !o.HasNext() {
-		return nil
+func (o *OrderIterator) NextBatch() ([]*common.Order, error) {
+	orders, err := o.movStore.ListOrders(o.lastOrder)
+	if err != nil {
+		return nil, err
 	}
 
-	orders := o.orders
-	o.orders = nil
-	return orders
+	if len(orders) == 0 {
+		return nil, nil
+	}
+
+	o.lastOrder = orders[len(orders)-1]
+	return orders, nil
 }

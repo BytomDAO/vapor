@@ -17,7 +17,7 @@ func (m *MockMovStore) GetMovDatabaseState() (*common.MovDatabaseState, error) {
 
 func (m *MockMovStore) ListOrders(orderAfter *common.Order) ([]*common.Order, error) {
 	tradePair := &common.TradePair{FromAssetID: orderAfter.FromAssetID, ToAssetID: orderAfter.ToAssetID}
-	orders := m.OrderMap[tradePair.String()]
+	orders := m.OrderMap[tradePair.Key()]
 	begin := len(orders)
 	if orderAfter.Rate == 0 {
 		begin = 0

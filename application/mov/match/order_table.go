@@ -9,72 +9,54 @@ import (
 var errOrderRate = errors.New("rate of order must less than the min order in order table")
 
 type OrderTable struct {
-	buyOrders         []*common.Order
-	sellOrders        []*common.Order
-	buyOrderIterator  *database.OrderIterator
-	sellOrderIterator *database.OrderIterator
+	movStore    database.MovStore
+	orderMap    map[string][]*common.Order
+	iteratorMap map[string]*database.OrderIterator
 }
 
-func NewOrderTable(movStore database.MovStore, buyTradePair *common.TradePair) *OrderTable {
-	sellTradePair := buyTradePair.Reverse()
-	buyOrderIterator := database.NewOrderIterator(movStore, buyTradePair)
-	sellOrderIterator := database.NewOrderIterator(movStore, sellTradePair)
-
+func NewOrderTable(movStore database.MovStore) *OrderTable {
 	return &OrderTable{
-		buyOrderIterator:  buyOrderIterator,
-		sellOrderIterator: sellOrderIterator,
+		movStore:    movStore,
+		orderMap:    make(map[string][]*common.Order),
+		iteratorMap: make(map[string]*database.OrderIterator),
 	}
 }
 
-func (o *OrderTable) PeekOrder() (*common.Order, *common.Order) {
-	if !o.HasNextOrder() {
-		return nil, nil
+func (o *OrderTable) PeekOrder(tradePair *common.TradePair) (*common.Order, error) {
+	if len(o.orderMap[tradePair.Key()]) == 0 {
+		iterator := o.iteratorMap[tradePair.Key()]
+		if iterator == nil {
+			iterator = database.NewOrderIterator(o.movStore, tradePair)
+			o.iteratorMap[tradePair.Key()] = iterator
+		}
+
+		orders, err := iterator.NextBatch()
+		if err != nil {
+			return nil, err
+		}
+
+		if len(orders) == 0 {
+			return nil, nil
+		}
+
+		for i := len(orders) - 1; i >= 0; i-- {
+			o.orderMap[tradePair.Key()] = append(o.orderMap[tradePair.Key()], orders[i])
+		}
 	}
-	return o.buyOrders[len(o.buyOrders)-1], o.sellOrders[len(o.sellOrders)-1]
+	orders := o.orderMap[tradePair.Key()]
+	return orders[len(orders)-1], nil
 }
 
-func (o *OrderTable) PopOrder() {
-	o.buyOrders = o.buyOrders[0 : len(o.buyOrders)-1]
-	o.sellOrders = o.sellOrders[0: len(o.sellOrders)-1]
+func (o *OrderTable) PopOrder(tradePair *common.TradePair) {
+	orders := o.orderMap[tradePair.Key()]
+	o.orderMap[tradePair.Key()] = orders[0 : len(orders)-1]
 }
 
-func (o *OrderTable) AddBuyOrder(order *common.Order) error {
-	if len(o.buyOrders) > 0 && order.Rate > o.buyOrders[len(o.buyOrders) - 1].Rate {
+func (o *OrderTable) AddOrder(tradePair *common.TradePair, order *common.Order) error {
+	orders := o.orderMap[tradePair.Key()]
+	if len(orders) > 0 && order.Rate > orders[len(orders)-1].Rate {
 		return errOrderRate
 	}
-	o.buyOrders = append(o.buyOrders, order)
+	o.orderMap[tradePair.Key()] = append(orders, order)
 	return nil
-}
-
-func (o *OrderTable) AddSellOrder(order *common.Order) error {
-	if len(o.sellOrders) > 0 && order.Rate > o.sellOrders[len(o.sellOrders) - 1].Rate {
-		return errOrderRate
-	}
-	o.sellOrders = append(o.sellOrders, order)
-	return nil
-}
-
-func (o *OrderTable) HasNextOrder() bool {
-	if len(o.buyOrders) == 0 {
-		if !o.buyOrderIterator.HasNext() {
-			return false
-		}
-
-		orders := o.buyOrderIterator.NextBatch()
-		for i := len(orders) - 1; i >= 0; i-- {
-			o.buyOrders = append(o.buyOrders, orders[i])
-		}
-	}
-
-	if len(o.sellOrders) == 0 {
-		if !o.sellOrderIterator.HasNext() {
-			return false
-		}
-
-		orders := o.sellOrderIterator.NextBatch()
-		for i := len(orders) - 1; i >= 0; i-- {
-			o.sellOrders = append(o.sellOrders, orders[i])
-		}
-	}
-	return true
 }

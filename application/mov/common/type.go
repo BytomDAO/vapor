@@ -35,11 +35,11 @@ func NewOrderFromOutput(tx *types.Tx, outputIndex int) (*Order, error) {
 		return nil, err
 	}
 
-	assetAmount := tx.Outputs[outputIndex].AssetAmount()
+	assetAmount := output.Source.Value
 	return &Order{
 		FromAssetID: assetAmount.AssetId,
 		ToAssetID:   &contractArgs.RequestedAsset,
-		Rate:        float64(contractArgs.RatioMolecule) / float64(contractArgs.RatioDenominator),
+		Rate:        float64(contractArgs.RatioNumerator) / float64(contractArgs.RatioDenominator),
 		Utxo: &MovUtxo{
 			SourceID:       output.Source.Ref,
 			Amount:         assetAmount.Amount,
@@ -63,7 +63,7 @@ func NewOrderFromInput(txInput *types.TxInput) (*Order, error) {
 	return &Order{
 		FromAssetID: input.AssetId,
 		ToAssetID:   &contractArgs.RequestedAsset,
-		Rate:        float64(contractArgs.RatioMolecule) / float64(contractArgs.RatioDenominator),
+		Rate:        float64(contractArgs.RatioNumerator) / float64(contractArgs.RatioDenominator),
 		Utxo: &MovUtxo{
 			SourceID:       &input.SourceID,
 			Amount:         input.Amount,
@@ -73,7 +73,7 @@ func NewOrderFromInput(txInput *types.TxInput) (*Order, error) {
 	}, nil
 }
 
-func (o *Order) ID() string {
+func (o *Order) Key() string {
 	return fmt.Sprintf("%s:%d", o.Utxo.SourceID, o.Utxo.SourcePos)
 }
 
@@ -102,7 +102,7 @@ func (t *TradePair) Reverse() *TradePair {
 	}
 }
 
-func (t *TradePair) String() string {
+func (t *TradePair) Key() string {
 	return fmt.Sprintf("%s:%s", t.FromAssetID, t.ToAssetID)
 }
 

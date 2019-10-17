@@ -1,16 +1,14 @@
 package mov
 
 import (
-	"encoding/hex"
-
 	"github.com/vapor/application/mov/common"
 	"github.com/vapor/application/mov/database"
 	"github.com/vapor/application/mov/match"
+	"github.com/vapor/application/mov/util"
 	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/vm"
 )
 
 type MovCore struct {
@@ -55,43 +53,29 @@ func (m *MovCore) ApplyBlock(block *types.Block) error {
 }
 
 func (m *MovCore) validateMatchedTxs(txs []*types.Tx) error {
-	matchedTxMap := groupMatchedTx(txs)
-	for _, packagedMatchedTxs := range matchedTxMap {
-		tradePair := getTradePairFromMatchedTx(packagedMatchedTxs[0])
-		realMatchedTxs, err := match.GenerateMatchedTxs(match.NewOrderTable(m.movStore, tradePair))
+	matchEngine := match.NewEngine(m.movStore)
+	for _, matchedTx := range txs {
+		if !isMatchedTx(matchedTx) {
+			continue
+		}
+
+		tradePair := getTradePairFromMatchedTx(matchedTx)
+		realMatchedTx, err := matchEngine.NextMatchedTx(tradePair, tradePair.Reverse())
 		if err != nil {
 			return err
 		}
 
-		for i := 0; i < len(packagedMatchedTxs); i++ {
-			if i >= len(realMatchedTxs) || packagedMatchedTxs[i].ID != realMatchedTxs[i].ID {
-				return errors.New("fail to validate match transaction")
-			}
+		if matchedTx.ID != realMatchedTx.ID {
+			return errors.New("fail to validate match transaction")
 		}
 	}
 	return nil
 }
 
-func groupMatchedTx(txs []*types.Tx) map[string][]*types.Tx {
-	matchedTxMap := make(map[string][]*types.Tx)
-	for _, tx := range txs {
-		if !isMatchedTx(tx) {
-			continue
-		}
-
-		tradePair := getTradePairFromMatchedTx(tx)
-		matchedTxMap[tradePair.String()] = append(matchedTxMap[tradePair.String()], tx)
-	}
-	return matchedTxMap
-}
-
 func getTradePairFromMatchedTx(tx *types.Tx) *common.TradePair {
 	fromAssetID := tx.Inputs[0].AssetID()
 	toAssetID := tx.Inputs[1].AssetID()
-	if fromAssetID.String() > toAssetID.String() {
-		return &common.TradePair{FromAssetID: &fromAssetID, ToAssetID: &toAssetID}
-	}
-	return &common.TradePair{FromAssetID: &toAssetID, ToAssetID: &fromAssetID}
+	return &common.TradePair{FromAssetID: &fromAssetID, ToAssetID: &toAssetID}
 }
 
 // DetachBlock parse pending order and cancel from the the transactions of block
@@ -108,22 +92,38 @@ func (m *MovCore) DetachBlock(block *types.Block) error {
 // BeforeProposalBlock get all pending orders from the dex db, parse pending orders and cancel orders from transactions
 // Then merge the two, use match engine to generate matched transactions, finally return them.
 func (m *MovCore) BeforeProposalBlock(capacity int) ([]*types.Tx, error) {
-	var packagedTxs []*types.Tx
+	matchEngine := match.NewEngine(m.movStore)
+	tradePairMap := make(map[string]bool)
 	tradePairIterator := database.NewTradePairIterator(m.movStore)
+	remainder := capacity
 
-	for tradePairIterator.HasNext() {
-		orderTable := match.NewOrderTable(m.movStore, tradePairIterator.Next())
-		matchedTxs, err := match.GenerateMatchedTxs(orderTable)
+	var packagedTxs []*types.Tx
+	for tradePair, err := tradePairIterator.Next(); remainder > 0; tradePair, err = tradePairIterator.Next() {
 		if err != nil {
 			return nil, err
 		}
 
-		num := len(matchedTxs)
-		if len(packagedTxs)+len(matchedTxs) > capacity {
-			num = capacity - len(packagedTxs)
+		if tradePair == nil {
+			break
 		}
-		for i := 0; i < num; i++ {
-			packagedTxs = append(packagedTxs, matchedTxs[i])
+
+		if tradePairMap[tradePair.Key()] {
+			continue
+		}
+		tradePairMap[tradePair.Key()] = true
+		tradePairMap[tradePair.Reverse().Key()] = true
+
+		for {
+			matchedTx, err := matchEngine.NextMatchedTx(tradePair, tradePair.Reverse())
+			if err != nil {
+				return nil, err
+			}
+
+			if matchedTx == nil {
+				break
+			}
+			packagedTxs = append(packagedTxs, matchedTx)
+			remainder--
 		}
 	}
 	return packagedTxs, nil
@@ -143,7 +143,7 @@ func applyTransactions(txs []*types.Tx) ([]*common.Order, []*common.Order, error
 		}
 
 		for _, order := range addOrders {
-			addOrderMap[order.ID()] = order
+			addOrderMap[order.Key()] = order
 		}
 
 		deleteOrders, err := getDeleteOrdersFromTx(tx)
@@ -152,7 +152,7 @@ func applyTransactions(txs []*types.Tx) ([]*common.Order, []*common.Order, error
 		}
 
 		for _, order := range deleteOrders {
-			deleteOrderMap[order.ID()] = order
+			deleteOrderMap[order.Key()] = order
 		}
 	}
 
@@ -198,7 +198,7 @@ func getDeleteOrdersFromTx(tx *types.Tx) ([]*common.Order, error) {
 			continue
 		}
 
-		if isCancelClauseSelector(input) || isTradeClauseSelector(input) {
+		if util.IsCancelClauseSelector(input) || util.IsTradeClauseSelector(input) {
 			order, err := common.NewOrderFromInput(input)
 			if err != nil {
 				return nil, err
@@ -213,20 +213,9 @@ func getDeleteOrdersFromTx(tx *types.Tx) ([]*common.Order, error) {
 func isMatchedTx(tx *types.Tx) bool {
 	p2wmCount := 0
 	for _, input := range tx.Inputs {
-		if segwit.IsP2WMCScript(input.ControlProgram()) && isTradeClauseSelector(input) && input.InputType() == types.SpendInputType {
+		if segwit.IsP2WMCScript(input.ControlProgram()) && util.IsTradeClauseSelector(input) && input.InputType() == types.SpendInputType {
 			p2wmCount++
 		}
 	}
 	return p2wmCount >= 2
 }
-
-func isCancelClauseSelector(input *types.TxInput) bool {
-	return len(input.Arguments()) == 3 && hex.EncodeToString(input.Arguments()[2]) == hex.EncodeToString(vm.Int64Bytes(2))
-}
-
-func isTradeClauseSelector(input *types.TxInput) bool {
-	arguments := input.Arguments()
-	clauseSelector := hex.EncodeToString(arguments[len(arguments)-1])
-	return clauseSelector == hex.EncodeToString(vm.Int64Bytes(0)) || clauseSelector == hex.EncodeToString(vm.Int64Bytes(1))
-}
-

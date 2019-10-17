@@ -276,7 +276,7 @@ func (m *LevelDBMovStore) saveMovDatabaseState(batch dbm.Batch, state *common.Mo
 	return nil
 }
 
-func (m *MovStore) calcNextDatabaseState(blockHeader *types.BlockHeader) (*common.MovDatabaseState, error) {
+func (m *LevelDBMovStore) calcNextDatabaseState(blockHeader *types.BlockHeader) (*common.MovDatabaseState, error) {
 	hash := blockHeader.Hash()
 	height := blockHeader.Height
 

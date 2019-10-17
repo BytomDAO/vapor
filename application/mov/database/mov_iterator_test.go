@@ -60,42 +60,7 @@ func TestTradePairIterator(t *testing.T) {
 			},
 		},
 		{
-			desc: "has duplicate trade pair",
-			storeTradePairs: []*common.TradePair{
-				{
-					FromAssetID: &asset1,
-					ToAssetID:   &asset2,
-				},
-				{
-					FromAssetID: &asset1,
-					ToAssetID:   &asset3,
-				},
-				{
-					FromAssetID: &asset3,
-					ToAssetID:   &asset1,
-				},
-				{
-					FromAssetID: &asset1,
-					ToAssetID:   &asset4,
-				},
-			},
-			wantTradePairs: []*common.TradePair{
-				{
-					FromAssetID: &asset1,
-					ToAssetID:   &asset2,
-				},
-				{
-					FromAssetID: &asset1,
-					ToAssetID:   &asset3,
-				},
-				{
-					FromAssetID: &asset1,
-					ToAssetID:   &asset4,
-				},
-			},
-		},
-		{
-			desc: "has duplicate trade pair in tail",
+			desc: "num of trade pairs more than one return",
 			storeTradePairs: []*common.TradePair{
 				{
 					FromAssetID: &asset1,
@@ -107,7 +72,7 @@ func TestTradePairIterator(t *testing.T) {
 				},
 				{
 					FromAssetID: &asset1,
-					ToAssetID:   &asset3,
+					ToAssetID:   &asset4,
 				},
 				{
 					FromAssetID: &asset2,
@@ -123,6 +88,14 @@ func TestTradePairIterator(t *testing.T) {
 					FromAssetID: &asset1,
 					ToAssetID:   &asset3,
 				},
+				{
+					FromAssetID: &asset1,
+					ToAssetID:   &asset4,
+				},
+				{
+					FromAssetID: &asset2,
+					ToAssetID:   &asset1,
+				},
 			},
 		},
 		{
@@ -136,8 +109,16 @@ func TestTradePairIterator(t *testing.T) {
 		store := &MockMovStore{TradePairs: c.storeTradePairs}
 		var gotTradePairs []*common.TradePair
 		iterator := NewTradePairIterator(store)
-		for iterator.HasNext() {
-			gotTradePairs = append(gotTradePairs, iterator.Next())
+		for tradePair, err := iterator.Next();;tradePair, err = iterator.Next() {
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tradePair == nil {
+				break
+			}
+
+
+			gotTradePairs = append(gotTradePairs, tradePair)
 		}
 		if !testutil.DeepEqual(c.wantTradePairs, gotTradePairs) {
 			t.Errorf("#%d(%s):got trade pairs it not equals want trade pairs", i, c.desc)
@@ -159,7 +140,7 @@ func TestOrderIterator(t *testing.T) {
 			wantOrders:  []*common.Order{order1, order2, order3},
 		},
 		{
-			desc: "num of order more than one return",
+			desc: "num of orders more than one return",
 			tradePair: &common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2},
 			storeOrders: []*common.Order{order1, order2, order3, order4, order5},
 			wantOrders:  []*common.Order{order1, order2, order3, order4, order5},
@@ -179,13 +160,19 @@ func TestOrderIterator(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		orderMap := map[string][]*common.Order{c.tradePair.String(): c.storeOrders}
+		orderMap := map[string][]*common.Order{c.tradePair.Key(): c.storeOrders}
 		store := &MockMovStore{OrderMap: orderMap}
 
 		var gotOrders []*common.Order
 		iterator := NewOrderIterator(store, c.tradePair)
-		for iterator.HasNext() {
-			gotOrders = append(gotOrders, iterator.NextBatch()...)
+		for orders, err := iterator.NextBatch();;orders, err = iterator.NextBatch() {
+			if err != nil {
+				t.Fatal(err)
+			}
+			if orders == nil {
+				break
+			}
+			gotOrders = append(gotOrders, orders...)
 		}
 		if !testutil.DeepEqual(c.wantOrders, gotOrders) {
 			t.Errorf("#%d(%s):got orders it not equals want orders", i, c.desc)
