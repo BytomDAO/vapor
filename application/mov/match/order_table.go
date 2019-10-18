@@ -20,34 +20,31 @@ func NewOrderTable(movStore database.MovStore) *OrderTable {
 	}
 }
 
-func (o *OrderTable) PeekOrder(tradePair *common.TradePair) (*common.Order, error) {
-	if len(o.orderMap[tradePair.Key()]) == 0 {
-		iterator := o.iteratorMap[tradePair.Key()]
-		if iterator == nil {
-			iterator = database.NewOrderIterator(o.movStore, tradePair)
-			o.iteratorMap[tradePair.Key()] = iterator
-		}
-
-		orders, err := iterator.NextBatch()
-		if err != nil {
-			return nil, err
-		}
-
-		if len(orders) == 0 {
-			return nil, nil
-		}
-
-		for i := len(orders) - 1; i >= 0; i-- {
-			o.orderMap[tradePair.Key()] = append(o.orderMap[tradePair.Key()], orders[i])
-		}
-	}
+func (o *OrderTable) PeekOrder(tradePair *common.TradePair) *common.Order {
 	orders := o.orderMap[tradePair.Key()]
-	return orders[len(orders)-1], nil
+	if len(orders) != 0 {
+		return orders[len(orders)-1]
+	}
+
+	iterator, ok := o.iteratorMap[tradePair.Key()]
+	if !ok {
+		iterator = database.NewOrderIterator(o.movStore, tradePair)
+		o.iteratorMap[tradePair.Key()] = iterator
+	}
+
+	nextOrders := iterator.NextBatch()
+	if len(nextOrders) == 0 {
+		return nil
+	}
+
+	for i := len(nextOrders) - 1; i >= 0; i-- {
+		o.orderMap[tradePair.Key()] = append(o.orderMap[tradePair.Key()], nextOrders[i])
+	}
+	return nextOrders[0]
 }
 
 func (o *OrderTable) PopOrder(tradePair *common.TradePair) {
-	orders := o.orderMap[tradePair.Key()]
-	if len(orders) > 0 {
+	if orders := o.orderMap[tradePair.Key()]; len(orders) > 0 {
 		o.orderMap[tradePair.Key()] = orders[0 : len(orders)-1]
 	}
 }

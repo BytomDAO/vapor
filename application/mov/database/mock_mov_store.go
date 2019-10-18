@@ -1,6 +1,8 @@
 package database
 
 import (
+	"sort"
+
 	"github.com/vapor/application/mov/common"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
@@ -58,11 +60,21 @@ func (m *MockMovStore) ListTradePairsWithStart(fromAssetIDAfter, toAssetIDAfter 
 }
 
 func (m *MockMovStore) ProcessOrders(addOrders []*common.Order, delOrders []*common.Order, blockHeader *types.BlockHeader) error {
-	for _, addOrder := range addOrders {
-		m.OrderMap[addOrder.Key()] = append(m.OrderMap[addOrder.Key()], addOrder)
+	for _, order := range addOrders {
+		tradePair := &common.TradePair{FromAssetID: order.FromAssetID, ToAssetID: order.ToAssetID}
+		m.OrderMap[tradePair.Key()] = append(m.OrderMap[tradePair.Key()], order)
 	}
-	for _, deleteOrder := range delOrders {
-		delete(m.OrderMap, deleteOrder.Key())
+	for _, delOrder := range delOrders {
+		tradePair := &common.TradePair{FromAssetID: delOrder.FromAssetID, ToAssetID: delOrder.ToAssetID}
+		orders := m.OrderMap[tradePair.Key()]
+		for i, order := range orders {
+			if delOrder.Key() == order.Key() {
+				m.OrderMap[tradePair.Key()] = append(orders[0:i], orders[i+1:]...)
+			}
+		}
+	}
+	for _, orders := range m.OrderMap {
+		sort.Sort(common.OrderSlice(orders))
 	}
 
 	if blockHeader.Height == m.DBState.Height {

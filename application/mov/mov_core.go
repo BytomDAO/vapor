@@ -97,15 +97,8 @@ func (m *MovCore) BeforeProposalBlock(capacity int) ([]*types.Tx, error) {
 	remainder := capacity
 
 	var packagedTxs []*types.Tx
-	for tradePair, err := tradePairIterator.Next(); remainder > 0; tradePair, err = tradePairIterator.Next() {
-		if err != nil {
-			return nil, err
-		}
-
-		if tradePair == nil {
-			break
-		}
-
+	for remainder > 0 && tradePairIterator.HasNext() {
+		tradePair := tradePairIterator.Next()
 		if tradePairMap[tradePair.Key()] {
 			continue
 		}
@@ -162,7 +155,7 @@ func applyTransactions(txs []*types.Tx) ([]*common.Order, []*common.Order, error
 func mergeOrders(addOrderMap, deleteOrderMap map[string]*common.Order) ([]*common.Order, []*common.Order) {
 	var deleteOrders, addOrders []*common.Order
 	for orderID, order := range addOrderMap {
-		if deleteOrderMap[orderID] != nil {
+		if _, ok := deleteOrderMap[orderID]; ok {
 			delete(deleteOrderMap, orderID)
 			continue
 		}
@@ -178,26 +171,28 @@ func mergeOrders(addOrderMap, deleteOrderMap map[string]*common.Order) ([]*commo
 func getAddOrdersFromTx(tx *types.Tx) ([]*common.Order, error) {
 	var orders []*common.Order
 	for i, output := range tx.Outputs {
-		if output.OutputType() == types.IntraChainOutputType && segwit.IsP2WMCScript(output.ControlProgram()) {
-			order, err := common.NewOrderFromOutput(tx, i)
-			if err != nil {
-				return nil, err
-			}
-
-			orders = append(orders, order)
+		if output.OutputType() != types.IntraChainOutputType || !segwit.IsP2WMCScript(output.ControlProgram()) {
+			continue
 		}
+
+		order, err := common.NewOrderFromOutput(tx, i)
+		if err != nil {
+			return nil, err
+		}
+
+		orders = append(orders, order)
 	}
 	return orders, nil
 }
 
 func getDeleteOrdersFromTx(tx *types.Tx) ([]*common.Order, error) {
 	var orders []*common.Order
-	for _, input := range tx.Inputs {
+	for i, input := range tx.Inputs {
 		if input.InputType() != types.SpendInputType || !segwit.IsP2WMCScript(input.ControlProgram()) {
 			continue
 		}
 
-		order, err := common.NewOrderFromInput(input)
+		order, err := common.NewOrderFromInput(tx, i)
 		if err != nil {
 			return nil, err
 		}
@@ -210,7 +205,7 @@ func getDeleteOrdersFromTx(tx *types.Tx) ([]*common.Order, error) {
 func isMatchedTx(tx *types.Tx) bool {
 	p2wmCount := 0
 	for _, input := range tx.Inputs {
-		if segwit.IsP2WMCScript(input.ControlProgram()) && util.IsTradeClauseSelector(input) && input.InputType() == types.SpendInputType {
+		if input.InputType() == types.SpendInputType && util.IsTradeClauseSelector(input) && segwit.IsP2WMCScript(input.ControlProgram()) {
 			p2wmCount++
 		}
 	}

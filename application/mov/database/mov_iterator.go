@@ -15,7 +15,7 @@ func NewTradePairIterator(movStore MovStore) *TradePairIterator {
 	return &TradePairIterator{movStore: movStore}
 }
 
-func (t *TradePairIterator) hasNext() (bool, error) {
+func (t *TradePairIterator) HasNext() bool {
 	if tradePairSize := len(t.tradePairs); t.tradePairIndex >= tradePairSize {
 		var fromAssetID, toAssetID *bc.AssetID
 		if len(t.tradePairs) > 0 {
@@ -25,37 +25,34 @@ func (t *TradePairIterator) hasNext() (bool, error) {
 
 		tradePairs, err := t.movStore.ListTradePairsWithStart(fromAssetID, toAssetID)
 		if err != nil {
-			return false, err
+			// If the error is returned, it is an error of the program itself, and cannot be recovered.
+			panic(err)
 		}
 
 		if len(tradePairs) == 0 {
-			return false, nil
+			return false
 		}
 
 		t.tradePairs = tradePairs
 		t.tradePairIndex = 0
 	}
-	return true, nil
+	return true
 }
 
-func (t *TradePairIterator) Next() (*common.TradePair, error) {
-	hasNext, err := t.hasNext()
-	if err != nil {
-		return nil, err
-	}
-
-	if !hasNext {
-		return nil, nil
+func (t *TradePairIterator) Next() *common.TradePair {
+	if !t.HasNext() {
+		return nil
 	}
 
 	tradePair := t.tradePairs[t.tradePairIndex]
 	t.tradePairIndex++
-	return tradePair, nil
+	return tradePair
 }
 
 type OrderIterator struct {
 	movStore    MovStore
 	lastOrder   *common.Order
+	orders      []*common.Order
 }
 
 func NewOrderIterator(movStore MovStore, tradePair *common.TradePair) *OrderIterator {
@@ -65,16 +62,29 @@ func NewOrderIterator(movStore MovStore, tradePair *common.TradePair) *OrderIter
 	}
 }
 
-func (o *OrderIterator) NextBatch() ([]*common.Order, error) {
-	orders, err := o.movStore.ListOrders(o.lastOrder)
-	if err != nil {
-		return nil, err
+func (o *OrderIterator) HasNext() bool {
+	if len(o.orders) == 0 {
+		orders, err := o.movStore.ListOrders(o.lastOrder)
+		if err != nil {
+			panic(err)
+		}
+
+		if len(orders) == 0 {
+			return false
+		}
+
+		o.orders = orders
+		o.lastOrder = o.orders[len(o.orders)-1]
+	}
+	return true
+}
+
+func (o *OrderIterator) NextBatch() []*common.Order {
+	if !o.HasNext() {
+		return nil
 	}
 
-	if len(orders) == 0 {
-		return nil, nil
-	}
-
-	o.lastOrder = orders[len(orders)-1]
-	return orders, nil
+	orders := o.orders
+	o.orders = nil
+	return orders
 }

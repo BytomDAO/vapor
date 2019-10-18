@@ -31,16 +31,8 @@ func NewEngine(movStore database.MovStore) *Engine {
 // NextMatchedTx match two opposite pending orders.
 // for example, the buy orders want change A with B, then the sell orders must change B with A.
 func (e *Engine) NextMatchedTx(buyTradePair, sellTradePair *common.TradePair) (*types.Tx, error) {
-	buyOrder, err := e.orderTable.PeekOrder(buyTradePair)
-	if err != nil {
-		return nil, err
-	}
-
-	sellOrder, err := e.orderTable.PeekOrder(sellTradePair)
-	if err != nil {
-		return nil, err
-	}
-
+	buyOrder := e.orderTable.PeekOrder(buyTradePair)
+	sellOrder  := e.orderTable.PeekOrder(sellTradePair)
 	if buyOrder == nil || sellOrder == nil {
 		return nil, nil
 	}
@@ -144,23 +136,19 @@ func setMatchTxArguments(txData *types.TxData, buyReceiveAmount, sellReceiveAmou
 }
 
 func addPartialTradeOrder(tx *types.Tx, orderTable *OrderTable, buyTradePair, sellTradePair *common.TradePair) error {
-	if util.IsPartialTradeClauseSelector(tx.Inputs[0]) {
-		order, err := common.NewOrderFromOutput(tx, partialBuyOrderOutputIdx)
+	tradePairs := []*common.TradePair{buyTradePair, sellTradePair}
+	outputIdxes := []int{partialBuyOrderOutputIdx, partialSellOrderOutputIdx}
+	for i, input := range tx.Inputs {
+		if !util.IsPartialTradeClauseSelector(input) {
+			continue
+		}
+
+		order, err := common.NewOrderFromOutput(tx, outputIdxes[i])
 		if err != nil {
 			return err
 		}
 
-		if err := orderTable.AddOrder(buyTradePair, order); err != nil {
-			return err
-		}
-	}
-	if util.IsPartialTradeClauseSelector(tx.Inputs[1]) {
-		order, err := common.NewOrderFromOutput(tx, partialSellOrderOutputIdx)
-		if err != nil {
-			return err
-		}
-
-		if err := orderTable.AddOrder(sellTradePair, order); err != nil {
+		if err := orderTable.AddOrder(tradePairs[i], order); err != nil {
 			return err
 		}
 	}

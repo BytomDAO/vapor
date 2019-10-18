@@ -30,7 +30,7 @@ func NewOrderFromOutput(tx *types.Tx, outputIndex int) (*Order, error) {
 		return nil, err
 	}
 
-	contractArgs, err := segwit.DecodeP2WMCProgram(tx.Outputs[outputIndex].ControlProgram())
+	contractArgs, err := segwit.DecodeP2WMCProgram(output.ControlProgram.Code)
 	if err != nil {
 		return nil, err
 	}
@@ -49,8 +49,8 @@ func NewOrderFromOutput(tx *types.Tx, outputIndex int) (*Order, error) {
 	}, nil
 }
 
-func NewOrderFromInput(txInput *types.TxInput) (*Order, error) {
-	input, ok := txInput.TypedInput.(*types.SpendInput)
+func NewOrderFromInput(tx *types.Tx, inputIndex int) (*Order, error) {
+	input, ok := tx.Inputs[inputIndex].TypedInput.(*types.SpendInput)
 	if !ok {
 		return nil, errors.New("input is not type of spend input")
 	}

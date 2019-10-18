@@ -109,16 +109,8 @@ func TestTradePairIterator(t *testing.T) {
 		store := &MockMovStore{TradePairs: c.storeTradePairs}
 		var gotTradePairs []*common.TradePair
 		iterator := NewTradePairIterator(store)
-		for tradePair, err := iterator.Next();;tradePair, err = iterator.Next() {
-			if err != nil {
-				t.Fatal(err)
-			}
-			if tradePair == nil {
-				break
-			}
-
-
-			gotTradePairs = append(gotTradePairs, tradePair)
+		for iterator.HasNext() {
+			gotTradePairs = append(gotTradePairs, iterator.Next())
 		}
 		if !testutil.DeepEqual(c.wantTradePairs, gotTradePairs) {
 			t.Errorf("#%d(%s):got trade pairs is not equals want trade pairs", i, c.desc)
@@ -165,14 +157,8 @@ func TestOrderIterator(t *testing.T) {
 
 		var gotOrders []*common.Order
 		iterator := NewOrderIterator(store, c.tradePair)
-		for orders, err := iterator.NextBatch();;orders, err = iterator.NextBatch() {
-			if err != nil {
-				t.Fatal(err)
-			}
-			if orders == nil {
-				break
-			}
-			gotOrders = append(gotOrders, orders...)
+		for iterator.HasNext() {
+			gotOrders = append(gotOrders, iterator.NextBatch()...)
 		}
 		if !testutil.DeepEqual(c.wantOrders, gotOrders) {
 			t.Errorf("#%d(%s):got orders it not equals want orders", i, c.desc)
