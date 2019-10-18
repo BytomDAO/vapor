@@ -25,7 +25,8 @@ func (t *TradePairIterator) HasNext() bool {
 
 		tradePairs, err := t.movStore.ListTradePairsWithStart(fromAssetID, toAssetID)
 		if err != nil {
-			// If the error is returned, it is an error of the program itself, and cannot be recovered.
+			// If the error is returned, it's an error of program itself,
+			// and cannot be recovered, so panic directly.
 			panic(err)
 		}
 

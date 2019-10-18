@@ -105,7 +105,7 @@ func (m *MovCore) BeforeProposalBlock(capacity int) ([]*types.Tx, error) {
 		tradePairMap[tradePair.Key()] = true
 		tradePairMap[tradePair.Reverse().Key()] = true
 
-		for {
+		for remainder > 0 {
 			matchedTx, err := matchEngine.NextMatchedTx(tradePair, tradePair.Reverse())
 			if err != nil {
 				return nil, err

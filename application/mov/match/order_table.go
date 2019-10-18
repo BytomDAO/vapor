@@ -49,7 +49,8 @@ func (o *OrderTable) PopOrder(tradePair *common.TradePair) {
 	}
 }
 
-func (o *OrderTable) AddOrder(tradePair *common.TradePair, order *common.Order) error {
+func (o *OrderTable) AddOrder(order *common.Order) error {
+	tradePair := order.GetTradePair()
 	orders := o.orderMap[tradePair.Key()]
 	if len(orders) > 0 && order.Rate > orders[len(orders)-1].Rate {
 		return errors.New("rate of order must less than the min order in order table")

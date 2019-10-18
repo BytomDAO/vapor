@@ -6,18 +6,12 @@ import (
 
 	"github.com/vapor/application/mov/common"
 	"github.com/vapor/application/mov/database"
-	"github.com/vapor/application/mov/util"
 	"github.com/vapor/consensus/segwit"
 	vprMath "github.com/vapor/math"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/vm"
 	"github.com/vapor/protocol/vm/vmutil"
-)
-
-const (
-	partialBuyOrderOutputIdx  = 1
-	partialSellOrderOutputIdx = 2
 )
 
 type Engine struct {
@@ -32,7 +26,7 @@ func NewEngine(movStore database.MovStore) *Engine {
 // for example, the buy orders want change A with B, then the sell orders must change B with A.
 func (e *Engine) NextMatchedTx(buyTradePair, sellTradePair *common.TradePair) (*types.Tx, error) {
 	buyOrder := e.orderTable.PeekOrder(buyTradePair)
-	sellOrder  := e.orderTable.PeekOrder(sellTradePair)
+	sellOrder := e.orderTable.PeekOrder(sellTradePair)
 	if buyOrder == nil || sellOrder == nil {
 		return nil, nil
 	}
@@ -76,37 +70,33 @@ func canNotBeMatched(buyOrder, sellOrder *common.Order, buyContractArgs, sellCon
 }
 
 func buildMatchTx(buyOrder, sellOrder *common.Order, buyContractArgs, sellContractArgs *vmutil.MagneticContractArgs) *types.Tx {
-	buyRequestAmount := calcRequestAmount(buyOrder.Utxo.Amount, buyContractArgs)
-	buyReceiveAmount := vprMath.MinUint64(buyRequestAmount, sellOrder.Utxo.Amount)
-	buyShouldPayAmount := calcShouldPayAmount(buyReceiveAmount, buyContractArgs)
-
-	sellRequestAmount := calcRequestAmount(sellOrder.Utxo.Amount, sellContractArgs)
-	sellReceiveAmount := vprMath.MinUint64(sellRequestAmount, buyOrder.Utxo.Amount)
-	sellShouldPayAmount := calcShouldPayAmount(sellReceiveAmount, sellContractArgs)
-
 	txData := &types.TxData{}
 	txData.Inputs = append(txData.Inputs, types.NewSpendInput(nil, *buyOrder.Utxo.SourceID, *buyOrder.FromAssetID, buyOrder.Utxo.Amount, buyOrder.Utxo.SourcePos, buyOrder.Utxo.ControlProgram))
 	txData.Inputs = append(txData.Inputs, types.NewSpendInput(nil, *sellOrder.Utxo.SourceID, *sellOrder.FromAssetID, sellOrder.Utxo.Amount, sellOrder.Utxo.SourcePos, sellOrder.Utxo.ControlProgram))
 
-	addMatchTxOutput(txData, buyOrder, buyReceiveAmount, buyShouldPayAmount, buyContractArgs.SellerProgram)
-	addMatchTxOutput(txData, sellOrder, sellReceiveAmount, sellShouldPayAmount, sellContractArgs.SellerProgram)
+	isBuyPartialTrade, buyReceiveAmount, buyShouldPayAmount := addMatchTxOutput(txData, buyOrder, buyContractArgs, sellOrder.Utxo.Amount)
+	isSellPartialTrade, sellReceiveAmount, sellShouldPayAmount := addMatchTxOutput(txData, sellOrder, sellContractArgs, buyOrder.Utxo.Amount)
 
 	addMatchTxFeeOutput(txData, buyShouldPayAmount, sellReceiveAmount, *buyOrder.FromAssetID)
 	addMatchTxFeeOutput(txData, sellShouldPayAmount, buyReceiveAmount, *sellOrder.FromAssetID)
 
-	setMatchTxArguments(txData, buyReceiveAmount, sellReceiveAmount)
+	setMatchTxArguments(txData, []bool{isBuyPartialTrade, isSellPartialTrade}, []uint64{buyReceiveAmount, sellReceiveAmount})
 	tx := types.NewTx(*txData)
 	return tx
 }
 
 // addMatchTxOutput return whether partial matched
-func addMatchTxOutput(txData *types.TxData, order *common.Order, receiveAmount, shouldPayAmount uint64, receiveProgram []byte) bool {
-	txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*order.ToAssetID, receiveAmount, receiveProgram))
+func addMatchTxOutput(txData *types.TxData, order *common.Order, contractArgs *vmutil.MagneticContractArgs, oppositeAmount uint64) (bool, uint64, uint64) {
+	requestAmount := calcRequestAmount(order.Utxo.Amount, contractArgs)
+	receiveAmount := vprMath.MinUint64(requestAmount, oppositeAmount)
+	shouldPayAmount := calcShouldPayAmount(receiveAmount, contractArgs)
+
+	txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*order.ToAssetID, receiveAmount, contractArgs.SellerProgram))
 	if order.Utxo.Amount > shouldPayAmount {
 		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*order.FromAssetID, order.Utxo.Amount-shouldPayAmount, order.Utxo.ControlProgram))
-		return true
+		return true, receiveAmount, shouldPayAmount
 	}
-	return false
+	return false, receiveAmount, shouldPayAmount
 }
 
 func addMatchTxFeeOutput(txData *types.TxData, shouldPayAmount, oppositeReceiveAmount uint64, fromAssetID bc.AssetID) {
@@ -115,40 +105,33 @@ func addMatchTxFeeOutput(txData *types.TxData, shouldPayAmount, oppositeReceiveA
 	}
 }
 
-func setMatchTxArguments(txData *types.TxData, buyReceiveAmount, sellReceiveAmount uint64) {
-	partialTradeStatus := make([]bool, 2)
-	partialTradeStatus[0] = segwit.IsP2WMCScript(txData.Outputs[partialBuyOrderOutputIdx].ControlProgram())
-	partialTradeStatus[1] = len(txData.Outputs) > 2 && segwit.IsP2WMCScript(txData.Outputs[partialSellOrderOutputIdx].ControlProgram())
-
-	receiveAmounts := []uint64{buyReceiveAmount, sellReceiveAmount}
-	arguments := make([][][]byte, 2)
+func setMatchTxArguments(txData *types.TxData, partialTradeStatus []bool, receiveAmounts []uint64) {
 	var position int64
 	for i, isPartial := range partialTradeStatus {
+		var arguments [][]byte
 		if isPartial {
-			arguments[i] = [][]byte{vm.Int64Bytes(int64(receiveAmounts[i])), vm.Int64Bytes(position), vm.Int64Bytes(0)}
+			arguments = [][]byte{vm.Int64Bytes(int64(receiveAmounts[i])), vm.Int64Bytes(position), vm.Int64Bytes(0)}
 			position += 2
 		} else {
-			arguments[i] = [][]byte{vm.Int64Bytes(position), vm.Int64Bytes(1)}
+			arguments = [][]byte{vm.Int64Bytes(position), vm.Int64Bytes(1)}
 			position++
 		}
-		txData.Inputs[i].SetArguments(arguments[i])
+		txData.Inputs[i].SetArguments(arguments)
 	}
 }
 
 func addPartialTradeOrder(tx *types.Tx, orderTable *OrderTable, buyTradePair, sellTradePair *common.TradePair) error {
-	tradePairs := []*common.TradePair{buyTradePair, sellTradePair}
-	outputIdxes := []int{partialBuyOrderOutputIdx, partialSellOrderOutputIdx}
-	for i, input := range tx.Inputs {
-		if !util.IsPartialTradeClauseSelector(input) {
+	for i, output := range tx.Outputs {
+		if !segwit.IsP2WMCScript(output.ControlProgram()) {
 			continue
 		}
 
-		order, err := common.NewOrderFromOutput(tx, outputIdxes[i])
+		order, err := common.NewOrderFromOutput(tx, i)
 		if err != nil {
 			return err
 		}
 
-		if err := orderTable.AddOrder(tradePairs[i], order); err != nil {
+		if err := orderTable.AddOrder(order); err != nil {
 			return err
 		}
 	}

@@ -73,6 +73,10 @@ func NewOrderFromInput(tx *types.Tx, inputIndex int) (*Order, error) {
 	}, nil
 }
 
+func (o *Order) GetTradePair() *TradePair {
+	return &TradePair{FromAssetID: o.FromAssetID, ToAssetID: o.ToAssetID}
+}
+
 func (o *Order) Key() string {
 	return fmt.Sprintf("%s:%d", o.Utxo.SourceID, o.Utxo.SourcePos)
 }
