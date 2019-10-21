@@ -14,6 +14,8 @@ import (
 	"github.com/vapor/protocol/vm/vmutil"
 )
 
+var maxFeeRate = 0.1
+
 type Engine struct {
 	orderTable *OrderTable
 }
@@ -49,7 +51,7 @@ func (e *Engine) NextMatchedTx(buyTradePair, sellTradePair *common.TradePair) (*
 
 	e.orderTable.PopOrder(buyTradePair)
 	e.orderTable.PopOrder(sellTradePair)
-	if err := addPartialTradeOrder(tx, e.orderTable, buyTradePair, sellTradePair); err != nil {
+	if err := addPartialTradeOrder(tx, e.orderTable); err != nil {
 		return nil, err
 	}
 	return tx, nil
@@ -77,8 +79,9 @@ func buildMatchTx(buyOrder, sellOrder *common.Order, buyContractArgs, sellContra
 	isBuyPartialTrade, buyReceiveAmount, buyShouldPayAmount := addMatchTxOutput(txData, buyOrder, buyContractArgs, sellOrder.Utxo.Amount)
 	isSellPartialTrade, sellReceiveAmount, sellShouldPayAmount := addMatchTxOutput(txData, sellOrder, sellContractArgs, buyOrder.Utxo.Amount)
 
-	addMatchTxFeeOutput(txData, buyShouldPayAmount, sellReceiveAmount, *buyOrder.FromAssetID)
-	addMatchTxFeeOutput(txData, sellShouldPayAmount, buyReceiveAmount, *sellOrder.FromAssetID)
+	participantPrograms := [][]byte{buyContractArgs.SellerProgram, sellContractArgs.SellerProgram}
+	addMatchTxFeeOutput(txData, buyShouldPayAmount, sellReceiveAmount, *buyOrder.FromAssetID, participantPrograms)
+	addMatchTxFeeOutput(txData, sellShouldPayAmount, buyReceiveAmount, *sellOrder.FromAssetID, participantPrograms)
 
 	setMatchTxArguments(txData, []bool{isBuyPartialTrade, isSellPartialTrade}, []uint64{buyReceiveAmount, sellReceiveAmount})
 	tx := types.NewTx(*txData)
@@ -89,7 +92,7 @@ func buildMatchTx(buyOrder, sellOrder *common.Order, buyContractArgs, sellContra
 func addMatchTxOutput(txData *types.TxData, order *common.Order, contractArgs *vmutil.MagneticContractArgs, oppositeAmount uint64) (bool, uint64, uint64) {
 	requestAmount := calcRequestAmount(order.Utxo.Amount, contractArgs)
 	receiveAmount := vprMath.MinUint64(requestAmount, oppositeAmount)
-	shouldPayAmount := calcShouldPayAmount(receiveAmount, contractArgs)
+	shouldPayAmount := CalcShouldPayAmount(receiveAmount, contractArgs)
 
 	txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*order.ToAssetID, receiveAmount, contractArgs.SellerProgram))
 	if order.Utxo.Amount > shouldPayAmount {
@@ -99,9 +102,30 @@ func addMatchTxOutput(txData *types.TxData, order *common.Order, contractArgs *v
 	return false, receiveAmount, shouldPayAmount
 }
 
-func addMatchTxFeeOutput(txData *types.TxData, shouldPayAmount, oppositeReceiveAmount uint64, fromAssetID bc.AssetID) {
+func addMatchTxFeeOutput(txData *types.TxData, shouldPayAmount, oppositeReceiveAmount uint64, fromAssetID bc.AssetID, participantPrograms [][]byte) {
 	if shouldPayAmount > oppositeReceiveAmount {
-		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(fromAssetID, shouldPayAmount-oppositeReceiveAmount, []byte{ /** node address */ }))
+		feeAmount := shouldPayAmount - oppositeReceiveAmount
+		var reminder uint64 = 0
+		maxFeeAmount := CalcMaxFeeAmount(shouldPayAmount)
+		if feeAmount > maxFeeAmount {
+			feeAmount = maxFeeAmount
+			reminder = feeAmount - maxFeeAmount
+		}
+		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(fromAssetID, feeAmount, []byte{ /** node address */ }))
+
+		// There is the remaining amount after paying the handling fee, assign it evenly to participants in the transaction
+		averageAmount := reminder / uint64(len(participantPrograms))
+		if averageAmount == 0 {
+			averageAmount = 1
+		}
+		for i := 0; i < len(participantPrograms) && reminder > 0; i++ {
+			if i == len(participantPrograms)-1 {
+				txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(fromAssetID, reminder, participantPrograms[i]))
+			} else {
+				txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(fromAssetID, averageAmount, participantPrograms[i]))
+			}
+			reminder -= averageAmount
+		}
 	}
 }
 
@@ -120,7 +144,7 @@ func setMatchTxArguments(txData *types.TxData, partialTradeStatus []bool, receiv
 	}
 }
 
-func addPartialTradeOrder(tx *types.Tx, orderTable *OrderTable, buyTradePair, sellTradePair *common.TradePair) error {
+func addPartialTradeOrder(tx *types.Tx, orderTable *OrderTable) error {
 	for i, output := range tx.Outputs {
 		if !segwit.IsP2WMCScript(output.ControlProgram()) {
 			continue
@@ -142,6 +166,10 @@ func calcRequestAmount(fromAmount uint64, contractArg *vmutil.MagneticContractAr
 	return uint64(int64(fromAmount) * contractArg.RatioNumerator / contractArg.RatioDenominator)
 }
 
-func calcShouldPayAmount(receiveAmount uint64, contractArg *vmutil.MagneticContractArgs) uint64 {
+func CalcShouldPayAmount(receiveAmount uint64, contractArg *vmutil.MagneticContractArgs) uint64 {
 	return uint64(math.Ceil(float64(receiveAmount) * float64(contractArg.RatioDenominator) / float64(contractArg.RatioNumerator)))
+}
+
+func CalcMaxFeeAmount(shouldPayAmount uint64) uint64 {
+	return uint64(math.Ceil(float64(shouldPayAmount) * maxFeeRate))
 }

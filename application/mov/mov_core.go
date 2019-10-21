@@ -1,6 +1,9 @@
 package mov
 
 import (
+	"encoding/hex"
+	"github.com/vapor/math/checked"
+
 	"github.com/vapor/application/mov/common"
 	"github.com/vapor/application/mov/database"
 	"github.com/vapor/application/mov/match"
@@ -25,22 +28,149 @@ func (m *MovCore) ChainStatus() (uint64, *bc.Hash, error) {
 	return state.Height, state.Hash, nil
 }
 
-func (m *MovCore) ValidateBlock(block *types.Block) error {
-	if err := m.ValidateTxs(block.Transactions); err != nil {
+func (m *MovCore) ValidateBlock(block *types.Block, verifyResults []*bc.TxVerifyResult) error {
+	if err := m.ValidateTxs(block.Transactions, verifyResults); err != nil {
 		return err
 	}
 	return nil
 }
 
-// ValidateTxs validate the matched transactions is generated according to the matching rule.
-func (m *MovCore) ValidateTxs(txs []*types.Tx) error {
+// ValidateTxs validate the trade transaction.
+func (m *MovCore) ValidateTxs(txs []*types.Tx, verifyResults []*bc.TxVerifyResult) error {
+	for _, tx := range txs {
+		if isMatchedTx(tx) {
+			if err := validateMatchedTx(tx); err != nil {
+				return err
+			}
+		}
+
+		if isCancelOrderTx(tx) {
+			if err := validateCancelOrderTx(tx); err != nil {
+				return err
+			}
+		}
+
+		for _, output := range tx.Outputs {
+			if !segwit.IsP2WMCScript(output.ControlProgram()) {
+				continue
+			}
+
+			if err := validateMagneticContractArgs(output.AssetAmount().Amount, output.ControlProgram()); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
+}
+
+func validateMatchedTx(tx *types.Tx) error {
+	fromAssetIDMap := make(map[string]bool)
+	toAssetIDMap := make(map[string]bool)
+	feeAssetAmount := getFeeFromMatchedTx(tx)
+
+	for i, input := range tx.Inputs {
+		if !segwit.IsP2WMCScript(input.ControlProgram()) {
+			return errors.New("input program of matched tx must p2wmc script")
+		}
+
+		if util.IsCancelClauseSelector(input) {
+			return errors.New("can't exist cancel order in the matched transaction")
+		}
+
+		if err := validateMagneticContractArgs(input.AssetAmount().Amount, input.ControlProgram()); err != nil {
+			return err
+		}
+
+		order, err := common.NewOrderFromInput(tx, i)
+		if err != nil {
+			return err
+		}
+
+		if feeAssetAmount.Amount != 0 && *order.FromAssetID == *feeAssetAmount.AssetId {
+			if err := validateMatchedTxFeeAmount(tx, i, feeAssetAmount); err != nil {
+				return err
+			}
+		}
+
+		fromAssetIDMap[order.FromAssetID.String()] = true
+		toAssetIDMap[order.ToAssetID.String()] = true
+	}
+
+	if len(fromAssetIDMap) != len(tx.Inputs) || len(toAssetIDMap) != len(tx.Inputs) {
+		return errors.New("asset id must unique in matched transaction")
+	}
+	return nil
+}
+
+func validateCancelOrderTx(tx *types.Tx) error {
+	for _, input := range tx.Inputs {
+		if !segwit.IsP2WMCScript(input.ControlProgram()) {
+			continue
+		}
+
+		if util.IsTradeClauseSelector(input) {
+			return errors.New("can't exist trade order in the cancel order transaction")
+		}
+
+		if err := validateMagneticContractArgs(input.AssetAmount().Amount, input.ControlProgram()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateMatchedTxFeeAmount(tx *types.Tx, inputIndex int, feeAssetAmount bc.AssetAmount) error {
+	input := tx.Inputs[inputIndex]
+	outputPos, err := util.GetTradeReceivePosition(input)
+	if err != nil {
+		return err
+	}
+
+	if outputPos >= int64(len(tx.Outputs)) {
+		return errors.New("position of output in trade input arguments is overflow")
+	}
+
+	contractArgs, err := segwit.DecodeP2WMCProgram(input.ControlProgram())
+	if err != nil {
+		return err
+	}
+
+	shouldPayAmount := match.CalcShouldPayAmount(tx.Outputs[outputPos].AssetAmount().Amount, contractArgs)
+	if feeAssetAmount.Amount > match.CalcMaxFeeAmount(shouldPayAmount) {
+		return errors.New("amount of fee greater than max fee amount")
+	}
+	return nil
+}
+
+func validateMagneticContractArgs(inputAmount uint64, program []byte) error {
+	contractArgs, err := segwit.DecodeP2WMCProgram(program)
+	if err != nil {
+		return err
+	}
+
+	if contractArgs.RatioNumerator <= 0 || contractArgs.RatioDenominator <= 0 {
+		return errors.New("ratio arguments must greater than zero")
+	}
+
+	if _, ok := checked.MulInt64(int64(inputAmount), contractArgs.RatioNumerator); !ok {
+		return errors.New("ratio numerator of contract args product input amount is overflow")
+	}
+	return nil
+}
+
+func getFeeFromMatchedTx(tx *types.Tx) bc.AssetAmount {
+	for _, output := range tx.Outputs {
+		if hex.EncodeToString(output.ControlProgram()) == "" { // node address
+			return output.AssetAmount()
+		}
+	}
+	return bc.AssetAmount{}
 }
 
 // ApplyBlock parse pending order and cancel from the the transactions of block
 // and add pending order to the dex db, remove cancel order from dex db.
 func (m *MovCore) ApplyBlock(block *types.Block) error {
-	if err := m.validateMatchedTxs(block.Transactions); err != nil {
+	if err := m.validateMatchedTxSequence(block.Transactions); err != nil {
 		return err
 	}
 
@@ -52,7 +182,7 @@ func (m *MovCore) ApplyBlock(block *types.Block) error {
 	return m.movStore.ProcessOrders(addOrders, deleteOrders, &block.BlockHeader)
 }
 
-func (m *MovCore) validateMatchedTxs(txs []*types.Tx) error {
+func (m *MovCore) validateMatchedTxSequence(txs []*types.Tx, ) error {
 	matchEngine := match.NewEngine(m.movStore)
 	for _, matchedTx := range txs {
 		if !isMatchedTx(matchedTx) {
@@ -60,13 +190,34 @@ func (m *MovCore) validateMatchedTxs(txs []*types.Tx) error {
 		}
 
 		tradePair := getTradePairFromMatchedTx(matchedTx)
-		realMatchedTx, err := matchEngine.NextMatchedTx(tradePair, tradePair.Reverse())
+		actualMatchedTx, err := matchEngine.NextMatchedTx(tradePair, tradePair.Reverse())
 		if err != nil {
 			return err
 		}
 
-		if matchedTx.ID != realMatchedTx.ID {
-			return errors.New("fail to validate match transaction")
+		if len(matchedTx.Inputs) != len(actualMatchedTx.Inputs) {
+			return errors.New("length of matched tx input is not equals to actual matched tx input")
+		}
+
+		spendOutputIDs := make(map[string]bool)
+		for _, input := range matchedTx.Inputs {
+			spendOutputID, err := input.SpentOutputID()
+			if err != nil {
+				return err
+			}
+
+			spendOutputIDs[spendOutputID.String()] = true
+		}
+
+		for _, input := range actualMatchedTx.Inputs {
+			spendOutputID, err := input.SpentOutputID()
+			if err != nil {
+				return err
+			}
+
+			if _, ok := spendOutputIDs[spendOutputID.String()]; !ok {
+				return errors.New("spend output id of matched tx is not equals to actual matched tx")
+			}
 		}
 	}
 	return nil
@@ -210,4 +361,13 @@ func isMatchedTx(tx *types.Tx) bool {
 		}
 	}
 	return p2wmCount >= 2
+}
+
+func isCancelOrderTx(tx *types.Tx) bool {
+	for _, input := range tx.Inputs {
+		if input.InputType() == types.SpendInputType && util.IsCancelClauseSelector(input) && segwit.IsP2WMCScript(input.ControlProgram()) {
+			return true
+		}
+	}
+	return false
 }

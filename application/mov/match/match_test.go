@@ -121,7 +121,7 @@ func TestGenerateMatchedTxs(t *testing.T) {
 			wantMatchedTxs: []*types.TxData{
 				{
 					Inputs: []*types.TxInput{
-						types.NewSpendInput([][]byte{vm.Int64Bytes(0), vm.Int64Bytes(0)}, *orders[0].Utxo.SourceID, *orders[0].FromAssetID, orders[0].Utxo.Amount, orders[0].Utxo.SourcePos, orders[0].Utxo.ControlProgram),
+						types.NewSpendInput([][]byte{vm.Int64Bytes(416), vm.Int64Bytes(0), vm.Int64Bytes(0)}, *orders[0].Utxo.SourceID, *orders[0].FromAssetID, orders[0].Utxo.Amount, orders[0].Utxo.SourcePos, orders[0].Utxo.ControlProgram),
 						types.NewSpendInput([][]byte{vm.Int64Bytes(2), vm.Int64Bytes(1)}, *orders[3].Utxo.SourceID, *orders[3].FromAssetID, orders[3].Utxo.Amount, orders[3].Utxo.SourcePos, orders[3].Utxo.ControlProgram),
 					},
 					Outputs: []*types.TxOutput{
@@ -146,7 +146,7 @@ func TestGenerateMatchedTxs(t *testing.T) {
 				{
 					Inputs: []*types.TxInput{
 						types.NewSpendInput([][]byte{vm.Int64Bytes(0), vm.Int64Bytes(1)}, *orders[0].Utxo.SourceID, *orders[0].FromAssetID, orders[0].Utxo.Amount, orders[0].Utxo.SourcePos, orders[0].Utxo.ControlProgram),
-						types.NewSpendInput([][]byte{vm.Int64Bytes(1), vm.Int64Bytes(0)}, *orders[4].Utxo.SourceID, *orders[4].FromAssetID, orders[4].Utxo.Amount, orders[4].Utxo.SourcePos, orders[4].Utxo.ControlProgram),
+						types.NewSpendInput([][]byte{vm.Int64Bytes(10), vm.Int64Bytes(1), vm.Int64Bytes(0)}, *orders[4].Utxo.SourceID, *orders[4].FromAssetID, orders[4].Utxo.Amount, orders[4].Utxo.SourcePos, orders[4].Utxo.ControlProgram),
 					},
 					Outputs: []*types.TxOutput{
 						types.NewIntraChainOutput(*orders[0].ToAssetID, 500, testutil.MustDecodeHexString("51")),
