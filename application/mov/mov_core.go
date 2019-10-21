@@ -160,7 +160,7 @@ func validateMagneticContractArgs(inputAmount uint64, program []byte) error {
 
 func getFeeFromMatchedTx(tx *types.Tx) bc.AssetAmount {
 	for _, output := range tx.Outputs {
-		if hex.EncodeToString(output.ControlProgram()) == "" { // node address
+		if hex.EncodeToString(output.ControlProgram()) == "" { // node address of package block
 			return output.AssetAmount()
 		}
 	}
