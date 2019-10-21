@@ -11,12 +11,12 @@ const (
 
 type matchEnginer interface {
 	ApplyBlock(block *types.Block) error
-	BeforeProposalBlock(txs []*types.Tx) ([]*types.Tx, error)
-	ChainStatus() (uint64, *bc.Hash)
+	BeforeProposalBlock(capacity int) ([]*types.Tx, error)
+	ChainStatus() (uint64, *bc.Hash, error)
 	DetachBlock(block *types.Block) error
 	IsDust(tx *types.Tx) bool
-	ValidateBlock(block *bc.Block) error
-	ValidateTxs(txs []*bc.Tx) error
+	ValidateBlock(block *types.Block) error
+	ValidateTxs(txs []*types.Tx) error
 }
 
 type MOV struct {
@@ -31,11 +31,11 @@ func (m MOV) ApplyBlock(block *types.Block) error {
 	return m.engine.ApplyBlock(block)
 }
 
-func (m MOV) BeforeProposalBlock(txs []*types.Tx) ([]*types.Tx, error) {
-	return m.engine.BeforeProposalBlock(txs)
+func (m MOV) BeforeProposalBlock(capacity int) ([]*types.Tx, error) {
+	return m.engine.BeforeProposalBlock(capacity)
 }
 
-func (m MOV) ChainStatus() (uint64, *bc.Hash) {
+func (m MOV) ChainStatus() (uint64, *bc.Hash, error) {
 	return m.engine.ChainStatus()
 }
 
@@ -51,14 +51,10 @@ func (m MOV) Name() string {
 	return protocolName
 }
 
-func (m MOV) ValidateBlock(block *bc.Block) error {
+func (m MOV) ValidateBlock(block *types.Block) error {
 	return m.engine.ValidateBlock(block)
 }
 
-func (m MOV) ValidateTxs(txs []*bc.Tx) error {
+func (m MOV) ValidateTxs(txs []*types.Tx) error {
 	return m.engine.ValidateTxs(txs)
-}
-
-func (m MOV) Status() (uint64, *bc.Hash) {
-	return m.engine.ChainStatus()
 }

@@ -21,9 +21,9 @@ const (
 
 type Protocoler interface {
 	Name() string
-	Status() (uint64, *bc.Hash)
-	ValidateBlock(block *bc.Block) error
-	ValidateTxs(txs []*bc.Tx) error
+	ChainStatus() (uint64, *bc.Hash, error)
+	ValidateBlock(block *types.Block) error
+	ValidateTxs(txs []*types.Tx) error
 	ApplyBlock(block *types.Block) error
 	DetachBlock(block *types.Block) error
 }
@@ -202,7 +202,11 @@ func (c *Chain) markTransactions(txs ...*types.Tx) {
 }
 
 func (c *Chain) syncProtocolStatus(subProtocol Protocoler) error {
-	protocolHeight, protocolHash := subProtocol.Status()
+	protocolHeight, protocolHash, err := subProtocol.ChainStatus()
+	if err != nil {
+		return errors.Wrap(err, "failed on get sub protocol status")
+	}
+
 	if protocolHeight == c.BestBlockHeight() && protocolHash == c.BestBlockHash() {
 		return nil
 	}
@@ -217,7 +221,10 @@ func (c *Chain) syncProtocolStatus(subProtocol Protocoler) error {
 			return errors.Wrap(err, subProtocol.Name(), "sub protocol detach block err")
 		}
 
-		protocolHeight, protocolHash = subProtocol.Status()
+		protocolHeight, protocolHash, err = subProtocol.ChainStatus()
+		if err != nil {
+			return errors.Wrap(err, "failed on get sub protocol status")
+		}
 	}
 
 	for height := protocolHeight + 1; height <= c.BestBlockHeight(); height++ {
@@ -230,7 +237,11 @@ func (c *Chain) syncProtocolStatus(subProtocol Protocoler) error {
 			return errors.Wrap(err, subProtocol.Name(), "sub protocol apply block err")
 		}
 
-		protocolHeight, protocolHash = subProtocol.Status()
+		protocolHeight, protocolHash, err = subProtocol.ChainStatus()
+		if err != nil {
+			return errors.Wrap(err, "failed on get sub protocol status")
+		}
+
 		if *protocolHash != block.Hash() {
 			return errors.Wrap(errors.New("sub protocol status sync err"), subProtocol.Name())
 		}

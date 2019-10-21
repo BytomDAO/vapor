@@ -299,7 +299,7 @@ func (c *Chain) saveBlock(block *types.Block) error {
 	}
 
 	for _, p := range c.subProtocols {
-		if err := p.ValidateBlock(bcBlock); err != nil {
+		if err := p.ValidateBlock(block); err != nil {
 			return errors.Wrap(err, "sub protocol save block")
 		}
 	}
