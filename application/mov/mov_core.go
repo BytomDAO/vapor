@@ -2,7 +2,6 @@ package mov
 
 import (
 	"encoding/hex"
-	"github.com/vapor/math/checked"
 
 	"github.com/vapor/application/mov/common"
 	"github.com/vapor/application/mov/database"
@@ -10,6 +9,7 @@ import (
 	"github.com/vapor/application/mov/util"
 	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/errors"
+	"github.com/vapor/math/checked"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
