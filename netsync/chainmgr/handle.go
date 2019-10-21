@@ -255,7 +255,7 @@ func (m *Manager) handleTransactionMsg(peer *peers.Peer, msg *msgs.TransactionMe
 		return
 	}
 
-	if ok := m.mempool.IsDust(tx); ok {
+	if m.mempool.IsDust(tx) {
 		m.peers.ProcessIllegal(peer.ID(), security.LevelMsgIllegal, "receive dust tx msg")
 		return
 	}
@@ -279,7 +279,7 @@ func (m *Manager) handleTransactionsMsg(peer *peers.Peer, msg *msgs.Transactions
 	}
 
 	for _, tx := range txs {
-		if ok := m.mempool.IsDust(tx); ok {
+		if m.mempool.IsDust(tx) {
 			m.peers.ProcessIllegal(peer.ID(), security.LevelMsgIllegal, "receive dust txs msg")
 			continue
 		}

@@ -82,7 +82,7 @@ func (b *BlockProposer) generateBlocks() {
 			continue
 		}
 
-		packageTxs := []*types.Tx{}
+		var packageTxs []*types.Tx
 		txs := b.txPool.GetTransactions()
 		sort.Sort(byTime(txs))
 		for _, txDesc := range txs {
