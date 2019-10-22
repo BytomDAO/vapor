@@ -32,7 +32,7 @@ func (t *TradePairIterator) HasNext() bool {
 	if err != nil {
 		// If the error is returned, it's an error of program itself,
 		// and cannot be recovered, so panic directly.
-		log.Fatal(err)
+		log.WithField("err", err).Fatal("fail to list trade pairs")
 	}
 
 	if len(tradePairs) == 0 {
@@ -71,7 +71,7 @@ func (o *OrderIterator) HasNext() bool {
 	if len(o.orders) == 0 {
 		orders, err := o.movStore.ListOrders(o.lastOrder)
 		if err != nil {
-			log.Fatal(err)
+			log.WithField("err", err).Fatal("fail to list orders")
 		}
 
 		if len(orders) == 0 {
