@@ -917,8 +917,8 @@ func TestMagneticContractTx(t *testing.T) {
 					types.MapTx(&types.TxData{
 						SerializedSize: 1,
 						Inputs: []*types.TxInput{
-							types.NewSpendInput([][]byte{vm.Int64Bytes(0), vm.Int64Bytes(1)}, bc.Hash{V0: 10}, buyerArgs.RequestedAsset, 100000000, 1, programSeller),
-							types.NewSpendInput([][]byte{vm.Int64Bytes(1), vm.Int64Bytes(1)}, bc.Hash{V0: 20}, sellerArgs.RequestedAsset, 200000000, 0, programBuyer),
+							types.NewSpendInput([][]byte{vm.Int64Bytes(0), vm.Int64Bytes(int64(vmutil.MagneticContractFullTradeClauseSelector))}, bc.Hash{V0: 10}, buyerArgs.RequestedAsset, 100000000, 1, programSeller),
+							types.NewSpendInput([][]byte{vm.Int64Bytes(1), vm.Int64Bytes(int64(vmutil.MagneticContractFullTradeClauseSelector))}, bc.Hash{V0: 20}, sellerArgs.RequestedAsset, 200000000, 0, programBuyer),
 						},
 						Outputs: []*types.TxOutput{
 							types.NewIntraChainOutput(sellerArgs.RequestedAsset, 200000000, sellerArgs.SellerProgram),
@@ -937,8 +937,8 @@ func TestMagneticContractTx(t *testing.T) {
 					types.MapTx(&types.TxData{
 						SerializedSize: 1,
 						Inputs: []*types.TxInput{
-							types.NewSpendInput([][]byte{vm.Int64Bytes(100000000), vm.Int64Bytes(0), vm.Int64Bytes(0)}, bc.Hash{V0: 10}, buyerArgs.RequestedAsset, 200000000, 1, programSeller),
-							types.NewSpendInput([][]byte{vm.Int64Bytes(2), vm.Int64Bytes(1)}, bc.Hash{V0: 20}, sellerArgs.RequestedAsset, 100000000, 0, programBuyer),
+							types.NewSpendInput([][]byte{vm.Int64Bytes(100000000), vm.Int64Bytes(0), vm.Int64Bytes(int64(vmutil.MagneticContractPartialTradeClauseSelector))}, bc.Hash{V0: 10}, buyerArgs.RequestedAsset, 200000000, 1, programSeller),
+							types.NewSpendInput([][]byte{vm.Int64Bytes(2), vm.Int64Bytes(int64(vmutil.MagneticContractFullTradeClauseSelector))}, bc.Hash{V0: 20}, sellerArgs.RequestedAsset, 100000000, 0, programBuyer),
 						},
 						Outputs: []*types.TxOutput{
 							types.NewIntraChainOutput(sellerArgs.RequestedAsset, 100000000, sellerArgs.SellerProgram),
@@ -958,8 +958,8 @@ func TestMagneticContractTx(t *testing.T) {
 					types.MapTx(&types.TxData{
 						SerializedSize: 1,
 						Inputs: []*types.TxInput{
-							types.NewSpendInput([][]byte{vm.Int64Bytes(0), vm.Int64Bytes(1)}, bc.Hash{V0: 10}, buyerArgs.RequestedAsset, 100000000, 1, programSeller),
-							types.NewSpendInput([][]byte{vm.Int64Bytes(100000000), vm.Int64Bytes(1), vm.Int64Bytes(0)}, bc.Hash{V0: 20}, sellerArgs.RequestedAsset, 300000000, 0, programBuyer),
+							types.NewSpendInput([][]byte{vm.Int64Bytes(0), vm.Int64Bytes(int64(vmutil.MagneticContractFullTradeClauseSelector))}, bc.Hash{V0: 10}, buyerArgs.RequestedAsset, 100000000, 1, programSeller),
+							types.NewSpendInput([][]byte{vm.Int64Bytes(100000000), vm.Int64Bytes(1), vm.Int64Bytes(int64(vmutil.MagneticContractPartialTradeClauseSelector))}, bc.Hash{V0: 20}, sellerArgs.RequestedAsset, 300000000, 0, programBuyer),
 						},
 						Outputs: []*types.TxOutput{
 							types.NewIntraChainOutput(sellerArgs.RequestedAsset, 200000000, sellerArgs.SellerProgram),
@@ -979,7 +979,7 @@ func TestMagneticContractTx(t *testing.T) {
 					types.MapTx(&types.TxData{
 						SerializedSize: 1,
 						Inputs: []*types.TxInput{
-							types.NewSpendInput([][]byte{testutil.MustDecodeHexString("0a72a2b2944ec9b4bcdef392e6c532effc77ea536809fa290a12e39df7651851a9939e23e492369dc8936e0ebf3ecd1de4e9077d0593bd3fcb5874fb26dfc60a"), vm.Int64Bytes(0), vm.Int64Bytes(2)}, bc.Hash{V0: 10}, buyerArgs.RequestedAsset, 100000000, 0, programSeller),
+							types.NewSpendInput([][]byte{testutil.MustDecodeHexString("0a72a2b2944ec9b4bcdef392e6c532effc77ea536809fa290a12e39df7651851a9939e23e492369dc8936e0ebf3ecd1de4e9077d0593bd3fcb5874fb26dfc60a"), vm.Int64Bytes(0), vm.Int64Bytes(int64(vmutil.MagneticContractCancelClauseSelector))}, bc.Hash{V0: 10}, buyerArgs.RequestedAsset, 100000000, 0, programSeller),
 						},
 						Outputs: []*types.TxOutput{
 							types.NewIntraChainOutput(buyerArgs.RequestedAsset, 100000000, sellerArgs.SellerProgram),
@@ -997,7 +997,7 @@ func TestMagneticContractTx(t *testing.T) {
 					types.MapTx(&types.TxData{
 						SerializedSize: 1,
 						Inputs: []*types.TxInput{
-							types.NewSpendInput([][]byte{testutil.MustDecodeHexString("686b983a8de1893ef723144389fd1f07b12b048f52f389faa863243195931d5732dbfd15470b43ed63d5067900718cf94f137073f4a972d277bbd967b022545d"), vm.Int64Bytes(0), vm.Int64Bytes(2)}, bc.Hash{V0: 10}, buyerArgs.RequestedAsset, 100000000, 0, programSeller),
+							types.NewSpendInput([][]byte{testutil.MustDecodeHexString("686b983a8de1893ef723144389fd1f07b12b048f52f389faa863243195931d5732dbfd15470b43ed63d5067900718cf94f137073f4a972d277bbd967b022545d"), vm.Int64Bytes(0), vm.Int64Bytes(int64(vmutil.MagneticContractCancelClauseSelector))}, bc.Hash{V0: 10}, buyerArgs.RequestedAsset, 100000000, 0, programSeller),
 						},
 						Outputs: []*types.TxOutput{
 							types.NewIntraChainOutput(buyerArgs.RequestedAsset, 100000000, sellerArgs.SellerProgram),
@@ -1015,8 +1015,8 @@ func TestMagneticContractTx(t *testing.T) {
 					types.MapTx(&types.TxData{
 						SerializedSize: 1,
 						Inputs: []*types.TxInput{
-							types.NewSpendInput([][]byte{vm.Int64Bytes(0), vm.Int64Bytes(1)}, bc.Hash{V0: 10}, buyerArgs.RequestedAsset, 100000000, 1, programSeller),
-							types.NewSpendInput([][]byte{vm.Int64Bytes(1), vm.Int64Bytes(1)}, bc.Hash{V0: 20}, sellerArgs.RequestedAsset, 200000000, 0, programBuyer),
+							types.NewSpendInput([][]byte{vm.Int64Bytes(0), vm.Int64Bytes(int64(vmutil.MagneticContractFullTradeClauseSelector))}, bc.Hash{V0: 10}, buyerArgs.RequestedAsset, 100000000, 1, programSeller),
+							types.NewSpendInput([][]byte{vm.Int64Bytes(1), vm.Int64Bytes(int64(vmutil.MagneticContractFullTradeClauseSelector))}, bc.Hash{V0: 20}, sellerArgs.RequestedAsset, 200000000, 0, programBuyer),
 						},
 						Outputs: []*types.TxOutput{
 							types.NewIntraChainOutput(sellerArgs.RequestedAsset, 200000000, sellerArgs.SellerProgram),
@@ -1036,8 +1036,8 @@ func TestMagneticContractTx(t *testing.T) {
 					types.MapTx(&types.TxData{
 						SerializedSize: 1,
 						Inputs: []*types.TxInput{
-							types.NewSpendInput([][]byte{vm.Int64Bytes(0), vm.Int64Bytes(1)}, bc.Hash{V0: 10}, buyerArgs.RequestedAsset, 100000000, 1, programSeller),
-							types.NewSpendInput([][]byte{vm.Int64Bytes(1), vm.Int64Bytes(1)}, bc.Hash{V0: 20}, sellerArgs.RequestedAsset, 200000000, 0, programBuyer),
+							types.NewSpendInput([][]byte{vm.Int64Bytes(0), vm.Int64Bytes(int64(vmutil.MagneticContractFullTradeClauseSelector))}, bc.Hash{V0: 10}, buyerArgs.RequestedAsset, 100000000, 1, programSeller),
+							types.NewSpendInput([][]byte{vm.Int64Bytes(1), vm.Int64Bytes(int64(vmutil.MagneticContractFullTradeClauseSelector))}, bc.Hash{V0: 20}, sellerArgs.RequestedAsset, 200000000, 0, programBuyer),
 							types.NewSpendInput(nil, bc.Hash{V0: 30}, bc.AssetID{V0: 1}, 200000000, 0, []byte{0x51}),
 						},
 						Outputs: []*types.TxOutput{
@@ -1058,8 +1058,8 @@ func TestMagneticContractTx(t *testing.T) {
 					types.MapTx(&types.TxData{
 						SerializedSize: 1,
 						Inputs: []*types.TxInput{
-							types.NewSpendInput([][]byte{vm.Int64Bytes(100000000), vm.Int64Bytes(0), vm.Int64Bytes(0)}, bc.Hash{V0: 10}, buyerArgs.RequestedAsset, 200000000, 1, programSeller),
-							types.NewSpendInput([][]byte{vm.Int64Bytes(2), vm.Int64Bytes(1)}, bc.Hash{V0: 20}, sellerArgs.RequestedAsset, 100000000, 0, programBuyer),
+							types.NewSpendInput([][]byte{vm.Int64Bytes(100000000), vm.Int64Bytes(0), vm.Int64Bytes(int64(vmutil.MagneticContractPartialTradeClauseSelector))}, bc.Hash{V0: 10}, buyerArgs.RequestedAsset, 200000000, 1, programSeller),
+							types.NewSpendInput([][]byte{vm.Int64Bytes(2), vm.Int64Bytes(int64(vmutil.MagneticContractFullTradeClauseSelector))}, bc.Hash{V0: 20}, sellerArgs.RequestedAsset, 100000000, 0, programBuyer),
 						},
 						Outputs: []*types.TxOutput{
 							types.NewIntraChainOutput(sellerArgs.RequestedAsset, 100000000, sellerArgs.SellerProgram),
@@ -1133,9 +1133,9 @@ func TestRingMagneticContractTx(t *testing.T) {
 					types.MapTx(&types.TxData{
 						SerializedSize: 1,
 						Inputs: []*types.TxInput{
-							types.NewSpendInput([][]byte{vm.Int64Bytes(0), vm.Int64Bytes(1)}, bc.Hash{V0: 10}, jackArgs.RequestedAsset, 100000000, 0, aliceProgram),
-							types.NewSpendInput([][]byte{vm.Int64Bytes(1), vm.Int64Bytes(1)}, bc.Hash{V0: 20}, aliceArgs.RequestedAsset, 200000000, 0, bobProgram),
-							types.NewSpendInput([][]byte{vm.Int64Bytes(2), vm.Int64Bytes(1)}, bc.Hash{V0: 30}, bobArgs.RequestedAsset, 400000000, 0, jackProgram),
+							types.NewSpendInput([][]byte{vm.Int64Bytes(0), vm.Int64Bytes(int64(vmutil.MagneticContractFullTradeClauseSelector))}, bc.Hash{V0: 10}, jackArgs.RequestedAsset, 100000000, 0, aliceProgram),
+							types.NewSpendInput([][]byte{vm.Int64Bytes(1), vm.Int64Bytes(int64(vmutil.MagneticContractFullTradeClauseSelector))}, bc.Hash{V0: 20}, aliceArgs.RequestedAsset, 200000000, 0, bobProgram),
+							types.NewSpendInput([][]byte{vm.Int64Bytes(2), vm.Int64Bytes(int64(vmutil.MagneticContractFullTradeClauseSelector))}, bc.Hash{V0: 30}, bobArgs.RequestedAsset, 400000000, 0, jackProgram),
 						},
 						Outputs: []*types.TxOutput{
 							types.NewIntraChainOutput(aliceArgs.RequestedAsset, 200000000, aliceArgs.SellerProgram),

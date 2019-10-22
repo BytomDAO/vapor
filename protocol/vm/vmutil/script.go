@@ -13,6 +13,12 @@ var (
 	ErrMultisigFormat = errors.New("bad multisig program format")
 )
 
+const (
+	MagneticContractPartialTradeClauseSelector uint8 = iota
+	MagneticContractFullTradeClauseSelector
+	MagneticContractCancelClauseSelector
+)
+
 // MagneticContractArgs is a struct for magnetic contract arguments
 type MagneticContractArgs struct {
 	RequestedAsset   bc.AssetID
