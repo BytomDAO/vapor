@@ -83,8 +83,11 @@ func NewNode(config *cfg.Config) *Node {
 	}
 
 	initCommonConfig(config)
-
-	mov := protocol.NewMOV()
+	movDB := dbm.NewDB("mov", config.DBBackend, config.DBDir())
+	mov, err := protocol.NewMOV(movDB, consensus.ActiveNetParams.MovStartPoint)
+	if err != nil {
+		log.Fatalf("Failed to create Mov protocol", err.Error())
+	}
 	// Get store
 	if config.DBBackend != "memdb" && config.DBBackend != "leveldb" {
 		cmn.Exit(cmn.Fmt("Param db_backend [%v] is invalid, use leveldb or memdb", config.DBBackend))

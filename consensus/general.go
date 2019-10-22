@@ -103,6 +103,7 @@ type Params struct {
 	ProducerSubsidys []ProducerSubsidy
 
 	SoftForkPoint map[uint64]uint64
+	MovStartPoint Checkpoint
 }
 
 // ActiveNetParams is the active NetParams
