@@ -5,8 +5,10 @@ import (
 	"math"
 	"sync"
 
+	"github.com/vapor/common"
 	"github.com/vapor/config"
 	"github.com/vapor/consensus"
+	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/errors"
 	"github.com/vapor/math/checked"
 	"github.com/vapor/protocol/bc"
@@ -277,9 +279,24 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errors.New("incorrect asset_id while checking CrossChainInput")
 		}
 
+		code := config.FederationWScript(config.CommonConfig.Federation)
+
+		isCrossChainOfNoBytom, err := common.IsCrossChainAssetOfNoBytom(e.RawDefinitionByte)
+		if err != nil {
+			return err
+		}
+
+		if isCrossChainOfNoBytom {
+			pubs, required, err := segwit.GetXpubsAndRequiredFromProg(e.AssetDefinition.IssuanceProgram.Code)
+			if err != nil {
+				return err
+			}
+			code = config.FederationWScriptFromPubs(pubs, required)
+		}
+
 		prog := &bc.Program{
 			VmVersion: e.ControlProgram.VmVersion,
-			Code:      config.FederationWScript(config.CommonConfig),
+			Code:      code,
 		}
 
 		if _, err := vm.Verify(NewTxVMContext(vs, e, prog, e.WitnessArguments), consensus.ActiveNetParams.DefaultGasCredit); err != nil {

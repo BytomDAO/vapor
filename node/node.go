@@ -66,8 +66,8 @@ func NewNode(config *cfg.Config) *Node {
 		cmn.Exit(cmn.Fmt("Failed to load federated information:[%s]", err.Error()))
 	}
 
-	if err:=vaporLog.InitLogFile(config);err!=nil{
-		log.WithField("err",err).Fatalln("InitLogFile failed")
+	if err := vaporLog.InitLogFile(config); err != nil {
+		log.WithField("err", err).Fatalln("InitLogFile failed")
 	}
 
 	log.WithFields(log.Fields{
@@ -75,7 +75,7 @@ func NewNode(config *cfg.Config) *Node {
 		"pubkey":             config.PrivateKey().XPub(),
 		"fed_xpubs":          config.Federation.Xpubs,
 		"fed_quorum":         config.Federation.Quorum,
-		"fed_controlprogram": hex.EncodeToString(cfg.FederationWScript(config)),
+		"fed_controlprogram": hex.EncodeToString(cfg.FederationWScript(config.Federation)),
 	}).Info()
 
 	if err := consensus.InitActiveNetParams(config.ChainID); err != nil {
@@ -169,7 +169,7 @@ func NewNode(config *cfg.Config) *Node {
 
 // find whether config xpubs equal genesis block xpubs
 func checkConfig(chain *protocol.Chain, config *cfg.Config) error {
-	fedpegScript := cfg.FederationWScript(config)
+	fedpegScript := cfg.FederationWScript(config.Federation)
 	genesisBlock, err := chain.GetBlockByHeight(0)
 	if err != nil {
 		return err

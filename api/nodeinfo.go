@@ -40,7 +40,7 @@ type NetInfo struct {
 func (a *API) GetNodeInfo() *NetInfo {
 	nodeXPub := cfg.CommonConfig.PrivateKey().XPub()
 
-	signScript := cfg.FederationPMultiSigScript(cfg.CommonConfig)
+	signScript := cfg.FederationPMultiSigScript(cfg.CommonConfig.Federation)
 	scriptHash := crypto.Sha256(signScript)
 	address, err := common.NewAddressWitnessScriptHash(scriptHash, consensus.BytomMainNetParams(&consensus.ActiveNetParams))
 	if err != nil {

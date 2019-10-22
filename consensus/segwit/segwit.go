@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/vapor/consensus"
+	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/vm"
 	"github.com/vapor/protocol/vm/vmutil"
@@ -159,4 +160,45 @@ func GetHashFromStandardProg(prog []byte) ([]byte, error) {
 	}
 
 	return insts[1].Data, nil
+}
+
+func GetXpubsAndRequiredFromProg(prog []byte) ([]ed25519.PublicKey, int, error) {
+	// if program is P2PKH or P2SH script, convert it into actual executed program
+	if IsP2WPKHScript(prog) {
+		if witnessProg, err := ConvertP2PKHSigProgram(prog); err == nil {
+			prog = witnessProg
+		}
+	} else if IsP2WSHScript(prog) {
+		if witnessProg, err := ConvertP2SHProgram(prog); err == nil {
+			prog = witnessProg
+		}
+	}
+
+	insts, err := vm.ParseProgram(prog)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	instsLen := len(insts)
+
+	if insts[0].Op != vm.OP_TXSIGHASH || insts[instsLen-1].Op != vm.OP_CHECKMULTISIG {
+		return nil, 0, errors.New("instruction is error")
+	}
+
+	required, err := vm.AsInt64(insts[instsLen-3].Data)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	xpubsNum, err := vm.AsInt64(insts[instsLen-2].Data)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var pubs []ed25519.PublicKey
+	for i := 1; i < int(xpubsNum+1); i++ {
+		pubs = append(pubs, insts[i].Data)
+	}
+
+	return pubs, int(required), nil
 }

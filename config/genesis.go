@@ -7,6 +7,7 @@ import (
 
 	"github.com/vapor/consensus"
 	"github.com/vapor/crypto"
+	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -22,10 +23,10 @@ var FedAddressPath = [][]byte{
 	[]byte{0x01, 0x00, 0x00, 0x00},
 }
 
-func FederationPMultiSigScript(c *Config) []byte {
-	xpubs := c.Federation.Xpubs
+func FederationPMultiSigScript(c *FederationConfig) []byte {
+	xpubs := c.Xpubs
 	derivedXPubs := chainkd.DeriveXPubs(xpubs, FedAddressPath)
-	program, err := vmutil.P2SPMultiSigProgram(chainkd.XPubKeys(derivedXPubs), c.Federation.Quorum)
+	program, err := vmutil.P2SPMultiSigProgram(chainkd.XPubKeys(derivedXPubs), c.Quorum)
 	if err != nil {
 		log.Panicf("fail to generate federation scirpt for federation: %v", err)
 	}
@@ -33,9 +34,24 @@ func FederationPMultiSigScript(c *Config) []byte {
 	return program
 }
 
-func FederationWScript(c *Config) []byte {
+func FederationWScript(c *FederationConfig) []byte {
 	script := FederationPMultiSigScript(c)
 	scriptHash := crypto.Sha256(script)
+	wscript, err := vmutil.P2WSHProgram(scriptHash)
+	if err != nil {
+		log.Panicf("Fail converts scriptHash to witness: %v", err)
+	}
+
+	return wscript
+}
+
+func FederationWScriptFromPubs(pubkeys []ed25519.PublicKey, quorum int) []byte {
+	program, err := vmutil.P2SPMultiSigProgram(pubkeys, quorum)
+	if err != nil {
+		log.Panicf("fail to generate federation scirpt for federation: %v", err)
+	}
+
+	scriptHash := crypto.Sha256(program)
 	wscript, err := vmutil.P2WSHProgram(scriptHash)
 	if err != nil {
 		log.Panicf("Fail converts scriptHash to witness: %v", err)
@@ -50,7 +66,7 @@ func GenesisTx() *types.Tx {
 		log.Panicf("fail on decode genesis tx output control program")
 	}
 
-	coinbaseInput := FederationWScript(CommonConfig)
+	coinbaseInput := FederationWScript(CommonConfig.Federation)
 
 	txData := types.TxData{
 		Version: 1,
