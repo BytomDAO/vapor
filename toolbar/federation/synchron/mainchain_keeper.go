@@ -24,6 +24,8 @@ import (
 	"github.com/vapor/toolbar/federation/service"
 )
 
+const filterAssetIDUpdateSencond = 1
+
 type mainchainKeeper struct {
 	cfg            *config.Chain
 	db             *gorm.DB
@@ -32,6 +34,7 @@ type mainchainKeeper struct {
 	chainID        uint64
 	federationProg []byte
 	vaporNetParams consensus.Params
+	filterAssets   map[string]bool
 }
 
 func NewMainchainKeeper(db *gorm.DB, assetStore *database.AssetStore, cfg *config.Config) *mainchainKeeper {
@@ -40,7 +43,7 @@ func NewMainchainKeeper(db *gorm.DB, assetStore *database.AssetStore, cfg *confi
 		log.WithField("err", err).Fatal("fail on get chain info")
 	}
 
-	return &mainchainKeeper{
+	keeper := &mainchainKeeper{
 		cfg:            &cfg.Mainchain,
 		db:             db,
 		node:           service.NewNode(cfg.Mainchain.Upstream),
@@ -48,10 +51,18 @@ func NewMainchainKeeper(db *gorm.DB, assetStore *database.AssetStore, cfg *confi
 		federationProg: cfg.FederationProg,
 		chainID:        chain.ID,
 		vaporNetParams: consensus.NetParams[cfg.Network],
+		filterAssets:   make(map[string]bool),
 	}
+
+	if err := keeper.initFilterAssetID(); err != nil {
+		log.WithField("err", err).Fatal("fail on init filterAssetID")
+	}
+	return keeper
 }
 
 func (m *mainchainKeeper) Run() {
+	go m.checkFilterAssetIDUpdate()
+
 	ticker := time.NewTicker(time.Duration(m.cfg.SyncSeconds) * time.Second)
 	for ; true; <-ticker.C {
 		for {
@@ -84,6 +95,10 @@ func (m *mainchainKeeper) createCrossChainReqs(db *gorm.DB, crossTransactionID u
 		asset, err := m.assetStore.GetByAssetID(rawOutput.OutputCommitment.AssetAmount.AssetId.String())
 		if err != nil {
 			return err
+		}
+
+		if asset.IsFilter {
+			continue
 		}
 
 		req := &orm.CrossTransactionReq{
@@ -246,6 +261,7 @@ func (m *mainchainKeeper) processIssuance(tx *types.Tx) error {
 			IssuanceProgram: hex.EncodeToString(issuance.IssuanceProgram),
 			VMVersion:       issuance.VMVersion,
 			Definition:      string(issuance.AssetDefinition),
+			IsFilter:        m.isFilterAssetID(assetID.String()),
 		}
 
 		if err := m.db.Create(asset).Error; err != nil {
@@ -336,4 +352,36 @@ func (m *mainchainKeeper) tryAttachBlock(block *types.Block, txStatus *bc.Transa
 	}
 
 	return dbTx.Commit().Error
+}
+
+func (m *mainchainKeeper) isFilterAssetID(assetID string) bool {
+	_, ok := m.filterAssets[assetID]
+	return ok
+}
+
+func (m *mainchainKeeper) checkFilterAssetIDUpdate() error {
+	ticker := time.NewTicker(time.Duration(filterAssetIDUpdateSencond) * time.Second)
+	for ; true; <-ticker.C {
+		filterAssets := []*orm.FilterAsset{}
+		if err := m.db.Find(filterAssets).Order("id asc").Error; err != nil {
+			return err
+		}
+
+		for i := len(filterAssets); i < len(filterAssets); i++ {
+			m.filterAssets[filterAssets[i].AssetID] = true
+		}
+	}
+	return nil
+}
+
+func (m *mainchainKeeper) initFilterAssetID() error {
+	filterAssets := []*orm.FilterAsset{}
+	if err := m.db.Find(filterAssets).Order("id asc").Error; err != nil {
+		return err
+	}
+
+	for i := 0; i < len(filterAssets); i++ {
+		m.filterAssets[filterAssets[i].AssetID] = true
+	}
+	return nil
 }

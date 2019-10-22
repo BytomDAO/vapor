@@ -104,3 +104,16 @@ CREATE TABLE `assets` (
 
 LOCK TABLES `assets` WRITE;
 UNLOCK TABLES;
+
+
+# Dump of table filter_assets
+# ------------------------------------------------------------
+
+CREATE TABLE `filter_assets` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `asset_id` varchar(64) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+LOCK TABLES `filter_assets` WRITE;
+UNLOCK TABLES;

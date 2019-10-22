@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm"
 
 	"github.com/vapor/errors"
 	"github.com/vapor/toolbar/federation/common"
@@ -34,7 +35,7 @@ func (s *Server) ListCrosschainTxs(c *gin.Context, listTxsReq *listCrosschainTxs
 		txFilter.SourceTxHash = txHash
 	}
 	if txHash, err := listTxsReq.GetFilterString("dest_tx_hash"); err == nil && txHash != "" {
-		txFilter.DestTxHash = sql.NullString{txHash, true}
+		txFilter.DestTxHash = sql.NullString{String: txHash, Valid: true}
 	}
 
 	txQuery := s.db.Preload("Chain").Preload("Reqs").Preload("Reqs.Asset").Where(txFilter)
@@ -66,4 +67,29 @@ func (s *Server) ListChains(c *gin.Context) ([]*orm.Chain, error) {
 	}
 
 	return chains, nil
+}
+
+type filterAssetIDReq struct {
+	AssetIDs []string `json:"asset_ids"`
+}
+
+func (s *Server) AddFilterAssetIDs(c *gin.Context, req *filterAssetIDReq) error {
+	batch := s.db.Begin()
+	for _, assetID := range req.AssetIDs {
+		filterAsset := &orm.FilterAsset{AssetID: assetID}
+		err := batch.Find(filterAsset).Error
+		if err == nil {
+			continue
+		}
+
+		if err != gorm.ErrRecordNotFound {
+			return err
+		}
+
+		if err := batch.Save(filterAsset).Error; err != nil {
+			return err
+		}
+	}
+
+	return batch.Commit().Error
 }
