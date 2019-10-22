@@ -278,7 +278,7 @@ func (c *MConnection) recvRoutine() {
 		c.recvMonitor.Update(int(n))
 		if err != nil {
 			if c.IsRunning() {
-				log.WithFields(log.Fields{"module": logModule, "conn": c, "error": err}).Error("Connection failed @ recvRoutine (reading byte)")
+				log.WithFields(log.Fields{"module": logModule, "conn": c, "error": err}).Warn("Connection failed @ recvRoutine (reading byte)")
 				c.conn.Close()
 				c.stopForError(err)
 			}
