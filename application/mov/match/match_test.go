@@ -153,7 +153,10 @@ func TestGenerateMatchedTxs(t *testing.T) {
 						// re-order
 						types.NewIntraChainOutput(*orders[4].FromAssetID, 270, orders[4].Utxo.ControlProgram),
 						// fee
-						types.NewIntraChainOutput(*orders[4].FromAssetID, 40, []byte{0x51}),
+						types.NewIntraChainOutput(*orders[4].FromAssetID, 27, []byte{0x51}),
+						// refund
+						types.NewIntraChainOutput(*orders[4].FromAssetID, 6, testutil.MustDecodeHexString("51")),
+						types.NewIntraChainOutput(*orders[4].FromAssetID, 7, testutil.MustDecodeHexString("55")),
 					},
 				},
 				{
