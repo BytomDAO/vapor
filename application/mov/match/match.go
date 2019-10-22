@@ -27,8 +27,9 @@ func NewEngine(movStore database.MovStore, nodeProgram []byte) *Engine {
 	return &Engine{orderTable: NewOrderTable(movStore), nodeProgram: nodeProgram}
 }
 
-// NextMatchedTx match two opposite pending orders.
-// for example, the buy orders want change A with B, then the sell orders must change B with A.
+// NextMatchedTx return the next matchable transaction by the specified trade pairs
+// the size of trade pairs at least, and the sequence of trade pairs can form a loop
+// for example, [assetA -> assetB, assetB -> assetC, assetC -> assetA]
 func (e *Engine) NextMatchedTx(tradePairs  ...*common.TradePair) (*types.Tx, error) {
 	if err := validateTradePairs(tradePairs); err != nil {
 		return nil, err
