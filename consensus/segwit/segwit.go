@@ -163,17 +163,6 @@ func GetHashFromStandardProg(prog []byte) ([]byte, error) {
 }
 
 func GetXpubsAndRequiredFromProg(prog []byte) ([]ed25519.PublicKey, int, error) {
-	// if program is P2PKH or P2SH script, convert it into actual executed program
-	if IsP2WPKHScript(prog) {
-		if witnessProg, err := ConvertP2PKHSigProgram(prog); err == nil {
-			prog = witnessProg
-		}
-	} else if IsP2WSHScript(prog) {
-		if witnessProg, err := ConvertP2SHProgram(prog); err == nil {
-			prog = witnessProg
-		}
-	}
-
 	insts, err := vm.ParseProgram(prog)
 	if err != nil {
 		return nil, 0, err
@@ -181,8 +170,12 @@ func GetXpubsAndRequiredFromProg(prog []byte) ([]ed25519.PublicKey, int, error) 
 
 	instsLen := len(insts)
 
+	if instsLen < 5 {
+		return nil, 0, errors.New("bad length of instruction for issuance program")
+	}
+
 	if insts[0].Op != vm.OP_TXSIGHASH || insts[instsLen-1].Op != vm.OP_CHECKMULTISIG {
-		return nil, 0, errors.New("instruction is error")
+		return nil, 0, errors.New("bad op of instruction for issuance program")
 	}
 
 	required, err := vm.AsInt64(insts[instsLen-3].Data)
@@ -197,6 +190,14 @@ func GetXpubsAndRequiredFromProg(prog []byte) ([]ed25519.PublicKey, int, error) 
 
 	var pubs []ed25519.PublicKey
 	for i := 1; i < int(xpubsNum+1); i++ {
+		if insts[i].Op != vm.OP_DATA_32 || len(insts[i].Data) != 32 {
+			return nil, 0, errors.New("bad publicKey in instruction for issuance program")
+		}
+
+		if !insts[i].IsPushdata() {
+			return nil, 0, errors.New("bad data type in instruction for issuance program")
+		}
+
 		pubs = append(pubs, insts[i].Data)
 	}
 
