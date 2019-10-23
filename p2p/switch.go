@@ -272,7 +272,7 @@ func (sw *Switch) DialPeerWithAddress(addr *NetAddress) error {
 
 	pc, err := newOutboundPeerConn(addr, sw.nodePrivKey, sw.peerConfig)
 	if err != nil {
-		log.WithFields(log.Fields{"module": logModule, "address": addr, " err": err}).Error("DialPeer fail on newOutboundPeerConn")
+		log.WithFields(log.Fields{"module": logModule, "address": addr, " err": err}).Warn("DialPeer fail on newOutboundPeerConn")
 		return err
 	}
 
@@ -431,7 +431,7 @@ func (sw *Switch) listenerRoutine(l Listener) {
 
 func (sw *Switch) dialPeerWorker(a *NetAddress, wg *sync.WaitGroup) {
 	if err := sw.DialPeerWithAddress(a); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "addr": a, "err": err}).Error("dialPeerWorker fail on dial peer")
+		log.WithFields(log.Fields{"module": logModule, "addr": a, "err": err}).Warn("dialPeerWorker fail on dial peer")
 	}
 	wg.Done()
 }
