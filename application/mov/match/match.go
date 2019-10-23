@@ -3,7 +3,6 @@ package match
 import (
 	"encoding/hex"
 	"math"
-	"math/big"
 
 	"github.com/vapor/application/mov/common"
 	"github.com/vapor/application/mov/contract"
@@ -38,19 +37,8 @@ func (e *Engine) HasMatchedTx(tradePairs ...*common.TradePair) bool {
 		return false
 	}
 
-	var contractArgsList []*vmutil.MagneticContractArgs
-	for _, order := range orders {
-		contractArgs, err := segwit.DecodeP2WMCProgram(order.Utxo.ControlProgram)
-		if err != nil {
-			return false
-		}
-
-		contractArgsList = append(contractArgsList, contractArgs)
-	}
-
-	for i, contractArgs := range contractArgsList {
-		oppositeContractArgs := contractArgsList[getOppositeIndex(len(contractArgsList), i)]
-		if canNotBeMatched(contractArgs, oppositeContractArgs) {
+	for i, order := range orders {
+		if canNotBeMatched(order, orders[getOppositeIndex(len(orders), i)]) {
 			return false
 		}
 	}
@@ -112,14 +100,9 @@ func validateTradePairs(tradePairs []*common.TradePair) error {
 	return nil
 }
 
-func canNotBeMatched(contractArgs, oppositeContractArgs *vmutil.MagneticContractArgs) bool {
-	if contractArgs.RatioNumerator == 0 || oppositeContractArgs.RatioDenominator == 0 {
-		return false
-	}
-
-	buyRate := big.NewFloat(0).Quo(big.NewFloat(0).SetInt64(contractArgs.RatioDenominator), big.NewFloat(0).SetInt64(contractArgs.RatioNumerator))
-	sellRate := big.NewFloat(0).Quo(big.NewFloat(0).SetInt64(oppositeContractArgs.RatioNumerator), big.NewFloat(0).SetInt64(oppositeContractArgs.RatioDenominator))
-	return buyRate.Cmp(sellRate) < 0
+func canNotBeMatched(order, oppositeOrder *common.Order) bool {
+	rate := 1 / order.Rate
+	return rate < oppositeOrder.Rate
 }
 
 func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, error) {
