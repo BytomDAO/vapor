@@ -207,6 +207,7 @@ func (m *MovCore) validateMatchedTxSequence(txs []*types.Tx, ) error {
 
 func getSortedTradePairsFromMatchedTx(tx *types.Tx) ([]*common.TradePair, error) {
 	assetMap := make(map[bc.AssetID]bc.AssetID)
+	var firstTradePair *common.TradePair
 	for _, tx := range tx.Inputs {
 		contractArgs, err := segwit.DecodeP2WMCProgram(tx.ControlProgram())
 		if err != nil {
@@ -214,9 +215,11 @@ func getSortedTradePairsFromMatchedTx(tx *types.Tx) ([]*common.TradePair, error)
 		}
 
 		assetMap[tx.AssetID()] = contractArgs.RequestedAsset
+		if firstTradePair == nil {
+			firstTradePair = &common.TradePair{FromAssetID: tx.AssetAmount().AssetId, ToAssetID: &contractArgs.RequestedAsset}
+		}
 	}
 
-	firstTradePair := &common.TradePair{}
 	tradePairs := []*common.TradePair{firstTradePair}
 	tradePair := firstTradePair
 	for *tradePair.ToAssetID != *firstTradePair.FromAssetID {
