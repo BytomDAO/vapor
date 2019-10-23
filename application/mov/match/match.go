@@ -156,16 +156,16 @@ func (e *Engine) addMatchTxFeeOutput(txData *types.TxData) error {
 	}
 
 	for feeAssetID, amount := range feeAssetAmountMap {
-		var reminder uint64 = 0
+		var reminder int64 = 0
 		feeAmount := amount.payableFeeAmount
 		if amount.payableFeeAmount > amount.maxFeeAmount {
 			feeAmount = amount.maxFeeAmount
 			reminder = amount.payableFeeAmount - amount.maxFeeAmount
 		}
-		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(feeAssetID, feeAmount, e.nodeProgram))
+		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(feeAssetID, uint64(feeAmount), e.nodeProgram))
 
 		// There is the remaining amount after paying the handling fee, assign it evenly to participants in the transaction
-		averageAmount := reminder / uint64(len(txData.Inputs))
+		averageAmount := reminder / int64(len(txData.Inputs))
 		if averageAmount == 0 {
 			averageAmount = 1
 		}
@@ -176,9 +176,9 @@ func (e *Engine) addMatchTxFeeOutput(txData *types.TxData) error {
 			}
 
 			if i == len(txData.Inputs)-1 {
-				txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(feeAssetID, reminder, contractArgs.SellerProgram))
+				txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(feeAssetID, uint64(reminder), contractArgs.SellerProgram))
 			} else {
-				txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(feeAssetID, averageAmount, contractArgs.SellerProgram))
+				txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(feeAssetID, uint64(averageAmount), contractArgs.SellerProgram))
 			}
 			reminder -= averageAmount
 		}
@@ -223,8 +223,8 @@ func getOppositeIndex(size int, selfIdx int) int {
 }
 
 type feeAmount struct {
-	maxFeeAmount     uint64
-	payableFeeAmount uint64
+	maxFeeAmount     int64
+	payableFeeAmount int64
 }
 
 func CalcFeeFromMatchedTx(txData *types.TxData) (map[bc.AssetID]*feeAmount, error) {
@@ -237,7 +237,7 @@ func CalcFeeFromMatchedTx(txData *types.TxData) (map[bc.AssetID]*feeAmount, erro
 	for _, output := range txData.Outputs {
 		// minus the amount of the re-order
 		if segwit.IsP2WMCScript(output.ControlProgram()) {
-			assetAmountMap[*output.AssetAmount().AssetId].payableFeeAmount -= output.AssetAmount().Amount
+			assetAmountMap[*output.AssetAmount().AssetId].payableFeeAmount -= int64(output.AssetAmount().Amount)
 		} else {
 			receiveOutputMap[hex.EncodeToString(output.ControlProgram())] = output
 		}
@@ -249,13 +249,13 @@ func CalcFeeFromMatchedTx(txData *types.TxData) (map[bc.AssetID]*feeAmount, erro
 			return nil, err
 		}
 
-		assetAmountMap[input.AssetID()].payableFeeAmount += input.AssetAmount().Amount
+		assetAmountMap[input.AssetID()].payableFeeAmount += int64(input.AssetAmount().Amount)
 		receiveOutput, ok := receiveOutputMap[hex.EncodeToString(contractArgs.SellerProgram)]
 		if !ok {
 			return nil, errors.New("the input of matched tx has no receive output")
 		}
 
-		assetAmountMap[*receiveOutput.AssetAmount().AssetId].payableFeeAmount -= receiveOutput.AssetAmount().Amount
+		assetAmountMap[*receiveOutput.AssetAmount().AssetId].payableFeeAmount -= int64(receiveOutput.AssetAmount().Amount)
 		assetAmountMap[input.AssetID()].maxFeeAmount = CalcMaxFeeAmount(CalcShouldPayAmount(receiveOutput.AssetAmount().Amount, contractArgs))
 	}
 
@@ -275,6 +275,6 @@ func CalcShouldPayAmount(receiveAmount uint64, contractArg *vmutil.MagneticContr
 	return uint64(math.Ceil(float64(receiveAmount) * float64(contractArg.RatioDenominator) / float64(contractArg.RatioNumerator)))
 }
 
-func CalcMaxFeeAmount(shouldPayAmount uint64) uint64 {
-	return uint64(math.Ceil(float64(shouldPayAmount) * maxFeeRate))
+func CalcMaxFeeAmount(shouldPayAmount uint64) int64 {
+	return int64(math.Ceil(float64(shouldPayAmount) * maxFeeRate))
 }
