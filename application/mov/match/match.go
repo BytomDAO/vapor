@@ -150,17 +150,17 @@ func addMatchTxOutput(txData *types.TxData, txInput *types.TxInput, order *commo
 }
 
 func (e *Engine) addMatchTxFeeOutput(txData *types.TxData) error {
-	feeAssetAmountMap, err := CalcFeeFromMatchedTx(txData)
+	txFee, err := CalcMatchedTxFee(txData)
 	if err != nil {
 		return err
 	}
 
-	for feeAssetID, amount := range feeAssetAmountMap {
+	for feeAssetID, amount := range txFee {
 		var reminder int64 = 0
-		feeAmount := amount.payableFeeAmount
-		if amount.payableFeeAmount > amount.maxFeeAmount {
-			feeAmount = amount.maxFeeAmount
-			reminder = amount.payableFeeAmount - amount.maxFeeAmount
+		feeAmount := amount.FeeAmount
+		if amount.FeeAmount > amount.MaxFeeAmount {
+			feeAmount = amount.MaxFeeAmount
+			reminder = amount.FeeAmount - amount.MaxFeeAmount
 		}
 		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(feeAssetID, uint64(feeAmount), e.nodeProgram))
 
@@ -222,25 +222,26 @@ func getOppositeIndex(size int, selfIdx int) int {
 	return oppositeIdx
 }
 
-type feeAmount struct {
-	maxFeeAmount     int64
-	payableFeeAmount int64
+type MatchedTxFee struct {
+	MaxFeeAmount int64
+	FeeAmount    int64
 }
 
-func CalcFeeFromMatchedTx(txData *types.TxData) (map[bc.AssetID]*feeAmount, error) {
-	assetAmountMap := make(map[bc.AssetID]*feeAmount)
-	for _, input := range txData.Inputs {
-		assetAmountMap[input.AssetID()] = &feeAmount{}
-	}
+func CalcMatchedTxFee(txData *types.TxData) (map[bc.AssetID]*MatchedTxFee, error) {
+	assetFeeMap := make(map[bc.AssetID]*MatchedTxFee)
+	sellerProgramMap := make(map[string]bool)
+	assetInputMap := make(map[bc.AssetID]uint64)
 
-	receiveOutputMap := make(map[string]*types.TxOutput)
-	for _, output := range txData.Outputs {
-		// minus the amount of the re-order
-		if segwit.IsP2WMCScript(output.ControlProgram()) {
-			assetAmountMap[*output.AssetAmount().AssetId].payableFeeAmount -= int64(output.AssetAmount().Amount)
-		} else {
-			receiveOutputMap[hex.EncodeToString(output.ControlProgram())] = output
+	for _, input := range txData.Inputs {
+		assetFeeMap[input.AssetID()] = &MatchedTxFee{}
+		assetFeeMap[input.AssetID()].FeeAmount += int64(input.AssetAmount().Amount)
+		contractArgs, err := segwit.DecodeP2WMCProgram(input.ControlProgram())
+		if err != nil {
+			return nil, err
 		}
+
+		sellerProgramMap[hex.EncodeToString(contractArgs.SellerProgram)] = true
+		assetInputMap[input.AssetID()] = input.Amount()
 	}
 
 	for _, input := range txData.Inputs {
@@ -249,22 +250,28 @@ func CalcFeeFromMatchedTx(txData *types.TxData) (map[bc.AssetID]*feeAmount, erro
 			return nil, err
 		}
 
-		assetAmountMap[input.AssetID()].payableFeeAmount += int64(input.AssetAmount().Amount)
-		receiveOutput, ok := receiveOutputMap[hex.EncodeToString(contractArgs.SellerProgram)]
-		if !ok {
-			return nil, errors.New("the input of matched tx has no receive output")
-		}
-
-		assetAmountMap[*receiveOutput.AssetAmount().AssetId].payableFeeAmount -= int64(receiveOutput.AssetAmount().Amount)
-		assetAmountMap[input.AssetID()].maxFeeAmount = CalcMaxFeeAmount(CalcShouldPayAmount(receiveOutput.AssetAmount().Amount, contractArgs))
+		oppositeAmount := assetInputMap[contractArgs.RequestedAsset]
+		receiveAmount := vprMath.MinUint64(calcRequestAmount(input.Amount(), contractArgs), oppositeAmount)
+		assetFeeMap[input.AssetID()].MaxFeeAmount = CalcMaxFeeAmount(CalcShouldPayAmount(receiveAmount, contractArgs))
 	}
 
-	for assetID, amount := range assetAmountMap {
-		if amount.payableFeeAmount == 0 {
-			delete(assetAmountMap, assetID)
+	for _, output := range txData.Outputs {
+		// minus the amount of the re-order
+		if segwit.IsP2WMCScript(output.ControlProgram()) {
+			assetFeeMap[*output.AssetAmount().AssetId].FeeAmount -= int64(output.AssetAmount().Amount)
+		}
+		// minus the amount of seller's receiving output
+		if _, ok := sellerProgramMap[hex.EncodeToString(output.ControlProgram())]; ok {
+			assetFeeMap[*output.AssetAmount().AssetId].FeeAmount -= int64(output.AssetAmount().Amount)
 		}
 	}
-	return assetAmountMap, nil
+
+	for assetID, amount := range assetFeeMap {
+		if amount.FeeAmount == 0 {
+			delete(assetFeeMap, assetID)
+		}
+	}
+	return assetFeeMap, nil
 }
 
 func calcRequestAmount(fromAmount uint64, contractArg *vmutil.MagneticContractArgs) uint64 {
