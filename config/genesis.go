@@ -22,10 +22,10 @@ var FedAddressPath = [][]byte{
 	[]byte{0x01, 0x00, 0x00, 0x00},
 }
 
-func FederationPMultiSigScript(c *FederationConfig) []byte {
-	xpubs := c.Xpubs
+func FederationPMultiSigScript(c *Config) []byte {
+	xpubs := c.Federation.Xpubs
 	derivedXPubs := chainkd.DeriveXPubs(xpubs, FedAddressPath)
-	program, err := vmutil.P2SPMultiSigProgram(chainkd.XPubKeys(derivedXPubs), c.Quorum)
+	program, err := vmutil.P2SPMultiSigProgram(chainkd.XPubKeys(derivedXPubs), c.Federation.Quorum)
 	if err != nil {
 		log.Panicf("fail to generate federation scirpt for federation: %v", err)
 	}
@@ -33,7 +33,7 @@ func FederationPMultiSigScript(c *FederationConfig) []byte {
 	return program
 }
 
-func FederationWScript(c *FederationConfig) []byte {
+func FederationWScript(c *Config) []byte {
 	script := FederationPMultiSigScript(c)
 	scriptHash := crypto.Sha256(script)
 	wscript, err := vmutil.P2WSHProgram(scriptHash)
@@ -50,7 +50,7 @@ func GenesisTx() *types.Tx {
 		log.Panicf("fail on decode genesis tx output control program")
 	}
 
-	coinbaseInput := FederationWScript(CommonConfig.Federation)
+	coinbaseInput := FederationWScript(CommonConfig)
 
 	txData := types.TxData{
 		Version: 1,

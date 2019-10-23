@@ -296,7 +296,7 @@ func (c *crossInAction) Build(ctx context.Context, builder *TemplateBuilder) err
 
 	if !common.IsCrossChainAssetOfNoBytom(c.RawDefinitionByte) {
 		tplIn.AddRawWitnessKeys(fed.Xpubs, cfg.FedAddressPath, fed.Quorum)
-		tplIn.AddDataWitness(cfg.FederationPMultiSigScript(fed))
+		tplIn.AddDataWitness(cfg.FederationPMultiSigScript(cfg.CommonConfig))
 	}
 
 	return builder.AddInput(txin, tplIn)
