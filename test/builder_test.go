@@ -13,6 +13,8 @@ import (
 var (
 	//chainTxUtxoNum maximum utxo quantity in a tx
 	chainTxUtxoNum = 5
+	//chainTxMergeGas chain tx gas
+	chainTxMergeGas = uint64(10000000)
 )
 
 func TestBuildBtmTxChain(t *testing.T) {
@@ -28,7 +30,7 @@ func TestBuildBtmTxChain(t *testing.T) {
 			inputUtxo:  []uint64{5},
 			wantInput:  [][]uint64{},
 			wantOutput: [][]uint64{},
-			wantUtxo:   5,
+			wantUtxo:   5 * chainTxMergeGas,
 		},
 		{
 			inputUtxo: []uint64{5, 4},
@@ -36,9 +38,9 @@ func TestBuildBtmTxChain(t *testing.T) {
 				[]uint64{5, 4},
 			},
 			wantOutput: [][]uint64{
-				[]uint64{9},
+				[]uint64{8},
 			},
-			wantUtxo: 9,
+			wantUtxo: 8 * chainTxMergeGas,
 		},
 		{
 			inputUtxo: []uint64{5, 4, 1, 1},
@@ -47,22 +49,22 @@ func TestBuildBtmTxChain(t *testing.T) {
 				[]uint64{1, 9},
 			},
 			wantOutput: [][]uint64{
-				[]uint64{11},
 				[]uint64{10},
+				[]uint64{9},
 			},
-			wantUtxo: 11,
+			wantUtxo: 10 * chainTxMergeGas,
 		},
 		{
 			inputUtxo: []uint64{22, 123, 53, 234, 23, 4, 2423, 24, 23, 43, 34, 234, 234, 24, 11, 16, 33, 59, 73, 89, 66},
 			wantInput: [][]uint64{
 				[]uint64{22, 123, 53, 234, 23, 4, 2423, 24, 23, 43, 34, 234, 234, 24, 11, 16, 33, 59, 73, 89},
-				[]uint64{66, 3779},
+				[]uint64{66, 3778},
 			},
 			wantOutput: [][]uint64{
-				[]uint64{3779},
-				[]uint64{3845},
+				[]uint64{3778},
+				[]uint64{3843},
 			},
-			wantUtxo: 3845,
+			wantUtxo: 3843 * chainTxMergeGas,
 		},
 	}
 
@@ -80,7 +82,7 @@ func TestBuildBtmTxChain(t *testing.T) {
 		utxos := []*acc.UTXO{}
 		for _, amount := range c.inputUtxo {
 			utxos = append(utxos, &acc.UTXO{
-				Amount:         amount,
+				Amount:         amount * chainTxMergeGas,
 				AssetID:        *consensus.BTMAssetID,
 				Address:        acp.Address,
 				ControlProgram: acp.ControlProgram,
@@ -95,12 +97,12 @@ func TestBuildBtmTxChain(t *testing.T) {
 		for i, tpl := range tpls {
 			gotInput := []uint64{}
 			for _, input := range tpl.Transaction.Inputs {
-				gotInput = append(gotInput, input.Amount())
+				gotInput = append(gotInput, input.Amount()/chainTxMergeGas)
 			}
 
 			gotOutput := []uint64{}
 			for _, output := range tpl.Transaction.Outputs {
-				gotOutput = append(gotOutput, output.AssetAmount().Amount)
+				gotOutput = append(gotOutput, output.AssetAmount().Amount/chainTxMergeGas)
 			}
 
 			if !testutil.DeepEqual(c.wantInput[i], gotInput) {
