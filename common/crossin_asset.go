@@ -2,27 +2,24 @@ package common
 
 import (
 	"encoding/json"
-	"errors"
 )
 
-func IsCrossChainAssetOfNoBytom(rawDefinitionByte []byte) (bool, error) {
+func IsCrossChainAssetOfNoBytom(rawDefinitionByte []byte) bool {
 	var defMap map[string]interface{}
-	if err := json.Unmarshal(rawDefinitionByte, &defMap); err != nil {
-		return false, err
-	}
+	json.Unmarshal(rawDefinitionByte, &defMap)
 
 	description, ok := defMap["description"].(map[string]interface{})
 	if !ok {
-		return false, nil
+		return false
 	}
 
 	issueAssetAction, ok := description["issue_asset_action"].(string)
 	if !ok {
-		return false, nil
+		return false
 	}
 
 	if issueAssetAction != "cross_chain" {
-		return false, errors.New("issueAssetAction is error")
+		return false
 	}
-	return true, nil
+	return true
 }

@@ -10,7 +10,6 @@ import (
 	"github.com/vapor/common"
 	cfg "github.com/vapor/config"
 	"github.com/vapor/consensus"
-	"github.com/vapor/crypto/ed25519/chainkd"
 	"github.com/vapor/encoding/json"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -263,13 +262,11 @@ func DecodeCrossInAction(data []byte) (Action, error) {
 
 type crossInAction struct {
 	bc.AssetAmount
-	SourceID            bc.Hash        `json:"source_id"`
-	SourcePos           uint64         `json:"source_pos"`
-	VMVersion           uint64         `json:"vm_version"`
-	RawDefinitionByte   json.HexBytes  `json:"raw_definition_byte"`
-	IssuanceProgram     json.HexBytes  `json:"issuance_program"`
-	OpenFederationXpubs []chainkd.XPub `json:"open_federation_xpubs"`
-	Quorum              int            `json:"quorum"`
+	SourceID          bc.Hash       `json:"source_id"`
+	SourcePos         uint64        `json:"source_pos"`
+	VMVersion         uint64        `json:"vm_version"`
+	RawDefinitionByte json.HexBytes `json:"raw_definition_byte"`
+	IssuanceProgram   json.HexBytes `json:"issuance_program"`
 }
 
 func (c *crossInAction) Build(ctx context.Context, builder *TemplateBuilder) error {
@@ -296,18 +293,12 @@ func (c *crossInAction) Build(ctx context.Context, builder *TemplateBuilder) err
 	txin := types.NewCrossChainInput(nil, c.SourceID, *c.AssetId, c.Amount, c.SourcePos, c.VMVersion, c.RawDefinitionByte, c.IssuanceProgram)
 	tplIn := &SigningInstruction{}
 	fed := cfg.CommonConfig.Federation
-	isCrossChain, err := common.IsCrossChainAssetOfNoBytom(c.RawDefinitionByte)
-	if err != nil {
-		return err
+
+	if !common.IsCrossChainAssetOfNoBytom(c.RawDefinitionByte) {
+		tplIn.AddRawWitnessKeys(fed.Xpubs, cfg.FedAddressPath, fed.Quorum)
+		tplIn.AddDataWitness(cfg.FederationPMultiSigScript(fed))
 	}
 
-	if isCrossChain {
-		fed.Xpubs = c.OpenFederationXpubs
-		fed.Quorum = c.Quorum
-	}
-
-	tplIn.AddRawWitnessKeys(fed.Xpubs, cfg.FedAddressPath, fed.Quorum)
-	tplIn.AddDataWitness(cfg.FederationPMultiSigScript(fed))
 	return builder.AddInput(txin, tplIn)
 }
 

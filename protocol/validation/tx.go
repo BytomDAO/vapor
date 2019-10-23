@@ -8,7 +8,6 @@ import (
 	"github.com/vapor/common"
 	"github.com/vapor/config"
 	"github.com/vapor/consensus"
-	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/errors"
 	"github.com/vapor/math/checked"
 	"github.com/vapor/protocol/bc"
@@ -281,17 +280,8 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 
 		code := config.FederationWScript(config.CommonConfig.Federation)
 
-		isCrossChainOfNoBytom, err := common.IsCrossChainAssetOfNoBytom(e.RawDefinitionByte)
-		if err != nil {
-			return err
-		}
-
-		if isCrossChainOfNoBytom {
-			pubs, required, err := segwit.GetXpubsAndRequiredFromProg(e.AssetDefinition.IssuanceProgram.Code)
-			if err != nil {
-				return err
-			}
-			code = config.FederationWScriptFromPubs(pubs, required)
+		if common.IsCrossChainAssetOfNoBytom(e.RawDefinitionByte) {
+			code = e.AssetDefinition.IssuanceProgram.Code
 		}
 
 		prog := &bc.Program{
