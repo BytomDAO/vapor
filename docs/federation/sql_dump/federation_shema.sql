@@ -21,6 +21,7 @@ CREATE TABLE `chains` (
   `name` varchar(64) NOT NULL,
   `block_height` int(11) DEFAULT '0',
   `block_hash` char(64) NOT NULL,
+  `is_filter`  tinyint(1) DEFAULT '0',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),

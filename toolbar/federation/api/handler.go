@@ -77,12 +77,9 @@ func (s *Server) AddFilterAssetIDs(c *gin.Context, req *filterAssetIDReq) error 
 	batch := s.db.Begin()
 	for _, assetID := range req.AssetIDs {
 		filterAsset := &orm.FilterAsset{AssetID: assetID}
-		err := batch.Find(filterAsset).Error
-		if err == nil {
+		if err := batch.Find(filterAsset).Error; err == nil {
 			continue
-		}
-
-		if err != gorm.ErrRecordNotFound {
+		} else if err != gorm.ErrRecordNotFound {
 			return err
 		}
 

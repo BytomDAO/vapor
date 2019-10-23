@@ -375,7 +375,7 @@ func (m *mainchainKeeper) checkFilterAssetIDUpdate() error {
 
 func (m *mainchainKeeper) fillFilterAssetID() error {
 	filterAssets := []*orm.FilterAsset{}
-	if err := m.db.Find(filterAssets).Order("id asc").Error; err != nil {
+	if err := m.db.Find(&filterAssets).Where("id > ?", len(m.filterAssets)).Order("id asc").Error; err != nil {
 		return err
 	}
 
