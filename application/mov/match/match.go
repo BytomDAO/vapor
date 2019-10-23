@@ -104,7 +104,7 @@ func validateTradePairs(tradePairs []*common.TradePair) error {
 
 	for i, tradePair := range tradePairs {
 		oppositeTradePair := tradePairs[getOppositeIndex(len(tradePairs), i)]
-		if *tradePair.FromAssetID != *oppositeTradePair.ToAssetID || *tradePair.ToAssetID != *oppositeTradePair.FromAssetID {
+		if *tradePair.ToAssetID != *oppositeTradePair.FromAssetID {
 			return errors.New("specified trade pairs is invalid")
 		}
 	}
@@ -143,8 +143,7 @@ func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, error) {
 	}
 
 	txData.SerializedSize = uint64(len(byteData))
-	tx := types.NewTx(*txData)
-	return tx, nil
+	return types.NewTx(*txData), nil
 }
 
 func addMatchTxOutput(txData *types.TxData, txInput *types.TxInput, order *common.Order, oppositeAmount uint64) error {
