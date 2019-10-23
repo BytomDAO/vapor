@@ -6,6 +6,7 @@ import (
 	"math/big"
 
 	"github.com/vapor/application/mov/common"
+	"github.com/vapor/application/mov/contract"
 	"github.com/vapor/application/mov/database"
 	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/errors"
@@ -205,9 +206,9 @@ func (e *Engine) addMatchTxFeeOutput(txData *types.TxData) error {
 func setMatchTxArguments(txInput *types.TxInput, isPartialTrade bool, position int, receiveAmounts uint64) {
 	var arguments [][]byte
 	if isPartialTrade {
-		arguments = [][]byte{vm.Int64Bytes(int64(receiveAmounts)), vm.Int64Bytes(int64(position)), vm.Int64Bytes(0)}
+		arguments = [][]byte{vm.Int64Bytes(int64(receiveAmounts)), vm.Int64Bytes(int64(position)), vm.Int64Bytes(contract.PartialTradeClauseSelector)}
 	} else {
-		arguments = [][]byte{vm.Int64Bytes(int64(position)), vm.Int64Bytes(1)}
+		arguments = [][]byte{vm.Int64Bytes(int64(position)), vm.Int64Bytes(contract.FullTradeClauseSelector)}
 	}
 	txInput.SetArguments(arguments)
 }
