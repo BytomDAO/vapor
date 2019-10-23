@@ -877,6 +877,285 @@ func TestValidateTxVersion(t *testing.T) {
 	}
 }
 
+func TestMagneticContractTx(t *testing.T) {
+	buyerArgs := vmutil.MagneticContractArgs{
+		RequestedAsset:   bc.AssetID{V0: 1},
+		RatioNumerator:   1,
+		RatioDenominator: 2,
+		SellerProgram:    []byte{0x51},
+		SellerKey:        testutil.MustDecodeHexString("960ecabafb88ba460a40912841afecebf0e84884178611ac97210e327c0d1173"),
+	}
+
+	sellerArgs := vmutil.MagneticContractArgs{
+		RequestedAsset:   bc.AssetID{V0: 2},
+		RatioNumerator:   2,
+		RatioDenominator: 1,
+		SellerProgram:    []byte{0x52},
+		SellerKey:        testutil.MustDecodeHexString("ad79ec6bd3a6d6dbe4d0ee902afc99a12b9702fb63edce5f651db3081d868b75"),
+	}
+
+	programBuyer, err := vmutil.P2WMCProgram(buyerArgs)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	programSeller, err := vmutil.P2WMCProgram(sellerArgs)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cases := []struct {
+		desc  string
+		block *bc.Block
+		err   error
+	}{
+		{
+			desc: "contracts all full trade",
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{Version: 0},
+				Transactions: []*bc.Tx{
+					types.MapTx(&types.TxData{
+						SerializedSize: 1,
+						Inputs: []*types.TxInput{
+							types.NewSpendInput([][]byte{vm.Int64Bytes(0), vm.Int64Bytes(1)}, bc.Hash{V0: 10}, buyerArgs.RequestedAsset, 100000000, 1, programSeller),
+							types.NewSpendInput([][]byte{vm.Int64Bytes(1), vm.Int64Bytes(1)}, bc.Hash{V0: 20}, sellerArgs.RequestedAsset, 200000000, 0, programBuyer),
+						},
+						Outputs: []*types.TxOutput{
+							types.NewIntraChainOutput(sellerArgs.RequestedAsset, 200000000, sellerArgs.SellerProgram),
+							types.NewIntraChainOutput(buyerArgs.RequestedAsset, 100000000, buyerArgs.SellerProgram),
+						},
+					}),
+				},
+			},
+			err: nil,
+		},
+		{
+			desc: "first contract partial trade, second contract full trade",
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{Version: 0},
+				Transactions: []*bc.Tx{
+					types.MapTx(&types.TxData{
+						SerializedSize: 1,
+						Inputs: []*types.TxInput{
+							types.NewSpendInput([][]byte{vm.Int64Bytes(100000000), vm.Int64Bytes(0), vm.Int64Bytes(0)}, bc.Hash{V0: 10}, buyerArgs.RequestedAsset, 200000000, 1, programSeller),
+							types.NewSpendInput([][]byte{vm.Int64Bytes(2), vm.Int64Bytes(1)}, bc.Hash{V0: 20}, sellerArgs.RequestedAsset, 100000000, 0, programBuyer),
+						},
+						Outputs: []*types.TxOutput{
+							types.NewIntraChainOutput(sellerArgs.RequestedAsset, 100000000, sellerArgs.SellerProgram),
+							types.NewIntraChainOutput(buyerArgs.RequestedAsset, 150000000, programSeller),
+							types.NewIntraChainOutput(buyerArgs.RequestedAsset, 50000000, buyerArgs.SellerProgram),
+						},
+					}),
+				},
+			},
+			err: nil,
+		},
+		{
+			desc: "first contract full trade, second contract partial trade",
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{Version: 0},
+				Transactions: []*bc.Tx{
+					types.MapTx(&types.TxData{
+						SerializedSize: 1,
+						Inputs: []*types.TxInput{
+							types.NewSpendInput([][]byte{vm.Int64Bytes(0), vm.Int64Bytes(1)}, bc.Hash{V0: 10}, buyerArgs.RequestedAsset, 100000000, 1, programSeller),
+							types.NewSpendInput([][]byte{vm.Int64Bytes(100000000), vm.Int64Bytes(1), vm.Int64Bytes(0)}, bc.Hash{V0: 20}, sellerArgs.RequestedAsset, 300000000, 0, programBuyer),
+						},
+						Outputs: []*types.TxOutput{
+							types.NewIntraChainOutput(sellerArgs.RequestedAsset, 200000000, sellerArgs.SellerProgram),
+							types.NewIntraChainOutput(buyerArgs.RequestedAsset, 100000000, buyerArgs.SellerProgram),
+							types.NewIntraChainOutput(sellerArgs.RequestedAsset, 100000000, programBuyer),
+						},
+					}),
+				},
+			},
+			err: nil,
+		},
+		{
+			desc: "cancel magnetic contract",
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{Version: 0},
+				Transactions: []*bc.Tx{
+					types.MapTx(&types.TxData{
+						SerializedSize: 1,
+						Inputs: []*types.TxInput{
+							types.NewSpendInput([][]byte{testutil.MustDecodeHexString("0a72a2b2944ec9b4bcdef392e6c532effc77ea536809fa290a12e39df7651851a9939e23e492369dc8936e0ebf3ecd1de4e9077d0593bd3fcb5874fb26dfc60a"), vm.Int64Bytes(0), vm.Int64Bytes(2)}, bc.Hash{V0: 10}, buyerArgs.RequestedAsset, 100000000, 0, programSeller),
+						},
+						Outputs: []*types.TxOutput{
+							types.NewIntraChainOutput(buyerArgs.RequestedAsset, 100000000, sellerArgs.SellerProgram),
+						},
+					}),
+				},
+			},
+			err: nil,
+		},
+		{
+			desc: "wrong signature with cancel magnetic contract",
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{Version: 0},
+				Transactions: []*bc.Tx{
+					types.MapTx(&types.TxData{
+						SerializedSize: 1,
+						Inputs: []*types.TxInput{
+							types.NewSpendInput([][]byte{testutil.MustDecodeHexString("686b983a8de1893ef723144389fd1f07b12b048f52f389faa863243195931d5732dbfd15470b43ed63d5067900718cf94f137073f4a972d277bbd967b022545d"), vm.Int64Bytes(0), vm.Int64Bytes(2)}, bc.Hash{V0: 10}, buyerArgs.RequestedAsset, 100000000, 0, programSeller),
+						},
+						Outputs: []*types.TxOutput{
+							types.NewIntraChainOutput(buyerArgs.RequestedAsset, 100000000, sellerArgs.SellerProgram),
+						},
+					}),
+				},
+			},
+			err: vm.ErrFalseVMResult,
+		},
+		{
+			desc: "wrong output amount with contracts all full trade",
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{Version: 0},
+				Transactions: []*bc.Tx{
+					types.MapTx(&types.TxData{
+						SerializedSize: 1,
+						Inputs: []*types.TxInput{
+							types.NewSpendInput([][]byte{vm.Int64Bytes(0), vm.Int64Bytes(1)}, bc.Hash{V0: 10}, buyerArgs.RequestedAsset, 100000000, 1, programSeller),
+							types.NewSpendInput([][]byte{vm.Int64Bytes(1), vm.Int64Bytes(1)}, bc.Hash{V0: 20}, sellerArgs.RequestedAsset, 200000000, 0, programBuyer),
+						},
+						Outputs: []*types.TxOutput{
+							types.NewIntraChainOutput(sellerArgs.RequestedAsset, 200000000, sellerArgs.SellerProgram),
+							types.NewIntraChainOutput(buyerArgs.RequestedAsset, 50000000, buyerArgs.SellerProgram),
+							types.NewIntraChainOutput(buyerArgs.RequestedAsset, 50000000, []byte{0x55}),
+						},
+					}),
+				},
+			},
+			err: vm.ErrFalseVMResult,
+		},
+		{
+			desc: "wrong output assetID with contracts all full trade",
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{Version: 0},
+				Transactions: []*bc.Tx{
+					types.MapTx(&types.TxData{
+						SerializedSize: 1,
+						Inputs: []*types.TxInput{
+							types.NewSpendInput([][]byte{vm.Int64Bytes(0), vm.Int64Bytes(1)}, bc.Hash{V0: 10}, buyerArgs.RequestedAsset, 100000000, 1, programSeller),
+							types.NewSpendInput([][]byte{vm.Int64Bytes(1), vm.Int64Bytes(1)}, bc.Hash{V0: 20}, sellerArgs.RequestedAsset, 200000000, 0, programBuyer),
+							types.NewSpendInput(nil, bc.Hash{V0: 30}, bc.AssetID{V0: 1}, 200000000, 0, []byte{0x51}),
+						},
+						Outputs: []*types.TxOutput{
+							types.NewIntraChainOutput(bc.AssetID{V0: 1}, 200000000, sellerArgs.SellerProgram),
+							types.NewIntraChainOutput(buyerArgs.RequestedAsset, 100000000, buyerArgs.SellerProgram),
+							types.NewIntraChainOutput(sellerArgs.RequestedAsset, 200000000, []byte{0x55}),
+						},
+					}),
+				},
+			},
+			err: vm.ErrFalseVMResult,
+		},
+		{
+			desc: "wrong output change program with first contract partial trade and second contract full trade",
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{Version: 0},
+				Transactions: []*bc.Tx{
+					types.MapTx(&types.TxData{
+						SerializedSize: 1,
+						Inputs: []*types.TxInput{
+							types.NewSpendInput([][]byte{vm.Int64Bytes(100000000), vm.Int64Bytes(0), vm.Int64Bytes(0)}, bc.Hash{V0: 10}, buyerArgs.RequestedAsset, 200000000, 1, programSeller),
+							types.NewSpendInput([][]byte{vm.Int64Bytes(2), vm.Int64Bytes(1)}, bc.Hash{V0: 20}, sellerArgs.RequestedAsset, 100000000, 0, programBuyer),
+						},
+						Outputs: []*types.TxOutput{
+							types.NewIntraChainOutput(sellerArgs.RequestedAsset, 100000000, sellerArgs.SellerProgram),
+							types.NewIntraChainOutput(buyerArgs.RequestedAsset, 150000000, []byte{0x55}),
+							types.NewIntraChainOutput(buyerArgs.RequestedAsset, 50000000, buyerArgs.SellerProgram),
+						},
+					}),
+				},
+			},
+			err: vm.ErrFalseVMResult,
+		},
+	}
+
+	for i, c := range cases {
+		if _, err := ValidateTx(c.block.Transactions[0], c.block); rootErr(err) != c.err {
+			t.Errorf("case #%d (%s) got error %t, want %t", i, c.desc, rootErr(err), c.err)
+		}
+	}
+}
+
+func TestRingMagneticContractTx(t *testing.T) {
+	aliceArgs := vmutil.MagneticContractArgs{
+		RequestedAsset:   bc.AssetID{V0: 1},
+		RatioNumerator:   2,
+		RatioDenominator: 1,
+		SellerProgram:    []byte{0x51},
+		SellerKey:        testutil.MustDecodeHexString("960ecabafb88ba460a40912841afecebf0e84884178611ac97210e327c0d1173"),
+	}
+
+	bobArgs := vmutil.MagneticContractArgs{
+		RequestedAsset:   bc.AssetID{V0: 2},
+		RatioNumerator:   2,
+		RatioDenominator: 1,
+		SellerProgram:    []byte{0x52},
+		SellerKey:        testutil.MustDecodeHexString("ad79ec6bd3a6d6dbe4d0ee902afc99a12b9702fb63edce5f651db3081d868b75"),
+	}
+
+	jackArgs := vmutil.MagneticContractArgs{
+		RequestedAsset:   bc.AssetID{V0: 3},
+		RatioNumerator:   1,
+		RatioDenominator: 4,
+		SellerProgram:    []byte{0x53},
+		SellerKey:        testutil.MustDecodeHexString("9c19a91988c62046c2767bd7e9999b0c142891b9ebf467bfa59210b435cb0de7"),
+	}
+
+	aliceProgram, err := vmutil.P2WMCProgram(aliceArgs)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bobProgram, err := vmutil.P2WMCProgram(bobArgs)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	jackProgram, err := vmutil.P2WMCProgram(jackArgs)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cases := []struct {
+		desc  string
+		block *bc.Block
+		err   error
+	}{
+		{
+			desc: "contracts all full trade",
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{Version: 0},
+				Transactions: []*bc.Tx{
+					types.MapTx(&types.TxData{
+						SerializedSize: 1,
+						Inputs: []*types.TxInput{
+							types.NewSpendInput([][]byte{vm.Int64Bytes(0), vm.Int64Bytes(1)}, bc.Hash{V0: 10}, jackArgs.RequestedAsset, 100000000, 0, aliceProgram),
+							types.NewSpendInput([][]byte{vm.Int64Bytes(1), vm.Int64Bytes(1)}, bc.Hash{V0: 20}, aliceArgs.RequestedAsset, 200000000, 0, bobProgram),
+							types.NewSpendInput([][]byte{vm.Int64Bytes(2), vm.Int64Bytes(1)}, bc.Hash{V0: 30}, bobArgs.RequestedAsset, 400000000, 0, jackProgram),
+						},
+						Outputs: []*types.TxOutput{
+							types.NewIntraChainOutput(aliceArgs.RequestedAsset, 200000000, aliceArgs.SellerProgram),
+							types.NewIntraChainOutput(bobArgs.RequestedAsset, 400000000, bobArgs.SellerProgram),
+							types.NewIntraChainOutput(jackArgs.RequestedAsset, 100000000, jackArgs.SellerProgram),
+						},
+					}),
+				},
+			},
+			err: nil,
+		},
+	}
+
+	for i, c := range cases {
+		if _, err := ValidateTx(c.block.Transactions[0], c.block); rootErr(err) != c.err {
+			t.Errorf("case #%d (%s) got error %t, want %t", i, c.desc, rootErr(err), c.err)
+		}
+	}
+}
+
 // A txFixture is returned by sample (below) to produce a sample
 // transaction, which takes a separate, optional _input_ txFixture to
 // affect the transaction that's built. The components of the
