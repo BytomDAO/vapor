@@ -12,6 +12,13 @@ import (
 	"github.com/vapor/protocol/bc/types"
 )
 
+type MovStore interface {
+	GetMovDatabaseState() (*common.MovDatabaseState, error)
+	ListOrders(orderAfter *common.Order) ([]*common.Order, error)
+	ListTradePairsWithStart(fromAssetIDAfter, toAssetIDAfter *bc.AssetID) ([]*common.TradePair, error)
+	ProcessOrders(addOrders []*common.Order, delOrders []*common.Order, blockHeader *types.BlockHeader) error
+}
+
 const (
 	order byte = iota
 	tradePair
@@ -72,11 +79,11 @@ type tradePairData struct {
 	Count int
 }
 
-type MovStore struct {
+type LevelDBMovStore struct {
 	db dbm.DB
 }
 
-func NewMovStore(db dbm.DB, height uint64, hash *bc.Hash) (*MovStore, error) {
+func NewLevelDBMovStore(db dbm.DB, height uint64, hash *bc.Hash) (*LevelDBMovStore, error) {
 	if value := db.Get(bestMatchStore); value == nil {
 		state := &common.MovDatabaseState{Height: height, Hash: hash}
 		value, err := json.Marshal(state)
@@ -86,10 +93,10 @@ func NewMovStore(db dbm.DB, height uint64, hash *bc.Hash) (*MovStore, error) {
 
 		db.Set(bestMatchStore, value)
 	}
-	return &MovStore{db: db}, nil
+	return &LevelDBMovStore{db: db}, nil
 }
 
-func (m *MovStore) ListOrders(orderAfter *common.Order) ([]*common.Order, error) {
+func (m *LevelDBMovStore) ListOrders(orderAfter *common.Order) ([]*common.Order, error) {
 	if orderAfter.FromAssetID == nil || orderAfter.ToAssetID == nil {
 		return nil, errors.New("assetID is nil")
 	}
@@ -123,7 +130,7 @@ func (m *MovStore) ListOrders(orderAfter *common.Order) ([]*common.Order, error)
 	return orders, nil
 }
 
-func (m *MovStore) ProcessOrders(addOrders []*common.Order, delOreders []*common.Order, blockHeader *types.BlockHeader) error {
+func (m *LevelDBMovStore) ProcessOrders(addOrders []*common.Order, delOrders []*common.Order, blockHeader *types.BlockHeader) error {
 	if err := m.checkMovDatabaseState(blockHeader); err != nil {
 		return err
 	}
@@ -134,14 +141,18 @@ func (m *MovStore) ProcessOrders(addOrders []*common.Order, delOreders []*common
 		return err
 	}
 
-	m.deleteOrders(batch, delOreders, tradePairsCnt)
+	m.deleteOrders(batch, delOrders, tradePairsCnt)
 
 	if err := m.updateTradePairs(batch, tradePairsCnt); err != nil {
 		return err
 	}
 
-	hash := blockHeader.Hash()
-	if err := m.saveMovDatabaseState(batch, &common.MovDatabaseState{Height: blockHeader.Height, Hash: &hash}); err != nil {
+	state, err := m.calcNextDatabaseState(blockHeader)
+	if err != nil {
+		return err
+	}
+
+	if err := m.saveMovDatabaseState(batch, state); err != nil {
 		return err
 	}
 
@@ -149,7 +160,7 @@ func (m *MovStore) ProcessOrders(addOrders []*common.Order, delOreders []*common
 	return nil
 }
 
-func (m *MovStore) addOrders(batch dbm.Batch, orders []*common.Order, tradePairsCnt map[common.TradePair]int) error {
+func (m *LevelDBMovStore) addOrders(batch dbm.Batch, orders []*common.Order, tradePairsCnt map[common.TradePair]int) error {
 	for _, order := range orders {
 		data, err := json.Marshal(order.Utxo)
 		if err != nil {
@@ -168,7 +179,7 @@ func (m *MovStore) addOrders(batch dbm.Batch, orders []*common.Order, tradePairs
 	return nil
 }
 
-func (m *MovStore) deleteOrders(batch dbm.Batch, orders []*common.Order, tradePairsCnt map[common.TradePair]int) {
+func (m *LevelDBMovStore) deleteOrders(batch dbm.Batch, orders []*common.Order, tradePairsCnt map[common.TradePair]int) {
 	for _, order := range orders {
 		key := calcOrderKey(order.FromAssetID, order.ToAssetID, calcUTXOHash(order), order.Rate)
 		batch.Delete(key)
@@ -181,7 +192,7 @@ func (m *MovStore) deleteOrders(batch dbm.Batch, orders []*common.Order, tradePa
 	}
 }
 
-func (m *MovStore) GetMovDatabaseState() (*common.MovDatabaseState, error) {
+func (m *LevelDBMovStore) GetMovDatabaseState() (*common.MovDatabaseState, error) {
 	if value := m.db.Get(bestMatchStore); value != nil {
 		state := &common.MovDatabaseState{}
 		return state, json.Unmarshal(value, state)
@@ -190,7 +201,7 @@ func (m *MovStore) GetMovDatabaseState() (*common.MovDatabaseState, error) {
 	return nil, errors.New("don't find state of mov-database")
 }
 
-func (m *MovStore) ListTradePairsWithStart(fromAssetIDAfter, toAssetIDAfter *bc.AssetID) ([]*common.TradePair, error) {
+func (m *LevelDBMovStore) ListTradePairsWithStart(fromAssetIDAfter, toAssetIDAfter *bc.AssetID) ([]*common.TradePair, error) {
 	var startKey []byte
 	if fromAssetIDAfter != nil && toAssetIDAfter != nil {
 		startKey = calcTradePairKey(fromAssetIDAfter, toAssetIDAfter)
@@ -215,7 +226,7 @@ func (m *MovStore) ListTradePairsWithStart(fromAssetIDAfter, toAssetIDAfter *bc.
 	return tradePairs, nil
 }
 
-func (m *MovStore) updateTradePairs(batch dbm.Batch, tradePairs map[common.TradePair]int) error {
+func (m *LevelDBMovStore) updateTradePairs(batch dbm.Batch, tradePairs map[common.TradePair]int) error {
 	for k, v := range tradePairs {
 		key := calcTradePairKey(k.FromAssetID, k.ToAssetID)
 		tradePairData := &tradePairData{}
@@ -242,21 +253,20 @@ func (m *MovStore) updateTradePairs(batch dbm.Batch, tradePairs map[common.Trade
 	return nil
 }
 
-func (m *MovStore) checkMovDatabaseState(header *types.BlockHeader) error {
+func (m *LevelDBMovStore) checkMovDatabaseState(header *types.BlockHeader) error {
 	state, err := m.GetMovDatabaseState()
 	if err != nil {
 		return err
 	}
 
-	blockHash := header.Hash()
-	if (state.Hash.String() == header.PreviousBlockHash.String() && (state.Height+1) == header.Height) || state.Hash.String() == blockHash.String() {
+	if (*state.Hash == header.PreviousBlockHash && (state.Height+1) == header.Height) || *state.Hash == header.Hash() {
 		return nil
 	}
 
 	return errors.New("the status of the block is inconsistent with that of mov-database")
 }
 
-func (m *MovStore) saveMovDatabaseState(batch dbm.Batch, state *common.MovDatabaseState) error {
+func (m *LevelDBMovStore) saveMovDatabaseState(batch dbm.Batch, state *common.MovDatabaseState) error {
 	value, err := json.Marshal(state)
 	if err != nil {
 		return err
@@ -264,4 +274,21 @@ func (m *MovStore) saveMovDatabaseState(batch dbm.Batch, state *common.MovDataba
 
 	batch.Set(bestMatchStore, value)
 	return nil
+}
+
+func (m *LevelDBMovStore) calcNextDatabaseState(blockHeader *types.BlockHeader) (*common.MovDatabaseState, error) {
+	hash := blockHeader.Hash()
+	height := blockHeader.Height
+
+	state, err := m.GetMovDatabaseState()
+	if err != nil {
+		return nil, err
+	}
+
+	if *state.Hash == hash {
+		hash = blockHeader.PreviousBlockHash
+		height = blockHeader.Height - 1
+	}
+
+	return &common.MovDatabaseState{Height: height, Hash: &hash}, nil
 }
