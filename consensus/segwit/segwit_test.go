@@ -3,10 +3,6 @@ package segwit
 import (
 	"encoding/hex"
 	"testing"
-
-	"github.com/vapor/crypto/ed25519"
-	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/testutil"
 )
 
 func TestConvertProgram(t *testing.T) {
@@ -120,70 +116,6 @@ func TestProgramType(t *testing.T) {
 
 		if c.fun(progBytes) != c.yes {
 			t.Errorf("case #%d (%s) got %t, expect %t", i, c.desc, c.fun(progBytes), c.yes)
-		}
-	}
-}
-
-func TestGetXpubsAndRequiredFromProg(t *testing.T) {
-	xpubStr1 := "95a1fdf4d9c30a0daf3ef6ec475058ba09b62677ce1384e33a17d028c1755ede896ec9fd8abecf0fdef9d89bba8f0d7c2576a3e78120336584884e516e128354"
-	xpubStr2 := "bfc74caeb528064b056d7d1edd2913c9fb35a1bdd921087972effeb8ceb90f152b1e03199efbfc924fd7665107914309a6dcc12930256867a94b97855b392ff5"
-	xpubStr3 := "5624b832e0276af2811c8c8dbb6ed9f603201e8a4236aaac7880d6ee1a746abe91e21f290f47d867aaa7bf8e0c8a69ab383c41966e5c960371b2d2cd219c11ac"
-
-	xpub1 := &chainkd.XPub{}
-	if err := xpub1.UnmarshalText([]byte(xpubStr1)); err != nil {
-		t.Fatal(err)
-	}
-
-	xpub2 := &chainkd.XPub{}
-	if err := xpub2.UnmarshalText([]byte(xpubStr2)); err != nil {
-		t.Fatal(err)
-	}
-
-	xpub3 := &chainkd.XPub{}
-	if err := xpub3.UnmarshalText([]byte(xpubStr3)); err != nil {
-		t.Fatal(err)
-	}
-
-	cases := []struct {
-		desc         string
-		program      string
-		wantXpubs    []ed25519.PublicKey
-		wantRequired int
-	}{
-		{
-			desc:         "one xpub",
-			program:      "ae20f5f412c87794b137b9433ce7d1cbb147fe5d87ca03a81d28eaba4264d7a74fc65151ad",
-			wantXpubs:    []ed25519.PublicKey{xpub1.PublicKey()},
-			wantRequired: 1,
-		},
-		{
-			desc:         "two xpub",
-			program:      "ae2099dbcf35be6b199e3183c7bbfe5a89d1d13978b5e1ceacbf7779507a998ba0e120ccbbbb7c72a7f8a77f227747bc8bc1f38a76ff112f395b5ff05c002e84ccd79e5152ad",
-			wantXpubs:    []ed25519.PublicKey{xpub1.PublicKey(), xpub2.PublicKey()},
-			wantRequired: 1,
-		},
-		{
-			desc:         "three xpub",
-			program:      "ae209ab9179c0266ca64abca8fd7703081cf4911dab8d7e44cef921414dd31109ff320ce889516b82f9367a54d146b0c20c995dead34f0bf7c393f6a23ec5367dbbd782043f5fcdecfacb24dc1a61a750dec71065657d028695650d6c73c878e963448155253ad",
-			wantXpubs:    []ed25519.PublicKey{xpub1.PublicKey(), xpub2.PublicKey(), xpub3.PublicKey()},
-			wantRequired: 2,
-		},
-	}
-
-	for i, c := range cases {
-		progBytes, err := hex.DecodeString(c.program)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		gotXpus, gotRequired, err := GetXpubsAndRequiredFromProg(progBytes)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if gotRequired != c.wantRequired || testutil.DeepEqual(gotXpus, c.wantXpubs) {
-			t.Errorf("case #%d (%s) got xpubs: %v, Required: %d, expect xpubs: %v,  Required: %d", i, c.desc, gotXpus, gotRequired, c.wantXpubs, c.wantRequired)
-
 		}
 	}
 }

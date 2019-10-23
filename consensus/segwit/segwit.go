@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/vapor/consensus"
-	"github.com/vapor/crypto/ed25519"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/vm"
 	"github.com/vapor/protocol/vm/vmutil"
@@ -160,46 +159,4 @@ func GetHashFromStandardProg(prog []byte) ([]byte, error) {
 	}
 
 	return insts[1].Data, nil
-}
-
-func GetXpubsAndRequiredFromProg(prog []byte) ([]ed25519.PublicKey, int, error) {
-	insts, err := vm.ParseProgram(prog)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	instsLen := len(insts)
-
-	if instsLen < 5 {
-		return nil, 0, errors.New("bad length of instruction for issuance program")
-	}
-
-	if insts[0].Op != vm.OP_TXSIGHASH || insts[instsLen-1].Op != vm.OP_CHECKMULTISIG {
-		return nil, 0, errors.New("bad op of instruction for issuance program")
-	}
-
-	if !(insts[instsLen-2].IsPushdata() && insts[instsLen-3].IsPushdata()) {
-		return nil, 0, errors.New("bad pushdata in instruction for issuance program")
-	}
-
-	required, err := vm.AsInt64(insts[instsLen-3].Data)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	xpubsNum, err := vm.AsInt64(insts[instsLen-2].Data)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	var pubs []ed25519.PublicKey
-	for i := 1; i < int(xpubsNum+1); i++ {
-		if insts[i].Op != vm.OP_DATA_32 || len(insts[i].Data) != 32 {
-			return nil, 0, errors.New("bad publicKey in instruction for issuance program")
-		}
-
-		pubs = append(pubs, insts[i].Data)
-	}
-
-	return pubs, int(required), nil
 }
