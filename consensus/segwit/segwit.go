@@ -178,6 +178,10 @@ func GetXpubsAndRequiredFromProg(prog []byte) ([]ed25519.PublicKey, int, error) 
 		return nil, 0, errors.New("bad op of instruction for issuance program")
 	}
 
+	if !(insts[instsLen-2].IsPushdata() && insts[instsLen-3].IsPushdata()) {
+		return nil, 0, errors.New("bad pushdata in instruction for issuance program")
+	}
+
 	required, err := vm.AsInt64(insts[instsLen-3].Data)
 	if err != nil {
 		return nil, 0, err
@@ -192,10 +196,6 @@ func GetXpubsAndRequiredFromProg(prog []byte) ([]ed25519.PublicKey, int, error) 
 	for i := 1; i < int(xpubsNum+1); i++ {
 		if insts[i].Op != vm.OP_DATA_32 || len(insts[i].Data) != 32 {
 			return nil, 0, errors.New("bad publicKey in instruction for issuance program")
-		}
-
-		if !insts[i].IsPushdata() {
-			return nil, 0, errors.New("bad data type in instruction for issuance program")
 		}
 
 		pubs = append(pubs, insts[i].Data)
