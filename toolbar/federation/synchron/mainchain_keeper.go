@@ -24,7 +24,7 @@ import (
 	"github.com/vapor/toolbar/federation/service"
 )
 
-const filterAssetIDUpdateSencond = 1
+const filterAssetIDUpdateSecond = 1
 
 type mainchainKeeper struct {
 	cfg            *config.Chain
@@ -54,8 +54,8 @@ func NewMainchainKeeper(db *gorm.DB, assetStore *database.AssetStore, cfg *confi
 		filterAssets:   make(map[string]bool),
 	}
 
-	if err := keeper.initFilterAssetID(); err != nil {
-		log.WithField("err", err).Fatal("fail on init filterAssetID")
+	if err := keeper.fillFilterAssetID(); err != nil {
+		log.WithField("err", err).Fatal("fail on fill filterAssetID")
 	}
 	return keeper
 }
@@ -64,6 +64,8 @@ func (m *mainchainKeeper) Run() {
 	go m.checkFilterAssetIDUpdate()
 
 	ticker := time.NewTicker(time.Duration(m.cfg.SyncSeconds) * time.Second)
+	defer ticker.Stop()
+
 	for ; true; <-ticker.C {
 		for {
 			isUpdate, err := m.syncBlock()
@@ -360,27 +362,24 @@ func (m *mainchainKeeper) isFilterAssetID(assetID string) bool {
 }
 
 func (m *mainchainKeeper) checkFilterAssetIDUpdate() error {
-	ticker := time.NewTicker(time.Duration(filterAssetIDUpdateSencond) * time.Second)
-	for ; true; <-ticker.C {
-		filterAssets := []*orm.FilterAsset{}
-		if err := m.db.Find(filterAssets).Order("id asc").Error; err != nil {
-			return err
-		}
+	ticker := time.NewTicker(time.Duration(filterAssetIDUpdateSecond) * time.Second)
+	defer ticker.Stop()
 
-		for i := len(filterAssets); i < len(filterAssets); i++ {
-			m.filterAssets[filterAssets[i].AssetID] = true
+	for ; true; <-ticker.C {
+		if err := m.fillFilterAssetID(); err != nil {
+			return err
 		}
 	}
 	return nil
 }
 
-func (m *mainchainKeeper) initFilterAssetID() error {
+func (m *mainchainKeeper) fillFilterAssetID() error {
 	filterAssets := []*orm.FilterAsset{}
 	if err := m.db.Find(filterAssets).Order("id asc").Error; err != nil {
 		return err
 	}
 
-	for i := 0; i < len(filterAssets); i++ {
+	for i := len(m.filterAssets); i < len(filterAssets); i++ {
 		m.filterAssets[filterAssets[i].AssetID] = true
 	}
 	return nil
