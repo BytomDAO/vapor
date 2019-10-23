@@ -180,14 +180,12 @@ func TestGenerateMatchedTxs(t *testing.T) {
 		movStore := &database.MockMovStore{OrderMap: c.storeOrderMap}
 		matchEngine := NewEngine(movStore, []byte{0x51})
 		var gotMatchedTxs []*types.Tx
-		for {
+		for matchEngine.HasMatchedTx(c.tradePair, c.tradePair.Reverse()) {
 			matchedTx, err := matchEngine.NextMatchedTx(c.tradePair, c.tradePair.Reverse())
 			if err != nil {
 				t.Fatal(err)
 			}
-			if matchedTx == nil {
-				break
-			}
+
 			gotMatchedTxs = append(gotMatchedTxs, matchedTx)
 		}
 

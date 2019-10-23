@@ -1,12 +1,12 @@
 package match
 
 import (
+	"encoding/hex"
 	"math"
 	"math/big"
 
 	"github.com/vapor/application/mov/common"
 	"github.com/vapor/application/mov/database"
-	"github.com/vapor/application/mov/util"
 	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/errors"
 	vprMath "github.com/vapor/math"
@@ -16,7 +16,7 @@ import (
 	"github.com/vapor/protocol/vm/vmutil"
 )
 
-var maxFeeRate = 0.05
+const maxFeeRate = 0.05
 
 type Engine struct {
 	orderTable  *OrderTable
@@ -27,22 +27,46 @@ func NewEngine(movStore database.MovStore, nodeProgram []byte) *Engine {
 	return &Engine{orderTable: NewOrderTable(movStore), nodeProgram: nodeProgram}
 }
 
+func (e *Engine) HasMatchedTx(tradePairs ...*common.TradePair) bool {
+	if err := validateTradePairs(tradePairs); err != nil {
+		return false
+	}
+
+	orders := e.peekOrders(tradePairs)
+	if len(orders) == 0 {
+		return false
+	}
+
+	var contractArgsList []*vmutil.MagneticContractArgs
+	for _, order := range orders {
+		contractArgs, err := segwit.DecodeP2WMCProgram(order.Utxo.ControlProgram)
+		if err != nil {
+			return false
+		}
+
+		contractArgsList = append(contractArgsList, contractArgs)
+	}
+
+	for i, contractArgs := range contractArgsList {
+		oppositeContractArgs := contractArgsList[getOppositeIndex(len(contractArgsList), i)]
+		if canNotBeMatched(contractArgs, oppositeContractArgs) {
+			return false
+		}
+	}
+	return true
+}
+
 // NextMatchedTx return the next matchable transaction by the specified trade pairs
-// the size of trade pairs at least, and the sequence of trade pairs can form a loop
+// the size of trade pairs at least 2, and the sequence of trade pairs can form a loop
 // for example, [assetA -> assetB, assetB -> assetC, assetC -> assetA]
-func (e *Engine) NextMatchedTx(tradePairs  ...*common.TradePair) (*types.Tx, error) {
+func (e *Engine) NextMatchedTx(tradePairs ...*common.TradePair) (*types.Tx, error) {
 	if err := validateTradePairs(tradePairs); err != nil {
 		return nil, err
 	}
 
-	var orders []*common.Order
-	for _, tradePair := range tradePairs {
-		order := e.orderTable.PeekOrder(tradePair)
-		if order == nil {
-			return nil, nil
-		}
-
-		orders = append(orders, order)
+	orders := e.peekOrders(tradePairs)
+	if len(orders) == 0 {
+		return nil, errors.New("no order for the specified trade pair in the order table")
 	}
 
 	tx, err := e.buildMatchTx(orders)
@@ -50,17 +74,27 @@ func (e *Engine) NextMatchedTx(tradePairs  ...*common.TradePair) (*types.Tx, err
 		return nil, err
 	}
 
-	if tx == nil {
-		return nil, nil
-	}
-
 	for _, tradePair := range tradePairs {
 		e.orderTable.PopOrder(tradePair)
 	}
+
 	if err := addPartialTradeOrder(tx, e.orderTable); err != nil {
 		return nil, err
 	}
 	return tx, nil
+}
+
+func (e *Engine) peekOrders(tradePairs []*common.TradePair) []*common.Order {
+	var orders []*common.Order
+	for _, tradePair := range tradePairs {
+		order := e.orderTable.PeekOrder(tradePair)
+		if order == nil {
+			return nil
+		}
+
+		orders = append(orders, order)
+	}
+	return orders
 }
 
 func validateTradePairs(tradePairs []*common.TradePair) error {
@@ -68,7 +102,7 @@ func validateTradePairs(tradePairs []*common.TradePair) error {
 		return errors.New("size of trade pairs at least 2")
 	}
 
-	for i, tradePair:= range tradePairs {
+	for i, tradePair := range tradePairs {
 		oppositeTradePair := tradePairs[getOppositeIndex(len(tradePairs), i)]
 		if *tradePair.FromAssetID != *oppositeTradePair.ToAssetID || *tradePair.ToAssetID != *oppositeTradePair.FromAssetID {
 			return errors.New("specified trade pairs is invalid")
@@ -77,34 +111,28 @@ func validateTradePairs(tradePairs []*common.TradePair) error {
 	return nil
 }
 
-func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, error) {
-	txData := &types.TxData{Version: 1}
-	var partialTradeStatus []bool
-	var receiveAmounts []uint64
-
-	for i, order := range orders {
-		contractArgs, err := segwit.DecodeP2WMCProgram(order.Utxo.ControlProgram)
-		if err != nil {
-			return nil, err
-		}
-
-		oppositeOrder := orders[getOppositeIndex(len(orders), i)]
-		oppositeContractArgs, err := segwit.DecodeP2WMCProgram(oppositeOrder.Utxo.ControlProgram)
-		if err != nil {
-			return nil, err
-		}
-
-		if canNotBeMatched(contractArgs, oppositeContractArgs) {
-			return nil, nil
-		}
-
-		txData.Inputs = append(txData.Inputs, types.NewSpendInput(nil, *order.Utxo.SourceID, *order.FromAssetID, order.Utxo.Amount, order.Utxo.SourcePos, order.Utxo.ControlProgram))
-		isPartialTrade, receiveAmount := addMatchTxOutput(txData, order, contractArgs, oppositeOrder.Utxo.Amount)
-		partialTradeStatus = append(partialTradeStatus, isPartialTrade)
-		receiveAmounts = append(receiveAmounts, receiveAmount)
+func canNotBeMatched(contractArgs, oppositeContractArgs *vmutil.MagneticContractArgs) bool {
+	if contractArgs.RatioNumerator == 0 || oppositeContractArgs.RatioDenominator == 0 {
+		return false
 	}
 
-	setMatchTxArguments(txData, partialTradeStatus, receiveAmounts)
+	buyRate := big.NewFloat(0).Quo(big.NewFloat(0).SetInt64(contractArgs.RatioDenominator), big.NewFloat(0).SetInt64(contractArgs.RatioNumerator))
+	sellRate := big.NewFloat(0).Quo(big.NewFloat(0).SetInt64(oppositeContractArgs.RatioNumerator), big.NewFloat(0).SetInt64(oppositeContractArgs.RatioDenominator))
+	return buyRate.Cmp(sellRate) < 0
+}
+
+func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, error) {
+	txData := &types.TxData{Version: 1}
+	for i, order := range orders {
+		input := types.NewSpendInput(nil, *order.Utxo.SourceID, *order.FromAssetID, order.Utxo.Amount, order.Utxo.SourcePos, order.Utxo.ControlProgram)
+		txData.Inputs = append(txData.Inputs, input)
+
+		oppositeOrder := orders[getOppositeIndex(len(orders), i)]
+		if err := addMatchTxOutput(txData, input, order, oppositeOrder.Utxo.Amount); err != nil {
+			return nil, err
+		}
+	}
+
 	if err := e.addMatchTxFeeOutput(txData); err != nil {
 		return nil, err
 	}
@@ -119,28 +147,23 @@ func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, error) {
 	return tx, nil
 }
 
-func canNotBeMatched(contractArgs, oppositeContractArgs *vmutil.MagneticContractArgs) bool {
-	if contractArgs.RatioNumerator == 0 || oppositeContractArgs.RatioDenominator == 0 {
-		return false
+func addMatchTxOutput(txData *types.TxData, txInput *types.TxInput, order *common.Order, oppositeAmount uint64) error {
+	contractArgs, err := segwit.DecodeP2WMCProgram(order.Utxo.ControlProgram)
+	if err != nil {
+		return err
 	}
 
-	buyRate := big.NewFloat(0).Quo(big.NewFloat(0).SetInt64(contractArgs.RatioDenominator), big.NewFloat(0).SetInt64(contractArgs.RatioNumerator))
-	sellRate := big.NewFloat(0).Quo(big.NewFloat(0).SetInt64(oppositeContractArgs.RatioNumerator), big.NewFloat(0).SetInt64(oppositeContractArgs.RatioDenominator))
-	return buyRate.Cmp(sellRate) < 0
-}
-
-// addMatchTxOutput return whether partial matched
-func addMatchTxOutput(txData *types.TxData, order *common.Order, contractArgs *vmutil.MagneticContractArgs, oppositeAmount uint64) (bool, uint64) {
 	requestAmount := calcRequestAmount(order.Utxo.Amount, contractArgs)
 	receiveAmount := vprMath.MinUint64(requestAmount, oppositeAmount)
 	shouldPayAmount := CalcShouldPayAmount(receiveAmount, contractArgs)
+	isPartialTrade := order.Utxo.Amount > shouldPayAmount
 
+	setMatchTxArguments(txInput, isPartialTrade, len(txData.Outputs), receiveAmount)
 	txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*order.ToAssetID, receiveAmount, contractArgs.SellerProgram))
-	if order.Utxo.Amount > shouldPayAmount {
+	if isPartialTrade {
 		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*order.FromAssetID, order.Utxo.Amount-shouldPayAmount, order.Utxo.ControlProgram))
-		return true, receiveAmount
 	}
-	return false, receiveAmount
+	return nil
 }
 
 func (e *Engine) addMatchTxFeeOutput(txData *types.TxData) error {
@@ -180,19 +203,14 @@ func (e *Engine) addMatchTxFeeOutput(txData *types.TxData) error {
 	return nil
 }
 
-func setMatchTxArguments(txData *types.TxData, partialTradeStatus []bool, receiveAmounts []uint64) {
-	var position int64
-	for i, isPartial := range partialTradeStatus {
-		var arguments [][]byte
-		if isPartial {
-			arguments = [][]byte{vm.Int64Bytes(int64(receiveAmounts[i])), vm.Int64Bytes(position), vm.Int64Bytes(0)}
-			position += 2
-		} else {
-			arguments = [][]byte{vm.Int64Bytes(position), vm.Int64Bytes(1)}
-			position++
-		}
-		txData.Inputs[i].SetArguments(arguments)
+func setMatchTxArguments(txInput *types.TxInput, isPartialTrade bool, position int, receiveAmounts uint64) {
+	var arguments [][]byte
+	if isPartialTrade {
+		arguments = [][]byte{vm.Int64Bytes(int64(receiveAmounts)), vm.Int64Bytes(int64(position)), vm.Int64Bytes(0)}
+	} else {
+		arguments = [][]byte{vm.Int64Bytes(int64(position)), vm.Int64Bytes(1)}
 	}
+	txInput.SetArguments(arguments)
 }
 
 func addPartialTradeOrder(tx *types.Tx, orderTable *OrderTable) error {
@@ -215,22 +233,10 @@ func addPartialTradeOrder(tx *types.Tx, orderTable *OrderTable) error {
 
 func getOppositeIndex(size int, selfIdx int) int {
 	oppositeIdx := selfIdx + 1
-	if selfIdx >= size - 1 {
+	if selfIdx >= size-1 {
 		oppositeIdx = 0
 	}
 	return oppositeIdx
-}
-
-func calcRequestAmount(fromAmount uint64, contractArg *vmutil.MagneticContractArgs) uint64 {
-	return uint64(int64(fromAmount) * contractArg.RatioNumerator / contractArg.RatioDenominator)
-}
-
-func CalcShouldPayAmount(receiveAmount uint64, contractArg *vmutil.MagneticContractArgs) uint64 {
-	return uint64(math.Ceil(float64(receiveAmount) * float64(contractArg.RatioDenominator) / float64(contractArg.RatioNumerator)))
-}
-
-func CalcMaxFeeAmount(shouldPayAmount uint64) uint64 {
-	return uint64(math.Ceil(float64(shouldPayAmount) * maxFeeRate))
 }
 
 type feeAmount struct {
@@ -244,28 +250,30 @@ func CalcFeeFromMatchedTx(txData *types.TxData) (map[bc.AssetID]*feeAmount, erro
 		assetAmountMap[input.AssetID()] = &feeAmount{}
 	}
 
-	for _, input := range txData.Inputs {
-		assetAmountMap[input.AssetID()].payableFeeAmount += input.AssetAmount().Amount
-		outputPos, err := util.GetTradeReceivePosition(input)
-		if err != nil {
-			return nil, err
+	receiveOutputMap := make(map[string]*types.TxOutput)
+	for _, output := range txData.Outputs {
+		// minus the amount of the re-order
+		if segwit.IsP2WMCScript(output.ControlProgram()) {
+			assetAmountMap[*output.AssetAmount().AssetId].payableFeeAmount -= output.AssetAmount().Amount
+		} else {
+			receiveOutputMap[hex.EncodeToString(output.ControlProgram())] = output
 		}
+	}
 
-		receiveOutput := txData.Outputs[outputPos]
-		assetAmountMap[*receiveOutput.AssetAmount().AssetId].payableFeeAmount -= receiveOutput.AssetAmount().Amount
+	for _, input := range txData.Inputs {
 		contractArgs, err := segwit.DecodeP2WMCProgram(input.ControlProgram())
 		if err != nil {
 			return nil, err
 		}
 
-		assetAmountMap[input.AssetID()].maxFeeAmount = CalcMaxFeeAmount(CalcShouldPayAmount(receiveOutput.AssetAmount().Amount, contractArgs))
-	}
-
-	for _, output := range txData.Outputs {
-		// minus the amount of the re-order
-		if segwit.IsP2WMCScript(output.ControlProgram()) {
-			assetAmountMap[*output.AssetAmount().AssetId].payableFeeAmount -= output.AssetAmount().Amount
+		assetAmountMap[input.AssetID()].payableFeeAmount += input.AssetAmount().Amount
+		receiveOutput, ok := receiveOutputMap[hex.EncodeToString(contractArgs.SellerProgram)]
+		if !ok {
+			return nil, errors.New("the input of matched tx has no receive output")
 		}
+
+		assetAmountMap[*receiveOutput.AssetAmount().AssetId].payableFeeAmount -= receiveOutput.AssetAmount().Amount
+		assetAmountMap[input.AssetID()].maxFeeAmount = CalcMaxFeeAmount(CalcShouldPayAmount(receiveOutput.AssetAmount().Amount, contractArgs))
 	}
 
 	for assetID, amount := range assetAmountMap {
@@ -274,4 +282,16 @@ func CalcFeeFromMatchedTx(txData *types.TxData) (map[bc.AssetID]*feeAmount, erro
 		}
 	}
 	return assetAmountMap, nil
+}
+
+func calcRequestAmount(fromAmount uint64, contractArg *vmutil.MagneticContractArgs) uint64 {
+	return uint64(int64(fromAmount) * contractArg.RatioNumerator / contractArg.RatioDenominator)
+}
+
+func CalcShouldPayAmount(receiveAmount uint64, contractArg *vmutil.MagneticContractArgs) uint64 {
+	return uint64(math.Ceil(float64(receiveAmount) * float64(contractArg.RatioDenominator) / float64(contractArg.RatioNumerator)))
+}
+
+func CalcMaxFeeAmount(shouldPayAmount uint64) uint64 {
+	return uint64(math.Ceil(float64(shouldPayAmount) * maxFeeRate))
 }
