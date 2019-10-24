@@ -203,7 +203,6 @@ func (m *mainchainKeeper) processChainInfo(db *gorm.DB, block *types.Block) erro
 
 func (m *mainchainKeeper) isAllOpenFederationIssueAssetTx(tx *types.Tx) (bool, error) {
 	noOFIssueAssetNum := 0
-
 	for _, input := range tx.Inputs {
 		assetID := input.AssetID()
 		asset, err := m.assetStore.GetByAssetID(assetID.String())
