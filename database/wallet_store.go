@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 
@@ -227,7 +228,7 @@ func (store *WalletStore) GetAsset(assetID *bc.AssetID) (*asset.Asset, error) {
 		return nil, err
 	}
 
-	alias := assetID.String()
+	alias := strings.ToUpper(assetID.String())
 	externalAsset := &asset.Asset{
 		AssetID:           *assetID,
 		Alias:             &alias,

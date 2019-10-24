@@ -224,7 +224,7 @@ func (reg *Registry) GetAsset(id string) (*Asset, error) {
 		if err := json.Unmarshal(extAsset, &definitionMap); err != nil {
 			return nil, err
 		}
-		alias := assetID.String()
+		alias := strings.ToUpper(assetID.String())
 		asset.Alias = &alias
 		asset.AssetID = assetID
 		asset.DefinitionMap = definitionMap
