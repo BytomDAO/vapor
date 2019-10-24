@@ -16,8 +16,10 @@ __Vapor Node__
 
 + `PR #401`
     - Define the levelDB database structure of MOV.
+      - Including utxo, order, transaction pair and database status of MOV
 + `PR #404`
     - Database leveldb realizes the function of MOV data paging query and storage.
+      - Including order storage and sorting of MOV, paging query function of order and transaction pairs
 + `PR #407`
     - Solve the problem of node discovery service name consistency.
 + `PR #409`
