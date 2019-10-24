@@ -124,11 +124,9 @@ func (m *mainchainKeeper) isDepositTx(tx *types.Tx) (bool, error) {
 
 		if isOFAsset, err := m.isOpenFederationAsset(output.AssetId); err != nil {
 			return false, err
-		} else if isOFAsset {
-			continue
+		} else if !isOFAsset {
+			return true, nil
 		}
-
-		return true, nil
 	}
 	return false, nil
 }

@@ -108,11 +108,9 @@ func (s *sidechainKeeper) isDepositTx(tx *types.Tx) (bool, error) {
 
 		if isOFAsset, err := s.isOpenFederationAsset(input.AssetAmount().AssetId); err != nil {
 			return false, err
-		} else if isOFAsset {
-			continue
+		} else if !isOFAsset {
+			return true, nil
 		}
-
-		return true, nil
 	}
 	return false, nil
 }
@@ -125,11 +123,9 @@ func (s *sidechainKeeper) isWithdrawalTx(tx *types.Tx) (bool, error) {
 
 		if isOFAsset, err := s.isOpenFederationAsset(output.AssetAmount().AssetId); err != nil {
 			return false, err
-		} else if isOFAsset {
-			continue
+		} else if !isOFAsset {
+			return true, nil
 		}
-
-		return true, nil
 	}
 	return false, nil
 }
