@@ -132,7 +132,7 @@ func (m *mainchainKeeper) isDepositTx(tx *types.Tx) (bool, error) {
 }
 
 func (m *mainchainKeeper) isWithdrawalTx(tx *types.Tx) (bool, error) {
-	for index, input := range tx.Inputs {
+	for _, input := range tx.Inputs {
 		if !bytes.Equal(input.ControlProgram(), m.federationProg) {
 			return false, nil
 		}
