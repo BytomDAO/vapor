@@ -7,6 +7,9 @@ import (
 )
 
 func IsMatchedTx(tx *types.Tx) bool {
+	if len(tx.Inputs) < 2 {
+		return false
+	}
 	for _, input := range tx.Inputs {
 		if input.InputType() == types.SpendInputType && contract.IsTradeClauseSelector(input) && segwit.IsP2WMCScript(input.ControlProgram()) {
 			return true
