@@ -14,8 +14,3 @@ type Asset struct {
 	CreatedAt       common.Timestamp `json:"-"`
 	UpdatedAt       common.Timestamp `json:"-"`
 }
-
-type FilterAsset struct {
-	ID      uint64 `gorm:"primary_key" json:"-"`
-	AssetID string `json:"asset_id"`
-}
