@@ -280,7 +280,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 
 		prog := e.ControlProgram
 
-		if !common.IsCrossChainAssetOfNoBytom(e.RawDefinitionByte) {
+		if !common.IsOpenFederationIssueAsset(e.RawDefinitionByte) {
 			prog.Code = config.FederationWScript(config.CommonConfig)
 		}
 

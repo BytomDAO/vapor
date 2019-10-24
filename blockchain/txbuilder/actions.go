@@ -294,7 +294,7 @@ func (c *crossInAction) Build(ctx context.Context, builder *TemplateBuilder) err
 	tplIn := &SigningInstruction{}
 	fed := cfg.CommonConfig.Federation
 
-	if !common.IsCrossChainAssetOfNoBytom(c.RawDefinitionByte) {
+	if !common.IsOpenFederationIssueAsset(c.RawDefinitionByte) {
 		tplIn.AddRawWitnessKeys(fed.Xpubs, cfg.FedAddressPath, fed.Quorum)
 		tplIn.AddDataWitness(cfg.FederationPMultiSigScript(cfg.CommonConfig))
 	}
