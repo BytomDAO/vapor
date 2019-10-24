@@ -139,11 +139,7 @@ func (m *mainchainKeeper) isWithdrawalTx(tx *types.Tx) (bool, error) {
 
 		if isOFAsset, err := m.isOpenFederationAsset(input.AssetAmount().AssetId); err != nil {
 			return false, err
-		} else if !isOFAsset {
-			continue
-		}
-
-		if (index + 1) == len(tx.Outputs) {
+		} else if isOFAsset {
 			return false, nil
 		}
 	}
