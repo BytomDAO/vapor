@@ -111,12 +111,6 @@ func (m *mainchainKeeper) createCrossChainReqs(db *gorm.DB, crossTransactionID u
 }
 
 func (m *mainchainKeeper) isDepositTx(tx *types.Tx) (bool, error) {
-	if only, err := m.onlyHaveFederationTx(tx); err != nil {
-		return false, err
-	} else if only {
-		return false, nil
-	}
-
 	for _, input := range tx.Inputs {
 		if bytes.Equal(input.ControlProgram(), m.federationProg) {
 			return false, nil
@@ -124,7 +118,12 @@ func (m *mainchainKeeper) isDepositTx(tx *types.Tx) (bool, error) {
 	}
 
 	for _, output := range tx.Outputs {
-		if bytes.Equal(output.OutputCommitment.ControlProgram, m.federationProg) {
+		isOFAssetID, err := m.isOpenFederationAssetID(output.AssetId)
+		if err != nil {
+			return false, err
+		}
+
+		if !isOFAssetID && bytes.Equal(output.OutputCommitment.ControlProgram, m.federationProg) {
 			return true, nil
 		}
 	}
@@ -132,10 +131,19 @@ func (m *mainchainKeeper) isDepositTx(tx *types.Tx) (bool, error) {
 }
 
 func (m *mainchainKeeper) isWithdrawalTx(tx *types.Tx) (bool, error) {
-	if only, err := m.onlyHaveFederationTx(tx); err != nil {
-		return false, err
-	} else if only {
-		return false, nil
+	for index, output := range tx.Outputs {
+		isOFAssetID, err := m.isOpenFederationAssetID(output.AssetId)
+		if err != nil {
+			return false, err
+		}
+
+		if !isOFAssetID {
+			break
+		}
+
+		if (index + 1) == len(tx.Outputs) {
+			return false, nil
+		}
 	}
 
 	for _, input := range tx.Inputs {
@@ -211,18 +219,13 @@ func (m *mainchainKeeper) processChainInfo(db *gorm.DB, block *types.Block) erro
 	return nil
 }
 
-func (m *mainchainKeeper) onlyHaveFederationTx(tx *types.Tx) (bool, error) {
-	for _, output := range tx.Outputs {
-		asset, err := m.assetStore.GetByAssetID(output.AssetId.String())
-		if err != nil {
-			return false, err
-		}
-
-		if !asset.IsOpenFederationIssue {
-			return false, nil
-		}
+func (m *mainchainKeeper) isOpenFederationAssetID(assetID *btmBc.AssetID) (bool, error) {
+	asset, err := m.assetStore.GetByAssetID(assetID.String())
+	if err != nil {
+		return false, err
 	}
-	return true, nil
+
+	return asset.IsOpenFederationIssue, nil
 }
 
 func (m *mainchainKeeper) processDepositTx(db *gorm.DB, block *types.Block, txStatus *bc.TransactionStatus, txIndex int) error {
