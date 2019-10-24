@@ -100,33 +100,55 @@ func (s *sidechainKeeper) createCrossChainReqs(db *gorm.DB, crossTransactionID u
 	return nil
 }
 
-func (s *sidechainKeeper) isDepositTx(tx *types.Tx) bool {
+func (s *sidechainKeeper) isDepositTx(tx *types.Tx) (bool, error) {
+	if b, err := s.isAllOpenFederationAssetTx(tx); err != nil {
+		return false, err
+	} else if b {
+		return false, nil
+	}
+
 	for _, input := range tx.Inputs {
 		if input.InputType() == types.CrossChainInputType {
-			return true
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
-func (s *sidechainKeeper) isWithdrawalTx(tx *types.Tx) bool {
+func (s *sidechainKeeper) isWithdrawalTx(tx *types.Tx) (bool, error) {
+	if b, err := s.isAllOpenFederationAssetTx(tx); err != nil {
+		return false, err
+	} else if b {
+		return false, nil
+	}
+
 	for _, output := range tx.Outputs {
 		if output.OutputType() == types.CrossChainOutputType {
-			return true
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
 func (s *sidechainKeeper) processBlock(db *gorm.DB, block *types.Block, txStatus *bc.TransactionStatus) error {
 	for i, tx := range block.Transactions {
-		if s.isDepositTx(tx) {
+		isDeposit, err := s.isDepositTx(tx)
+		if err != nil {
+			return err
+		}
+
+		if isDeposit {
 			if err := s.processDepositTx(db, block, i); err != nil {
 				return err
 			}
 		}
 
-		if s.isWithdrawalTx(tx) {
+		isWithdrawal, err := s.isWithdrawalTx(tx)
+		if err != nil {
+			return err
+		}
+
+		if isWithdrawal {
 			if err := s.processWithdrawalTx(db, block, txStatus, i); err != nil {
 				return err
 			}
@@ -182,7 +204,8 @@ func (s *sidechainKeeper) processDepositTx(db *gorm.DB, block *types.Block, txIn
 }
 
 func (s *sidechainKeeper) isAllOpenFederationAssetTx(tx *types.Tx) (bool, error) {
-	for _, input := range tx.Inputs[1:] {
+	noOFIssueAssetNum := 0
+	for _, input := range tx.Inputs {
 		assetID := input.AssetID()
 		asset, err := s.assetStore.GetByAssetID(assetID.String())
 		if err != nil {
@@ -190,6 +213,10 @@ func (s *sidechainKeeper) isAllOpenFederationAssetTx(tx *types.Tx) (bool, error)
 		}
 
 		if !asset.IsOpenFederationIssue {
+			noOFIssueAssetNum++
+		}
+
+		if noOFIssueAssetNum > 1 {
 			return false, nil
 		}
 	}
@@ -210,12 +237,6 @@ func (s *sidechainKeeper) processWithdrawalTx(db *gorm.DB, block *types.Block, t
 		muxID = *res.Source.Ref
 	default:
 		return ErrOutputType
-	}
-
-	if b, err := s.isAllOpenFederationAssetTx(tx); err != nil {
-		return err
-	} else if b {
-		return nil
 	}
 
 	rawTx, err := tx.MarshalText()
