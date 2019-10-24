@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm"
 
 	"github.com/vapor/errors"
 	"github.com/vapor/toolbar/federation/common"
@@ -67,26 +66,4 @@ func (s *Server) ListChains(c *gin.Context) ([]*orm.Chain, error) {
 	}
 
 	return chains, nil
-}
-
-type filterAssetIDReq struct {
-	AssetIDs []string `json:"asset_ids"`
-}
-
-func (s *Server) AddFilterAssetIDs(c *gin.Context, req *filterAssetIDReq) error {
-	batch := s.db.Begin()
-	for _, assetID := range req.AssetIDs {
-		filterAsset := &orm.FilterAsset{AssetID: assetID}
-		if err := batch.Find(filterAsset).Error; err == nil {
-			continue
-		} else if err != gorm.ErrRecordNotFound {
-			return err
-		}
-
-		if err := batch.Save(filterAsset).Error; err != nil {
-			return err
-		}
-	}
-
-	return batch.Commit().Error
 }

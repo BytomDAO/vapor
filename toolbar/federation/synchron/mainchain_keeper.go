@@ -14,6 +14,7 @@ import (
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 
+	vpCommon "github.com/vapor/common"
 	"github.com/vapor/consensus"
 	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
@@ -43,7 +44,7 @@ func NewMainchainKeeper(db *gorm.DB, assetStore *database.AssetStore, cfg *confi
 		log.WithField("err", err).Fatal("fail on get chain info")
 	}
 
-	keeper := &mainchainKeeper{
+	return &mainchainKeeper{
 		cfg:            &cfg.Mainchain,
 		db:             db,
 		node:           service.NewNode(cfg.Mainchain.Upstream),
@@ -53,16 +54,9 @@ func NewMainchainKeeper(db *gorm.DB, assetStore *database.AssetStore, cfg *confi
 		vaporNetParams: consensus.NetParams[cfg.Network],
 		filterAssets:   make(map[string]bool),
 	}
-
-	if err := keeper.fillFilterAssetID(); err != nil {
-		log.WithField("err", err).Fatal("fail on fill filterAssetID")
-	}
-	return keeper
 }
 
 func (m *mainchainKeeper) Run() {
-	go m.checkFilterAssetIDUpdate()
-
 	ticker := time.NewTicker(time.Duration(m.cfg.SyncSeconds) * time.Second)
 	defer ticker.Stop()
 
@@ -263,7 +257,7 @@ func (m *mainchainKeeper) processIssuance(tx *types.Tx) error {
 			IssuanceProgram: hex.EncodeToString(issuance.IssuanceProgram),
 			VMVersion:       issuance.VMVersion,
 			Definition:      string(issuance.AssetDefinition),
-			IsFilter:        m.isFilterAssetID(assetID.String()),
+			IsFilter:        vpCommon.IsCrossChainAssetOfNoBytom(issuance.AssetDefinition),
 		}
 
 		if err := m.db.Create(asset).Error; err != nil {
@@ -354,33 +348,4 @@ func (m *mainchainKeeper) tryAttachBlock(block *types.Block, txStatus *bc.Transa
 	}
 
 	return dbTx.Commit().Error
-}
-
-func (m *mainchainKeeper) isFilterAssetID(assetID string) bool {
-	_, ok := m.filterAssets[assetID]
-	return ok
-}
-
-func (m *mainchainKeeper) checkFilterAssetIDUpdate() error {
-	ticker := time.NewTicker(time.Duration(filterAssetIDUpdateSecond) * time.Second)
-	defer ticker.Stop()
-
-	for ; true; <-ticker.C {
-		if err := m.fillFilterAssetID(); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (m *mainchainKeeper) fillFilterAssetID() error {
-	filterAssets := []*orm.FilterAsset{}
-	if err := m.db.Find(filterAssets).Order("id asc").Error; err != nil {
-		return err
-	}
-
-	for i := len(m.filterAssets); i < len(filterAssets); i++ {
-		m.filterAssets[filterAssets[i].AssetID] = true
-	}
-	return nil
 }
