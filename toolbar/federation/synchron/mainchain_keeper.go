@@ -89,7 +89,7 @@ func (m *mainchainKeeper) createCrossChainReqs(db *gorm.DB, crossTransactionID u
 			return err
 		}
 
-		if asset.IsFilter {
+		if asset.IsOpenFederationIssue {
 			continue
 		}
 
@@ -249,11 +249,11 @@ func (m *mainchainKeeper) processIssuance(tx *types.Tx) error {
 		}
 
 		asset := &orm.Asset{
-			AssetID:         assetID.String(),
-			IssuanceProgram: hex.EncodeToString(issuance.IssuanceProgram),
-			VMVersion:       issuance.VMVersion,
-			Definition:      string(issuance.AssetDefinition),
-			IsFilter:        vpCommon.IsOpenFederationIssueAsset(issuance.AssetDefinition),
+			AssetID:               assetID.String(),
+			IssuanceProgram:       hex.EncodeToString(issuance.IssuanceProgram),
+			VMVersion:             issuance.VMVersion,
+			Definition:            string(issuance.AssetDefinition),
+			IsOpenFederationIssue: vpCommon.IsOpenFederationIssueAsset(issuance.AssetDefinition),
 		}
 
 		if err := m.db.Create(asset).Error; err != nil {

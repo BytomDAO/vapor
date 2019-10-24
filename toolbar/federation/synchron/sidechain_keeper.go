@@ -78,7 +78,7 @@ func (s *sidechainKeeper) createCrossChainReqs(db *gorm.DB, crossTransactionID u
 			return err
 		}
 
-		if asset.IsFilter {
+		if asset.IsOpenFederationIssue {
 			continue
 		}
 
