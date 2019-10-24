@@ -195,6 +195,15 @@ func (m *mainchainKeeper) processChainInfo(db *gorm.DB, block *types.Block) erro
 	return nil
 }
 
+func (m *mainchainKeeper) isAllOpenFederationIssueAssetTx(tx *types.TxData) bool {
+	for _, input := range tx.Inputs[1:] {
+		if !vpCommon.IsOpenFederationIssueAsset(input.AssetDefinition()) {
+			return false
+		}
+	}
+	return true
+}
+
 func (m *mainchainKeeper) processDepositTx(db *gorm.DB, block *types.Block, txStatus *bc.TransactionStatus, txIndex int) error {
 	tx := block.Transactions[txIndex]
 	var muxID btmBc.Hash
@@ -205,6 +214,10 @@ func (m *mainchainKeeper) processDepositTx(db *gorm.DB, block *types.Block, txSt
 		muxID = *res.Source.Ref
 	default:
 		return ErrOutputType
+	}
+
+	if m.isAllOpenFederationIssueAssetTx(&tx.TxData) {
+		return nil
 	}
 
 	rawTx, err := tx.MarshalText()

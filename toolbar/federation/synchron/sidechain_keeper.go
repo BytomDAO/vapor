@@ -181,6 +181,21 @@ func (s *sidechainKeeper) processDepositTx(db *gorm.DB, block *types.Block, txIn
 	return nil
 }
 
+func (s *sidechainKeeper) isAllOpenFederationAssetTx(tx *types.Tx) (bool, error) {
+	for _, input := range tx.Inputs[1:] {
+		assetID := input.AssetID()
+		asset, err := s.assetStore.GetByAssetID(assetID.String())
+		if err != nil {
+			return false, err
+		}
+
+		if !asset.IsOpenFederationIssue {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
 func (s *sidechainKeeper) processWithdrawalTx(db *gorm.DB, block *types.Block, txStatus *bc.TransactionStatus, txIndex int) error {
 	tx := block.Transactions[txIndex]
 	var muxID bc.Hash
@@ -195,6 +210,12 @@ func (s *sidechainKeeper) processWithdrawalTx(db *gorm.DB, block *types.Block, t
 		muxID = *res.Source.Ref
 	default:
 		return ErrOutputType
+	}
+
+	if b, err := s.isAllOpenFederationAssetTx(tx); err != nil {
+		return err
+	} else if b {
+		return nil
 	}
 
 	rawTx, err := tx.MarshalText()
