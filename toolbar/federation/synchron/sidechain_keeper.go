@@ -78,6 +78,10 @@ func (s *sidechainKeeper) createCrossChainReqs(db *gorm.DB, crossTransactionID u
 			return err
 		}
 
+		if asset.IsFilter {
+			continue
+		}
+
 		prog := rawOutput.ControlProgram()
 		req := &orm.CrossTransactionReq{
 			CrossTransactionID: crossTransactionID,

@@ -253,7 +253,7 @@ func (m *mainchainKeeper) processIssuance(tx *types.Tx) error {
 			IssuanceProgram: hex.EncodeToString(issuance.IssuanceProgram),
 			VMVersion:       issuance.VMVersion,
 			Definition:      string(issuance.AssetDefinition),
-			IsFilter:        vpCommon.IsCrossChainAssetOfNoBytom(issuance.AssetDefinition),
+			IsFilter:        vpCommon.IsOpenFederationIssueAsset(issuance.AssetDefinition),
 		}
 
 		if err := m.db.Create(asset).Error; err != nil {

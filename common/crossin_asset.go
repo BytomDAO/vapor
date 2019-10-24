@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 )
 
-func IsCrossChainAssetOfNoBytom(rawDefinitionByte []byte) bool {
+func IsOpenFederationIssueAsset(rawDefinitionByte []byte) bool {
 	var defMap map[string]interface{}
 	if err := json.Unmarshal(rawDefinitionByte, &defMap); err != nil {
 		return false
