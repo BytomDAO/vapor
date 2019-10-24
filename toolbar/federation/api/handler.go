@@ -34,7 +34,7 @@ func (s *Server) ListCrosschainTxs(c *gin.Context, listTxsReq *listCrosschainTxs
 		txFilter.SourceTxHash = txHash
 	}
 	if txHash, err := listTxsReq.GetFilterString("dest_tx_hash"); err == nil && txHash != "" {
-		txFilter.DestTxHash = sql.NullString{txHash, true}
+		txFilter.DestTxHash = sql.NullString{String: txHash, Valid: true}
 	}
 
 	txQuery := s.db.Preload("Chain").Preload("Reqs").Preload("Reqs.Asset").Where(txFilter)
