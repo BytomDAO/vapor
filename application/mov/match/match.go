@@ -16,15 +16,14 @@ import (
 	"github.com/vapor/protocol/vm/vmutil"
 )
 
-const maxFeeRate = 0.05
-
 type Engine struct {
 	orderTable  *OrderTable
+	maxFeeRate  float64
 	nodeProgram []byte
 }
 
-func NewEngine(movStore database.MovStore, nodeProgram []byte) *Engine {
-	return &Engine{orderTable: NewOrderTable(movStore), nodeProgram: nodeProgram}
+func NewEngine(movStore database.MovStore, maxFeeRate float64, nodeProgram []byte) *Engine {
+	return &Engine{orderTable: NewOrderTable(movStore), maxFeeRate: maxFeeRate, nodeProgram: nodeProgram}
 }
 
 func (e *Engine) HasMatchedTx(tradePairs ...*common.TradePair) bool {
@@ -150,7 +149,7 @@ func addMatchTxOutput(txData *types.TxData, txInput *types.TxInput, order *commo
 }
 
 func (e *Engine) addMatchTxFeeOutput(txData *types.TxData) error {
-	txFee, err := CalcMatchedTxFee(txData)
+	txFee, err := CalcMatchedTxFee(txData, e.maxFeeRate)
 	if err != nil {
 		return err
 	}
@@ -227,7 +226,7 @@ type MatchedTxFee struct {
 	FeeAmount    int64
 }
 
-func CalcMatchedTxFee(txData *types.TxData) (map[bc.AssetID]*MatchedTxFee, error) {
+func CalcMatchedTxFee(txData *types.TxData, maxFeeRate float64) (map[bc.AssetID]*MatchedTxFee, error) {
 	assetFeeMap := make(map[bc.AssetID]*MatchedTxFee)
 	sellerProgramMap := make(map[string]bool)
 	assetInputMap := make(map[bc.AssetID]uint64)
@@ -252,7 +251,7 @@ func CalcMatchedTxFee(txData *types.TxData) (map[bc.AssetID]*MatchedTxFee, error
 
 		oppositeAmount := assetInputMap[contractArgs.RequestedAsset]
 		receiveAmount := vprMath.MinUint64(calcRequestAmount(input.Amount(), contractArgs), oppositeAmount)
-		assetFeeMap[input.AssetID()].MaxFeeAmount = CalcMaxFeeAmount(CalcShouldPayAmount(receiveAmount, contractArgs))
+		assetFeeMap[input.AssetID()].MaxFeeAmount = CalcMaxFeeAmount(CalcShouldPayAmount(receiveAmount, contractArgs), maxFeeRate)
 	}
 
 	for _, output := range txData.Outputs {
@@ -262,13 +261,11 @@ func CalcMatchedTxFee(txData *types.TxData) (map[bc.AssetID]*MatchedTxFee, error
 		}
 		// minus the amount of seller's receiving output
 		if _, ok := sellerProgramMap[hex.EncodeToString(output.ControlProgram())]; ok {
-			assetFeeMap[*output.AssetAmount().AssetId].FeeAmount -= int64(output.AssetAmount().Amount)
-		}
-	}
-
-	for assetID, amount := range assetFeeMap {
-		if amount.FeeAmount == 0 {
-			delete(assetFeeMap, assetID)
+			assetID := *output.AssetAmount().AssetId
+			assetFeeMap[assetID].FeeAmount -= int64(output.AssetAmount().Amount)
+			if assetFeeMap[assetID].FeeAmount == 0 {
+				delete(assetFeeMap, assetID)
+			}
 		}
 	}
 	return assetFeeMap, nil
@@ -282,6 +279,6 @@ func CalcShouldPayAmount(receiveAmount uint64, contractArg *vmutil.MagneticContr
 	return uint64(math.Ceil(float64(receiveAmount) * float64(contractArg.RatioDenominator) / float64(contractArg.RatioNumerator)))
 }
 
-func CalcMaxFeeAmount(shouldPayAmount uint64) int64 {
+func CalcMaxFeeAmount(shouldPayAmount uint64, maxFeeRate float64) int64 {
 	return int64(math.Ceil(float64(shouldPayAmount) * maxFeeRate))
 }

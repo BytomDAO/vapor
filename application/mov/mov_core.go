@@ -12,6 +12,8 @@ import (
 	"github.com/vapor/protocol/bc/types"
 )
 
+const maxFeeRate = 0.05
+
 var (
 	errInvalidTradePairs = errors.New("The trade pairs in the tx input is invalid")
 )
@@ -41,13 +43,13 @@ func (m *MovCore) ValidateBlock(block *types.Block, verifyResults []*bc.TxVerify
 // ValidateTxs validate the trade transaction.
 func (m *MovCore) ValidateTxs(txs []*types.Tx, verifyResults []*bc.TxVerifyResult) error {
 	for _, tx := range txs {
-		if isMatchedTx(tx) {
+		if common.IsMatchedTx(tx) {
 			if err := validateMatchedTx(tx); err != nil {
 				return err
 			}
 		}
 
-		if isCancelOrderTx(tx) {
+		if common.IsCancelOrderTx(tx) {
 			if err := validateCancelOrderTx(tx); err != nil {
 				return err
 			}
@@ -116,7 +118,7 @@ func validateCancelOrderTx(tx *types.Tx) error {
 }
 
 func validateMatchedTxFeeAmount(tx *types.Tx) error {
-	txFee, err := match.CalcMatchedTxFee(&tx.TxData)
+	txFee, err := match.CalcMatchedTxFee(&tx.TxData, maxFeeRate)
 	if err != nil {
 		return err
 	}
@@ -161,7 +163,7 @@ func (m *MovCore) ApplyBlock(block *types.Block) error {
 }
 
 func (m *MovCore) validateMatchedTxSequence(txs []*types.Tx, ) error {
-	matchEngine := match.NewEngine(m.movStore, nil)
+	matchEngine := match.NewEngine(m.movStore, maxFeeRate, nil)
 	for _, matchedTx := range txs {
 		if !isMatchedTx(matchedTx) {
 			continue
@@ -221,8 +223,7 @@ func getSortedTradePairsFromMatchedTx(tx *types.Tx) ([]*common.TradePair, error)
 	}
 
 	tradePairs := []*common.TradePair{firstTradePair}
-	tradePair := firstTradePair
-	for *tradePair.ToAssetID != *firstTradePair.FromAssetID {
+	for tradePair := firstTradePair; *tradePair.ToAssetID != *firstTradePair.FromAssetID; {
 		nextTradePairToAssetID, ok := assetMap[*tradePair.ToAssetID]
 		if !ok {
 			return nil, errInvalidTradePairs
@@ -251,13 +252,12 @@ func (m *MovCore) DetachBlock(block *types.Block) error {
 
 // BeforeProposalBlock return all transactions than can be matched, and the number of transactions cannot exceed the given capacity.
 func (m *MovCore) BeforeProposalBlock(capacity int, nodeProgram []byte) ([]*types.Tx, error) {
-	matchEngine := match.NewEngine(m.movStore, nodeProgram)
+	matchEngine := match.NewEngine(m.movStore, maxFeeRate, nodeProgram)
 	tradePairMap := make(map[string]bool)
 	tradePairIterator := database.NewTradePairIterator(m.movStore)
-	remainder := capacity
 
 	var packagedTxs []*types.Tx
-	for remainder > 0 && tradePairIterator.HasNext() {
+	for len(packagedTxs) < capacity && tradePairIterator.HasNext() {
 		tradePair := tradePairIterator.Next()
 		if tradePairMap[tradePair.Key()] {
 			continue
@@ -265,17 +265,13 @@ func (m *MovCore) BeforeProposalBlock(capacity int, nodeProgram []byte) ([]*type
 		tradePairMap[tradePair.Key()] = true
 		tradePairMap[tradePair.Reverse().Key()] = true
 
-		for matchEngine.HasMatchedTx(tradePair, tradePair.Reverse()) && remainder > 0 {
+		for len(packagedTxs) < capacity && matchEngine.HasMatchedTx(tradePair, tradePair.Reverse()) {
 			matchedTx, err := matchEngine.NextMatchedTx(tradePair, tradePair.Reverse())
 			if err != nil {
 				return nil, err
 			}
 
-			if matchedTx == nil {
-				break
-			}
 			packagedTxs = append(packagedTxs, matchedTx)
-			remainder--
 		}
 	}
 	return packagedTxs, nil
@@ -360,23 +356,4 @@ func getDeleteOrdersFromTx(tx *types.Tx) ([]*common.Order, error) {
 		orders = append(orders, order)
 	}
 	return orders, nil
-}
-
-func isMatchedTx(tx *types.Tx) bool {
-	p2wmCount := 0
-	for _, input := range tx.Inputs {
-		if input.InputType() == types.SpendInputType && contract.IsTradeClauseSelector(input) && segwit.IsP2WMCScript(input.ControlProgram()) {
-			p2wmCount++
-		}
-	}
-	return p2wmCount >= 2
-}
-
-func isCancelOrderTx(tx *types.Tx) bool {
-	for _, input := range tx.Inputs {
-		if input.InputType() == types.SpendInputType && contract.IsCancelClauseSelector(input) && segwit.IsP2WMCScript(input.ControlProgram()) {
-			return true
-		}
-	}
-	return false
 }
