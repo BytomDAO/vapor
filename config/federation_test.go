@@ -9,7 +9,6 @@ import (
 )
 
 func TestFederation(t *testing.T) {
-
 	tmpDir, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatalf("failed to create temporary data folder: %v", err)
