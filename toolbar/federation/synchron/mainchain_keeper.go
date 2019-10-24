@@ -25,8 +25,6 @@ import (
 	"github.com/vapor/toolbar/federation/service"
 )
 
-const filterAssetIDUpdateSecond = 1
-
 type mainchainKeeper struct {
 	cfg            *config.Chain
 	db             *gorm.DB
