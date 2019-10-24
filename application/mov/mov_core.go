@@ -157,7 +157,7 @@ func (m *MovCore) ApplyBlock(block *types.Block) error {
 func (m *MovCore) validateMatchedTxSequence(txs []*types.Tx, ) error {
 	matchEngine := match.NewEngine(m.movStore, maxFeeRate, nil)
 	for _, matchedTx := range txs {
-		if !isMatchedTx(matchedTx) {
+		if !common.IsMatchedTx(matchedTx) {
 			continue
 		}
 
