@@ -11,7 +11,7 @@ branches:
     only:
         - master
         - dev
-        - v0.1
+        - mov
 
 script:
     - make ci
