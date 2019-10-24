@@ -109,10 +109,6 @@ func validateCancelOrderTx(tx *types.Tx) error {
 		if contract.IsTradeClauseSelector(input) {
 			return errors.New("can't exist trade order in the cancel order transaction")
 		}
-
-		if err := validateMagneticContractArgs(input.AssetAmount().Amount, input.ControlProgram()); err != nil {
-			return err
-		}
 	}
 	return nil
 }
