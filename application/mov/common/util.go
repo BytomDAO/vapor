@@ -7,13 +7,12 @@ import (
 )
 
 func IsMatchedTx(tx *types.Tx) bool {
-	p2wmCount := 0
 	for _, input := range tx.Inputs {
 		if input.InputType() == types.SpendInputType && contract.IsTradeClauseSelector(input) && segwit.IsP2WMCScript(input.ControlProgram()) {
-			p2wmCount++
+			return true
 		}
 	}
-	return p2wmCount >= 2
+	return false
 }
 
 func IsCancelOrderTx(tx *types.Tx) bool {

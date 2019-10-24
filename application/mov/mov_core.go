@@ -80,10 +80,6 @@ func validateMatchedTx(tx *types.Tx) error {
 			return errors.New("can't exist cancel order in the matched transaction")
 		}
 
-		if err := validateMagneticContractArgs(input.AssetAmount().Amount, input.ControlProgram()); err != nil {
-			return err
-		}
-
 		order, err := common.NewOrderFromInput(tx, i)
 		if err != nil {
 			return err
@@ -274,6 +270,11 @@ func (m *MovCore) BeforeProposalBlock(capacity int, nodeProgram []byte) ([]*type
 }
 
 func (m *MovCore) IsDust(tx *types.Tx) bool {
+	for _, input := range tx.Inputs {
+		if segwit.IsP2WMCScript(input.ControlProgram()) && !contract.IsCancelClauseSelector(input) {
+			return true
+		}
+	}
 	return false
 }
 
