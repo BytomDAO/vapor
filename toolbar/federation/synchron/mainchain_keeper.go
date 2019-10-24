@@ -35,7 +35,6 @@ type mainchainKeeper struct {
 	chainID        uint64
 	federationProg []byte
 	vaporNetParams consensus.Params
-	filterAssets   map[string]bool
 }
 
 func NewMainchainKeeper(db *gorm.DB, assetStore *database.AssetStore, cfg *config.Config) *mainchainKeeper {
@@ -52,7 +51,6 @@ func NewMainchainKeeper(db *gorm.DB, assetStore *database.AssetStore, cfg *confi
 		federationProg: cfg.FederationProg,
 		chainID:        chain.ID,
 		vaporNetParams: consensus.NetParams[cfg.Network],
-		filterAssets:   make(map[string]bool),
 	}
 }
 
