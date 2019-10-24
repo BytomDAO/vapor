@@ -118,33 +118,34 @@ func (m *mainchainKeeper) isDepositTx(tx *types.Tx) (bool, error) {
 	}
 
 	for _, output := range tx.Outputs {
-		isOFAsset, err := m.isOpenFederationAsset(output.AssetId)
-		if err != nil {
-			return false, err
+		if !bytes.Equal(output.OutputCommitment.ControlProgram, m.federationProg) {
+			continue
 		}
 
-		if !isOFAsset && bytes.Equal(output.OutputCommitment.ControlProgram, m.federationProg) {
-			return true, nil
+		if isOFAsset, err := m.isOpenFederationAsset(output.AssetId); err != nil {
+			return false, err
+		} else if isOFAsset {
+			continue
 		}
+
+		return true, nil
 	}
 	return false, nil
 }
 
 func (m *mainchainKeeper) isWithdrawalTx(tx *types.Tx) (bool, error) {
-	for index, output := range tx.Outputs {
-		if isOFAsset, err := m.isOpenFederationAsset(output.AssetId); err != nil {
+	for index, input := range tx.Inputs {
+		if !bytes.Equal(input.ControlProgram(), m.federationProg) {
+			return false, nil
+		}
+
+		if isOFAsset, err := m.isOpenFederationAsset(input.AssetAmount().AssetId); err != nil {
 			return false, err
 		} else if !isOFAsset {
-			break
+			continue
 		}
 
 		if (index + 1) == len(tx.Outputs) {
-			return false, nil
-		}
-	}
-
-	for _, input := range tx.Inputs {
-		if !bytes.Equal(input.ControlProgram(), m.federationProg) {
 			return false, nil
 		}
 	}
