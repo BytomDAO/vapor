@@ -4,12 +4,14 @@ import (
 	"errors"
 	"math/rand"
 	"net"
+	"time"
 
 	"github.com/tendermint/go-wire"
 	"github.com/tendermint/tmlibs/flowrate"
 	dbm "github.com/vapor/database/leveldb"
 
 	"github.com/vapor/consensus"
+	"github.com/vapor/event"
 	"github.com/vapor/netsync/peers"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
@@ -49,6 +51,10 @@ func (p *P2PPeer) IsLAN() bool {
 	return false
 }
 
+func (p *P2PPeer) Moniker() string {
+	return ""
+}
+
 func (p *P2PPeer) RemoteAddrHost() string {
 	return ""
 }
@@ -84,6 +90,7 @@ func (p *P2PPeer) setAsync(b bool) {
 func (p *P2PPeer) postMan() {
 	for msgBytes := range p.msgCh {
 		msgType, msg, _ := decodeMessage(msgBytes)
+		time.Sleep(10 * time.Millisecond)
 		p.remoteNode.processMsg(p.srcPeer, msgType, msg)
 	}
 }
@@ -159,6 +166,33 @@ func mockBlocks(startBlock *types.Block, height uint64) []*types.Block {
 	return blocks
 }
 
+func mockErrorBlocks(startBlock *types.Block, height uint64, errBlockHeight uint64) []*types.Block {
+	blocks := []*types.Block{}
+	indexBlock := &types.Block{}
+	if startBlock == nil {
+		indexBlock = &types.Block{BlockHeader: types.BlockHeader{Version: uint64(rand.Uint32())}}
+		blocks = append(blocks, indexBlock)
+	} else {
+		indexBlock = startBlock
+	}
+
+	for indexBlock.Height < height {
+		block := &types.Block{
+			BlockHeader: types.BlockHeader{
+				Height:            indexBlock.Height + 1,
+				PreviousBlockHash: indexBlock.Hash(),
+				Version:           uint64(rand.Uint32()),
+			},
+		}
+		if block.Height == errBlockHeight {
+			block.TransactionsMerkleRoot = bc.NewHash([32]byte{0x1})
+		}
+		blocks = append(blocks, block)
+		indexBlock = block
+	}
+	return blocks
+}
+
 func mockSync(blocks []*types.Block, mempool *mock.Mempool, fastSyncDB dbm.DB) *Manager {
 	chain := mock.NewChain(mempool)
 	peers := peers.NewPeerSet(NewPeerSet())
@@ -168,11 +202,12 @@ func mockSync(blocks []*types.Block, mempool *mock.Mempool, fastSyncDB dbm.DB) *
 	}
 
 	return &Manager{
-		chain:       chain,
-		blockKeeper: newBlockKeeper(chain, peers, fastSyncDB),
-		peers:       peers,
-		mempool:     mempool,
-		txSyncCh:    make(chan *txSyncMsg),
+		chain:           chain,
+		blockKeeper:     newBlockKeeper(chain, peers, fastSyncDB),
+		peers:           peers,
+		mempool:         mempool,
+		txSyncCh:        make(chan *txSyncMsg),
+		eventDispatcher: event.NewDispatcher(),
 	}
 }
 

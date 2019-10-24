@@ -4,8 +4,14 @@ import (
 	"errors"
 	"math/rand"
 
+	"github.com/vapor/protocol"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
+)
+
+var (
+	ErrFoundHeaderByHash   = errors.New("can't find header by hash")
+	ErrFoundHeaderByHeight = errors.New("can't find header by height")
 )
 
 type mempool interface {
@@ -22,10 +28,11 @@ type Chain struct {
 
 func NewChain(mempool *Mempool) *Chain {
 	return &Chain{
-		heightMap:   map[uint64]*types.Block{},
-		blockMap:    map[bc.Hash]*types.Block{},
-		prevOrphans: make(map[bc.Hash]*types.Block),
-		mempool:     mempool,
+		bestBlockHeader: &types.BlockHeader{},
+		heightMap:       map[uint64]*types.Block{},
+		blockMap:        map[bc.Hash]*types.Block{},
+		prevOrphans:     make(map[bc.Hash]*types.Block),
+		mempool:         mempool,
 	}
 }
 
@@ -64,7 +71,7 @@ func (c *Chain) GetBlockByHeight(height uint64) (*types.Block, error) {
 func (c *Chain) GetHeaderByHash(hash *bc.Hash) (*types.BlockHeader, error) {
 	block, ok := c.blockMap[*hash]
 	if !ok {
-		return nil, errors.New("can't find block")
+		return nil, ErrFoundHeaderByHash
 	}
 	return &block.BlockHeader, nil
 }
@@ -72,7 +79,7 @@ func (c *Chain) GetHeaderByHash(hash *bc.Hash) (*types.BlockHeader, error) {
 func (c *Chain) GetHeaderByHeight(height uint64) (*types.BlockHeader, error) {
 	block, ok := c.heightMap[height]
 	if !ok {
-		return nil, errors.New("can't find block")
+		return nil, ErrFoundHeaderByHeight
 	}
 	return &block.BlockHeader, nil
 }
@@ -107,6 +114,10 @@ func (c *Chain) InMainChain(hash bc.Hash) bool {
 }
 
 func (c *Chain) ProcessBlock(block *types.Block) (bool, error) {
+	if block.TransactionsMerkleRoot == bc.NewHash([32]byte{0x1}) {
+		return false, protocol.ErrBadStateRoot
+	}
+
 	if c.bestBlockHeader.Hash() == block.PreviousBlockHash {
 		c.heightMap[block.Height] = block
 		c.blockMap[block.Hash()] = block
@@ -135,6 +146,11 @@ func (c *Chain) ProcessBlock(block *types.Block) (bool, error) {
 		block = c.blockMap[block.PreviousBlockHash]
 	}
 	return false, nil
+}
+
+// TODO:
+func (c *Chain) ProcessBlockSignature(signature, pubkey []byte, blockHash *bc.Hash) error {
+	return nil
 }
 
 func (c *Chain) SetBestBlockHeader(header *types.BlockHeader) {

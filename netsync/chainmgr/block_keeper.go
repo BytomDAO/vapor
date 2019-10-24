@@ -112,7 +112,7 @@ func (bk *blockKeeper) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash, skip
 	headers := make([]*types.BlockHeader, 0)
 	stopHeader, err := bk.chain.GetHeaderByHash(stopHash)
 	if err != nil {
-		return headers, nil
+		return headers, err
 	}
 
 	if !bk.chain.InMainChain(*stopHash) || stopHeader.Height < startHeader.Height {
@@ -162,8 +162,7 @@ func (bk *blockKeeper) regularBlockSync() error {
 		targetHeight = peerHeight
 	}
 
-	i := bestHeight + 1
-	for i <= targetHeight {
+	for i := bestHeight + 1; i <= targetHeight; {
 		block, err := bk.msgFetcher.requireBlock(bk.syncPeer.ID(), i)
 		if err != nil {
 			bk.peers.ProcessIllegal(bk.syncPeer.ID(), security.LevelConnException, err.Error())
@@ -180,7 +179,14 @@ func (bk *blockKeeper) regularBlockSync() error {
 			i--
 			continue
 		}
-		i = bk.chain.BestBlockHeight() + 1
+
+		//This code is used to preventing the sync peer return a dust block which will not change the node's chain status
+		if bestHeight = bk.chain.BestBlockHeight(); i == bestHeight+1 {
+			log.WithFields(log.Fields{"module": logModule, "height": i}).Warn("stop regular sync due to loop sync same height")
+			return nil
+		}
+
+		i = bestHeight + 1
 	}
 	log.WithFields(log.Fields{"module": logModule, "height": bk.chain.BestBlockHeight()}).Info("regular sync success")
 	return nil
@@ -191,16 +197,13 @@ func (bk *blockKeeper) start() {
 }
 
 func (bk *blockKeeper) checkSyncType() int {
-	peer := bk.peers.BestIrreversiblePeer(consensus.SFFullNode | consensus.SFFastSync)
-	if peer == nil {
-		log.WithFields(log.Fields{"module": logModule}).Debug("can't find fast sync peer")
-		return noNeedSync
-	}
-
 	bestHeight := bk.chain.BestBlockHeight()
-	if peerIrreversibleHeight := peer.IrreversibleHeight(); peerIrreversibleHeight >= bestHeight+minGapStartFastSync {
-		bk.fastSync.setSyncPeer(peer)
-		return fastSyncType
+	peer := bk.peers.BestIrreversiblePeer(consensus.SFFullNode | consensus.SFFastSync)
+	if peer != nil {
+		if peerIrreversibleHeight := peer.IrreversibleHeight(); peerIrreversibleHeight >= bestHeight+minGapStartFastSync {
+			bk.fastSync.setSyncPeer(peer)
+			return fastSyncType
+		}
 	}
 
 	peer = bk.peers.BestPeer(consensus.SFFullNode)
@@ -209,8 +212,7 @@ func (bk *blockKeeper) checkSyncType() int {
 		return noNeedSync
 	}
 
-	peerHeight := peer.Height()
-	if peerHeight > bestHeight {
+	if peer.Height() > bestHeight {
 		bk.syncPeer = peer
 		return regularSyncType
 	}
@@ -230,6 +232,8 @@ func (bk *blockKeeper) startSync() bool {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on regularBlockSync")
 			return false
 		}
+	default:
+		return false
 	}
 
 	return true

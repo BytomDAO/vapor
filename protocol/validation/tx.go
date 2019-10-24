@@ -41,6 +41,7 @@ var (
 	ErrGasCalculate              = errors.New("gas usage calculate got a math error")
 	ErrVotePubKey                = errors.New("invalid public key of vote")
 	ErrVoteOutputAmount          = errors.New("invalid vote amount")
+	ErrVoteOutputAseet           = errors.New("incorrect asset_id while checking vote asset")
 )
 
 // GasState record the gas usage status
@@ -239,6 +240,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		if len(e.Vote) != 64 {
 			return ErrVotePubKey
 		}
+
 		vs2 := *vs
 		vs2.sourcePos = 0
 		if err = checkValidSrc(&vs2, e.Source); err != nil {
@@ -247,6 +249,10 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 
 		if e.Source.Value.Amount < consensus.ActiveNetParams.MinVoteOutputAmount {
 			return ErrVoteOutputAmount
+		}
+
+		if *e.Source.Value.AssetId != *consensus.BTMAssetID {
+			return ErrVoteOutputAseet
 		}
 
 	case *bc.Retirement:
@@ -579,6 +585,16 @@ func checkTimeRange(tx *bc.Tx, block *bc.Block) error {
 	return nil
 }
 
+func applySoftFork001(vs *validationState, err error) {
+	if err == nil || vs.block.Height < consensus.ActiveNetParams.SoftForkPoint[consensus.SoftFork001] {
+		return
+	}
+
+	if rootErr := errors.Root(err); rootErr == ErrVotePubKey || rootErr == ErrVoteOutputAmount || rootErr == ErrVoteOutputAseet {
+		vs.gasStatus.GasValid = false
+	}
+}
+
 // ValidateTx validates a transaction.
 func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
 	gasStatus := &GasState{GasValid: false}
@@ -602,7 +618,10 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
 		gasStatus: gasStatus,
 		cache:     make(map[bc.Hash]error),
 	}
-	return vs.gasStatus, checkValid(vs, tx.TxHeader)
+
+	err := checkValid(vs, tx.TxHeader)
+	applySoftFork001(vs, err)
+	return vs.gasStatus, err
 }
 
 type validateTxWork struct {

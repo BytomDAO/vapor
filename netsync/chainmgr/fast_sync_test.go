@@ -3,12 +3,15 @@ package chainmgr
 import (
 	"io/ioutil"
 	"os"
+	"reflect"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/vapor/consensus"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
+	"github.com/vapor/netsync/peers"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/test/mock"
@@ -96,7 +99,9 @@ func TestFastBlockSync(t *testing.T) {
 	}()
 
 	baseChain := mockBlocks(nil, 300)
-
+	chainX := []*types.Block{}
+	chainX = append(chainX, baseChain[:30]...)
+	chainX = append(chainX, mockBlocks(baseChain[30], 500)...)
 	cases := []struct {
 		syncTimeout time.Duration
 		aBlocks     []*types.Block
@@ -146,6 +151,13 @@ func TestFastBlockSync(t *testing.T) {
 			want:        baseChain[:50],
 			err:         errSkeletonSize,
 		},
+		{
+			syncTimeout: 30 * time.Second,
+			aBlocks:     chainX[:50],
+			bBlocks:     baseChain[:301],
+			want:        baseChain[:128],
+			err:         nil,
+		},
 	}
 
 	for i, c := range cases {
@@ -178,6 +190,178 @@ func TestFastBlockSync(t *testing.T) {
 		}
 		if !testutil.DeepEqual(got, c.want) {
 			t.Errorf("case %d: got %v want %v", i, got, c.want)
+		}
+	}
+}
+
+type mockFetcher struct {
+	baseChain  []*types.Block
+	peerStatus map[string][]*types.Block
+	peers      []string
+	testType   int
+}
+
+func (mf *mockFetcher) resetParameter() {
+	return
+}
+
+func (mf *mockFetcher) addSyncPeer(peerID string) {
+	return
+}
+
+func (mf *mockFetcher) requireBlock(peerID string, height uint64) (*types.Block, error) {
+	return nil, nil
+}
+
+func (mf *mockFetcher) parallelFetchBlocks(work []*fetchBlocksWork, downloadNotifyCh chan struct{}, ProcessStopCh chan struct{}, wg *sync.WaitGroup) {
+	return
+}
+
+func (mf *mockFetcher) parallelFetchHeaders(peers []*peers.Peer, locator []*bc.Hash, stopHash *bc.Hash, skip uint64) map[string][]*types.BlockHeader {
+	result := make(map[string][]*types.BlockHeader)
+	switch mf.testType {
+	case 1:
+		result["peer1"] = []*types.BlockHeader{&mf.peerStatus["peer1"][1000].BlockHeader, &mf.peerStatus["peer1"][1100].BlockHeader, &mf.peerStatus["peer1"][1200].BlockHeader,
+			&mf.peerStatus["peer1"][1300].BlockHeader, &mf.peerStatus["peer1"][1400].BlockHeader, &mf.peerStatus["peer1"][1500].BlockHeader,
+			&mf.peerStatus["peer1"][1600].BlockHeader, &mf.peerStatus["peer1"][1700].BlockHeader, &mf.peerStatus["peer1"][1800].BlockHeader,
+		}
+		result["peer2"] = []*types.BlockHeader{&mf.peerStatus["peer2"][1000].BlockHeader, &mf.peerStatus["peer2"][1100].BlockHeader, &mf.peerStatus["peer2"][1200].BlockHeader,
+			&mf.peerStatus["peer2"][1300].BlockHeader, &mf.peerStatus["peer2"][1400].BlockHeader, &mf.peerStatus["peer2"][1500].BlockHeader,
+			&mf.peerStatus["peer2"][1600].BlockHeader, &mf.peerStatus["peer2"][1700].BlockHeader, &mf.peerStatus["peer2"][1800].BlockHeader,
+		}
+
+	case 2:
+		result["peer1"] = []*types.BlockHeader{}
+	case 3:
+	case 4:
+		result["peer2"] = []*types.BlockHeader{&mf.peerStatus["peer2"][1000].BlockHeader, &mf.peerStatus["peer2"][1100].BlockHeader, &mf.peerStatus["peer2"][1200].BlockHeader,
+			&mf.peerStatus["peer2"][1300].BlockHeader, &mf.peerStatus["peer2"][1400].BlockHeader, &mf.peerStatus["peer2"][1500].BlockHeader,
+			&mf.peerStatus["peer2"][1600].BlockHeader, &mf.peerStatus["peer2"][1700].BlockHeader, &mf.peerStatus["peer2"][1800].BlockHeader,
+		}
+	case 5:
+		result["peer1"] = []*types.BlockHeader{&mf.peerStatus["peer1"][1000].BlockHeader, &mf.peerStatus["peer1"][1100].BlockHeader, &mf.peerStatus["peer1"][1200].BlockHeader,
+			&mf.peerStatus["peer1"][1300].BlockHeader, &mf.peerStatus["peer1"][1400].BlockHeader, &mf.peerStatus["peer1"][1500].BlockHeader,
+			&mf.peerStatus["peer1"][1600].BlockHeader, &mf.peerStatus["peer1"][1700].BlockHeader, &mf.peerStatus["peer1"][1800].BlockHeader,
+		}
+		result["peer2"] = []*types.BlockHeader{&mf.peerStatus["peer2"][1000].BlockHeader, &mf.peerStatus["peer2"][1100].BlockHeader, &mf.peerStatus["peer2"][1200].BlockHeader,
+			&mf.peerStatus["peer2"][1300].BlockHeader, &mf.peerStatus["peer2"][1400].BlockHeader, &mf.peerStatus["peer2"][1500].BlockHeader,
+			&mf.peerStatus["peer2"][1600].BlockHeader, &mf.peerStatus["peer2"][1700].BlockHeader,
+		}
+	}
+	return result
+}
+
+func TestCreateFetchBlocksTasks(t *testing.T) {
+	baseChain := mockBlocks(nil, 1000)
+	chainX := append(baseChain, mockBlocks(baseChain[1000], 2000)...)
+	chainY := append(baseChain, mockBlocks(baseChain[1000], 1900)...)
+	peerStatus := make(map[string][]*types.Block)
+	peerStatus["peer1"] = chainX
+	peerStatus["peer2"] = chainY
+	type syncPeer struct {
+		peer               *P2PPeer
+		bestHeight         uint64
+		irreversibleHeight uint64
+	}
+
+	cases := []struct {
+		peers        []*syncPeer
+		mainSyncPeer string
+		testType     int
+		wantTasks    []*fetchBlocksWork
+		wantErr      error
+	}{
+		// normal test
+		{
+			peers: []*syncPeer{
+				{peer: &P2PPeer{id: "peer1", flag: consensus.SFFullNode | consensus.SFFastSync}, bestHeight: 1000, irreversibleHeight: 1000},
+				{peer: &P2PPeer{id: "peer2", flag: consensus.SFFullNode | consensus.SFFastSync}, bestHeight: 800, irreversibleHeight: 800},
+			},
+			mainSyncPeer: "peer1",
+			testType:     1,
+			wantTasks: []*fetchBlocksWork{
+				{&chainX[1000].BlockHeader, &chainX[1100].BlockHeader}, {&chainX[1100].BlockHeader, &chainX[1200].BlockHeader},
+				{&chainX[1200].BlockHeader, &chainX[1300].BlockHeader}, {&chainX[1300].BlockHeader, &chainX[1400].BlockHeader},
+				{&chainX[1400].BlockHeader, &chainX[1500].BlockHeader}, {&chainX[1500].BlockHeader, &chainX[1600].BlockHeader},
+				{&chainX[1600].BlockHeader, &chainX[1700].BlockHeader}, {&chainX[1700].BlockHeader, &chainX[1800].BlockHeader},
+			},
+			wantErr: nil,
+		},
+		// test no sync peer
+		{
+			peers:        []*syncPeer{},
+			mainSyncPeer: "peer1",
+			testType:     0,
+			wantTasks:    nil,
+			wantErr:      errNoSyncPeer,
+		},
+		// primary sync peer skeleton size error
+		{
+			peers: []*syncPeer{
+				{peer: &P2PPeer{id: "peer1", flag: consensus.SFFullNode | consensus.SFFastSync}, bestHeight: 1000, irreversibleHeight: 1000},
+				{peer: &P2PPeer{id: "peer2", flag: consensus.SFFullNode | consensus.SFFastSync}, bestHeight: 800, irreversibleHeight: 800},
+			},
+			mainSyncPeer: "peer1",
+			testType:     2,
+			wantTasks:    nil,
+			wantErr:      errSkeletonSize,
+		},
+		// no skeleton return
+		{
+			peers: []*syncPeer{
+				{peer: &P2PPeer{id: "peer1", flag: consensus.SFFullNode | consensus.SFFastSync}, bestHeight: 1000, irreversibleHeight: 1000},
+				{peer: &P2PPeer{id: "peer2", flag: consensus.SFFullNode | consensus.SFFastSync}, bestHeight: 800, irreversibleHeight: 800},
+			},
+			mainSyncPeer: "peer1",
+			testType:     3,
+			wantTasks:    nil,
+			wantErr:      errNoSkeletonFound,
+		},
+		// no main skeleton found
+		{
+			peers: []*syncPeer{
+				{peer: &P2PPeer{id: "peer1", flag: consensus.SFFullNode | consensus.SFFastSync}, bestHeight: 1000, irreversibleHeight: 1000},
+				{peer: &P2PPeer{id: "peer2", flag: consensus.SFFullNode | consensus.SFFastSync}, bestHeight: 800, irreversibleHeight: 800},
+			},
+			mainSyncPeer: "peer1",
+			testType:     4,
+			wantTasks:    nil,
+			wantErr:      errNoMainSkeleton,
+		},
+		// skeleton length mismatch
+		{
+			peers: []*syncPeer{
+				{peer: &P2PPeer{id: "peer1", flag: consensus.SFFullNode | consensus.SFFastSync}, bestHeight: 1000, irreversibleHeight: 1000},
+				{peer: &P2PPeer{id: "peer2", flag: consensus.SFFullNode | consensus.SFFastSync}, bestHeight: 800, irreversibleHeight: 800},
+			},
+			mainSyncPeer: "peer1",
+			testType:     5,
+			wantTasks: []*fetchBlocksWork{
+				{&chainX[1000].BlockHeader, &chainX[1100].BlockHeader}, {&chainX[1100].BlockHeader, &chainX[1200].BlockHeader},
+				{&chainX[1200].BlockHeader, &chainX[1300].BlockHeader}, {&chainX[1300].BlockHeader, &chainX[1400].BlockHeader},
+				{&chainX[1400].BlockHeader, &chainX[1500].BlockHeader}, {&chainX[1500].BlockHeader, &chainX[1600].BlockHeader},
+				{&chainX[1600].BlockHeader, &chainX[1700].BlockHeader}, {&chainX[1700].BlockHeader, &chainX[1800].BlockHeader},
+			},
+			wantErr: nil,
+		},
+	}
+
+	for i, c := range cases {
+		peers := peers.NewPeerSet(NewPeerSet())
+		for _, syncPeer := range c.peers {
+			peers.AddPeer(syncPeer.peer)
+			peers.SetStatus(syncPeer.peer.id, syncPeer.bestHeight, nil)
+			peers.SetIrreversibleStatus(syncPeer.peer.id, syncPeer.irreversibleHeight, nil)
+		}
+		mockChain := mock.NewChain(nil)
+		fs := newFastSync(mockChain, &mockFetcher{baseChain: baseChain, peerStatus: peerStatus, testType: c.testType}, nil, peers)
+		fs.mainSyncPeer = fs.peers.GetPeer(c.mainSyncPeer)
+		tasks, err := fs.createFetchBlocksTasks(baseChain[700])
+		if err != c.wantErr {
+			t.Errorf("case %d: got %v want %v", i, err, c.wantErr)
+		}
+		if !reflect.DeepEqual(tasks, c.wantTasks) {
+			t.Errorf("case %d: got %v want %v", i, tasks, c.wantTasks)
 		}
 	}
 }

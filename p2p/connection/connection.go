@@ -38,7 +38,7 @@ const (
 	defaultRecvMessageCapacity = 22020096         // 21MB
 	defaultRecvRate            = int64(104857600) // 100MB/s
 	defaultSendTimeout         = 10 * time.Second
-	logModule                  = "p2p/conn"
+	logModule                  = "p2pConn"
 )
 
 type receiveCbFunc func(chID byte, msgBytes []byte)
@@ -278,7 +278,7 @@ func (c *MConnection) recvRoutine() {
 		c.recvMonitor.Update(int(n))
 		if err != nil {
 			if c.IsRunning() {
-				log.WithFields(log.Fields{"module": logModule, "conn": c, "error": err}).Error("Connection failed @ recvRoutine (reading byte)")
+				log.WithFields(log.Fields{"module": logModule, "conn": c, "error": err}).Warn("Connection failed @ recvRoutine (reading byte)")
 				c.conn.Close()
 				c.stopForError(err)
 			}

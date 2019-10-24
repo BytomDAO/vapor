@@ -13,8 +13,6 @@ import (
 var (
 	//chainTxUtxoNum maximum utxo quantity in a tx
 	chainTxUtxoNum = 5
-	//chainTxMergeGas chain tx gas
-	chainTxMergeGas = uint64(10000000)
 )
 
 func TestBuildBtmTxChain(t *testing.T) {
@@ -30,7 +28,7 @@ func TestBuildBtmTxChain(t *testing.T) {
 			inputUtxo:  []uint64{5},
 			wantInput:  [][]uint64{},
 			wantOutput: [][]uint64{},
-			wantUtxo:   5 * chainTxMergeGas,
+			wantUtxo:   5,
 		},
 		{
 			inputUtxo: []uint64{5, 4},
@@ -38,9 +36,9 @@ func TestBuildBtmTxChain(t *testing.T) {
 				[]uint64{5, 4},
 			},
 			wantOutput: [][]uint64{
-				[]uint64{8},
+				[]uint64{9},
 			},
-			wantUtxo: 8 * chainTxMergeGas,
+			wantUtxo: 9,
 		},
 		{
 			inputUtxo: []uint64{5, 4, 1, 1},
@@ -49,32 +47,22 @@ func TestBuildBtmTxChain(t *testing.T) {
 				[]uint64{1, 9},
 			},
 			wantOutput: [][]uint64{
+				[]uint64{11},
 				[]uint64{10},
-				[]uint64{9},
 			},
-			wantUtxo: 10 * chainTxMergeGas,
+			wantUtxo: 11,
 		},
 		{
-			inputUtxo: []uint64{22, 123, 53, 234, 23, 4, 2423, 24, 23, 43, 34, 234, 234, 24},
+			inputUtxo: []uint64{22, 123, 53, 234, 23, 4, 2423, 24, 23, 43, 34, 234, 234, 24, 11, 16, 33, 59, 73, 89, 66},
 			wantInput: [][]uint64{
-				[]uint64{22, 123, 53, 234, 23},
-				[]uint64{4, 2423, 24, 23, 43},
-				[]uint64{34, 234, 234, 24, 454},
-				[]uint64{2516, 979},
-				[]uint64{234, 24, 197},
-				[]uint64{260, 2469, 310},
-				[]uint64{454, 3038},
+				[]uint64{22, 123, 53, 234, 23, 4, 2423, 24, 23, 43, 34, 234, 234, 24, 11, 16, 33, 59, 73, 89},
+				[]uint64{66, 3779},
 			},
 			wantOutput: [][]uint64{
-				[]uint64{454},
-				[]uint64{2516},
-				[]uint64{979},
-				[]uint64{3494},
-				[]uint64{454},
-				[]uint64{3038},
-				[]uint64{3491},
+				[]uint64{3779},
+				[]uint64{3845},
 			},
-			wantUtxo: 3494 * chainTxMergeGas,
+			wantUtxo: 3845,
 		},
 	}
 
@@ -92,7 +80,7 @@ func TestBuildBtmTxChain(t *testing.T) {
 		utxos := []*acc.UTXO{}
 		for _, amount := range c.inputUtxo {
 			utxos = append(utxos, &acc.UTXO{
-				Amount:         amount * chainTxMergeGas,
+				Amount:         amount,
 				AssetID:        *consensus.BTMAssetID,
 				Address:        acp.Address,
 				ControlProgram: acp.ControlProgram,
@@ -107,12 +95,12 @@ func TestBuildBtmTxChain(t *testing.T) {
 		for i, tpl := range tpls {
 			gotInput := []uint64{}
 			for _, input := range tpl.Transaction.Inputs {
-				gotInput = append(gotInput, input.Amount()/chainTxMergeGas)
+				gotInput = append(gotInput, input.Amount())
 			}
 
 			gotOutput := []uint64{}
 			for _, output := range tpl.Transaction.Outputs {
-				gotOutput = append(gotOutput, output.AssetAmount().Amount/chainTxMergeGas)
+				gotOutput = append(gotOutput, output.AssetAmount().Amount)
 			}
 
 			if !testutil.DeepEqual(c.wantInput[i], gotInput) {
