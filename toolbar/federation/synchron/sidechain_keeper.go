@@ -102,12 +102,9 @@ func (s *sidechainKeeper) createCrossChainReqs(db *gorm.DB, crossTransactionID u
 
 func (s *sidechainKeeper) isDepositTx(tx *types.Tx) (bool, error) {
 	for index, output := range tx.Outputs {
-		isOFAssetID, err := s.isOpenFederationAssetID(output.AssetAmount().AssetId)
-		if err != nil {
+		if isOFAsset, err := s.isOpenFederationAsset(output.AssetAmount().AssetId); err != nil {
 			return false, err
-		}
-
-		if !isOFAssetID {
+		} else if !isOFAsset {
 			break
 		}
 
@@ -126,12 +123,12 @@ func (s *sidechainKeeper) isDepositTx(tx *types.Tx) (bool, error) {
 
 func (s *sidechainKeeper) isWithdrawalTx(tx *types.Tx) (bool, error) {
 	for _, output := range tx.Outputs {
-		isOFAssetID, err := s.isOpenFederationAssetID(output.AssetAmount().AssetId)
+		isOFAsset, err := s.isOpenFederationAsset(output.AssetAmount().AssetId)
 		if err != nil {
 			return false, err
 		}
 
-		if !isOFAssetID && output.OutputType() == types.CrossChainOutputType {
+		if !isOFAsset && output.OutputType() == types.CrossChainOutputType {
 			return true, nil
 		}
 	}
@@ -205,7 +202,7 @@ func (s *sidechainKeeper) processDepositTx(db *gorm.DB, block *types.Block, txIn
 	return nil
 }
 
-func (s *sidechainKeeper) isOpenFederationAssetID(assetID *bc.AssetID) (bool, error) {
+func (s *sidechainKeeper) isOpenFederationAsset(assetID *bc.AssetID) (bool, error) {
 	asset, err := s.assetStore.GetByAssetID(assetID.String())
 	if err != nil {
 		return false, err
