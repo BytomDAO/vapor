@@ -23,9 +23,9 @@ __Vapor Node__
 + `PR #407`
     - Solve the problem of node discovery service name consistency.
 + `PR #409`
-    - Add transaction gas of merge UTXO is 0.
+    - Update the gas cost by the chain transactions.
 + `PR #423`
-    - Solve the problem that the cross chain asset name alias can't be found.
+    - Solve the problem cross chain asset name alias can't be found  that cost by the format of upper case and lower case.
 
 
 __Vapor Dashboard__
