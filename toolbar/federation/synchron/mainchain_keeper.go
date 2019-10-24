@@ -110,42 +110,30 @@ func (m *mainchainKeeper) createCrossChainReqs(db *gorm.DB, crossTransactionID u
 	return nil
 }
 
-func (m *mainchainKeeper) isDepositTx(tx *types.Tx) (bool, error) {
-	if b, err := m.isAllOpenFederationIssueAssetTx(tx); err != nil {
-		return false, err
-	} else if b {
-		return false, nil
-	}
-
+func (m *mainchainKeeper) isDepositTx(tx *types.Tx) bool {
 	for _, input := range tx.Inputs {
 		if bytes.Equal(input.ControlProgram(), m.federationProg) {
-			return false, nil
+			return false
 		}
 	}
 
 	for _, output := range tx.Outputs {
 		if bytes.Equal(output.OutputCommitment.ControlProgram, m.federationProg) {
-			return true, nil
+			return true
 		}
 	}
-	return false, nil
+	return false
 }
 
-func (m *mainchainKeeper) isWithdrawalTx(tx *types.Tx) (bool, error) {
-	if b, err := m.isAllOpenFederationIssueAssetTx(tx); err != nil {
-		return false, err
-	} else if b {
-		return false, nil
-	}
-
+func (m *mainchainKeeper) isWithdrawalTx(tx *types.Tx) bool {
 	for _, input := range tx.Inputs {
 		if !bytes.Equal(input.ControlProgram(), m.federationProg) {
-			return false, nil
+			return false
 		}
 	}
 
 	sourceTxHash := locateSideChainTx(tx.Outputs[len(tx.Outputs)-1])
-	return sourceTxHash != "", nil
+	return sourceTxHash != ""
 }
 
 func locateSideChainTx(output *types.TxOutput) string {
@@ -175,23 +163,19 @@ func (m *mainchainKeeper) processBlock(db *gorm.DB, block *types.Block, txStatus
 			return err
 		}
 
-		isDeposit, err := m.isDepositTx(tx)
-		if err != nil {
+		if b, err := m.isAllOpenFederationIssueAssetTx(tx); err != nil {
 			return err
+		} else if b {
+			continue
 		}
 
-		if isDeposit {
+		if m.isDepositTx(tx) {
 			if err := m.processDepositTx(db, block, txStatus, i); err != nil {
 				return err
 			}
 		}
 
-		isWithdrawal, err := m.isWithdrawalTx(tx)
-		if err != nil {
-			return err
-		}
-
-		if isWithdrawal {
+		if m.isWithdrawalTx(tx) {
 			if err := m.processWithdrawalTx(db, block, i); err != nil {
 				return err
 			}

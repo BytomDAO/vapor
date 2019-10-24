@@ -100,55 +100,39 @@ func (s *sidechainKeeper) createCrossChainReqs(db *gorm.DB, crossTransactionID u
 	return nil
 }
 
-func (s *sidechainKeeper) isDepositTx(tx *types.Tx) (bool, error) {
-	if b, err := s.isAllOpenFederationAssetTx(tx); err != nil {
-		return false, err
-	} else if b {
-		return false, nil
-	}
-
+func (s *sidechainKeeper) isDepositTx(tx *types.Tx) bool {
 	for _, input := range tx.Inputs {
 		if input.InputType() == types.CrossChainInputType {
-			return true, nil
+			return true
 		}
 	}
-	return false, nil
+	return false
 }
 
-func (s *sidechainKeeper) isWithdrawalTx(tx *types.Tx) (bool, error) {
-	if b, err := s.isAllOpenFederationAssetTx(tx); err != nil {
-		return false, err
-	} else if b {
-		return false, nil
-	}
-
+func (s *sidechainKeeper) isWithdrawalTx(tx *types.Tx) bool {
 	for _, output := range tx.Outputs {
 		if output.OutputType() == types.CrossChainOutputType {
-			return true, nil
+			return true
 		}
 	}
-	return false, nil
+	return false
 }
 
 func (s *sidechainKeeper) processBlock(db *gorm.DB, block *types.Block, txStatus *bc.TransactionStatus) error {
 	for i, tx := range block.Transactions {
-		isDeposit, err := s.isDepositTx(tx)
-		if err != nil {
+		if b, err := s.isAllOpenFederationAssetTx(tx); err != nil {
 			return err
+		} else if b {
+			continue
 		}
 
-		if isDeposit {
+		if s.isDepositTx(tx) {
 			if err := s.processDepositTx(db, block, i); err != nil {
 				return err
 			}
 		}
 
-		isWithdrawal, err := s.isWithdrawalTx(tx)
-		if err != nil {
-			return err
-		}
-
-		if isWithdrawal {
+		if s.isWithdrawalTx(tx) {
 			if err := s.processWithdrawalTx(db, block, txStatus, i); err != nil {
 				return err
 			}
