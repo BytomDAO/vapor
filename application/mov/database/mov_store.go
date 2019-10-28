@@ -136,7 +136,7 @@ func (m *LevelDBMovStore) ProcessOrders(addOrders []*common.Order, delOrders []*
 	}
 
 	batch := m.db.NewBatch()
-	tradePairsCnt := make(map[common.TradePair]int)
+	tradePairsCnt := make(map[string]*common.TradePair)
 	if err := m.addOrders(batch, addOrders, tradePairsCnt); err != nil {
 		return err
 	}
@@ -160,7 +160,7 @@ func (m *LevelDBMovStore) ProcessOrders(addOrders []*common.Order, delOrders []*
 	return nil
 }
 
-func (m *LevelDBMovStore) addOrders(batch dbm.Batch, orders []*common.Order, tradePairsCnt map[common.TradePair]int) error {
+func (m *LevelDBMovStore) addOrders(batch dbm.Batch, orders []*common.Order, tradePairsCnt map[string]*common.TradePair) error {
 	for _, order := range orders {
 		data, err := json.Marshal(order.Utxo)
 		if err != nil {
@@ -170,25 +170,31 @@ func (m *LevelDBMovStore) addOrders(batch dbm.Batch, orders []*common.Order, tra
 		key := calcOrderKey(order.FromAssetID, order.ToAssetID, calcUTXOHash(order), order.Rate)
 		batch.Set(key, data)
 
-		tradePair := common.TradePair{
+		tradePair := &common.TradePair{
 			FromAssetID: order.FromAssetID,
 			ToAssetID:   order.ToAssetID,
 		}
-		tradePairsCnt[tradePair] += 1
+		if _, ok := tradePairsCnt[tradePair.Key()]; !ok {
+			tradePairsCnt[tradePair.Key()] = tradePair
+		}
+		tradePairsCnt[tradePair.Key()].Count++
 	}
 	return nil
 }
 
-func (m *LevelDBMovStore) deleteOrders(batch dbm.Batch, orders []*common.Order, tradePairsCnt map[common.TradePair]int) {
+func (m *LevelDBMovStore) deleteOrders(batch dbm.Batch, orders []*common.Order, tradePairsCnt map[string]*common.TradePair) {
 	for _, order := range orders {
 		key := calcOrderKey(order.FromAssetID, order.ToAssetID, calcUTXOHash(order), order.Rate)
 		batch.Delete(key)
 
-		tradePair := common.TradePair{
+		tradePair := &common.TradePair{
 			FromAssetID: order.FromAssetID,
 			ToAssetID:   order.ToAssetID,
 		}
-		tradePairsCnt[tradePair] -= 1
+		if _, ok := tradePairsCnt[tradePair.Key()]; !ok {
+			tradePairsCnt[tradePair.Key()] = tradePair
+		}
+		tradePairsCnt[tradePair.Key()].Count--
 	}
 }
 
@@ -226,19 +232,19 @@ func (m *LevelDBMovStore) ListTradePairsWithStart(fromAssetIDAfter, toAssetIDAft
 	return tradePairs, nil
 }
 
-func (m *LevelDBMovStore) updateTradePairs(batch dbm.Batch, tradePairs map[common.TradePair]int) error {
-	for k, v := range tradePairs {
-		key := calcTradePairKey(k.FromAssetID, k.ToAssetID)
+func (m *LevelDBMovStore) updateTradePairs(batch dbm.Batch, tradePairs map[string]*common.TradePair) error {
+	for _, v := range tradePairs {
+		key := calcTradePairKey(v.FromAssetID, v.ToAssetID)
 		tradePairData := &tradePairData{}
 		if value := m.db.Get(key); value != nil {
 			if err := json.Unmarshal(value, tradePairData); err != nil {
 				return err
 			}
-		} else if v < 0 {
+		} else if v.Count < 0 {
 			return errors.New("don't find trade pair")
 		}
 
-		tradePairData.Count += v
+		tradePairData.Count += v.Count
 		if tradePairData.Count > 0 {
 			value, err := json.Marshal(tradePairData)
 			if err != nil {
