@@ -1541,12 +1541,12 @@ func TestMovStore(t *testing.T) {
 		}
 
 		batch := movStore.db.NewBatch()
-		tradePairsCnt := make(map[common.TradePair]int)
+		tradePairsCnt := make(map[string]*common.TradePair)
 		movStore.addOrders(batch, c.beforeOrders, tradePairsCnt)
 		if len(c.beforeOrders) > 0 {
-			tradePairsCnt = make(map[common.TradePair]int)
+			tradePairsCnt = make(map[string]*common.TradePair)
 			for _, tradePair := range c.beforeTradePairs {
-				tradePairsCnt[*tradePair] = tradePair.Count
+				tradePairsCnt[tradePair.Key()] = tradePair
 			}
 			movStore.updateTradePairs(batch, tradePairsCnt)
 			movStore.saveMovDatabaseState(batch, c.beforeDBStatus)
@@ -1975,7 +1975,7 @@ func TestListOrders(t *testing.T) {
 		}
 
 		batch := movStore.db.NewBatch()
-		tradePairsCnt := make(map[common.TradePair]int)
+		tradePairsCnt := make(map[string]*common.TradePair)
 		movStore.addOrders(batch, c.storeOrders, tradePairsCnt)
 		movStore.updateTradePairs(batch, tradePairsCnt)
 		batch.Write()
@@ -2388,12 +2388,12 @@ func TestAddOrders(t *testing.T) {
 		}
 
 		batch := movStore.db.NewBatch()
-		tradePairsCnt := make(map[common.TradePair]int)
+		tradePairsCnt := make(map[string]*common.TradePair)
 		movStore.addOrders(batch, c.beforeOrders, tradePairsCnt)
 		movStore.updateTradePairs(batch, tradePairsCnt)
 		batch.Write()
 
-		tradePairsCnt = make(map[common.TradePair]int)
+		tradePairsCnt = make(map[string]*common.TradePair)
 		movStore.addOrders(batch, c.addOrders, tradePairsCnt)
 		batch.Write()
 
@@ -2728,12 +2728,12 @@ func TestDelOrders(t *testing.T) {
 		}
 
 		batch := movStore.db.NewBatch()
-		tradePairsCnt := make(map[common.TradePair]int)
+		tradePairsCnt := make(map[string]*common.TradePair)
 		movStore.addOrders(batch, c.beforeOrders, tradePairsCnt)
 		movStore.updateTradePairs(batch, tradePairsCnt)
 		batch.Write()
 
-		tradePairsCnt = make(map[common.TradePair]int)
+		tradePairsCnt = make(map[string]*common.TradePair)
 		movStore.deleteOrders(batch, c.delOrders, tradePairsCnt)
 		movStore.updateTradePairs(batch, tradePairsCnt)
 		batch.Write()
@@ -2755,7 +2755,7 @@ func TestDelOrders(t *testing.T) {
 func TestListTradePairsWithStart(t *testing.T) {
 	cases := []struct {
 		desc            string
-		storeTradePairs map[common.TradePair]int
+		storeTradePairs map[string]*common.TradePair
 		query           *common.TradePair
 		wantTradePairs  []*common.TradePair
 	}{
@@ -2766,13 +2766,13 @@ func TestListTradePairsWithStart(t *testing.T) {
 		},
 		{
 			desc: "query from first",
-			storeTradePairs: map[common.TradePair]int{
-				common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}: 1,
-				common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3}: 2,
-				common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4}: 3,
-				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}: 4,
-				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}: 5,
-				common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}: 6,
+			storeTradePairs: map[string]*common.TradePair{
+				(&common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}).Key(): {FromAssetID: assetID1, ToAssetID: assetID2, Count: 1},
+				(&common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3}).Key(): {FromAssetID: assetID2, ToAssetID: assetID3, Count: 2},
+				(&common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4}).Key(): {FromAssetID: assetID3, ToAssetID: assetID4, Count: 3},
+				(&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}).Key(): {FromAssetID: assetID4, ToAssetID: assetID5, Count: 4},
+				(&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}).Key(): {FromAssetID: assetID4, ToAssetID: assetID6, Count: 5},
+				(&common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}).Key(): {FromAssetID: assetID5, ToAssetID: assetID7, Count: 6},
 			},
 			query: &common.TradePair{},
 			wantTradePairs: []*common.TradePair{
@@ -2786,14 +2786,14 @@ func TestListTradePairsWithStart(t *testing.T) {
 		},
 		{
 			desc: "query from middle",
-			storeTradePairs: map[common.TradePair]int{
-				common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}: 1,
-				common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3}: 2,
-				common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4}: 3,
-				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}: 4,
-				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}: 5,
-				common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}: 6,
-				common.TradePair{FromAssetID: assetID6, ToAssetID: assetID8}: 7,
+			storeTradePairs: map[string]*common.TradePair{
+				(&common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}).Key(): {FromAssetID: assetID1, ToAssetID: assetID2, Count: 1},
+				(&common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3}).Key(): {FromAssetID: assetID2, ToAssetID: assetID3, Count: 2},
+				(&common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4}).Key(): {FromAssetID: assetID3, ToAssetID: assetID4, Count: 3},
+				(&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}).Key(): {FromAssetID: assetID4, ToAssetID: assetID5, Count: 4},
+				(&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}).Key(): {FromAssetID: assetID4, ToAssetID: assetID6, Count: 5},
+				(&common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}).Key(): {FromAssetID: assetID5, ToAssetID: assetID7, Count: 6},
+				(&common.TradePair{FromAssetID: assetID6, ToAssetID: assetID8}).Key(): {FromAssetID: assetID6, ToAssetID: assetID8, Count: 7},
 			},
 			query: &common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4, Count: 3},
 			wantTradePairs: []*common.TradePair{
@@ -2842,20 +2842,20 @@ func TestListTradePairsWithStart(t *testing.T) {
 func TestUpdateTradePairs(t *testing.T) {
 	cases := []struct {
 		desc             string
-		beforeTradePairs map[common.TradePair]int
-		addTradePairs    map[common.TradePair]int
-		delTradePairs    map[common.TradePair]int
+		beforeTradePairs map[string]*common.TradePair
+		addTradePairs    map[string]*common.TradePair
+		delTradePairs    map[string]*common.TradePair
 		wantTradePairs   []*common.TradePair
 	}{
 		{
 			desc: "empty",
-			addTradePairs: map[common.TradePair]int{
-				common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}: 1,
-				common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3}: 2,
-				common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4}: 3,
-				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}: 4,
-				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}: 5,
-				common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}: 6,
+			addTradePairs: map[string]*common.TradePair{
+				(&common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}).Key(): {FromAssetID: assetID1, ToAssetID: assetID2, Count: 1},
+				(&common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3}).Key(): {FromAssetID: assetID2, ToAssetID: assetID3, Count: 2},
+				(&common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4}).Key(): {FromAssetID: assetID3, ToAssetID: assetID4, Count: 3},
+				(&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}).Key(): {FromAssetID: assetID4, ToAssetID: assetID5, Count: 4},
+				(&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}).Key(): {FromAssetID: assetID4, ToAssetID: assetID6, Count: 5},
+				(&common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}).Key(): {FromAssetID: assetID5, ToAssetID: assetID7, Count: 6},
 			},
 			wantTradePairs: []*common.TradePair{
 				&common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2, Count: 1},
@@ -2868,15 +2868,15 @@ func TestUpdateTradePairs(t *testing.T) {
 		},
 		{
 			desc: "Stored data already exists",
-			beforeTradePairs: map[common.TradePair]int{
-				common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}: 1,
-				common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3}: 2,
-				common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4}: 3,
+			beforeTradePairs: map[string]*common.TradePair{
+				(&common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}).Key(): {FromAssetID: assetID1, ToAssetID: assetID2, Count: 1},
+				(&common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3}).Key(): {FromAssetID: assetID2, ToAssetID: assetID3, Count: 2},
+				(&common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4}).Key(): {FromAssetID: assetID3, ToAssetID: assetID4, Count: 3},
 			},
-			addTradePairs: map[common.TradePair]int{
-				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}: 4,
-				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}: 5,
-				common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}: 6,
+			addTradePairs: map[string]*common.TradePair{
+				(&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}).Key(): {FromAssetID: assetID4, ToAssetID: assetID5, Count: 4},
+				(&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}).Key(): {FromAssetID: assetID4, ToAssetID: assetID6, Count: 5},
+				(&common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}).Key(): {FromAssetID: assetID5, ToAssetID: assetID7, Count: 6},
 			},
 			wantTradePairs: []*common.TradePair{
 				&common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2, Count: 1},
@@ -2889,19 +2889,19 @@ func TestUpdateTradePairs(t *testing.T) {
 		},
 		{
 			desc: "delete some data",
-			beforeTradePairs: map[common.TradePair]int{
-				common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}: 1,
-				common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3}: 2,
-				common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4}: 3,
-				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}: 4,
-				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}: 5,
-				common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}: 6,
+			beforeTradePairs: map[string]*common.TradePair{
+				(&common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}).Key(): {FromAssetID: assetID1, ToAssetID: assetID2, Count: 1},
+				(&common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3}).Key(): {FromAssetID: assetID2, ToAssetID: assetID3, Count: 2},
+				(&common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4}).Key(): {FromAssetID: assetID3, ToAssetID: assetID4, Count: 3},
+				(&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}).Key(): {FromAssetID: assetID4, ToAssetID: assetID5, Count: 4},
+				(&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}).Key(): {FromAssetID: assetID4, ToAssetID: assetID6, Count: 5},
+				(&common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}).Key(): {FromAssetID: assetID5, ToAssetID: assetID7, Count: 6},
 			},
-			delTradePairs: map[common.TradePair]int{
-				common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}: -1,
-				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}: -4,
-				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}: -2,
-				common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}: -4,
+			delTradePairs: map[string]*common.TradePair{
+				(&common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}).Key(): {FromAssetID: assetID1, ToAssetID: assetID2, Count: -1},
+				(&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}).Key(): {FromAssetID: assetID4, ToAssetID: assetID5, Count: -4},
+				(&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}).Key(): {FromAssetID: assetID4, ToAssetID: assetID6, Count: -2},
+				(&common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}).Key(): {FromAssetID: assetID5, ToAssetID: assetID7, Count: -4},
 			},
 			wantTradePairs: []*common.TradePair{
 				&common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3, Count: 2},
