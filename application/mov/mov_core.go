@@ -6,6 +6,7 @@ import (
 	"github.com/vapor/application/mov/database"
 	"github.com/vapor/application/mov/match"
 	"github.com/vapor/consensus/segwit"
+	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 	"github.com/vapor/math/checked"
 	"github.com/vapor/protocol/bc"
@@ -19,11 +20,26 @@ var (
 )
 
 type MovCore struct {
-	movStore database.MovStore
+	movStore       database.MovStore
+	startHeight    uint64
+	startBlockHash *bc.Hash
 }
 
-func NewMovCore(store database.MovStore) *MovCore {
-	return &MovCore{movStore: store}
+func NewMovCore(db dbm.DB, startHeight uint64, startBlockHash *bc.Hash) (*MovCore, error) {
+	movStore, err := database.NewLevelDBMovStore(db, startHeight, startBlockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	return &MovCore{
+		movStore:       movStore,
+		startHeight:    startHeight,
+		startBlockHash: startBlockHash,
+	}, nil
+}
+
+func (m *MovCore) Name() string {
+	return "MOV"
 }
 
 // ChainStatus return the current block height and block hash in dex core
@@ -142,6 +158,10 @@ func validateMagneticContractArgs(inputAmount uint64, program []byte) error {
 // ApplyBlock parse pending order and cancel from the the transactions of block
 // and add pending order to the dex db, remove cancel order from dex db.
 func (m *MovCore) ApplyBlock(block *types.Block) error {
+	if block.Height <= m.startHeight {
+		return nil
+	}
+
 	if err := m.validateMatchedTxSequence(block.Transactions); err != nil {
 		return err
 	}
@@ -215,7 +235,7 @@ func getSortedTradePairsFromMatchedTx(tx *types.Tx) ([]*common.TradePair, error)
 	}
 
 	tradePairs := []*common.TradePair{firstTradePair}
-	for tradePair := firstTradePair; *tradePair.ToAssetID != *firstTradePair.FromAssetID; {
+	for tradePair := firstTradePair; tradePair.ToAssetID != firstTradePair.FromAssetID; {
 		nextTradePairToAssetID, ok := assetMap[*tradePair.ToAssetID]
 		if !ok {
 			return nil, errInvalidTradePairs
@@ -234,6 +254,10 @@ func getSortedTradePairsFromMatchedTx(tx *types.Tx) ([]*common.TradePair, error)
 // DetachBlock parse pending order and cancel from the the transactions of block
 // and add cancel order to the dex db, remove pending order from dex db.
 func (m *MovCore) DetachBlock(block *types.Block) error {
+	if block.Height <= m.startHeight {
+		return nil
+	}
+
 	deleteOrders, addOrders, err := applyTransactions(block.Transactions)
 	if err != nil {
 		return err

@@ -138,7 +138,7 @@ func addMatchTxOutput(txData *types.TxData, txInput *types.TxInput, order *commo
 	requestAmount := calcRequestAmount(order.Utxo.Amount, contractArgs)
 	receiveAmount := vprMath.MinUint64(requestAmount, oppositeAmount)
 	shouldPayAmount := CalcShouldPayAmount(receiveAmount, contractArgs)
-	isPartialTrade := order.Utxo.Amount > shouldPayAmount
+	isPartialTrade := requestAmount > receiveAmount
 
 	setMatchTxArguments(txInput, isPartialTrade, len(txData.Outputs), receiveAmount)
 	txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*order.ToAssetID, receiveAmount, contractArgs.SellerProgram))
@@ -263,9 +263,12 @@ func CalcMatchedTxFee(txData *types.TxData, maxFeeRate float64) (map[bc.AssetID]
 		if _, ok := sellerProgramMap[hex.EncodeToString(output.ControlProgram())]; ok {
 			assetID := *output.AssetAmount().AssetId
 			assetFeeMap[assetID].FeeAmount -= int64(output.AssetAmount().Amount)
-			if assetFeeMap[assetID].FeeAmount == 0 {
-				delete(assetFeeMap, assetID)
-			}
+		}
+	}
+
+	for assetID, fee := range assetFeeMap {
+		if fee.FeeAmount == 0 {
+			delete(assetFeeMap, assetID)
 		}
 	}
 	return assetFeeMap, nil
