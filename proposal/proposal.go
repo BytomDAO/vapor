@@ -1,7 +1,6 @@
 package proposal
 
 import (
-	"sort"
 	"strconv"
 	"time"
 
@@ -74,7 +73,7 @@ func createCoinbaseTx(accountManager *account.Manager, blockHeight uint64, rewar
 }
 
 // NewBlockTemplate returns a new block template that is ready to be solved
-func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager, timestamp uint64) (b *types.Block, err error) {
+func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager, txs []*types.Tx, timestamp uint64) (b *types.Block, err error) {
 	view := state.NewUtxoViewpoint()
 	txStatus := bc.NewTransactionStatus()
 	if err := txStatus.SetStatus(0, false); err != nil {
@@ -101,18 +100,14 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: nextBlockHeight}}
 	b.Transactions = []*types.Tx{nil}
 
-	txs := txPool.GetTransactions()
-	sort.Sort(byTime(txs))
-
 	entriesTxs := []*bc.Tx{}
-	for _, txDesc := range txs {
-		entriesTxs = append(entriesTxs, txDesc.Tx.Tx)
+	for _, tx := range txs {
+		entriesTxs = append(entriesTxs, tx.Tx)
 	}
 
 	validateResults := validation.ValidateTxs(entriesTxs, bcBlock)
 	for i, validateResult := range validateResults {
-		txDesc := txs[i]
-		tx := txDesc.Tx.Tx
+		tx := txs[i].Tx
 		gasOnlyTx := false
 
 		gasStatus := validateResult.GetGasState()
@@ -142,7 +137,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			return nil, err
 		}
 
-		b.Transactions = append(b.Transactions, txDesc.Tx)
+		b.Transactions = append(b.Transactions, txs[i])
 		txEntries = append(txEntries, tx)
 		gasUsed += uint64(gasStatus.GasUsed)
 		if gasUsed == consensus.ActiveNetParams.MaxBlockGas {

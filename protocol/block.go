@@ -110,6 +110,12 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
+	for _, p := range c.subProtocols {
+		if err := p.ApplyBlock(block); err != nil {
+			return errors.Wrap(err, p.Name(), "sub protocol connect block")
+		}
+	}
+
 	irrBlockHeader := c.lastIrrBlockHeader
 	if c.isIrreversible(&block.BlockHeader) && block.Height > irrBlockHeader.Height {
 		irrBlockHeader = &block.BlockHeader
@@ -164,6 +170,12 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 			return err
 		}
 
+		for _, p := range c.subProtocols {
+			if err := p.DetachBlock(b); err != nil {
+				return errors.Wrap(err, p.Name(), "sub protocol detach block")
+			}
+		}
+
 		for _, tx := range b.Transactions {
 			txsToRestore[tx.ID] = tx
 		}
@@ -197,6 +209,12 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 
 		if err := consensusResult.ApplyBlock(b); err != nil {
 			return err
+		}
+
+		for _, p := range c.subProtocols {
+			if err := p.ApplyBlock(b); err != nil {
+				return errors.Wrap(err, p.Name(), "sub protocol attach block")
+			}
 		}
 
 		if consensusResult.IsFinalize() {
@@ -278,6 +296,12 @@ func (c *Chain) saveBlock(block *types.Block) error {
 	signature, err := c.SignBlock(block)
 	if err != nil {
 		return errors.Sub(ErrBadBlock, err)
+	}
+
+	for _, p := range c.subProtocols {
+		if err := p.ValidateBlock(block); err != nil {
+			return errors.Wrap(err, "sub protocol save block")
+		}
 	}
 
 	if err := c.store.SaveBlock(block, bcBlock.TransactionStatus); err != nil {
