@@ -1535,9 +1535,9 @@ func TestMovStore(t *testing.T) {
 	defer os.RemoveAll("temp")
 	for i, c := range cases {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
-		movStore, err := NewLevelDBMovStore(testDB, height, &hash)
-		if err != nil {
-			t.Fatalf("case %d: NewMovStore error %v.", i, err)
+		movStore := NewLevelDBMovStore(testDB)
+		if err := movStore.InitDBState(height, &hash); err != nil {
+			t.Fatalf("case %d: InitDBState error %v.", i, err)
 		}
 
 		batch := movStore.db.NewBatch()
@@ -1969,9 +1969,9 @@ func TestListOrders(t *testing.T) {
 	defer os.RemoveAll("temp")
 	for i, c := range cases {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
-		movStore, err := NewLevelDBMovStore(testDB, height, &hash)
-		if err != nil {
-			t.Fatalf("case %d: NewMovStore error %v.", i, err)
+		movStore := NewLevelDBMovStore(testDB)
+		if err := movStore.InitDBState(height, &hash); err != nil {
+			t.Fatalf("case %d: InitDBState error %v.", i, err)
 		}
 
 		batch := movStore.db.NewBatch()
@@ -2382,9 +2382,9 @@ func TestAddOrders(t *testing.T) {
 	defer os.RemoveAll("temp")
 	for i, c := range cases {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
-		movStore, err := NewLevelDBMovStore(testDB, height, &hash)
-		if err != nil {
-			t.Fatalf("case %d: NewMovStore error %v.", i, err)
+		movStore := NewLevelDBMovStore(testDB)
+		if err := movStore.InitDBState(height, &hash); err != nil {
+			t.Fatalf("case %d: InitDBState error %v.", i, err)
 		}
 
 		batch := movStore.db.NewBatch()
@@ -2722,9 +2722,9 @@ func TestDelOrders(t *testing.T) {
 	defer os.RemoveAll("temp")
 	for i, c := range cases {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
-		movStore, err := NewLevelDBMovStore(testDB, height, &hash)
-		if err != nil {
-			t.Fatalf("case %d: NewMovStore error %v.", i, err)
+		movStore := NewLevelDBMovStore(testDB)
+		if err := movStore.InitDBState(height, &hash); err != nil {
+			t.Fatalf("case %d: InitDBState error %v.", i, err)
 		}
 
 		batch := movStore.db.NewBatch()
@@ -2816,9 +2816,9 @@ func TestListTradePairsWithStart(t *testing.T) {
 	defer os.RemoveAll("temp")
 	for i, c := range cases {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
-		movStore, err := NewLevelDBMovStore(testDB, height, &hash)
-		if err != nil {
-			t.Fatalf("case %d: NewMovStore error %v.", i, err)
+		movStore := NewLevelDBMovStore(testDB)
+		if err := movStore.InitDBState(height, &hash); err != nil {
+			t.Fatalf("case %d: InitDBState error %v.", i, err)
 		}
 
 		batch := movStore.db.NewBatch()
@@ -2923,9 +2923,9 @@ func TestUpdateTradePairs(t *testing.T) {
 	defer os.RemoveAll("temp")
 	for i, c := range cases {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
-		movStore, err := NewLevelDBMovStore(testDB, height, &hash)
-		if err != nil {
-			t.Fatalf("case %d: NewMovStore error %v.", i, err)
+		movStore := NewLevelDBMovStore(testDB)
+		if err := movStore.InitDBState(height, &hash); err != nil {
+			t.Fatalf("case %d: InitDBState error %v.", i, err)
 		}
 
 		batch := movStore.db.NewBatch()
@@ -2995,9 +2995,9 @@ func TestCheckMovDatabaseState(t *testing.T) {
 	defer os.RemoveAll("temp")
 	for i, c := range cases {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
-		movStore, err := NewLevelDBMovStore(testDB, height, &hash)
-		if err != nil {
-			t.Fatalf("case %d: NewMovStore error %v.", i, err)
+		movStore := NewLevelDBMovStore(testDB)
+		if err := movStore.InitDBState(height, &hash); err != nil {
+			t.Fatalf("case %d: InitDBState error %v.", i, err)
 		}
 
 		batch := movStore.db.NewBatch()

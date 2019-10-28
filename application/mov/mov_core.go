@@ -152,10 +152,6 @@ func validateMagneticContractArgs(inputAmount uint64, program []byte) error {
 // ApplyBlock parse pending order and cancel from the the transactions of block
 // and add pending order to the dex db, remove cancel order from dex db.
 func (m *MovCore) ApplyBlock(block *types.Block) error {
-	if block.Height <= m.startHeight {
-		return nil
-	}
-
 	if err := m.validateMatchedTxSequence(block.Transactions); err != nil {
 		return err
 	}
@@ -248,10 +244,6 @@ func getSortedTradePairsFromMatchedTx(tx *types.Tx) ([]*common.TradePair, error)
 // DetachBlock parse pending order and cancel from the the transactions of block
 // and add cancel order to the dex db, remove pending order from dex db.
 func (m *MovCore) DetachBlock(block *types.Block) error {
-	if block.Height <= m.startHeight {
-		return nil
-	}
-
 	deleteOrders, addOrders, err := applyTransactions(block.Transactions)
 	if err != nil {
 		return err
