@@ -21,25 +21,19 @@ var (
 
 type MovCore struct {
 	movStore       database.MovStore
-	startHeight    uint64
-	startBlockHash *bc.Hash
 }
 
-func NewMovCore(db dbm.DB, startHeight uint64, startBlockHash *bc.Hash) (*MovCore, error) {
-	movStore, err := database.NewLevelDBMovStore(db, startHeight, startBlockHash)
-	if err != nil {
-		return nil, err
-	}
-
-	return &MovCore{
-		movStore:       movStore,
-		startHeight:    startHeight,
-		startBlockHash: startBlockHash,
-	}, nil
+func NewMovCore(dbBackend, dbDir string) *MovCore {
+	movDB := dbm.NewDB("mov", dbBackend, dbDir)
+	return &MovCore{movStore: database.NewLevelDBMovStore(movDB)}
 }
 
 func (m *MovCore) Name() string {
 	return "MOV"
+}
+
+func (m *MovCore) InitChainStatus(blockHeight uint64, blockHash *bc.Hash) error {
+	return m.movStore.InitDBState(blockHeight, blockHash)
 }
 
 // ChainStatus return the current block height and block hash in dex core

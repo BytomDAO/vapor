@@ -14,6 +14,7 @@ import (
 
 type MovStore interface {
 	GetMovDatabaseState() (*common.MovDatabaseState, error)
+	InitDBState(height uint64, hash *bc.Hash) error
 	ListOrders(orderAfter *common.Order) ([]*common.Order, error)
 	ListTradePairsWithStart(fromAssetIDAfter, toAssetIDAfter *bc.AssetID) ([]*common.TradePair, error)
 	ProcessOrders(addOrders []*common.Order, delOrders []*common.Order, blockHeader *types.BlockHeader) error
@@ -83,17 +84,19 @@ type LevelDBMovStore struct {
 	db dbm.DB
 }
 
-func NewLevelDBMovStore(db dbm.DB, height uint64, hash *bc.Hash) (*LevelDBMovStore, error) {
-	if value := db.Get(bestMatchStore); value == nil {
-		state := &common.MovDatabaseState{Height: height, Hash: hash}
-		value, err := json.Marshal(state)
-		if err != nil {
-			return nil, err
-		}
+func NewLevelDBMovStore(db dbm.DB, ) *LevelDBMovStore {
+	return &LevelDBMovStore{db: db}
+}
 
-		db.Set(bestMatchStore, value)
+func (m *LevelDBMovStore) InitDBState(height uint64, hash *bc.Hash) error {
+	state := &common.MovDatabaseState{Height: height, Hash: hash}
+	value, err := json.Marshal(state)
+	if err != nil {
+		return err
 	}
-	return &LevelDBMovStore{db: db}, nil
+
+	m.db.Set(bestMatchStore, value)
+	return nil
 }
 
 func (m *LevelDBMovStore) ListOrders(orderAfter *common.Order) ([]*common.Order, error) {

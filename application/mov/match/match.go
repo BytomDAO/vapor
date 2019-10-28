@@ -262,13 +262,14 @@ func CalcMatchedTxFee(txData *types.TxData, maxFeeRate float64) (map[bc.AssetID]
 		// minus the amount of seller's receiving output
 		if _, ok := sellerProgramMap[hex.EncodeToString(output.ControlProgram())]; ok {
 			assetID := *output.AssetAmount().AssetId
-			assetFeeMap[assetID].FeeAmount -= int64(output.AssetAmount().Amount)
-		}
-	}
-
-	for assetID, fee := range assetFeeMap {
-		if fee.FeeAmount == 0 {
-			delete(assetFeeMap, assetID)
+			fee, ok := assetFeeMap[assetID]
+			if !ok {
+				continue
+			}
+			fee.FeeAmount -= int64(output.AssetAmount().Amount)
+			if fee.FeeAmount == 0 {
+				delete(assetFeeMap, assetID)
+			}
 		}
 	}
 	return assetFeeMap, nil
