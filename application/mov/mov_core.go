@@ -20,7 +20,7 @@ var (
 )
 
 type MovCore struct {
-	movStore       database.MovStore
+	movStore database.MovStore
 }
 
 func NewMovCore(dbBackend, dbDir string) *MovCore {
