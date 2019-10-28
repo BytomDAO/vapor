@@ -280,7 +280,7 @@ func calcRequestAmount(fromAmount uint64, contractArg *vmutil.MagneticContractAr
 }
 
 func CalcShouldPayAmount(receiveAmount uint64, contractArg *vmutil.MagneticContractArgs) uint64 {
-	return uint64(math.Ceil(float64(receiveAmount) * float64(contractArg.RatioDenominator) / float64(contractArg.RatioNumerator)))
+	return uint64(math.Floor(float64(receiveAmount) * float64(contractArg.RatioDenominator) / float64(contractArg.RatioNumerator)))
 }
 
 func CalcMaxFeeAmount(shouldPayAmount uint64, maxFeeRate float64) int64 {
