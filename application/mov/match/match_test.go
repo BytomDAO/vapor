@@ -126,10 +126,8 @@ func TestGenerateMatchedTxs(t *testing.T) {
 					Outputs: []*types.TxOutput{
 						types.NewIntraChainOutput(*orders[0].ToAssetID, 416, testutil.MustDecodeHexString("51")),
 						// re-order
-						types.NewIntraChainOutput(*orders[0].FromAssetID, 1, orders[0].Utxo.ControlProgram),
+						types.NewIntraChainOutput(*orders[0].FromAssetID, 2, orders[0].Utxo.ControlProgram),
 						types.NewIntraChainOutput(*orders[3].ToAssetID, 8, testutil.MustDecodeHexString("54")),
-						// fee
-						types.NewIntraChainOutput(*orders[3].ToAssetID, 1, []byte{0x51}),
 					},
 				},
 			},
@@ -167,9 +165,8 @@ func TestGenerateMatchedTxs(t *testing.T) {
 					Outputs: []*types.TxOutput{
 						types.NewIntraChainOutput(*orders[1].ToAssetID, 270, testutil.MustDecodeHexString("52")),
 						// re-order
-						types.NewIntraChainOutput(*orders[1].FromAssetID, 14, orders[1].Utxo.ControlProgram),
+						types.NewIntraChainOutput(*orders[1].FromAssetID, 15, orders[1].Utxo.ControlProgram),
 						types.NewIntraChainOutput(*orders[4].ToAssetID, 5, testutil.MustDecodeHexString("55")),
-						types.NewIntraChainOutput(*orders[1].FromAssetID, 1, []byte{0x51}),
 					},
 				},
 			},

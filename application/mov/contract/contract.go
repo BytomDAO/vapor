@@ -11,7 +11,9 @@ const (
 	sizeOfCancelClauseArgs = 3
 	sizeOfPartialTradeClauseArgs = 3
 	sizeOfFullTradeClauseArgs = 2
+)
 
+const (
 	PartialTradeClauseSelector int64 = iota
 	FullTradeClauseSelector
 	CancelClauseSelector
