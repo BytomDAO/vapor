@@ -6,6 +6,7 @@ import (
 	"github.com/vapor/application/mov/database"
 	"github.com/vapor/application/mov/match"
 	"github.com/vapor/consensus/segwit"
+	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
 	"github.com/vapor/math/checked"
 	"github.com/vapor/protocol/bc"
@@ -22,8 +23,17 @@ type MovCore struct {
 	movStore database.MovStore
 }
 
-func NewMovCore(store database.MovStore) *MovCore {
-	return &MovCore{movStore: store}
+func NewMovCore(dbBackend, dbDir string) *MovCore {
+	movDB := dbm.NewDB("mov", dbBackend, dbDir)
+	return &MovCore{movStore: database.NewLevelDBMovStore(movDB)}
+}
+
+func (m *MovCore) Name() string {
+	return "MOV"
+}
+
+func (m *MovCore) InitChainStatus(blockHeight uint64, blockHash *bc.Hash) error {
+	return m.movStore.InitDBState(blockHeight, blockHash)
 }
 
 // ChainStatus return the current block height and block hash in dex core

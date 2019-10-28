@@ -19,6 +19,10 @@ func (m *MockMovStore) GetMovDatabaseState() (*common.MovDatabaseState, error) {
 	return m.DBState, nil
 }
 
+func (m *MockMovStore) InitDBState(height uint64, hash *bc.Hash) error {
+	return nil
+}
+
 func (m *MockMovStore) ListOrders(orderAfter *common.Order) ([]*common.Order, error) {
 	tradePair := &common.TradePair{FromAssetID: orderAfter.FromAssetID, ToAssetID: orderAfter.ToAssetID}
 	orders := m.OrderMap[tradePair.Key()]
