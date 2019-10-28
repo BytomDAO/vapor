@@ -235,7 +235,7 @@ func getSortedTradePairsFromMatchedTx(tx *types.Tx) ([]*common.TradePair, error)
 	}
 
 	tradePairs := []*common.TradePair{firstTradePair}
-	for tradePair := firstTradePair; tradePair.ToAssetID != firstTradePair.FromAssetID; {
+	for tradePair := firstTradePair; *tradePair.ToAssetID != *firstTradePair.FromAssetID; {
 		nextTradePairToAssetID, ok := assetMap[*tradePair.ToAssetID]
 		if !ok {
 			return nil, errInvalidTradePairs
