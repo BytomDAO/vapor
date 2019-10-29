@@ -16,22 +16,37 @@ import (
 const maxFeeRate = 0.05
 
 var (
-	errInvalidTradePairs = errors.New("The trade pairs in the tx input is invalid")
+	errInvalidTradePairs             = errors.New("The trade pairs in the tx input is invalid")
+	errStatusFailMustFalse           = errors.New("status fail of transaction does not allow to be true")
+	errInputProgramMustP2WMCScript   = errors.New("input program of matched tx must p2wmc script")
+	errExistCancelOrderInMatchedTx   = errors.New("can't exist cancel order in the matched transaction")
+	errExistTradeInCancelOrderTx     = errors.New("can't exist trade in the cancel order transaction")
+	errAmountOfFeeGreaterThanMaximum = errors.New("amount of fee greater than max fee amount")
+	errAssetIDMustUniqueInMatchedTx  = errors.New("asset id must unique in matched transaction")
+	errRatioOfTradeLessThanZero      = errors.New("ratio arguments must greater than zero")
+	errNumeratorOfRatioIsOverflow    = errors.New("ratio numerator of contract args product input amount is overflow")
+	errLengthOfInputIsIncorrect      = errors.New("length of matched tx input is not equals to actual matched tx input")
+	errSpendOutputIDIsIncorrect      = errors.New("spend output id of matched tx is not equals to actual matched tx")
 )
 
+// MovCore represent the core logic of the match module, which include generate match transactions before packing the block,
+// verify the match transaction in block is correct, and update the order table according to the transaction.
 type MovCore struct {
 	movStore database.MovStore
 }
 
+// NewMovCore return a instance of MovCore by path of mov db
 func NewMovCore(dbBackend, dbDir string) *MovCore {
 	movDB := dbm.NewDB("mov", dbBackend, dbDir)
 	return &MovCore{movStore: database.NewLevelDBMovStore(movDB)}
 }
 
+// Name return the name of current module
 func (m *MovCore) Name() string {
 	return "MOV"
 }
 
+// InitChainStatus init the start block height and start block hash, this method only needs to be called once in the initialization
 func (m *MovCore) InitChainStatus(blockHeight uint64, blockHash *bc.Hash) error {
 	return m.movStore.InitDBState(blockHeight, blockHash)
 }
@@ -46,21 +61,23 @@ func (m *MovCore) ChainStatus() (uint64, *bc.Hash, error) {
 	return state.Height, state.Hash, nil
 }
 
+// ValidateBlock no need to verify the block header, becaure the first module has been verified.
+// just need to verify the transactions in the block.
 func (m *MovCore) ValidateBlock(block *types.Block, verifyResults []*bc.TxVerifyResult) error {
 	return m.ValidateTxs(block.Transactions, verifyResults)
 }
 
 // ValidateTxs validate the trade transaction.
 func (m *MovCore) ValidateTxs(txs []*types.Tx, verifyResults []*bc.TxVerifyResult) error {
-	for _, tx := range txs {
+	for i, tx := range txs {
 		if common.IsMatchedTx(tx) {
-			if err := validateMatchedTx(tx); err != nil {
+			if err := validateMatchedTx(tx, verifyResults[i]); err != nil {
 				return err
 			}
 		}
 
 		if common.IsCancelOrderTx(tx) {
-			if err := validateCancelOrderTx(tx); err != nil {
+			if err := validateCancelOrderTx(tx, verifyResults[i]); err != nil {
 				return err
 			}
 		}
@@ -68,6 +85,9 @@ func (m *MovCore) ValidateTxs(txs []*types.Tx, verifyResults []*bc.TxVerifyResul
 		for _, output := range tx.Outputs {
 			if !segwit.IsP2WMCScript(output.ControlProgram()) {
 				continue
+			}
+			if verifyResults[i].StatusFail {
+				return errStatusFailMustFalse
 			}
 
 			if err := validateMagneticContractArgs(output.AssetAmount().Amount, output.ControlProgram()); err != nil {
@@ -78,16 +98,20 @@ func (m *MovCore) ValidateTxs(txs []*types.Tx, verifyResults []*bc.TxVerifyResul
 	return nil
 }
 
-func validateMatchedTx(tx *types.Tx) error {
+func validateMatchedTx(tx *types.Tx, verifyResult *bc.TxVerifyResult) error {
+	if verifyResult.StatusFail {
+		return errStatusFailMustFalse
+	}
+
 	fromAssetIDMap := make(map[string]bool)
 	toAssetIDMap := make(map[string]bool)
 	for i, input := range tx.Inputs {
 		if !segwit.IsP2WMCScript(input.ControlProgram()) {
-			return errors.New("input program of matched tx must p2wmc script")
+			return errInputProgramMustP2WMCScript
 		}
 
 		if contract.IsCancelClauseSelector(input) {
-			return errors.New("can't exist cancel order in the matched transaction")
+			return errExistCancelOrderInMatchedTx
 		}
 
 		order, err := common.NewOrderFromInput(tx, i)
@@ -100,20 +124,24 @@ func validateMatchedTx(tx *types.Tx) error {
 	}
 
 	if len(fromAssetIDMap) != len(tx.Inputs) || len(toAssetIDMap) != len(tx.Inputs) {
-		return errors.New("asset id must unique in matched transaction")
+		return errAssetIDMustUniqueInMatchedTx
 	}
 
 	return validateMatchedTxFeeAmount(tx)
 }
 
-func validateCancelOrderTx(tx *types.Tx) error {
+func validateCancelOrderTx(tx *types.Tx, verifyResult *bc.TxVerifyResult) error {
+	if verifyResult.StatusFail {
+		return errStatusFailMustFalse
+	}
+
 	for _, input := range tx.Inputs {
 		if !segwit.IsP2WMCScript(input.ControlProgram()) {
-			return errors.New("input program of cancel order tx must p2wmc script")
+			return errInputProgramMustP2WMCScript
 		}
 
 		if contract.IsTradeClauseSelector(input) {
-			return errors.New("can't exist trade order in the cancel order transaction")
+			return errExistTradeInCancelOrderTx
 		}
 	}
 	return nil
@@ -127,7 +155,7 @@ func validateMatchedTxFeeAmount(tx *types.Tx) error {
 
 	for _, amount := range txFee {
 		if amount.FeeAmount > amount.MaxFeeAmount {
-			return errors.New("amount of fee greater than max fee amount")
+			return errAmountOfFeeGreaterThanMaximum
 		}
 	}
 	return nil
@@ -140,11 +168,11 @@ func validateMagneticContractArgs(inputAmount uint64, program []byte) error {
 	}
 
 	if contractArgs.RatioNumerator <= 0 || contractArgs.RatioDenominator <= 0 {
-		return errors.New("ratio arguments must greater than zero")
+		return errRatioOfTradeLessThanZero
 	}
 
 	if _, ok := checked.MulInt64(int64(inputAmount), contractArgs.RatioNumerator); !ok {
-		return errors.New("ratio numerator of contract args product input amount is overflow")
+		return errNumeratorOfRatioIsOverflow
 	}
 	return nil
 }
@@ -164,7 +192,7 @@ func (m *MovCore) ApplyBlock(block *types.Block) error {
 	return m.movStore.ProcessOrders(addOrders, deleteOrders, &block.BlockHeader)
 }
 
-func (m *MovCore) validateMatchedTxSequence(txs []*types.Tx, ) error {
+func (m *MovCore) validateMatchedTxSequence(txs []*types.Tx) error {
 	matchEngine := match.NewEngine(m.movStore, maxFeeRate, nil)
 	for _, matchedTx := range txs {
 		if !common.IsMatchedTx(matchedTx) {
@@ -182,7 +210,7 @@ func (m *MovCore) validateMatchedTxSequence(txs []*types.Tx, ) error {
 		}
 
 		if len(matchedTx.Inputs) != len(actualMatchedTx.Inputs) {
-			return errors.New("length of matched tx input is not equals to actual matched tx input")
+			return errLengthOfInputIsIncorrect
 		}
 
 		spendOutputIDs := make(map[string]bool)
@@ -202,7 +230,7 @@ func (m *MovCore) validateMatchedTxSequence(txs []*types.Tx, ) error {
 			}
 
 			if _, ok := spendOutputIDs[spendOutputID.String()]; !ok {
-				return errors.New("spend output id of matched tx is not equals to actual matched tx")
+				return errSpendOutputIDIsIncorrect
 			}
 		}
 	}
@@ -279,6 +307,7 @@ func (m *MovCore) BeforeProposalBlock(capacity int, nodeProgram []byte) ([]*type
 	return packagedTxs, nil
 }
 
+// IsDust block the transaction that are not generated by the match engine 
 func (m *MovCore) IsDust(tx *types.Tx) bool {
 	for _, input := range tx.Inputs {
 		if segwit.IsP2WMCScript(input.ControlProgram()) && !contract.IsCancelClauseSelector(input) {
