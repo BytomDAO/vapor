@@ -17,6 +17,7 @@ import (
 	"github.com/vapor/accesstoken"
 	"github.com/vapor/account"
 	"github.com/vapor/api"
+	"github.com/vapor/application/mov"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/pseudohsm"
 	cfg "github.com/vapor/config"
@@ -83,9 +84,12 @@ func NewNode(config *cfg.Config) *Node {
 	}
 
 	initCommonConfig(config)
-	movDB := dbm.NewDB("mov", config.DBBackend, config.DBDir())
-	mov, err := protocol.NewMOV(movDB, consensus.ActiveNetParams.MovStartPoint)
-	if err != nil {
+	movCore := mov.NewMovCore(config.DBBackend, config.DBDir())
+	startPoint := consensus.ActiveNetParams.MovStartPoint
+	if startPoint.Height == 0 {
+		startPoint.Hash = cfg.GenesisBlock().Hash()
+	}
+	if err := movCore.InitChainStatus(startPoint.Height, &startPoint.Hash); err != nil {
 		log.Fatalf("Failed to create Mov protocol", err.Error())
 	}
 	// Get store
@@ -99,8 +103,8 @@ func NewNode(config *cfg.Config) *Node {
 	accessTokens := accesstoken.NewStore(tokenDB)
 
 	dispatcher := event.NewDispatcher()
-	txPool := protocol.NewTxPool(store, []protocol.DustFilterer{mov}, dispatcher)
-	chain, err := protocol.NewChain(store, txPool, []protocol.Protocoler{mov}, dispatcher)
+	txPool := protocol.NewTxPool(store, []protocol.DustFilterer{movCore}, dispatcher)
+	chain, err := protocol.NewChain(store, txPool, []protocol.Protocoler{movCore}, dispatcher)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 	}
@@ -166,7 +170,7 @@ func NewNode(config *cfg.Config) *Node {
 		notificationMgr: notificationMgr,
 	}
 
-	node.cpuMiner = blockproposer.NewBlockProposer(chain, accounts, txPool, []blockproposer.Preprocessor{mov}, dispatcher)
+	node.cpuMiner = blockproposer.NewBlockProposer(chain, accounts, txPool, []blockproposer.Preprocessor{movCore}, dispatcher)
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 	return node
 }

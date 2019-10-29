@@ -22,8 +22,8 @@ const (
 type Protocoler interface {
 	Name() string
 	ChainStatus() (uint64, *bc.Hash, error)
-	ValidateBlock(block *types.Block) error
-	ValidateTxs(txs []*types.Tx) error
+	ValidateBlock(block *types.Block, verifyResults []*bc.TxVerifyResult) error
+	ValidateTxs(txs []*types.Tx, verifyResults []*bc.TxVerifyResult) error
 	ApplyBlock(block *types.Block) error
 	DetachBlock(block *types.Block) error
 }

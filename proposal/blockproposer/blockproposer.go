@@ -23,7 +23,7 @@ const (
 )
 
 type Preprocessor interface {
-	BeforeProposalBlock(capacity int) ([]*types.Tx, error)
+	BeforeProposalBlock(capacity int, nodeProgram []byte) ([]*types.Tx, error)
 }
 
 // BlockProposer propose several block in specified time range
@@ -94,7 +94,7 @@ func (b *BlockProposer) generateBlocks() {
 				break
 			}
 
-			txs, err := p.BeforeProposalBlock(capacity)
+			txs, err := p.BeforeProposalBlock(capacity, []byte{0x51})
 			if err != nil {
 				log.WithFields(log.Fields{"module": logModule, "index": i, "error": err}).Error("failed on sub protocol txs package")
 				continue
