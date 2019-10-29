@@ -51,6 +51,10 @@ func (m *mempool) GetTransactions() []*core.TxDesc {
 	return txs
 }
 
+func (m *mempool) IsDust(tx *types.Tx) bool {
+	return false
+}
+
 func TestSyncMempool(t *testing.T) {
 	tmpDir, err := ioutil.TempDir(".", "")
 	if err != nil {

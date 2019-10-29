@@ -189,9 +189,9 @@ func mockAccountManager(t *testing.T) *mockAccManager {
 	dispatcher := event.NewDispatcher()
 	store := database.NewStore(testDB)
 	accountStore := database.NewAccountStore(testDB)
-	txPool := protocol.NewTxPool(store, dispatcher)
+	txPool := protocol.NewTxPool(store, nil, dispatcher)
 	config.CommonConfig = config.DefaultConfig()
-	chain, err := protocol.NewChain(store, txPool, dispatcher)
+	chain, err := protocol.NewChain(store, txPool, nil, dispatcher)
 	if err != nil {
 		t.Fatal(err)
 	}

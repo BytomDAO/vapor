@@ -90,7 +90,7 @@ func NewNode(config *cfg.Config) *Node {
 		startPoint.Hash = cfg.GenesisBlock().Hash()
 	}
 	if err := movCore.InitChainStatus(startPoint.Height, &startPoint.Hash); err != nil {
-		log.Fatalf("Failed to create Mov protocol", err.Error())
+		log.Fatalf("Failed to create Mov protocol:%v", err.Error())
 	}
 	// Get store
 	if config.DBBackend != "memdb" && config.DBBackend != "leveldb" {
