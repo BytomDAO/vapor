@@ -50,6 +50,7 @@ type Switch interface {
 // Mempool is the interface for Bytom mempool
 type Mempool interface {
 	GetTransactions() []*core.TxDesc
+	IsDust(tx *types.Tx) bool
 }
 
 //Manager is responsible for the business layer information synchronization
@@ -254,6 +255,11 @@ func (m *Manager) handleTransactionMsg(peer *peers.Peer, msg *msgs.TransactionMe
 		return
 	}
 
+	if m.mempool.IsDust(tx) {
+		m.peers.ProcessIllegal(peer.ID(), security.LevelMsgIllegal, "receive dust tx msg")
+		return
+	}
+
 	m.peers.MarkTx(peer.ID(), tx.ID)
 	if isOrphan, err := m.chain.ValidateTx(tx); err != nil && err != core.ErrDustTx && !isOrphan {
 		m.peers.ProcessIllegal(peer.ID(), security.LevelMsgIllegal, "fail on validate tx transaction")
@@ -273,6 +279,11 @@ func (m *Manager) handleTransactionsMsg(peer *peers.Peer, msg *msgs.Transactions
 	}
 
 	for _, tx := range txs {
+		if m.mempool.IsDust(tx) {
+			m.peers.ProcessIllegal(peer.ID(), security.LevelMsgIllegal, "receive dust txs msg")
+			continue
+		}
+
 		m.peers.MarkTx(peer.ID(), tx.ID)
 		if isOrphan, err := m.chain.ValidateTx(tx); err != nil && !isOrphan {
 			m.peers.ProcessIllegal(peer.ID(), security.LevelMsgIllegal, "fail on validate tx transaction")

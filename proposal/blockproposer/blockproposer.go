@@ -2,6 +2,7 @@ package blockproposer
 
 import (
 	"encoding/hex"
+	"sort"
 	"sync"
 	"time"
 
@@ -13,11 +14,17 @@ import (
 	"github.com/vapor/event"
 	"github.com/vapor/proposal"
 	"github.com/vapor/protocol"
+	"github.com/vapor/protocol/bc/types"
 )
 
 const (
-	logModule = "blockproposer"
+	logModule     = "blockproposer"
+	maxBlockTxNum = 3000
 )
+
+type Preprocessor interface {
+	BeforeProposalBlock(capacity int) ([]*types.Tx, error)
+}
 
 // BlockProposer propose several block in specified time range
 type BlockProposer struct {
@@ -25,6 +32,7 @@ type BlockProposer struct {
 	chain           *protocol.Chain
 	accountManager  *account.Manager
 	txPool          *protocol.TxPool
+	preprocessors   []Preprocessor
 	started         bool
 	quit            chan struct{}
 	eventDispatcher *event.Dispatcher
@@ -74,7 +82,28 @@ func (b *BlockProposer) generateBlocks() {
 			continue
 		}
 
-		block, err := proposal.NewBlockTemplate(b.chain, b.txPool, b.accountManager, nextBlockTime)
+		var packageTxs []*types.Tx
+		txs := b.txPool.GetTransactions()
+		sort.Sort(byTime(txs))
+		for _, txDesc := range txs {
+			packageTxs = append(packageTxs, txDesc.Tx)
+		}
+		capacity := maxBlockTxNum - len(txs)
+		for i, p := range b.preprocessors {
+			if capacity <= 0 {
+				break
+			}
+
+			txs, err := p.BeforeProposalBlock(capacity)
+			if err != nil {
+				log.WithFields(log.Fields{"module": logModule, "index": i, "error": err}).Error("failed on sub protocol txs package")
+				continue
+			}
+			packageTxs = append(packageTxs, txs...)
+			capacity = capacity - len(txs)
+		}
+
+		block, err := proposal.NewBlockTemplate(b.chain, b.txPool, b.accountManager, packageTxs, nextBlockTime)
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("failed on create NewBlockTemplate")
 			continue
@@ -147,11 +176,12 @@ func (b *BlockProposer) IsProposing() bool {
 // NewBlockProposer returns a new instance of a block proposer for the provided configuration.
 // Use Start to begin the proposal process.  See the documentation for BlockProposer
 // type for more details.
-func NewBlockProposer(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, dispatcher *event.Dispatcher) *BlockProposer {
+func NewBlockProposer(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, preprocessors []Preprocessor, dispatcher *event.Dispatcher) *BlockProposer {
 	return &BlockProposer{
 		chain:           c,
 		accountManager:  accountManager,
 		txPool:          txPool,
+		preprocessors:   preprocessors,
 		eventDispatcher: dispatcher,
 	}
 }

@@ -83,7 +83,11 @@ func NewNode(config *cfg.Config) *Node {
 	}
 
 	initCommonConfig(config)
-
+	movDB := dbm.NewDB("mov", config.DBBackend, config.DBDir())
+	mov, err := protocol.NewMOV(movDB, consensus.ActiveNetParams.MovStartPoint)
+	if err != nil {
+		log.Fatalf("Failed to create Mov protocol", err.Error())
+	}
 	// Get store
 	if config.DBBackend != "memdb" && config.DBBackend != "leveldb" {
 		cmn.Exit(cmn.Fmt("Param db_backend [%v] is invalid, use leveldb or memdb", config.DBBackend))
@@ -95,8 +99,8 @@ func NewNode(config *cfg.Config) *Node {
 	accessTokens := accesstoken.NewStore(tokenDB)
 
 	dispatcher := event.NewDispatcher()
-	txPool := protocol.NewTxPool(store, dispatcher)
-	chain, err := protocol.NewChain(store, txPool, dispatcher)
+	txPool := protocol.NewTxPool(store, []protocol.DustFilterer{mov}, dispatcher)
+	chain, err := protocol.NewChain(store, txPool, []protocol.Protocoler{mov}, dispatcher)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 	}
@@ -162,7 +166,7 @@ func NewNode(config *cfg.Config) *Node {
 		notificationMgr: notificationMgr,
 	}
 
-	node.cpuMiner = blockproposer.NewBlockProposer(chain, accounts, txPool, dispatcher)
+	node.cpuMiner = blockproposer.NewBlockProposer(chain, accounts, txPool, []blockproposer.Preprocessor{mov}, dispatcher)
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 	return node
 }
