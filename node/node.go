@@ -96,7 +96,7 @@ func NewNode(config *cfg.Config) *Node {
 	accessTokens := accesstoken.NewStore(tokenDB)
 
 	dispatcher := event.NewDispatcher()
-	movCore := mov.NewMovCore(config.DBBackend, config.DBDir())
+	movCore := mov.NewMovCore(config.DBBackend, config.DBDir(), consensus.ActiveNetParams.MovStartHeight)
 	txPool := protocol.NewTxPool(store, []protocol.DustFilterer{movCore}, dispatcher)
 	chain, err := protocol.NewChain(store, txPool, []protocol.Protocoler{movCore}, dispatcher)
 	if err != nil {
@@ -105,12 +105,6 @@ func NewNode(config *cfg.Config) *Node {
 
 	if err := checkConfig(chain, config); err != nil {
 		panic(err)
-	}
-
-	if chain.BestBlockHeight() == 0 {
-		if err := movCore.InitChainStatus(0, chain.BestBlockHash()); err != nil {
-			log.Fatalf("Failed to create Mov protocol:%v", err.Error())
-		}
 	}
 
 	var accounts *account.Manager

@@ -104,19 +104,26 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: nextBlockHeight}}
 	b.Transactions = []*types.Tx{nil}
 
+	txs := txPool.GetTransactions()
+	sort.Sort(byTime(txs))
+
 	entriesTxs := []*bc.Tx{}
-	txs, err := packageSubProtocolTxs(c, txPool, accountManager)
+	for _, txDesc := range txs {
+		entriesTxs = append(entriesTxs, txDesc.Tx.Tx)
+	}
+
+	subProtocolTxs, err := packageSubProtocolTxs(c, accountManager, maxBlockTxNum - len(entriesTxs))
 	if err != nil {
 		return nil, err
 	}
-
-	for _, tx := range txs {
+	for _, tx := range subProtocolTxs {
 		entriesTxs = append(entriesTxs, tx.Tx)
 	}
 
 	validateResults := validation.ValidateTxs(entriesTxs, bcBlock)
 	for i, validateResult := range validateResults {
-		tx := txs[i].Tx
+		txDesc := txs[i]
+		tx := txDesc.Tx.Tx
 		gasOnlyTx := false
 
 		gasStatus := validateResult.GetGasState()
@@ -146,7 +153,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			return nil, err
 		}
 
-		b.Transactions = append(b.Transactions, txs[i])
+		b.Transactions = append(b.Transactions, txDesc.Tx)
 		txEntries = append(txEntries, tx)
 		gasUsed += uint64(gasStatus.GasUsed)
 		if gasUsed == consensus.ActiveNetParams.MaxBlockGas {
@@ -183,14 +190,8 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	return b, err
 }
 
-func packageSubProtocolTxs(chain *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager) ([]*types.Tx, error) {
+func packageSubProtocolTxs(chain *protocol.Chain, accountManager *account.Manager, capacity int) ([]*types.Tx, error) {
 	var packageTxs []*types.Tx
-	txs := txPool.GetTransactions()
-	sort.Sort(byTime(txs))
-	for _, txDesc := range txs {
-		packageTxs = append(packageTxs, txDesc.Tx)
-	}
-	capacity := maxBlockTxNum - len(txs)
 	cp, err := accountManager.GetCoinbaseControlProgram()
 	if err != nil {
 		return nil, err

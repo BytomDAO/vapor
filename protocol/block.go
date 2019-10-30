@@ -148,6 +148,12 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 		return err
 	}
 
+	for _, p := range c.subProtocols {
+		if err := c.syncProtocolStatus(p); err != nil {
+			return errors.Wrap(err, p.Name(), "sync sub protocol status")
+		}
+	}
+
 	txsToRestore := map[bc.Hash]*types.Tx{}
 	for _, detachBlockHeader := range detachBlockHeaders {
 		detachHash := detachBlockHeader.Hash()
@@ -175,10 +181,6 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 		}
 
 		for _, p := range c.subProtocols {
-			if err := c.syncProtocolStatus(p); err != nil {
-				return errors.Wrap(err, p.Name(), "sync sub protocol status")
-			}
-
 			if err := p.DetachBlock(b); err != nil {
 				return errors.Wrap(err, p.Name(), "sub protocol detach block")
 			}
