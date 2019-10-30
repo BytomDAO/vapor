@@ -1,4 +1,4 @@
-package blockproposer
+package proposal
 
 import "github.com/vapor/protocol"
 

@@ -84,14 +84,7 @@ func NewNode(config *cfg.Config) *Node {
 	}
 
 	initCommonConfig(config)
-	movCore := mov.NewMovCore(config.DBBackend, config.DBDir())
-	startPoint := consensus.ActiveNetParams.MovStartPoint
-	if startPoint.Height == 0 {
-		startPoint.Hash = cfg.GenesisBlock().Hash()
-	}
-	if err := movCore.InitChainStatus(startPoint.Height, &startPoint.Hash); err != nil {
-		log.Fatalf("Failed to create Mov protocol:%v", err.Error())
-	}
+
 	// Get store
 	if config.DBBackend != "memdb" && config.DBBackend != "leveldb" {
 		cmn.Exit(cmn.Fmt("Param db_backend [%v] is invalid, use leveldb or memdb", config.DBBackend))
@@ -103,6 +96,7 @@ func NewNode(config *cfg.Config) *Node {
 	accessTokens := accesstoken.NewStore(tokenDB)
 
 	dispatcher := event.NewDispatcher()
+	movCore := mov.NewMovCore(config.DBBackend, config.DBDir())
 	txPool := protocol.NewTxPool(store, []protocol.DustFilterer{movCore}, dispatcher)
 	chain, err := protocol.NewChain(store, txPool, []protocol.Protocoler{movCore}, dispatcher)
 	if err != nil {
@@ -111,6 +105,12 @@ func NewNode(config *cfg.Config) *Node {
 
 	if err := checkConfig(chain, config); err != nil {
 		panic(err)
+	}
+
+	if chain.BestBlockHeight() == 0 {
+		if err := movCore.InitChainStatus(0, chain.BestBlockHash()); err != nil {
+			log.Fatalf("Failed to create Mov protocol:%v", err.Error())
+		}
 	}
 
 	var accounts *account.Manager
@@ -170,7 +170,7 @@ func NewNode(config *cfg.Config) *Node {
 		notificationMgr: notificationMgr,
 	}
 
-	node.cpuMiner = blockproposer.NewBlockProposer(chain, accounts, txPool, []blockproposer.Preprocessor{movCore}, dispatcher)
+	node.cpuMiner = blockproposer.NewBlockProposer(chain, accounts, txPool, dispatcher)
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 	return node
 }

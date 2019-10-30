@@ -111,6 +111,10 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	}
 
 	for _, p := range c.subProtocols {
+		if err := c.syncProtocolStatus(p); err != nil {
+			return errors.Wrap(err, p.Name(), "sync sub protocol status")
+		}
+
 		if err := p.ApplyBlock(block); err != nil {
 			return errors.Wrap(err, p.Name(), "sub protocol connect block")
 		}
@@ -171,6 +175,10 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 		}
 
 		for _, p := range c.subProtocols {
+			if err := c.syncProtocolStatus(p); err != nil {
+				return errors.Wrap(err, p.Name(), "sync sub protocol status")
+			}
+
 			if err := p.DetachBlock(b); err != nil {
 				return errors.Wrap(err, p.Name(), "sub protocol detach block")
 			}

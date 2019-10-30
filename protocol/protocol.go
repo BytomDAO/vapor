@@ -21,6 +21,7 @@ const (
 
 type Protocoler interface {
 	Name() string
+	BeforeProposalBlock(capacity int, nodeProgram []byte) ([]*types.Tx, error)
 	ChainStatus() (uint64, *bc.Hash, error)
 	ValidateBlock(block *types.Block, verifyResults []*bc.TxVerifyResult) error
 	ValidateTxs(txs []*types.Tx, verifyResults []*bc.TxVerifyResult) error
@@ -163,6 +164,10 @@ func (c *Chain) InMainChain(hash bc.Hash) bool {
 		return false
 	}
 	return *blockHash == hash
+}
+
+func (c *Chain) SubProtocols() []Protocoler {
+	return c.subProtocols
 }
 
 // trace back to the tail of the chain from the given block header

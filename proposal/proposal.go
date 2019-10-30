@@ -1,6 +1,7 @@
 package proposal
 
 import (
+	"sort"
 	"strconv"
 	"time"
 
@@ -18,7 +19,10 @@ import (
 	"github.com/vapor/protocol/vm/vmutil"
 )
 
-const logModule = "mining"
+const (
+	logModule = "mining"
+	maxBlockTxNum = 3000
+)
 
 // createCoinbaseTx returns a coinbase transaction paying an appropriate subsidy
 // based on the passed block height to the provided address.  When the address
@@ -73,7 +77,7 @@ func createCoinbaseTx(accountManager *account.Manager, blockHeight uint64, rewar
 }
 
 // NewBlockTemplate returns a new block template that is ready to be solved
-func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager, txs []*types.Tx, timestamp uint64) (b *types.Block, err error) {
+func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager, timestamp uint64) (b *types.Block, err error) {
 	view := state.NewUtxoViewpoint()
 	txStatus := bc.NewTransactionStatus()
 	if err := txStatus.SetStatus(0, false); err != nil {
@@ -101,6 +105,11 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	b.Transactions = []*types.Tx{nil}
 
 	entriesTxs := []*bc.Tx{}
+	txs, err := packageSubProtocolTxs(c, txPool, accountManager)
+	if err != nil {
+		return nil, err
+	}
+
 	for _, tx := range txs {
 		entriesTxs = append(entriesTxs, tx.Tx)
 	}
@@ -172,6 +181,35 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 
 	_, err = c.SignBlock(b)
 	return b, err
+}
+
+func packageSubProtocolTxs(chain *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager) ([]*types.Tx, error) {
+	var packageTxs []*types.Tx
+	txs := txPool.GetTransactions()
+	sort.Sort(byTime(txs))
+	for _, txDesc := range txs {
+		packageTxs = append(packageTxs, txDesc.Tx)
+	}
+	capacity := maxBlockTxNum - len(txs)
+	cp, err := accountManager.GetCoinbaseControlProgram()
+	if err != nil {
+		return nil, err
+	}
+
+	for i, p := range chain.SubProtocols() {
+		if capacity <= 0 {
+			break
+		}
+
+		txs, err := p.BeforeProposalBlock(capacity, cp)
+		if err != nil {
+			log.WithFields(log.Fields{"module": logModule, "index": i, "error": err}).Error("failed on sub protocol txs package")
+			continue
+		}
+		packageTxs = append(packageTxs, txs...)
+		capacity = capacity - len(txs)
+	}
+	return packageTxs, nil
 }
 
 func blkGenSkipTxForErr(txPool *protocol.TxPool, txHash *bc.Hash, err error) {
