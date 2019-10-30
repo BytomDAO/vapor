@@ -26,7 +26,7 @@ const (
 // createCoinbaseTx returns a coinbase transaction paying an appropriate subsidy
 // based on the passed block height to the provided address.  When the address
 // is nil, the coinbase transaction will instead be redeemable by anyone.
-func createCoinbaseTx(chain *protocol.Chain, accountManager *account.Manager, preBlockHeader *types.BlockHeader) (tx *types.Tx, err error) {
+func createCoinbaseTx(accountManager *account.Manager, chain *protocol.Chain, preBlockHeader *types.BlockHeader) (tx *types.Tx, err error) {
 	preBlockHash := preBlockHeader.Hash()
 	consensusResult, err := chain.GetConsensusResultByHash(&preBlockHash)
 	if err != nil {
@@ -38,7 +38,11 @@ func createCoinbaseTx(chain *protocol.Chain, accountManager *account.Manager, pr
 		return nil, err
 	}
 
-	arbitrary := append([]byte{0x00}, []byte(strconv.FormatUint(preBlockHeader.Height + 1, 10))...)
+	return createCoinbaseTxByReward(accountManager, preBlockHeader.Height + 1, rewards)
+}
+
+func createCoinbaseTxByReward(accountManager *account.Manager, blockHeight uint64, rewards []state.CoinbaseReward) (tx *types.Tx, err error) {
+	arbitrary := append([]byte{0x00}, []byte(strconv.FormatUint(blockHeight, 10))...)
 	var script []byte
 	if accountManager == nil {
 		script, err = vmutil.DefaultCoinbaseProgram()
@@ -126,7 +130,7 @@ func NewBlockTemplate(chain *protocol.Chain, txPool *protocol.TxPool, accountMan
 
 func createBasicBlock(chain *protocol.Chain, accountManager *account.Manager, timestamp uint64) (*types.Block, error) {
 	preBlockHeader := chain.BestBlockHeader()
-	coinbaseTx, err := createCoinbaseTx(chain, accountManager, preBlockHeader)
+	coinbaseTx, err := createCoinbaseTx(accountManager, chain, preBlockHeader)
 	if err != nil {
 		return nil, errors.Wrap(err, "fail on create coinbase tx")
 	}
