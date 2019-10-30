@@ -170,7 +170,7 @@ func applyTransactionFromSubProtocol(chain *protocol.Chain, view *state.UtxoView
 
 	results, gasLeft := preValidateTxs(txs, chain, view, gasLeft)
 	for _, result := range results {
-		if result.err != nil {
+		if result.err != nil && result.gasOnly {
 			continue
 		}
 
