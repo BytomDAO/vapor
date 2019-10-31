@@ -242,10 +242,6 @@ func (c *Chain) syncProtocolStatus(subProtocol Protocoler) error {
 
 		blockHash := block.Hash()
 		protocolHeight, protocolHash = block.Height, &blockHash
-
-		if *protocolHash != block.Hash() {
-			return errors.Wrap(errors.New("sub protocol status sync err"), subProtocol.Name())
-		}
 	}
 
 	return nil
