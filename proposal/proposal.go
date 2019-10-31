@@ -280,7 +280,7 @@ func getTxsFromSubProtocols(chain *protocol.Chain, accountManager *account.Manag
 			break
 		}
 
-		subTxs, gasLeft, err = p.BeforeProposalBlock(cp, gasLeft, calcGasUsed(&bc.Block{BlockHeader: &bc.BlockHeader{Height: chain.BestBlockHeight() + 1}}))
+		subTxs, gasLeft, err = p.BeforeProposalBlock(cp, gasLeft)
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "index": i, "error": err}).Error("failed on sub protocol txs package")
 			continue
@@ -289,17 +289,6 @@ func getTxsFromSubProtocols(chain *protocol.Chain, accountManager *account.Manag
 		result = append(result, subTxs...)
 	}
 	return result, nil
-}
-
-func calcGasUsed(bcBlock *bc.Block) func (*types.Tx) (int64, error) {
-	return func (tx *types.Tx) (int64, error) {
-		gasState, err := validation.ValidateTx(tx.Tx, bcBlock)
-		if err != nil {
-			return 0, err
-		}
-
-		return gasState.GasUsed, nil
-	}
 }
 
 func blkGenSkipTxForErr(txPool *protocol.TxPool, txHash *bc.Hash, err error) {

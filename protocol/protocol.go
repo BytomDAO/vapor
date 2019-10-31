@@ -21,7 +21,7 @@ const (
 
 type Protocoler interface {
 	Name() string
-	BeforeProposalBlock(nodeProgram []byte, gasLeft int64, calcGasUsed func(*types.Tx) (int64, error)) ([]*types.Tx, int64, error)
+	BeforeProposalBlock(nodeProgram []byte, gasLeft int64) ([]*types.Tx, int64, error)
 	ChainStatus() (uint64, *bc.Hash, error)
 	ValidateBlock(block *types.Block, verifyResults []*bc.TxVerifyResult) error
 	ValidateTxs(txs []*types.Tx, verifyResults []*bc.TxVerifyResult) error
