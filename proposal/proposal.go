@@ -218,9 +218,8 @@ func preValidateTxs(txs []*types.Tx, chain *protocol.Chain, view *state.UtxoView
 	validateResults := validation.ValidateTxs(bcTxs, bcBlock)
 	for i := 0; i < len(validateResults) && gasLeft > 0; i++ {
 		gasOnlyTx := false
-		var err error
 		gasStatus := validateResults[i].GetGasState()
-		if err = validateResults[i].GetError(); err != nil {
+		if err := validateResults[i].GetError(); err != nil {
 			if !gasStatus.GasValid {
 				results = append(results, &validateTxResult{tx: txs[i], err: err})
 				continue
@@ -228,7 +227,7 @@ func preValidateTxs(txs []*types.Tx, chain *protocol.Chain, view *state.UtxoView
 			gasOnlyTx = true
 		}
 
-		if err = chain.GetTransactionsUtxo(view, []*bc.Tx{bcTxs[i]}); err != nil {
+		if err := chain.GetTransactionsUtxo(view, []*bc.Tx{bcTxs[i]}); err != nil {
 			results = append(results, &validateTxResult{tx: txs[i], err: err})
 			continue
 		}
@@ -237,23 +236,30 @@ func preValidateTxs(txs []*types.Tx, chain *protocol.Chain, view *state.UtxoView
 			break
 		}
 
-		if err = view.ApplyTransaction(bcBlock, bcTxs[i], gasOnlyTx); err != nil {
+		if err := view.ApplyTransaction(bcBlock, bcTxs[i], gasOnlyTx); err != nil {
 			results = append(results, &validateTxResult{tx: txs[i], err: err})
 			continue
 		}
 
-		for _, subProtocol := range chain.SubProtocols() {
-			verifyResult := &bc.TxVerifyResult{StatusFail: validateResults[i].GetError() != nil}
-			if err = subProtocol.ValidateTx(txs[i], verifyResult); err != nil {
-				results = append(results, &validateTxResult{tx: txs[i], err: err})
-				break
-			}
+		if err := validateBySubProtocols(txs[i], validateResults[i].GetError() != nil, chain.SubProtocols()); err != nil {
+			results = append(results, &validateTxResult{tx: txs[i], err: err})
+			continue
 		}
 
-		results = append(results, &validateTxResult{tx: txs[i], gasOnly: gasOnlyTx, err: err})
+		results = append(results, &validateTxResult{tx: txs[i], gasOnly: gasOnlyTx, err: validateResults[i].GetError()})
 		gasLeft -= gasStatus.GasUsed
 	}
 	return results, gasLeft
+}
+
+func validateBySubProtocols(tx *types.Tx, statusFail bool, subProtocols []protocol.Protocoler) error {
+	for _, subProtocol := range subProtocols {
+		verifyResult := &bc.TxVerifyResult{StatusFail: statusFail}
+		if err := subProtocol.ValidateTx(tx, verifyResult); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func getAllTxsFromPool(txPool *protocol.TxPool) []*types.Tx {
