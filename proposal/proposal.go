@@ -147,7 +147,7 @@ func applyCoinbaseTransaction(chain *protocol.Chain, block *types.Block, txStatu
 		return 0, errors.Wrap(err, "fail on create coinbase tx")
 	}
 
-	gasState, err := validation.ValidateTx(coinbaseTx.Tx, &bc.Block{BlockHeader: &bc.BlockHeader{Height: chain.BestBlockHeight() + 1}})
+	gasState, err := validation.ValidateTx(coinbaseTx.Tx, &bc.Block{BlockHeader: &bc.BlockHeader{Height: chain.BestBlockHeight() + 1}, Transactions: []*bc.Tx{coinbaseTx.Tx}})
 	if err != nil {
 		return 0, err
 	}
