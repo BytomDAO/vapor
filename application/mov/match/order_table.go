@@ -43,7 +43,7 @@ func (o *OrderTable) PeekOrder(tradePair *common.TradePair) *common.Order {
 	}
 
 	if nextOrder != nil && o.extraDelOrderMap[nextOrder.Key()] != nil {
-		o.PopOrder(tradePair)
+		o.orderMap[tradePair.Key()] = orders[0 : len(orders)-1]
 		delete(o.extraDelOrderMap, nextOrder.Key())
 		return o.PeekOrder(tradePair)
 	}
