@@ -17,6 +17,7 @@ import (
 	"github.com/vapor/accesstoken"
 	"github.com/vapor/account"
 	"github.com/vapor/api"
+	"github.com/vapor/application/mov"
 	"github.com/vapor/asset"
 	"github.com/vapor/blockchain/pseudohsm"
 	cfg "github.com/vapor/config"
@@ -95,8 +96,9 @@ func NewNode(config *cfg.Config) *Node {
 	accessTokens := accesstoken.NewStore(tokenDB)
 
 	dispatcher := event.NewDispatcher()
-	txPool := protocol.NewTxPool(store, dispatcher)
-	chain, err := protocol.NewChain(store, txPool, dispatcher)
+	movCore := mov.NewMovCore(config.DBBackend, config.DBDir(), consensus.ActiveNetParams.MovStartHeight)
+	txPool := protocol.NewTxPool(store, []protocol.DustFilterer{movCore}, dispatcher)
+	chain, err := protocol.NewChain(store, txPool, []protocol.Protocoler{movCore}, dispatcher)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 	}

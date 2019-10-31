@@ -43,6 +43,10 @@ var (
 	ErrDustTx = errors.New("transaction is dust tx")
 )
 
+type DustFilterer interface {
+	IsDust(tx *types.Tx) bool
+}
+
 type TxMsgEvent struct{ TxMsg *TxPoolMsg }
 
 // TxDesc store tx and related info for mining strategy
@@ -76,11 +80,12 @@ type TxPool struct {
 	orphans         map[bc.Hash]*orphanTx
 	orphansByPrev   map[bc.Hash]map[bc.Hash]*orphanTx
 	errCache        *lru.Cache
+	filters         []DustFilterer
 	eventDispatcher *event.Dispatcher
 }
 
 // NewTxPool init a new TxPool
-func NewTxPool(store Store, dispatcher *event.Dispatcher) *TxPool {
+func NewTxPool(store Store, filters []DustFilterer, dispatcher *event.Dispatcher) *TxPool {
 	tp := &TxPool{
 		lastUpdated:     time.Now().Unix(),
 		store:           store,
@@ -89,6 +94,7 @@ func NewTxPool(store Store, dispatcher *event.Dispatcher) *TxPool {
 		orphans:         make(map[bc.Hash]*orphanTx),
 		orphansByPrev:   make(map[bc.Hash]map[bc.Hash]*orphanTx),
 		errCache:        lru.New(maxCachedErrTxs),
+		filters:         filters,
 		eventDispatcher: dispatcher,
 	}
 	go tp.orphanExpireWorker()
@@ -212,7 +218,16 @@ func isTransactionZeroOutput(tx *types.Tx) bool {
 
 //IsDust checks if a tx has zero output
 func (tp *TxPool) IsDust(tx *types.Tx) bool {
-	return isTransactionZeroOutput(tx)
+	if ok := isTransactionZeroOutput(tx); ok {
+		return ok
+	}
+
+	for _, filter := range tp.filters {
+		if ok := filter.IsDust(tx); ok {
+			return ok
+		}
+	}
+	return false
 }
 
 func (tp *TxPool) processTransaction(tx *types.Tx, statusFail bool, height, fee uint64) (bool, error) {

@@ -32,23 +32,19 @@ var (
 // MovCore represent the core logic of the match module, which include generate match transactions before packing the block,
 // verify the match transaction in block is correct, and update the order table according to the transaction.
 type MovCore struct {
-	movStore database.MovStore
+	movStore         database.MovStore
+	startBlockHeight uint64
 }
 
 // NewMovCore return a instance of MovCore by path of mov db
-func NewMovCore(dbBackend, dbDir string) *MovCore {
+func NewMovCore(dbBackend, dbDir string, startBlockHeight uint64) *MovCore {
 	movDB := dbm.NewDB("mov", dbBackend, dbDir)
-	return &MovCore{movStore: database.NewLevelDBMovStore(movDB)}
+	return &MovCore{movStore: database.NewLevelDBMovStore(movDB), startBlockHeight: startBlockHeight}
 }
 
 // Name return the name of current module
 func (m *MovCore) Name() string {
 	return "MOV"
-}
-
-// InitChainStatus init the start block height and start block hash, this method only needs to be called once in the initialization
-func (m *MovCore) InitChainStatus(blockHeight uint64, blockHash *bc.Hash) error {
-	return m.movStore.InitDBState(blockHeight, blockHash)
 }
 
 // ChainStatus return the current block height and block hash in dex core
@@ -70,29 +66,36 @@ func (m *MovCore) ValidateBlock(block *types.Block, verifyResults []*bc.TxVerify
 // ValidateTxs validate the trade transaction.
 func (m *MovCore) ValidateTxs(txs []*types.Tx, verifyResults []*bc.TxVerifyResult) error {
 	for i, tx := range txs {
-		if common.IsMatchedTx(tx) {
-			if err := validateMatchedTx(tx, verifyResults[i]); err != nil {
-				return err
-			}
+		if err := m.ValidateTx(tx, verifyResults[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m *MovCore) ValidateTx(tx *types.Tx, verifyResult *bc.TxVerifyResult) error {
+	if common.IsMatchedTx(tx) {
+		if err := validateMatchedTx(tx, verifyResult); err != nil {
+			return err
+		}
+	}
+
+	if common.IsCancelOrderTx(tx) {
+		if err := validateCancelOrderTx(tx, verifyResult); err != nil {
+			return err
+		}
+	}
+
+	for _, output := range tx.Outputs {
+		if !segwit.IsP2WMCScript(output.ControlProgram()) {
+			continue
+		}
+		if verifyResult.StatusFail {
+			return errStatusFailMustFalse
 		}
 
-		if common.IsCancelOrderTx(tx) {
-			if err := validateCancelOrderTx(tx, verifyResults[i]); err != nil {
-				return err
-			}
-		}
-
-		for _, output := range tx.Outputs {
-			if !segwit.IsP2WMCScript(output.ControlProgram()) {
-				continue
-			}
-			if verifyResults[i].StatusFail {
-				return errStatusFailMustFalse
-			}
-
-			if err := validateMagneticContractArgs(output.AssetAmount().Amount, output.ControlProgram()); err != nil {
-				return err
-			}
+		if err := validateMagneticContractArgs(output.AssetAmount().Amount, output.ControlProgram()); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -180,6 +183,19 @@ func validateMagneticContractArgs(inputAmount uint64, program []byte) error {
 // ApplyBlock parse pending order and cancel from the the transactions of block
 // and add pending order to the dex db, remove cancel order from dex db.
 func (m *MovCore) ApplyBlock(block *types.Block) error {
+	if block.Height < m.startBlockHeight {
+		return nil
+	}
+
+	if block.Height == m.startBlockHeight {
+		blockHash := block.Hash()
+		if err := m.movStore.InitDBState(block.Height, &blockHash); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
 	if err := m.validateMatchedTxSequence(block.Transactions); err != nil {
 		return err
 	}
@@ -272,6 +288,10 @@ func getSortedTradePairsFromMatchedTx(tx *types.Tx) ([]*common.TradePair, error)
 // DetachBlock parse pending order and cancel from the the transactions of block
 // and add cancel order to the dex db, remove pending order from dex db.
 func (m *MovCore) DetachBlock(block *types.Block) error {
+	if block.Height <= m.startBlockHeight {
+		return nil
+	}
+
 	deleteOrders, addOrders, err := applyTransactions(block.Transactions)
 	if err != nil {
 		return err
@@ -281,13 +301,17 @@ func (m *MovCore) DetachBlock(block *types.Block) error {
 }
 
 // BeforeProposalBlock return all transactions than can be matched, and the number of transactions cannot exceed the given capacity.
-func (m *MovCore) BeforeProposalBlock(capacity int, nodeProgram []byte) ([]*types.Tx, error) {
+func (m *MovCore) BeforeProposalBlock(nodeProgram []byte, blockHeight uint64, gasLeft int64) ([]*types.Tx, int64, error) {
+	if blockHeight <= m.startBlockHeight {
+		return nil, 0, nil
+	}
+
 	matchEngine := match.NewEngine(m.movStore, maxFeeRate, nodeProgram)
 	tradePairMap := make(map[string]bool)
 	tradePairIterator := database.NewTradePairIterator(m.movStore)
 
 	var packagedTxs []*types.Tx
-	for len(packagedTxs) < capacity && tradePairIterator.HasNext() {
+	for gasLeft > 0 && tradePairIterator.HasNext() {
 		tradePair := tradePairIterator.Next()
 		if tradePairMap[tradePair.Key()] {
 			continue
@@ -295,16 +319,24 @@ func (m *MovCore) BeforeProposalBlock(capacity int, nodeProgram []byte) ([]*type
 		tradePairMap[tradePair.Key()] = true
 		tradePairMap[tradePair.Reverse().Key()] = true
 
-		for len(packagedTxs) < capacity && matchEngine.HasMatchedTx(tradePair, tradePair.Reverse()) {
+		for gasLeft > 0 && matchEngine.HasMatchedTx(tradePair, tradePair.Reverse()) {
 			matchedTx, err := matchEngine.NextMatchedTx(tradePair, tradePair.Reverse())
 			if err != nil {
-				return nil, err
+				return nil, 0, err
 			}
 
-			packagedTxs = append(packagedTxs, matchedTx)
+			gasUsed := calcMatchedTxGasUsed(matchedTx)
+			if gasLeft - gasUsed >= 0 {
+				packagedTxs = append(packagedTxs, matchedTx)
+			}
+			gasLeft -= gasUsed
 		}
 	}
-	return packagedTxs, nil
+	return packagedTxs, gasLeft, nil
+}
+
+func calcMatchedTxGasUsed(tx *types.Tx) int64 {
+	return int64(len(tx.Inputs)) * 150 + int64(tx.SerializedSize)
 }
 
 // IsDust block the transaction that are not generated by the match engine 

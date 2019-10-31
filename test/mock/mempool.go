@@ -22,3 +22,7 @@ func (m *Mempool) AddTx(tx *types.Tx) {
 func (m *Mempool) GetTransactions() []*protocol.TxDesc {
 	return m.txs
 }
+
+func (m *Mempool) IsDust(tx *types.Tx) bool {
+	return false
+}
