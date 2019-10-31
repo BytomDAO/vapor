@@ -56,12 +56,19 @@ func (o *OrderTable) PeekOrder(tradePair *common.TradePair) *common.Order {
 }
 
 func (o *OrderTable) PopOrder(tradePair *common.TradePair) {
-	if extraOrder := o.peekExtraOrder(tradePair); extraOrder != nil && extraOrder.Rate < extraOrder.Rate {
-		extraOrders := o.extraAddOrderMap[tradePair.Key()]
-		o.extraAddOrderMap[tradePair.Key()] = extraOrders[0 : len(extraOrders)-1]
+	order := o.PeekOrder(tradePair)
+	if order == nil {
+		return
+	}
 
-	} else if orders := o.orderMap[tradePair.Key()]; len(orders) > 0 {
+	orders := o.orderMap[tradePair.Key()]
+	if len(orders) != 0 && orders[len(orders) - 1].Key() == order.Key() {
 		o.orderMap[tradePair.Key()] = orders[0 : len(orders)-1]
+	}
+
+	extraOrders := o.extraAddOrderMap[tradePair.Key()]
+	if len(extraOrders) != 0 && orders[len(extraOrders) - 1].Key() == order.Key() {
+		o.extraAddOrderMap[tradePair.Key()] = extraOrders[0 : len(orders)-1]
 	}
 }
 
