@@ -180,7 +180,7 @@ func applyTransactionFromPool(chain *protocol.Chain, view *state.UtxoViewpoint, 
 }
 
 func applyTransactionFromSubProtocol(chain *protocol.Chain, view *state.UtxoViewpoint, block *types.Block, txStatus *bc.TransactionStatus, accountManager *account.Manager, gasLeft int64) error {
-	txs, err := getTxsFromSubProtocols(chain, accountManager, gasLeft)
+	txs, err := getTxsFromSubProtocols(chain, accountManager, block.Transactions, gasLeft)
 	if err != nil {
 		return err
 	}
@@ -273,7 +273,7 @@ func getAllTxsFromPool(txPool *protocol.TxPool) []*types.Tx {
 	return poolTxs
 }
 
-func getTxsFromSubProtocols(chain *protocol.Chain, accountManager *account.Manager, gasLeft int64) ([]*types.Tx, error) {
+func getTxsFromSubProtocols(chain *protocol.Chain, accountManager *account.Manager, poolTxs []*types.Tx, gasLeft int64) ([]*types.Tx, error) {
 	cp, err := accountManager.GetCoinbaseControlProgram()
 	if err != nil {
 		return nil, err
@@ -286,7 +286,7 @@ func getTxsFromSubProtocols(chain *protocol.Chain, accountManager *account.Manag
 			break
 		}
 
-		subTxs, gasLeft, err = p.BeforeProposalBlock(cp, chain.BestBlockHeight() + 1, gasLeft)
+		subTxs, gasLeft, err = p.BeforeProposalBlock(poolTxs, cp, chain.BestBlockHeight() + 1, gasLeft)
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "index": i, "error": err}).Error("failed on sub protocol txs package")
 			continue

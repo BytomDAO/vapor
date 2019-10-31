@@ -175,7 +175,7 @@ func TestGenerateMatchedTxs(t *testing.T) {
 
 	for i, c := range cases {
 		movStore := &database.MockMovStore{OrderMap: c.storeOrderMap}
-		matchEngine := NewEngine(movStore, 0.05, []byte{0x51})
+		matchEngine := NewEngine(NewOrderTable(movStore, nil, nil), 0.05, []byte{0x51})
 		var gotMatchedTxs []*types.Tx
 		for matchEngine.HasMatchedTx(c.tradePair, c.tradePair.Reverse()) {
 			matchedTx, err := matchEngine.NextMatchedTx(c.tradePair, c.tradePair.Reverse())
