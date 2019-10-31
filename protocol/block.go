@@ -303,15 +303,15 @@ func (c *Chain) saveBlock(block *types.Block) error {
 		return errors.Sub(ErrBadBlock, err)
 	}
 
-	signature, err := c.SignBlock(block)
-	if err != nil {
-		return errors.Sub(ErrBadBlock, err)
-	}
-
 	for _, p := range c.subProtocols {
 		if err := p.ValidateBlock(block, bcBlock.TransactionStatus.GetVerifyStatus()); err != nil {
 			return errors.Wrap(err, "sub protocol save block")
 		}
+	}
+
+	signature, err := c.SignBlock(block)
+	if err != nil {
+		return errors.Sub(ErrBadBlock, err)
 	}
 
 	if err := c.store.SaveBlock(block, bcBlock.TransactionStatus); err != nil {

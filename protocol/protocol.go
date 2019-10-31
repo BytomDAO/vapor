@@ -213,7 +213,7 @@ func (c *Chain) syncProtocolStatus(subProtocol Protocoler) error {
 		return errors.Wrap(err, "failed on get sub protocol status")
 	}
 
-	if protocolHeight == c.bestBlockHeader.Height && *protocolHash == c.bestBlockHeader.Hash() {
+	if *protocolHash == c.bestBlockHeader.Hash() {
 		return nil
 	}
 
