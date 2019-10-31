@@ -192,6 +192,8 @@ func (m *MovCore) ApplyBlock(block *types.Block) error {
 		if err := m.movStore.InitDBState(block.Height, &blockHash); err != nil {
 			return err
 		}
+
+		return nil
 	}
 
 	if err := m.validateMatchedTxSequence(block.Transactions); err != nil {
@@ -299,7 +301,11 @@ func (m *MovCore) DetachBlock(block *types.Block) error {
 }
 
 // BeforeProposalBlock return all transactions than can be matched, and the number of transactions cannot exceed the given capacity.
-func (m *MovCore) BeforeProposalBlock(nodeProgram []byte, gasLeft int64) ([]*types.Tx, int64, error) {
+func (m *MovCore) BeforeProposalBlock(nodeProgram []byte, blockHeight uint64, gasLeft int64) ([]*types.Tx, int64, error) {
+	if blockHeight <= m.startBlockHeight {
+		return nil, 0, nil
+	}
+
 	matchEngine := match.NewEngine(m.movStore, maxFeeRate, nodeProgram)
 	tradePairMap := make(map[string]bool)
 	tradePairIterator := database.NewTradePairIterator(m.movStore)

@@ -286,7 +286,7 @@ func getTxsFromSubProtocols(chain *protocol.Chain, accountManager *account.Manag
 			break
 		}
 
-		subTxs, gasLeft, err = p.BeforeProposalBlock(cp, gasLeft)
+		subTxs, gasLeft, err = p.BeforeProposalBlock(cp, chain.BestBlockHeight() + 1, gasLeft)
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "index": i, "error": err}).Error("failed on sub protocol txs package")
 			continue
