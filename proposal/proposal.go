@@ -92,18 +92,17 @@ func createCoinbaseTxByReward(accountManager *account.Manager, blockHeight uint6
 
 // NewBlockTemplate returns a new block template that is ready to be solved
 func NewBlockTemplate(chain *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager, timestamp uint64) (*types.Block, error) {
-	block, err := createBasicBlock(chain, accountManager, timestamp)
+	block := createBasicBlock(chain, timestamp)
+
+	view := state.NewUtxoViewpoint()
+	txStatus := bc.NewTransactionStatus()
+
+	gasLeft, err := applyCoinbaseTransaction(chain, block, txStatus, accountManager, int64(consensus.ActiveNetParams.MaxBlockGas))
 	if err != nil {
 		return nil, err
 	}
 
-	view := state.NewUtxoViewpoint()
-	txStatus := bc.NewTransactionStatus()
-	if err := txStatus.SetStatus(0, false); err != nil {
-		return nil, err
-	}
-
-	gasLeft, err := applyTransactionFromPool(chain, view, block, txStatus, int64(consensus.ActiveNetParams.MaxBlockGas))
+	gasLeft, err = applyTransactionFromPool(chain, view, block, txStatus, gasLeft)
 	if err != nil {
 		return nil, err
 	}
@@ -128,13 +127,8 @@ func NewBlockTemplate(chain *protocol.Chain, txPool *protocol.TxPool, accountMan
 	return block, err
 }
 
-func createBasicBlock(chain *protocol.Chain, accountManager *account.Manager, timestamp uint64) (*types.Block, error) {
+func createBasicBlock(chain *protocol.Chain, timestamp uint64) *types.Block {
 	preBlockHeader := chain.BestBlockHeader()
-	coinbaseTx, err := createCoinbaseTx(accountManager, chain, preBlockHeader)
-	if err != nil {
-		return nil, errors.Wrap(err, "fail on create coinbase tx")
-	}
-
 	return &types.Block{
 		BlockHeader: types.BlockHeader{
 			Version:           1,
@@ -144,15 +138,34 @@ func createBasicBlock(chain *protocol.Chain, accountManager *account.Manager, ti
 			BlockCommitment:   types.BlockCommitment{},
 			BlockWitness:      types.BlockWitness{Witness: make([][]byte, consensus.ActiveNetParams.NumOfConsensusNode)},
 		},
-		Transactions: []*types.Tx{coinbaseTx},
-	}, nil
+	}
 }
+
+func applyCoinbaseTransaction(chain *protocol.Chain, block *types.Block, txStatus *bc.TransactionStatus, accountManager *account.Manager, gasLeft int64) (int64, error) {
+	coinbaseTx, err := createCoinbaseTx(accountManager, chain, chain.BestBlockHeader())
+	if err != nil {
+		return 0, errors.Wrap(err, "fail on create coinbase tx")
+	}
+
+	gasState, err := validation.ValidateTx(coinbaseTx.Tx, &bc.Block{BlockHeader: &bc.BlockHeader{Height: chain.BestBlockHeight() + 1}})
+	if err != nil {
+		return 0, err
+	}
+
+	block.Transactions = append(block.Transactions, coinbaseTx)
+	if err := txStatus.SetStatus(0, false); err != nil {
+		return 0, err
+	}
+
+	return gasLeft - gasState.GasUsed, nil
+}
+
 
 func applyTransactionFromPool(chain *protocol.Chain, view *state.UtxoViewpoint, block *types.Block, txStatus *bc.TransactionStatus, gasLeft int64) (int64, error) {
 	poolTxs := getAllTxsFromPool(chain.GetTxPool())
 	results, gasLeft := preValidateTxs(poolTxs, chain, view, gasLeft)
 	for _, result := range results {
-		if result.err != nil {
+		if result.err != nil && !result.gasOnly {
 			blkGenSkipTxForErr(chain.GetTxPool(), &result.tx.ID, result.err)
 			continue
 		}
@@ -174,8 +187,8 @@ func applyTransactionFromSubProtocol(chain *protocol.Chain, view *state.UtxoView
 
 	results, gasLeft := preValidateTxs(txs, chain, view, gasLeft)
 	for _, result := range results {
-		if result.err != nil && result.gasOnly {
-			continue
+		if result.err != nil {
+			return err
 		}
 
 		if err := txStatus.SetStatus(len(block.Transactions), result.gasOnly); err != nil {
@@ -205,8 +218,9 @@ func preValidateTxs(txs []*types.Tx, chain *protocol.Chain, view *state.UtxoView
 	validateResults := validation.ValidateTxs(bcTxs, bcBlock)
 	for i := 0; i < len(validateResults) && gasLeft > 0; i++ {
 		gasOnlyTx := false
+		var err error
 		gasStatus := validateResults[i].GetGasState()
-		if err := validateResults[i].GetError(); err != nil {
+		if err = validateResults[i].GetError(); err != nil {
 			if !gasStatus.GasValid {
 				results = append(results, &validateTxResult{tx: txs[i], err: err})
 				continue
@@ -214,7 +228,7 @@ func preValidateTxs(txs []*types.Tx, chain *protocol.Chain, view *state.UtxoView
 			gasOnlyTx = true
 		}
 
-		if err := chain.GetTransactionsUtxo(view, []*bc.Tx{bcTxs[i]}); err != nil {
+		if err = chain.GetTransactionsUtxo(view, []*bc.Tx{bcTxs[i]}); err != nil {
 			results = append(results, &validateTxResult{tx: txs[i], err: err})
 			continue
 		}
@@ -223,12 +237,20 @@ func preValidateTxs(txs []*types.Tx, chain *protocol.Chain, view *state.UtxoView
 			break
 		}
 
-		if err := view.ApplyTransaction(bcBlock, bcTxs[i], gasOnlyTx); err != nil {
+		if err = view.ApplyTransaction(bcBlock, bcTxs[i], gasOnlyTx); err != nil {
 			results = append(results, &validateTxResult{tx: txs[i], err: err})
 			continue
 		}
 
-		results = append(results, &validateTxResult{tx: txs[i], gasOnly: gasOnlyTx})
+		for _, subProtocol := range chain.SubProtocols() {
+			verifyResult := &bc.TxVerifyResult{StatusFail: validateResults[i].GetError() != nil}
+			if err = subProtocol.ValidateTx(txs[i], verifyResult); err != nil {
+				results = append(results, &validateTxResult{tx: txs[i], err: err})
+				break
+			}
+		}
+
+		results = append(results, &validateTxResult{tx: txs[i], gasOnly: gasOnlyTx, err: err})
 		gasLeft -= gasStatus.GasUsed
 	}
 	return results, gasLeft

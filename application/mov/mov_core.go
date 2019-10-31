@@ -66,29 +66,36 @@ func (m *MovCore) ValidateBlock(block *types.Block, verifyResults []*bc.TxVerify
 // ValidateTxs validate the trade transaction.
 func (m *MovCore) ValidateTxs(txs []*types.Tx, verifyResults []*bc.TxVerifyResult) error {
 	for i, tx := range txs {
-		if common.IsMatchedTx(tx) {
-			if err := validateMatchedTx(tx, verifyResults[i]); err != nil {
-				return err
-			}
+		if err := m.ValidateTx(tx, verifyResults[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m *MovCore) ValidateTx(tx *types.Tx, verifyResult *bc.TxVerifyResult) error {
+	if common.IsMatchedTx(tx) {
+		if err := validateMatchedTx(tx, verifyResult); err != nil {
+			return err
+		}
+	}
+
+	if common.IsCancelOrderTx(tx) {
+		if err := validateCancelOrderTx(tx, verifyResult); err != nil {
+			return err
+		}
+	}
+
+	for _, output := range tx.Outputs {
+		if !segwit.IsP2WMCScript(output.ControlProgram()) {
+			continue
+		}
+		if verifyResult.StatusFail {
+			return errStatusFailMustFalse
 		}
 
-		if common.IsCancelOrderTx(tx) {
-			if err := validateCancelOrderTx(tx, verifyResults[i]); err != nil {
-				return err
-			}
-		}
-
-		for _, output := range tx.Outputs {
-			if !segwit.IsP2WMCScript(output.ControlProgram()) {
-				continue
-			}
-			if verifyResults[i].StatusFail {
-				return errStatusFailMustFalse
-			}
-
-			if err := validateMagneticContractArgs(output.AssetAmount().Amount, output.ControlProgram()); err != nil {
-				return err
-			}
+		if err := validateMagneticContractArgs(output.AssetAmount().Amount, output.ControlProgram()); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -179,6 +186,7 @@ func (m *MovCore) ApplyBlock(block *types.Block) error {
 	if block.Height < m.startBlockHeight {
 		return nil
 	}
+
 	if block.Height == m.startBlockHeight {
 		blockHash := block.Hash()
 		if err := m.movStore.InitDBState(block.Height, &blockHash); err != nil {
@@ -281,6 +289,7 @@ func (m *MovCore) DetachBlock(block *types.Block) error {
 	if block.Height <= m.startBlockHeight {
 		return nil
 	}
+
 	deleteOrders, addOrders, err := applyTransactions(block.Transactions)
 	if err != nil {
 		return err
