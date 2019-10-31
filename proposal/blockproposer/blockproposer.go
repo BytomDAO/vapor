@@ -74,7 +74,7 @@ func (b *BlockProposer) generateBlocks() {
 			continue
 		}
 
-		block, err := proposal.NewBlockTemplate(b.chain, b.txPool, b.accountManager, nextBlockTime)
+		block, err := proposal.NewBlockTemplate(b.chain, b.accountManager, nextBlockTime)
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("failed on create NewBlockTemplate")
 			continue

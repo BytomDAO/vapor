@@ -91,7 +91,7 @@ func createCoinbaseTxByReward(accountManager *account.Manager, blockHeight uint6
 }
 
 // NewBlockTemplate returns a new block template that is ready to be solved
-func NewBlockTemplate(chain *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager, timestamp uint64) (*types.Block, error) {
+func NewBlockTemplate(chain *protocol.Chain, accountManager *account.Manager, timestamp uint64) (*types.Block, error) {
 	block := createBasicBlock(chain, timestamp)
 
 	view := state.NewUtxoViewpoint()
