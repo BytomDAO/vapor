@@ -68,7 +68,7 @@ func (o *OrderTable) PopOrder(tradePair *common.TradePair) {
 
 	extraOrders := o.extraAddOrderMap[tradePair.Key()]
 	if len(extraOrders) != 0 && orders[len(extraOrders) - 1].Key() == order.Key() {
-		o.extraAddOrderMap[tradePair.Key()] = extraOrders[0 : len(orders)-1]
+		o.extraAddOrderMap[tradePair.Key()] = extraOrders[0 : len(extraOrders)-1]
 	}
 }
 
