@@ -85,7 +85,7 @@ func NewOrderFromInput(tx *types.Tx, inputIndex int) (*Order, error) {
 	}, nil
 }
 
-func (o *Order) GetTradePair() *TradePair {
+func (o *Order) TradePair() *TradePair {
 	return &TradePair{FromAssetID: o.FromAssetID, ToAssetID: o.ToAssetID}
 }
 
