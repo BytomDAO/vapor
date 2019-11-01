@@ -69,13 +69,13 @@ func (o *OrderTable) PopOrder(tradePair *common.TradePair) {
 	}
 
 	arrivalOrders := o.arrivalAddOrders[tradePair.Key()]
-	if len(arrivalOrders) != 0 && orders[len(arrivalOrders) - 1].Key() == order.Key() {
+	if len(arrivalOrders) != 0 && arrivalOrders[len(arrivalOrders) - 1].Key() == order.Key() {
 		o.arrivalAddOrders[tradePair.Key()] = arrivalOrders[0 : len(arrivalOrders)-1]
 	}
 }
 
 func (o *OrderTable) AddOrder(order *common.Order) error {
-	tradePair := order.GetTradePair()
+	tradePair := order.TradePair()
 	orders := o.dbOrders[tradePair.Key()]
 	if len(orders) > 0 && order.Rate > orders[len(orders)-1].Rate {
 		return errors.New("rate of order must less than the min order in order table")
@@ -109,11 +109,11 @@ func (o *OrderTable) peekArrivalOrder(tradePair *common.TradePair) *common.Order
 func arrangeArrivalAddOrders(orders []*common.Order) map[string][]*common.Order {
 	arrivalAddOrderMap := make(map[string][]*common.Order)
 	for _, order := range orders {
-		arrivalAddOrderMap[order.Key()] = append(arrivalAddOrderMap[order.Key()], order)
+		arrivalAddOrderMap[order.TradePair().Key()] = append(arrivalAddOrderMap[order.TradePair().Key()], order)
 	}
 
 	for _, orders := range arrivalAddOrderMap {
-		sort.Sort(common.OrderSlice(orders))
+		sort.Sort(sort.Reverse(common.OrderSlice(orders)))
 	}
 	return arrivalAddOrderMap
 }
