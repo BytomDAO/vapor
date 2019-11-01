@@ -63,18 +63,6 @@ func (m *MockMovStore) ListTradePairsWithStart(fromAssetIDAfter, toAssetIDAfter 
 	return result, nil
 }
 
-type OrderSlice []*common.Order
-
-func (o OrderSlice) Len() int {
-	return len(o)
-}
-func (o OrderSlice) Swap(i, j int) {
-	o[i], o[j] = o[j], o[i]
-}
-func (o OrderSlice) Less(i, j int) bool {
-	return o[i].Rate < o[j].Rate
-}
-
 func (m *MockMovStore) ProcessOrders(addOrders []*common.Order, delOrders []*common.Order, blockHeader *types.BlockHeader) error {
 	for _, order := range addOrders {
 		tradePair := &common.TradePair{FromAssetID: order.FromAssetID, ToAssetID: order.ToAssetID}
@@ -90,7 +78,7 @@ func (m *MockMovStore) ProcessOrders(addOrders []*common.Order, delOrders []*com
 		}
 	}
 	for _, orders := range m.OrderMap {
-		sort.Sort(OrderSlice(orders))
+		sort.Sort(common.OrderSlice(orders))
 	}
 
 	if blockHeader.Height == m.DBState.Height {

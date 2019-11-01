@@ -6,7 +6,6 @@ import (
 
 	"github.com/vapor/application/mov/common"
 	"github.com/vapor/application/mov/contract"
-	"github.com/vapor/application/mov/database"
 	"github.com/vapor/consensus/segwit"
 	"github.com/vapor/errors"
 	vprMath "github.com/vapor/math"
@@ -22,8 +21,8 @@ type Engine struct {
 	nodeProgram []byte
 }
 
-func NewEngine(movStore database.MovStore, maxFeeRate float64, nodeProgram []byte) *Engine {
-	return &Engine{orderTable: NewOrderTable(movStore), maxFeeRate: maxFeeRate, nodeProgram: nodeProgram}
+func NewEngine(orderTable *OrderTable, maxFeeRate float64, nodeProgram []byte) *Engine {
+	return &Engine{orderTable: orderTable, maxFeeRate: maxFeeRate, nodeProgram: nodeProgram}
 }
 
 func (e *Engine) HasMatchedTx(tradePairs ...*common.TradePair) bool {
