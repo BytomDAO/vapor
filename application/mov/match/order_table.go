@@ -9,48 +9,50 @@ import (
 )
 
 type OrderTable struct {
-	movStore    database.MovStore
-	orderMap    map[string][]*common.Order
-	iteratorMap map[string]*database.OrderIterator
+	movStore       database.MovStore
+	// key of tradePair -> []order
+	dbOrders map[string][]*common.Order
+	// key of tradePair -> iterator
+	orderIterators map[string]*database.OrderIterator
 
-	// tradePair -> []order
-	extraAddOrderMap map[string][]*common.Order
+	// key of tradePair -> []order
+	arrivalAddOrders map[string][]*common.Order
 	// key of order -> order
-	extraDelOrderMap map[string]*common.Order
+	arrivalDelOrders map[string]*common.Order
 }
 
-func NewOrderTable(movStore database.MovStore, extraAddOrders, extraDelOrders []*common.Order) *OrderTable {
+func NewOrderTable(movStore database.MovStore, arrivalAddOrders, arrivalDelOrders []*common.Order) *OrderTable {
 	return &OrderTable{
-		movStore:    movStore,
-		orderMap:    make(map[string][]*common.Order),
-		iteratorMap: make(map[string]*database.OrderIterator),
+		movStore:       movStore,
+		dbOrders:       make(map[string][]*common.Order),
+		orderIterators: make(map[string]*database.OrderIterator),
 
-		extraAddOrderMap: arrangeExtraAddOrders(extraAddOrders),
-		extraDelOrderMap: arrangeExtraDelOrders(extraDelOrders),
+		arrivalAddOrders: arrangeArrivalAddOrders(arrivalAddOrders),
+		arrivalDelOrders: arrangeArrivalDelOrders(arrivalDelOrders),
 	}
 }
 
 func (o *OrderTable) PeekOrder(tradePair *common.TradePair) *common.Order {
-	if len(o.orderMap[tradePair.Key()]) == 0 {
-		o.extendOrders(tradePair)
+	if len(o.dbOrders[tradePair.Key()]) == 0 {
+		o.extendDBOrders(tradePair)
 	}
 
 	var nextOrder *common.Order
 
-	orders := o.orderMap[tradePair.Key()]
+	orders := o.dbOrders[tradePair.Key()]
 	if len(orders) != 0 {
 		nextOrder = orders[len(orders) - 1]
 	}
 
-	if nextOrder != nil && o.extraDelOrderMap[nextOrder.Key()] != nil {
-		o.orderMap[tradePair.Key()] = orders[0 : len(orders)-1]
-		delete(o.extraDelOrderMap, nextOrder.Key())
+	if nextOrder != nil && o.arrivalDelOrders[nextOrder.Key()] != nil {
+		o.dbOrders[tradePair.Key()] = orders[0 : len(orders)-1]
+		delete(o.arrivalDelOrders, nextOrder.Key())
 		return o.PeekOrder(tradePair)
 	}
 
-	extraOrder := o.peekExtraOrder(tradePair)
-	if nextOrder == nil || (extraOrder != nil && extraOrder.Rate < nextOrder.Rate) {
-		nextOrder = extraOrder
+	arrivalOrder := o.peekArrivalOrder(tradePair)
+	if nextOrder == nil || (arrivalOrder != nil && arrivalOrder.Rate < nextOrder.Rate) {
+		nextOrder = arrivalOrder
 	}
 	return nextOrder
 }
@@ -61,65 +63,65 @@ func (o *OrderTable) PopOrder(tradePair *common.TradePair) {
 		return
 	}
 
-	orders := o.orderMap[tradePair.Key()]
+	orders := o.dbOrders[tradePair.Key()]
 	if len(orders) != 0 && orders[len(orders) - 1].Key() == order.Key() {
-		o.orderMap[tradePair.Key()] = orders[0 : len(orders)-1]
+		o.dbOrders[tradePair.Key()] = orders[0 : len(orders)-1]
 	}
 
-	extraOrders := o.extraAddOrderMap[tradePair.Key()]
-	if len(extraOrders) != 0 && orders[len(extraOrders) - 1].Key() == order.Key() {
-		o.extraAddOrderMap[tradePair.Key()] = extraOrders[0 : len(extraOrders)-1]
+	arrivalOrders := o.arrivalAddOrders[tradePair.Key()]
+	if len(arrivalOrders) != 0 && orders[len(arrivalOrders) - 1].Key() == order.Key() {
+		o.arrivalAddOrders[tradePair.Key()] = arrivalOrders[0 : len(arrivalOrders)-1]
 	}
 }
 
 func (o *OrderTable) AddOrder(order *common.Order) error {
 	tradePair := order.GetTradePair()
-	orders := o.orderMap[tradePair.Key()]
+	orders := o.dbOrders[tradePair.Key()]
 	if len(orders) > 0 && order.Rate > orders[len(orders)-1].Rate {
 		return errors.New("rate of order must less than the min order in order table")
 	}
 
-	o.orderMap[tradePair.Key()] = append(orders, order)
+	o.dbOrders[tradePair.Key()] = append(orders, order)
 	return nil
 }
 
-func (o *OrderTable) extendOrders(tradePair *common.TradePair) {
-	iterator, ok := o.iteratorMap[tradePair.Key()]
+func (o *OrderTable) extendDBOrders(tradePair *common.TradePair) {
+	iterator, ok := o.orderIterators[tradePair.Key()]
 	if !ok {
 		iterator = database.NewOrderIterator(o.movStore, tradePair)
-		o.iteratorMap[tradePair.Key()] = iterator
+		o.orderIterators[tradePair.Key()] = iterator
 	}
 
 	nextOrders := iterator.NextBatch()
 	for i := len(nextOrders) - 1; i >= 0; i-- {
-		o.orderMap[tradePair.Key()] = append(o.orderMap[tradePair.Key()], nextOrders[i])
+		o.dbOrders[tradePair.Key()] = append(o.dbOrders[tradePair.Key()], nextOrders[i])
 	}
 }
 
-func (o *OrderTable) peekExtraOrder(tradePair *common.TradePair) *common.Order {
-	extraAddOrders := o.extraAddOrderMap[tradePair.Key()]
-	if len(extraAddOrders) > 0 {
-		return extraAddOrders[len(extraAddOrders) -1]
+func (o *OrderTable) peekArrivalOrder(tradePair *common.TradePair) *common.Order {
+	arrivalAddOrders := o.arrivalAddOrders[tradePair.Key()]
+	if len(arrivalAddOrders) > 0 {
+		return arrivalAddOrders[len(arrivalAddOrders) -1]
 	}
 	return nil
 }
 
-func arrangeExtraAddOrders(orders []*common.Order) map[string][]*common.Order {
-	extraAddOrderMap := make(map[string][]*common.Order)
+func arrangeArrivalAddOrders(orders []*common.Order) map[string][]*common.Order {
+	arrivalAddOrderMap := make(map[string][]*common.Order)
 	for _, order := range orders {
-		extraAddOrderMap[order.Key()] = append(extraAddOrderMap[order.Key()], order)
+		arrivalAddOrderMap[order.Key()] = append(arrivalAddOrderMap[order.Key()], order)
 	}
 
-	for _, orders := range extraAddOrderMap {
+	for _, orders := range arrivalAddOrderMap {
 		sort.Sort(common.OrderSlice(orders))
 	}
-	return extraAddOrderMap
+	return arrivalAddOrderMap
 }
 
-func arrangeExtraDelOrders(orders []*common.Order) map[string]*common.Order {
-	extraDelOrderMap := make(map[string]*common.Order)
+func arrangeArrivalDelOrders(orders []*common.Order) map[string]*common.Order {
+	arrivalDelOrderMap := make(map[string]*common.Order)
 	for _, order := range orders {
-		extraDelOrderMap[order.Key()] = order
+		arrivalDelOrderMap[order.Key()] = order
 	}
-	return extraDelOrderMap
+	return arrivalDelOrderMap
 }
