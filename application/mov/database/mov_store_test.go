@@ -48,7 +48,7 @@ func TestCalcUTXOHash(t *testing.T) {
 		},
 	}
 
-	hash := calcUTXOHash(order)
+	hash := order.UTXOHash()
 	if hash.String() != wantHash {
 		t.Fatal("The function is incorrect")
 	}
@@ -328,7 +328,7 @@ func TestSortOrderKey(t *testing.T) {
 
 	for i, c := range cases {
 		for _, order := range c.orders {
-			key := calcOrderKey(order.FromAssetID, order.ToAssetID, calcUTXOHash(&order), order.Rate)
+			key := calcOrderKey(order.FromAssetID, order.ToAssetID, order.UTXOHash(), order.Rate)
 			data, err := json.Marshal(order.Utxo)
 			if err != nil {
 				t.Fatal(err)

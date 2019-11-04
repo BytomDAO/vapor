@@ -18,7 +18,7 @@ const maxFeeRate = 0.05
 var (
 	errInvalidTradePairs             = errors.New("The trade pairs in the tx input is invalid")
 	errStatusFailMustFalse           = errors.New("status fail of transaction does not allow to be true")
-	errInputProgramMustP2WMCScript   = errors.New("input program of matched tx must p2wmc script")
+	errInputProgramMustP2WMCScript   = errors.New("input program of trade tx must p2wmc script")
 	errExistCancelOrderInMatchedTx   = errors.New("can't exist cancel order in the matched transaction")
 	errExistTradeInCancelOrderTx     = errors.New("can't exist trade in the cancel order transaction")
 	errAmountOfFeeGreaterThanMaximum = errors.New("amount of fee greater than max fee amount")
@@ -57,7 +57,7 @@ func (m *MovCore) ChainStatus() (uint64, *bc.Hash, error) {
 	return state.Height, state.Hash, nil
 }
 
-// ValidateBlock no need to verify the block header, becaure the first module has been verified.
+// ValidateBlock no need to verify the block header, because the first module has been verified.
 // just need to verify the transactions in the block.
 func (m *MovCore) ValidateBlock(block *types.Block, verifyResults []*bc.TxVerifyResult) error {
 	return m.ValidateTxs(block.Transactions, verifyResults)
