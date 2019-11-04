@@ -1,6 +1,8 @@
 package match
 
 import (
+	"github.com/vapor/protocol/bc"
+	"github.com/vapor/testutil"
 	"testing"
 
 	"github.com/vapor/application/mov/common"
@@ -65,7 +67,7 @@ func TestGenerateMatchedTxs(t *testing.T) {
 
 	for i, c := range cases {
 		movStore := mock.NewMovStore([]*common.TradePair{btc2eth, eth2btc}, c.initStoreOrders)
-		matchEngine := NewEngine(NewOrderTable(movStore, nil, nil), 0.05, []byte{0x51})
+		matchEngine := NewEngine(NewOrderTable(movStore, nil, nil), 0.05, mock.NodeProgram)
 		var gotMatchedTxs []*types.Tx
 		for matchEngine.HasMatchedTx(c.tradePair, c.tradePair.Reverse()) {
 			matchedTx, err := matchEngine.NextMatchedTx(c.tradePair, c.tradePair.Reverse())
@@ -93,6 +95,45 @@ func TestGenerateMatchedTxs(t *testing.T) {
 			if gotMatchedTx.ID != wantMatchedTx.ID {
 				t.Errorf("#%d(%s) the tx hash of got matched tx: %s is not equals want matched tx: %s", i, c.desc, gotMatchedTx.ID.String(), wantMatchedTx.ID.String())
 			}
+		}
+	}
+}
+
+func TestCalcMatchedTxFee(t *testing.T) {
+	cases := []struct {
+		desc             string
+		tx               *types.TxData
+		maxFeeRate       float64
+		wantMatchedTxFee map[bc.AssetID]*MatchedTxFee
+	}{
+		{
+			desc: "fee less than max fee",
+			maxFeeRate: 0.05,
+			wantMatchedTxFee: map[bc.AssetID]*MatchedTxFee{mock.ETH: {FeeAmount: 10, MaxFeeAmount: 26}},
+			tx: &mock.MatchedTxs[1].TxData,
+		},
+		{
+			desc: "fee refund in tx",
+			maxFeeRate: 0.05,
+			wantMatchedTxFee: map[bc.AssetID]*MatchedTxFee{mock.ETH: {FeeAmount: 27, MaxFeeAmount: 27}},
+			tx: &mock.MatchedTxs[2].TxData,
+		},
+		{
+			desc: "fee is zero",
+			maxFeeRate: 0.05,
+			wantMatchedTxFee: map[bc.AssetID]*MatchedTxFee{},
+			tx: &mock.MatchedTxs[0].TxData,
+		},
+	}
+
+	for i, c := range cases {
+		gotMatchedTxFee, err := CalcMatchedTxFee(c.tx, c.maxFeeRate)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !testutil.DeepEqual(gotMatchedTxFee, c.wantMatchedTxFee) {
+			t.Errorf("#%d(%s):fail to caculate matched tx fee, got (%v), want (%v)", i, c.desc, gotMatchedTxFee, c.wantMatchedTxFee)
 		}
 	}
 }

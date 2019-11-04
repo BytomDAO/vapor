@@ -10,8 +10,9 @@ import (
 )
 
 var (
-	BTC = bc.NewAssetID([32]byte{1})
-	ETH = bc.NewAssetID([32]byte{2})
+	BTC         = bc.NewAssetID([32]byte{1})
+	ETH         = bc.NewAssetID([32]byte{2})
+	NodeProgram = []byte{0x58}
 
 	Btc2EthOrders = []*common.Order{
 		{
@@ -96,7 +97,7 @@ var (
 		},
 	}
 
-	Btc2EthMakerTxs = []*types.Tx {
+	Btc2EthMakerTxs = []*types.Tx{
 		// Btc2EthOrders[0]
 		types.NewTx(types.TxData{
 			Inputs:  []*types.TxInput{types.NewSpendInput(nil, *Btc2EthOrders[0].Utxo.SourceID, *Btc2EthOrders[0].FromAssetID, Btc2EthOrders[0].Utxo.Amount, Btc2EthOrders[0].Utxo.SourcePos, []byte{0x51})},
@@ -119,7 +120,7 @@ var (
 		}),
 	}
 
-	Eth2BtcMakerTxs = []*types.Tx {
+	Eth2BtcMakerTxs = []*types.Tx{
 		// Eth2Btc[0]
 		types.NewTx(types.TxData{
 			Inputs:  []*types.TxInput{types.NewSpendInput(nil, *Eth2BtcOrders[0].Utxo.SourceID, *Eth2BtcOrders[0].FromAssetID, Eth2BtcOrders[0].Utxo.Amount, Eth2BtcOrders[0].Utxo.SourcePos, []byte{0x51})},
@@ -136,7 +137,7 @@ var (
 			Outputs: []*types.TxOutput{types.NewIntraChainOutput(*Eth2BtcOrders[2].FromAssetID, Eth2BtcOrders[2].Utxo.Amount, Eth2BtcOrders[2].Utxo.ControlProgram)},
 		}),
 	}
-	
+
 	MatchedTxs = []*types.Tx{
 		// partial matched transaction from Btc2EthOrders[0], Eth2BtcOrders[1]
 		types.NewTx(types.TxData{
@@ -151,7 +152,7 @@ var (
 				types.NewIntraChainOutput(*Eth2BtcOrders[1].ToAssetID, 8, testutil.MustDecodeHexString("54")),
 			},
 		}),
-		
+
 		// full matched transaction from Btc2EthOrders[0], Eth2BtcOrders[0]
 		types.NewTx(types.TxData{
 			Inputs: []*types.TxInput{
@@ -161,7 +162,7 @@ var (
 			Outputs: []*types.TxOutput{
 				types.NewIntraChainOutput(*Btc2EthOrders[0].ToAssetID, 500, testutil.MustDecodeHexString("51")),
 				types.NewIntraChainOutput(*Eth2BtcOrders[0].ToAssetID, 10, testutil.MustDecodeHexString("53")),
-				types.NewIntraChainOutput(*Btc2EthOrders[0].ToAssetID, 10, []byte{0x51}),
+				types.NewIntraChainOutput(*Btc2EthOrders[0].ToAssetID, 10, NodeProgram),
 			},
 		}),
 
@@ -177,7 +178,7 @@ var (
 				// re-order
 				types.NewIntraChainOutput(*Eth2BtcOrders[2].FromAssetID, 270, Eth2BtcOrders[2].Utxo.ControlProgram),
 				// fee
-				types.NewIntraChainOutput(*Eth2BtcOrders[2].FromAssetID, 27, []byte{0x51}),
+				types.NewIntraChainOutput(*Eth2BtcOrders[2].FromAssetID, 27, NodeProgram),
 				// refund
 				types.NewIntraChainOutput(*Eth2BtcOrders[2].FromAssetID, 6, testutil.MustDecodeHexString("51")),
 				types.NewIntraChainOutput(*Eth2BtcOrders[2].FromAssetID, 7, testutil.MustDecodeHexString("55")),
