@@ -123,6 +123,8 @@ type BaseConfig struct {
 
 	// Federation file name
 	FederationFileName string `mapstructure:"federation_file"`
+
+	BlockTimeInterval uint64 `mapstructure:"block_time_interval"`
 }
 
 // Default configurable base parameters.
@@ -137,6 +139,7 @@ func DefaultBaseConfig() BaseConfig {
 		LogFile:            "log",
 		PrivateKeyFile:     "node_key.txt",
 		FederationFileName: "federation.json",
+		BlockTimeInterval:  500,
 	}
 }
 

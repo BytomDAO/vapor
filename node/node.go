@@ -66,8 +66,8 @@ func NewNode(config *cfg.Config) *Node {
 		cmn.Exit(cmn.Fmt("Failed to load federated information:[%s]", err.Error()))
 	}
 
-	if err:=vaporLog.InitLogFile(config);err!=nil{
-		log.WithField("err",err).Fatalln("InitLogFile failed")
+	if err := vaporLog.InitLogFile(config); err != nil {
+		log.WithField("err", err).Fatalln("InitLogFile failed")
 	}
 
 	log.WithFields(log.Fields{
@@ -81,6 +81,8 @@ func NewNode(config *cfg.Config) *Node {
 	if err := consensus.InitActiveNetParams(config.ChainID); err != nil {
 		log.Fatalf("Failed to init ActiveNetParams:[%s]", err.Error())
 	}
+
+	consensus.ActiveNetParams.BlockTimeInterval = config.BlockTimeInterval
 
 	initCommonConfig(config)
 

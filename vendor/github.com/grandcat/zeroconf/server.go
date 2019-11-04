@@ -563,7 +563,7 @@ func (s *Server) probe() {
 			resp.Extra = []dns.RR{}
 			s.composeLookupAnswers(resp, s.ttl, intf.Index, true)
 			if err := s.multicastResponse(resp, intf.Index); err != nil {
-				log.Println("[ERR] zeroconf: failed to send announcement:", err.Error())
+				//log.Println("[ERR] zeroconf: failed to send announcement:", err.Error())
 			}
 		}
 		time.Sleep(timeout)

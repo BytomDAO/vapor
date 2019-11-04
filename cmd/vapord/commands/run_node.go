@@ -30,6 +30,7 @@ func init() {
 	runNodeCmd.Flags().Bool("vault_mode", config.VaultMode, "Run in the offline enviroment")
 	runNodeCmd.Flags().Bool("web.closed", config.Web.Closed, "Lanch web browser or not")
 	runNodeCmd.Flags().String("chain_id", config.ChainID, "Select network type")
+	runNodeCmd.Flags().Uint64("block_time_interval", config.BlockTimeInterval, "Node generation block interval. time uint: ms")
 
 	// log level
 	runNodeCmd.Flags().String("log_level", config.LogLevel, "Select log level(debug, info, warn, error or fatal)")
@@ -87,7 +88,7 @@ func runNode(cmd *cobra.Command, args []string) error {
 	log.WithFields(log.Fields{
 		"module":   logModule,
 		"duration": time.Since(startTime),
-	}).Info("start node complete")
+	}).Debug("start node complete")
 
 	// Trap signal, run forever.
 	n.RunForever()
