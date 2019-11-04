@@ -174,7 +174,7 @@ func TestOrderTable(t *testing.T) {
 				continue
 			}
 
-			if wantOrder != nil && gotOrder != nil && gotOrder.Key() != wantOrder.Key() {
+			if gotOrder.Key() != wantOrder.Key() {
 				t.Errorf("#%d(%s):the key of got order(%v) is not equals key of want order(%v)", i, c.desc, gotOrder, wantOrder)
 			}
 		}
