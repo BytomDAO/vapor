@@ -3,9 +3,9 @@ package match
 import (
 	"testing"
 
-	"github.com/vapor/application/mov/mock"
 	"github.com/vapor/application/mov/common"
 	"github.com/vapor/application/mov/database"
+	"github.com/vapor/application/mov/mock"
 )
 
 var (

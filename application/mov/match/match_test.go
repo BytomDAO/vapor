@@ -1,9 +1,10 @@
 package match
 
 import (
+	"testing"
+
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/testutil"
-	"testing"
 
 	"github.com/vapor/application/mov/common"
 	"github.com/vapor/application/mov/mock"

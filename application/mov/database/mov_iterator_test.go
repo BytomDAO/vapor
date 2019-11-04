@@ -1,13 +1,12 @@
 package database
 
 import (
-	"github.com/vapor/application/mov/mock"
 	"testing"
 
 	"github.com/vapor/application/mov/common"
+	"github.com/vapor/application/mov/mock"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/testutil"
-
 )
 
 var (
