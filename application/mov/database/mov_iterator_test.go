@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"github.com/vapor/application/mov/common"
+	"github.com/vapor/application/mov/mock"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/testutil"
-
 )
 
 var (
@@ -106,7 +106,7 @@ func TestTradePairIterator(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		store := &MockMovStore{TradePairs: c.storeTradePairs}
+		store := mock.NewMovStore(c.storeTradePairs, nil)
 		var gotTradePairs []*common.TradePair
 		iterator := NewTradePairIterator(store)
 		for iterator.HasNext() {
@@ -152,8 +152,7 @@ func TestOrderIterator(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		orderMap := map[string][]*common.Order{c.tradePair.Key(): c.storeOrders}
-		store := &MockMovStore{OrderMap: orderMap}
+		store := mock.NewMovStore(nil, c.storeOrders)
 
 		var gotOrders []*common.Order
 		iterator := NewOrderIterator(store, c.tradePair)

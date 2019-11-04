@@ -1,6 +1,7 @@
 package common
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	"github.com/vapor/consensus/segwit"
@@ -32,6 +33,9 @@ func (o OrderSlice) Swap(i, j int) {
 	o[i], o[j] = o[j], o[i]
 }
 func (o OrderSlice) Less(i, j int) bool {
+	if o[i].Rate == o[j].Rate {
+		return hex.EncodeToString(o[i].UTXOHash().Bytes()) < hex.EncodeToString(o[j].UTXOHash().Bytes())
+	}
 	return o[i].Rate < o[j].Rate
 }
 
@@ -83,6 +87,17 @@ func NewOrderFromInput(tx *types.Tx, inputIndex int) (*Order, error) {
 			ControlProgram: input.ControlProgram,
 		},
 	}, nil
+}
+
+func (o *Order) UTXOHash() *bc.Hash {
+	prog := &bc.Program{VmVersion: 1, Code: o.Utxo.ControlProgram}
+	src := &bc.ValueSource{
+		Ref:      o.Utxo.SourceID,
+		Value:    &bc.AssetAmount{AssetId: o.FromAssetID, Amount: o.Utxo.Amount},
+		Position: o.Utxo.SourcePos,
+	}
+	hash := bc.EntryID(bc.NewIntraChainOutput(src, prog, 0))
+	return &hash
 }
 
 func (o *Order) TradePair() *TradePair {
