@@ -42,20 +42,11 @@ func (e *Engine) HasMatchedTx(tradePairs ...*common.TradePair) bool {
 // the size of trade pairs at least 2, and the sequence of trade pairs can form a loop
 // for example, [assetA -> assetB, assetB -> assetC, assetC -> assetA]
 func (e *Engine) NextMatchedTx(tradePairs ...*common.TradePair) (*types.Tx, error) {
-	if err := validateTradePairs(tradePairs); err != nil {
-		return nil, err
-	}
-
-	orders := e.peekOrders(tradePairs)
-	if len(orders) == 0 {
-		return nil, errors.New("no order for the specified trade pair in the order table")
-	}
-
-	if !isMatched(orders) {
+	if !e.HasMatchedTx(tradePairs...) {
 		return nil, errors.New("the specified trade pairs can not be matched")
 	}
 
-	tx, err := e.buildMatchTx(orders)
+	tx, err := e.buildMatchTx(e.peekOrders(tradePairs))
 	if err != nil {
 		return nil, err
 	}
