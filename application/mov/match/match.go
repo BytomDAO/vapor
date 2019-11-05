@@ -35,12 +35,7 @@ func (e *Engine) HasMatchedTx(tradePairs ...*common.TradePair) bool {
 		return false
 	}
 
-	for i, order := range orders {
-		if canNotBeMatched(order, orders[getOppositeIndex(len(orders), i)]) {
-			return false
-		}
-	}
-	return true
+	return isMatched(orders)
 }
 
 // NextMatchedTx return the next matchable transaction by the specified trade pairs
@@ -54,6 +49,10 @@ func (e *Engine) NextMatchedTx(tradePairs ...*common.TradePair) (*types.Tx, erro
 	orders := e.peekOrders(tradePairs)
 	if len(orders) == 0 {
 		return nil, errors.New("no order for the specified trade pair in the order table")
+	}
+
+	if !isMatched(orders) {
+		return nil, errors.New("the specified trade pairs can not be matched")
 	}
 
 	tx, err := e.buildMatchTx(orders)
@@ -98,9 +97,14 @@ func validateTradePairs(tradePairs []*common.TradePair) error {
 	return nil
 }
 
-func canNotBeMatched(order, oppositeOrder *common.Order) bool {
-	rate := 1 / order.Rate
-	return rate < oppositeOrder.Rate
+func isMatched(orders []*common.Order) bool {
+	for i, order := range orders {
+		opposisteOrder := orders[getOppositeIndex(len(orders), i)]
+		if 1 / order.Rate < opposisteOrder.Rate {
+			return false
+		}
+	}
+	return true
 }
 
 func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, error) {
