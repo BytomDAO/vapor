@@ -7,21 +7,25 @@ import (
 	"github.com/vapor/protocol/bc"
 )
 
+// TradePairIterator wrap read trade pair from DB action
 type TradePairIterator struct {
 	movStore       MovStore
 	tradePairs     []*common.TradePair
 	tradePairIndex int
 }
 
+// NewTradePairIterator create the new TradePairIterator object
 func NewTradePairIterator(movStore MovStore) *TradePairIterator {
 	return &TradePairIterator{movStore: movStore}
 }
 
+// HasNext check if there are more trade pairs in memory or DB
 func (t *TradePairIterator) HasNext() bool {
 	tradePairSize := len(t.tradePairs)
 	if t.tradePairIndex < tradePairSize {
 		return true
 	}
+
 	var fromAssetID, toAssetID *bc.AssetID
 	if len(t.tradePairs) > 0 {
 		lastTradePair := t.tradePairs[tradePairSize-1]
@@ -44,6 +48,7 @@ func (t *TradePairIterator) HasNext() bool {
 	return true
 }
 
+// Next return the next available trade pair in memory or DB
 func (t *TradePairIterator) Next() *common.TradePair {
 	if !t.HasNext() {
 		return nil
@@ -54,12 +59,14 @@ func (t *TradePairIterator) Next() *common.TradePair {
 	return tradePair
 }
 
+// OrderIterator wrap read order from DB action
 type OrderIterator struct {
 	movStore  MovStore
 	lastOrder *common.Order
 	orders    []*common.Order
 }
 
+// NewOrderIterator create the new OrderIterator object
 func NewOrderIterator(movStore MovStore, tradePair *common.TradePair) *OrderIterator {
 	return &OrderIterator{
 		movStore:  movStore,
@@ -67,6 +74,7 @@ func NewOrderIterator(movStore MovStore, tradePair *common.TradePair) *OrderIter
 	}
 }
 
+// HasNext check if there are more orders in memory or DB
 func (o *OrderIterator) HasNext() bool {
 	if len(o.orders) == 0 {
 		orders, err := o.movStore.ListOrders(o.lastOrder)
@@ -84,6 +92,7 @@ func (o *OrderIterator) HasNext() bool {
 	return true
 }
 
+// NextBatch return the next batch of orders in memory or DB
 func (o *OrderIterator) NextBatch() []*common.Order {
 	if !o.HasNext() {
 		return nil
