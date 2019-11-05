@@ -52,17 +52,6 @@ func calcTradePairKey(fromAssetID, toAssetID *bc.AssetID) []byte {
 	return append(key, toAssetID.Bytes()...)
 }
 
-func calcUTXOHash(order *common.Order) *bc.Hash {
-	prog := &bc.Program{VmVersion: 1, Code: order.Utxo.ControlProgram}
-	src := &bc.ValueSource{
-		Ref:      order.Utxo.SourceID,
-		Value:    &bc.AssetAmount{AssetId: order.FromAssetID, Amount: order.Utxo.Amount},
-		Position: order.Utxo.SourcePos,
-	}
-	hash := bc.EntryID(bc.NewIntraChainOutput(src, prog, 0))
-	return &hash
-}
-
 func getAssetIDFromTradePairKey(key []byte, prefix []byte, posIndex int) *bc.AssetID {
 	b := [32]byte{}
 	pos := len(prefix) + assetIDLen*posIndex
@@ -84,7 +73,7 @@ type LevelDBMovStore struct {
 	db dbm.DB
 }
 
-func NewLevelDBMovStore(db dbm.DB, ) *LevelDBMovStore {
+func NewLevelDBMovStore(db dbm.DB) *LevelDBMovStore {
 	return &LevelDBMovStore{db: db}
 }
 
@@ -109,7 +98,7 @@ func (m *LevelDBMovStore) ListOrders(orderAfter *common.Order) ([]*common.Order,
 
 	var startKey []byte
 	if orderAfter.Rate > 0 {
-		startKey = calcOrderKey(orderAfter.FromAssetID, orderAfter.ToAssetID, calcUTXOHash(orderAfter), orderAfter.Rate)
+		startKey = calcOrderKey(orderAfter.FromAssetID, orderAfter.ToAssetID, orderAfter.UTXOHash(), orderAfter.Rate)
 	}
 
 	itr := m.db.IteratorPrefixWithStart(orderPrefix, startKey, false)
@@ -170,7 +159,7 @@ func (m *LevelDBMovStore) addOrders(batch dbm.Batch, orders []*common.Order, tra
 			return err
 		}
 
-		key := calcOrderKey(order.FromAssetID, order.ToAssetID, calcUTXOHash(order), order.Rate)
+		key := calcOrderKey(order.FromAssetID, order.ToAssetID, order.UTXOHash(), order.Rate)
 		batch.Set(key, data)
 
 		tradePair := &common.TradePair{
@@ -187,7 +176,7 @@ func (m *LevelDBMovStore) addOrders(batch dbm.Batch, orders []*common.Order, tra
 
 func (m *LevelDBMovStore) deleteOrders(batch dbm.Batch, orders []*common.Order, tradePairsCnt map[string]*common.TradePair) {
 	for _, order := range orders {
-		key := calcOrderKey(order.FromAssetID, order.ToAssetID, calcUTXOHash(order), order.Rate)
+		key := calcOrderKey(order.FromAssetID, order.ToAssetID, order.UTXOHash(), order.Rate)
 		batch.Delete(key)
 
 		tradePair := &common.TradePair{
