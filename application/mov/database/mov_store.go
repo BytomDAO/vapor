@@ -31,8 +31,8 @@ const (
 	assetIDLen     = 32
 	rateByteLen    = 8
 
-	tradePairsNum = 1024
-	ordersNum     = 4096
+	tradePairsNum = 32
+	ordersNum     = 128
 )
 
 var (
