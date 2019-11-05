@@ -10,10 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/vapor/application/mov/common"
-	"github.com/vapor/consensus"
 	"github.com/vapor/database/leveldb"
 	dbm "github.com/vapor/database/leveldb"
-	chainjson "github.com/vapor/encoding/json"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/testutil"
@@ -30,29 +28,18 @@ var (
 	assetID8 = &bc.AssetID{V0: 8}
 )
 
-func TestCalcUTXOHash(t *testing.T) {
-	wantHash := "7cbaf92f950f2a6bededd6cc5ec08c924505f5365b0a8af963e1d52912c99667"
-	controlProgramStr := "0014ab5acbea076f269bfdc8ededbed7d0a13e6e0b19"
+func TestGetAssetIDFromTradePairKey(t *testing.T) {
+	b := calcTradePairKey(assetID1, assetID2)
+	gotA := getAssetIDFromTradePairKey(b, fromAssetIDPos)
+	gotB := getAssetIDFromTradePairKey(b, toAssetIDPos)
 
-	var controlProgram chainjson.HexBytes
-	controlProgram.UnmarshalText([]byte(controlProgramStr))
-
-	sourceID := testutil.MustDecodeHash("ca2faf5fcbf8ee2b43560a32594f608528b12a1fe79cee85252564f886f91060")
-	order := &common.Order{
-		FromAssetID: consensus.BTMAssetID,
-		Utxo: &common.MovUtxo{
-			SourceID:       &sourceID,
-			SourcePos:      0,
-			Amount:         31249300000,
-			ControlProgram: controlProgram[:],
-		},
+	if *gotA != *assetID1 {
+		t.Fatalf("got wrong from asset id got %s, want %s", gotA.String(), assetID1.String())
 	}
 
-	hash := order.UTXOHash()
-	if hash.String() != wantHash {
-		t.Fatal("The function is incorrect")
+	if *gotB != *assetID2 {
+		t.Fatalf("got wrong to asset id got %s, want %s", gotB.String(), assetID2.String())
 	}
-
 }
 
 func TestSortOrderKey(t *testing.T) {
@@ -130,6 +117,39 @@ func TestSortOrderKey(t *testing.T) {
 					Rate:        0.00098,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 24},
+						Amount:         10,
+						SourcePos:      1,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				common.Order{
+					FromAssetID: &bc.AssetID{V0: 1},
+					ToAssetID:   &bc.AssetID{V0: 0},
+					Rate:        0.00098,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 25},
+						Amount:         10,
+						SourcePos:      1,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				common.Order{
+					FromAssetID: &bc.AssetID{V0: 1},
+					ToAssetID:   &bc.AssetID{V0: 0},
+					Rate:        0.00098,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 26},
+						Amount:         10,
+						SourcePos:      1,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				common.Order{
+					FromAssetID: &bc.AssetID{V0: 1},
+					ToAssetID:   &bc.AssetID{V0: 0},
+					Rate:        0.00098,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 27},
 						Amount:         10,
 						SourcePos:      1,
 						ControlProgram: []byte("aa"),
@@ -300,7 +320,19 @@ func TestSortOrderKey(t *testing.T) {
 				},
 				expectedData{
 					rate:     0.00098,
+					utxoHash: "14b51a6103f75d9cacdf0f9551467588c687ed3b029e25c646d276720569e227",
+				},
+				expectedData{
+					rate:     0.00098,
 					utxoHash: "1fa9fae83d0a5401a4e92f80636966486e763eecca588aa11dff02b415320602",
+				},
+				expectedData{
+					rate:     0.00098,
+					utxoHash: "6687d18ddbe4e7381a844e393ca3032a412285c9da6988eff182106e28ba09ca",
+				},
+				expectedData{
+					rate:     0.00098,
+					utxoHash: "841b1de7c871dfe6e2d1886809d9ae12ec45e570233b03879305232b096fda43",
 				},
 				expectedData{
 					rate:     0.00098,
@@ -338,7 +370,6 @@ func TestSortOrderKey(t *testing.T) {
 		}
 
 		got := []expectedData{}
-
 		itr := db.IteratorPrefixWithStart(nil, nil, false)
 		for itr.Next() {
 			key := itr.Key()
@@ -347,9 +378,8 @@ func TestSortOrderKey(t *testing.T) {
 			copy(b[:], key[pos+8:])
 			utxoHash := bc.NewHash(b)
 
-			rate := getRateFromOrderKey(key, ordersPrefix)
 			got = append(got, expectedData{
-				rate:     rate,
+				rate:     getRateFromOrderKey(key),
 				utxoHash: utxoHash.String(),
 			})
 		}
@@ -358,7 +388,6 @@ func TestSortOrderKey(t *testing.T) {
 		if !testutil.DeepEqual(c.want, got) {
 			t.Errorf("case %v: got recovery status, got: %v, want: %v.", i, got, c.want)
 		}
-
 	}
 }
 
@@ -1717,6 +1746,17 @@ func TestListOrders(t *testing.T) {
 					FromAssetID: assetID1,
 					ToAssetID:   assetID2,
 					Rate:        0.00095,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 26},
+						Amount:         1,
+						SourcePos:      0,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID: assetID2,
+					ToAssetID:   assetID4,
+					Rate:        0.00075,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 26},
 						Amount:         1,
