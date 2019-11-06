@@ -90,12 +90,11 @@ func (e *Engine) addMatchTxFeeOutput(txData *types.TxData) error {
 				return err
 			}
 
-			if reminder < 2*averageAmount {
+			if i == len(txData.Inputs)-1 {
 				txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(assetID, uint64(reminder), contractArgs.SellerProgram))
-				break
+			} else {
+				txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(assetID, uint64(averageAmount), contractArgs.SellerProgram))
 			}
-
-			txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(assetID, uint64(averageAmount), contractArgs.SellerProgram))
 			reminder -= averageAmount
 		}
 	}
