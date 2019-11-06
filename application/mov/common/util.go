@@ -6,6 +6,7 @@ import (
 	"github.com/vapor/protocol/bc/types"
 )
 
+// IsMatchedTx check if this transaction has trade mov order input
 func IsMatchedTx(tx *types.Tx) bool {
 	if len(tx.Inputs) < 2 {
 		return false
@@ -18,6 +19,7 @@ func IsMatchedTx(tx *types.Tx) bool {
 	return false
 }
 
+// IsCancelOrderTx check if this transaction has cancel mov order input
 func IsCancelOrderTx(tx *types.Tx) bool {
 	for _, input := range tx.Inputs {
 		if input.InputType() == types.SpendInputType && contract.IsCancelClauseSelector(input) && segwit.IsP2WMCScript(input.ControlProgram()) {
@@ -26,4 +28,3 @@ func IsCancelOrderTx(tx *types.Tx) bool {
 	}
 	return false
 }
-

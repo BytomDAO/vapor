@@ -90,7 +90,7 @@ func TestOrderTable(t *testing.T) {
 					mock.Btc2EthOrders[1], mock.Btc2EthOrders[2], mock.Btc2EthOrders[3],
 				}),
 			initArrivalAddOrders: []*common.Order{mock.Btc2EthOrders[0]},
-			popOrders: []*common.TradePair{btc2eth},
+			popOrders:            []*common.TradePair{btc2eth},
 			wantPeekedOrders: map[common.TradePair]*common.Order{
 				*btc2eth: mock.Btc2EthOrders[0],
 			},
@@ -129,7 +129,7 @@ func TestOrderTable(t *testing.T) {
 				}),
 			initArrivalAddOrders: []*common.Order{mock.Btc2EthOrders[0], mock.Btc2EthOrders[2]},
 			initArrivalDelOrders: []*common.Order{mock.Btc2EthOrders[3]},
-			popOrders: []*common.TradePair{btc2eth},
+			popOrders:            []*common.TradePair{btc2eth},
 			wantPeekedOrders: map[common.TradePair]*common.Order{
 				*btc2eth: mock.Btc2EthOrders[2],
 			},
@@ -152,6 +152,19 @@ func TestOrderTable(t *testing.T) {
 			initArrivalAddOrders: []*common.Order{},
 			wantPeekedOrders: map[common.TradePair]*common.Order{
 				*btc2eth: nil,
+			},
+		},
+		{
+			desc: "has arrival delete orders, no add order, no pop order, need recursive to peek one order",
+			initMovStore: mock.NewMovStore(
+				[]*common.TradePair{btc2eth},
+				[]*common.Order{
+					mock.Btc2EthOrders[0], mock.Btc2EthOrders[1], mock.Btc2EthOrders[2], mock.Btc2EthOrders[3],
+				}),
+			initArrivalAddOrders: []*common.Order{},
+			initArrivalDelOrders: []*common.Order{mock.Btc2EthOrders[3], mock.Btc2EthOrders[0], mock.Btc2EthOrders[2]},
+			wantPeekedOrders: map[common.TradePair]*common.Order{
+				*btc2eth: mock.Btc2EthOrders[1],
 			},
 		},
 	}
