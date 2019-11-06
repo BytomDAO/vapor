@@ -11,6 +11,9 @@ import (
 	"github.com/vapor/protocol/bc/types"
 )
 
+/*
+	Test: validateTradePairs vaild and invaild case for 2, 3 trade pairs
+*/
 func TestGenerateMatchedTxs(t *testing.T) {
 	btc2eth := &common.TradePair{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH}
 	eth2btc := &common.TradePair{FromAssetID: &mock.ETH, ToAssetID: &mock.BTC}
@@ -108,22 +111,22 @@ func TestCalcMatchedTxFee(t *testing.T) {
 		wantMatchedTxFee map[bc.AssetID]*MatchedTxFee
 	}{
 		{
-			desc: "fee less than max fee",
-			maxFeeRate: 0.05,
+			desc:             "fee less than max fee",
+			maxFeeRate:       0.05,
 			wantMatchedTxFee: map[bc.AssetID]*MatchedTxFee{mock.ETH: {FeeAmount: 10, MaxFeeAmount: 26}},
-			tx: &mock.MatchedTxs[1].TxData,
+			tx:               &mock.MatchedTxs[1].TxData,
 		},
 		{
-			desc: "fee refund in tx",
-			maxFeeRate: 0.05,
+			desc:             "fee refund in tx",
+			maxFeeRate:       0.05,
 			wantMatchedTxFee: map[bc.AssetID]*MatchedTxFee{mock.ETH: {FeeAmount: 27, MaxFeeAmount: 27}},
-			tx: &mock.MatchedTxs[2].TxData,
+			tx:               &mock.MatchedTxs[2].TxData,
 		},
 		{
-			desc: "fee is zero",
-			maxFeeRate: 0.05,
+			desc:             "fee is zero",
+			maxFeeRate:       0.05,
 			wantMatchedTxFee: map[bc.AssetID]*MatchedTxFee{},
-			tx: &mock.MatchedTxs[0].TxData,
+			tx:               &mock.MatchedTxs[0].TxData,
 		},
 	}
 

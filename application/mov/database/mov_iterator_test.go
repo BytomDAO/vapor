@@ -126,26 +126,26 @@ func TestOrderIterator(t *testing.T) {
 		wantOrders  []*common.Order
 	}{
 		{
-			desc: "normal case",
-			tradePair: &common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2},
+			desc:        "normal case",
+			tradePair:   &common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2},
 			storeOrders: []*common.Order{order1, order2, order3},
 			wantOrders:  []*common.Order{order1, order2, order3},
 		},
 		{
-			desc: "num of orders more than one return",
-			tradePair: &common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2},
+			desc:        "num of orders more than one return",
+			tradePair:   &common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2},
 			storeOrders: []*common.Order{order1, order2, order3, order4, order5},
 			wantOrders:  []*common.Order{order1, order2, order3, order4, order5},
 		},
 		{
-			desc: "only one order",
-			tradePair: &common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2},
+			desc:        "only one order",
+			tradePair:   &common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2},
 			storeOrders: []*common.Order{order1},
 			wantOrders:  []*common.Order{order1},
 		},
 		{
-			desc: "store is empty",
-			tradePair: &common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2},
+			desc:        "store is empty",
+			tradePair:   &common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2},
 			storeOrders: []*common.Order{},
 			wantOrders:  []*common.Order{},
 		},
