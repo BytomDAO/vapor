@@ -283,7 +283,7 @@ func TestCountCoinbaseTxRewards(t *testing.T) {
 		}
 
 		// create coinbase transaction
-		c.block.Transactions[0], err = createCoinbaseTx(nil, c.block.Height, rewards)
+		c.block.Transactions[0], err = createCoinbaseTxByReward(nil, c.block.Height, rewards)
 		if err != nil {
 			t.Fatal(err)
 		}

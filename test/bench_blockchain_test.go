@@ -141,8 +141,8 @@ func GenerateChainData(dirPath string, testDB dbm.DB, txNumber, otherAssetNum in
 	config.CommonConfig = config.DefaultConfig()
 	store := database.NewStore(testDB)
 	dispatcher := event.NewDispatcher()
-	txPool := protocol.NewTxPool(store, dispatcher)
-	chain, err := protocol.NewChain(store, txPool, dispatcher)
+	txPool := protocol.NewTxPool(store, nil, dispatcher)
+	chain, err := protocol.NewChain(store, txPool, nil, dispatcher)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -159,7 +159,7 @@ func InsertChain(chain *protocol.Chain, txPool *protocol.TxPool, txs []*types.Tx
 		}
 	}
 
-	block, err := proposal.NewBlockTemplate(chain, txPool, nil, uint64(time.Now().UnixNano()/1e6))
+	block, err := proposal.NewBlockTemplate(chain, nil, uint64(time.Now().UnixNano()/1e6))
 	if err != nil {
 		return err
 	}

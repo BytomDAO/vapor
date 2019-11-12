@@ -41,9 +41,9 @@ func TestWalletUpdate(t *testing.T) {
 	store := database.NewStore(testDB)
 	walletStore := database.NewWalletStore(testDB)
 	dispatcher := event.NewDispatcher()
-	txPool := protocol.NewTxPool(store, dispatcher)
+	txPool := protocol.NewTxPool(store, nil, dispatcher)
 
-	chain, err := protocol.NewChain(store, txPool, dispatcher)
+	chain, err := protocol.NewChain(store, txPool, nil, dispatcher)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,8 +140,8 @@ func TestRescanWallet(t *testing.T) {
 
 	store := database.NewStore(testDB)
 	dispatcher := event.NewDispatcher()
-	txPool := protocol.NewTxPool(store, dispatcher)
-	chain, err := protocol.NewChain(store, txPool, dispatcher)
+	txPool := protocol.NewTxPool(store, nil, dispatcher)
+	chain, err := protocol.NewChain(store, txPool, nil, dispatcher)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,9 +191,9 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 
 	store := database.NewStore(testDB)
 	dispatcher := event.NewDispatcher()
-	txPool := protocol.NewTxPool(store, dispatcher)
+	txPool := protocol.NewTxPool(store, nil, dispatcher)
 
-	chain, err := protocol.NewChain(store, txPool, dispatcher)
+	chain, err := protocol.NewChain(store, txPool, nil, dispatcher)
 	if err != nil {
 		t.Fatal(err)
 	}

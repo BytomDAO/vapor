@@ -110,6 +110,16 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
+	for _, p := range c.subProtocols {
+		if err := c.syncProtocolStatus(p); err != nil {
+			return errors.Wrap(err, p.Name(), "sync sub protocol status")
+		}
+
+		if err := p.ApplyBlock(block); err != nil {
+			return errors.Wrap(err, p.Name(), "sub protocol connect block")
+		}
+	}
+
 	irrBlockHeader := c.lastIrrBlockHeader
 	if c.isIrreversible(&block.BlockHeader) && block.Height > irrBlockHeader.Height {
 		irrBlockHeader = &block.BlockHeader
@@ -138,6 +148,12 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 		return err
 	}
 
+	for _, p := range c.subProtocols {
+		if err := c.syncProtocolStatus(p); err != nil {
+			return errors.Wrap(err, p.Name(), "sync sub protocol status")
+		}
+	}
+
 	txsToRestore := map[bc.Hash]*types.Tx{}
 	for _, detachBlockHeader := range detachBlockHeaders {
 		detachHash := detachBlockHeader.Hash()
@@ -162,6 +178,12 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 
 		if err := consensusResult.DetachBlock(b); err != nil {
 			return err
+		}
+
+		for _, p := range c.subProtocols {
+			if err := p.DetachBlock(b); err != nil {
+				return errors.Wrap(err, p.Name(), "sub protocol detach block")
+			}
 		}
 
 		for _, tx := range b.Transactions {
@@ -197,6 +219,12 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 
 		if err := consensusResult.ApplyBlock(b); err != nil {
 			return err
+		}
+
+		for _, p := range c.subProtocols {
+			if err := p.ApplyBlock(b); err != nil {
+				return errors.Wrap(err, p.Name(), "sub protocol attach block")
+			}
 		}
 
 		if consensusResult.IsFinalize() {
@@ -273,6 +301,12 @@ func (c *Chain) saveBlock(block *types.Block) error {
 	bcBlock := types.MapBlock(block)
 	if err := validation.ValidateBlock(bcBlock, parent, rewards); err != nil {
 		return errors.Sub(ErrBadBlock, err)
+	}
+
+	for _, p := range c.subProtocols {
+		if err := p.ValidateBlock(block, bcBlock.TransactionStatus.GetVerifyStatus()); err != nil {
+			return errors.Wrap(err, "sub protocol save block")
+		}
 	}
 
 	signature, err := c.SignBlock(block)

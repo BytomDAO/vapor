@@ -19,12 +19,29 @@ import (
 	"github.com/vapor/protocol/vm/vmutil"
 )
 
-const logModule = "mining"
+const (
+	logModule = "mining"
+)
 
 // createCoinbaseTx returns a coinbase transaction paying an appropriate subsidy
 // based on the passed block height to the provided address.  When the address
 // is nil, the coinbase transaction will instead be redeemable by anyone.
-func createCoinbaseTx(accountManager *account.Manager, blockHeight uint64, rewards []state.CoinbaseReward) (tx *types.Tx, err error) {
+func createCoinbaseTx(accountManager *account.Manager, chain *protocol.Chain, preBlockHeader *types.BlockHeader) (tx *types.Tx, err error) {
+	preBlockHash := preBlockHeader.Hash()
+	consensusResult, err := chain.GetConsensusResultByHash(&preBlockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	rewards, err := consensusResult.GetCoinbaseRewards(preBlockHeader.Height)
+	if err != nil {
+		return nil, err
+	}
+
+	return createCoinbaseTxByReward(accountManager, preBlockHeader.Height + 1, rewards)
+}
+
+func createCoinbaseTxByReward(accountManager *account.Manager, blockHeight uint64, rewards []state.CoinbaseReward) (tx *types.Tx, err error) {
 	arbitrary := append([]byte{0x00}, []byte(strconv.FormatUint(blockHeight, 10))...)
 	var script []byte
 	if accountManager == nil {
@@ -74,109 +91,210 @@ func createCoinbaseTx(accountManager *account.Manager, blockHeight uint64, rewar
 }
 
 // NewBlockTemplate returns a new block template that is ready to be solved
-func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager, timestamp uint64) (b *types.Block, err error) {
+func NewBlockTemplate(chain *protocol.Chain, accountManager *account.Manager, timestamp uint64) (*types.Block, error) {
+	block := createBasicBlock(chain, timestamp)
+
 	view := state.NewUtxoViewpoint()
 	txStatus := bc.NewTransactionStatus()
-	if err := txStatus.SetStatus(0, false); err != nil {
+
+	gasLeft, err := applyCoinbaseTransaction(chain, block, txStatus, accountManager, int64(consensus.ActiveNetParams.MaxBlockGas))
+	if err != nil {
 		return nil, err
 	}
-	txEntries := []*bc.Tx{nil}
-	gasUsed := uint64(0)
 
-	// get preblock info for generate next block
-	preBlockHeader := c.BestBlockHeader()
-	preBlockHash := preBlockHeader.Hash()
-	nextBlockHeight := preBlockHeader.Height + 1
+	gasLeft, err = applyTransactionFromPool(chain, view, block, txStatus, gasLeft)
+	if err != nil {
+		return nil, err
+	}
+	
+	if err := applyTransactionFromSubProtocol(chain, view, block, txStatus, accountManager, gasLeft); err != nil {
+		return nil, err
+	}
 
-	b = &types.Block{
+	var txEntries []*bc.Tx
+	for _, tx := range block.Transactions {
+		txEntries = append(txEntries, tx.Tx)
+	}
+
+	block.BlockHeader.BlockCommitment.TransactionsMerkleRoot, err = types.TxMerkleRoot(txEntries)
+	if err != nil {
+		return nil, err
+	}
+
+	block.BlockHeader.BlockCommitment.TransactionStatusHash, err = types.TxStatusMerkleRoot(txStatus.VerifyStatus)
+
+	_, err = chain.SignBlock(block)
+	return block, err
+}
+
+func createBasicBlock(chain *protocol.Chain, timestamp uint64) *types.Block {
+	preBlockHeader := chain.BestBlockHeader()
+	return &types.Block{
 		BlockHeader: types.BlockHeader{
 			Version:           1,
-			Height:            nextBlockHeight,
-			PreviousBlockHash: preBlockHash,
+			Height:            preBlockHeader.Height + 1,
+			PreviousBlockHash: preBlockHeader.Hash(),
 			Timestamp:         timestamp,
 			BlockCommitment:   types.BlockCommitment{},
 			BlockWitness:      types.BlockWitness{Witness: make([][]byte, consensus.ActiveNetParams.NumOfConsensusNode)},
 		},
 	}
-	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: nextBlockHeight}}
-	b.Transactions = []*types.Tx{nil}
+}
 
-	txs := txPool.GetTransactions()
-	sort.Sort(byTime(txs))
-
-	entriesTxs := []*bc.Tx{}
-	for _, txDesc := range txs {
-		entriesTxs = append(entriesTxs, txDesc.Tx.Tx)
+func applyCoinbaseTransaction(chain *protocol.Chain, block *types.Block, txStatus *bc.TransactionStatus, accountManager *account.Manager, gasLeft int64) (int64, error) {
+	coinbaseTx, err := createCoinbaseTx(accountManager, chain, chain.BestBlockHeader())
+	if err != nil {
+		return 0, errors.Wrap(err, "fail on create coinbase tx")
 	}
 
-	validateResults := validation.ValidateTxs(entriesTxs, bcBlock)
-	for i, validateResult := range validateResults {
-		txDesc := txs[i]
-		tx := txDesc.Tx.Tx
-		gasOnlyTx := false
+	gasState, err := validation.ValidateTx(coinbaseTx.Tx, &bc.Block{BlockHeader: &bc.BlockHeader{Height: chain.BestBlockHeight() + 1}, Transactions: []*bc.Tx{coinbaseTx.Tx}})
+	if err != nil {
+		return 0, err
+	}
 
-		gasStatus := validateResult.GetGasState()
-		if validateResult.GetError() != nil {
+	block.Transactions = append(block.Transactions, coinbaseTx)
+	if err := txStatus.SetStatus(0, false); err != nil {
+		return 0, err
+	}
+
+	return gasLeft - gasState.GasUsed, nil
+}
+
+
+func applyTransactionFromPool(chain *protocol.Chain, view *state.UtxoViewpoint, block *types.Block, txStatus *bc.TransactionStatus, gasLeft int64) (int64, error) {
+	poolTxs := getAllTxsFromPool(chain.GetTxPool())
+	results, gasLeft := preValidateTxs(poolTxs, chain, view, gasLeft)
+	for _, result := range results {
+		if result.err != nil && !result.gasOnly {
+			blkGenSkipTxForErr(chain.GetTxPool(), &result.tx.ID, result.err)
+			continue
+		}
+
+		if err := txStatus.SetStatus(len(block.Transactions), result.gasOnly); err != nil {
+			return 0, err
+		}
+
+		block.Transactions = append(block.Transactions, result.tx)
+	}
+	return gasLeft, nil
+}
+
+func applyTransactionFromSubProtocol(chain *protocol.Chain, view *state.UtxoViewpoint, block *types.Block, txStatus *bc.TransactionStatus, accountManager *account.Manager, gasLeft int64) error {
+	txs, err := getTxsFromSubProtocols(chain, accountManager, block.Transactions, gasLeft)
+	if err != nil {
+		return err
+	}
+
+	results, gasLeft := preValidateTxs(txs, chain, view, gasLeft)
+	for _, result := range results {
+		if result.err != nil {
+			return err
+		}
+
+		if err := txStatus.SetStatus(len(block.Transactions), result.gasOnly); err != nil {
+			return err
+		}
+
+		block.Transactions = append(block.Transactions, result.tx)
+	}
+	return nil
+}
+
+type validateTxResult struct {
+	tx      *types.Tx
+	gasOnly bool
+	err     error
+}
+
+func preValidateTxs(txs []*types.Tx, chain *protocol.Chain, view *state.UtxoViewpoint, gasLeft int64) ([]*validateTxResult, int64) {
+	var results []*validateTxResult
+
+	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: chain.BestBlockHeight() + 1}}
+	bcTxs := make([]*bc.Tx, len(txs))
+	for i, tx := range txs {
+		bcTxs[i] = tx.Tx
+	}
+
+	validateResults := validation.ValidateTxs(bcTxs, bcBlock)
+	for i := 0; i < len(validateResults) && gasLeft > 0; i++ {
+		gasOnlyTx := false
+		gasStatus := validateResults[i].GetGasState()
+		if err := validateResults[i].GetError(); err != nil {
 			if !gasStatus.GasValid {
-				blkGenSkipTxForErr(txPool, &tx.ID, err)
+				results = append(results, &validateTxResult{tx: txs[i], err: err})
 				continue
 			}
 			gasOnlyTx = true
 		}
 
-		if err := c.GetTransactionsUtxo(view, []*bc.Tx{tx}); err != nil {
-			blkGenSkipTxForErr(txPool, &tx.ID, err)
+		if err := chain.GetTransactionsUtxo(view, []*bc.Tx{bcTxs[i]}); err != nil {
+			results = append(results, &validateTxResult{tx: txs[i], err: err})
 			continue
 		}
 
-		if gasUsed+uint64(gasStatus.GasUsed) > consensus.ActiveNetParams.MaxBlockGas {
+		if gasLeft-gasStatus.GasUsed < 0 {
 			break
 		}
 
-		if err := view.ApplyTransaction(bcBlock, tx, gasOnlyTx); err != nil {
-			blkGenSkipTxForErr(txPool, &tx.ID, err)
+		if err := view.ApplyTransaction(bcBlock, bcTxs[i], gasOnlyTx); err != nil {
+			results = append(results, &validateTxResult{tx: txs[i], err: err})
 			continue
 		}
 
-		if err := txStatus.SetStatus(len(b.Transactions), gasOnlyTx); err != nil {
-			return nil, err
+		if err := validateBySubProtocols(txs[i], validateResults[i].GetError() != nil, chain.SubProtocols()); err != nil {
+			results = append(results, &validateTxResult{tx: txs[i], err: err})
+			continue
 		}
 
-		b.Transactions = append(b.Transactions, txDesc.Tx)
-		txEntries = append(txEntries, tx)
-		gasUsed += uint64(gasStatus.GasUsed)
-		if gasUsed == consensus.ActiveNetParams.MaxBlockGas {
+		results = append(results, &validateTxResult{tx: txs[i], gasOnly: gasOnlyTx, err: validateResults[i].GetError()})
+		gasLeft -= gasStatus.GasUsed
+	}
+	return results, gasLeft
+}
+
+func validateBySubProtocols(tx *types.Tx, statusFail bool, subProtocols []protocol.Protocoler) error {
+	for _, subProtocol := range subProtocols {
+		verifyResult := &bc.TxVerifyResult{StatusFail: statusFail}
+		if err := subProtocol.ValidateTx(tx, verifyResult); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func getAllTxsFromPool(txPool *protocol.TxPool) []*types.Tx {
+	txDescList := txPool.GetTransactions()
+	sort.Sort(byTime(txDescList))
+
+	poolTxs := make([]*types.Tx, len(txDescList))
+	for i, txDesc := range txDescList {
+		poolTxs[i] = txDesc.Tx
+	}
+	return poolTxs
+}
+
+func getTxsFromSubProtocols(chain *protocol.Chain, accountManager *account.Manager, poolTxs []*types.Tx, gasLeft int64) ([]*types.Tx, error) {
+	cp, err := accountManager.GetCoinbaseControlProgram()
+	if err != nil {
+		return nil, err
+	}
+
+	var result []*types.Tx
+	var subTxs []*types.Tx
+	for i, p := range chain.SubProtocols() {
+		if gasLeft <= 0 {
 			break
 		}
 
+		subTxs, gasLeft, err = p.BeforeProposalBlock(poolTxs, cp, chain.BestBlockHeight() + 1, gasLeft)
+		if err != nil {
+			log.WithFields(log.Fields{"module": logModule, "index": i, "error": err}).Error("failed on sub protocol txs package")
+			continue
+		}
+
+		result = append(result, subTxs...)
 	}
-
-	consensusResult, err := c.GetConsensusResultByHash(&preBlockHash)
-	if err != nil {
-		return nil, err
-	}
-
-	rewards, err := consensusResult.GetCoinbaseRewards(preBlockHeader.Height)
-	if err != nil {
-		return nil, err
-	}
-
-	// create coinbase transaction
-	b.Transactions[0], err = createCoinbaseTx(accountManager, nextBlockHeight, rewards)
-	if err != nil {
-		return nil, errors.Wrap(err, "fail on createCoinbaseTx")
-	}
-
-	txEntries[0] = b.Transactions[0].Tx
-	b.BlockHeader.BlockCommitment.TransactionsMerkleRoot, err = types.TxMerkleRoot(txEntries)
-	if err != nil {
-		return nil, err
-	}
-
-	b.BlockHeader.BlockCommitment.TransactionStatusHash, err = types.TxStatusMerkleRoot(txStatus.VerifyStatus)
-
-	_, err = c.SignBlock(b)
-	return b, err
+	return result, nil
 }
 
 func blkGenSkipTxForErr(txPool *protocol.TxPool, txHash *bc.Hash, err error) {
