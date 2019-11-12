@@ -170,7 +170,7 @@ func (a *crossOutAction) Build(ctx context.Context, b *TemplateBuilder) error {
 	}
 
 	program := a.Program
-	if len(program) == 0 {
+	if a.Address != "" {
 		address, err := common.DecodeAddress(a.Address, consensus.BytomMainNetParams(&consensus.ActiveNetParams))
 		if err != nil {
 			return err
