@@ -96,6 +96,7 @@ CREATE TABLE `assets` (
   `issuance_program` varchar(128) NOT NULL,
   `vm_version` int(11) NOT NULL DEFAULT '1',
   `definition` text,
+  `is_open_federation_issue` tinyint(1) DEFAULT '0',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),

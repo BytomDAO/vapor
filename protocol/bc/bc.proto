@@ -132,4 +132,5 @@ message CrossChainInput {
   AssetDefinition  asset_definition          = 4;
   repeated bytes   witness_arguments         = 5;
   uint64           ordinal                   = 6;
+  bytes            rawDefinitionByte         = 7;
 }
