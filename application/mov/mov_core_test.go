@@ -16,6 +16,13 @@ import (
 	"github.com/vapor/testutil"
 )
 
+/*
+	@addTest:BeforeProposalBlock: will gas affect generate tx? will be packed tx affect generate tx?
+	@addTest:TestApplyBlock: one block has two different trade pairs & different trade pair won't affect each order(attach & detach)
+	@addTest:TestApplyBlock: node packed maker tx and match transaction in random order(attach & detach)
+	@addTest:TestValidateBlock: one tx has trade input and cancel input mixed
+	@addTest:TestValidateBlock: regular match transaction's seller program is also a P2WMCProgram
+*/
 func TestApplyBlock(t *testing.T) {
 	initBlockHeader := &types.BlockHeader{Height: 1, PreviousBlockHash: bc.Hash{}}
 	cases := []struct {
@@ -199,7 +206,7 @@ func TestValidateBlock(t *testing.T) {
 				},
 			},
 			verifyResults: []*bc.TxVerifyResult{{StatusFail: false}, {StatusFail: false}},
-			wantError: nil,
+			wantError:     nil,
 		},
 		{
 			desc: "block only has matched tx",
@@ -211,7 +218,7 @@ func TestValidateBlock(t *testing.T) {
 				},
 			},
 			verifyResults: []*bc.TxVerifyResult{{StatusFail: false}, {StatusFail: false}, {StatusFail: false}},
-			wantError: nil,
+			wantError:     nil,
 		},
 		{
 			desc: "block has maker tx and matched tx",
@@ -225,7 +232,7 @@ func TestValidateBlock(t *testing.T) {
 				},
 			},
 			verifyResults: []*bc.TxVerifyResult{{StatusFail: false}, {StatusFail: false}, {StatusFail: false}, {StatusFail: false}, {StatusFail: false}},
-			wantError: nil,
+			wantError:     nil,
 		},
 		{
 			desc: "status fail of maker tx is true",
@@ -236,7 +243,7 @@ func TestValidateBlock(t *testing.T) {
 				},
 			},
 			verifyResults: []*bc.TxVerifyResult{{StatusFail: false}, {StatusFail: true}},
-			wantError: errStatusFailMustFalse,
+			wantError:     errStatusFailMustFalse,
 		},
 		{
 			desc: "status fail of matched tx is true",
@@ -247,7 +254,7 @@ func TestValidateBlock(t *testing.T) {
 				},
 			},
 			verifyResults: []*bc.TxVerifyResult{{StatusFail: false}, {StatusFail: true}},
-			wantError: errStatusFailMustFalse,
+			wantError:     errStatusFailMustFalse,
 		},
 		{
 			desc: "asset id in matched tx is not unique",
@@ -267,7 +274,7 @@ func TestValidateBlock(t *testing.T) {
 				},
 			},
 			verifyResults: []*bc.TxVerifyResult{{StatusFail: false}, {StatusFail: true}},
-			wantError: errAssetIDMustUniqueInMatchedTx,
+			wantError:     errAssetIDMustUniqueInMatchedTx,
 		},
 		{
 			desc: "common input in the matched tx",
@@ -289,7 +296,7 @@ func TestValidateBlock(t *testing.T) {
 				},
 			},
 			verifyResults: []*bc.TxVerifyResult{{StatusFail: false}},
-			wantError: errInputProgramMustP2WMCScript,
+			wantError:     errInputProgramMustP2WMCScript,
 		},
 		{
 			desc: "cancel order in the matched tx",
@@ -311,7 +318,7 @@ func TestValidateBlock(t *testing.T) {
 				},
 			},
 			verifyResults: []*bc.TxVerifyResult{{StatusFail: false}},
-			wantError: errExistCancelOrderInMatchedTx,
+			wantError:     errExistCancelOrderInMatchedTx,
 		},
 		{
 			desc: "common input in the cancel order tx",
@@ -330,7 +337,7 @@ func TestValidateBlock(t *testing.T) {
 				},
 			},
 			verifyResults: []*bc.TxVerifyResult{{StatusFail: false}},
-			wantError: errInputProgramMustP2WMCScript,
+			wantError:     errInputProgramMustP2WMCScript,
 		},
 		{
 			desc: "amount of fee greater than max fee amount",
@@ -353,7 +360,7 @@ func TestValidateBlock(t *testing.T) {
 				},
 			},
 			verifyResults: []*bc.TxVerifyResult{{StatusFail: false}},
-			wantError: errAmountOfFeeGreaterThanMaximum,
+			wantError:     errAmountOfFeeGreaterThanMaximum,
 		},
 		{
 			desc: "ratio numerator is zero",
@@ -366,7 +373,7 @@ func TestValidateBlock(t *testing.T) {
 				},
 			},
 			verifyResults: []*bc.TxVerifyResult{{StatusFail: false}},
-			wantError: errRatioOfTradeLessThanZero,
+			wantError:     errRatioOfTradeLessThanZero,
 		},
 		{
 			desc: "ratio denominator is zero",
@@ -379,7 +386,7 @@ func TestValidateBlock(t *testing.T) {
 				},
 			},
 			verifyResults: []*bc.TxVerifyResult{{StatusFail: false}},
-			wantError: errRatioOfTradeLessThanZero,
+			wantError:     errRatioOfTradeLessThanZero,
 		},
 		{
 			desc: "ratio numerator product input amount is overflow",
@@ -392,7 +399,7 @@ func TestValidateBlock(t *testing.T) {
 				},
 			},
 			verifyResults: []*bc.TxVerifyResult{{StatusFail: false}},
-			wantError: errNumeratorOfRatioIsOverflow,
+			wantError:     errNumeratorOfRatioIsOverflow,
 		},
 	}
 
