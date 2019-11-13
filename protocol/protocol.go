@@ -21,6 +21,7 @@ const (
 
 type Protocoler interface {
 	Name() string
+	StartHeight() uint64
 	BeforeProposalBlock(txs []*types.Tx, nodeProgram []byte, blockHeight uint64, gasLeft int64) ([]*types.Tx, int64, error)
 	ChainStatus() (uint64, *bc.Hash, error)
 	ValidateBlock(block *types.Block, verifyResults []*bc.TxVerifyResult) error
@@ -111,7 +112,13 @@ func (c *Chain) initChainStatus() error {
 		return err
 	}
 
-	consensusResults := []*state.ConsensusResult{&state.ConsensusResult{
+	for _, subProtocol := range c.subProtocols {
+		if err := subProtocol.ApplyBlock(genesisBlock); err != nil {
+			return err
+		}
+	}
+
+	consensusResults := []*state.ConsensusResult{{
 		Seq:            0,
 		NumOfVote:      make(map[string]uint64),
 		CoinbaseReward: make(map[string]uint64),
@@ -208,6 +215,10 @@ func (c *Chain) markTransactions(txs ...*types.Tx) {
 }
 
 func (c *Chain) syncProtocolStatus(subProtocol Protocoler) error {
+	if c.BestBlockHeight() < subProtocol.StartHeight() {
+		return nil
+	}
+
 	protocolHeight, protocolHash, err := subProtocol.ChainStatus()
 	if err != nil {
 		return errors.Wrap(err, "failed on get sub protocol status")
