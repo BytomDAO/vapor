@@ -215,7 +215,7 @@ func (c *Chain) markTransactions(txs ...*types.Tx) {
 }
 
 func (c *Chain) syncProtocolStatus(subProtocol Protocoler) error {
-	if c.BestBlockHeight() < subProtocol.StartHeight() {
+	if c.bestBlockHeader.Height < subProtocol.StartHeight() {
 		return nil
 	}
 
