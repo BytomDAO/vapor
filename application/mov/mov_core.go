@@ -155,6 +155,11 @@ func (m *MovCore) Name() string {
 	return "MOV"
 }
 
+// StartHeight return the start block height of current module
+func (m *MovCore) StartHeight() uint64 {
+	return m.startBlockHeight
+}
+
 // ValidateBlock no need to verify the block header, because the first module has been verified.
 // just need to verify the transactions in the block.
 func (m *MovCore) ValidateBlock(block *types.Block, verifyResults []*bc.TxVerifyResult) error {
