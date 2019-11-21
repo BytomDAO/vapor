@@ -3,6 +3,7 @@ package validation
 import (
 	"fmt"
 	"math"
+	"runtime"
 	"sync"
 
 	"github.com/vapor/common"
@@ -12,10 +13,6 @@ import (
 	"github.com/vapor/math/checked"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/vm"
-)
-
-const (
-	validateWorkerNum = 32
 )
 
 // validate transaction error
@@ -665,6 +662,7 @@ func validateTxWorker(workCh chan *validateTxWork, resultCh chan *ValidateTxResu
 // ValidateTxs validates txs in async mode
 func ValidateTxs(txs []*bc.Tx, block *bc.Block) []*ValidateTxResult {
 	txSize := len(txs)
+	validateWorkerNum := runtime.NumCPU()
 	//init the goroutine validate worker
 	var wg sync.WaitGroup
 	workCh := make(chan *validateTxWork, txSize)

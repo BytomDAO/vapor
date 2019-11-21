@@ -26,6 +26,6 @@ func BenchmarkNewBlockTpl(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		proposal.NewBlockTemplate(chain, accountManager, uint64(time.Now().UnixNano()/1e6))
+		proposal.NewBlockTemplate(chain, accountManager, uint64(time.Now().UnixNano()/1e6), time.Minute)
 	}
 }
