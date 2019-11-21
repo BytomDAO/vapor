@@ -22,7 +22,7 @@ const (
 type Protocoler interface {
 	Name() string
 	StartHeight() uint64
-	BeforeProposalBlock(txs []*types.Tx, nodeProgram []byte, blockHeight uint64, gasLeft int64) ([]*types.Tx, int64, error)
+	BeforeProposalBlock(txs []*types.Tx, nodeProgram []byte, blockHeight uint64, gasLeft int64, isTimeout func() bool) ([]*types.Tx, error)
 	ChainStatus() (uint64, *bc.Hash, error)
 	ValidateBlock(block *types.Block, verifyResults []*bc.TxVerifyResult) error
 	ValidateTxs(txs []*types.Tx, verifyResults []*bc.TxVerifyResult) error
@@ -238,7 +238,7 @@ func (c *Chain) syncProtocolStatus(subProtocol Protocoler) error {
 			return errors.Wrap(err, subProtocol.Name(), "sub protocol detach block err")
 		}
 
-		protocolHeight, protocolHash = block.Height -1, &block.PreviousBlockHash
+		protocolHeight, protocolHash = block.Height-1, &block.PreviousBlockHash
 	}
 
 	for height := protocolHeight + 1; height <= c.BestBlockHeight(); height++ {

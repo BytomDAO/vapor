@@ -76,14 +76,14 @@ func (m *MovCore) ApplyBlock(block *types.Block) error {
     become an infinite loop and DDoS attacks the whole network?
 */
 // BeforeProposalBlock return all transactions than can be matched, and the number of transactions cannot exceed the given capacity.
-func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, nodeProgram []byte, blockHeight uint64, gasLeft int64) ([]*types.Tx, int64, error) {
+func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, nodeProgram []byte, blockHeight uint64, gasLeft int64, isTimeout func() bool) ([]*types.Tx, error) {
 	if blockHeight <= m.startBlockHeight {
-		return nil, 0, nil
+		return nil, nil
 	}
 
 	orderTable, err := buildOrderTable(m.movStore, txs)
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 
 	matchEngine := match.NewEngine(orderTable, maxFeeRate, nodeProgram)
@@ -91,7 +91,7 @@ func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, nodeProgram []byte, block
 	tradePairIterator := database.NewTradePairIterator(m.movStore)
 
 	var packagedTxs []*types.Tx
-	for gasLeft > 0 && tradePairIterator.HasNext() {
+	for gasLeft > 0 && !isTimeout() && tradePairIterator.HasNext() {
 		tradePair := tradePairIterator.Next()
 		if tradePairMap[tradePair.Key()] {
 			continue
@@ -99,10 +99,10 @@ func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, nodeProgram []byte, block
 		tradePairMap[tradePair.Key()] = true
 		tradePairMap[tradePair.Reverse().Key()] = true
 
-		for gasLeft > 0 && matchEngine.HasMatchedTx(tradePair, tradePair.Reverse()) {
+		for gasLeft > 0 && !isTimeout() && matchEngine.HasMatchedTx(tradePair, tradePair.Reverse()) {
 			matchedTx, err := matchEngine.NextMatchedTx(tradePair, tradePair.Reverse())
 			if err != nil {
-				return nil, 0, err
+				return nil, err
 			}
 
 			gasUsed := calcMatchedTxGasUsed(matchedTx)
@@ -112,7 +112,7 @@ func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, nodeProgram []byte, block
 			gasLeft -= gasUsed
 		}
 	}
-	return packagedTxs, gasLeft, nil
+	return packagedTxs, nil
 }
 
 // ChainStatus return the current block height and block hash in dex core
