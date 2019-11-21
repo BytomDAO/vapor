@@ -24,6 +24,12 @@ const (
 	batchApplyNum = 64
 )
 
+// NewBlockTemplate returns a new block template that is ready to be solved
+func NewBlockTemplate(chain *protocol.Chain, accountManager *account.Manager, timestamp uint64, timeoutDuration time.Duration) (*types.Block, error) {
+	builder := newBlockBuilder(chain, accountManager, timestamp, timeoutDuration)
+	return builder.build()
+}
+
 type blockBuilder struct {
 	chain          *protocol.Chain
 	accountManager *account.Manager
@@ -91,7 +97,8 @@ func (b *blockBuilder) applyTransactions(txs []*types.Tx) error {
 		results, gasLeft := preValidateTxs(tempTxs, b.chain, b.utxoView, b.gasLeft)
 		for _, result := range results {
 			if result.err != nil && !result.gasOnly {
-				blkGenSkipTxForErr(b.chain.GetTxPool(), &result.tx.ID, result.err)
+				log.WithFields(log.Fields{"module": logModule, "error": result.err}).Error("mining block generation: skip tx due to")
+				b.chain.GetTxPool().RemoveTransaction(&result.tx.ID)
 				continue
 			}
 
@@ -134,7 +141,7 @@ func (b *blockBuilder) applyTransactionFromSubProtocol() error {
 			break
 		}
 
-		subTxs, _, err := p.BeforeProposalBlock(b.block.Transactions, cp, b.block.Height, b.gasLeft, b.isTimeout)
+		subTxs, err := p.BeforeProposalBlock(b.block.Transactions, cp, b.block.Height, b.gasLeft, b.isTimeout)
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "index": i, "error": err}).Error("failed on sub protocol txs package")
 			continue
@@ -145,6 +152,27 @@ func (b *blockBuilder) applyTransactionFromSubProtocol() error {
 		}
 	}
 	return nil
+}
+
+func (b *blockBuilder) build() (*types.Block, error) {
+	if err := b.applyCoinbaseTransaction(); err != nil {
+		return nil, err
+	}
+
+	if err := b.applyTransactionFromPool(); err != nil {
+		return nil, err
+	}
+
+	if err := b.applyTransactionFromSubProtocol(); err != nil {
+		return nil, err
+	}
+
+	if err := b.calcBlockCommitment(); err != nil {
+		return nil, err
+	}
+
+	_, err := b.chain.SignBlock(b.block)
+	return b.block, err
 }
 
 func (b *blockBuilder) calcBlockCommitment() (err error) {
@@ -241,29 +269,6 @@ func createCoinbaseTxByReward(accountManager *account.Manager, blockHeight uint6
 	return tx, nil
 }
 
-// NewBlockTemplate returns a new block template that is ready to be solved
-func NewBlockTemplate(chain *protocol.Chain, accountManager *account.Manager, timestamp uint64, timeoutDuration time.Duration) (*types.Block, error) {
-	builder := newBlockBuilder(chain, accountManager, timestamp, timeoutDuration)
-	if err := builder.applyCoinbaseTransaction(); err != nil {
-		return nil, err
-	}
-
-	if err := builder.applyTransactionFromPool(); err != nil {
-		return nil, err
-	}
-
-	if err := builder.applyTransactionFromSubProtocol(); err != nil {
-		return nil, err
-	}
-
-	if err := builder.calcBlockCommitment(); err != nil {
-		return nil, err
-	}
-
-	_, err := builder.chain.SignBlock(builder.block)
-	return builder.block, err
-}
-
 type validateTxResult struct {
 	tx      *types.Tx
 	gasOnly bool
@@ -324,9 +329,4 @@ func validateBySubProtocols(tx *types.Tx, statusFail bool, subProtocols []protoc
 		}
 	}
 	return nil
-}
-
-func blkGenSkipTxForErr(txPool *protocol.TxPool, txHash *bc.Hash, err error) {
-	log.WithFields(log.Fields{"module": logModule, "error": err}).Error("mining block generation: skip tx due to")
-	txPool.RemoveTransaction(txHash)
 }
