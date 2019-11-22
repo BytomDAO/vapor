@@ -241,7 +241,7 @@ func (c *Chain) syncProtocolStatus(subProtocol Protocoler) error {
 		protocolHeight, protocolHash = block.Height-1, &block.PreviousBlockHash
 	}
 
-	for height := protocolHeight + 1; height <= c.BestBlockHeight(); height++ {
+	for height := protocolHeight + 1; height <= c.bestBlockHeader.Height; height++ {
 		block, err := c.GetBlockByHeight(height)
 		if err != nil {
 			return errors.Wrap(err, subProtocol.Name(), "can't get block by height in chain")
