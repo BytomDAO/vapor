@@ -152,11 +152,12 @@ var TestNetParams = Params{
 	Name:            "test",
 	Bech32HRPSegwit: "tp",
 	DefaultPort:     "56657",
-	DNSSeeds: []string{
-		"52.82.7.233",
-		"52.82.109.252",
-		"52.82.29.30",
-	},
+	DNSSeeds:        []string{},
+	// DNSSeeds: []string{
+	// 	"52.82.7.233",
+	// 	"52.82.109.252",
+	// 	"52.82.29.30",
+	// },
 	BasicConfig: BasicConfig{
 		MaxBlockGas:                uint64(10000000),
 		MaxGasAmount:               int64(200000),
