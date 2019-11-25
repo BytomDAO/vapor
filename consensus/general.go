@@ -156,12 +156,12 @@ var TestNetParams = Params{
 	DNSSeeds:        []string{"www.testnetseed.vapor.io"},
 	BasicConfig: BasicConfig{
 		MaxBlockGas:                uint64(10000000),
-		MaxGasAmount:               int64(200000),
+		MaxGasAmount:               int64(640000),
 		DefaultGasCredit:           int64(160000),
 		StorageGasRate:             int64(1),
 		VMGasRate:                  int64(200),
-		VotePendingBlockNumber:     uint64(10000),
-		CoinbasePendingBlockNumber: uint64(1200),
+		VotePendingBlockNumber:     uint64(3456000),
+		CoinbasePendingBlockNumber: uint64(7200),
 		CoinbaseArbitrarySizeLimit: 128,
 	},
 	DPOSConfig: DPOSConfig{
