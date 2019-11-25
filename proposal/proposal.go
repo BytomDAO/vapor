@@ -44,8 +44,8 @@ type blockBuilder struct {
 
 	warnTimeoutCh     <-chan time.Time
 	criticalTimeoutCh <-chan time.Time
-	gasLeft           int64
 	timeoutStatus     uint8
+	gasLeft           int64
 }
 
 func newBlockBuilder(chain *protocol.Chain, accountManager *account.Manager, timestamp uint64, warnDuration, criticalDuration time.Duration) *blockBuilder {
