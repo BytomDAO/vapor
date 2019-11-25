@@ -156,8 +156,8 @@ type crossOutAction struct {
 
 func (a *crossOutAction) Build(ctx context.Context, b *TemplateBuilder) error {
 	var missing []string
-	if a.Address == "" {
-		missing = append(missing, "address")
+	if a.Address == "" && len(a.Program) == 0 {
+		missing = append(missing, "address or program")
 	}
 	if a.AssetId.IsZero() {
 		missing = append(missing, "asset_id")

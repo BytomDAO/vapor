@@ -185,7 +185,7 @@ func CalcMatchedTxFee(txData *types.TxData, maxFeeRate float64) (map[bc.AssetID]
 		}
 
 		oppositeAmount := uint64(assetFeeMap[contractArgs.RequestedAsset].FeeAmount)
-		receiveAmount := vprMath.MinUint64(calcRequestAmount(input.Amount(), contractArgs), oppositeAmount)
+		receiveAmount := vprMath.MinUint64(CalcRequestAmount(input.Amount(), contractArgs), oppositeAmount)
 		assetFeeMap[input.AssetID()].MaxFeeAmount = calcMaxFeeAmount(calcShouldPayAmount(receiveAmount, contractArgs), maxFeeRate)
 	}
 
@@ -207,7 +207,7 @@ func addMatchTxOutput(txData *types.TxData, txInput *types.TxInput, order *commo
 		return err
 	}
 
-	requestAmount := calcRequestAmount(order.Utxo.Amount, contractArgs)
+	requestAmount := CalcRequestAmount(order.Utxo.Amount, contractArgs)
 	receiveAmount := vprMath.MinUint64(requestAmount, oppositeAmount)
 	shouldPayAmount := calcShouldPayAmount(receiveAmount, contractArgs)
 	isPartialTrade := requestAmount > receiveAmount
@@ -220,7 +220,7 @@ func addMatchTxOutput(txData *types.TxData, txInput *types.TxInput, order *commo
 	return nil
 }
 
-func calcRequestAmount(fromAmount uint64, contractArg *vmutil.MagneticContractArgs) uint64 {
+func CalcRequestAmount(fromAmount uint64, contractArg *vmutil.MagneticContractArgs) uint64 {
 	return uint64(int64(fromAmount) * contractArg.RatioNumerator / contractArg.RatioDenominator)
 }
 

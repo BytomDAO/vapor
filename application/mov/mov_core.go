@@ -27,6 +27,7 @@ var (
 	errNumeratorOfRatioIsOverflow    = errors.New("ratio numerator of contract args product input amount is overflow")
 	errLengthOfInputIsIncorrect      = errors.New("length of matched tx input is not equals to actual matched tx input")
 	errSpendOutputIDIsIncorrect      = errors.New("spend output id of matched tx is not equals to actual matched tx")
+	errRequestAmountLessThenOne      = errors.New("request amount of order less than one")
 )
 
 // MovCore represent the core logic of the match module, which include generate match transactions before packing the block,
@@ -222,7 +223,7 @@ func validateCancelOrderTx(tx *types.Tx, verifyResult *bc.TxVerifyResult) error 
 	return nil
 }
 
-func validateMagneticContractArgs(inputAmount uint64, program []byte) error {
+func validateMagneticContractArgs(fromAmount uint64, program []byte) error {
 	contractArgs, err := segwit.DecodeP2WMCProgram(program)
 	if err != nil {
 		return err
@@ -232,8 +233,12 @@ func validateMagneticContractArgs(inputAmount uint64, program []byte) error {
 		return errRatioOfTradeLessThanZero
 	}
 
-	if _, ok := checked.MulInt64(int64(inputAmount), contractArgs.RatioNumerator); !ok {
+	if _, ok := checked.MulInt64(int64(fromAmount), contractArgs.RatioNumerator); !ok {
 		return errNumeratorOfRatioIsOverflow
+	}
+
+	if match.CalcRequestAmount(fromAmount, contractArgs) < 1 {
+		return errRequestAmountLessThenOne
 	}
 	return nil
 }
