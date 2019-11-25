@@ -226,18 +226,11 @@ func (b *blockBuilder) getTimeoutStatus() uint8 {
 	select {
 	case <-b.criticalTimeoutCh:
 		b.timeoutStatus = timeoutCritical
-	default:
-	}
-
-	if b.timeoutStatus > timeoutOk {
-		return b.timeoutStatus
-	}
-
-	select {
 	case <-b.warnTimeoutCh:
 		b.timeoutStatus = timeoutWarn
 	default:
 	}
+
 	return b.timeoutStatus
 }
 
