@@ -94,7 +94,7 @@ func (b *blockBuilder) applyCoinbaseTransaction() error {
 	b.gasLeft -= gasState.GasUsed
 	return nil
 }
-func (b *blockBuilder) applyTransactions(txs []*types.Tx) error {
+func (b *blockBuilder) applyTransactions(txs []*types.Tx, timeoutStatus uint8) error {
 	tempTxs := []*types.Tx{}
 	for i := 0; i < len(txs); i++ {
 		if tempTxs = append(tempTxs, txs[i]); len(tempTxs) < batchApplyNum && i != len(txs)-1 {
@@ -118,7 +118,7 @@ func (b *blockBuilder) applyTransactions(txs []*types.Tx) error {
 
 		b.gasLeft = gasLeft
 		tempTxs = []*types.Tx{}
-		if b.getTimeoutStatus() == timeoutCritical {
+		if b.getTimeoutStatus() >= timeoutStatus {
 			break
 		}
 	}
@@ -134,7 +134,7 @@ func (b *blockBuilder) applyTransactionFromPool() error {
 		poolTxs[i] = txDesc.Tx
 	}
 
-	return b.applyTransactions(poolTxs)
+	return b.applyTransactions(poolTxs, timeoutWarn)
 }
 
 func (b *blockBuilder) applyTransactionFromSubProtocol() error {
@@ -158,7 +158,7 @@ func (b *blockBuilder) applyTransactionFromSubProtocol() error {
 			continue
 		}
 
-		if err := b.applyTransactions(subTxs); err != nil {
+		if err := b.applyTransactions(subTxs, timeoutCritical); err != nil {
 			return err
 		}
 	}
