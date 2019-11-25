@@ -16,8 +16,11 @@ import (
 )
 
 const (
-	logModule                 = "blockproposer"
-	timeProportionDenominator = 3
+	logModule         = "blockproposer"
+	warnTimeNum       = 2
+	warnTimeDenom     = 5
+	criticalTimeNum   = 4
+	criticalTimeDenom = 5
 )
 
 // BlockProposer propose several block in specified time range
@@ -75,8 +78,9 @@ func (b *BlockProposer) generateBlocks() {
 			continue
 		}
 
-		timeoutDuration := time.Duration(consensus.ActiveNetParams.BlockTimeInterval/timeProportionDenominator) * time.Millisecond
-		block, err := proposal.NewBlockTemplate(b.chain, b.accountManager, nextBlockTime, timeoutDuration)
+		warnDuration := time.Duration(consensus.ActiveNetParams.BlockTimeInterval*warnTimeNum/warnTimeDenom) * time.Millisecond
+		criticalDuration := time.Duration(consensus.ActiveNetParams.BlockTimeInterval*criticalTimeNum/criticalTimeDenom) * time.Millisecond
+		block, err := proposal.NewBlockTemplate(b.chain, b.accountManager, nextBlockTime, warnDuration, criticalDuration)
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("failed on create NewBlockTemplate")
 			continue

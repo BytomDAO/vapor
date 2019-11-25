@@ -159,7 +159,7 @@ func InsertChain(chain *protocol.Chain, txPool *protocol.TxPool, txs []*types.Tx
 		}
 	}
 
-	block, err := proposal.NewBlockTemplate(chain, nil, uint64(time.Now().UnixNano()/1e6), time.Minute)
+	block, err := proposal.NewBlockTemplate(chain, nil, uint64(time.Now().UnixNano()/1e6), time.Minute, time.Minute)
 	if err != nil {
 		return err
 	}
