@@ -22,11 +22,15 @@ import (
 const (
 	logModule     = "mining"
 	batchApplyNum = 64
+
+	timeoutOk = iota + 1
+	timeoutWarn
+	timeoutCritical
 )
 
 // NewBlockTemplate returns a new block template that is ready to be solved
-func NewBlockTemplate(chain *protocol.Chain, accountManager *account.Manager, timestamp uint64, timeoutDuration time.Duration) (*types.Block, error) {
-	builder := newBlockBuilder(chain, accountManager, timestamp, timeoutDuration)
+func NewBlockTemplate(chain *protocol.Chain, accountManager *account.Manager, timestamp uint64, warnDuration, criticalDuration time.Duration) (*types.Block, error) {
+	builder := newBlockBuilder(chain, accountManager, timestamp, warnDuration, criticalDuration)
 	return builder.build()
 }
 
@@ -38,12 +42,13 @@ type blockBuilder struct {
 	txStatus *bc.TransactionStatus
 	utxoView *state.UtxoViewpoint
 
-	timeoutCh   <-chan time.Time
-	gasLeft     int64
-	timeoutFlag bool
+	warnTimeoutCh     <-chan time.Time
+	criticalTimeoutCh <-chan time.Time
+	gasLeft           int64
+	timeoutStatus     uint8
 }
 
-func newBlockBuilder(chain *protocol.Chain, accountManager *account.Manager, timestamp uint64, timeoutDuration time.Duration) *blockBuilder {
+func newBlockBuilder(chain *protocol.Chain, accountManager *account.Manager, timestamp uint64, warnDuration, criticalDuration time.Duration) *blockBuilder {
 	preBlockHeader := chain.BestBlockHeader()
 	block := &types.Block{
 		BlockHeader: types.BlockHeader{
@@ -57,13 +62,15 @@ func newBlockBuilder(chain *protocol.Chain, accountManager *account.Manager, tim
 	}
 
 	builder := &blockBuilder{
-		chain:          chain,
-		accountManager: accountManager,
-		block:          block,
-		txStatus:       bc.NewTransactionStatus(),
-		utxoView:       state.NewUtxoViewpoint(),
-		timeoutCh:      time.After(timeoutDuration),
-		gasLeft:        int64(consensus.ActiveNetParams.MaxBlockGas),
+		chain:             chain,
+		accountManager:    accountManager,
+		block:             block,
+		txStatus:          bc.NewTransactionStatus(),
+		utxoView:          state.NewUtxoViewpoint(),
+		warnTimeoutCh:     time.After(warnDuration),
+		criticalTimeoutCh: time.After(criticalDuration),
+		gasLeft:           int64(consensus.ActiveNetParams.MaxBlockGas),
+		timeoutStatus:     timeoutOk,
 	}
 	return builder
 }
@@ -111,7 +118,7 @@ func (b *blockBuilder) applyTransactions(txs []*types.Tx) error {
 
 		b.gasLeft = gasLeft
 		tempTxs = []*types.Tx{}
-		if b.isTimeout() {
+		if b.getTimeoutStatus() == timeoutCritical {
 			break
 		}
 	}
@@ -136,12 +143,16 @@ func (b *blockBuilder) applyTransactionFromSubProtocol() error {
 		return err
 	}
 
+	isTimeout := func() bool {
+		return b.getTimeoutStatus() > timeoutOk
+	}
+
 	for i, p := range b.chain.SubProtocols() {
-		if b.gasLeft <= 0 || b.isTimeout() {
+		if b.gasLeft <= 0 || isTimeout() {
 			break
 		}
 
-		subTxs, err := p.BeforeProposalBlock(b.block.Transactions, cp, b.block.Height, b.gasLeft, b.isTimeout)
+		subTxs, err := p.BeforeProposalBlock(b.block.Transactions, cp, b.block.Height, b.gasLeft, isTimeout)
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "index": i, "error": err}).Error("failed on sub protocol txs package")
 			continue
@@ -207,17 +218,27 @@ func (b *blockBuilder) createCoinbaseTx() (*types.Tx, error) {
 	return createCoinbaseTxByReward(b.accountManager, b.block.Height, rewards)
 }
 
-func (b *blockBuilder) isTimeout() bool {
-	if b.timeoutFlag {
-		return true
+func (b *blockBuilder) getTimeoutStatus() uint8 {
+	if b.timeoutStatus == timeoutCritical {
+		return b.timeoutStatus
 	}
 
 	select {
-	case <-b.timeoutCh:
-		b.timeoutFlag = true
+	case <-b.criticalTimeoutCh:
+		b.timeoutStatus = timeoutCritical
 	default:
 	}
-	return b.timeoutFlag
+
+	if b.timeoutStatus > timeoutOk {
+		return b.timeoutStatus
+	}
+
+	select {
+	case <-b.warnTimeoutCh:
+		b.timeoutStatus = timeoutWarn
+	default:
+	}
+	return b.timeoutStatus
 }
 
 func createCoinbaseTxByReward(accountManager *account.Manager, blockHeight uint64, rewards []state.CoinbaseReward) (tx *types.Tx, err error) {
