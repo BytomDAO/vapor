@@ -182,6 +182,12 @@ func (bk *blockKeeper) regularBlockSync() error {
 
 		//This code is used to preventing the sync peer return a dust block which will not change the node's chain status
 		if bestHeight = bk.chain.BestBlockHeight(); i == bestHeight+1 {
+			blockHash := block.Hash()
+			if _, err := bk.chain.GetHeaderByHash(&blockHash); err != nil {
+				i--
+				continue
+			}
+
 			log.WithFields(log.Fields{"module": logModule, "height": i}).Warn("stop regular sync due to loop sync same height")
 			return nil
 		}
