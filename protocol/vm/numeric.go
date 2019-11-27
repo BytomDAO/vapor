@@ -484,7 +484,7 @@ func opMulFraction(vm *virtualMachine) error {
 	}
 
 	res := big.NewInt(x)
-	res.Mul(res, big.NewInt(y)).Div(res, big.NewInt(z))
+	res.Mul(res, big.NewInt(y)).Quo(res, big.NewInt(z))
 	if !res.IsInt64() {
 		return ErrRange
 	}

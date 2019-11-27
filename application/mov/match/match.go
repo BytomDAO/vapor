@@ -223,7 +223,7 @@ func addMatchTxOutput(txData *types.TxData, txInput *types.TxInput, order *commo
 
 func CalcRequestAmount(fromAmount uint64, contractArg *vmutil.MagneticContractArgs) uint64 {
 	res := big.NewInt(0).SetUint64(fromAmount)
-	res.Mul(res, big.NewInt(contractArg.RatioNumerator)).Div(res, big.NewInt(contractArg.RatioDenominator))
+	res.Mul(res, big.NewInt(contractArg.RatioNumerator)).Quo(res, big.NewInt(contractArg.RatioDenominator))
 	if !res.IsUint64() {
 		return 0
 	}
@@ -231,7 +231,12 @@ func CalcRequestAmount(fromAmount uint64, contractArg *vmutil.MagneticContractAr
 }
 
 func calcShouldPayAmount(receiveAmount uint64, contractArg *vmutil.MagneticContractArgs) uint64 {
-	return uint64(math.Floor(float64(receiveAmount) * float64(contractArg.RatioDenominator) / float64(contractArg.RatioNumerator)))
+	res := big.NewInt(0).SetUint64(receiveAmount)
+	res.Mul(res, big.NewInt(contractArg.RatioDenominator)).Quo(res, big.NewInt(contractArg.RatioNumerator))
+	if !res.IsUint64() {
+		return 0
+	}
+	return res.Uint64()
 }
 
 func calcMaxFeeAmount(shouldPayAmount uint64, maxFeeRate float64) int64 {
@@ -244,7 +249,7 @@ func calcOppositeIndex(size int, selfIdx int) int {
 
 func isMatched(orders []*common.Order) bool {
 	for i, order := range orders {
-		if opposisteOrder := orders[calcOppositeIndex(len(orders), i)]; 1/order.Rate < opposisteOrder.Rate {
+		if oppositeOrder := orders[calcOppositeIndex(len(orders), i)]; 1/order.Rate < oppositeOrder.Rate {
 			return false
 		}
 	}
