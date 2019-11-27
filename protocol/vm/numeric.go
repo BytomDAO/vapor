@@ -474,13 +474,13 @@ func opMulFraction(vm *virtualMachine) error {
 		return err
 	}
 
+	if z == 0 {
+		return ErrDivZero
+	}
+
 	x, err := vm.popInt64(true)
 	if err != nil {
 		return err
-	}
-
-	if z == 0 {
-		return ErrDivZero
 	}
 
 	res := big.NewInt(x)
