@@ -3,9 +3,7 @@ package protocol
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/config"
 	"github.com/vapor/errors"
-	"github.com/vapor/event"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 	"github.com/vapor/protocol/state"
@@ -120,20 +118,8 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		}
 	}
 
-	signature, err := c.signBlockHeader(&block.BlockHeader)
-	if err != nil {
+	if err := c.applyBlockSign(&block.BlockHeader); err != nil {
 		return errors.Sub(ErrBadBlock, err)
-	}
-
-	if len(signature) != 0 {
-		if err := c.store.SaveBlockHeader(&block.BlockHeader); err != nil {
-			return err
-		}
-
-		xpub := config.CommonConfig.PrivateKey().XPub()
-		if err := c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: block.Hash(), Signature: signature, XPub: xpub[:]}); err != nil {
-			return err
-		}
 	}
 
 	irrBlockHeader := c.lastIrrBlockHeader
@@ -259,20 +245,8 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 			}
 		}
 
-		signature, err := c.signBlockHeader(attachBlockHeader)
-		if err != nil {
+		if err := c.applyBlockSign(attachBlockHeader); err != nil {
 			return errors.Sub(ErrBadBlock, err)
-		}
-
-		if len(signature) != 0 {
-			if err := c.store.SaveBlockHeader(attachBlockHeader); err != nil {
-				return err
-			}
-
-			xpub := config.CommonConfig.PrivateKey().XPub()
-			if err := c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: attachBlockHeader.Hash(), Signature: signature, XPub: xpub[:]}); err != nil {
-				return err
-			}
 		}
 
 		blockHash := blockHeader.Hash()

@@ -205,6 +205,24 @@ func (c *Chain) SignBlockHeader(blockHeader *types.BlockHeader) error {
 	return err
 }
 
+func (c *Chain) applyBlockSign(blockHeader *types.BlockHeader) error {
+	signature, err := c.signBlockHeader(blockHeader)
+	if err != nil {
+		return errors.Sub(ErrBadBlock, err)
+	}
+
+	if len(signature) == 0 {
+		return nil
+	}
+
+	if err := c.store.SaveBlockHeader(blockHeader); err != nil {
+		return err
+	}
+
+	xpub := config.CommonConfig.PrivateKey().XPub()
+	return c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: blockHeader.Hash(), Signature: signature, XPub: xpub[:]})
+}
+
 func (c *Chain) signBlockHeader(blockHeader *types.BlockHeader) ([]byte, error) {
 	xprv := config.CommonConfig.PrivateKey()
 	xpub := xprv.XPub()
