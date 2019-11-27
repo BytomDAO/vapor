@@ -3,6 +3,7 @@ package match
 import (
 	"encoding/hex"
 	"math"
+	"math/big"
 
 	"github.com/vapor/application/mov/common"
 	"github.com/vapor/application/mov/contract"
@@ -221,11 +222,19 @@ func addMatchTxOutput(txData *types.TxData, txInput *types.TxInput, order *commo
 }
 
 func CalcRequestAmount(fromAmount uint64, contractArg *vmutil.MagneticContractArgs) uint64 {
-	return uint64(int64(fromAmount) * contractArg.RatioNumerator / contractArg.RatioDenominator)
+	bigFromAmount := big.NewInt(0).SetUint64(fromAmount)
+	bigRatioNum := big.NewInt(0).SetInt64(contractArg.RatioNumerator)
+	bigRatioDen := big.NewInt(0).SetInt64(contractArg.RatioDenominator)
+	product := big.NewInt(0).Mul(bigFromAmount, bigRatioNum)
+	return big.NewInt(0).Quo(product, bigRatioDen).Uint64()
 }
 
 func calcShouldPayAmount(receiveAmount uint64, contractArg *vmutil.MagneticContractArgs) uint64 {
-	return receiveAmount * uint64(contractArg.RatioDenominator) / uint64(contractArg.RatioNumerator)
+	bigReceiveAmount := big.NewInt(0).SetUint64(receiveAmount)
+	bigRatioNum := big.NewInt(0).SetInt64(contractArg.RatioNumerator)
+	bigRatioDen := big.NewInt(0).SetInt64(contractArg.RatioDenominator)
+	product := big.NewInt(0).Mul(bigReceiveAmount, bigRatioDen)
+	return big.NewInt(0).Quo(product, bigRatioNum).Uint64()
 }
 
 func calcMaxFeeAmount(shouldPayAmount uint64, maxFeeRate float64) int64 {
