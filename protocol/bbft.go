@@ -208,7 +208,7 @@ func (c *Chain) SignBlockHeader(blockHeader *types.BlockHeader) error {
 func (c *Chain) applyBlockSign(blockHeader *types.BlockHeader) error {
 	signature, err := c.signBlockHeader(blockHeader)
 	if err != nil {
-		return errors.Sub(ErrBadBlock, err)
+		return err
 	}
 
 	if len(signature) == 0 {

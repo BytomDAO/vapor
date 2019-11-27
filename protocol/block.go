@@ -119,7 +119,7 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	}
 
 	if err := c.applyBlockSign(&block.BlockHeader); err != nil {
-		return errors.Sub(ErrBadBlock, err)
+		return err
 	}
 
 	irrBlockHeader := c.lastIrrBlockHeader
@@ -233,6 +233,10 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 			consensusResults = append(consensusResults, consensusResult.Fork())
 		}
 
+		if err := c.applyBlockSign(attachBlockHeader); err != nil {
+			return err
+		}
+
 		if c.isIrreversible(attachBlockHeader) && attachBlockHeader.Height > irrBlockHeader.Height {
 			irrBlockHeader = attachBlockHeader
 		}
@@ -243,10 +247,6 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 			} else {
 				delete(txsToRestore, tx.ID)
 			}
-		}
-
-		if err := c.applyBlockSign(attachBlockHeader); err != nil {
-			return errors.Sub(ErrBadBlock, err)
 		}
 
 		blockHash := blockHeader.Hash()
