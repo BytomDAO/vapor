@@ -222,7 +222,7 @@ func addMatchTxOutput(txData *types.TxData, txInput *types.TxInput, order *commo
 }
 
 func CalcRequestAmount(fromAmount uint64, contractArg *vmutil.MagneticContractArgs) uint64 {
-	res := big.NewInt(int64(fromAmount))
+	res := big.NewInt(0).SetUint64(fromAmount)
 	res.Mul(res, big.NewInt(contractArg.RatioNumerator)).Div(res, big.NewInt(contractArg.RatioDenominator))
 	if !res.IsUint64() {
 		return 0
