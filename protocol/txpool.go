@@ -278,7 +278,7 @@ func (tp *TxPool) ProcessTransaction(tx *types.Tx, statusFail bool, height, fee 
 		return false, nil
 	}
 
-	if isNoGasStatusFail(tx, statusFail); ok {
+	if isNoGasStatusFail(tx, statusFail) {
 		log.WithFields(log.Fields{"module": logModule, "tx_id": tx.ID.String()}).Warn("drop no gas status fail tx")
 		return false, nil
 	}
