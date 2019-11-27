@@ -8,7 +8,6 @@ import (
 	"github.com/vapor/consensus/segwit"
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/errors"
-	"github.com/vapor/math/checked"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/protocol/bc/types"
 )
@@ -27,7 +26,7 @@ var (
 	errNumeratorOfRatioIsOverflow    = errors.New("ratio numerator of contract args product input amount is overflow")
 	errLengthOfInputIsIncorrect      = errors.New("length of matched tx input is not equals to actual matched tx input")
 	errSpendOutputIDIsIncorrect      = errors.New("spend output id of matched tx is not equals to actual matched tx")
-	errRequestAmountLessThenOne      = errors.New("request amount of order less than one")
+	errRequestAmountMath             = errors.New("request amount of order less than one or big than max of int64")
 )
 
 // MovCore represent the core logic of the match module, which include generate match transactions before packing the block,
@@ -233,12 +232,8 @@ func validateMagneticContractArgs(fromAmount uint64, program []byte) error {
 		return errRatioOfTradeLessThanZero
 	}
 
-	if _, ok := checked.MulInt64(int64(fromAmount), contractArgs.RatioNumerator); !ok {
-		return errNumeratorOfRatioIsOverflow
-	}
-
 	if match.CalcRequestAmount(fromAmount, contractArgs) < 1 {
-		return errRequestAmountLessThenOne
+		return errRequestAmountMath
 	}
 	return nil
 }

@@ -389,17 +389,17 @@ func TestValidateBlock(t *testing.T) {
 			wantError:     errRatioOfTradeLessThanZero,
 		},
 		{
-			desc: "ratio numerator product input amount is overflow",
+			desc: "want amount is overflow",
 			block: &types.Block{
 				Transactions: []*types.Tx{
 					types.NewTx(types.TxData{
 						Inputs:  []*types.TxInput{types.NewSpendInput(nil, *mock.Btc2EthOrders[0].Utxo.SourceID, *mock.Btc2EthOrders[0].FromAssetID, mock.Btc2EthOrders[0].Utxo.Amount, mock.Btc2EthOrders[0].Utxo.SourcePos, []byte{0x51})},
-						Outputs: []*types.TxOutput{types.NewIntraChainOutput(*mock.Btc2EthOrders[0].FromAssetID, mock.Btc2EthOrders[0].Utxo.Amount, mock.MustCreateP2WMCProgram(mock.ETH, testutil.MustDecodeHexString("51"), math.MaxInt64, 10))},
+						Outputs: []*types.TxOutput{types.NewIntraChainOutput(*mock.Btc2EthOrders[0].FromAssetID, mock.Btc2EthOrders[0].Utxo.Amount, mock.MustCreateP2WMCProgram(mock.ETH, testutil.MustDecodeHexString("51"), math.MaxInt64, 1))},
 					}),
 				},
 			},
 			verifyResults: []*bc.TxVerifyResult{{StatusFail: false}},
-			wantError:     errNumeratorOfRatioIsOverflow,
+			wantError:     errRequestAmountMath,
 		},
 	}
 
