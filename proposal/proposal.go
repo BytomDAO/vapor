@@ -182,8 +182,11 @@ func (b *blockBuilder) build() (*types.Block, error) {
 		return nil, err
 	}
 
-	_, err := b.chain.SignBlock(b.block)
-	return b.block, err
+	if err := b.chain.SignBlockHeader(&b.block.BlockHeader); err != nil {
+		return nil, err
+	}
+
+	return b.block, nil
 }
 
 func (b *blockBuilder) calcBlockCommitment() (err error) {
