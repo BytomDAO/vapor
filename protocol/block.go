@@ -120,6 +120,22 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		}
 	}
 
+	signature, err := c.signBlockHeader(&block.BlockHeader)
+	if err != nil {
+		return errors.Sub(ErrBadBlock, err)
+	}
+
+	if len(signature) != 0 {
+		if err := c.store.SaveBlockHeader(&block.BlockHeader); err != nil {
+			return err
+		}
+
+		xpub := config.CommonConfig.PrivateKey().XPub()
+		if err := c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: block.Hash(), Signature: signature, XPub: xpub[:]}); err != nil {
+			return err
+		}
+	}
+
 	irrBlockHeader := c.lastIrrBlockHeader
 	if c.isIrreversible(&block.BlockHeader) && block.Height > irrBlockHeader.Height {
 		irrBlockHeader = &block.BlockHeader
@@ -243,6 +259,22 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 			}
 		}
 
+		signature, err := c.signBlockHeader(attachBlockHeader)
+		if err != nil {
+			return errors.Sub(ErrBadBlock, err)
+		}
+
+		if len(signature) != 0 {
+			if err := c.store.SaveBlockHeader(attachBlockHeader); err != nil {
+				return err
+			}
+
+			xpub := config.CommonConfig.PrivateKey().XPub()
+			if err := c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: attachBlockHeader.Hash(), Signature: signature, XPub: xpub[:]}); err != nil {
+				return err
+			}
+		}
+
 		blockHash := blockHeader.Hash()
 		log.WithFields(log.Fields{"module": logModule, "height": blockHeader.Height, "hash": blockHash.String()}).Debug("attach from mainchain")
 	}
@@ -309,22 +341,11 @@ func (c *Chain) saveBlock(block *types.Block) error {
 		}
 	}
 
-	signature, err := c.SignBlock(block)
-	if err != nil {
-		return errors.Sub(ErrBadBlock, err)
-	}
-
 	if err := c.store.SaveBlock(block, bcBlock.TransactionStatus); err != nil {
 		return err
 	}
-	c.orphanManage.Delete(&bcBlock.ID)
 
-	if len(signature) != 0 {
-		xPub := config.CommonConfig.PrivateKey().XPub()
-		if err := c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: block.Hash(), Signature: signature, XPub: xPub[:]}); err != nil {
-			return err
-		}
-	}
+	c.orphanManage.Delete(&bcBlock.ID)
 	return nil
 }
 

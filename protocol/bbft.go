@@ -199,27 +199,33 @@ func (c *Chain) ProcessBlockSignature(signature, xPub []byte, blockHash *bc.Hash
 	return c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: *blockHash, Signature: signature, XPub: xPub})
 }
 
-// SignBlock signing the block if current node is consensus node
-func (c *Chain) SignBlock(block *types.Block) ([]byte, error) {
+// SignBlockHeader signing the block if current node is consensus node
+func (c *Chain) SignBlockHeader(blockHeader *types.BlockHeader) error {
+	_, err := c.signBlockHeader(blockHeader)
+	return err
+}
+
+func (c *Chain) signBlockHeader(blockHeader *types.BlockHeader) ([]byte, error) {
 	xprv := config.CommonConfig.PrivateKey()
-	xpubStr := xprv.XPub().String()
-	node, err := c.getConsensusNode(&block.PreviousBlockHash, xpubStr)
+	xpub := xprv.XPub()
+	node, err := c.getConsensusNode(&blockHeader.PreviousBlockHash, xpub.String())
 	if err == errNotFoundConsensusNode {
 		return nil, nil
 	} else if err != nil {
 		return nil, err
 	}
 
-	if err := c.checkDoubleSign(&block.BlockHeader, node.XPub.String()); err == errDoubleSignBlock {
+	if err := c.checkDoubleSign(blockHeader, node.XPub.String()); err == errDoubleSignBlock {
 		return nil, nil
 	} else if err != nil {
 		return nil, err
 	}
 
-	signature := block.Get(node.Order)
-	if len(signature) == 0 {
-		signature = xprv.Sign(block.Hash().Bytes())
-		block.Set(node.Order, signature)
+	if signature := blockHeader.Get(node.Order); len(signature) != 0 {
+		return nil, nil
 	}
+
+	signature := xprv.Sign(blockHeader.Hash().Bytes())
+	blockHeader.Set(node.Order, signature)
 	return signature, nil
 }
