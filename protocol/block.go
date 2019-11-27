@@ -22,7 +22,7 @@ var (
 
 // BlockExist check is a block in chain or orphan
 func (c *Chain) BlockExist(hash *bc.Hash) bool {
-	if _, err := c.store.GetBlockHeader(hash); err == nil {
+	if bh, err := c.store.GetBlockHeader(hash); err == nil && bh.Height <= c.BestBlockHeight() {
 		return true
 	}
 	return c.orphanManage.BlockExist(hash)
