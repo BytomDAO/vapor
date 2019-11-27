@@ -187,9 +187,6 @@ func (bk *blockKeeper) regularBlockSync() error {
 				i--
 				continue
 			}
-
-			log.WithFields(log.Fields{"module": logModule, "height": i}).Warn("stop regular sync due to loop sync same height")
-			return nil
 		}
 
 		i = bestHeight + 1
