@@ -30,32 +30,6 @@ func signCacheKey(blockHash, pubkey string) string {
 }
 
 func (c *Chain) checkDoubleSign(bh *types.BlockHeader, xPub string) error {
-	blockHashes, err := c.store.GetBlockHashesByHeight(bh.Height)
-	if err != nil {
-		return err
-	}
-
-	for _, blockHash := range blockHashes {
-		if *blockHash == bh.Hash() {
-			continue
-		}
-
-		blockHeader, err := c.store.GetBlockHeader(blockHash)
-		if err != nil {
-			return err
-		}
-
-		consensusNode, err := c.getConsensusNode(&blockHeader.PreviousBlockHash, xPub)
-		if err == errNotFoundConsensusNode {
-			continue
-		} else if err != nil {
-			return err
-		}
-
-		if blockHeader.BlockWitness.Get(consensusNode.Order) != nil {
-			return errDoubleSignBlock
-		}
-	}
 	return nil
 }
 
