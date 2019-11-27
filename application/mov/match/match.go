@@ -222,19 +222,21 @@ func addMatchTxOutput(txData *types.TxData, txInput *types.TxInput, order *commo
 }
 
 func CalcRequestAmount(fromAmount uint64, contractArg *vmutil.MagneticContractArgs) uint64 {
-	bigFromAmount := big.NewInt(0).SetUint64(fromAmount)
-	bigRatioNum := big.NewInt(0).SetInt64(contractArg.RatioNumerator)
-	bigRatioDen := big.NewInt(0).SetInt64(contractArg.RatioDenominator)
-	product := big.NewInt(0).Mul(bigFromAmount, bigRatioNum)
-	return big.NewInt(0).Quo(product, bigRatioDen).Uint64()
+	res := big.NewInt(0).SetUint64(fromAmount)
+	res.Mul(res, big.NewInt(contractArg.RatioNumerator)).Quo(res, big.NewInt(contractArg.RatioDenominator))
+	if !res.IsUint64() {
+		return 0
+	}
+	return res.Uint64()
 }
 
 func calcShouldPayAmount(receiveAmount uint64, contractArg *vmutil.MagneticContractArgs) uint64 {
-	bigReceiveAmount := big.NewInt(0).SetUint64(receiveAmount)
-	bigRatioNum := big.NewInt(0).SetInt64(contractArg.RatioNumerator)
-	bigRatioDen := big.NewInt(0).SetInt64(contractArg.RatioDenominator)
-	product := big.NewInt(0).Mul(bigReceiveAmount, bigRatioDen)
-	return big.NewInt(0).Quo(product, bigRatioNum).Uint64()
+	res := big.NewInt(0).SetUint64(receiveAmount)
+	res.Mul(res, big.NewInt(contractArg.RatioDenominator)).Quo(res, big.NewInt(contractArg.RatioNumerator))
+	if !res.IsUint64() {
+		return 0
+	}
+	return res.Uint64()
 }
 
 func calcMaxFeeAmount(shouldPayAmount uint64, maxFeeRate float64) int64 {
@@ -247,7 +249,7 @@ func calcOppositeIndex(size int, selfIdx int) int {
 
 func isMatched(orders []*common.Order) bool {
 	for i, order := range orders {
-		if opposisteOrder := orders[calcOppositeIndex(len(orders), i)]; 1/order.Rate < opposisteOrder.Rate {
+		if oppositeOrder := orders[calcOppositeIndex(len(orders), i)]; 1/order.Rate < oppositeOrder.Rate {
 			return false
 		}
 	}
