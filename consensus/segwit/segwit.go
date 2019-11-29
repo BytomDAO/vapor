@@ -86,6 +86,10 @@ func IsP2WMCScript(prog []byte) bool {
 	if _, err = vm.AsInt64(insts[3].Data); err != nil {
 		return false
 	}
+
+	if !IsP2WScript(insts[4].Data) {
+		return false
+	}
 	return insts[5].Op == vm.OP_DATA_32 && len(insts[5].Data) == 32
 }
 
@@ -149,9 +153,6 @@ func DecodeP2WMCProgram(prog []byte) (*vmutil.MagneticContractArgs, error) {
 		return nil, err
 	}
 
-	if !IsP2WScript(magneticContractArgs.SellerProgram) {
-		return nil, errors.New("contract seller program need to be P2WScript")
-	}
 	return magneticContractArgs, nil
 }
 
