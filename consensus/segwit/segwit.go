@@ -148,6 +148,10 @@ func DecodeP2WMCProgram(prog []byte) (*vmutil.MagneticContractArgs, error) {
 	if magneticContractArgs.RatioDenominator, err = vm.AsInt64(insts[3].Data); err != nil {
 		return nil, err
 	}
+
+	if !IsP2WScript(magneticContractArgs.SellerProgram) {
+		return nil, errors.New("contract seller program need to be P2WScript")
+	}
 	return magneticContractArgs, nil
 }
 
