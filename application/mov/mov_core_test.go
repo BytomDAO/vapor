@@ -368,7 +368,7 @@ func TestValidateBlock(t *testing.T) {
 				Transactions: []*types.Tx{
 					types.NewTx(types.TxData{
 						Inputs:  []*types.TxInput{types.NewSpendInput(nil, *mock.Btc2EthOrders[0].Utxo.SourceID, *mock.Btc2EthOrders[0].FromAssetID, mock.Btc2EthOrders[0].Utxo.Amount, mock.Btc2EthOrders[0].Utxo.SourcePos, []byte{0x51})},
-						Outputs: []*types.TxOutput{types.NewIntraChainOutput(*mock.Btc2EthOrders[0].FromAssetID, mock.Btc2EthOrders[0].Utxo.Amount, mock.MustCreateP2WMCProgram(mock.ETH, testutil.MustDecodeHexString("51"), 0, 1))},
+						Outputs: []*types.TxOutput{types.NewIntraChainOutput(*mock.Btc2EthOrders[0].FromAssetID, mock.Btc2EthOrders[0].Utxo.Amount, mock.MustCreateP2WMCProgram(mock.ETH, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19251"), 0, 1))},
 					}),
 				},
 			},
@@ -381,7 +381,7 @@ func TestValidateBlock(t *testing.T) {
 				Transactions: []*types.Tx{
 					types.NewTx(types.TxData{
 						Inputs:  []*types.TxInput{types.NewSpendInput(nil, *mock.Btc2EthOrders[0].Utxo.SourceID, *mock.Btc2EthOrders[0].FromAssetID, mock.Btc2EthOrders[0].Utxo.Amount, mock.Btc2EthOrders[0].Utxo.SourcePos, []byte{0x51})},
-						Outputs: []*types.TxOutput{types.NewIntraChainOutput(*mock.Btc2EthOrders[0].FromAssetID, mock.Btc2EthOrders[0].Utxo.Amount, mock.MustCreateP2WMCProgram(mock.ETH, testutil.MustDecodeHexString("51"), 1, 0))},
+						Outputs: []*types.TxOutput{types.NewIntraChainOutput(*mock.Btc2EthOrders[0].FromAssetID, mock.Btc2EthOrders[0].Utxo.Amount, mock.MustCreateP2WMCProgram(mock.ETH, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19251"), 1, 0))},
 					}),
 				},
 			},
@@ -394,7 +394,7 @@ func TestValidateBlock(t *testing.T) {
 				Transactions: []*types.Tx{
 					types.NewTx(types.TxData{
 						Inputs:  []*types.TxInput{types.NewSpendInput(nil, *mock.Btc2EthOrders[0].Utxo.SourceID, *mock.Btc2EthOrders[0].FromAssetID, mock.Btc2EthOrders[0].Utxo.Amount, mock.Btc2EthOrders[0].Utxo.SourcePos, []byte{0x51})},
-						Outputs: []*types.TxOutput{types.NewIntraChainOutput(*mock.Btc2EthOrders[0].FromAssetID, mock.Btc2EthOrders[0].Utxo.Amount, mock.MustCreateP2WMCProgram(mock.ETH, testutil.MustDecodeHexString("51"), math.MaxInt64, 1))},
+						Outputs: []*types.TxOutput{types.NewIntraChainOutput(*mock.Btc2EthOrders[0].FromAssetID, mock.Btc2EthOrders[0].Utxo.Amount, mock.MustCreateP2WMCProgram(mock.ETH, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19251"), math.MaxInt64, 1))},
 					}),
 				},
 			},

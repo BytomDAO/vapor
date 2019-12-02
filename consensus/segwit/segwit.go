@@ -90,6 +90,7 @@ func IsP2WMCScript(prog []byte) bool {
 	if !IsP2WScript(insts[4].Data) {
 		return false
 	}
+
 	return insts[5].Op == vm.OP_DATA_32 && len(insts[5].Data) == 32
 }
 
