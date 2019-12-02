@@ -93,7 +93,7 @@ UNLOCK TABLES;
 CREATE TABLE `assets` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `asset_id` varchar(64) NOT NULL,
-  `issuance_program` varchar(128) NOT NULL,
+  `issuance_program` varchar(512) NOT NULL,
   `vm_version` int(11) NOT NULL DEFAULT '1',
   `definition` text,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
