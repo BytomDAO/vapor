@@ -35,6 +35,7 @@ var (
 
 //BasePeer is the interface for connection level peer
 type BasePeer interface {
+	Moniker() string
 	Addr() net.Addr
 	ID() string
 	RemoteAddrHost() string
@@ -61,6 +62,7 @@ type BroadcastMsg interface {
 // PeerInfo indicate peer status snap
 type PeerInfo struct {
 	ID                  string `json:"peer_id"`
+	Moniker             string `json:"moniker"`
 	RemoteAddr          string `json:"remote_addr"`
 	Height              uint64 `json:"height"`
 	Ping                string `json:"ping"`
@@ -169,6 +171,7 @@ func (p *Peer) GetPeerInfo() *PeerInfo {
 
 	return &PeerInfo{
 		ID:                  p.ID(),
+		Moniker:             p.BasePeer.Moniker(),
 		RemoteAddr:          p.Addr().String(),
 		Height:              p.bestHeight,
 		Ping:                ping.String(),
@@ -250,32 +253,6 @@ func (p *Peer) markTransaction(hash *bc.Hash) {
 		p.knownTxs.Pop()
 	}
 	p.knownTxs.Add(hash.String())
-}
-
-func (ps *PeerSet) PeersWithoutBlock(hash bc.Hash) []string {
-	ps.mtx.RLock()
-	defer ps.mtx.RUnlock()
-
-	var peers []string
-	for _, peer := range ps.peers {
-		if !peer.knownBlocks.Has(hash.String()) {
-			peers = append(peers, peer.ID())
-		}
-	}
-	return peers
-}
-
-func (ps *PeerSet) PeersWithoutSign(signature []byte) []string {
-	ps.mtx.RLock()
-	defer ps.mtx.RUnlock()
-
-	var peers []string
-	for _, peer := range ps.peers {
-		if !peer.knownSignatures.Has(hex.EncodeToString(signature)) {
-			peers = append(peers, peer.ID())
-		}
-	}
-	return peers
 }
 
 func (p *Peer) SendBlock(block *types.Block) (bool, error) {
@@ -544,14 +521,6 @@ func (ps *PeerSet) BroadcastTx(tx *types.Tx) error {
 	return nil
 }
 
-func (ps *PeerSet) ErrorHandler(peerID string, level byte, err error) {
-	if errors.Root(err) == ErrPeerMisbehave {
-		ps.ProcessIllegal(peerID, level, err.Error())
-	} else {
-		ps.RemovePeer(peerID)
-	}
-}
-
 // Peer retrieves the registered peer with the given id.
 func (ps *PeerSet) GetPeer(id string) *Peer {
 	ps.mtx.RLock()
@@ -618,14 +587,27 @@ func (ps *PeerSet) MarkTx(peerID string, txHash bc.Hash) {
 	peer.markTransaction(&txHash)
 }
 
-func (ps *PeerSet) peersWithoutBlock(hash *bc.Hash) []*Peer {
+func (ps *PeerSet) PeersWithoutBlock(hash bc.Hash) []string {
 	ps.mtx.RLock()
 	defer ps.mtx.RUnlock()
 
-	peers := []*Peer{}
+	var peers []string
 	for _, peer := range ps.peers {
 		if !peer.knownBlocks.Has(hash.String()) {
-			peers = append(peers, peer)
+			peers = append(peers, peer.ID())
+		}
+	}
+	return peers
+}
+
+func (ps *PeerSet) PeersWithoutSignature(signature []byte) []string {
+	ps.mtx.RLock()
+	defer ps.mtx.RUnlock()
+
+	var peers []string
+	for _, peer := range ps.peers {
+		if !peer.knownSignatures.Has(hex.EncodeToString(signature)) {
+			peers = append(peers, peer.ID())
 		}
 	}
 	return peers
@@ -673,9 +655,11 @@ func (ps *PeerSet) SetStatus(peerID string, height uint64, hash *bc.Hash) {
 	peer.SetBestStatus(height, hash)
 }
 
-func (ps *PeerSet) Size() int {
-	ps.mtx.RLock()
-	defer ps.mtx.RUnlock()
+func (ps *PeerSet) SetIrreversibleStatus(peerID string, height uint64, hash *bc.Hash) {
+	peer := ps.GetPeer(peerID)
+	if peer == nil {
+		return
+	}
 
-	return len(ps.peers)
+	peer.SetIrreversibleStatus(height, hash)
 }

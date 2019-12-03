@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/http"
 	_ "net/http/pprof"
-	"os"
 	"path/filepath"
 	"reflect"
 
@@ -26,6 +25,7 @@ import (
 	dbm "github.com/vapor/database/leveldb"
 	"github.com/vapor/env"
 	"github.com/vapor/event"
+	vaporLog "github.com/vapor/log"
 	"github.com/vapor/net/websocket"
 	"github.com/vapor/netsync"
 	"github.com/vapor/proposal/blockproposer"
@@ -66,6 +66,10 @@ func NewNode(config *cfg.Config) *Node {
 		cmn.Exit(cmn.Fmt("Failed to load federated information:[%s]", err.Error()))
 	}
 
+	if err:=vaporLog.InitLogFile(config);err!=nil{
+		log.WithField("err",err).Fatalln("InitLogFile failed")
+	}
+
 	log.WithFields(log.Fields{
 		"module":             logModule,
 		"pubkey":             config.PrivateKey().XPub(),
@@ -74,10 +78,10 @@ func NewNode(config *cfg.Config) *Node {
 		"fed_controlprogram": hex.EncodeToString(cfg.FederationWScript(config)),
 	}).Info()
 
-	initLogFile(config)
 	if err := consensus.InitActiveNetParams(config.ChainID); err != nil {
 		log.Fatalf("Failed to init ActiveNetParams:[%s]", err.Error())
 	}
+
 	initCommonConfig(config)
 
 	// Get store
@@ -186,20 +190,6 @@ func lockDataDirectory(config *cfg.Config) error {
 		return errors.New("datadir already used by another process")
 	}
 	return nil
-}
-
-func initLogFile(config *cfg.Config) {
-	if config.LogFile == "" {
-		return
-	}
-	cmn.EnsureDir(filepath.Dir(config.LogFile), 0700)
-	file, err := os.OpenFile(config.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err == nil {
-		log.SetOutput(file)
-	} else {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Info("using default")
-	}
-
 }
 
 func initCommonConfig(config *cfg.Config) {

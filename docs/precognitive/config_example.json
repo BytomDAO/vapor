@@ -1,0 +1,42 @@
+{
+    "api" : {
+        "listening_port" : 3009
+    }, 
+    "network_id": 10817814959495988245,
+    "mysql" : {
+        "connection" : {
+            "host": "127.0.0.1",
+            "port": 3306,
+            "username": "root",
+            "password": "toor",
+            "database": "precognitive"
+        },
+        "log_mode" : true
+    },
+    "check_frequency_minutes" : 30,
+    "policy" : {
+        "required_rtt_ms" : 2000
+    },
+    "seeds" : [
+        {
+            "xpub" : "f2767279cd01ed8793808e0542a18958e1a2f3a6b6fe5328ec79596a022bc6f085951a98a631917563f86bb91db9159dd2969ff9d690fc12b250baff2b6f6a1d",
+            "ip": "47.103.79.68",
+            "port": 56656
+        },
+        {
+            "xpub" : "c785deb76af14e918ea05eeab863288c48b16d1816621adf74ada868e8e3246780bf5206dc5a0e3efef0c119978e11ed75eca9d3b50846e37c55cf8d56717c4f",
+            "ip": "47.103.13.86",
+            "port": 56656
+        },
+        {
+            "xpub" : "22bc19ec65d4ee524c5130575ddff041e712dbb415740eae314fd3359aa3978319384cd3ded8c4125ca2774716d7285268ebf1d85091eef8e7ad03077857e7ab",
+            "ip": "47.102.193.119",
+            "port": 56656
+        },
+        {
+            "xpub" : "214c0e6827346e9fee1056c4c8b96cefd67b75ed1dead59e4e4e3eee8c1fe095dbe7a7fb61bb23b4ab66cde2a1c04466b8d3e8efa21cf7eee064c70fb1525b14",
+            "ip": "47.103.17.22",
+            "port": 56656
+        }
+    ]
+}

@@ -18,9 +18,9 @@ import (
 
 var (
 	//chainTxUtxoNum maximum utxo quantity in a tx
-	chainTxUtxoNum = 5
+	chainTxUtxoNum = 20
 	//chainTxMergeGas chain tx gas
-	chainTxMergeGas = uint64(10000000)
+	chainTxMergeGas = uint64(0)
 )
 
 //DecodeSpendAction unmarshal JSON-encoded data of spend action

@@ -26,6 +26,17 @@ type Chain interface {
 	ProcessBlockSignature(signature, pubkey []byte, blockHash *bc.Hash) error
 }
 
+type Peers interface {
+	AddPeer(peer peers.BasePeer)
+	BroadcastMsg(bm peers.BroadcastMsg) error
+	GetPeer(id string) *peers.Peer
+	MarkBlock(peerID string, hash *bc.Hash)
+	MarkBlockSignature(peerID string, signature []byte)
+	ProcessIllegal(peerID string, level byte, reason string)
+	RemovePeer(peerID string)
+	SetStatus(peerID string, height uint64, hash *bc.Hash)
+}
+
 type blockMsg struct {
 	block  *types.Block
 	peerID string
@@ -35,7 +46,7 @@ type blockMsg struct {
 type Manager struct {
 	sw              Switch
 	chain           Chain
-	peers           *peers.PeerSet
+	peers           Peers
 	blockFetcher    *blockFetcher
 	eventDispatcher *event.Dispatcher
 
@@ -43,7 +54,7 @@ type Manager struct {
 }
 
 // NewManager create new manager.
-func NewManager(sw Switch, chain Chain, dispatcher *event.Dispatcher, peers *peers.PeerSet) *Manager {
+func NewManager(sw Switch, chain Chain, peers Peers, dispatcher *event.Dispatcher) *Manager {
 	manager := &Manager{
 		sw:              sw,
 		chain:           chain,
@@ -180,6 +191,7 @@ func (m *Manager) removePeer(peerID string) {
 
 //Start consensus manager service.
 func (m *Manager) Start() error {
+	go m.blockFetcher.blockProcessorLoop()
 	go m.blockProposeMsgBroadcastLoop()
 	go m.blockSignatureMsgBroadcastLoop()
 	return nil

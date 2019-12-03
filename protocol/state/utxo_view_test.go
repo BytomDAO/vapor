@@ -3,8 +3,11 @@ package state
 import (
 	"testing"
 
+	"github.com/davecgh/go-spew/spew"
+
 	"github.com/vapor/consensus"
 	"github.com/vapor/database/storage"
+	"github.com/vapor/errors"
 	"github.com/vapor/protocol/bc"
 	"github.com/vapor/testutil"
 )
@@ -592,6 +595,835 @@ func TestDetachBlock(t *testing.T) {
 		}
 		if !testutil.DeepEqual(c.inputView, c.fetchView) {
 			t.Errorf("test case %d, want %v, get %v", i, c.fetchView, c.inputView)
+		}
+	}
+}
+
+func TestApplyCrossChainUTXO(t *testing.T) {
+	cases := []struct {
+		desc         string
+		block        *bc.Block
+		tx           *bc.Tx
+		prevUTXOView *UtxoViewpoint
+		postUTXOView *UtxoViewpoint
+		err          error
+	}{
+		{
+			desc: "normal test",
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					Height: 100,
+				},
+			},
+			tx: &bc.Tx{
+				TxHeader: &bc.TxHeader{
+					ResultIds: []*bc.Hash{},
+				},
+				MainchainOutputIDs: []bc.Hash{
+					bc.Hash{V0: 0},
+				},
+				Entries: voteEntry,
+			},
+			prevUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.CrosschainUTXOType, 0, false),
+				},
+			},
+			postUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.CrosschainUTXOType, 100, true),
+				},
+			},
+			err: nil,
+		},
+		{
+			desc: "test failed to find mainchain output entry",
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{},
+			},
+			tx: &bc.Tx{
+				TxHeader: &bc.TxHeader{
+					ResultIds: []*bc.Hash{},
+				},
+				MainchainOutputIDs: []bc.Hash{
+					bc.Hash{V0: 0},
+				},
+				Entries: voteEntry,
+			},
+			prevUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{},
+			},
+			postUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{},
+			},
+			err: errors.New("fail to find mainchain output entry"),
+		},
+		{
+			desc: "test mainchain output has been spent",
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{},
+			},
+			tx: &bc.Tx{
+				TxHeader: &bc.TxHeader{
+					ResultIds: []*bc.Hash{},
+				},
+				MainchainOutputIDs: []bc.Hash{
+					bc.Hash{V0: 0},
+				},
+				Entries: voteEntry,
+			},
+			prevUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.CrosschainUTXOType, 0, true),
+				},
+			},
+			postUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{},
+			},
+			err: errors.New("mainchain output has been spent"),
+		},
+	}
+
+	for i, c := range cases {
+		if err := c.prevUTXOView.applyCrossChainUtxo(c.block, c.tx); err != nil {
+			if err.Error() != c.err.Error() {
+				t.Errorf("test case #%d want err = %v, got err = %v", i, c.err, err)
+			}
+			continue
+		}
+
+		if !testutil.DeepEqual(c.prevUTXOView, c.postUTXOView) {
+			t.Errorf("test case #%d, want %v, got %v", i, c.postUTXOView, c.prevUTXOView)
+		}
+	}
+}
+
+func TestApplyOutputUTXO(t *testing.T) {
+	cases := []struct {
+		desc         string
+		block        *bc.Block
+		tx           *bc.Tx
+		statusFail   bool
+		prevUTXOView *UtxoViewpoint
+		postUTXOView *UtxoViewpoint
+		err          error
+	}{
+		{
+			desc: "normal test IntraChainOutput,VoteOutput,Retirement",
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{},
+			},
+			tx: &bc.Tx{
+				TxHeader: &bc.TxHeader{
+					ResultIds: []*bc.Hash{&bc.Hash{V0: 0}, &bc.Hash{V0: 1}, &bc.Hash{V0: 2}},
+				},
+				Entries: map[bc.Hash]bc.Entry{
+					bc.Hash{V0: 0}: &bc.IntraChainOutput{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: &bc.AssetID{V0: 0},
+								Amount:  100,
+							},
+						},
+					},
+					bc.Hash{V0: 1}: &bc.VoteOutput{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: &bc.AssetID{V0: 1},
+							},
+						},
+					},
+					bc.Hash{V0: 2}: &bc.Retirement{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: &bc.AssetID{V0: 1},
+							},
+						},
+					},
+				},
+			},
+			prevUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{},
+			},
+			postUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, false),
+					bc.Hash{V0: 1}: storage.NewUtxoEntry(storage.VoteUTXOType, 0, false),
+				},
+			},
+			err: nil,
+		},
+		{
+			desc: "test statusFail",
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{},
+			},
+			tx: &bc.Tx{
+				TxHeader: &bc.TxHeader{
+					ResultIds: []*bc.Hash{&bc.Hash{V0: 0}, &bc.Hash{V0: 1}, &bc.Hash{V0: 2}},
+				},
+				Entries: map[bc.Hash]bc.Entry{
+					bc.Hash{V0: 0}: &bc.IntraChainOutput{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: &bc.AssetID{V0: 0},
+								Amount:  100,
+							},
+						},
+					},
+					bc.Hash{V0: 1}: &bc.VoteOutput{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: consensus.BTMAssetID,
+							},
+						},
+					},
+					bc.Hash{V0: 2}: &bc.Retirement{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: &bc.AssetID{V0: 1},
+							},
+						},
+					},
+				},
+			},
+			statusFail: true,
+			prevUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{},
+			},
+			postUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 1}: storage.NewUtxoEntry(storage.VoteUTXOType, 0, false),
+				},
+			},
+			err: nil,
+		},
+		{
+			desc: "test failed on found id from tx entry",
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{},
+			},
+			tx: &bc.Tx{
+				TxHeader: &bc.TxHeader{
+					ResultIds: []*bc.Hash{&bc.Hash{V0: 0}, &bc.Hash{V0: 1}, &bc.Hash{V0: 2}},
+				},
+				Entries: map[bc.Hash]bc.Entry{
+					bc.Hash{V0: 1}: &bc.VoteOutput{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: consensus.BTMAssetID,
+							},
+						},
+					},
+					bc.Hash{V0: 2}: &bc.Retirement{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: &bc.AssetID{V0: 1},
+							},
+						},
+					},
+				},
+			},
+			statusFail: false,
+			prevUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{},
+			},
+			postUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{},
+			},
+			err: bc.ErrMissingEntry,
+		},
+	}
+
+	for i, c := range cases {
+		if err := c.prevUTXOView.applyOutputUtxo(c.block, c.tx, c.statusFail); err != nil {
+			if errors.Root(err) != errors.Root(c.err) {
+				t.Errorf("test case #%d want err = %v, got err = %v", i, c.err.Error(), err.Error())
+			}
+			continue
+		}
+
+		if !testutil.DeepEqual(c.prevUTXOView, c.postUTXOView) {
+			t.Errorf("test case #%d, want %v, got %v", i, c.postUTXOView, c.prevUTXOView)
+		}
+	}
+}
+
+func TestApplySpendUTXO(t *testing.T) {
+	cases := []struct {
+		desc         string
+		block        *bc.Block
+		tx           *bc.Tx
+		statusFail   bool
+		prevUTXOView *UtxoViewpoint
+		postUTXOView *UtxoViewpoint
+		err          error
+	}{
+		{
+			desc: "normal test",
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					Height: consensus.ActiveNetParams.VotePendingBlockNumber,
+				},
+			},
+			tx: &bc.Tx{
+				TxHeader:       &bc.TxHeader{},
+				SpentOutputIDs: []bc.Hash{{V0: 0}, {V0: 1}, {V0: 2}},
+				Entries: map[bc.Hash]bc.Entry{
+					bc.Hash{V0: 0}: &bc.IntraChainOutput{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: &bc.AssetID{V0: 0},
+								Amount:  100,
+							},
+						},
+					},
+					bc.Hash{V0: 1}: &bc.VoteOutput{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: &bc.AssetID{V0: 1},
+							},
+						},
+					},
+					bc.Hash{V0: 2}: &bc.IntraChainOutput{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: consensus.BTMAssetID,
+								Amount:  100,
+							},
+						},
+					},
+				},
+			},
+			prevUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, false),
+					bc.Hash{V0: 1}: storage.NewUtxoEntry(storage.VoteUTXOType, 0, false),
+					bc.Hash{V0: 2}: storage.NewUtxoEntry(storage.CoinbaseUTXOType, 0, false),
+				},
+			},
+			postUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, true),
+					bc.Hash{V0: 1}: storage.NewUtxoEntry(storage.VoteUTXOType, 0, true),
+					bc.Hash{V0: 2}: storage.NewUtxoEntry(storage.CoinbaseUTXOType, 0, true),
+				},
+			},
+			err: nil,
+		},
+		{
+			desc: "test coinbase is not ready for use",
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					Height: consensus.ActiveNetParams.CoinbasePendingBlockNumber - 1,
+				},
+			},
+			tx: &bc.Tx{
+				TxHeader:       &bc.TxHeader{},
+				SpentOutputIDs: []bc.Hash{{V0: 1}, {V0: 2}},
+				Entries: map[bc.Hash]bc.Entry{
+					bc.Hash{V0: 1}: &bc.VoteOutput{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: &bc.AssetID{V0: 1},
+							},
+						},
+					},
+					bc.Hash{V0: 2}: &bc.IntraChainOutput{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: consensus.BTMAssetID,
+								Amount:  100,
+							},
+						},
+					},
+				},
+			},
+			prevUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 1}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, false),
+					bc.Hash{V0: 2}: storage.NewUtxoEntry(storage.CoinbaseUTXOType, 0, false),
+				},
+			},
+			postUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{},
+			},
+			err: errors.New("coinbase utxo is not ready for use"),
+		},
+		{
+			desc: "test Coin is  within the voting lock time",
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					Height: consensus.ActiveNetParams.VotePendingBlockNumber - 1,
+				},
+			},
+			tx: &bc.Tx{
+				TxHeader:       &bc.TxHeader{},
+				SpentOutputIDs: []bc.Hash{{V0: 1}, {V0: 2}},
+				Entries: map[bc.Hash]bc.Entry{
+					bc.Hash{V0: 1}: &bc.VoteOutput{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: &bc.AssetID{V0: 1},
+							},
+						},
+					},
+					bc.Hash{V0: 2}: &bc.IntraChainOutput{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: consensus.BTMAssetID,
+								Amount:  100,
+							},
+						},
+					},
+				},
+			},
+			prevUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 1}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, false),
+					bc.Hash{V0: 2}: storage.NewUtxoEntry(storage.VoteUTXOType, 0, false),
+				},
+			},
+			postUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{},
+			},
+			err: errors.New("Coin is  within the voting lock time"),
+		},
+		{
+			desc: "test utxo has been spent",
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					Height: 0,
+				},
+			},
+			tx: &bc.Tx{
+				TxHeader:       &bc.TxHeader{},
+				SpentOutputIDs: []bc.Hash{{V0: 0}, {V0: 1}, {V0: 2}},
+				Entries: map[bc.Hash]bc.Entry{
+					bc.Hash{V0: 0}: &bc.IntraChainOutput{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: &bc.AssetID{V0: 0},
+								Amount:  100,
+							},
+						},
+					},
+					bc.Hash{V0: 1}: &bc.VoteOutput{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: &bc.AssetID{V0: 1},
+							},
+						},
+					},
+					bc.Hash{V0: 2}: &bc.IntraChainOutput{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: consensus.BTMAssetID,
+								Amount:  100,
+							},
+						},
+					},
+				},
+			},
+			prevUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, true),
+					bc.Hash{V0: 1}: storage.NewUtxoEntry(storage.VoteUTXOType, 0, false),
+					bc.Hash{V0: 2}: storage.NewUtxoEntry(storage.CoinbaseUTXOType, 0, false),
+				},
+			},
+			postUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{},
+			},
+			err: errors.New("utxo has been spent"),
+		},
+		{
+			desc: "test faild to find utxo entry",
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					Height: 0,
+				},
+			},
+			tx: &bc.Tx{
+				TxHeader:       &bc.TxHeader{},
+				SpentOutputIDs: []bc.Hash{{V0: 0}, {V0: 1}, {V0: 2}},
+				Entries: map[bc.Hash]bc.Entry{
+					bc.Hash{V0: 0}: &bc.IntraChainOutput{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: &bc.AssetID{V0: 0},
+								Amount:  100,
+							},
+						},
+					},
+					bc.Hash{V0: 1}: &bc.VoteOutput{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: &bc.AssetID{V0: 1},
+							},
+						},
+					},
+					bc.Hash{V0: 2}: &bc.IntraChainOutput{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: consensus.BTMAssetID,
+								Amount:  100,
+							},
+						},
+					},
+				},
+			},
+			prevUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 1}: storage.NewUtxoEntry(storage.VoteUTXOType, 0, false),
+					bc.Hash{V0: 2}: storage.NewUtxoEntry(storage.CoinbaseUTXOType, 0, false),
+				},
+			},
+			postUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{},
+			},
+			err: errors.New("fail to find utxo entry"),
+		},
+	}
+
+	for i, c := range cases {
+		if err := c.prevUTXOView.applySpendUtxo(c.block, c.tx, c.statusFail); err != nil {
+			if err.Error() != c.err.Error() {
+				t.Errorf("test case #%d want err = %v, got err = %v", i, err.Error(), c.err.Error())
+			}
+			continue
+		}
+
+		if !testutil.DeepEqual(c.prevUTXOView, c.postUTXOView) {
+			t.Errorf("test case #%d, want %v, got %v", i, spew.Sdump(c.postUTXOView), spew.Sdump(c.prevUTXOView))
+		}
+	}
+}
+
+func TestDetachCrossChainUTXO(t *testing.T) {
+	cases := []struct {
+		desc         string
+		tx           *bc.Tx
+		prevUTXOView *UtxoViewpoint
+		postUTXOView *UtxoViewpoint
+		err          error
+	}{
+		{
+			desc: "normal test",
+			tx: &bc.Tx{
+				TxHeader: &bc.TxHeader{
+					ResultIds: []*bc.Hash{},
+				},
+				MainchainOutputIDs: []bc.Hash{
+					bc.Hash{V0: 0},
+				},
+				Entries: voteEntry,
+			},
+			prevUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.CrosschainUTXOType, 0, true),
+				},
+			},
+			postUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.CrosschainUTXOType, 0, false),
+				},
+			},
+			err: nil,
+		},
+		{
+			desc: "test failed to find mainchain output entry",
+			tx: &bc.Tx{
+				TxHeader: &bc.TxHeader{
+					ResultIds: []*bc.Hash{},
+				},
+				MainchainOutputIDs: []bc.Hash{
+					bc.Hash{V0: 0},
+				},
+				Entries: voteEntry,
+			},
+			prevUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{},
+			},
+			postUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{},
+			},
+			err: errors.New("fail to find mainchain output entry"),
+		},
+		{
+			desc: "test revert output is unspent",
+			tx: &bc.Tx{
+				TxHeader: &bc.TxHeader{
+					ResultIds: []*bc.Hash{},
+				},
+				MainchainOutputIDs: []bc.Hash{
+					bc.Hash{V0: 0},
+				},
+				Entries: voteEntry,
+			},
+			prevUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.CrosschainUTXOType, 0, false),
+				},
+			},
+			postUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{},
+			},
+			err: errors.New("mainchain output is unspent"),
+		},
+	}
+
+	for i, c := range cases {
+		if err := c.prevUTXOView.detachCrossChainUtxo(c.tx); err != nil {
+			if err.Error() != c.err.Error() {
+				t.Errorf("test case #%d want err = %v, got err = %v", i, c.err, err)
+			}
+			continue
+		}
+
+		if !testutil.DeepEqual(c.prevUTXOView, c.postUTXOView) {
+			t.Errorf("test case #%d, want %v, got %v", i, c.postUTXOView, c.prevUTXOView)
+		}
+	}
+}
+
+func TestDetachOutputUTXO(t *testing.T) {
+	cases := []struct {
+		desc         string
+		tx           *bc.Tx
+		statusFail   bool
+		prevUTXOView *UtxoViewpoint
+		postUTXOView *UtxoViewpoint
+		err          error
+	}{
+		{
+			desc: "normal test IntraChainOutput,VoteOutput",
+			tx: &bc.Tx{
+				TxHeader: &bc.TxHeader{
+					ResultIds: []*bc.Hash{&bc.Hash{V0: 0}, &bc.Hash{V0: 1}, &bc.Hash{V0: 2}},
+				},
+				Entries: map[bc.Hash]bc.Entry{
+					bc.Hash{V0: 0}: &bc.IntraChainOutput{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: &bc.AssetID{V0: 0},
+								Amount:  100,
+							},
+						},
+					},
+					bc.Hash{V0: 1}: &bc.VoteOutput{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: &bc.AssetID{V0: 1},
+							},
+						},
+					},
+					bc.Hash{V0: 2}: &bc.Retirement{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: &bc.AssetID{V0: 1},
+							},
+						},
+					},
+				},
+			},
+			prevUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, true),
+					bc.Hash{V0: 1}: storage.NewUtxoEntry(storage.VoteUTXOType, 0, true),
+				},
+			},
+			postUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, true),
+					bc.Hash{V0: 1}: storage.NewUtxoEntry(storage.VoteUTXOType, 0, true),
+				},
+			},
+			err: nil,
+		},
+		{
+			desc: "test statusFail",
+			tx: &bc.Tx{
+				TxHeader: &bc.TxHeader{
+					ResultIds: []*bc.Hash{&bc.Hash{V0: 0}, &bc.Hash{V0: 1}},
+				},
+				Entries: map[bc.Hash]bc.Entry{
+					bc.Hash{V0: 0}: &bc.IntraChainOutput{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: &bc.AssetID{V0: 0},
+								Amount:  100,
+							},
+						},
+					},
+					bc.Hash{V0: 1}: &bc.VoteOutput{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: consensus.BTMAssetID,
+							},
+						},
+					},
+				},
+			},
+			statusFail: true,
+			prevUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{},
+			},
+			postUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 1}: storage.NewUtxoEntry(storage.VoteUTXOType, 0, true),
+				},
+			},
+			err: nil,
+		},
+		{
+			desc: "test failed on found id from tx entry",
+			tx: &bc.Tx{
+				TxHeader: &bc.TxHeader{
+					ResultIds: []*bc.Hash{&bc.Hash{V0: 0}, &bc.Hash{V0: 1}, &bc.Hash{V0: 2}},
+				},
+				Entries: map[bc.Hash]bc.Entry{
+					bc.Hash{V0: 1}: &bc.VoteOutput{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: consensus.BTMAssetID,
+							},
+						},
+					},
+					bc.Hash{V0: 2}: &bc.Retirement{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: &bc.AssetID{V0: 1},
+							},
+						},
+					},
+				},
+			},
+			statusFail: false,
+			prevUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{},
+			},
+			postUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{},
+			},
+			err: bc.ErrMissingEntry,
+		},
+	}
+
+	for i, c := range cases {
+		if err := c.prevUTXOView.detachOutputUtxo(c.tx, c.statusFail); err != nil {
+			if errors.Root(err) != errors.Root(c.err) {
+				t.Errorf("test case #%d want err = %v, got err = %v", i, c.err.Error(), err.Error())
+			}
+			continue
+		}
+
+		if !testutil.DeepEqual(c.prevUTXOView, c.postUTXOView) {
+			t.Errorf("test case #%d, want %v, got %v", i, c.postUTXOView, c.prevUTXOView)
+		}
+	}
+}
+
+func TestDetachSpendUTXO(t *testing.T) {
+	cases := []struct {
+		desc         string
+		tx           *bc.Tx
+		statusFail   bool
+		prevUTXOView *UtxoViewpoint
+		postUTXOView *UtxoViewpoint
+		err          error
+	}{
+		{
+			desc: "normal test",
+			tx: &bc.Tx{
+				TxHeader:       &bc.TxHeader{},
+				SpentOutputIDs: []bc.Hash{{V0: 0}, {V0: 1}},
+				Entries: map[bc.Hash]bc.Entry{
+					bc.Hash{V0: 0}: &bc.IntraChainOutput{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: &bc.AssetID{V0: 0},
+								Amount:  100,
+							},
+						},
+					},
+					bc.Hash{V0: 1}: &bc.VoteOutput{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: &bc.AssetID{V0: 1},
+							},
+						},
+					},
+				},
+			},
+			prevUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, true),
+					bc.Hash{V0: 1}: storage.NewUtxoEntry(storage.VoteUTXOType, 0, true),
+				},
+			},
+			postUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, false),
+					bc.Hash{V0: 1}: storage.NewUtxoEntry(storage.VoteUTXOType, 0, false),
+				},
+			},
+			err: nil,
+		},
+		{
+			desc: "test utxo has been spent",
+			tx: &bc.Tx{
+				TxHeader:       &bc.TxHeader{},
+				SpentOutputIDs: []bc.Hash{{V0: 0}, {V0: 1}, {V0: 2}},
+				Entries: map[bc.Hash]bc.Entry{
+					bc.Hash{V0: 0}: &bc.IntraChainOutput{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: consensus.BTMAssetID,
+								Amount:  100,
+							},
+						},
+					},
+					bc.Hash{V0: 1}: &bc.VoteOutput{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: &bc.AssetID{V0: 1},
+							},
+						},
+					},
+					bc.Hash{V0: 2}: &bc.IntraChainOutput{
+						Source: &bc.ValueSource{
+							Value: &bc.AssetAmount{
+								AssetId: consensus.BTMAssetID,
+								Amount:  100,
+							},
+						},
+					},
+				},
+			},
+			prevUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(storage.NormalUTXOType, 0, false),
+					bc.Hash{V0: 1}: storage.NewUtxoEntry(storage.VoteUTXOType, 0, true),
+				},
+			},
+			postUTXOView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{},
+			},
+			err: errors.New("try to revert an unspent utxo"),
+		},
+	}
+
+	for i, c := range cases {
+		if err := c.prevUTXOView.detachSpendUtxo(c.tx, c.statusFail); err != nil {
+			if err.Error() != c.err.Error() {
+				t.Errorf("test case #%d want err = %v, got err = %v", i, err.Error(), c.err.Error())
+			}
+			continue
+		}
+
+		if !testutil.DeepEqual(c.prevUTXOView, c.postUTXOView) {
+			t.Errorf("test case #%d, want %v, got %v", i, spew.Sdump(c.postUTXOView), spew.Sdump(c.prevUTXOView))
 		}
 	}
 }

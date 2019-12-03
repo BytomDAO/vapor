@@ -1,14 +1,14 @@
 package orm
 
 import (
-	"github.com/vapor/toolbar/federation/types"
+	"github.com/vapor/toolbar/common"
 )
 
 type Chain struct {
-	ID          uint64 `gorm:"primary_key"`
-	Name        string
-	BlockHeight uint64
-	BlockHash   string
-	CreatedAt   types.Timestamp
-	UpdatedAt   types.Timestamp
+	ID          uint64           `gorm:"primary_key" json:"-"`
+	Name        string           `json:"name"`
+	BlockHeight uint64           `json:"block_height"`
+	BlockHash   string           `json:"block_hash"`
+	CreatedAt   common.Timestamp `json:"-"`
+	UpdatedAt   common.Timestamp `json:"-"`
 }

@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 
 	"github.com/vapor/errors"
-	"github.com/vapor/toolbar/federation/common"
-	"github.com/vapor/toolbar/federation/types"
+	"github.com/vapor/toolbar/common"
+	fedCommon "github.com/vapor/toolbar/federation/common"
 )
 
 type CrossTransaction struct {
@@ -25,8 +25,8 @@ type CrossTransaction struct {
 	DestTxIndex          sql.NullInt64  `sql:"default:null"`
 	DestTxHash           sql.NullString `sql:"default:null"`
 	Status               uint8
-	CreatedAt            types.Timestamp
-	UpdatedAt            types.Timestamp
+	CreatedAt            common.Timestamp
+	UpdatedAt            common.Timestamp
 
 	Chain *Chain `gorm:"foreignkey:ChainID"`
 	Reqs  []*CrossTransactionReq
@@ -35,10 +35,10 @@ type CrossTransaction struct {
 func (c *CrossTransaction) MarshalJSON() ([]byte, error) {
 	var status string
 	switch c.Status {
-	case common.CrossTxPendingStatus:
-		status = common.CrossTxPendingStatusLabel
-	case common.CrossTxCompletedStatus:
-		status = common.CrossTxCompletedStatusLabel
+	case fedCommon.CrossTxPendingStatus:
+		status = fedCommon.CrossTxPendingStatusLabel
+	case fedCommon.CrossTxCompletedStatus:
+		status = fedCommon.CrossTxCompletedStatusLabel
 	default:
 		return nil, errors.New("unknown cross-chain tx status")
 	}

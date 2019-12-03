@@ -127,13 +127,169 @@ func TestBlockFetcher(t *testing.T) {
 		},
 	}
 	fetcher := newBlockFetcher(newChain(), peers)
-
+	go fetcher.blockProcessorLoop()
 	for i, c := range testCase {
 		fetcher.processNewBlock(c.blockMsg)
 		time.Sleep(10 * time.Millisecond)
 		chainHeight := fetcher.chain.BestBlockHeight()
 		if chainHeight != c.height {
 			t.Fatalf("test block fetcher error. index %d expected chain height %d but got %d", i, chainHeight, c.height)
+		}
+	}
+}
+
+func TestAddBlockMsg(t *testing.T) {
+	peers := peers.NewPeerSet(&peerMgr{})
+	testPeer := "peer1"
+	testCase := []struct {
+		blocksMsg  []*blockMsg
+		limit      int
+		queueSize  int
+		msgSetSize int
+		msgCounter int
+	}{
+		//normal test
+		{
+			blocksMsg: []*blockMsg{
+				{
+					block: &types.Block{
+						BlockHeader: types.BlockHeader{
+							Height: 100,
+						},
+					},
+					peerID: testPeer,
+				},
+				{
+					block: &types.Block{
+						BlockHeader: types.BlockHeader{
+							Height: 101,
+						},
+					},
+					peerID: testPeer,
+				},
+				{
+					block: &types.Block{
+						BlockHeader: types.BlockHeader{
+							Height: 102,
+						},
+					},
+					peerID: testPeer,
+				},
+			},
+			limit:      5,
+			queueSize:  3,
+			msgSetSize: 3,
+			msgCounter: 3,
+		},
+		// test DOS
+		{
+			blocksMsg: []*blockMsg{
+				{
+					block: &types.Block{
+						BlockHeader: types.BlockHeader{
+							Version: 1,
+							Height:  100,
+						},
+					},
+					peerID: testPeer,
+				},
+				{
+					block: &types.Block{
+						BlockHeader: types.BlockHeader{
+							Version: 2,
+							Height:  100,
+						},
+					},
+					peerID: testPeer,
+				},
+				{
+					block: &types.Block{
+						BlockHeader: types.BlockHeader{
+							Version: 3,
+							Height:  100,
+						},
+					},
+					peerID: testPeer,
+				},
+				{
+					block: &types.Block{
+						BlockHeader: types.BlockHeader{
+							Version: 4,
+							Height:  100,
+						},
+					},
+					peerID: testPeer,
+				},
+			},
+			limit:      3,
+			queueSize:  3,
+			msgSetSize: 3,
+			msgCounter: 3,
+		},
+
+		// test msg height does not meet the requirements
+		{
+			blocksMsg: []*blockMsg{
+				{
+					block: &types.Block{
+						BlockHeader: types.BlockHeader{
+							Version: 1,
+							Height:  98,
+						},
+					},
+					peerID: testPeer,
+				},
+				{
+					block: &types.Block{
+						BlockHeader: types.BlockHeader{
+							Version: 2,
+							Height:  97,
+						},
+					},
+					peerID: testPeer,
+				},
+				{
+					block: &types.Block{
+						BlockHeader: types.BlockHeader{
+							Version: 3,
+							Height:  164,
+						},
+					},
+					peerID: testPeer,
+				},
+				{
+					block: &types.Block{
+						BlockHeader: types.BlockHeader{
+							Version: 4,
+							Height:  165,
+						},
+					},
+					peerID: testPeer,
+				},
+			},
+			limit:      5,
+			queueSize:  0,
+			msgSetSize: 0,
+			msgCounter: 0,
+		},
+	}
+
+	for i, c := range testCase {
+		fetcher := newBlockFetcher(newChain(), peers)
+		for _, msg := range c.blocksMsg {
+			fetcher.add(msg, c.limit)
+		}
+
+		if fetcher.queue.Size() != c.queueSize {
+			t.Fatalf("index: %d queue size err got %d: want %d", i, fetcher.queue.Size(), c.queueSize)
+		}
+
+		if len(fetcher.msgSet) != c.msgSetSize {
+			t.Fatalf("index: %d msg set size err got %d: want %d", i, len(fetcher.msgSet), c.msgSetSize)
+		}
+
+		if fetcher.msgCounter[testPeer] != c.msgCounter {
+			t.Fatalf("index: %d peer msg counter err got %d: want %d", i, fetcher.msgCounter[testPeer], c.msgCounter)
 		}
 	}
 }

@@ -283,8 +283,7 @@ func (a *API) decodeRawTransaction(ctx context.Context, ins struct {
 	return NewSuccessResponse(tx)
 }
 
-// POST /list-unspent-outputs
-func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
+type ListUtxosReq struct {
 	AccountID     string `json:"account_id"`
 	AccountAlias  string `json:"account_alias"`
 	ID            string `json:"id"`
@@ -292,7 +291,10 @@ func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 	SmartContract bool   `json:"smart_contract"`
 	From          uint   `json:"from"`
 	Count         uint   `json:"count"`
-}) Response {
+}
+
+// POST /list-unspent-outputs
+func (a *API) listUnspentOutputs(ctx context.Context, filter ListUtxosReq) Response {
 	accountID := filter.AccountID
 	if filter.AccountAlias != "" {
 		acc, err := a.wallet.AccountMgr.FindByAlias(filter.AccountAlias)

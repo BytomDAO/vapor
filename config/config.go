@@ -134,6 +134,7 @@ func DefaultBaseConfig() BaseConfig {
 		DBBackend:          "leveldb",
 		DBPath:             "data",
 		KeysPath:           "keystore",
+		LogFile:            "log",
 		PrivateKeyFile:     "node_key.txt",
 		FederationFileName: "federation.json",
 	}
@@ -141,6 +142,10 @@ func DefaultBaseConfig() BaseConfig {
 
 func (b BaseConfig) DBDir() string {
 	return rootify(b.DBPath, b.RootDir)
+}
+
+func (b BaseConfig) LogDir() string {
+	return rootify(b.LogFile, b.RootDir)
 }
 
 func (b BaseConfig) KeysDir() string {

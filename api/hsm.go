@@ -9,19 +9,21 @@ import (
 	"github.com/vapor/crypto/ed25519/chainkd"
 )
 
-type createKeyResp struct {
+type CreateKeyReq struct {
+	Alias    string `json:"alias"`
+	Password string `json:"password"`
+	Mnemonic string `json:"mnemonic"`
+	Language string `json:"language"`
+}
+
+type CreateKeyResp struct {
 	Alias    string       `json:"alias"`
 	XPub     chainkd.XPub `json:"xpub"`
 	File     string       `json:"file"`
 	Mnemonic string       `json:"mnemonic,omitempty"`
 }
 
-func (a *API) pseudohsmCreateKey(ctx context.Context, in struct {
-	Alias    string `json:"alias"`
-	Password string `json:"password"`
-	Mnemonic string `json:"mnemonic"`
-	Language string `json:"language"`
-}) Response {
+func (a *API) pseudohsmCreateKey(ctx context.Context, in CreateKeyReq) Response {
 	if in.Language == "" {
 		in.Language = "en"
 	}
@@ -30,13 +32,13 @@ func (a *API) pseudohsmCreateKey(ctx context.Context, in struct {
 		if err != nil {
 			return NewErrorResponse(err)
 		}
-		return NewSuccessResponse(&createKeyResp{Alias: xpub.Alias, XPub: xpub.XPub, File: xpub.File})
+		return NewSuccessResponse(&CreateKeyResp{Alias: xpub.Alias, XPub: xpub.XPub, File: xpub.File})
 	}
 	xpub, mnemonic, err := a.wallet.Hsm.XCreate(in.Alias, in.Password, in.Language)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
-	return NewSuccessResponse(&createKeyResp{Alias: xpub.Alias, XPub: xpub.XPub, File: xpub.File, Mnemonic: *mnemonic})
+	return NewSuccessResponse(&CreateKeyResp{Alias: xpub.Alias, XPub: xpub.XPub, File: xpub.File, Mnemonic: *mnemonic})
 }
 
 func (a *API) pseudohsmUpdateKeyAlias(ctx context.Context, in struct {

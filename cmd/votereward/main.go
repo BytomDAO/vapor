@@ -35,6 +35,7 @@ func init() {
 }
 
 func runReward(cmd *cobra.Command, args []string) error {
+	log.Info("This tool belongs to an open-source project, we can not guarantee this tool is bug-free. Please check the code before using, developers will not be responsible for any asset loss due to bug!")
 	startTime := time.Now()
 	config := &cfg.Config{}
 	if err := cfg.LoadConfigFile(configFile, config); err != nil {
@@ -52,6 +53,8 @@ func runReward(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "error": err}).Fatal("Failded to initialize mysql db.")
 	}
+
+	db.LogMode(true)
 
 	sync, err := synchron.NewChainKeeper(db, config, rewardEndHeight)
 	if err != nil {

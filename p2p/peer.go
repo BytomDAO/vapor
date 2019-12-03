@@ -194,6 +194,11 @@ func (p *Peer) IsLAN() bool {
 	return p.isLAN
 }
 
+// Moniker returns peer's moniker.
+func (p *Peer) Moniker() string {
+	return p.NodeInfo.Moniker
+}
+
 // PubKey returns peer's public key.
 func (p *Peer) PubKey() string {
 	return p.conn.(*connection.SecretConnection).RemotePubKey().String()

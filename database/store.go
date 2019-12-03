@@ -325,6 +325,7 @@ func (s *Store) SaveBlockHeader(blockHeader *types.BlockHeader) error {
 
 // SaveChainStatus save the core's newest status && delete old status
 func (s *Store) SaveChainStatus(blockHeader, irrBlockHeader *types.BlockHeader, mainBlockHeaders []*types.BlockHeader, view *state.UtxoViewpoint, consensusResults []*state.ConsensusResult) error {
+	currentStatus := loadBlockStoreStateJSON(s.db)
 	batch := s.db.NewBatch()
 	if err := saveUtxoView(batch, view); err != nil {
 		return err
@@ -363,6 +364,13 @@ func (s *Store) SaveChainStatus(blockHeader, irrBlockHeader *types.BlockHeader, 
 
 		batch.Set(calcMainChainIndexPrefix(bh.Height), binaryBlockHash)
 		s.cache.removeMainChainHash(bh.Height)
+	}
+
+	if currentStatus != nil {
+		for i := blockHeader.Height + 1; i <= currentStatus.Height; i++ {
+			batch.Delete(calcMainChainIndexPrefix(i))
+			s.cache.removeMainChainHash(i)
+		}
 	}
 	batch.Write()
 	return nil

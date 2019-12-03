@@ -13,6 +13,9 @@ const (
 
 	PayToWitnessPubKeyHashDataSize = 20
 	PayToWitnessScriptHashDataSize = 32
+
+	_ = iota
+	SoftFork001
 )
 
 // BTMAssetID is BTM's asset id, the soul asset of Bytom
@@ -98,6 +101,8 @@ type Params struct {
 
 	// ProducerSubsidys defines the producer subsidy by block height
 	ProducerSubsidys []ProducerSubsidy
+
+	SoftForkPoint map[uint64]uint64
 }
 
 // ActiveNetParams is the active NetParams
@@ -139,6 +144,7 @@ var MainNetParams = Params{
 	ProducerSubsidys: []ProducerSubsidy{
 		{BeginBlock: 1, EndBlock: 63072000, Subsidy: 9512938},
 	},
+	SoftForkPoint: map[uint64]uint64{SoftFork001: 10461600},
 }
 
 // TestNetParams is the config for vapor-testnet
