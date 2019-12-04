@@ -23,7 +23,6 @@ var (
 	errAmountOfFeeGreaterThanMaximum = errors.New("amount of fee greater than max fee amount")
 	errAssetIDMustUniqueInMatchedTx  = errors.New("asset id must unique in matched transaction")
 	errRatioOfTradeLessThanZero      = errors.New("ratio arguments must greater than zero")
-	errNumeratorOfRatioIsOverflow    = errors.New("ratio numerator of contract args product input amount is overflow")
 	errLengthOfInputIsIncorrect      = errors.New("length of matched tx input is not equals to actual matched tx input")
 	errSpendOutputIDIsIncorrect      = errors.New("spend output id of matched tx is not equals to actual matched tx")
 	errRequestAmountMath             = errors.New("request amount of order less than one or big than max of int64")
@@ -198,7 +197,7 @@ func (m *MovCore) ValidateTx(tx *types.Tx, verifyResult *bc.TxVerifyResult) erro
 			return errStatusFailMustFalse
 		}
 
-		if err := validateMagneticContractArgs(output.AssetAmount().Amount, output.ControlProgram()); err != nil {
+		if err := validateMagneticContractArgs(output.AssetAmount(), output.ControlProgram()); err != nil {
 			return err
 		}
 	}
@@ -222,17 +221,21 @@ func validateCancelOrderTx(tx *types.Tx, verifyResult *bc.TxVerifyResult) error 
 	return nil
 }
 
-func validateMagneticContractArgs(fromAmount uint64, program []byte) error {
+func validateMagneticContractArgs(fromAssetAmount bc.AssetAmount, program []byte) error {
 	contractArgs, err := segwit.DecodeP2WMCProgram(program)
 	if err != nil {
 		return err
+	}
+
+	if *fromAssetAmount.AssetId == contractArgs.RequestedAsset {
+		return errInvalidTradePairs
 	}
 
 	if contractArgs.RatioNumerator <= 0 || contractArgs.RatioDenominator <= 0 {
 		return errRatioOfTradeLessThanZero
 	}
 
-	if match.CalcRequestAmount(fromAmount, contractArgs) < 1 {
+	if match.CalcRequestAmount(fromAssetAmount.Amount, contractArgs) < 1 {
 		return errRequestAmountMath
 	}
 	return nil
