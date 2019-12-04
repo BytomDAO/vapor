@@ -197,7 +197,7 @@ func (m *MovCore) ValidateTx(tx *types.Tx, verifyResult *bc.TxVerifyResult) erro
 			return errStatusFailMustFalse
 		}
 
-		if err := validateMagneticContractArgs(output.AssetAmount().Amount, output.ControlProgram()); err != nil {
+		if err := validateMagneticContractArgs(output.AssetAmount(), output.ControlProgram()); err != nil {
 			return err
 		}
 	}
@@ -221,17 +221,21 @@ func validateCancelOrderTx(tx *types.Tx, verifyResult *bc.TxVerifyResult) error 
 	return nil
 }
 
-func validateMagneticContractArgs(fromAmount uint64, program []byte) error {
+func validateMagneticContractArgs(fromAssetAmount bc.AssetAmount, program []byte) error {
 	contractArgs, err := segwit.DecodeP2WMCProgram(program)
 	if err != nil {
 		return err
+	}
+
+	if *fromAssetAmount.AssetId == contractArgs.RequestedAsset {
+		return errInvalidTradePairs
 	}
 
 	if contractArgs.RatioNumerator <= 0 || contractArgs.RatioDenominator <= 0 {
 		return errRatioOfTradeLessThanZero
 	}
 
-	if match.CalcRequestAmount(fromAmount, contractArgs) < 1 {
+	if match.CalcRequestAmount(fromAssetAmount.Amount, contractArgs) < 1 {
 		return errRequestAmountMath
 	}
 	return nil
@@ -256,10 +260,6 @@ func validateMatchedTx(tx *types.Tx, verifyResult *bc.TxVerifyResult) error {
 		order, err := common.NewOrderFromInput(tx, i)
 		if err != nil {
 			return err
-		}
-
-		if *order.FromAssetID == *order.ToAssetID {
-			return errInvalidTradePairs
 		}
 
 		fromAssetIDMap[order.FromAssetID.String()] = true
