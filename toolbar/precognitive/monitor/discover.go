@@ -6,8 +6,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/p2p/discover/dht"
-	"github.com/vapor/toolbar/precognitive/config"
+	"github.com/bytom/vapor/p2p/discover/dht"
+	"github.com/bytom/vapor/toolbar/precognitive/config"
 )
 
 var (

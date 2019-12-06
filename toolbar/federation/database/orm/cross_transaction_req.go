@@ -1,7 +1,7 @@
 package orm
 
 import (
-	"github.com/vapor/toolbar/common"
+	"github.com/bytom/vapor/toolbar/common"
 )
 
 type CrossTransactionReq struct {

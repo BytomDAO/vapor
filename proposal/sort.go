@@ -1,6 +1,6 @@
 package proposal
 
-import "github.com/vapor/protocol"
+import "github.com/bytom/vapor/protocol"
 
 type byTime []*protocol.TxDesc
 

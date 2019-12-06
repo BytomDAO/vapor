@@ -3,9 +3,9 @@ package integration
 import (
 	"fmt"
 
-	cfg "github.com/vapor/config"
-	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/util"
+	cfg "github.com/bytom/vapor/config"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
+	"github.com/bytom/vapor/util"
 )
 
 // Mock config.

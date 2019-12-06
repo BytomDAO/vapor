@@ -3,8 +3,8 @@ package consensusmgr
 import (
 	"github.com/sirupsen/logrus"
 
-	"github.com/vapor/p2p"
-	"github.com/vapor/p2p/connection"
+	"github.com/bytom/vapor/p2p"
+	"github.com/bytom/vapor/p2p/connection"
 )
 
 const (

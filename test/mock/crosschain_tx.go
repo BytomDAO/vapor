@@ -6,11 +6,11 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/blockchain/txbuilder"
-	"github.com/vapor/consensus"
-	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/blockchain/txbuilder"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
 )
 
 func NewCrosschainTx(privateKey string) *types.Tx {

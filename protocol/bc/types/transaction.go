@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/vapor/encoding/blockchain"
-	"github.com/vapor/errors"
-	"github.com/vapor/protocol/bc"
+	"github.com/bytom/vapor/encoding/blockchain"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/protocol/bc"
 )
 
 const serRequired = 0x7 // Bit mask accepted serialization flag.

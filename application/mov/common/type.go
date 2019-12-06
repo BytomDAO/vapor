@@ -1,6 +1,6 @@
 package common
 
-import "github.com/vapor/protocol/bc"
+import "github.com/bytom/vapor/protocol/bc"
 
 type MovUtxo struct {
 	SourceID       *bc.Hash

@@ -17,9 +17,9 @@ import (
 	"path/filepath"
 
 	"github.com/pborman/uuid"
-	"github.com/vapor/crypto"
-	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/crypto/randentropy"
+	"github.com/bytom/vapor/crypto"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
+	"github.com/bytom/vapor/crypto/randentropy"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"
 )

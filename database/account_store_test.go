@@ -6,15 +6,15 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/vapor/common"
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/common"
+	"github.com/bytom/vapor/testutil"
 
-	"github.com/vapor/blockchain/signers"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	"github.com/bytom/vapor/blockchain/signers"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
 
-	acc "github.com/vapor/account"
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/protocol/bc"
+	acc "github.com/bytom/vapor/account"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/protocol/bc"
 )
 
 func TestDeleteAccount(t *testing.T) {

@@ -6,8 +6,8 @@ import (
 	"github.com/golang/groupcache/lru"
 	"github.com/jinzhu/gorm"
 
-	"github.com/vapor/errors"
-	"github.com/vapor/toolbar/federation/database/orm"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/toolbar/federation/database/orm"
 )
 
 const (

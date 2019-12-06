@@ -5,7 +5,7 @@ import (
 	"crypto"
 	"testing"
 
-	"github.com/vapor/crypto/ed25519"
+	"github.com/bytom/vapor/crypto/ed25519"
 )
 
 // Testing basic InnerSign+Verify and the invariants:

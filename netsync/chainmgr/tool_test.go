@@ -8,14 +8,14 @@ import (
 
 	"github.com/tendermint/go-wire"
 	"github.com/tendermint/tmlibs/flowrate"
-	dbm "github.com/vapor/database/leveldb"
+	dbm "github.com/bytom/vapor/database/leveldb"
 
-	"github.com/vapor/consensus"
-	"github.com/vapor/event"
-	"github.com/vapor/netsync/peers"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/test/mock"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/event"
+	"github.com/bytom/vapor/netsync/peers"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/test/mock"
 )
 
 type P2PPeer struct {

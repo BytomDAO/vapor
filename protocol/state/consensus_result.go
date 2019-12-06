@@ -4,14 +4,14 @@ import (
 	"encoding/hex"
 	"sort"
 
-	"github.com/vapor/common/arithmetic"
-	"github.com/vapor/config"
-	"github.com/vapor/consensus"
-	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/errors"
-	"github.com/vapor/math/checked"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/common/arithmetic"
+	"github.com/bytom/vapor/config"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/math/checked"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
 )
 
 // fedConsensusPath is used to derive federation root xpubs for signing blocks

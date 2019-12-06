@@ -4,16 +4,16 @@ import (
 	"os"
 	"testing"
 
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/testutil"
 
 	"github.com/golang/protobuf/proto"
 
-	"github.com/vapor/database"
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/database/storage"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/state"
+	"github.com/bytom/vapor/database"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/database/storage"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/state"
 )
 
 func TestAttachOrDetachBlocks(t *testing.T) {

@@ -6,15 +6,15 @@ import (
 	"os"
 	"testing"
 
-	"github.com/vapor/account"
-	"github.com/vapor/blockchain/pseudohsm"
-	"github.com/vapor/blockchain/signers"
-	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/database"
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/validation"
-	"github.com/vapor/test"
+	"github.com/bytom/vapor/account"
+	"github.com/bytom/vapor/blockchain/pseudohsm"
+	"github.com/bytom/vapor/blockchain/signers"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
+	"github.com/bytom/vapor/database"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/validation"
+	"github.com/bytom/vapor/test"
 )
 
 func TestP2PKH(t *testing.T) {

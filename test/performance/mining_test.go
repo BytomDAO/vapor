@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vapor/account"
-	"github.com/vapor/database"
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/proposal"
-	"github.com/vapor/test"
+	"github.com/bytom/vapor/account"
+	"github.com/bytom/vapor/database"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/proposal"
+	"github.com/bytom/vapor/test"
 )
 
 // Function NewBlockTemplate's benchmark - 0.05s

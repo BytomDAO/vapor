@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"encoding/json"
 
-	"github.com/vapor/errors"
-	"github.com/vapor/toolbar/common"
-	fedCommon "github.com/vapor/toolbar/federation/common"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/toolbar/common"
+	fedCommon "github.com/bytom/vapor/toolbar/federation/common"
 )
 
 type CrossTransaction struct {

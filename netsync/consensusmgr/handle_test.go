@@ -9,12 +9,12 @@ import (
 
 	"github.com/tendermint/tmlibs/flowrate"
 
-	"github.com/vapor/consensus"
-	"github.com/vapor/event"
-	"github.com/vapor/netsync/peers"
-	"github.com/vapor/p2p"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/event"
+	"github.com/bytom/vapor/netsync/peers"
+	"github.com/bytom/vapor/p2p"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
 )
 
 type p2peer struct {

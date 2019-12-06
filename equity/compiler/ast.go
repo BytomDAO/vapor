@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	chainjson "github.com/vapor/encoding/json"
+	chainjson "github.com/bytom/vapor/encoding/json"
 )
 
 // Contract is a compiled Equity contract.

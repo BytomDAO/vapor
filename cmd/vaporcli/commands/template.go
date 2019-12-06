@@ -3,7 +3,7 @@ package commands
 import (
 	"fmt"
 
-	"github.com/vapor/errors"
+	"github.com/bytom/vapor/errors"
 )
 
 const (

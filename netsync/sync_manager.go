@@ -5,15 +5,15 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/vapor/config"
-	"github.com/vapor/consensus"
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/event"
-	"github.com/vapor/netsync/chainmgr"
-	"github.com/vapor/netsync/consensusmgr"
-	"github.com/vapor/netsync/peers"
-	"github.com/vapor/p2p"
-	"github.com/vapor/protocol"
+	"github.com/bytom/vapor/config"
+	"github.com/bytom/vapor/consensus"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/event"
+	"github.com/bytom/vapor/netsync/chainmgr"
+	"github.com/bytom/vapor/netsync/consensusmgr"
+	"github.com/bytom/vapor/netsync/peers"
+	"github.com/bytom/vapor/p2p"
+	"github.com/bytom/vapor/protocol"
 )
 
 const (

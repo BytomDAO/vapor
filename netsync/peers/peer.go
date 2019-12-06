@@ -10,11 +10,11 @@ import (
 	"github.com/tendermint/tmlibs/flowrate"
 	"gopkg.in/fatih/set.v0"
 
-	"github.com/vapor/consensus"
-	"github.com/vapor/errors"
-	msgs "github.com/vapor/netsync/messages"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/errors"
+	msgs "github.com/bytom/vapor/netsync/messages"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
 )
 
 const (

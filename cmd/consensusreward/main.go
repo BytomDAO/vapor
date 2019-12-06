@@ -7,9 +7,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/tendermint/tmlibs/cli"
 
-	"github.com/vapor/consensus"
-	"github.com/vapor/toolbar/consensusreward"
-	cfg "github.com/vapor/toolbar/consensusreward/config"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/toolbar/consensusreward"
+	cfg "github.com/bytom/vapor/toolbar/consensusreward/config"
 )
 
 const logModule = "consensusereward"

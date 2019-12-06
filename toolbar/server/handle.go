@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/vapor/errors"
+	"github.com/bytom/vapor/errors"
 )
 
 func Middleware(serverInstance interface{}) gin.HandlerFunc {

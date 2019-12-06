@@ -3,7 +3,7 @@ package txbuilder
 import (
 	"encoding/json"
 
-	chainjson "github.com/vapor/encoding/json"
+	chainjson "github.com/bytom/vapor/encoding/json"
 )
 
 // DataWitness used sign transaction

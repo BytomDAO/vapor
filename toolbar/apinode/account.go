@@ -3,12 +3,12 @@ package apinode
 import (
 	"encoding/json"
 
-	"github.com/vapor/api"
-	"github.com/vapor/blockchain/pseudohsm"
-	"github.com/vapor/blockchain/query"
-	"github.com/vapor/blockchain/txbuilder"
-	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/errors"
+	"github.com/bytom/vapor/api"
+	"github.com/bytom/vapor/blockchain/pseudohsm"
+	"github.com/bytom/vapor/blockchain/query"
+	"github.com/bytom/vapor/blockchain/txbuilder"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
+	"github.com/bytom/vapor/errors"
 )
 
 func (n *Node) CreateKey(alias, password string) (*api.CreateKeyResp, error) {

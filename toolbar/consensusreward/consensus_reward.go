@@ -5,11 +5,11 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/consensus"
-	"github.com/vapor/errors"
-	"github.com/vapor/toolbar/apinode"
-	"github.com/vapor/toolbar/common"
-	"github.com/vapor/toolbar/consensusreward/config"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/toolbar/apinode"
+	"github.com/bytom/vapor/toolbar/common"
+	"github.com/bytom/vapor/toolbar/consensusreward/config"
 )
 
 const standbyNodesRewardForConsensusCycle = 7610350076 // 400000000000000 / (365 * 24 * 60 / (500 * 1200 / 1000 / 60))
