@@ -7,8 +7,8 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/tendermint/go-wire"
 
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
 )
 
 var _ = wire.RegisterInterface(

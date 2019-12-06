@@ -5,13 +5,13 @@ import (
 	"encoding/hex"
 	"strings"
 
-	"github.com/vapor/blockchain/signers"
-	"github.com/vapor/common"
-	"github.com/vapor/consensus"
-	"github.com/vapor/crypto"
-	"github.com/vapor/crypto/ed25519"
-	"github.com/vapor/crypto/ed25519/chainkd"
-	chainjson "github.com/vapor/encoding/json"
+	"github.com/bytom/vapor/blockchain/signers"
+	"github.com/bytom/vapor/common"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/crypto"
+	"github.com/bytom/vapor/crypto/ed25519"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
+	chainjson "github.com/bytom/vapor/encoding/json"
 )
 
 // SignMsgResp is response for sign message

@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/vapor/protocol/vm"
+	"github.com/bytom/vapor/protocol/vm"
 )
 
 func TestAddJump(t *testing.T) {

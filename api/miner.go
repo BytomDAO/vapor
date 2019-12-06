@@ -4,10 +4,10 @@ import (
 	"context"
 	"strconv"
 
-	chainjson "github.com/vapor/encoding/json"
-	"github.com/vapor/errors"
-	"github.com/vapor/event"
-	"github.com/vapor/protocol/bc/types"
+	chainjson "github.com/bytom/vapor/encoding/json"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/event"
+	"github.com/bytom/vapor/protocol/bc/types"
 )
 
 type CoinbaseArbitrary struct {

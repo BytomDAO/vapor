@@ -6,11 +6,11 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/crypto/sha3pool"
-	chainjson "github.com/vapor/encoding/json"
-	"github.com/vapor/errors"
-	"github.com/vapor/protocol/vm"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
+	"github.com/bytom/vapor/crypto/sha3pool"
+	chainjson "github.com/bytom/vapor/encoding/json"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/protocol/vm"
 )
 
 type (

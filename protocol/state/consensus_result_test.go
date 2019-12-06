@@ -8,13 +8,13 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 
-	"github.com/vapor/consensus"
-	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/errors"
-	"github.com/vapor/math/checked"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/math/checked"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/testutil"
 )
 
 func TestApplyTransaction(t *testing.T) {

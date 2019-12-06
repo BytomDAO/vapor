@@ -3,10 +3,10 @@ package protocol
 import (
 	"errors"
 
-	"github.com/vapor/database/storage"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/state"
+	"github.com/bytom/vapor/database/storage"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/state"
 )
 
 var (

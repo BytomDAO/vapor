@@ -6,16 +6,16 @@ import (
 	"strings"
 	"testing"
 
-	acc "github.com/vapor/account"
-	"github.com/vapor/blockchain/signers"
-	"github.com/vapor/config"
-	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/database"
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/errors"
-	"github.com/vapor/event"
-	"github.com/vapor/protocol"
-	"github.com/vapor/testutil"
+	acc "github.com/bytom/vapor/account"
+	"github.com/bytom/vapor/blockchain/signers"
+	"github.com/bytom/vapor/config"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
+	"github.com/bytom/vapor/database"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/event"
+	"github.com/bytom/vapor/protocol"
+	"github.com/bytom/vapor/testutil"
 )
 
 func TestCreateAccountWithUppercase(t *testing.T) {

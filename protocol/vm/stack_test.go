@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/testutil"
 )
 
 func TestStackOps(t *testing.T) {

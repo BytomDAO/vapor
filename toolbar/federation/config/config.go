@@ -6,8 +6,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	vaporJson "github.com/vapor/encoding/json"
-	"github.com/vapor/toolbar/common"
+	vaporJson "github.com/bytom/vapor/encoding/json"
+	"github.com/bytom/vapor/toolbar/common"
 )
 
 func NewConfig() *Config {

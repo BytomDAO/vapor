@@ -10,7 +10,7 @@ RUN cd /go/src/github.com/vapor && make vapord && make vaporcli
 FROM alpine:latest
 
 RUN apk add --no-cache ca-certificates
-COPY --from=builder /go/src/github.com/vapor/cmd/vapord/vapord /usr/local/bin/
-COPY --from=builder /go/src/github.com/vapor/cmd/vaporcli/vaporcli /usr/local/bin/
+COPY --from=builder /go/src/github.com/bytom/vapor/cmd/vapord/vapord /usr/local/bin/
+COPY --from=builder /go/src/github.com/bytom/vapor/cmd/vaporcli/vaporcli /usr/local/bin/
 
 EXPOSE 9889 56656 56657 56658

@@ -1,6 +1,6 @@
 FROM bytom/golang-gcc-gpp:1.11.2 as builder
 LABEL stage=vapord_builder
-WORKDIR /go/src/github.com/vapor
+WORKDIR /go/src/github.com/bytom/vapor
 COPY . .
 RUN go build -o /usr/local/vapord/vapord ./cmd/vapord/main.go
 # save node public key in /usr/local/vapord/node_pubkey.txt

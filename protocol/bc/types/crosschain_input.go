@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc"
 )
 
 // CrossChainInput satisfies the TypedInput interface and represents a cross-chain transaction.

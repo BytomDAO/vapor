@@ -1,8 +1,8 @@
 package mock
 
 import (
-	"github.com/vapor/protocol"
-	"github.com/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol"
+	"github.com/bytom/vapor/protocol/bc/types"
 )
 
 type Mempool struct {

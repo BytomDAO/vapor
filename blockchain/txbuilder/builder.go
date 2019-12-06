@@ -4,9 +4,9 @@ import (
 	"math"
 	"time"
 
-	"github.com/vapor/common/arithmetic"
-	"github.com/vapor/errors"
-	"github.com/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/common/arithmetic"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/protocol/bc/types"
 )
 
 // NewBuilder return new TemplateBuilder instance

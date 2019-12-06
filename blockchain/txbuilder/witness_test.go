@@ -6,8 +6,8 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 
-	chainjson "github.com/vapor/encoding/json"
-	"github.com/vapor/testutil"
+	chainjson "github.com/bytom/vapor/encoding/json"
+	"github.com/bytom/vapor/testutil"
 )
 
 func TestWitnessJSON(t *testing.T) {

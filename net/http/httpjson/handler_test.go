@@ -9,7 +9,7 @@ import (
 	"testing"
 	"testing/iotest"
 
-	"github.com/vapor/errors"
+	"github.com/bytom/vapor/errors"
 )
 
 func TestHandler(t *testing.T) {

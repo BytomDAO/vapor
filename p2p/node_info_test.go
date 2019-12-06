@@ -8,8 +8,8 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/tendermint/go-wire"
 
-	"github.com/vapor/errors"
-	"github.com/vapor/p2p/signlib"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/p2p/signlib"
 )
 
 func mockCompatibleWithFalse(remoteVerStr string) (bool, error) {

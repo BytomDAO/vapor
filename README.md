@@ -12,7 +12,8 @@ Vapor
 ## Get source code
 
 ```
-$ git clone https://github.com/Bytom/vapor.git $GOPATH/src/github.com/vapor
+$ cd $GOPATH/src/github.com/bytom
+$ git clone https://github.com/Bytom/vapor.git
 ```
 
 Then, you have two ways to get vapor executable file:
@@ -23,7 +24,7 @@ Then, you have two ways to get vapor executable file:
 ## Installation
 
 ```
-$ cd $GOPATH/src/github.com/vapor
+$ cd $GOPATH/src/github.com/bytom/vapor
 $ make install
 ```
 
@@ -51,7 +52,7 @@ $ vapord node --home <vapor-data-path>
 ### Build the image
 
 ```
-$ cd $GOPATH/src/github.com/vapor
+$ cd $GOPATH/src/github.com/bytom/vapor
 $ docker build -t vapor .
 ```
 

@@ -6,8 +6,8 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/vapor/errors"
-	"github.com/vapor/net/http/httpjson"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/net/http/httpjson"
 )
 
 // Info contains a set of error codes to send to the user.

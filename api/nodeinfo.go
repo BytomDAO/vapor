@@ -6,14 +6,14 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/common"
-	cfg "github.com/vapor/config"
-	"github.com/vapor/consensus"
-	"github.com/vapor/crypto"
-	"github.com/vapor/errors"
-	"github.com/vapor/netsync/peers"
-	"github.com/vapor/p2p"
-	"github.com/vapor/version"
+	"github.com/bytom/vapor/common"
+	cfg "github.com/bytom/vapor/config"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/crypto"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/netsync/peers"
+	"github.com/bytom/vapor/p2p"
+	"github.com/bytom/vapor/version"
 )
 
 type VersionInfo struct {

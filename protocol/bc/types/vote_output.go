@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc"
 )
 
 // VoteOutput satisfies the TypedOutput interface and represents a vote transaction.

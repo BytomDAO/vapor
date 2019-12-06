@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/testutil"
 )
 
 func TestFederation(t *testing.T) {

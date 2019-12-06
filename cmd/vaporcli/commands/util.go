@@ -7,10 +7,10 @@ import (
 
 	jww "github.com/spf13/jwalterweatherman"
 
-	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/encoding/json"
-	chainjson "github.com/vapor/encoding/json"
-	"github.com/vapor/util"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
+	"github.com/bytom/vapor/encoding/json"
+	chainjson "github.com/bytom/vapor/encoding/json"
+	"github.com/bytom/vapor/util"
 )
 
 // accountIns is used for account related request.

@@ -6,13 +6,13 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/config"
-	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/errors"
-	"github.com/vapor/event"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/state"
+	"github.com/bytom/vapor/config"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/event"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/state"
 )
 
 const (

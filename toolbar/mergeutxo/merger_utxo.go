@@ -1,10 +1,10 @@
 package mergeutxo
 
 import (
-	"github.com/vapor/consensus"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/toolbar/apinode"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/toolbar/apinode"
 )
 
 func MergeUTXO(hostPort, accountID, password, address string, amount uint64) ([]string, error) {

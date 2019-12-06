@@ -8,7 +8,7 @@ import (
 	"reflect"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/vapor/errors"
+	"github.com/bytom/vapor/errors"
 )
 
 const logModule = "httpjson"

@@ -10,15 +10,15 @@ import (
 	"sort"
 	"testing"
 
-	acc "github.com/vapor/account"
-	"github.com/vapor/asset"
-	"github.com/vapor/blockchain/pseudohsm"
-	"github.com/vapor/blockchain/query"
-	"github.com/vapor/crypto/ed25519/chainkd"
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/testutil"
-	"github.com/vapor/wallet"
+	acc "github.com/bytom/vapor/account"
+	"github.com/bytom/vapor/asset"
+	"github.com/bytom/vapor/blockchain/pseudohsm"
+	"github.com/bytom/vapor/blockchain/query"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/testutil"
+	"github.com/bytom/vapor/wallet"
 )
 
 func TestAccountIndexKey(t *testing.T) {

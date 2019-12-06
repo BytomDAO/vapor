@@ -5,11 +5,11 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/toolbar/federation/api"
-	"github.com/vapor/toolbar/federation/config"
-	"github.com/vapor/toolbar/federation/database"
-	"github.com/vapor/toolbar/common"
-	"github.com/vapor/toolbar/federation/synchron"
+	"github.com/bytom/vapor/toolbar/federation/api"
+	"github.com/bytom/vapor/toolbar/federation/config"
+	"github.com/bytom/vapor/toolbar/federation/database"
+	"github.com/bytom/vapor/toolbar/common"
+	"github.com/bytom/vapor/toolbar/federation/synchron"
 )
 
 func main() {

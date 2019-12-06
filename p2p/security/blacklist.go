@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	cfg "github.com/vapor/config"
-	dbm "github.com/vapor/database/leveldb"
+	cfg "github.com/bytom/vapor/config"
+	dbm "github.com/bytom/vapor/database/leveldb"
 )
 
 const (

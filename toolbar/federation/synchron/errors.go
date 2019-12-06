@@ -1,7 +1,7 @@
 package synchron
 
 import (
-	"github.com/vapor/errors"
+	"github.com/bytom/vapor/errors"
 )
 
 var (

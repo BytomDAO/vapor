@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/vapor/common"
-	"github.com/vapor/errors"
-	"github.com/vapor/p2p/signlib"
+	"github.com/bytom/vapor/common"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/p2p/signlib"
 )
 
 func TestPacketCodec(t *testing.T) {

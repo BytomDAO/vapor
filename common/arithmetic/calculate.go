@@ -1,9 +1,9 @@
 package arithmetic
 
 import (
-	"github.com/vapor/consensus"
-	"github.com/vapor/math/checked"
-	"github.com/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/math/checked"
+	"github.com/bytom/vapor/protocol/bc/types"
 )
 
 // CalculateTxFee calculate transaction fee

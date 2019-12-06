@@ -1,9 +1,9 @@
 package txbuilder
 
 import (
-	"github.com/vapor/consensus"
-	"github.com/vapor/consensus/segwit"
-	"github.com/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/consensus/segwit"
+	"github.com/bytom/vapor/protocol/bc/types"
 )
 
 // EstimateTxGasInfo estimate transaction consumed gas

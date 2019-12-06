@@ -1,10 +1,10 @@
 package wallet
 
 import (
-	acc "github.com/vapor/account"
-	"github.com/vapor/asset"
-	"github.com/vapor/blockchain/query"
-	"github.com/vapor/protocol/bc"
+	acc "github.com/bytom/vapor/account"
+	"github.com/bytom/vapor/asset"
+	"github.com/bytom/vapor/blockchain/query"
+	"github.com/bytom/vapor/protocol/bc"
 )
 
 // WalletStore interface contains wallet storage functions.

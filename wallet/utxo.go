@@ -3,12 +3,12 @@ package wallet
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/account"
-	"github.com/vapor/consensus"
-	"github.com/vapor/consensus/segwit"
-	"github.com/vapor/crypto/sha3pool"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/account"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/consensus/segwit"
+	"github.com/bytom/vapor/crypto/sha3pool"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
 )
 
 // GetAccountUtxos return all account unspent outputs

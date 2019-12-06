@@ -14,14 +14,14 @@ import (
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/consensus"
-	"github.com/vapor/errors"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/toolbar/federation/common"
-	"github.com/vapor/toolbar/federation/config"
-	"github.com/vapor/toolbar/federation/database"
-	"github.com/vapor/toolbar/federation/database/orm"
-	"github.com/vapor/toolbar/federation/service"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/toolbar/federation/common"
+	"github.com/bytom/vapor/toolbar/federation/config"
+	"github.com/bytom/vapor/toolbar/federation/database"
+	"github.com/bytom/vapor/toolbar/federation/database/orm"
+	"github.com/bytom/vapor/toolbar/federation/service"
 )
 
 type mainchainKeeper struct {

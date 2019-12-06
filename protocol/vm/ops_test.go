@@ -5,9 +5,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/vapor/errors"
-	"github.com/vapor/math/checked"
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/math/checked"
+	"github.com/bytom/vapor/testutil"
 )
 
 func TestParseOp(t *testing.T) {

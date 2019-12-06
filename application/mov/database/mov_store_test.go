@@ -9,14 +9,14 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/vapor/application/mov/common"
-	"github.com/vapor/consensus"
-	"github.com/vapor/database/leveldb"
-	dbm "github.com/vapor/database/leveldb"
-	chainjson "github.com/vapor/encoding/json"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/application/mov/common"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/database/leveldb"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	chainjson "github.com/bytom/vapor/encoding/json"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/testutil"
 )
 
 var (

@@ -6,12 +6,12 @@ import (
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/errors"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/toolbar/apinode"
-	"github.com/vapor/toolbar/common"
-	"github.com/vapor/toolbar/vote_reward/config"
-	"github.com/vapor/toolbar/vote_reward/database/orm"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/toolbar/apinode"
+	"github.com/bytom/vapor/toolbar/common"
+	"github.com/bytom/vapor/toolbar/vote_reward/config"
+	"github.com/bytom/vapor/toolbar/vote_reward/database/orm"
 )
 
 var ErrInconsistentDB = errors.New("inconsistent db status")
