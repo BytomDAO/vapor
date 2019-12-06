@@ -18,14 +18,14 @@ import (
 
 // Engine is used to generate math transactions
 type Engine struct {
-	orderTable  *OrderTable
+	orderBook   *OrderBook
 	maxFeeRate  float64
 	nodeProgram []byte
 }
 
 // NewEngine return a new Engine
-func NewEngine(orderTable *OrderTable, maxFeeRate float64, nodeProgram []byte) *Engine {
-	return &Engine{orderTable: orderTable, maxFeeRate: maxFeeRate, nodeProgram: nodeProgram}
+func NewEngine(orderBook *OrderBook, maxFeeRate float64, nodeProgram []byte) *Engine {
+	return &Engine{orderBook: orderBook, maxFeeRate: maxFeeRate, nodeProgram: nodeProgram}
 }
 
 // HasMatchedTx check does the input trade pair can generate a match deal
@@ -56,7 +56,7 @@ func (e *Engine) NextMatchedTx(tradePairs ...*common.TradePair) (*types.Tx, erro
 	}
 
 	for _, tradePair := range tradePairs {
-		e.orderTable.PopOrder(tradePair)
+		e.orderBook.PopOrder(tradePair)
 	}
 
 	if err := e.addPartialTradeOrder(tx); err != nil {
@@ -113,7 +113,7 @@ func (e *Engine) addPartialTradeOrder(tx *types.Tx) error {
 			return err
 		}
 
-		if err := e.orderTable.AddOrder(order); err != nil {
+		if err := e.orderBook.AddOrder(order); err != nil {
 			return err
 		}
 	}
@@ -148,7 +148,7 @@ func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, error) {
 func (e *Engine) peekOrders(tradePairs []*common.TradePair) []*common.Order {
 	var orders []*common.Order
 	for _, tradePair := range tradePairs {
-		order := e.orderTable.PeekOrder(tradePair)
+		order := e.orderBook.PeekOrder(tradePair)
 		if order == nil {
 			return nil
 		}
@@ -248,12 +248,12 @@ func calcOppositeIndex(size int, selfIdx int) int {
 }
 
 func isMatched(orders []*common.Order) bool {
-	for i, order := range orders {
-		if oppositeOrder := orders[calcOppositeIndex(len(orders), i)]; 1/order.Rate < oppositeOrder.Rate {
-			return false
-		}
+	rate := orders[0].Rate
+	oppositeRate := 1.0
+	for i := 1; i < len(orders); i++ {
+		oppositeRate *= orders[i].Rate
 	}
-	return true
+	return 1/rate >= oppositeRate
 }
 
 func setMatchTxArguments(txInput *types.TxInput, isPartialTrade bool, position int, receiveAmounts uint64) {
@@ -272,6 +272,10 @@ func validateTradePairs(tradePairs []*common.TradePair) error {
 	}
 
 	for i, tradePair := range tradePairs {
+		if *tradePair.FromAssetID == *tradePair.ToAssetID {
+			return errors.New("from asset id can't equal to asset id")
+		}
+
 		oppositeTradePair := tradePairs[calcOppositeIndex(len(tradePairs), i)]
 		if *tradePair.ToAssetID != *oppositeTradePair.FromAssetID {
 			return errors.New("specified trade pairs is invalid")

@@ -12,7 +12,7 @@ var (
 	btc2eth = &common.TradePair{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH}
 )
 
-func TestOrderTable(t *testing.T) {
+func TestOrderBook(t *testing.T) {
 	cases := []struct {
 		desc                 string
 		initMovStore         database.MovStore
@@ -170,19 +170,19 @@ func TestOrderTable(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		orderTable := NewOrderTable(c.initMovStore, c.initArrivalAddOrders, c.initArrivalDelOrders)
+		orderBook := NewOrderBook(c.initMovStore, c.initArrivalAddOrders, c.initArrivalDelOrders)
 		for _, order := range c.addOrders {
-			if err := orderTable.AddOrder(order); err != nil {
+			if err := orderBook.AddOrder(order); err != nil {
 				t.Fatal(err)
 			}
 		}
 
 		for _, tradePair := range c.popOrders {
-			orderTable.PopOrder(tradePair)
+			orderBook.PopOrder(tradePair)
 		}
 
 		for tradePair, wantOrder := range c.wantPeekedOrders {
-			gotOrder := orderTable.PeekOrder(&tradePair)
+			gotOrder := orderBook.PeekOrder(&tradePair)
 			if wantOrder == gotOrder && wantOrder == nil {
 				continue
 			}

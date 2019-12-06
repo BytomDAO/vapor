@@ -80,12 +80,12 @@ func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, nodeProgram []byte, block
 		return nil, nil
 	}
 
-	orderTable, err := buildOrderTable(m.movStore, txs)
+	orderBook, err := buildOrderBook(m.movStore, txs)
 	if err != nil {
 		return nil, err
 	}
 
-	matchEngine := match.NewEngine(orderTable, maxFeeRate, nodeProgram)
+	matchEngine := match.NewEngine(orderBook, maxFeeRate, nodeProgram)
 	tradePairMap := make(map[string]bool)
 	tradePairIterator := database.NewTradePairIterator(m.movStore)
 
@@ -291,12 +291,12 @@ func validateMatchedTxFeeAmount(tx *types.Tx) error {
 	@issue: the match package didn't support circle yet
 */
 func (m *MovCore) validateMatchedTxSequence(txs []*types.Tx) error {
-	orderTable, err := buildOrderTable(m.movStore, txs)
+	orderBook, err := buildOrderBook(m.movStore, txs)
 	if err != nil {
 		return err
 	}
 
-	matchEngine := match.NewEngine(orderTable, maxFeeRate, nil)
+	matchEngine := match.NewEngine(orderBook, maxFeeRate, nil)
 	for _, matchedTx := range txs {
 		if !common.IsMatchedTx(matchedTx) {
 			continue
@@ -370,7 +370,7 @@ func applyTransactions(txs []*types.Tx) ([]*common.Order, []*common.Order, error
 /*
 	@issue: if consensus node packed match transaction first then packed regular tx, this function's logic may make a valid block invalid
 */
-func buildOrderTable(store database.MovStore, txs []*types.Tx) (*match.OrderTable, error) {
+func buildOrderBook(store database.MovStore, txs []*types.Tx) (*match.OrderBook, error) {
 	var nonMatchedTxs []*types.Tx
 	for _, tx := range txs {
 		if !common.IsMatchedTx(tx) {
@@ -394,7 +394,7 @@ func buildOrderTable(store database.MovStore, txs []*types.Tx) (*match.OrderTabl
 		arrivalDelOrders = append(arrivalDelOrders, delOrders...)
 	}
 
-	return match.NewOrderTable(store, arrivalAddOrders, arrivalDelOrders), nil
+	return match.NewOrderBook(store, arrivalAddOrders, arrivalDelOrders), nil
 }
 
 func calcMatchedTxGasUsed(tx *types.Tx) int64 {
