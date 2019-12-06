@@ -5,15 +5,15 @@ import (
 	"os"
 	"testing"
 
-	"github.com/vapor/application/mov/common"
-	"github.com/vapor/application/mov/database"
-	"github.com/vapor/application/mov/mock"
-	"github.com/vapor/consensus"
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/vm"
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/application/mov/common"
+	"github.com/bytom/vapor/application/mov/database"
+	"github.com/bytom/vapor/application/mov/mock"
+	"github.com/bytom/vapor/consensus"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/vm"
+	"github.com/bytom/vapor/testutil"
 )
 
 /*

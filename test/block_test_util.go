@@ -1,11 +1,11 @@
 package test
 
 import (
-	"github.com/vapor/protocol"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/validation"
-	"github.com/vapor/protocol/vm"
+	"github.com/bytom/vapor/protocol"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/validation"
+	"github.com/bytom/vapor/protocol/vm"
 )
 
 // NewBlock create block according to the current status of chain

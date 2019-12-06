@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"net"
 
-	cfg "github.com/vapor/config"
-	"github.com/vapor/consensus"
-	"github.com/vapor/errors"
-	"github.com/vapor/p2p/signlib"
-	"github.com/vapor/version"
+	cfg "github.com/bytom/vapor/config"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/p2p/signlib"
+	"github.com/bytom/vapor/version"
 )
 
 const maxNodeInfoSize = 10240 // 10Kb

@@ -5,9 +5,9 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/vm"
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/vm"
+	"github.com/bytom/vapor/testutil"
 )
 
 func TestMerkleRoot(t *testing.T) {

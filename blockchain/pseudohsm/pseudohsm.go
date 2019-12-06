@@ -12,9 +12,9 @@ import (
 
 	"github.com/pborman/uuid"
 
-	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/errors"
-	mnem "github.com/vapor/wallet/mnemonic"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
+	"github.com/bytom/vapor/errors"
+	mnem "github.com/bytom/vapor/wallet/mnemonic"
 )
 
 // pre-define errors for supporting bytom errorFormatter

@@ -14,7 +14,7 @@ import (
 
 	"github.com/cespare/cp"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
 )
 
 var (

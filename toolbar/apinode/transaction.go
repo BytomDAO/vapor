@@ -4,11 +4,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 
-	"github.com/vapor/blockchain/txbuilder"
-	"github.com/vapor/consensus"
-	"github.com/vapor/errors"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/blockchain/txbuilder"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
 )
 
 type SpendAccountAction struct {

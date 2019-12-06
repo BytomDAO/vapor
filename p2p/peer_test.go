@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	cfg "github.com/vapor/config"
-	"github.com/vapor/consensus"
-	conn "github.com/vapor/p2p/connection"
-	"github.com/vapor/p2p/signlib"
-	"github.com/vapor/version"
+	cfg "github.com/bytom/vapor/config"
+	"github.com/bytom/vapor/consensus"
+	conn "github.com/bytom/vapor/p2p/connection"
+	"github.com/bytom/vapor/p2p/signlib"
+	"github.com/bytom/vapor/version"
 )
 
 const testCh = 0x01

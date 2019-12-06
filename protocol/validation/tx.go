@@ -6,13 +6,13 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/vapor/common"
-	"github.com/vapor/config"
-	"github.com/vapor/consensus"
-	"github.com/vapor/errors"
-	"github.com/vapor/math/checked"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/vm"
+	"github.com/bytom/vapor/common"
+	"github.com/bytom/vapor/config"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/math/checked"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/vm"
 )
 
 // validate transaction error

@@ -6,15 +6,15 @@ import (
 	"sort"
 	"time"
 
-	"github.com/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc"
 
 	log "github.com/sirupsen/logrus"
 
-	acc "github.com/vapor/account"
-	"github.com/vapor/blockchain/query"
-	"github.com/vapor/crypto/sha3pool"
-	"github.com/vapor/protocol"
-	"github.com/vapor/protocol/bc/types"
+	acc "github.com/bytom/vapor/account"
+	"github.com/bytom/vapor/blockchain/query"
+	"github.com/bytom/vapor/crypto/sha3pool"
+	"github.com/bytom/vapor/protocol"
+	"github.com/bytom/vapor/protocol/bc/types"
 )
 
 const (

@@ -4,8 +4,8 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/vapor/crypto/ed25519"
-	"github.com/vapor/errors"
+	"github.com/bytom/vapor/crypto/ed25519"
+	"github.com/bytom/vapor/errors"
 )
 
 // TestIsUnspendable ensures the IsUnspendable function returns the expected

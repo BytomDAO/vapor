@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/vapor/crypto/ed25519/chainkd"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
 )
 
 func TestRestore(t *testing.T) {

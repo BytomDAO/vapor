@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vapor/common"
-	"github.com/vapor/crypto"
+	"github.com/bytom/vapor/common"
+	"github.com/bytom/vapor/crypto"
 )
 
 // Node represents a host on the network.

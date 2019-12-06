@@ -4,7 +4,7 @@ import (
 	"math"
 	"math/big"
 
-	"github.com/vapor/math/checked"
+	"github.com/bytom/vapor/math/checked"
 )
 
 func op1Add(vm *virtualMachine) error {

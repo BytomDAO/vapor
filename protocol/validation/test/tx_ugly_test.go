@@ -5,15 +5,15 @@ import (
 	"math"
 	"testing"
 
-	"github.com/vapor/account"
-	"github.com/vapor/blockchain/signers"
-	"github.com/vapor/consensus"
-	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/validation"
-	"github.com/vapor/protocol/vm/vmutil"
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/account"
+	"github.com/bytom/vapor/blockchain/signers"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/validation"
+	"github.com/bytom/vapor/protocol/vm/vmutil"
+	"github.com/bytom/vapor/testutil"
 )
 
 func TestValidateUglyTx(t *testing.T) {

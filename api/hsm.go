@@ -5,8 +5,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/blockchain/txbuilder"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	"github.com/bytom/vapor/blockchain/txbuilder"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
 )
 
 type CreateKeyReq struct {

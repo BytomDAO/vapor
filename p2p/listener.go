@@ -10,9 +10,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
 
-	cfg "github.com/vapor/config"
-	"github.com/vapor/errors"
-	"github.com/vapor/p2p/upnp"
+	cfg "github.com/bytom/vapor/config"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/p2p/upnp"
 )
 
 const (

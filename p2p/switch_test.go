@@ -8,12 +8,12 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	cfg "github.com/vapor/config"
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/errors"
-	conn "github.com/vapor/p2p/connection"
-	"github.com/vapor/p2p/security"
-	"github.com/vapor/p2p/signlib"
+	cfg "github.com/bytom/vapor/config"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/errors"
+	conn "github.com/bytom/vapor/p2p/connection"
+	"github.com/bytom/vapor/p2p/security"
+	"github.com/bytom/vapor/p2p/signlib"
 )
 
 var (

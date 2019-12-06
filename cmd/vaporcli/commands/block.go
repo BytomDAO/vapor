@@ -9,8 +9,8 @@ import (
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 
-	chainjson "github.com/vapor/encoding/json"
-	"github.com/vapor/util"
+	chainjson "github.com/bytom/vapor/encoding/json"
+	"github.com/bytom/vapor/util"
 )
 
 func init() {

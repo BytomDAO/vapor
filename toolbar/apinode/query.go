@@ -3,11 +3,11 @@ package apinode
 import (
 	"encoding/json"
 
-	"github.com/vapor/api"
-	"github.com/vapor/blockchain/query"
-	"github.com/vapor/errors"
-	"github.com/vapor/netsync/peers"
-	"github.com/vapor/wallet"
+	"github.com/bytom/vapor/api"
+	"github.com/bytom/vapor/blockchain/query"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/netsync/peers"
+	"github.com/bytom/vapor/wallet"
 )
 
 func (n *Node) ListAddresses(accountAlias string, from, count uint) (*[]api.AddressResp, error) {

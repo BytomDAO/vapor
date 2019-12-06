@@ -8,8 +8,8 @@ import (
 	"testing"
 	"testing/quick"
 
-	"github.com/vapor/errors"
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/testutil"
 )
 
 type tracebuf struct {

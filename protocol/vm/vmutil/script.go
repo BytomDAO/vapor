@@ -1,10 +1,10 @@
 package vmutil
 
 import (
-	"github.com/vapor/crypto/ed25519"
-	"github.com/vapor/errors"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/vm"
+	"github.com/bytom/vapor/crypto/ed25519"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/vm"
 )
 
 // pre-define errors

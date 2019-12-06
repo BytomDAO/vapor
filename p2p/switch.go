@@ -10,18 +10,18 @@ import (
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
 
-	cfg "github.com/vapor/config"
-	"github.com/vapor/consensus"
-	"github.com/vapor/crypto/sha3pool"
-	"github.com/vapor/errors"
-	"github.com/vapor/event"
-	"github.com/vapor/p2p/connection"
-	"github.com/vapor/p2p/discover/dht"
-	"github.com/vapor/p2p/discover/mdns"
-	"github.com/vapor/p2p/netutil"
-	security "github.com/vapor/p2p/security"
-	"github.com/vapor/p2p/signlib"
-	"github.com/vapor/version"
+	cfg "github.com/bytom/vapor/config"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/crypto/sha3pool"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/event"
+	"github.com/bytom/vapor/p2p/connection"
+	"github.com/bytom/vapor/p2p/discover/dht"
+	"github.com/bytom/vapor/p2p/discover/mdns"
+	"github.com/bytom/vapor/p2p/netutil"
+	security "github.com/bytom/vapor/p2p/security"
+	"github.com/bytom/vapor/p2p/signlib"
+	"github.com/bytom/vapor/version"
 )
 
 const (
@@ -272,7 +272,7 @@ func (sw *Switch) DialPeerWithAddress(addr *NetAddress) error {
 
 	pc, err := newOutboundPeerConn(addr, sw.nodePrivKey, sw.peerConfig)
 	if err != nil {
-		log.WithFields(log.Fields{"module": logModule, "address": addr, " err": err}).Error("DialPeer fail on newOutboundPeerConn")
+		log.WithFields(log.Fields{"module": logModule, "address": addr, " err": err}).Warn("DialPeer fail on newOutboundPeerConn")
 		return err
 	}
 
@@ -431,7 +431,7 @@ func (sw *Switch) listenerRoutine(l Listener) {
 
 func (sw *Switch) dialPeerWorker(a *NetAddress, wg *sync.WaitGroup) {
 	if err := sw.DialPeerWithAddress(a); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "addr": a, "err": err}).Error("dialPeerWorker fail on dial peer")
+		log.WithFields(log.Fields{"module": logModule, "addr": a, "err": err}).Warn("dialPeerWorker fail on dial peer")
 	}
 	wg.Done()
 }

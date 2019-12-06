@@ -1,9 +1,9 @@
 package common
 
 import (
-	"github.com/vapor/application/mov/contract"
-	"github.com/vapor/consensus/segwit"
-	"github.com/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/application/mov/contract"
+	"github.com/bytom/vapor/consensus/segwit"
+	"github.com/bytom/vapor/protocol/bc/types"
 )
 
 // IsMatchedTx check if this transaction has trade mov order input

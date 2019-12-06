@@ -3,10 +3,10 @@ package common
 import (
 	"errors"
 
-	"github.com/vapor/common"
-	"github.com/vapor/consensus"
-	"github.com/vapor/consensus/segwit"
-	"github.com/vapor/protocol/vm/vmutil"
+	"github.com/bytom/vapor/common"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/consensus/segwit"
+	"github.com/bytom/vapor/protocol/vm/vmutil"
 )
 
 func GetAddressFromControlProgram(prog []byte) string {

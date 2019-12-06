@@ -6,8 +6,8 @@ import (
 	"math"
 	"reflect"
 
-	"github.com/vapor/errors"
-	"github.com/vapor/math/checked"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/math/checked"
 )
 
 type Op uint8

@@ -5,9 +5,8 @@ import (
 	"os"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/vapor/crypto/ed25519/chainkd"
-
-	"github.com/vapor/toolbar/common"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
+	"github.com/bytom/vapor/toolbar/common"
 )
 
 func NewConfig() *Config {

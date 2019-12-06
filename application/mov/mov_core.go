@@ -1,15 +1,15 @@
 package mov
 
 import (
-	"github.com/vapor/application/mov/common"
-	"github.com/vapor/application/mov/contract"
-	"github.com/vapor/application/mov/database"
-	"github.com/vapor/application/mov/match"
-	"github.com/vapor/consensus/segwit"
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/errors"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/application/mov/common"
+	"github.com/bytom/vapor/application/mov/contract"
+	"github.com/bytom/vapor/application/mov/database"
+	"github.com/bytom/vapor/application/mov/match"
+	"github.com/bytom/vapor/consensus/segwit"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
 )
 
 const maxFeeRate = 0.05
