@@ -3,7 +3,7 @@ FROM golang:1.12-alpine as builder
 
 RUN apk add --no-cache make git
 
-ADD . /go/src/github.com/vapor
+ADD . /go/src/github.com/bytom/vapor
 WORKDIR /go/src/github.com/bytom/vapor/cmd/fedd
 
 RUN GOOS=linux CGO_ENABLED=0 go build -ldflags="-s -w" -installsuffix cgo -o fed main.go
