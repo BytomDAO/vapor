@@ -3,8 +3,8 @@ FROM golang:1.12-alpine as builder
 
 RUN apk add --no-cache make git
 
-ADD . /go/src/github.com/vapor
-RUN cd /go/src/github.com/vapor && make vapord && make vaporcli
+ADD . /go/src/github.com/bytom/vapor
+RUN cd /go/src/github.com/bytom/vapor && make vapord && make vaporcli
 
 # Pull Vapor into a second stage deploy alpine container
 FROM alpine:latest
