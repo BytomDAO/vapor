@@ -25,8 +25,8 @@ type fillBlockHashesFn func(height uint64) ([]*bc.Hash, error)
 type fillMainChainHashFn func(height uint64) (*bc.Hash, error)
 type fillConsensusResultFn func(seq uint64) (*state.ConsensusResult, error)
 
-func newCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransactionsFn, fillBlockHashes fillBlockHashesFn, fillMainChainHash fillMainChainHashFn, fillConsensusResult fillConsensusResultFn) cache {
-	return cache{
+func newCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransactionsFn, fillBlockHashes fillBlockHashesFn, fillMainChainHash fillMainChainHashFn, fillConsensusResult fillConsensusResultFn) *cache {
+	return &cache{
 		lruBlockHeaders:     common.NewCache(maxCachedBlockHeaders),
 		lruBlockTxs:         common.NewCache(maxCachedBlockTransactions),
 		lruBlockHashes:      common.NewCache(maxCachedBlockHashes),
