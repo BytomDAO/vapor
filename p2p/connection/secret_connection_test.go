@@ -7,7 +7,7 @@ import (
 
 	cmn "github.com/tendermint/tmlibs/common"
 
-	"github.com/vapor/crypto/ed25519/chainkd"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
 )
 
 type dummyConn struct {

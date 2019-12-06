@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vapor/blockchain/txbuilder"
-	"github.com/vapor/consensus"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/blockchain/txbuilder"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/testutil"
 )
 
 func TestMergeSpendAction(t *testing.T) {

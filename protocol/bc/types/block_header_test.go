@@ -9,9 +9,9 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 
-	"github.com/vapor/encoding/blockchain"
-	"github.com/vapor/errors"
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/encoding/blockchain"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/testutil"
 )
 
 func TestBlockHeader(t *testing.T) {

@@ -13,10 +13,10 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/flowrate"
 
-	cfg "github.com/vapor/config"
-	"github.com/vapor/consensus"
-	"github.com/vapor/p2p/connection"
-	"github.com/vapor/p2p/signlib"
+	cfg "github.com/bytom/vapor/config"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/p2p/connection"
+	"github.com/bytom/vapor/p2p/signlib"
 )
 
 // peerConn contains the raw connection and its config.

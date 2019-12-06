@@ -9,8 +9,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	cfg "github.com/vapor/config"
-	"github.com/vapor/crypto/ed25519/chainkd"
+	cfg "github.com/bytom/vapor/config"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
 )
 
 var initFilesCmd = &cobra.Command{

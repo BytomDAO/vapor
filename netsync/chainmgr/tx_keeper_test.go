@@ -9,12 +9,12 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 
-	"github.com/vapor/consensus"
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/protocol"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/test/mock"
+	"github.com/bytom/vapor/consensus"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/protocol"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/test/mock"
 )
 
 const txsNumber = 2000

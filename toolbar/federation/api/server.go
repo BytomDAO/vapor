@@ -9,8 +9,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 
-	"github.com/vapor/errors"
-	"github.com/vapor/toolbar/federation/config"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/toolbar/federation/config"
 )
 
 type Server struct {

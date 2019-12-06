@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	chainjson "github.com/vapor/encoding/json"
+	chainjson "github.com/bytom/vapor/encoding/json"
 
-	"github.com/vapor/equity/compiler/equitytest"
+	"github.com/bytom/vapor/equity/compiler/equitytest"
 )
 
 func TestCompile(t *testing.T) {

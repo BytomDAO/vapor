@@ -12,10 +12,10 @@ import (
 	"github.com/tendermint/go-wire"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/vapor/common"
-	"github.com/vapor/crypto/sha3pool"
-	"github.com/vapor/p2p/netutil"
-	"github.com/vapor/p2p/signlib"
+	"github.com/bytom/vapor/common"
+	"github.com/bytom/vapor/crypto/sha3pool"
+	"github.com/bytom/vapor/p2p/netutil"
+	"github.com/bytom/vapor/p2p/signlib"
 )
 
 var (

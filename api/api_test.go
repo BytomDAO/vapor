@@ -6,10 +6,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/vapor/accesstoken"
-	"github.com/vapor/blockchain/rpc"
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/accesstoken"
+	"github.com/bytom/vapor/blockchain/rpc"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/testutil"
 )
 
 func TestAPIHandler(t *testing.T) {

@@ -6,11 +6,11 @@ import (
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
 
-	cfg "github.com/vapor/config"
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/p2p/connection"
-	"github.com/vapor/p2p/discover/dht"
-	"github.com/vapor/p2p/signlib"
+	cfg "github.com/bytom/vapor/config"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/p2p/connection"
+	"github.com/bytom/vapor/p2p/discover/dht"
+	"github.com/bytom/vapor/p2p/signlib"
 )
 
 //PanicOnAddPeerErr add peer error

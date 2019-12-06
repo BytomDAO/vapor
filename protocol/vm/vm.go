@@ -6,7 +6,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/vapor/errors"
+	"github.com/bytom/vapor/errors"
 )
 
 type virtualMachine struct {

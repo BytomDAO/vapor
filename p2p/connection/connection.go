@@ -14,7 +14,7 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/flowrate"
 
-	"github.com/vapor/common/compression"
+	"github.com/bytom/vapor/common/compression"
 )
 
 const (

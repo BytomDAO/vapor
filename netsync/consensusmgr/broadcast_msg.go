@@ -1,7 +1,7 @@
 package consensusmgr
 
 import (
-	"github.com/vapor/netsync/peers"
+	"github.com/bytom/vapor/netsync/peers"
 )
 
 // BroadcastMsg the message that can be broadcast

@@ -5,8 +5,8 @@ import (
 	"errors"
 	"io"
 
-	"github.com/vapor/crypto/sha3pool"
-	"github.com/vapor/encoding/blockchain"
+	"github.com/bytom/vapor/crypto/sha3pool"
+	"github.com/bytom/vapor/encoding/blockchain"
 )
 
 // NewAssetID convert byte array to aseet id

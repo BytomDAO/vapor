@@ -5,14 +5,14 @@ import (
 	"sort"
 	"strings"
 
-	acc "github.com/vapor/account"
-	"github.com/vapor/blockchain/signers"
-	"github.com/vapor/common"
-	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/crypto/sha3pool"
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/errors"
-	"github.com/vapor/protocol/bc"
+	acc "github.com/bytom/vapor/account"
+	"github.com/bytom/vapor/blockchain/signers"
+	"github.com/bytom/vapor/common"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
+	"github.com/bytom/vapor/crypto/sha3pool"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/protocol/bc"
 )
 
 const (

@@ -3,8 +3,8 @@ package apinode
 import (
 	"encoding/json"
 
-	"github.com/vapor/errors"
-	"github.com/vapor/toolbar/common"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/toolbar/common"
 )
 
 // Node can invoke the api which provide by the full node server

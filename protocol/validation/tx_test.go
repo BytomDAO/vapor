@@ -6,14 +6,14 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 
-	"github.com/vapor/consensus"
-	"github.com/vapor/crypto/sha3pool"
-	"github.com/vapor/errors"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/vm"
-	"github.com/vapor/protocol/vm/vmutil"
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/crypto/sha3pool"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/vm"
+	"github.com/bytom/vapor/protocol/vm/vmutil"
+	"github.com/bytom/vapor/testutil"
 )
 
 func init() {

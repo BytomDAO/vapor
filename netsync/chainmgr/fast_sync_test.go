@@ -6,13 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vapor/consensus"
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/errors"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/test/mock"
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/consensus"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/test/mock"
+	"github.com/bytom/vapor/testutil"
 )
 
 func TestBlockLocator(t *testing.T) {

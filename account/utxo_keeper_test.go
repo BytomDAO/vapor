@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/golang/groupcache/lru"
-	"github.com/vapor/blockchain/txbuilder"
-	"github.com/vapor/crypto/ed25519/chainkd"
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/blockchain/txbuilder"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/testutil"
 )
 
 func TestAddUnconfirmedUtxo(t *testing.T) {

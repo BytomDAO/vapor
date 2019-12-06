@@ -3,11 +3,11 @@ package test
 import (
 	"testing"
 
-	acc "github.com/vapor/account"
-	"github.com/vapor/blockchain/signers"
-	"github.com/vapor/consensus"
-	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/testutil"
+	acc "github.com/bytom/vapor/account"
+	"github.com/bytom/vapor/blockchain/signers"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
+	"github.com/bytom/vapor/testutil"
 )
 
 var (

@@ -4,16 +4,16 @@ import (
 	"context"
 	stdjson "encoding/json"
 
-	"github.com/vapor/blockchain/signers"
-	"github.com/vapor/blockchain/txbuilder"
-	"github.com/vapor/common"
-	"github.com/vapor/consensus"
-	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/encoding/json"
-	"github.com/vapor/errors"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/vm/vmutil"
+	"github.com/bytom/vapor/blockchain/signers"
+	"github.com/bytom/vapor/blockchain/txbuilder"
+	"github.com/bytom/vapor/common"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
+	"github.com/bytom/vapor/encoding/json"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/vm/vmutil"
 )
 
 var (

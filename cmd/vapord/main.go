@@ -10,8 +10,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/cli"
 
-	"github.com/vapor/cmd/vapord/commands"
-	"github.com/vapor/config"
+	"github.com/bytom/vapor/cmd/vapord/commands"
+	"github.com/bytom/vapor/config"
 )
 
 // ContextHook is a hook for logrus.

@@ -11,7 +11,7 @@ endif
 
 PACKAGES    := $(shell go list ./... | grep -v '/vendor/' | grep -v '/crypto/ed25519/chainkd' | grep -v '/mining/tensority')
 
-BUILD_FLAGS := -ldflags "-X github.com/vapor/version.GitCommit=`git rev-parse HEAD`"
+BUILD_FLAGS := -ldflags "-X github.com/bytom/vapor/version.GitCommit=`git rev-parse HEAD`"
 
 
 VAPORD_BINARY32 := vapord-$(GOOS)_386

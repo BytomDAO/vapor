@@ -8,12 +8,12 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/vapor/account"
-	"github.com/vapor/consensus"
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/account"
+	"github.com/bytom/vapor/consensus"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/testutil"
 )
 
 func TestGetAccountUtxos(t *testing.T) {

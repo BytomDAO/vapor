@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/vapor/common/arithmetic"
-	cfg "github.com/vapor/config"
-	"github.com/vapor/errors"
-	"github.com/vapor/math/checked"
-	"github.com/vapor/protocol"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/vm"
+	"github.com/bytom/vapor/common/arithmetic"
+	cfg "github.com/bytom/vapor/config"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/math/checked"
+	"github.com/bytom/vapor/protocol"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/vm"
 )
 
 var (

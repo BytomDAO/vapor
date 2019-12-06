@@ -5,8 +5,8 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/vapor/encoding/blockchain"
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/encoding/blockchain"
+	"github.com/bytom/vapor/testutil"
 )
 
 func TestReadWriteBlockWitness(t *testing.T) {

@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vapor/netsync/peers"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/netsync/peers"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
 )
 
 type peerMgr struct {

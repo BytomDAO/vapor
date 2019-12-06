@@ -10,7 +10,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/vapor/errors"
+	"github.com/bytom/vapor/errors"
 )
 
 // Assemble converts a string like "2 3 ADD 5 NUMEQUAL" into 0x525393559c.

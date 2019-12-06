@@ -6,12 +6,12 @@ import (
 
 	"github.com/jinzhu/gorm"
 
-	"github.com/vapor/consensus"
-	"github.com/vapor/errors"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/toolbar/apinode"
-	"github.com/vapor/toolbar/common"
-	"github.com/vapor/toolbar/vote_reward/config"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/toolbar/apinode"
+	"github.com/bytom/vapor/toolbar/common"
+	"github.com/bytom/vapor/toolbar/vote_reward/config"
 )
 
 var (

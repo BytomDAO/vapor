@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/vapor/errors"
+	"github.com/bytom/vapor/errors"
 )
 
 var (

@@ -6,10 +6,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/go-wire"
 
-	"github.com/vapor/errors"
-	msgs "github.com/vapor/netsync/messages"
-	"github.com/vapor/p2p"
-	"github.com/vapor/p2p/connection"
+	"github.com/bytom/vapor/errors"
+	msgs "github.com/bytom/vapor/netsync/messages"
+	"github.com/bytom/vapor/p2p"
+	"github.com/bytom/vapor/p2p/connection"
 )
 
 //ProtocolReactor handles new coming protocol message.
