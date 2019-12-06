@@ -8,8 +8,8 @@ import (
 	"github.com/vapor/errors"
 )
 
-// OrderTable is used to handle the mov orders in memory like stack
-type OrderTable struct {
+// OrderBook is used to handle the mov orders in memory like stack
+type OrderBook struct {
 	movStore database.MovStore
 	// key of tradePair -> []order
 	dbOrders map[string][]*common.Order
@@ -22,9 +22,9 @@ type OrderTable struct {
 	arrivalDelOrders map[string]*common.Order
 }
 
-// NewOrderTable create a new OrderTable object
-func NewOrderTable(movStore database.MovStore, arrivalAddOrders, arrivalDelOrders []*common.Order) *OrderTable {
-	return &OrderTable{
+// NewOrderBook create a new OrderBook object
+func NewOrderBook(movStore database.MovStore, arrivalAddOrders, arrivalDelOrders []*common.Order) *OrderBook {
+	return &OrderBook{
 		movStore:       movStore,
 		dbOrders:       make(map[string][]*common.Order),
 		orderIterators: make(map[string]*database.OrderIterator),
@@ -35,7 +35,7 @@ func NewOrderTable(movStore database.MovStore, arrivalAddOrders, arrivalDelOrder
 }
 
 // AddOrder add the in memory temp order to order table
-func (o *OrderTable) AddOrder(order *common.Order) error {
+func (o *OrderBook) AddOrder(order *common.Order) error {
 	tradePairKey := order.TradePair().Key()
 	orders := o.arrivalAddOrders[tradePairKey]
 	if len(orders) > 0 && order.Rate > orders[len(orders)-1].Rate {
@@ -47,7 +47,7 @@ func (o *OrderTable) AddOrder(order *common.Order) error {
 }
 
 // PeekOrder return the next lowest order of given trade pair
-func (o *OrderTable) PeekOrder(tradePair *common.TradePair) *common.Order {
+func (o *OrderBook) PeekOrder(tradePair *common.TradePair) *common.Order {
 	if len(o.dbOrders[tradePair.Key()]) == 0 {
 		o.extendDBOrders(tradePair)
 	}
@@ -71,7 +71,7 @@ func (o *OrderTable) PeekOrder(tradePair *common.TradePair) *common.Order {
 }
 
 // PopOrder delete the next lowest order of given trade pair
-func (o *OrderTable) PopOrder(tradePair *common.TradePair) {
+func (o *OrderBook) PopOrder(tradePair *common.TradePair) {
 	order := o.PeekOrder(tradePair)
 	if order == nil {
 		return
@@ -108,7 +108,7 @@ func arrangeArrivalDelOrders(orders []*common.Order) map[string]*common.Order {
 	return arrivalDelOrderMap
 }
 
-func (o *OrderTable) extendDBOrders(tradePair *common.TradePair) {
+func (o *OrderBook) extendDBOrders(tradePair *common.TradePair) {
 	iterator, ok := o.orderIterators[tradePair.Key()]
 	if !ok {
 		iterator = database.NewOrderIterator(o.movStore, tradePair)
@@ -121,7 +121,7 @@ func (o *OrderTable) extendDBOrders(tradePair *common.TradePair) {
 	}
 }
 
-func (o *OrderTable) peekArrivalOrder(tradePair *common.TradePair) *common.Order {
+func (o *OrderBook) peekArrivalOrder(tradePair *common.TradePair) *common.Order {
 	if arrivalAddOrders := o.arrivalAddOrders[tradePair.Key()]; len(arrivalAddOrders) > 0 {
 		return arrivalAddOrders[len(arrivalAddOrders)-1]
 	}
