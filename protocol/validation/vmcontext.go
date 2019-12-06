@@ -98,12 +98,17 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 }
 
 func witnessProgram(prog []byte) []byte {
-	if segwit.IsP2WPKHScript(prog) {
-		if witnessProg, err := segwit.ConvertP2PKHSigProgram([]byte(prog)); err == nil {
+	switch {
+	case segwit.IsP2WPKHScript(prog):
+		if witnessProg, err := segwit.ConvertP2PKHSigProgram(prog); err == nil {
 			return witnessProg
 		}
-	} else if segwit.IsP2WSHScript(prog) {
-		if witnessProg, err := segwit.ConvertP2SHProgram([]byte(prog)); err == nil {
+	case segwit.IsP2WSHScript(prog):
+		if witnessProg, err := segwit.ConvertP2SHProgram(prog); err == nil {
+			return witnessProg
+		}
+	case segwit.IsP2WMCScript(prog):
+		if witnessProg, err := segwit.ConvertP2MCProgram(prog); err == nil {
 			return witnessProg
 		}
 	}

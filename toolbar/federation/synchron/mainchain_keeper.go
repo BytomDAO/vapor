@@ -14,6 +14,7 @@ import (
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 
+	vpCommon "github.com/bytom/vapor/common"
 	"github.com/bytom/vapor/consensus"
 	"github.com/bytom/vapor/errors"
 	"github.com/bytom/vapor/protocol/bc"
@@ -53,6 +54,8 @@ func NewMainchainKeeper(db *gorm.DB, assetStore *database.AssetStore, cfg *confi
 
 func (m *mainchainKeeper) Run() {
 	ticker := time.NewTicker(time.Duration(m.cfg.SyncSeconds) * time.Second)
+	defer ticker.Stop()
+
 	for ; true; <-ticker.C {
 		for {
 			isUpdate, err := m.syncBlock()
@@ -86,6 +89,10 @@ func (m *mainchainKeeper) createCrossChainReqs(db *gorm.DB, crossTransactionID u
 			return err
 		}
 
+		if asset.IsOpenFederationIssue {
+			continue
+		}
+
 		req := &orm.CrossTransactionReq{
 			CrossTransactionID: crossTransactionID,
 			SourcePos:          uint64(i),
@@ -103,30 +110,42 @@ func (m *mainchainKeeper) createCrossChainReqs(db *gorm.DB, crossTransactionID u
 	return nil
 }
 
-func (m *mainchainKeeper) isDepositTx(tx *types.Tx) bool {
+func (m *mainchainKeeper) isDepositTx(tx *types.Tx) (bool, error) {
 	for _, input := range tx.Inputs {
 		if bytes.Equal(input.ControlProgram(), m.federationProg) {
-			return false
+			return false, nil
 		}
 	}
 
 	for _, output := range tx.Outputs {
-		if bytes.Equal(output.OutputCommitment.ControlProgram, m.federationProg) {
-			return true
+		if !bytes.Equal(output.OutputCommitment.ControlProgram, m.federationProg) {
+			continue
+		}
+
+		if isOFAsset, err := m.isOpenFederationAsset(output.AssetId); err != nil {
+			return false, err
+		} else if !isOFAsset {
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
-func (m *mainchainKeeper) isWithdrawalTx(tx *types.Tx) bool {
+func (m *mainchainKeeper) isWithdrawalTx(tx *types.Tx) (bool, error) {
 	for _, input := range tx.Inputs {
 		if !bytes.Equal(input.ControlProgram(), m.federationProg) {
-			return false
+			return false, nil
+		}
+
+		if isOFAsset, err := m.isOpenFederationAsset(input.AssetAmount().AssetId); err != nil {
+			return false, err
+		} else if isOFAsset {
+			return false, nil
 		}
 	}
 
 	sourceTxHash := locateSideChainTx(tx.Outputs[len(tx.Outputs)-1])
-	return sourceTxHash != ""
+	return sourceTxHash != "", nil
 }
 
 func locateSideChainTx(output *types.TxOutput) string {
@@ -156,13 +175,17 @@ func (m *mainchainKeeper) processBlock(db *gorm.DB, block *types.Block, txStatus
 			return err
 		}
 
-		if m.isDepositTx(tx) {
+		if isDeposit, err := m.isDepositTx(tx); err != nil {
+			return err
+		} else if isDeposit {
 			if err := m.processDepositTx(db, block, txStatus, i); err != nil {
 				return err
 			}
 		}
 
-		if m.isWithdrawalTx(tx) {
+		if isWithdrawal, err := m.isWithdrawalTx(tx); err != nil {
+			return err
+		} else if isWithdrawal {
 			if err := m.processWithdrawalTx(db, block, i); err != nil {
 				return err
 			}
@@ -186,6 +209,15 @@ func (m *mainchainKeeper) processChainInfo(db *gorm.DB, block *types.Block) erro
 		return ErrInconsistentDB
 	}
 	return nil
+}
+
+func (m *mainchainKeeper) isOpenFederationAsset(assetID *btmBc.AssetID) (bool, error) {
+	asset, err := m.assetStore.GetByAssetID(assetID.String())
+	if err != nil {
+		return false, err
+	}
+
+	return asset.IsOpenFederationIssue, nil
 }
 
 func (m *mainchainKeeper) processDepositTx(db *gorm.DB, block *types.Block, txStatus *bc.TransactionStatus, txIndex int) error {
@@ -242,10 +274,11 @@ func (m *mainchainKeeper) processIssuance(tx *types.Tx) error {
 		}
 
 		asset := &orm.Asset{
-			AssetID:         assetID.String(),
-			IssuanceProgram: hex.EncodeToString(issuance.IssuanceProgram),
-			VMVersion:       issuance.VMVersion,
-			Definition:      string(issuance.AssetDefinition),
+			AssetID:               assetID.String(),
+			IssuanceProgram:       hex.EncodeToString(issuance.IssuanceProgram),
+			VMVersion:             issuance.VMVersion,
+			Definition:            string(issuance.AssetDefinition),
+			IsOpenFederationIssue: vpCommon.IsOpenFederationIssueAsset(issuance.AssetDefinition),
 		}
 
 		if err := m.db.Create(asset).Error; err != nil {

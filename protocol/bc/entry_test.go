@@ -76,6 +76,7 @@ func TestEntryID(t *testing.T) {
 					IssuanceProgram: &Program{VmVersion: 1, Code: []byte{1, 2, 3, 4}},
 					Data:            &Hash{V0: 0, V1: 1, V2: 2, V3: 3},
 				},
+				[]byte{},
 			),
 			expectEntryID: "14bb3f6e68f37d037b1f1539a21ab41e182b8d59d703a1af6c426d52cfc775d9",
 		},

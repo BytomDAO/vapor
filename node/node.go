@@ -17,6 +17,7 @@ import (
 	"github.com/bytom/vapor/accesstoken"
 	"github.com/bytom/vapor/account"
 	"github.com/bytom/vapor/api"
+	"github.com/bytom/vapor/application/mov"
 	"github.com/bytom/vapor/asset"
 	"github.com/bytom/vapor/blockchain/pseudohsm"
 	cfg "github.com/bytom/vapor/config"
@@ -66,8 +67,8 @@ func NewNode(config *cfg.Config) *Node {
 		cmn.Exit(cmn.Fmt("Failed to load federated information:[%s]", err.Error()))
 	}
 
-	if err:=vaporLog.InitLogFile(config);err!=nil{
-		log.WithField("err",err).Fatalln("InitLogFile failed")
+	if err := vaporLog.InitLogFile(config); err != nil {
+		log.WithField("err", err).Fatalln("InitLogFile failed")
 	}
 
 	log.WithFields(log.Fields{
@@ -95,8 +96,9 @@ func NewNode(config *cfg.Config) *Node {
 	accessTokens := accesstoken.NewStore(tokenDB)
 
 	dispatcher := event.NewDispatcher()
-	txPool := protocol.NewTxPool(store, dispatcher)
-	chain, err := protocol.NewChain(store, txPool, dispatcher)
+	movCore := mov.NewMovCore(config.DBBackend, config.DBDir(), consensus.ActiveNetParams.MovStartHeight)
+	txPool := protocol.NewTxPool(store, []protocol.DustFilterer{movCore}, dispatcher)
+	chain, err := protocol.NewChain(store, txPool, []protocol.Protocoler{movCore}, dispatcher)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 	}

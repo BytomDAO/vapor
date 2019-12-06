@@ -3,9 +3,7 @@ package protocol
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/vapor/config"
 	"github.com/bytom/vapor/errors"
-	"github.com/bytom/vapor/event"
 	"github.com/bytom/vapor/protocol/bc"
 	"github.com/bytom/vapor/protocol/bc/types"
 	"github.com/bytom/vapor/protocol/state"
@@ -22,7 +20,7 @@ var (
 
 // BlockExist check is a block in chain or orphan
 func (c *Chain) BlockExist(hash *bc.Hash) bool {
-	if _, err := c.store.GetBlockHeader(hash); err == nil {
+	if bh, err := c.store.GetBlockHeader(hash); err == nil && bh.Height <= c.BestBlockHeight() {
 		return true
 	}
 	return c.orphanManage.BlockExist(hash)
@@ -110,6 +108,20 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
+	for _, p := range c.subProtocols {
+		if err := c.syncProtocolStatus(p); err != nil {
+			return errors.Wrap(err, p.Name(), "sync sub protocol status")
+		}
+
+		if err := p.ApplyBlock(block); err != nil {
+			return errors.Wrap(err, p.Name(), "sub protocol connect block")
+		}
+	}
+
+	if err := c.applyBlockSign(&block.BlockHeader); err != nil {
+		return err
+	}
+
 	irrBlockHeader := c.lastIrrBlockHeader
 	if c.isIrreversible(&block.BlockHeader) && block.Height > irrBlockHeader.Height {
 		irrBlockHeader = &block.BlockHeader
@@ -138,6 +150,12 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 		return err
 	}
 
+	for _, p := range c.subProtocols {
+		if err := c.syncProtocolStatus(p); err != nil {
+			return errors.Wrap(err, p.Name(), "sync sub protocol status")
+		}
+	}
+
 	txsToRestore := map[bc.Hash]*types.Tx{}
 	for _, detachBlockHeader := range detachBlockHeaders {
 		detachHash := detachBlockHeader.Hash()
@@ -162,6 +180,12 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 
 		if err := consensusResult.DetachBlock(b); err != nil {
 			return err
+		}
+
+		for _, p := range c.subProtocols {
+			if err := p.DetachBlock(b); err != nil {
+				return errors.Wrap(err, p.Name(), "sub protocol detach block")
+			}
 		}
 
 		for _, tx := range b.Transactions {
@@ -199,8 +223,18 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 			return err
 		}
 
+		for _, p := range c.subProtocols {
+			if err := p.ApplyBlock(b); err != nil {
+				return errors.Wrap(err, p.Name(), "sub protocol attach block")
+			}
+		}
+
 		if consensusResult.IsFinalize() {
 			consensusResults = append(consensusResults, consensusResult.Fork())
+		}
+
+		if err := c.applyBlockSign(attachBlockHeader); err != nil {
+			return err
 		}
 
 		if c.isIrreversible(attachBlockHeader) && attachBlockHeader.Height > irrBlockHeader.Height {
@@ -275,22 +309,17 @@ func (c *Chain) saveBlock(block *types.Block) error {
 		return errors.Sub(ErrBadBlock, err)
 	}
 
-	signature, err := c.SignBlock(block)
-	if err != nil {
-		return errors.Sub(ErrBadBlock, err)
+	for _, p := range c.subProtocols {
+		if err := p.ValidateBlock(block, bcBlock.TransactionStatus.GetVerifyStatus()); err != nil {
+			return errors.Wrap(err, "sub protocol save block")
+		}
 	}
 
 	if err := c.store.SaveBlock(block, bcBlock.TransactionStatus); err != nil {
 		return err
 	}
-	c.orphanManage.Delete(&bcBlock.ID)
 
-	if len(signature) != 0 {
-		xPub := config.CommonConfig.PrivateKey().XPub()
-		if err := c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: block.Hash(), Signature: signature, XPub: xPub[:]}); err != nil {
-			return err
-		}
-	}
+	c.orphanManage.Delete(&bcBlock.ID)
 	return nil
 }
 

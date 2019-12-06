@@ -3,18 +3,16 @@ package validation
 import (
 	"fmt"
 	"math"
+	"runtime"
 	"sync"
 
+	"github.com/bytom/vapor/common"
 	"github.com/bytom/vapor/config"
 	"github.com/bytom/vapor/consensus"
 	"github.com/bytom/vapor/errors"
 	"github.com/bytom/vapor/math/checked"
 	"github.com/bytom/vapor/protocol/bc"
 	"github.com/bytom/vapor/protocol/vm"
-)
-
-const (
-	validateWorkerNum = 32
 )
 
 // validate transaction error
@@ -277,9 +275,10 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errors.New("incorrect asset_id while checking CrossChainInput")
 		}
 
-		prog := &bc.Program{
-			VmVersion: e.ControlProgram.VmVersion,
-			Code:      config.FederationWScript(config.CommonConfig),
+		prog := e.ControlProgram
+
+		if !common.IsOpenFederationIssueAsset(e.RawDefinitionByte) {
+			prog.Code = config.FederationWScript(config.CommonConfig)
 		}
 
 		if _, err := vm.Verify(NewTxVMContext(vs, e, prog, e.WitnessArguments), consensus.ActiveNetParams.DefaultGasCredit); err != nil {
@@ -663,6 +662,7 @@ func validateTxWorker(workCh chan *validateTxWork, resultCh chan *ValidateTxResu
 // ValidateTxs validates txs in async mode
 func ValidateTxs(txs []*bc.Tx, block *bc.Block) []*ValidateTxResult {
 	txSize := len(txs)
+	validateWorkerNum := runtime.NumCPU()
 	//init the goroutine validate worker
 	var wg sync.WaitGroup
 	workCh := make(chan *validateTxWork, txSize)

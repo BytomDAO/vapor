@@ -7,6 +7,7 @@ import (
 
 	"github.com/bytom/vapor/common"
 	"github.com/bytom/vapor/config"
+	"github.com/bytom/vapor/errors"
 	"github.com/bytom/vapor/event"
 	"github.com/bytom/vapor/protocol/bc"
 	"github.com/bytom/vapor/protocol/bc/types"
@@ -18,12 +19,25 @@ const (
 	maxKnownTxs           = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
 )
 
+type Protocoler interface {
+	Name() string
+	StartHeight() uint64
+	BeforeProposalBlock(txs []*types.Tx, nodeProgram []byte, blockHeight uint64, gasLeft int64, isTimeout func() bool) ([]*types.Tx, error)
+	ChainStatus() (uint64, *bc.Hash, error)
+	ValidateBlock(block *types.Block, verifyResults []*bc.TxVerifyResult) error
+	ValidateTxs(txs []*types.Tx, verifyResults []*bc.TxVerifyResult) error
+	ValidateTx(tx *types.Tx, verifyResult *bc.TxVerifyResult) error
+	ApplyBlock(block *types.Block) error
+	DetachBlock(block *types.Block) error
+}
+
 // Chain provides functions for working with the Bytom block chain.
 type Chain struct {
 	orphanManage   *OrphanManage
 	txPool         *TxPool
 	store          Store
 	processBlockCh chan *processBlockMsg
+	subProtocols   []Protocoler
 
 	signatureCache  *common.Cache
 	eventDispatcher *event.Dispatcher
@@ -36,12 +50,13 @@ type Chain struct {
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
-func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*Chain, error) {
+func NewChain(store Store, txPool *TxPool, subProtocols []Protocoler, eventDispatcher *event.Dispatcher) (*Chain, error) {
 	knownTxs, _ := common.NewOrderedSet(maxKnownTxs)
 	c := &Chain{
 		orphanManage:    NewOrphanManage(),
 		txPool:          txPool,
 		store:           store,
+		subProtocols:    subProtocols,
 		signatureCache:  common.NewCache(maxSignatureCacheSize),
 		eventDispatcher: eventDispatcher,
 		processBlockCh:  make(chan *processBlockMsg, maxProcessBlockChSize),
@@ -67,6 +82,13 @@ func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*
 	if err != nil {
 		return nil, err
 	}
+
+	for _, p := range c.subProtocols {
+		if err := c.syncProtocolStatus(p); err != nil {
+			return nil, errors.Wrap(err, p.Name(), "sync sub protocol status")
+		}
+	}
+
 	go c.blockProcesser()
 	return c, nil
 }
@@ -90,7 +112,13 @@ func (c *Chain) initChainStatus() error {
 		return err
 	}
 
-	consensusResults := []*state.ConsensusResult{&state.ConsensusResult{
+	for _, subProtocol := range c.subProtocols {
+		if err := subProtocol.ApplyBlock(genesisBlock); err != nil {
+			return err
+		}
+	}
+
+	consensusResults := []*state.ConsensusResult{{
 		Seq:            0,
 		NumOfVote:      make(map[string]uint64),
 		CoinbaseReward: make(map[string]uint64),
@@ -146,6 +174,10 @@ func (c *Chain) InMainChain(hash bc.Hash) bool {
 	return *blockHash == hash
 }
 
+func (c *Chain) SubProtocols() []Protocoler {
+	return c.subProtocols
+}
+
 // trace back to the tail of the chain from the given block header
 func (c *Chain) traceLongestChainTail(blockHeader *types.BlockHeader) (*types.BlockHeader, error) {
 	longestTail, workQueue := blockHeader, []*types.BlockHeader{blockHeader}
@@ -180,6 +212,50 @@ func (c *Chain) markTransactions(txs ...*types.Tx) {
 	for _, tx := range txs {
 		c.knownTxs.Add(tx.ID.String())
 	}
+}
+
+func (c *Chain) syncProtocolStatus(subProtocol Protocoler) error {
+	if c.bestBlockHeader.Height < subProtocol.StartHeight() {
+		return nil
+	}
+
+	protocolHeight, protocolHash, err := subProtocol.ChainStatus()
+	if err != nil {
+		return errors.Wrap(err, "failed on get sub protocol status")
+	}
+
+	if *protocolHash == c.bestBlockHeader.Hash() {
+		return nil
+	}
+
+	for !c.InMainChain(*protocolHash) {
+		block, err := c.GetBlockByHash(protocolHash)
+		if err != nil {
+			return errors.Wrap(err, subProtocol.Name(), "can't get block by hash in chain")
+		}
+
+		if err := subProtocol.DetachBlock(block); err != nil {
+			return errors.Wrap(err, subProtocol.Name(), "sub protocol detach block err")
+		}
+
+		protocolHeight, protocolHash = block.Height-1, &block.PreviousBlockHash
+	}
+
+	for height := protocolHeight + 1; height <= c.bestBlockHeader.Height; height++ {
+		block, err := c.GetBlockByHeight(height)
+		if err != nil {
+			return errors.Wrap(err, subProtocol.Name(), "can't get block by height in chain")
+		}
+
+		if err := subProtocol.ApplyBlock(block); err != nil {
+			return errors.Wrap(err, subProtocol.Name(), "sub protocol apply block err")
+		}
+
+		blockHash := block.Hash()
+		protocolHeight, protocolHash = block.Height, &blockHash
+	}
+
+	return nil
 }
 
 // This function must be called with mu lock in above level
