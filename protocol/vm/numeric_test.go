@@ -5,7 +5,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/testutil"
 )
 
 func TestNumericOps(t *testing.T) {

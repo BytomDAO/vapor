@@ -9,13 +9,13 @@ import (
 	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
 
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/database/storage"
-	"github.com/vapor/errors"
-	"github.com/vapor/protocol"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/state"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/database/storage"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/protocol"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/state"
 )
 
 const (
@@ -53,7 +53,7 @@ func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
 // methods for querying current data.
 type Store struct {
 	db    dbm.DB
-	cache cache
+	cache *cache
 }
 
 func calcMainChainIndexPrefix(height uint64) []byte {

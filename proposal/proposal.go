@@ -7,16 +7,16 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/account"
-	"github.com/vapor/blockchain/txbuilder"
-	"github.com/vapor/consensus"
-	"github.com/vapor/errors"
-	"github.com/vapor/protocol"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/state"
-	"github.com/vapor/protocol/validation"
-	"github.com/vapor/protocol/vm/vmutil"
+	"github.com/bytom/vapor/account"
+	"github.com/bytom/vapor/blockchain/txbuilder"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/protocol"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/state"
+	"github.com/bytom/vapor/protocol/validation"
+	"github.com/bytom/vapor/protocol/vm/vmutil"
 )
 
 const (

@@ -3,7 +3,7 @@ package api
 import (
 	"sort"
 
-	chainjson "github.com/vapor/encoding/json"
+	chainjson "github.com/bytom/vapor/encoding/json"
 )
 
 type VoteInfo struct {

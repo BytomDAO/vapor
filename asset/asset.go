@@ -8,12 +8,12 @@ import (
 
 	"github.com/golang/groupcache/lru"
 
-	"github.com/vapor/consensus"
-	dbm "github.com/vapor/database/leveldb"
-	chainjson "github.com/vapor/encoding/json"
-	"github.com/vapor/errors"
-	"github.com/vapor/protocol"
-	"github.com/vapor/protocol/bc"
+	"github.com/bytom/vapor/consensus"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	chainjson "github.com/bytom/vapor/encoding/json"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/protocol"
+	"github.com/bytom/vapor/protocol/bc"
 )
 
 // DefaultNativeAsset native BTM asset
@@ -224,7 +224,7 @@ func (reg *Registry) GetAsset(id string) (*Asset, error) {
 		if err := json.Unmarshal(extAsset, &definitionMap); err != nil {
 			return nil, err
 		}
-		alias := assetID.String()
+		alias := strings.ToUpper(assetID.String())
 		asset.Alias = &alias
 		asset.AssetID = assetID
 		asset.DefinitionMap = definitionMap

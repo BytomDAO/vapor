@@ -3,8 +3,8 @@ package common
 import (
 	"testing"
 
-	"github.com/vapor/consensus"
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/testutil"
 )
 
 func TestCalcUTXOHash(t *testing.T) {

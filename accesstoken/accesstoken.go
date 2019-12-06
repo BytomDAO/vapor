@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vapor/crypto/sha3pool"
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/errors"
+	"github.com/bytom/vapor/crypto/sha3pool"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/errors"
 )
 
 const tokenSize = 32

@@ -1,7 +1,7 @@
 package account
 
 import (
-	"github.com/vapor/blockchain/query"
+	"github.com/bytom/vapor/blockchain/query"
 )
 
 //Annotated init an annotated account object

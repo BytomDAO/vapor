@@ -3,8 +3,8 @@ package asset
 import (
 	"encoding/json"
 
-	"github.com/vapor/blockchain/query"
-	chainjson "github.com/vapor/encoding/json"
+	"github.com/bytom/vapor/blockchain/query"
+	chainjson "github.com/bytom/vapor/encoding/json"
 )
 
 //Annotated annotate the asset

@@ -1,12 +1,12 @@
 package mock
 
 import (
-	"github.com/vapor/application/mov/common"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/vm"
-	"github.com/vapor/protocol/vm/vmutil"
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/application/mov/common"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/vm"
+	"github.com/bytom/vapor/protocol/vm/vmutil"
+	"github.com/bytom/vapor/testutil"
 )
 
 var (

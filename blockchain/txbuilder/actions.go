@@ -7,13 +7,13 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
-	"github.com/vapor/common"
-	cfg "github.com/vapor/config"
-	"github.com/vapor/consensus"
-	"github.com/vapor/encoding/json"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/vm/vmutil"
+	"github.com/bytom/vapor/common"
+	cfg "github.com/bytom/vapor/config"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/encoding/json"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/vm/vmutil"
 )
 
 // DecodeControlAddressAction convert input data to action struct

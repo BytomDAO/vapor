@@ -10,11 +10,11 @@ import (
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/netsync/peers"
-	"github.com/vapor/p2p"
-	"github.com/vapor/toolbar/precognitive/common"
-	"github.com/vapor/toolbar/precognitive/config"
-	"github.com/vapor/toolbar/precognitive/database/orm"
+	"github.com/bytom/vapor/netsync/peers"
+	"github.com/bytom/vapor/p2p"
+	"github.com/bytom/vapor/toolbar/precognitive/common"
+	"github.com/bytom/vapor/toolbar/precognitive/config"
+	"github.com/bytom/vapor/toolbar/precognitive/database/orm"
 )
 
 func (m *monitor) upsertNode(node *config.Node) error {

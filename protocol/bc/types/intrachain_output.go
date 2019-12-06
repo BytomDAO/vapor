@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc"
 )
 
 // IntraChainOutput satisfies the TypedOutput interface and represents a intra-chain transaction.

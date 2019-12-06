@@ -3,7 +3,7 @@ package types
 import (
 	"io"
 
-	"github.com/vapor/encoding/blockchain"
+	"github.com/bytom/vapor/encoding/blockchain"
 )
 
 type BlockWitness struct {

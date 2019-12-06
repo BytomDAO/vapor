@@ -4,9 +4,9 @@ import (
 	"context"
 
 	jww "github.com/spf13/jwalterweatherman"
-	"github.com/vapor/api"
-	"github.com/vapor/blockchain/rpc"
-	"github.com/vapor/env"
+	"github.com/bytom/vapor/api"
+	"github.com/bytom/vapor/blockchain/rpc"
+	"github.com/bytom/vapor/env"
 )
 
 const (

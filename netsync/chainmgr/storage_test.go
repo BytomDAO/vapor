@@ -7,8 +7,8 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/protocol/bc/types"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/protocol/bc/types"
 )
 
 func TestReadWriteBlocks(t *testing.T) {

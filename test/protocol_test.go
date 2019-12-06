@@ -6,10 +6,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/vapor/consensus"
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/vm"
+	"github.com/bytom/vapor/consensus"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/vm"
 )
 
 // case1:           |------c1(height=7)

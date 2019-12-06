@@ -4,11 +4,11 @@ import (
 	"os"
 	"testing"
 
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/database/storage"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/state"
-	"github.com/vapor/testutil"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/database/storage"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/state"
+	"github.com/bytom/vapor/testutil"
 )
 
 func TestSaveUtxoView(t *testing.T) {

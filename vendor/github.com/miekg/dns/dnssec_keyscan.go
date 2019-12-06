@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/vapor/crypto/ed25519"
+	"github.com/bytom/vapor/crypto/ed25519"
 )
 
 // NewPrivateKey returns a PrivateKey by parsing the string s.

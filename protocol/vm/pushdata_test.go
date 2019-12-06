@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/testutil"
 )
 
 func TestPushdataOps(t *testing.T) {

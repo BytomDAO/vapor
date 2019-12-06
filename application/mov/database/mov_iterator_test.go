@@ -3,10 +3,10 @@ package database
 import (
 	"testing"
 
-	"github.com/vapor/application/mov/common"
-	"github.com/vapor/application/mov/mock"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/application/mov/common"
+	"github.com/bytom/vapor/application/mov/mock"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/testutil"
 )
 
 var (

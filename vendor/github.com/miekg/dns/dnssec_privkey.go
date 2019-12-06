@@ -8,7 +8,7 @@ import (
 	"math/big"
 	"strconv"
 
-	"github.com/vapor/crypto/ed25519"
+	"github.com/bytom/vapor/crypto/ed25519"
 )
 
 const format = "Private-key-format: v1.3\n"

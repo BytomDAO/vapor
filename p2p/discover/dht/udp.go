@@ -14,12 +14,12 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/go-wire"
 
-	"github.com/vapor/common"
-	cfg "github.com/vapor/config"
-	"github.com/vapor/crypto"
-	"github.com/vapor/p2p/netutil"
-	"github.com/vapor/p2p/signlib"
-	"github.com/vapor/version"
+	"github.com/bytom/vapor/common"
+	cfg "github.com/bytom/vapor/config"
+	"github.com/bytom/vapor/crypto"
+	"github.com/bytom/vapor/p2p/netutil"
+	"github.com/bytom/vapor/p2p/signlib"
+	"github.com/bytom/vapor/version"
 )
 
 const (

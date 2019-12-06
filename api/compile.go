@@ -3,10 +3,10 @@ package api
 import (
 	"strings"
 
-	chainjson "github.com/vapor/encoding/json"
-	"github.com/vapor/equity/compiler"
-	"github.com/vapor/errors"
-	"github.com/vapor/protocol/vm"
+	chainjson "github.com/bytom/vapor/encoding/json"
+	"github.com/bytom/vapor/equity/compiler"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/protocol/vm"
 )
 
 // pre-define contract error types

@@ -14,7 +14,7 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/flowrate"
 
-	"github.com/vapor/common/compression"
+	"github.com/bytom/vapor/common/compression"
 )
 
 const (
@@ -247,7 +247,7 @@ func (c *MConnection) String() string {
 
 func (c *MConnection) flush() {
 	if err := c.bufWriter.Flush(); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("MConnection flush failed")
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Warn("MConnection flush failed")
 	}
 }
 
@@ -278,7 +278,7 @@ func (c *MConnection) recvRoutine() {
 		c.recvMonitor.Update(int(n))
 		if err != nil {
 			if c.IsRunning() {
-				log.WithFields(log.Fields{"module": logModule, "conn": c, "error": err}).Error("Connection failed @ recvRoutine (reading byte)")
+				log.WithFields(log.Fields{"module": logModule, "conn": c, "error": err}).Warn("Connection failed @ recvRoutine (reading byte)")
 				c.conn.Close()
 				c.stopForError(err)
 			}
@@ -405,7 +405,7 @@ func (c *MConnection) sendRoutine() {
 			return
 		}
 		if err != nil {
-			log.WithFields(log.Fields{"module": logModule, "conn": c, "error": err}).Error("Connection failed @ sendRoutine")
+			log.WithFields(log.Fields{"module": logModule, "conn": c, "error": err}).Warn("Connection failed @ sendRoutine")
 			c.stopForError(err)
 			return
 		}

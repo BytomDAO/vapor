@@ -5,10 +5,10 @@ import (
 
 	"github.com/golang/groupcache/singleflight"
 
-	"github.com/vapor/common"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/state"
+	"github.com/bytom/vapor/common"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/state"
 )
 
 const (
@@ -25,8 +25,8 @@ type fillBlockHashesFn func(height uint64) ([]*bc.Hash, error)
 type fillMainChainHashFn func(height uint64) (*bc.Hash, error)
 type fillConsensusResultFn func(seq uint64) (*state.ConsensusResult, error)
 
-func newCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransactionsFn, fillBlockHashes fillBlockHashesFn, fillMainChainHash fillMainChainHashFn, fillConsensusResult fillConsensusResultFn) cache {
-	return cache{
+func newCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransactionsFn, fillBlockHashes fillBlockHashesFn, fillMainChainHash fillMainChainHashFn, fillConsensusResult fillConsensusResultFn) *cache {
+	return &cache{
 		lruBlockHeaders:     common.NewCache(maxCachedBlockHeaders),
 		lruBlockTxs:         common.NewCache(maxCachedBlockTransactions),
 		lruBlockHashes:      common.NewCache(maxCachedBlockHashes),

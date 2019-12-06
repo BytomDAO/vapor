@@ -3,7 +3,7 @@ package chainkd
 import (
 	"io"
 
-	"github.com/vapor/crypto/ed25519"
+	"github.com/bytom/vapor/crypto/ed25519"
 )
 
 // Utility functions

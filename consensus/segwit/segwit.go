@@ -3,10 +3,10 @@ package segwit
 import (
 	"errors"
 
-	"github.com/vapor/consensus"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/vm"
-	"github.com/vapor/protocol/vm/vmutil"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/vm"
+	"github.com/bytom/vapor/protocol/vm/vmutil"
 )
 
 // IsP2WScript is used to determine whether it is a P2WScript or not

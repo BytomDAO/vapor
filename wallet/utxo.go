@@ -3,12 +3,12 @@ package wallet
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/account"
-	"github.com/vapor/consensus"
-	"github.com/vapor/consensus/segwit"
-	"github.com/vapor/crypto/sha3pool"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/account"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/consensus/segwit"
+	"github.com/bytom/vapor/crypto/sha3pool"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
 )
 
 // GetAccountUtxos return all account unspent outputs
@@ -209,13 +209,9 @@ func txInToUtxos(tx *types.Tx, statusFail bool) []*account.UTXO {
 }
 
 func txOutToUtxos(tx *types.Tx, statusFail bool, blockHeight uint64) []*account.UTXO {
-	validHeight := uint64(0)
-	if tx.Inputs[0].InputType() == types.CoinbaseInputType {
-		validHeight = blockHeight + consensus.ActiveNetParams.CoinbasePendingBlockNumber
-	}
-
 	utxos := []*account.UTXO{}
 	for i, out := range tx.Outputs {
+		validHeight := uint64(0)
 		entryOutput, err := tx.Entry(*tx.ResultIds[i])
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("txOutToUtxos fail on get entryOutput")
@@ -228,6 +224,11 @@ func txOutToUtxos(tx *types.Tx, statusFail bool, blockHeight uint64) []*account.
 			if (statusFail && *out.AssetAmount().AssetId != *consensus.BTMAssetID) || out.AssetAmount().Amount == uint64(0) {
 				continue
 			}
+
+			if tx.Inputs[0].InputType() == types.CoinbaseInputType {
+				validHeight = blockHeight + consensus.ActiveNetParams.CoinbasePendingBlockNumber
+			}
+
 			utxo = &account.UTXO{
 				OutputID:       *tx.OutputID(i),
 				AssetID:        *out.AssetAmount().AssetId,

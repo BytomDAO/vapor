@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/vapor/toolbar/common"
-	precogCommon "github.com/vapor/toolbar/precognitive/common"
+	"github.com/bytom/vapor/toolbar/common"
+	precogCommon "github.com/bytom/vapor/toolbar/precognitive/common"
 )
 
 type Node struct {

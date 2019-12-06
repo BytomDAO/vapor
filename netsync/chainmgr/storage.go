@@ -4,9 +4,9 @@ import (
 	"encoding/binary"
 	"sync"
 
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/errors"
-	"github.com/vapor/protocol/bc/types"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/protocol/bc/types"
 )
 
 var (
