@@ -169,7 +169,7 @@ var TestNetParams = Params{
 		MinConsensusNodeVoteNum: uint64(100000000000000),
 		MinVoteOutputAmount:     uint64(100000000),
 		BlockTimeInterval:       500,
-		RoundVoteBlockNums:      1200,
+		RoundVoteBlockNums:      12,
 		MaxTimeOffsetMs:         2000,
 	},
 	Checkpoints: []Checkpoint{},
