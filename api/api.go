@@ -220,6 +220,7 @@ func (a *API) buildHandler() {
 		m.Handle("/get-coinbase-arbitrary", jsonHandler(a.getCoinbaseArbitrary))
 		m.Handle("/set-coinbase-arbitrary", jsonHandler(a.setCoinbaseArbitrary))
 
+		m.Handle("/create-asset", jsonHandler(a.createAsset))
 		m.Handle("/update-asset-alias", jsonHandler(a.updateAssetAlias))
 		m.Handle("/get-asset", jsonHandler(a.getAsset))
 		m.Handle("/list-assets", jsonHandler(a.listAssets))
