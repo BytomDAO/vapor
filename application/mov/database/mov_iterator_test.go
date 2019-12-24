@@ -15,11 +15,11 @@ var (
 	asset3 = bc.NewAssetID([32]byte{3})
 	asset4 = bc.NewAssetID([32]byte{4})
 
-	order1 = &common.Order{FromAssetID: assetID1, ToAssetID: assetID2, Rate: 0.1}
-	order2 = &common.Order{FromAssetID: assetID1, ToAssetID: assetID2, Rate: 0.2}
-	order3 = &common.Order{FromAssetID: assetID1, ToAssetID: assetID2, Rate: 0.3}
-	order4 = &common.Order{FromAssetID: assetID1, ToAssetID: assetID2, Rate: 0.4}
-	order5 = &common.Order{FromAssetID: assetID1, ToAssetID: assetID2, Rate: 0.5}
+	order1 = &common.Order{FromAssetID: assetID1, ToAssetID: assetID2, RatioNumerator: 1, RatioDenominator: 10}
+	order2 = &common.Order{FromAssetID: assetID1, ToAssetID: assetID2, RatioNumerator: 2, RatioDenominator: 10}
+	order3 = &common.Order{FromAssetID: assetID1, ToAssetID: assetID2, RatioNumerator: 3, RatioDenominator: 10}
+	order4 = &common.Order{FromAssetID: assetID1, ToAssetID: assetID2, RatioNumerator: 4, RatioDenominator: 10}
+	order5 = &common.Order{FromAssetID: assetID1, ToAssetID: assetID2, RatioNumerator: 5, RatioDenominator: 10}
 )
 
 func TestTradePairIterator(t *testing.T) {

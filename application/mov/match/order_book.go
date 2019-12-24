@@ -38,7 +38,7 @@ func NewOrderBook(movStore database.MovStore, arrivalAddOrders, arrivalDelOrders
 func (o *OrderBook) AddOrder(order *common.Order) error {
 	tradePairKey := order.TradePair().Key()
 	orders := o.arrivalAddOrders[tradePairKey]
-	if len(orders) > 0 && order.Rate > orders[len(orders)-1].Rate {
+	if len(orders) > 0 && order.Rate() > orders[len(orders)-1].Rate() {
 		return errors.New("rate of order must less than the min order in order table")
 	}
 
@@ -64,10 +64,24 @@ func (o *OrderBook) PeekOrder(tradePair *common.TradePair) *common.Order {
 	}
 
 	arrivalOrder := o.peekArrivalOrder(tradePair)
-	if nextOrder == nil || (arrivalOrder != nil && arrivalOrder.Rate < nextOrder.Rate) {
+	if nextOrder == nil || (arrivalOrder != nil && arrivalOrder.Rate() < nextOrder.Rate()) {
 		nextOrder = arrivalOrder
 	}
 	return nextOrder
+}
+
+// PeekOrders return the next lowest orders by given array of trade pairs
+func (o *OrderBook) PeekOrders(tradePairs []*common.TradePair) []*common.Order {
+	var orders []*common.Order
+	for _, tradePair := range tradePairs {
+		order := o.PeekOrder(tradePair)
+		if order == nil {
+			return nil
+		}
+
+		orders = append(orders, order)
+	}
+	return orders
 }
 
 // PopOrder delete the next lowest order of given trade pair
@@ -86,6 +100,15 @@ func (o *OrderBook) PopOrder(tradePair *common.TradePair) {
 	if len(arrivalOrders) != 0 && arrivalOrders[len(arrivalOrders)-1].Key() == order.Key() {
 		o.arrivalAddOrders[tradePair.Key()] = arrivalOrders[0 : len(arrivalOrders)-1]
 	}
+}
+
+// PopOrders delete the next lowest orders by given trade pairs
+func (o *OrderBook) PopOrders(tradePairs []*common.TradePair) []*common.Order {
+	var orders []*common.Order
+	for _, tradePair := range tradePairs {
+		o.PopOrder(tradePair)
+	}
+	return orders
 }
 
 func arrangeArrivalAddOrders(orders []*common.Order) map[string][]*common.Order {
