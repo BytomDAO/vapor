@@ -23,9 +23,9 @@ var (
 	errAmountOfFeeGreaterThanMaximum = errors.New("amount of fee greater than max fee amount")
 	errAssetIDMustUniqueInMatchedTx  = errors.New("asset id must unique in matched transaction")
 	errRatioOfTradeLessThanZero      = errors.New("ratio arguments must greater than zero")
-	errLengthOfInputIsIncorrect      = errors.New("length of matched tx input is not equals to actual matched tx input")
 	errSpendOutputIDIsIncorrect      = errors.New("spend output id of matched tx is not equals to actual matched tx")
 	errRequestAmountMath             = errors.New("request amount of order less than one or big than max of int64")
+	errNotMatchedOrder               = errors.New("order in matched tx is not matched")
 )
 
 // MovCore represent the core logic of the match module, which include generate match transactions before packing the block,
@@ -69,11 +69,6 @@ func (m *MovCore) ApplyBlock(block *types.Block) error {
 	return m.movStore.ProcessOrders(addOrders, deleteOrders, &block.BlockHeader)
 }
 
-/*
-	@issue: I have two orders A and B, order A's seller program is order B and order B's seller program is order A.
-    Assume consensus node accept 0% fee and This two orders are the only two order of this trading pair, will this
-    become an infinite loop and DDoS attacks the whole network?
-*/
 // BeforeProposalBlock return all transactions than can be matched, and the number of transactions cannot exceed the given capacity.
 func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, nodeProgram []byte, blockHeight uint64, gasLeft int64, isTimeout func() bool) ([]*types.Tx, error) {
 	if blockHeight <= m.startBlockHeight {
@@ -287,54 +282,67 @@ func validateMatchedTxFeeAmount(tx *types.Tx) error {
 	return nil
 }
 
-/*
-	@issue: the match package didn't support circle yet
-*/
 func (m *MovCore) validateMatchedTxSequence(txs []*types.Tx) error {
 	orderBook, err := buildOrderBook(m.movStore, txs)
 	if err != nil {
 		return err
 	}
 
-	matchEngine := match.NewEngine(orderBook, maxFeeRate, nil)
 	for _, matchedTx := range txs {
 		if !common.IsMatchedTx(matchedTx) {
 			continue
 		}
 
-		tradePairs, err := getSortedTradePairsFromMatchedTx(matchedTx)
+		tradePairs, err := getTradePairsFromMatchedTx(matchedTx)
 		if err != nil {
 			return err
 		}
 
-		actualMatchedTx, err := matchEngine.NextMatchedTx(tradePairs...)
+		orders := orderBook.PeekOrders(tradePairs)
+		if !match.IsMatched(orders) {
+			return errNotMatchedOrder
+		}
+
+		if err := validateSpendOrders(matchedTx, orders); err != nil {
+			return err
+		}
+
+		orderBook.PopOrders(tradePairs)
+
+		for i, output := range matchedTx.Outputs {
+			if !segwit.IsP2WMCScript(output.ControlProgram()) {
+				continue
+			}
+
+			order, err := common.NewOrderFromOutput(matchedTx, i)
+			if err != nil {
+				return err
+			}
+
+			if err := orderBook.AddOrder(order); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+
+func validateSpendOrders(matchedTx *types.Tx, orders []*common.Order) error {
+	spendOutputIDs := make(map[string]bool)
+	for _, input := range matchedTx.Inputs {
+		spendOutputID, err := input.SpentOutputID()
 		if err != nil {
 			return err
 		}
 
-		if len(matchedTx.Inputs) != len(actualMatchedTx.Inputs) {
-			return errLengthOfInputIsIncorrect
-		}
+		spendOutputIDs[spendOutputID.String()] = true
+	}
 
-		spendOutputIDs := make(map[string]bool)
-		for _, input := range matchedTx.Inputs {
-			spendOutputID, err := input.SpentOutputID()
-			if err != nil {
-				return err
-			}
-
-			spendOutputIDs[spendOutputID.String()] = true
-		}
-
-		for _, input := range actualMatchedTx.Inputs {
-			spendOutputID, err := input.SpentOutputID()
-			if err != nil {
-				return err
-			}
-
-			if _, ok := spendOutputIDs[spendOutputID.String()]; !ok {
-				return errSpendOutputIDIsIncorrect
-			}
+	for _, order := range orders {
+		outputID := order.UTXOHash().String()
+		if _, ok := spendOutputIDs[outputID]; !ok {
+			return errSpendOutputIDIsIncorrect
 		}
 	}
 	return nil
@@ -367,9 +375,6 @@ func applyTransactions(txs []*types.Tx) ([]*common.Order, []*common.Order, error
 	return addOrders, deleteOrders, nil
 }
 
-/*
-	@issue: if consensus node packed match transaction first then packed regular tx, this function's logic may make a valid block invalid
-*/
 func buildOrderBook(store database.MovStore, txs []*types.Tx) (*match.OrderBook, error) {
 	var nonMatchedTxs []*types.Tx
 	for _, tx := range txs {
@@ -435,34 +440,15 @@ func getDeleteOrdersFromTx(tx *types.Tx) ([]*common.Order, error) {
 	return orders, nil
 }
 
-func getSortedTradePairsFromMatchedTx(tx *types.Tx) ([]*common.TradePair, error) {
-	assetMap := make(map[bc.AssetID]bc.AssetID)
-	var firstTradePair *common.TradePair
+func getTradePairsFromMatchedTx(tx *types.Tx) ([]*common.TradePair, error) {
+	var tradePairs []*common.TradePair
 	for _, tx := range tx.Inputs {
 		contractArgs, err := segwit.DecodeP2WMCProgram(tx.ControlProgram())
 		if err != nil {
 			return nil, err
 		}
 
-		assetMap[tx.AssetID()] = contractArgs.RequestedAsset
-		if firstTradePair == nil {
-			firstTradePair = &common.TradePair{FromAssetID: tx.AssetAmount().AssetId, ToAssetID: &contractArgs.RequestedAsset}
-		}
-	}
-
-	tradePairs := []*common.TradePair{firstTradePair}
-	for tradePair := firstTradePair; *tradePair.ToAssetID != *firstTradePair.FromAssetID; {
-		nextTradePairToAssetID, ok := assetMap[*tradePair.ToAssetID]
-		if !ok {
-			return nil, errInvalidTradePairs
-		}
-
-		tradePair = &common.TradePair{FromAssetID: tradePair.ToAssetID, ToAssetID: &nextTradePairToAssetID}
-		tradePairs = append(tradePairs, tradePair)
-	}
-
-	if len(tradePairs) != len(tx.Inputs) {
-		return nil, errInvalidTradePairs
+		tradePairs = append(tradePairs, &common.TradePair{FromAssetID: tx.AssetAmount().AssetId, ToAssetID: &contractArgs.RequestedAsset})
 	}
 	return tradePairs, nil
 }

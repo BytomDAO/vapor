@@ -42,11 +42,11 @@ func (m *MovStore) ListOrders(orderAfter *common.Order) ([]*common.Order, error)
 	tradePair := &common.TradePair{FromAssetID: orderAfter.FromAssetID, ToAssetID: orderAfter.ToAssetID}
 	orders := m.orderMap[tradePair.Key()]
 	begin := len(orders)
-	if orderAfter.Rate == 0 {
+	if orderAfter.Rate() == 0 {
 		begin = 0
 	} else {
 		for i, order := range orders {
-			if order.Rate == orderAfter.Rate {
+			if order.Rate() == orderAfter.Rate() {
 				begin = i + 1
 				break
 			}

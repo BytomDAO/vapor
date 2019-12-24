@@ -18,9 +18,10 @@ var (
 
 	Btc2EthOrders = []*common.Order{
 		{
-			FromAssetID: &BTC,
-			ToAssetID:   &ETH,
-			Rate:        50,
+			FromAssetID:      &BTC,
+			ToAssetID:        &ETH,
+			RatioNumerator:   50,
+			RatioDenominator: 1,
 			Utxo: &common.MovUtxo{
 				SourceID:       hashPtr(testutil.MustDecodeHash("37b8edf656e45a7addf47f5626e114a8c394d918a36f61b5a2905675a09b40ae")),
 				SourcePos:      0,
@@ -29,9 +30,10 @@ var (
 			},
 		},
 		{
-			FromAssetID: &BTC,
-			ToAssetID:   &ETH,
-			Rate:        53,
+			FromAssetID:      &BTC,
+			ToAssetID:        &ETH,
+			RatioNumerator:   53,
+			RatioDenominator: 1,
 			Utxo: &common.MovUtxo{
 				SourceID:       hashPtr(testutil.MustDecodeHash("3ec2bbfb499a8736d377b547eee5392bcddf7ec2b287e9ed20b5938c3d84e7cd")),
 				SourcePos:      0,
@@ -40,9 +42,10 @@ var (
 			},
 		},
 		{
-			FromAssetID: &BTC,
-			ToAssetID:   &ETH,
-			Rate:        52,
+			FromAssetID:      &BTC,
+			ToAssetID:        &ETH,
+			RatioNumerator:   52,
+			RatioDenominator: 1,
 			Utxo: &common.MovUtxo{
 				SourceID:       hashPtr(testutil.MustDecodeHash("1232bbfb499a8736d377b547eee5392bcddf7ec2b287e9ed20b5938c3d84e7cd")),
 				SourcePos:      0,
@@ -51,9 +54,10 @@ var (
 			},
 		},
 		{
-			FromAssetID: &BTC,
-			ToAssetID:   &ETH,
-			Rate:        49,
+			FromAssetID:      &BTC,
+			ToAssetID:        &ETH,
+			RatioNumerator:   49,
+			RatioDenominator: 1,
 			Utxo: &common.MovUtxo{
 				SourceID:       hashPtr(testutil.MustDecodeHash("7872bbfb499a8736d377b547eee5392bcddf7ec2b287e9ed20b5938c3d84e7cd")),
 				SourcePos:      0,
@@ -65,9 +69,10 @@ var (
 
 	Eth2BtcOrders = []*common.Order{
 		{
-			FromAssetID: &ETH,
-			ToAssetID:   &BTC,
-			Rate:        1 / 51.0,
+			FromAssetID:      &ETH,
+			ToAssetID:        &BTC,
+			RatioNumerator:   1,
+			RatioDenominator: 51,
 			Utxo: &common.MovUtxo{
 				SourceID:       hashPtr(testutil.MustDecodeHash("fba43ff5155209cb1769e2ec0e1d4a33accf899c740865edfc6d1de39b873b29")),
 				SourcePos:      0,
@@ -76,9 +81,10 @@ var (
 			},
 		},
 		{
-			FromAssetID: &ETH,
-			ToAssetID:   &BTC,
-			Rate:        1 / 52.0,
+			FromAssetID:      &ETH,
+			ToAssetID:        &BTC,
+			RatioNumerator:   1,
+			RatioDenominator: 52,
 			Utxo: &common.MovUtxo{
 				SourceID:       hashPtr(testutil.MustDecodeHash("05f24bb847db823075d81786aa270748e02602199cd009c0284f928503846a5a")),
 				SourcePos:      0,
@@ -87,9 +93,10 @@ var (
 			},
 		},
 		{
-			FromAssetID: &ETH,
-			ToAssetID:   &BTC,
-			Rate:        1 / 54.0,
+			FromAssetID:      &ETH,
+			ToAssetID:        &BTC,
+			RatioNumerator:   1,
+			RatioDenominator: 54,
 			Utxo: &common.MovUtxo{
 				SourceID:       hashPtr(testutil.MustDecodeHash("119a02980796dc352cf6475457463aef5666f66622088de3551fa73a65f0d201")),
 				SourcePos:      0,
@@ -101,9 +108,10 @@ var (
 
 	Eos2EtcOrders = []*common.Order{
 		{
-			FromAssetID: &EOS,
-			ToAssetID:   &ETC,
-			Rate:        1 / 2.0,
+			FromAssetID:      &EOS,
+			ToAssetID:        &ETC,
+			RatioNumerator:   1,
+			RatioDenominator: 2,
 			Utxo: &common.MovUtxo{
 				SourceID:       hashPtr(testutil.MustDecodeHash("119a02980796dc352cf6475457463aef5666f66622088de3551fa73a65f0d202")),
 				SourcePos:      0,
@@ -115,9 +123,10 @@ var (
 
 	Etc2EosOrders = []*common.Order{
 		{
-			FromAssetID: &ETC,
-			ToAssetID:   &EOS,
-			Rate:        2.0,
+			FromAssetID:      &ETC,
+			ToAssetID:        &EOS,
+			RatioNumerator:   2,
+			RatioDenominator: 1,
 			Utxo: &common.MovUtxo{
 				SourceID:       hashPtr(testutil.MustDecodeHash("119a02980796dc352cf6475457463aef5666f66622088de3551fa73a65f0d203")),
 				SourcePos:      0,
@@ -129,9 +138,10 @@ var (
 
 	Eth2EosOrders = []*common.Order{
 		{
-			FromAssetID: &ETH,
-			ToAssetID:   &EOS,
-			Rate:        2.0,
+			FromAssetID:      &ETH,
+			ToAssetID:        &EOS,
+			RatioNumerator:   2,
+			RatioDenominator: 1,
 			Utxo: &common.MovUtxo{
 				SourceID:       hashPtr(testutil.MustDecodeHash("c1502d03946e4ea92abdb33f51638b181839bd0d8767acc2ee5c665b659c4b13")),
 				SourcePos:      0,
@@ -143,9 +153,10 @@ var (
 
 	Eos2BtcOrders = []*common.Order{
 		{
-			FromAssetID: &EOS,
-			ToAssetID:   &BTC,
-			Rate:        1 / 100.0,
+			FromAssetID:      &EOS,
+			ToAssetID:        &BTC,
+			RatioNumerator:   1,
+			RatioDenominator: 100,
 			Utxo: &common.MovUtxo{
 				SourceID:       hashPtr(testutil.MustDecodeHash("27cf8a0877dc858968cc06396fe6aa9e02d15f3e44c862fe29fa5fd50497cf20")),
 				SourcePos:      0,
