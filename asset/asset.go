@@ -3,11 +3,13 @@ package asset
 import (
 	"context"
 	"encoding/json"
-	"github.com/bytom/vapor/blockchain/signers"
-	"github.com/bytom/vapor/crypto/ed25519/chainkd"
-	"golang.org/x/crypto/sha3"
 	"strings"
 	"sync"
+
+	"github.com/bytom/vapor/blockchain/signers"
+	"github.com/bytom/vapor/common"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
+	"golang.org/x/crypto/sha3"
 
 	"github.com/golang/groupcache/lru"
 
@@ -108,6 +110,19 @@ type Asset struct {
 	DefinitionMap     map[string]interface{} `json:"definition"`
 }
 
+func (reg *Registry) getNextAssetIndex() uint64 {
+	reg.assetIndexMu.Lock()
+	defer reg.assetIndexMu.Unlock()
+
+	nextIndex := uint64(1)
+	if rawIndex := reg.db.Get(assetIndexKey); rawIndex != nil {
+		nextIndex = common.BytesToUnit64(rawIndex) + 1
+	}
+
+	reg.db.Set(assetIndexKey, common.Unit64ToBytes(nextIndex))
+	return nextIndex
+}
+
 func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, alias string) (*Asset, error) {
 	alias = strings.ToUpper(strings.TrimSpace(alias))
 	if alias == "" {
@@ -127,12 +142,17 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 		return nil, errors.Wrap(signers.ErrNoXPubs)
 	}
 
-	assetSigner, err := signers.Create("asset", xpubs, quorum, 0, signers.BIP0032)
+	nextAssetIndex := reg.getNextAssetIndex()
+	assetSigner, err := signers.Create("asset", xpubs, quorum, nextAssetIndex, signers.BIP0032)
 	if err != nil {
 		return nil, err
 	}
 
-	issuanceProgram, err := vmutil.P2SPMultiSigProgram(chainkd.XPubKeys(xpubs), quorum)
+	path := signers.GetBip0032Path(assetSigner, signers.AssetKeySpace)
+	derivedXPubs := chainkd.DeriveXPubs(assetSigner.XPubs, path)
+	derivedPKs := chainkd.XPubKeys(derivedXPubs)
+
+	issuanceProgram, err := vmutil.P2SPMultiSigProgram(derivedPKs, quorum)
 	if err != nil {
 		return nil, err
 	}
