@@ -332,7 +332,6 @@ func (s *Store) SaveChainStatus(blockHeader, irrBlockHeader *types.BlockHeader, 
 	}
 
 	var clearCacheFuncs []func()
-
 	for _, consensusResult := range consensusResults {
 		result := consensusResult
 		bytes, err := json.Marshal(result)
