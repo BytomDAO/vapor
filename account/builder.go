@@ -2,6 +2,7 @@ package account
 
 import (
 	"context"
+	"crypto/rand"
 	stdjson "encoding/json"
 
 	"github.com/bytom/vapor/blockchain/signers"
@@ -455,4 +456,41 @@ func (a *vetoAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) er
 		}
 	}
 	return nil
+}
+
+func (m *Manager) DecodeCrossInAction(data []byte) (txbuilder.Action, error) {
+	a := &crossInAction{accounts: m}
+	err := stdjson.Unmarshal(data, a)
+	return a, err
+}
+
+type crossInAction struct {
+	accounts *Manager
+	bc.AssetAmount
+}
+
+func (a *crossInAction) Build(ctx context.Context, builder *txbuilder.TemplateBuilder) error {
+	if a.AssetId.IsZero() {
+		return txbuilder.MissingFieldsError("asset_id")
+	}
+
+	asset, err := a.accounts.store.GetAssetByID(a.AssetId)
+	if err != nil {
+		return err
+	}
+
+	var nonce [32]byte
+	if _, err := rand.Read(nonce[:]); err != nil {
+		return err
+	}
+
+	txin := types.NewCrossChainInput(nil, bc.NewHash(nonce), *a.AssetId, a.Amount, 1, asset.VMVersion, asset.RawDefinitionByte, asset.IssuanceProgram)
+	tplIn := &txbuilder.SigningInstruction{}
+	path := signers.GetBip0032Path(asset.Signer, signers.AssetKeySpace)
+	tplIn.AddRawWitnessKeys(asset.Signer.XPubs, path, asset.Signer.Quorum)
+	return builder.AddInput(txin, tplIn)
+}
+
+func (a *crossInAction) ActionType() string {
+	return "cross_chain_in"
 }

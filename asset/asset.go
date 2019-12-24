@@ -3,6 +3,9 @@ package asset
 import (
 	"context"
 	"encoding/json"
+	"github.com/bytom/vapor/blockchain/signers"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
+	"golang.org/x/crypto/sha3"
 	"strings"
 	"sync"
 
@@ -14,6 +17,7 @@ import (
 	"github.com/bytom/vapor/errors"
 	"github.com/bytom/vapor/protocol"
 	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/vm/vmutil"
 )
 
 // DefaultNativeAsset native BTM asset
@@ -95,11 +99,56 @@ type Registry struct {
 
 //Asset describe asset on bytom chain
 type Asset struct {
+	*signers.Signer
 	AssetID           bc.AssetID             `json:"id"`
 	Alias             *string                `json:"alias"`
 	VMVersion         uint64                 `json:"vm_version"`
+	IssuanceProgram   chainjson.HexBytes     `json:"issue_program"`
 	RawDefinitionByte chainjson.HexBytes     `json:"raw_definition_byte"`
 	DefinitionMap     map[string]interface{} `json:"definition"`
+}
+
+func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, alias string) (*Asset, error) {
+	alias = strings.ToUpper(strings.TrimSpace(alias))
+	if alias == "" {
+		return nil, errors.Wrap(ErrNullAlias)
+	}
+
+	if alias == consensus.BTMAlias {
+		return nil, ErrInternalAsset
+	}
+
+	rawDefinition, err := serializeAssetDef(definition)
+	if err != nil {
+		return nil, ErrSerializing
+	}
+
+	if len(xpubs) == 0 {
+		return nil, errors.Wrap(signers.ErrNoXPubs)
+	}
+
+	assetSigner, err := signers.Create("asset", xpubs, quorum, 0, signers.BIP0032)
+	if err != nil {
+		return nil, err
+	}
+
+	issuanceProgram, err := vmutil.P2SPMultiSigProgram(chainkd.XPubKeys(xpubs), quorum)
+	if err != nil {
+		return nil, err
+	}
+
+	vmver := uint64(1)
+	defHash := bc.NewHash(sha3.Sum256(rawDefinition))
+	a := &Asset{
+		DefinitionMap:     definition,
+		RawDefinitionByte: rawDefinition,
+		VMVersion:         vmver,
+		IssuanceProgram:   issuanceProgram,
+		AssetID:           bc.ComputeAssetID(issuanceProgram, vmver, &defHash),
+		Signer:            assetSigner,
+		Alias:             &alias,
+	}
+	return a, reg.SaveAsset(a, alias)
 }
 
 // SaveAsset store asset

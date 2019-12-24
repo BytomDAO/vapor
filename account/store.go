@@ -1,6 +1,7 @@
 package account
 
 import (
+	"github.com/bytom/vapor/asset"
 	"github.com/bytom/vapor/crypto/ed25519/chainkd"
 	"github.com/bytom/vapor/protocol/bc"
 )
@@ -31,4 +32,5 @@ type AccountStore interface {
 	SetControlProgram(bc.Hash, *CtrlProgram) error
 	SetMiningAddress(*CtrlProgram) error
 	SetStandardUTXO(bc.Hash, *UTXO) error
+	GetAssetByID(*bc.AssetID) (*asset.Asset, error)
 }

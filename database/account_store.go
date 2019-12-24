@@ -2,6 +2,7 @@ package database
 
 import (
 	"encoding/json"
+	"github.com/bytom/vapor/asset"
 	"sort"
 	"strings"
 
@@ -433,4 +434,18 @@ func (store *AccountStore) SetStandardUTXO(outputID bc.Hash, utxo *acc.UTXO) err
 		store.batch.Set(StandardUTXOKey(outputID), data)
 	}
 	return nil
+}
+
+func (store *AccountStore) GetAssetByID(id *bc.AssetID) (*asset.Asset, error) {
+	assetBytes := store.db.Get(asset.Key(id))
+	if assetBytes == nil {
+		return nil, asset.ErrFindAsset
+	}
+
+	rawAsset := &asset.Asset{}
+	if err := json.Unmarshal(assetBytes, rawAsset); err != nil {
+		return nil, err
+	}
+
+	return rawAsset, nil
 }
