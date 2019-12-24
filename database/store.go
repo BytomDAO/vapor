@@ -331,14 +331,19 @@ func (s *Store) SaveChainStatus(blockHeader, irrBlockHeader *types.BlockHeader, 
 		return err
 	}
 
-	for _, result := range consensusResults {
+	var clearCacheFuncs []func()
+
+	for _, consensusResult := range consensusResults {
+		result := consensusResult
 		bytes, err := json.Marshal(result)
 		if err != nil {
 			return err
 		}
 
 		batch.Set(calcConsensusResultKey(result.Seq), bytes)
-		s.cache.removeConsensusResult(result)
+		clearCacheFuncs = append(clearCacheFuncs, func() {
+			s.cache.removeConsensusResult(result)
+		})
 	}
 
 	blockHash := blockHeader.Hash()
@@ -355,7 +360,8 @@ func (s *Store) SaveChainStatus(blockHeader, irrBlockHeader *types.BlockHeader, 
 	batch.Set([]byte{blockStore}, bytes)
 
 	// save main chain blockHeaders
-	for _, bh := range mainBlockHeaders {
+	for _, blockHeader := range mainBlockHeaders {
+		bh := blockHeader
 		blockHash := bh.Hash()
 		binaryBlockHash, err := blockHash.MarshalText()
 		if err != nil {
@@ -363,15 +369,24 @@ func (s *Store) SaveChainStatus(blockHeader, irrBlockHeader *types.BlockHeader, 
 		}
 
 		batch.Set(calcMainChainIndexPrefix(bh.Height), binaryBlockHash)
-		s.cache.removeMainChainHash(bh.Height)
+		clearCacheFuncs = append(clearCacheFuncs, func() {
+			s.cache.removeMainChainHash(bh.Height)
+		})
 	}
 
 	if currentStatus != nil {
 		for i := blockHeader.Height + 1; i <= currentStatus.Height; i++ {
-			batch.Delete(calcMainChainIndexPrefix(i))
-			s.cache.removeMainChainHash(i)
+			index := i
+			batch.Delete(calcMainChainIndexPrefix(index))
+			clearCacheFuncs = append(clearCacheFuncs, func() {
+				s.cache.removeMainChainHash(index)
+			})
 		}
 	}
 	batch.Write()
+
+	for _, clearCacheFunc := range clearCacheFuncs {
+		clearCacheFunc()
+	}
 	return nil
 }
