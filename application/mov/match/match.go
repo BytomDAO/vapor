@@ -271,10 +271,20 @@ func validateTradePairs(tradePairs []*common.TradePair) error {
 		return errors.New("size of trade pairs at least 2")
 	}
 
+	assetMap := make(map[string]bool)
 	for _, tradePair := range tradePairs {
+		assetMap[tradePair.FromAssetID.String()] = true
 		if *tradePair.FromAssetID == *tradePair.ToAssetID {
 			return errors.New("from asset id can't equal to asset id")
 		}
+	}
+
+	for _, tradePair := range tradePairs {
+		key := tradePair.ToAssetID.String()
+		if _, ok := assetMap[key]; !ok {
+			return errors.New("invalid trade pairs")
+		}
+		delete(assetMap, key)
 	}
 	return nil
 }

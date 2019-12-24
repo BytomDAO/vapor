@@ -226,7 +226,7 @@ func TestValidateTradePairs(t *testing.T) {
 			wantError: true,
 		},
 		{
-			desc: "invalid case 2 of three trade pairs",
+			desc: "valid case 2 of three trade pairs",
 			tradePairs: []*common.TradePair{
 				{
 					FromAssetID: &mock.BTC,
@@ -241,7 +241,7 @@ func TestValidateTradePairs(t *testing.T) {
 					ToAssetID:   &mock.EOS,
 				},
 			},
-			wantError: true,
+			wantError: false,
 		},
 	}
 
