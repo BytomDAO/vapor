@@ -27,9 +27,12 @@ func (c *Chain) ValidateTx(tx *types.Tx) (bool, error) {
 		return false, nil
 	}
 
-	c.markTransactions(tx)
 	bh := c.BestBlockHeader()
-	return c.validateTx(tx, bh)
+	isOrphan, err := c.validateTx(tx, bh)
+	if err == nil {
+		c.markTransactions(tx)
+	}
+	return isOrphan, err
 }
 
 // validateTx validates the given transaction without checking duplication.
