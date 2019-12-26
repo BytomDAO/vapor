@@ -189,9 +189,9 @@ func (c *Chain) ProcessBlockSignature(signature, xPub []byte, blockHash *bc.Hash
 
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
-	if err := c.checkNodeSign(blockHeader, consensusNode, signature); err != nil {
-		return err
-	}
+	// if err := c.checkNodeSign(blockHeader, consensusNode, signature); err != nil {
+	// 	return err
+	// }
 
 	if err := c.updateBlockSignature(blockHeader, consensusNode.Order, signature); err != nil {
 		return err
@@ -233,11 +233,11 @@ func (c *Chain) signBlockHeader(blockHeader *types.BlockHeader) ([]byte, error) 
 		return nil, err
 	}
 
-	if err := c.checkDoubleSign(blockHeader, node.XPub.String()); err == errDoubleSignBlock {
-		return nil, nil
-	} else if err != nil {
-		return nil, err
-	}
+	// if err := c.checkDoubleSign(blockHeader, node.XPub.String()); err == errDoubleSignBlock {
+	// 	return nil, nil
+	// } else if err != nil {
+	// 	return nil, err
+	// }
 
 	if signature := blockHeader.Get(node.Order); len(signature) != 0 {
 		return nil, nil
