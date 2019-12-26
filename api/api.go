@@ -251,6 +251,7 @@ func (a *API) buildHandler() {
 		m.Handle("/rescan-wallet", jsonHandler(a.rescanWallet))
 		m.Handle("/wallet-info", jsonHandler(a.getWalletInfo))
 		m.Handle("/recovery-wallet", jsonHandler(a.recoveryFromRootXPubs))
+		m.Handle("/rollback-block", jsonHandler(a.rollbackBlock))
 	} else {
 		log.Warn("Please enable wallet")
 	}

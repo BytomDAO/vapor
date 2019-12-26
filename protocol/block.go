@@ -283,6 +283,52 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 	return nil
 }
 
+func (c *Chain) DetachLast() error {
+	utxoView := state.NewUtxoViewpoint()
+	consensusResult, err := c.getBestConsensusResult()
+	if err != nil {
+		return err
+	}
+
+	detachHeader := c.bestBlockHeader
+	detachHash := detachHeader.Hash()
+	b, err := c.store.GetBlock(&detachHash)
+	if err != nil {
+		return err
+	}
+
+	detachBlock := types.MapBlock(b)
+	if err := c.store.GetTransactionsUtxo(utxoView, detachBlock.Transactions); err != nil {
+		return err
+	}
+
+	txStatus, err := c.GetTransactionStatus(&detachBlock.ID)
+	if err != nil {
+		return err
+	}
+
+	if err := utxoView.DetachBlock(detachBlock, txStatus); err != nil {
+		return err
+	}
+
+	if err := consensusResult.DetachBlock(b); err != nil {
+		return err
+	}
+
+	for _, p := range c.subProtocols {
+		if err := p.DetachBlock(b); err != nil {
+			return errors.Wrap(err, p.Name(), "sub protocol detach block")
+		}
+	}
+
+	blockHeader, err := c.store.GetBlockHeader(&detachHeader.PreviousBlockHash)
+	if err != nil {
+		return err
+	}
+
+	return c.setState(blockHeader, c.lastIrrBlockHeader, nil, utxoView, []*state.ConsensusResult{consensusResult})
+}
+
 // SaveBlock will validate and save block into storage
 func (c *Chain) saveBlock(block *types.Block) error {
 	if err := c.validateSign(block); err != nil {
