@@ -63,7 +63,6 @@ def login():
 
 
 @tele.route('/get-all-node', methods=["GET","POST"])
-@login_required
 def get_all_node(data):
     return jsonify({"code": 200, "msg": "", "data": NODE_LIST})
 
