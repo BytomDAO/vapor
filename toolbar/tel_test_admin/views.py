@@ -10,17 +10,17 @@ LOGINED_UUID = []
 NODE_LIST = [
     {
         "IP": "52.82.39.131",
-        "level": "height",
+        "level": "hight",
         "is_connect": True
     },
     {
         "IP": "52.82.39.21",
-        "level": "height",
+        "level": "hight",
         "is_connect": True
     },
 {
         "IP": "52.82.25.183",
-        "level": "height",
+        "level": "hight",
         "is_connect": True
     }
 ]
@@ -72,7 +72,7 @@ def get_all_node(data):
 @login_required
 def set_node_permission(data):
     ip = data.get('ip')
-    level = request.form.get('level')
+    level = data.get('level')
     for i in NODE_LIST:
         if i["IP"] == ip:
             i["level"] = level
