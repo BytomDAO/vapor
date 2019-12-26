@@ -49,18 +49,17 @@ def login():
         return jsonify({"code": 400, "msg": "password error", "data": ""})
     session_id = uuid4()
     LOGINED_UUID.append(session_id)
-    response = jsonify({"code": 200, "msg": "", "data": ""})
-    response.set_cookie("tele", str(session_id), max_age=86400)
+    response = jsonify({"code": 200, "msg": "", "data": str(session_id)})
 
     return response
 
 
-@tele.route('/logout', methods=["POST"])
-@login_required
-def logout():
-    response = jsonify({"code": 200, "msg": "", "data": ""})
-    response.delete_cookie("tele")
-    return response
+# @tele.route('/logout', methods=["POST"])
+# @login_required
+# def logout():
+#     response = jsonify({"code": 200, "msg": "", "data": ""})
+#     response.delete_cookie("tele")
+#     return response
 
 
 @tele.route('/get-all-node', methods=["GET"])
