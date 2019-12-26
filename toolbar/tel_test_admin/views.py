@@ -48,7 +48,7 @@ def login():
     if password != PASSWORD:
         return jsonify({"code": 400, "msg": "password error", "data": ""})
     session_id = uuid4()
-    LOGINED_UUID.append(session_id)
+    LOGINED_UUID.append(str(session_id))
     response = jsonify({"code": 200, "msg": "", "data": str(session_id)})
 
     return response
