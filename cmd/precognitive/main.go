@@ -5,10 +5,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/toolbar/common"
-	"github.com/vapor/toolbar/precognitive/api"
-	"github.com/vapor/toolbar/precognitive/config"
-	"github.com/vapor/toolbar/precognitive/monitor"
+	"github.com/bytom/vapor/toolbar/common"
+	"github.com/bytom/vapor/toolbar/precognitive/api"
+	"github.com/bytom/vapor/toolbar/precognitive/config"
+	"github.com/bytom/vapor/toolbar/precognitive/monitor"
 )
 
 func main() {

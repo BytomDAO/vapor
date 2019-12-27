@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/vapor/consensus"
+	"github.com/bytom/vapor/consensus"
 )
 
 var testnetAddr = []string{"1.2.3.4", "5.6.7.8"}

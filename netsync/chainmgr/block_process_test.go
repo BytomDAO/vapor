@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/netsync/peers"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/test/mock"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/netsync/peers"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/test/mock"
 )
 
 func TestBlockProcess(t *testing.T) {

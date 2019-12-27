@@ -8,13 +8,13 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/account"
-	"github.com/vapor/blockchain/query"
-	"github.com/vapor/consensus"
-	"github.com/vapor/crypto/sha3pool"
-	chainjson "github.com/vapor/encoding/json"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/account"
+	"github.com/bytom/vapor/blockchain/query"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/crypto/sha3pool"
+	chainjson "github.com/bytom/vapor/encoding/json"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
 )
 
 func parseGlobalTxIdx(globalTxIdx []byte) (*bc.Hash, uint64) {

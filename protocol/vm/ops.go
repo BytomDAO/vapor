@@ -6,8 +6,8 @@ import (
 	"math"
 	"reflect"
 
-	"github.com/vapor/errors"
-	"github.com/vapor/math/checked"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/math/checked"
 )
 
 type Op uint8
@@ -194,6 +194,7 @@ const (
 	OP_MIN                Op = 0xa3
 	OP_MAX                Op = 0xa4
 	OP_WITHIN             Op = 0xa5
+	OP_MULFRACTION        Op = 0xa6
 
 	OP_SHA256        Op = 0xa8
 	OP_SHA3          Op = 0xaa
@@ -300,6 +301,7 @@ var (
 		OP_MIN:                {OP_MIN, "MIN", opMin},
 		OP_MAX:                {OP_MAX, "MAX", opMax},
 		OP_WITHIN:             {OP_WITHIN, "WITHIN", opWithin},
+		OP_MULFRACTION:        {OP_MULFRACTION, "MULFRACTION", opMulFraction},
 
 		OP_SHA256:        {OP_SHA256, "SHA256", opSha256},
 		OP_SHA3:          {OP_SHA3, "SHA3", opSha3},

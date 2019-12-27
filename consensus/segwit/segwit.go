@@ -3,10 +3,10 @@ package segwit
 import (
 	"errors"
 
-	"github.com/vapor/consensus"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/vm"
-	"github.com/vapor/protocol/vm/vmutil"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/vm"
+	"github.com/bytom/vapor/protocol/vm/vmutil"
 )
 
 // IsP2WScript is used to determine whether it is a P2WScript or not
@@ -86,6 +86,11 @@ func IsP2WMCScript(prog []byte) bool {
 	if _, err = vm.AsInt64(insts[3].Data); err != nil {
 		return false
 	}
+
+	if !IsP2WScript(insts[4].Data) {
+		return false
+	}
+
 	return insts[5].Op == vm.OP_DATA_32 && len(insts[5].Data) == 32
 }
 
@@ -148,6 +153,7 @@ func DecodeP2WMCProgram(prog []byte) (*vmutil.MagneticContractArgs, error) {
 	if magneticContractArgs.RatioDenominator, err = vm.AsInt64(insts[3].Data); err != nil {
 		return nil, err
 	}
+
 	return magneticContractArgs, nil
 }
 

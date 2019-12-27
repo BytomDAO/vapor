@@ -3,10 +3,10 @@ package api
 import (
 	set "gopkg.in/fatih/set.v0"
 
-	"github.com/vapor/blockchain/query"
-	chainjson "github.com/vapor/encoding/json"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/blockchain/query"
+	chainjson "github.com/bytom/vapor/encoding/json"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
 )
 
 // return best block hash

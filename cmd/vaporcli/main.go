@@ -3,7 +3,7 @@ package main
 import (
 	"runtime"
 
-	cmd "github.com/vapor/cmd/vaporcli/commands"
+	cmd "github.com/bytom/vapor/cmd/vaporcli/commands"
 )
 
 func main() {

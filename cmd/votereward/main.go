@@ -7,11 +7,11 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/tendermint/tmlibs/cli"
 
-	"github.com/vapor/consensus"
-	"github.com/vapor/toolbar/common"
-	cfg "github.com/vapor/toolbar/vote_reward/config"
-	"github.com/vapor/toolbar/vote_reward/settlementvotereward"
-	"github.com/vapor/toolbar/vote_reward/synchron"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/toolbar/common"
+	cfg "github.com/bytom/vapor/toolbar/vote_reward/config"
+	"github.com/bytom/vapor/toolbar/vote_reward/settlementvotereward"
+	"github.com/bytom/vapor/toolbar/vote_reward/synchron"
 )
 
 const logModule = "reward"

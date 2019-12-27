@@ -9,11 +9,11 @@ import (
 	"github.com/golang/groupcache/lru"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/consensus"
-	"github.com/vapor/event"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/state"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/event"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/state"
 )
 
 // msg type
@@ -216,6 +216,19 @@ func isTransactionZeroOutput(tx *types.Tx) bool {
 	return false
 }
 
+func isNoGasStatusFail(tx *types.Tx, statusFail bool) bool {
+	if !statusFail {
+		return false
+	}
+
+	for _, input := range tx.TxData.Inputs {
+		if *consensus.BTMAssetID == input.AssetID() {
+			return false
+		}
+	}
+	return true
+}
+
 //IsDust checks if a tx has zero output
 func (tp *TxPool) IsDust(tx *types.Tx) bool {
 	if ok := isTransactionZeroOutput(tx); ok {
@@ -262,6 +275,11 @@ func (tp *TxPool) processTransaction(tx *types.Tx, statusFail bool, height, fee 
 func (tp *TxPool) ProcessTransaction(tx *types.Tx, statusFail bool, height, fee uint64) (bool, error) {
 	if tp.IsDust(tx) {
 		log.WithFields(log.Fields{"module": logModule, "tx_id": tx.ID.String()}).Warn("dust tx")
+		return false, nil
+	}
+
+	if isNoGasStatusFail(tx, statusFail) {
+		log.WithFields(log.Fields{"module": logModule, "tx_id": tx.ID.String()}).Warn("drop no gas status fail tx")
 		return false, nil
 	}
 	return tp.processTransaction(tx, statusFail, height, fee)

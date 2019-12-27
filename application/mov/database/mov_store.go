@@ -6,10 +6,10 @@ import (
 	"errors"
 	"math"
 
-	"github.com/vapor/application/mov/common"
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/application/mov/common"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
 )
 
 // MovStore is the interface for mov's persistent storage
@@ -41,6 +41,12 @@ var (
 	tradePairsPrefix = append(movStore, tradePair)
 	bestMatchStore   = append(movStore, matchStatus)
 )
+
+type orderData struct {
+	Utxo             *common.MovUtxo
+	RatioNumerator   int64
+	RatioDenominator int64
+}
 
 func calcOrderKey(fromAssetID, toAssetID *bc.AssetID, utxoHash *bc.Hash, rate float64) []byte {
 	buf := make([]byte, 8)
@@ -116,8 +122,8 @@ func (m *LevelDBMovStore) ListOrders(orderAfter *common.Order) ([]*common.Order,
 
 	var startKey []byte
 
-	if orderAfter.Rate > 0 {
-		startKey = calcOrderKey(orderAfter.FromAssetID, orderAfter.ToAssetID, orderAfter.UTXOHash(), orderAfter.Rate)
+	if orderAfter.Rate() > 0 {
+		startKey = calcOrderKey(orderAfter.FromAssetID, orderAfter.ToAssetID, orderAfter.UTXOHash(), orderAfter.Rate())
 	}
 
 	itr := m.db.IteratorPrefixWithStart(orderPrefix, startKey, false)
@@ -125,16 +131,17 @@ func (m *LevelDBMovStore) ListOrders(orderAfter *common.Order) ([]*common.Order,
 
 	var orders []*common.Order
 	for txNum := 0; txNum < ordersNum && itr.Next(); txNum++ {
-		movUtxo := &common.MovUtxo{}
-		if err := json.Unmarshal(itr.Value(), movUtxo); err != nil {
+		orderData := &orderData{}
+		if err := json.Unmarshal(itr.Value(), orderData); err != nil {
 			return nil, err
 		}
 
 		orders = append(orders, &common.Order{
-			FromAssetID: orderAfter.FromAssetID,
-			ToAssetID:   orderAfter.ToAssetID,
-			Rate:        getRateFromOrderKey(itr.Key()),
-			Utxo:        movUtxo,
+			FromAssetID:      orderAfter.FromAssetID,
+			ToAssetID:        orderAfter.ToAssetID,
+			Utxo:             orderData.Utxo,
+			RatioNumerator:   orderData.RatioNumerator,
+			RatioDenominator: orderData.RatioDenominator,
 		})
 	}
 	return orders, nil
@@ -198,12 +205,17 @@ func (m *LevelDBMovStore) ProcessOrders(addOrders []*common.Order, delOrders []*
 
 func (m *LevelDBMovStore) addOrders(batch dbm.Batch, orders []*common.Order, tradePairsCnt map[string]*common.TradePair) error {
 	for _, order := range orders {
-		data, err := json.Marshal(order.Utxo)
+		orderData := &orderData{
+			Utxo:             order.Utxo,
+			RatioNumerator:   order.RatioNumerator,
+			RatioDenominator: order.RatioDenominator,
+		}
+		data, err := json.Marshal(orderData)
 		if err != nil {
 			return err
 		}
 
-		key := calcOrderKey(order.FromAssetID, order.ToAssetID, order.UTXOHash(), order.Rate)
+		key := calcOrderKey(order.FromAssetID, order.ToAssetID, order.UTXOHash(), order.Rate())
 		batch.Set(key, data)
 
 		tradePair := &common.TradePair{
@@ -250,7 +262,7 @@ func (m *LevelDBMovStore) checkMovDatabaseState(header *types.BlockHeader) error
 
 func (m *LevelDBMovStore) deleteOrders(batch dbm.Batch, orders []*common.Order, tradePairsCnt map[string]*common.TradePair) {
 	for _, order := range orders {
-		key := calcOrderKey(order.FromAssetID, order.ToAssetID, order.UTXOHash(), order.Rate)
+		key := calcOrderKey(order.FromAssetID, order.ToAssetID, order.UTXOHash(), order.Rate())
 		batch.Delete(key)
 
 		tradePair := &common.TradePair{

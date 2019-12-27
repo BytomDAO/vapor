@@ -3,7 +3,7 @@ package performance
 import (
 	"testing"
 
-	"github.com/vapor/util"
+	"github.com/bytom/vapor/util"
 )
 
 // Test rpc call benchmark - 0.1 s/op

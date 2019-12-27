@@ -3,11 +3,12 @@ package common
 import (
 	"encoding/hex"
 	"fmt"
+	"math/big"
 
-	"github.com/vapor/consensus/segwit"
-	"github.com/vapor/errors"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/consensus/segwit"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
 )
 
 // MovUtxo store the utxo information for mov order
@@ -20,10 +21,21 @@ type MovUtxo struct {
 
 // Order store all the order information
 type Order struct {
-	FromAssetID *bc.AssetID
-	ToAssetID   *bc.AssetID
-	Utxo        *MovUtxo
-	Rate        float64
+	FromAssetID      *bc.AssetID
+	ToAssetID        *bc.AssetID
+	Utxo             *MovUtxo
+	RatioNumerator   int64
+	RatioDenominator int64
+}
+
+func (o *Order) Rate() float64 {
+	if o.RatioDenominator == 0 {
+		return 0
+	}
+	rate := big.NewFloat(0).SetInt64(o.RatioNumerator)
+	rate.Quo(rate, big.NewFloat(0).SetInt64(o.RatioDenominator))
+	result, _ := rate.Float64()
+	return result
 }
 
 // OrderSlice is define for order's sort
@@ -32,10 +44,10 @@ type OrderSlice []*Order
 func (o OrderSlice) Len() int      { return len(o) }
 func (o OrderSlice) Swap(i, j int) { o[i], o[j] = o[j], o[i] }
 func (o OrderSlice) Less(i, j int) bool {
-	if o[i].Rate == o[j].Rate {
+	if o[i].Rate() == o[j].Rate() {
 		return hex.EncodeToString(o[i].UTXOHash().Bytes()) < hex.EncodeToString(o[j].UTXOHash().Bytes())
 	}
-	return o[i].Rate < o[j].Rate
+	return o[i].Rate() < o[j].Rate()
 }
 
 // NewOrderFromOutput convert txinput to order
@@ -53,9 +65,10 @@ func NewOrderFromOutput(tx *types.Tx, outputIndex int) (*Order, error) {
 
 	assetAmount := output.Source.Value
 	return &Order{
-		FromAssetID: assetAmount.AssetId,
-		ToAssetID:   &contractArgs.RequestedAsset,
-		Rate:        float64(contractArgs.RatioNumerator) / float64(contractArgs.RatioDenominator),
+		FromAssetID:      assetAmount.AssetId,
+		ToAssetID:        &contractArgs.RequestedAsset,
+		RatioNumerator:   contractArgs.RatioNumerator,
+		RatioDenominator: contractArgs.RatioDenominator,
 		Utxo: &MovUtxo{
 			SourceID:       output.Source.Ref,
 			Amount:         assetAmount.Amount,
@@ -78,9 +91,10 @@ func NewOrderFromInput(tx *types.Tx, inputIndex int) (*Order, error) {
 	}
 
 	return &Order{
-		FromAssetID: input.AssetId,
-		ToAssetID:   &contractArgs.RequestedAsset,
-		Rate:        float64(contractArgs.RatioNumerator) / float64(contractArgs.RatioDenominator),
+		FromAssetID:      input.AssetId,
+		ToAssetID:        &contractArgs.RequestedAsset,
+		RatioNumerator:   contractArgs.RatioNumerator,
+		RatioDenominator: contractArgs.RatioDenominator,
 		Utxo: &MovUtxo{
 			SourceID:       &input.SourceID,
 			Amount:         input.Amount,

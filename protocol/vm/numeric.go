@@ -2,8 +2,9 @@ package vm
 
 import (
 	"math"
+	"math/big"
 
-	"github.com/vapor/math/checked"
+	"github.com/bytom/vapor/math/checked"
 )
 
 func op1Add(vm *virtualMachine) error {
@@ -456,4 +457,37 @@ func opWithin(vm *virtualMachine) error {
 		return err
 	}
 	return vm.pushBool(x >= min && x < max, true)
+}
+
+func opMulFraction(vm *virtualMachine) error {
+	if err := vm.applyCost(8); err != nil {
+		return err
+	}
+
+	z, err := vm.popInt64(true)
+	if err != nil {
+		return err
+	}
+
+	if z == 0 {
+		return ErrDivZero
+	}
+
+	y, err := vm.popInt64(true)
+	if err != nil {
+		return err
+	}
+
+	x, err := vm.popInt64(true)
+	if err != nil {
+		return err
+	}
+
+	res := big.NewInt(x)
+	res.Mul(res, big.NewInt(y)).Quo(res, big.NewInt(z))
+	if !res.IsInt64() {
+		return ErrRange
+	}
+
+	return vm.pushInt64(res.Int64(), true)
 }

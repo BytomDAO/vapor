@@ -6,13 +6,13 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/config"
-	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/errors"
-	"github.com/vapor/event"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/state"
+	"github.com/bytom/vapor/config"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/event"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/state"
 )
 
 const (
@@ -199,27 +199,51 @@ func (c *Chain) ProcessBlockSignature(signature, xPub []byte, blockHash *bc.Hash
 	return c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: *blockHash, Signature: signature, XPub: xPub})
 }
 
-// SignBlock signing the block if current node is consensus node
-func (c *Chain) SignBlock(block *types.Block) ([]byte, error) {
+// SignBlockHeader signing the block if current node is consensus node
+func (c *Chain) SignBlockHeader(blockHeader *types.BlockHeader) error {
+	_, err := c.signBlockHeader(blockHeader)
+	return err
+}
+
+func (c *Chain) applyBlockSign(blockHeader *types.BlockHeader) error {
+	signature, err := c.signBlockHeader(blockHeader)
+	if err != nil {
+		return err
+	}
+
+	if len(signature) == 0 {
+		return nil
+	}
+
+	if err := c.store.SaveBlockHeader(blockHeader); err != nil {
+		return err
+	}
+
+	xpub := config.CommonConfig.PrivateKey().XPub()
+	return c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: blockHeader.Hash(), Signature: signature, XPub: xpub[:]})
+}
+
+func (c *Chain) signBlockHeader(blockHeader *types.BlockHeader) ([]byte, error) {
 	xprv := config.CommonConfig.PrivateKey()
-	xpubStr := xprv.XPub().String()
-	node, err := c.getConsensusNode(&block.PreviousBlockHash, xpubStr)
+	xpub := xprv.XPub()
+	node, err := c.getConsensusNode(&blockHeader.PreviousBlockHash, xpub.String())
 	if err == errNotFoundConsensusNode {
 		return nil, nil
 	} else if err != nil {
 		return nil, err
 	}
 
-	if err := c.checkDoubleSign(&block.BlockHeader, node.XPub.String()); err == errDoubleSignBlock {
+	if err := c.checkDoubleSign(blockHeader, node.XPub.String()); err == errDoubleSignBlock {
 		return nil, nil
 	} else if err != nil {
 		return nil, err
 	}
 
-	signature := block.Get(node.Order)
-	if len(signature) == 0 {
-		signature = xprv.Sign(block.Hash().Bytes())
-		block.Set(node.Order, signature)
+	if signature := blockHeader.Get(node.Order); len(signature) != 0 {
+		return nil, nil
 	}
+
+	signature := xprv.Sign(blockHeader.Hash().Bytes())
+	blockHeader.Set(node.Order, signature)
 	return signature, nil
 }

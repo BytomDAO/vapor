@@ -6,8 +6,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/p2p"
-	"github.com/vapor/toolbar/precognitive/database/orm"
+	"github.com/bytom/vapor/p2p"
+	"github.com/bytom/vapor/toolbar/precognitive/database/orm"
 )
 
 func (m *monitor) connectionRoutine() {

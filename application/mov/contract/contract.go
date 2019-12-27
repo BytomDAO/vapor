@@ -3,8 +3,8 @@ package contract
 import (
 	"encoding/hex"
 
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/vm"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/vm"
 )
 
 const (

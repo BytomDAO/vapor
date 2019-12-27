@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/errors"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/errors"
 )
 
 func TestCreate(t *testing.T) {

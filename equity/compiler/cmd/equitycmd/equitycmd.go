@@ -8,12 +8,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/vapor/equity/compiler"
+	"github.com/bytom/vapor/equity/compiler"
 )
 
 var (
 	// generateInstPath is the directory (need to combine with GOPATH) for store generated contract instance
-	generateInstPath = "/src/github.com/vapor/equity/instance/"
+	generateInstPath = "/src/github.com/bytom/vapor/equity/instance/"
 )
 
 func main() {
@@ -66,8 +66,8 @@ func main() {
 		"bytes":                            true,
 		"encoding/hex":                     true,
 		"fmt":                              true,
-		"github.com/vapor/equity/compiler": true,
-		"github.com/vapor/protocol/vm":     true,
+		"github.com/bytom/vapor/equity/compiler": true,
+		"github.com/bytom/vapor/protocol/vm":     true,
 	}
 
 	buf := new(bytes.Buffer)
@@ -254,7 +254,7 @@ func asGoParams(params []*compiler.Param) (goParams string, imports []string) {
 			typ = "uint64"
 		case "Asset":
 			typ = "bc.AssetID"
-			imports = append(imports, "github.com/vapor/protocol/bc")
+			imports = append(imports, "github.com/bytom/vapor/protocol/bc")
 			strFlag = true
 		case "Boolean":
 			typ = "bool"
@@ -268,7 +268,7 @@ func asGoParams(params []*compiler.Param) (goParams string, imports []string) {
 			strFlag = true
 		case "PublicKey":
 			typ = "ed25519.PublicKey"
-			imports = append(imports, "github.com/vapor/crypto/ed25519")
+			imports = append(imports, "github.com/bytom/vapor/crypto/ed25519")
 			strFlag = true
 		case "Signature":
 			typ = "[]byte"
@@ -281,7 +281,7 @@ func asGoParams(params []*compiler.Param) (goParams string, imports []string) {
 	}
 
 	if strFlag {
-		imports = append(imports, "github.com/vapor/encoding/json")
+		imports = append(imports, "github.com/bytom/vapor/encoding/json")
 	}
 	return strings.Join(strs, ", "), imports
 }

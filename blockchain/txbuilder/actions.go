@@ -7,13 +7,13 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
-	"github.com/vapor/common"
-	cfg "github.com/vapor/config"
-	"github.com/vapor/consensus"
-	"github.com/vapor/encoding/json"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/vm/vmutil"
+	"github.com/bytom/vapor/common"
+	cfg "github.com/bytom/vapor/config"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/encoding/json"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/vm/vmutil"
 )
 
 // DecodeControlAddressAction convert input data to action struct
@@ -150,13 +150,14 @@ func DecodeCrossOutAction(data []byte) (Action, error) {
 
 type crossOutAction struct {
 	bc.AssetAmount
-	Address string `json:"address"`
+	Address string        `json:"address"`
+	Program json.HexBytes `json:"control_program"`
 }
 
 func (a *crossOutAction) Build(ctx context.Context, b *TemplateBuilder) error {
 	var missing []string
-	if a.Address == "" {
-		missing = append(missing, "address")
+	if a.Address == "" && len(a.Program) == 0 {
+		missing = append(missing, "address or program")
 	}
 	if a.AssetId.IsZero() {
 		missing = append(missing, "asset_id")
@@ -168,23 +169,25 @@ func (a *crossOutAction) Build(ctx context.Context, b *TemplateBuilder) error {
 		return MissingFieldsError(missing...)
 	}
 
-	address, err := common.DecodeAddress(a.Address, consensus.BytomMainNetParams(&consensus.ActiveNetParams))
-	if err != nil {
-		return err
-	}
+	program := a.Program
+	if a.Address != "" {
+		address, err := common.DecodeAddress(a.Address, consensus.BytomMainNetParams(&consensus.ActiveNetParams))
+		if err != nil {
+			return err
+		}
 
-	redeemContract := address.ScriptAddress()
-	program := []byte{}
-	switch address.(type) {
-	case *common.AddressWitnessPubKeyHash:
-		program, err = vmutil.P2WPKHProgram(redeemContract)
-	case *common.AddressWitnessScriptHash:
-		program, err = vmutil.P2WSHProgram(redeemContract)
-	default:
-		return errors.New("unsupport address type")
-	}
-	if err != nil {
-		return err
+		redeemContract := address.ScriptAddress()
+		switch address.(type) {
+		case *common.AddressWitnessPubKeyHash:
+			program, err = vmutil.P2WPKHProgram(redeemContract)
+		case *common.AddressWitnessScriptHash:
+			program, err = vmutil.P2WSHProgram(redeemContract)
+		default:
+			return errors.New("unsupport address type")
+		}
+		if err != nil {
+			return err
+		}
 	}
 
 	out := types.NewCrossChainOutput(*a.AssetId, a.Amount, program)

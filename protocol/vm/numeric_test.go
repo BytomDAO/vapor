@@ -5,7 +5,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/testutil"
 )
 
 func TestNumericOps(t *testing.T) {
@@ -446,6 +446,40 @@ func TestNumericOps(t *testing.T) {
 			deferredCost: -18,
 			dataStack:    [][]byte{{1}},
 		},
+	}, {
+		op: OP_MULFRACTION,
+		startVM: &virtualMachine{
+			runLimit:  50000,
+			dataStack: [][]byte{{15}, {2}, {3}},
+		},
+		wantVM: &virtualMachine{
+			runLimit:     49992,
+			deferredCost: -18,
+			dataStack:    [][]byte{{10}},
+		},
+	}, {
+		op: OP_MULFRACTION,
+		startVM: &virtualMachine{
+			runLimit:  50000,
+			dataStack: [][]byte{Int64Bytes(-654), {3}, {2}},
+		},
+		wantVM: &virtualMachine{
+			runLimit:     49992,
+			deferredCost: -18,
+			dataStack:    [][]byte{Int64Bytes(-981)},
+		},
+	}, {
+		op: OP_MULFRACTION,
+		startVM: &virtualMachine{
+			runLimit:  50000,
+			dataStack: [][]byte{Int64Bytes(-654), {3}, {}},
+		},
+		wantVM: &virtualMachine{
+			runLimit:     49992,
+			deferredCost: -18,
+			dataStack:    [][]byte{},
+		},
+		wantErr: ErrDivZero,
 	}}
 
 	numops := []Op{
@@ -453,6 +487,7 @@ func TestNumericOps(t *testing.T) {
 		OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_MOD, OP_LSHIFT, OP_RSHIFT, OP_BOOLAND,
 		OP_BOOLOR, OP_NUMEQUAL, OP_NUMEQUALVERIFY, OP_NUMNOTEQUAL, OP_LESSTHAN,
 		OP_LESSTHANOREQUAL, OP_GREATERTHAN, OP_GREATERTHANOREQUAL, OP_MIN, OP_MAX, OP_WITHIN,
+		OP_MULFRACTION,
 	}
 
 	for _, op := range numops {
@@ -536,6 +571,14 @@ func TestRangeErrs(t *testing.T) {
 		{fmt.Sprintf("%d 1 LSHIFT", int64(math.MinInt64)), true},
 		{fmt.Sprintf("%d 1 LSHIFT", int64(math.MinInt64)/2), false},
 		{fmt.Sprintf("%d 2 LSHIFT", int64(math.MinInt64)/2), true},
+		{fmt.Sprintf("%d %d %d MULFRACTION", int64(math.MaxInt64)/2-1, 2, 1), false},
+		{fmt.Sprintf("%d %d %d MULFRACTION", int64(math.MaxInt64)/2+1, 2, 1), true},
+		{fmt.Sprintf("%d %d %d MULFRACTION", int64(math.MinInt64)/2+1, 2, 1), false},
+		{fmt.Sprintf("%d %d %d MULFRACTION", int64(math.MinInt64)/2-1, 2, 1), true},
+		{fmt.Sprintf("%d %d %d MULFRACTION", int64(math.MaxInt64), 3, 2), true},
+		{fmt.Sprintf("%d %d %d MULFRACTION", int64(math.MaxInt64), 2, 3), false},
+		{fmt.Sprintf("%d %d %d MULFRACTION", int64(math.MinInt64), 3, 2), true},
+		{fmt.Sprintf("%d %d %d MULFRACTION", int64(math.MinInt64), 2, 3), false},
 	}
 
 	for i, c := range cases {

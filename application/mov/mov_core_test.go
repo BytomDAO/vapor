@@ -5,17 +5,24 @@ import (
 	"os"
 	"testing"
 
-	"github.com/vapor/application/mov/common"
-	"github.com/vapor/application/mov/database"
-	"github.com/vapor/application/mov/mock"
-	"github.com/vapor/consensus"
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/vm"
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/application/mov/common"
+	"github.com/bytom/vapor/application/mov/database"
+	"github.com/bytom/vapor/application/mov/mock"
+	"github.com/bytom/vapor/consensus"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/vm"
+	"github.com/bytom/vapor/testutil"
 )
 
+/*
+	@addTest:BeforeProposalBlock: will gas affect generate tx? will be packed tx affect generate tx?
+	@addTest:TestApplyBlock: one block has two different trade pairs & different trade pair won't affect each order(attach & detach)
+	@addTest:TestApplyBlock: node packed maker tx and match transaction in random order(attach & detach)
+	@addTest:TestValidateBlock: one tx has trade input and cancel input mixed
+	@addTest:TestValidateBlock: regular match transaction's seller program is also a P2WMCProgram
+*/
 func TestApplyBlock(t *testing.T) {
 	initBlockHeader := &types.BlockHeader{Height: 1, PreviousBlockHash: bc.Hash{}}
 	cases := []struct {
@@ -361,7 +368,7 @@ func TestValidateBlock(t *testing.T) {
 				Transactions: []*types.Tx{
 					types.NewTx(types.TxData{
 						Inputs:  []*types.TxInput{types.NewSpendInput(nil, *mock.Btc2EthOrders[0].Utxo.SourceID, *mock.Btc2EthOrders[0].FromAssetID, mock.Btc2EthOrders[0].Utxo.Amount, mock.Btc2EthOrders[0].Utxo.SourcePos, []byte{0x51})},
-						Outputs: []*types.TxOutput{types.NewIntraChainOutput(*mock.Btc2EthOrders[0].FromAssetID, mock.Btc2EthOrders[0].Utxo.Amount, mock.MustCreateP2WMCProgram(mock.ETH, testutil.MustDecodeHexString("51"), 0, 1))},
+						Outputs: []*types.TxOutput{types.NewIntraChainOutput(*mock.Btc2EthOrders[0].FromAssetID, mock.Btc2EthOrders[0].Utxo.Amount, mock.MustCreateP2WMCProgram(mock.ETH, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19251"), 0, 1))},
 					}),
 				},
 			},
@@ -374,7 +381,7 @@ func TestValidateBlock(t *testing.T) {
 				Transactions: []*types.Tx{
 					types.NewTx(types.TxData{
 						Inputs:  []*types.TxInput{types.NewSpendInput(nil, *mock.Btc2EthOrders[0].Utxo.SourceID, *mock.Btc2EthOrders[0].FromAssetID, mock.Btc2EthOrders[0].Utxo.Amount, mock.Btc2EthOrders[0].Utxo.SourcePos, []byte{0x51})},
-						Outputs: []*types.TxOutput{types.NewIntraChainOutput(*mock.Btc2EthOrders[0].FromAssetID, mock.Btc2EthOrders[0].Utxo.Amount, mock.MustCreateP2WMCProgram(mock.ETH, testutil.MustDecodeHexString("51"), 1, 0))},
+						Outputs: []*types.TxOutput{types.NewIntraChainOutput(*mock.Btc2EthOrders[0].FromAssetID, mock.Btc2EthOrders[0].Utxo.Amount, mock.MustCreateP2WMCProgram(mock.ETH, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19251"), 1, 0))},
 					}),
 				},
 			},
@@ -382,17 +389,21 @@ func TestValidateBlock(t *testing.T) {
 			wantError:     errRatioOfTradeLessThanZero,
 		},
 		{
-			desc: "ratio numerator product input amount is overflow",
+			desc: "want amount is overflow",
 			block: &types.Block{
 				Transactions: []*types.Tx{
 					types.NewTx(types.TxData{
 						Inputs:  []*types.TxInput{types.NewSpendInput(nil, *mock.Btc2EthOrders[0].Utxo.SourceID, *mock.Btc2EthOrders[0].FromAssetID, mock.Btc2EthOrders[0].Utxo.Amount, mock.Btc2EthOrders[0].Utxo.SourcePos, []byte{0x51})},
-						Outputs: []*types.TxOutput{types.NewIntraChainOutput(*mock.Btc2EthOrders[0].FromAssetID, mock.Btc2EthOrders[0].Utxo.Amount, mock.MustCreateP2WMCProgram(mock.ETH, testutil.MustDecodeHexString("51"), math.MaxInt64, 10))},
+						Outputs: []*types.TxOutput{types.NewIntraChainOutput(*mock.Btc2EthOrders[0].FromAssetID, mock.Btc2EthOrders[0].Utxo.Amount, mock.MustCreateP2WMCProgram(mock.ETH, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19251"), math.MaxInt64, 1))},
 					}),
 				},
 			},
 			verifyResults: []*bc.TxVerifyResult{{StatusFail: false}},
+<<<<<<< HEAD
 			wantError:     errNumeratorOfRatioIsOverflow,
+=======
+			wantError:     errRequestAmountMath,
+>>>>>>> ccf77741ae2821cdeee5575cfd642e13e6b4fc0a
 		},
 	}
 

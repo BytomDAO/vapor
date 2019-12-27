@@ -7,10 +7,10 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/tendermint/tmlibs/flowrate"
-	"github.com/vapor/consensus"
-	"github.com/vapor/p2p/security"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/p2p/security"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
 )
 
 var (

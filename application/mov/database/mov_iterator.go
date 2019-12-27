@@ -3,8 +3,8 @@ package database
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/application/mov/common"
-	"github.com/vapor/protocol/bc"
+	"github.com/bytom/vapor/application/mov/common"
+	"github.com/bytom/vapor/protocol/bc"
 )
 
 // TradePairIterator wrap read trade pair from DB action

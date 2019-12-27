@@ -7,16 +7,20 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/account"
-	"github.com/vapor/config"
-	"github.com/vapor/consensus"
-	"github.com/vapor/event"
-	"github.com/vapor/proposal"
-	"github.com/vapor/protocol"
+	"github.com/bytom/vapor/account"
+	"github.com/bytom/vapor/config"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/event"
+	"github.com/bytom/vapor/proposal"
+	"github.com/bytom/vapor/protocol"
 )
 
 const (
-	logModule     = "blockproposer"
+	logModule         = "blockproposer"
+	warnTimeNum       = 2
+	warnTimeDenom     = 5
+	criticalTimeNum   = 4
+	criticalTimeDenom = 5
 )
 
 // BlockProposer propose several block in specified time range
@@ -74,7 +78,9 @@ func (b *BlockProposer) generateBlocks() {
 			continue
 		}
 
-		block, err := proposal.NewBlockTemplate(b.chain, b.accountManager, nextBlockTime)
+		warnDuration := time.Duration(consensus.ActiveNetParams.BlockTimeInterval*warnTimeNum/warnTimeDenom) * time.Millisecond
+		criticalDuration := time.Duration(consensus.ActiveNetParams.BlockTimeInterval*criticalTimeNum/criticalTimeDenom) * time.Millisecond
+		block, err := proposal.NewBlockTemplate(b.chain, b.accountManager, nextBlockTime, warnDuration, criticalDuration)
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("failed on create NewBlockTemplate")
 			continue

@@ -5,11 +5,11 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/errors"
-	"github.com/vapor/netsync/peers"
-	"github.com/vapor/p2p/security"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/netsync/peers"
+	"github.com/bytom/vapor/p2p/security"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
 )
 
 var (
@@ -152,7 +152,7 @@ func (fs *fastSync) process() error {
 // sync length cannot be greater than maxFastSyncBlocksNum.
 func (fs *fastSync) findSyncRange() (*types.Block, error) {
 	bestHeight := fs.chain.BestBlockHeight()
-	length := fs.mainSyncPeer.IrreversibleHeight() - fastSyncPivotGap - bestHeight
+	length := fs.mainSyncPeer.Height() - fastSyncPivotGap - bestHeight
 	if length > maxNumOfBlocksPerSync {
 		length = maxNumOfBlocksPerSync
 	}

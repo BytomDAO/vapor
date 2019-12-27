@@ -3,7 +3,7 @@ package vm
 import (
 	"testing"
 
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/testutil"
 )
 
 func TestCheckSig(t *testing.T) {

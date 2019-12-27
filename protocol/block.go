@@ -3,13 +3,11 @@ package protocol
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/config"
-	"github.com/vapor/errors"
-	"github.com/vapor/event"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/state"
-	"github.com/vapor/protocol/validation"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/state"
+	"github.com/bytom/vapor/protocol/validation"
 )
 
 var (
@@ -22,7 +20,7 @@ var (
 
 // BlockExist check is a block in chain or orphan
 func (c *Chain) BlockExist(hash *bc.Hash) bool {
-	if _, err := c.store.GetBlockHeader(hash); err == nil {
+	if bh, err := c.store.GetBlockHeader(hash); err == nil && bh.Height <= c.BestBlockHeight() {
 		return true
 	}
 	return c.orphanManage.BlockExist(hash)
@@ -118,6 +116,10 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		if err := p.ApplyBlock(block); err != nil {
 			return errors.Wrap(err, p.Name(), "sub protocol connect block")
 		}
+	}
+
+	if err := c.applyBlockSign(&block.BlockHeader); err != nil {
+		return err
 	}
 
 	irrBlockHeader := c.lastIrrBlockHeader
@@ -231,6 +233,10 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 			consensusResults = append(consensusResults, consensusResult.Fork())
 		}
 
+		if err := c.applyBlockSign(attachBlockHeader); err != nil {
+			return err
+		}
+
 		if c.isIrreversible(attachBlockHeader) && attachBlockHeader.Height > irrBlockHeader.Height {
 			irrBlockHeader = attachBlockHeader
 		}
@@ -309,22 +315,11 @@ func (c *Chain) saveBlock(block *types.Block) error {
 		}
 	}
 
-	signature, err := c.SignBlock(block)
-	if err != nil {
-		return errors.Sub(ErrBadBlock, err)
-	}
-
 	if err := c.store.SaveBlock(block, bcBlock.TransactionStatus); err != nil {
 		return err
 	}
-	c.orphanManage.Delete(&bcBlock.ID)
 
-	if len(signature) != 0 {
-		xPub := config.CommonConfig.PrivateKey().XPub()
-		if err := c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: block.Hash(), Signature: signature, XPub: xPub[:]}); err != nil {
-			return err
-		}
-	}
+	c.orphanManage.Delete(&bcBlock.ID)
 	return nil
 }
 

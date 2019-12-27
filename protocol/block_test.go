@@ -3,11 +3,11 @@ package protocol
 import (
 	"testing"
 
-	"github.com/vapor/database/storage"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/state"
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/database/storage"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/state"
+	"github.com/bytom/vapor/testutil"
 )
 
 type mStore struct {

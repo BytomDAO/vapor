@@ -5,7 +5,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/tendermint/tmlibs/cli"
 
-	"github.com/vapor/toolbar/mergeutxo"
+	"github.com/bytom/vapor/toolbar/mergeutxo"
 )
 
 var RootCmd = &cobra.Command{

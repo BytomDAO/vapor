@@ -7,7 +7,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/vapor/toolbar/common"
+	"github.com/bytom/vapor/toolbar/common"
 )
 
 type Config struct {

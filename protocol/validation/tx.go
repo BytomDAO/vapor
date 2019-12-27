@@ -3,19 +3,16 @@ package validation
 import (
 	"fmt"
 	"math"
+	"runtime"
 	"sync"
 
-	"github.com/vapor/common"
-	"github.com/vapor/config"
-	"github.com/vapor/consensus"
-	"github.com/vapor/errors"
-	"github.com/vapor/math/checked"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/vm"
-)
-
-const (
-	validateWorkerNum = 32
+	"github.com/bytom/vapor/common"
+	"github.com/bytom/vapor/config"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/math/checked"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/vm"
 )
 
 // validate transaction error
@@ -665,6 +662,7 @@ func validateTxWorker(workCh chan *validateTxWork, resultCh chan *ValidateTxResu
 // ValidateTxs validates txs in async mode
 func ValidateTxs(txs []*bc.Tx, block *bc.Block) []*ValidateTxResult {
 	txSize := len(txs)
+	validateWorkerNum := runtime.NumCPU()
 	//init the goroutine validate worker
 	var wg sync.WaitGroup
 	workCh := make(chan *validateTxWork, txSize)

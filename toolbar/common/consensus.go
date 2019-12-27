@@ -3,8 +3,8 @@ package common
 import (
 	"sort"
 
-	"github.com/vapor/api"
-	"github.com/vapor/consensus"
+	"github.com/bytom/vapor/api"
+	"github.com/bytom/vapor/consensus"
 )
 
 const NumOfBPNode = 42

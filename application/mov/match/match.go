@@ -3,28 +3,29 @@ package match
 import (
 	"encoding/hex"
 	"math"
+	"math/big"
 
-	"github.com/vapor/application/mov/common"
-	"github.com/vapor/application/mov/contract"
-	"github.com/vapor/consensus/segwit"
-	"github.com/vapor/errors"
-	vprMath "github.com/vapor/math"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/vm"
-	"github.com/vapor/protocol/vm/vmutil"
+	"github.com/bytom/vapor/application/mov/common"
+	"github.com/bytom/vapor/application/mov/contract"
+	"github.com/bytom/vapor/consensus/segwit"
+	"github.com/bytom/vapor/errors"
+	vprMath "github.com/bytom/vapor/math"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/vm"
+	"github.com/bytom/vapor/protocol/vm/vmutil"
 )
 
 // Engine is used to generate math transactions
 type Engine struct {
-	orderTable  *OrderTable
+	orderBook   *OrderBook
 	maxFeeRate  float64
 	nodeProgram []byte
 }
 
 // NewEngine return a new Engine
-func NewEngine(orderTable *OrderTable, maxFeeRate float64, nodeProgram []byte) *Engine {
-	return &Engine{orderTable: orderTable, maxFeeRate: maxFeeRate, nodeProgram: nodeProgram}
+func NewEngine(orderBook *OrderBook, maxFeeRate float64, nodeProgram []byte) *Engine {
+	return &Engine{orderBook: orderBook, maxFeeRate: maxFeeRate, nodeProgram: nodeProgram}
 }
 
 // HasMatchedTx check does the input trade pair can generate a match deal
@@ -33,12 +34,12 @@ func (e *Engine) HasMatchedTx(tradePairs ...*common.TradePair) bool {
 		return false
 	}
 
-	orders := e.peekOrders(tradePairs)
+	orders := e.orderBook.PeekOrders(tradePairs)
 	if len(orders) == 0 {
 		return false
 	}
 
-	return isMatched(orders)
+	return IsMatched(orders)
 }
 
 // NextMatchedTx return the next matchable transaction by the specified trade pairs
@@ -49,13 +50,13 @@ func (e *Engine) NextMatchedTx(tradePairs ...*common.TradePair) (*types.Tx, erro
 		return nil, errors.New("the specified trade pairs can not be matched")
 	}
 
-	tx, err := e.buildMatchTx(e.peekOrders(tradePairs))
+	tx, err := e.buildMatchTx(sortOrders(e.orderBook.PeekOrders(tradePairs)))
 	if err != nil {
 		return nil, err
 	}
 
 	for _, tradePair := range tradePairs {
-		e.orderTable.PopOrder(tradePair)
+		e.orderBook.PopOrder(tradePair)
 	}
 
 	if err := e.addPartialTradeOrder(tx); err != nil {
@@ -112,7 +113,7 @@ func (e *Engine) addPartialTradeOrder(tx *types.Tx) error {
 			return err
 		}
 
-		if err := e.orderTable.AddOrder(order); err != nil {
+		if err := e.orderBook.AddOrder(order); err != nil {
 			return err
 		}
 	}
@@ -144,19 +145,6 @@ func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, error) {
 	return types.NewTx(*txData), nil
 }
 
-func (e *Engine) peekOrders(tradePairs []*common.TradePair) []*common.Order {
-	var orders []*common.Order
-	for _, tradePair := range tradePairs {
-		order := e.orderTable.PeekOrder(tradePair)
-		if order == nil {
-			return nil
-		}
-
-		orders = append(orders, order)
-	}
-	return orders
-}
-
 // MatchedTxFee is object to record the mov tx's fee information
 type MatchedTxFee struct {
 	MaxFeeAmount int64
@@ -185,7 +173,7 @@ func CalcMatchedTxFee(txData *types.TxData, maxFeeRate float64) (map[bc.AssetID]
 		}
 
 		oppositeAmount := uint64(assetFeeMap[contractArgs.RequestedAsset].FeeAmount)
-		receiveAmount := vprMath.MinUint64(calcRequestAmount(input.Amount(), contractArgs), oppositeAmount)
+		receiveAmount := vprMath.MinUint64(CalcRequestAmount(input.Amount(), contractArgs), oppositeAmount)
 		assetFeeMap[input.AssetID()].MaxFeeAmount = calcMaxFeeAmount(calcShouldPayAmount(receiveAmount, contractArgs), maxFeeRate)
 	}
 
@@ -207,7 +195,7 @@ func addMatchTxOutput(txData *types.TxData, txInput *types.TxInput, order *commo
 		return err
 	}
 
-	requestAmount := calcRequestAmount(order.Utxo.Amount, contractArgs)
+	requestAmount := CalcRequestAmount(order.Utxo.Amount, contractArgs)
 	receiveAmount := vprMath.MinUint64(requestAmount, oppositeAmount)
 	shouldPayAmount := calcShouldPayAmount(receiveAmount, contractArgs)
 	isPartialTrade := requestAmount > receiveAmount
@@ -220,12 +208,22 @@ func addMatchTxOutput(txData *types.TxData, txInput *types.TxInput, order *commo
 	return nil
 }
 
-func calcRequestAmount(fromAmount uint64, contractArg *vmutil.MagneticContractArgs) uint64 {
-	return uint64(int64(fromAmount) * contractArg.RatioNumerator / contractArg.RatioDenominator)
+func CalcRequestAmount(fromAmount uint64, contractArg *vmutil.MagneticContractArgs) uint64 {
+	res := big.NewInt(0).SetUint64(fromAmount)
+	res.Mul(res, big.NewInt(contractArg.RatioNumerator)).Quo(res, big.NewInt(contractArg.RatioDenominator))
+	if !res.IsUint64() {
+		return 0
+	}
+	return res.Uint64()
 }
 
 func calcShouldPayAmount(receiveAmount uint64, contractArg *vmutil.MagneticContractArgs) uint64 {
-	return uint64(math.Floor(float64(receiveAmount) * float64(contractArg.RatioDenominator) / float64(contractArg.RatioNumerator)))
+	res := big.NewInt(0).SetUint64(receiveAmount)
+	res.Mul(res, big.NewInt(contractArg.RatioDenominator)).Quo(res, big.NewInt(contractArg.RatioNumerator))
+	if !res.IsUint64() {
+		return 0
+	}
+	return res.Uint64()
 }
 
 func calcMaxFeeAmount(shouldPayAmount uint64, maxFeeRate float64) int64 {
@@ -236,13 +234,26 @@ func calcOppositeIndex(size int, selfIdx int) int {
 	return (selfIdx + 1) % size
 }
 
-func isMatched(orders []*common.Order) bool {
-	for i, order := range orders {
-		if opposisteOrder := orders[calcOppositeIndex(len(orders), i)]; 1/order.Rate < opposisteOrder.Rate {
-			return false
-		}
+func IsMatched(orders []*common.Order) bool {
+	sortedOrders := sortOrders(orders)
+	if len(sortedOrders) == 0 {
+		return false
 	}
-	return true
+
+	rate := orderRatio(sortedOrders[0])
+	oppositeRate := big.NewFloat(0).SetInt64(1)
+	for i := 1; i < len(sortedOrders); i++ {
+		oppositeRate.Mul(oppositeRate, orderRatio(sortedOrders[i]))
+	}
+
+	one := big.NewFloat(0).SetInt64(1)
+	return one.Quo(one, rate).Cmp(oppositeRate) >= 0
+}
+
+func orderRatio(order *common.Order) *big.Float {
+	ratio := big.NewFloat(0).SetInt64(order.RatioNumerator)
+	ratio.Quo(ratio, big.NewFloat(0).SetInt64(order.RatioDenominator))
+	return ratio
 }
 
 func setMatchTxArguments(txInput *types.TxInput, isPartialTrade bool, position int, receiveAmounts uint64) {
@@ -260,11 +271,40 @@ func validateTradePairs(tradePairs []*common.TradePair) error {
 		return errors.New("size of trade pairs at least 2")
 	}
 
-	for i, tradePair := range tradePairs {
-		oppositeTradePair := tradePairs[calcOppositeIndex(len(tradePairs), i)]
-		if *tradePair.ToAssetID != *oppositeTradePair.FromAssetID {
-			return errors.New("specified trade pairs is invalid")
+	assetMap := make(map[string]bool)
+	for _, tradePair := range tradePairs {
+		assetMap[tradePair.FromAssetID.String()] = true
+		if *tradePair.FromAssetID == *tradePair.ToAssetID {
+			return errors.New("from asset id can't equal to asset id")
 		}
 	}
+
+	for _, tradePair := range tradePairs {
+		key := tradePair.ToAssetID.String()
+		if _, ok := assetMap[key]; !ok {
+			return errors.New("invalid trade pairs")
+		}
+		delete(assetMap, key)
+	}
 	return nil
+}
+
+func sortOrders(orders []*common.Order) []*common.Order {
+	orderMap := make(map[bc.AssetID]*common.Order)
+	firstOrder := orders[0]
+	for i := 1; i < len(orders); i++ {
+		orderMap[*orders[i].FromAssetID] = orders[i]
+	}
+
+	sortedOrders := []*common.Order{firstOrder}
+	for order := firstOrder; *order.ToAssetID != *firstOrder.FromAssetID; {
+		nextOrder, ok := orderMap[*order.ToAssetID]
+		if !ok {
+			return nil
+		}
+
+		sortedOrders = append(sortedOrders, nextOrder)
+		order = nextOrder
+	}
+	return sortedOrders
 }

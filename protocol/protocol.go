@@ -5,13 +5,13 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vapor/common"
-	"github.com/vapor/config"
-	"github.com/vapor/errors"
-	"github.com/vapor/event"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/state"
+	"github.com/bytom/vapor/common"
+	"github.com/bytom/vapor/config"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/event"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/state"
 )
 
 const (
@@ -21,7 +21,8 @@ const (
 
 type Protocoler interface {
 	Name() string
-	BeforeProposalBlock(txs []*types.Tx, nodeProgram []byte, blockHeight uint64, gasLeft int64) ([]*types.Tx, int64, error)
+	StartHeight() uint64
+	BeforeProposalBlock(txs []*types.Tx, nodeProgram []byte, blockHeight uint64, gasLeft int64, isTimeout func() bool) ([]*types.Tx, error)
 	ChainStatus() (uint64, *bc.Hash, error)
 	ValidateBlock(block *types.Block, verifyResults []*bc.TxVerifyResult) error
 	ValidateTxs(txs []*types.Tx, verifyResults []*bc.TxVerifyResult) error
@@ -111,7 +112,13 @@ func (c *Chain) initChainStatus() error {
 		return err
 	}
 
-	consensusResults := []*state.ConsensusResult{&state.ConsensusResult{
+	for _, subProtocol := range c.subProtocols {
+		if err := subProtocol.ApplyBlock(genesisBlock); err != nil {
+			return err
+		}
+	}
+
+	consensusResults := []*state.ConsensusResult{{
 		Seq:            0,
 		NumOfVote:      make(map[string]uint64),
 		CoinbaseReward: make(map[string]uint64),
@@ -208,6 +215,10 @@ func (c *Chain) markTransactions(txs ...*types.Tx) {
 }
 
 func (c *Chain) syncProtocolStatus(subProtocol Protocoler) error {
+	if c.bestBlockHeader.Height < subProtocol.StartHeight() {
+		return nil
+	}
+
 	protocolHeight, protocolHash, err := subProtocol.ChainStatus()
 	if err != nil {
 		return errors.Wrap(err, "failed on get sub protocol status")
@@ -230,7 +241,7 @@ func (c *Chain) syncProtocolStatus(subProtocol Protocoler) error {
 		protocolHeight, protocolHash = block.Height-1, &block.PreviousBlockHash
 	}
 
-	for height := protocolHeight + 1; height <= c.BestBlockHeight(); height++ {
+	for height := protocolHeight + 1; height <= c.bestBlockHeader.Height; height++ {
 		block, err := c.GetBlockByHeight(height)
 		if err != nil {
 			return errors.Wrap(err, subProtocol.Name(), "can't get block by height in chain")

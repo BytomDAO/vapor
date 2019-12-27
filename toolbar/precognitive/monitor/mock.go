@@ -1,8 +1,8 @@
 package monitor
 
 import (
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/test/mock"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/test/mock"
 )
 
 func mockChainAndPool() (*mock.Chain, *mock.Mempool, error) {

@@ -1,8 +1,8 @@
 package account
 
 import (
-	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/protocol/bc"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
+	"github.com/bytom/vapor/protocol/bc"
 )
 
 // AccountStore interface contains account storage functions.

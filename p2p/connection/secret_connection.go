@@ -17,7 +17,7 @@ import (
 	"golang.org/x/crypto/nacl/secretbox"
 	"golang.org/x/crypto/ripemd160"
 
-	"github.com/vapor/p2p/signlib"
+	"github.com/bytom/vapor/p2p/signlib"
 )
 
 const (

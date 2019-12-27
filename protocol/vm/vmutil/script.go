@@ -1,10 +1,10 @@
 package vmutil
 
 import (
-	"github.com/vapor/crypto/ed25519"
-	"github.com/vapor/errors"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/vm"
+	"github.com/bytom/vapor/crypto/ed25519"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/vm"
 )
 
 // pre-define errors
@@ -200,10 +200,9 @@ func P2WMCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 // PICK                     [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset exchangeAmount]
 // 3                        [... exchangeAmount sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset exchangeAmount 3]
 // ROLL                     [... exchangeAmount sellerKey standardProgram sellerProgram ratioNumerator requestedAsset exchangeAmount ratioDenominator]
-// MUL                      [... exchangeAmount sellerKey standardProgram sellerProgram ratioNumerator requestedAsset (exchangeAmount * ratioDenominator)]
-// 2                        [... exchangeAmount sellerKey standardProgram sellerProgram ratioNumerator requestedAsset (exchangeAmount * ratioDenominator) 2]
-// ROLL                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset (exchangeAmount * ratioDenominator) ratioNumerator]
-// DIV                      [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount]
+// 3                        [... exchangeAmount sellerKey standardProgram sellerProgram ratioNumerator requestedAsset exchangeAmount ratioDenominator 3]
+// ROLL                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset exchangeAmount ratioDenominator ratioNumerator]
+// MULFRACTION              [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount]
 // AMOUNT                   [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount valueAmount]
 // OVER                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount valueAmount actualAmount]
 // 0                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount valueAmount actualAmount 0]
@@ -244,10 +243,9 @@ func P2WMCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 // AMOUNT                   [... sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset valueAmount]
 // 2                        [... sellerKey standardProgram sellerProgram ratioDenominator ratioNumerator requestedAsset valueAmount 2]
 // ROLL                     [... sellerKey standardProgram sellerProgram ratioDenominator requestedAsset valueAmount ratioNumerator]
-// MUL                      [... sellerKey standardProgram sellerProgram ratioDenominator requestedAsset (valueAmount * ratioNumerator)]
-// 2                        [... sellerKey standardProgram sellerProgram ratioDenominator requestedAsset (valueAmount * ratioNumerator) 2]
-// ROLL                     [... sellerKey standardProgram sellerProgram requestedAsset (valueAmount * ratioNumerator) ratioDenominator]
-// DIV                      [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount]
+// 3                        [... sellerKey standardProgram sellerProgram ratioDenominator requestedAsset valueAmount ratioNumerator 3]
+// ROLL                     [... sellerKey standardProgram sellerProgram requestedAsset valueAmount ratioNumerator ratioDenominator]
+// MULFRACTION              [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount]
 // DUP                      [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount requestedAmount]
 // 0                        [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount requestedAmount 0]
 // GREATERTHAN              [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount (requestedAmount > 0)]
@@ -299,9 +297,9 @@ func P2MCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 	builder.AddOp(vm.OP_PICK)
 	builder.AddOp(vm.OP_3)
 	builder.AddOp(vm.OP_ROLL)
-	builder.AddOp(vm.OP_MUL)
-	builder.AddOp(vm.OP_ROT)
-	builder.AddOp(vm.OP_DIV)
+	builder.AddOp(vm.OP_3)
+	builder.AddOp(vm.OP_ROLL)
+	builder.AddOp(vm.OP_MULFRACTION)
 	builder.AddOp(vm.OP_AMOUNT)
 	builder.AddOp(vm.OP_OVER)
 	builder.AddOp(vm.OP_0)
@@ -339,9 +337,9 @@ func P2MCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 	builder.SetJumpTarget(1)
 	builder.AddOp(vm.OP_AMOUNT)
 	builder.AddOp(vm.OP_ROT)
-	builder.AddOp(vm.OP_MUL)
-	builder.AddOp(vm.OP_ROT)
-	builder.AddOp(vm.OP_DIV)
+	builder.AddOp(vm.OP_3)
+	builder.AddOp(vm.OP_ROLL)
+	builder.AddOp(vm.OP_MULFRACTION)
 	builder.AddOp(vm.OP_DUP)
 	builder.AddOp(vm.OP_0)
 	builder.AddOp(vm.OP_GREATERTHAN)

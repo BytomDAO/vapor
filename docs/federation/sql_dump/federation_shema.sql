@@ -93,7 +93,7 @@ UNLOCK TABLES;
 CREATE TABLE `assets` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `asset_id` varchar(64) NOT NULL,
-  `issuance_program` varchar(128) NOT NULL,
+  `issuance_program` mediumtext NOT NULL,
   `vm_version` int(11) NOT NULL DEFAULT '1',
   `definition` text,
   `is_open_federation_issue` tinyint(1) DEFAULT '0',

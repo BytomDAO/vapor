@@ -3,10 +3,10 @@ package mock
 import (
 	"sort"
 
-	"github.com/vapor/application/mov/common"
-	"github.com/vapor/errors"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/application/mov/common"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
 )
 
 type MovStore struct {
@@ -42,11 +42,11 @@ func (m *MovStore) ListOrders(orderAfter *common.Order) ([]*common.Order, error)
 	tradePair := &common.TradePair{FromAssetID: orderAfter.FromAssetID, ToAssetID: orderAfter.ToAssetID}
 	orders := m.orderMap[tradePair.Key()]
 	begin := len(orders)
-	if orderAfter.Rate == 0 {
+	if orderAfter.Rate() == 0 {
 		begin = 0
 	} else {
 		for i, order := range orders {
-			if order.Rate == orderAfter.Rate {
+			if order.Rate() == orderAfter.Rate() {
 				begin = i + 1
 				break
 			}

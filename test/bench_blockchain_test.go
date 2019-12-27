@@ -7,22 +7,22 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vapor/account"
-	"github.com/vapor/blockchain/pseudohsm"
-	"github.com/vapor/blockchain/signers"
-	"github.com/vapor/blockchain/txbuilder"
-	"github.com/vapor/config"
-	"github.com/vapor/consensus"
-	"github.com/vapor/crypto/ed25519/chainkd"
-	"github.com/vapor/database"
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/database/storage"
-	"github.com/vapor/event"
-	"github.com/vapor/proposal"
-	"github.com/vapor/protocol"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/protocol/state"
+	"github.com/bytom/vapor/account"
+	"github.com/bytom/vapor/blockchain/pseudohsm"
+	"github.com/bytom/vapor/blockchain/signers"
+	"github.com/bytom/vapor/blockchain/txbuilder"
+	"github.com/bytom/vapor/config"
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
+	"github.com/bytom/vapor/database"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/database/storage"
+	"github.com/bytom/vapor/event"
+	"github.com/bytom/vapor/proposal"
+	"github.com/bytom/vapor/protocol"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/state"
 )
 
 func BenchmarkChain_CoinBaseTx_NoAsset(b *testing.B) {
@@ -159,7 +159,7 @@ func InsertChain(chain *protocol.Chain, txPool *protocol.TxPool, txs []*types.Tx
 		}
 	}
 
-	block, err := proposal.NewBlockTemplate(chain, nil, uint64(time.Now().UnixNano()/1e6))
+	block, err := proposal.NewBlockTemplate(chain, nil, uint64(time.Now().UnixNano()/1e6), time.Minute, time.Minute)
 	if err != nil {
 		return err
 	}

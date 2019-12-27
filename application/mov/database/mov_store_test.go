@@ -9,12 +9,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/vapor/application/mov/common"
-	"github.com/vapor/database/leveldb"
-	dbm "github.com/vapor/database/leveldb"
-	"github.com/vapor/protocol/bc"
-	"github.com/vapor/protocol/bc/types"
-	"github.com/vapor/testutil"
+	"github.com/bytom/vapor/application/mov/common"
+	"github.com/bytom/vapor/database/leveldb"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/testutil"
 )
 
 var (
@@ -29,9 +29,10 @@ var (
 
 	mockOrders = []*common.Order{
 		&common.Order{
-			FromAssetID: assetID1,
-			ToAssetID:   assetID2,
-			Rate:        1.00090,
+			FromAssetID:      assetID1,
+			ToAssetID:        assetID2,
+			RatioNumerator:   100090,
+			RatioDenominator: 100000,
 			Utxo: &common.MovUtxo{
 				SourceID:       &bc.Hash{V0: 21},
 				Amount:         1,
@@ -40,9 +41,10 @@ var (
 			},
 		},
 		&common.Order{
-			FromAssetID: assetID1,
-			ToAssetID:   assetID2,
-			Rate:        0.00090,
+			FromAssetID:      assetID1,
+			ToAssetID:        assetID2,
+			RatioNumerator:   90,
+			RatioDenominator: 100000,
 			Utxo: &common.MovUtxo{
 				SourceID:       &bc.Hash{V0: 22},
 				Amount:         1,
@@ -51,9 +53,10 @@ var (
 			},
 		},
 		&common.Order{
-			FromAssetID: assetID1,
-			ToAssetID:   assetID2,
-			Rate:        0.00097,
+			FromAssetID:      assetID1,
+			ToAssetID:        assetID2,
+			RatioNumerator:   97,
+			RatioDenominator: 100000,
 			Utxo: &common.MovUtxo{
 				SourceID:       &bc.Hash{V0: 23},
 				Amount:         1,
@@ -62,9 +65,10 @@ var (
 			},
 		},
 		&common.Order{
-			FromAssetID: assetID1,
-			ToAssetID:   assetID2,
-			Rate:        0.00098,
+			FromAssetID:      assetID1,
+			ToAssetID:        assetID2,
+			RatioNumerator:   98,
+			RatioDenominator: 100000,
 			Utxo: &common.MovUtxo{
 				SourceID:       &bc.Hash{V0: 13},
 				Amount:         1,
@@ -73,9 +77,10 @@ var (
 			},
 		},
 		&common.Order{
-			FromAssetID: assetID1,
-			ToAssetID:   assetID2,
-			Rate:        0.00098,
+			FromAssetID:      assetID1,
+			ToAssetID:        assetID2,
+			RatioNumerator:   98,
+			RatioDenominator: 100000,
 			Utxo: &common.MovUtxo{
 				SourceID:       &bc.Hash{V0: 24},
 				Amount:         10,
@@ -84,9 +89,10 @@ var (
 			},
 		},
 		&common.Order{
-			FromAssetID: assetID1,
-			ToAssetID:   assetID2,
-			Rate:        0.00099,
+			FromAssetID:      assetID1,
+			ToAssetID:        assetID2,
+			RatioNumerator:   99,
+			RatioDenominator: 100000,
 			Utxo: &common.MovUtxo{
 				SourceID:       &bc.Hash{V0: 24},
 				Amount:         1,
@@ -95,9 +101,10 @@ var (
 			},
 		},
 		&common.Order{
-			FromAssetID: assetID1,
-			ToAssetID:   assetID2,
-			Rate:        0.00096,
+			FromAssetID:      assetID1,
+			ToAssetID:        assetID2,
+			RatioNumerator:   96,
+			RatioDenominator: 100000,
 			Utxo: &common.MovUtxo{
 				SourceID:       &bc.Hash{V0: 25},
 				Amount:         1,
@@ -106,9 +113,10 @@ var (
 			},
 		},
 		&common.Order{
-			FromAssetID: assetID1,
-			ToAssetID:   assetID2,
-			Rate:        0.00095,
+			FromAssetID:      assetID1,
+			ToAssetID:        assetID2,
+			RatioNumerator:   95,
+			RatioDenominator: 100000,
 			Utxo: &common.MovUtxo{
 				SourceID:       &bc.Hash{V0: 26},
 				Amount:         1,
@@ -117,9 +125,10 @@ var (
 			},
 		},
 		&common.Order{
-			FromAssetID: assetID1,
-			ToAssetID:   assetID2,
-			Rate:        1.00090,
+			FromAssetID:      assetID1,
+			ToAssetID:        assetID2,
+			RatioNumerator:   90,
+			RatioDenominator: 100000,
 			Utxo: &common.MovUtxo{
 				SourceID:       &bc.Hash{V0: 1},
 				Amount:         1,
@@ -128,9 +137,10 @@ var (
 			},
 		},
 		&common.Order{
-			FromAssetID: assetID1,
-			ToAssetID:   assetID2,
-			Rate:        0.00090,
+			FromAssetID:      assetID1,
+			ToAssetID:        assetID2,
+			RatioNumerator:   90,
+			RatioDenominator: 100000,
 			Utxo: &common.MovUtxo{
 				SourceID:       &bc.Hash{V0: 2},
 				Amount:         1,
@@ -139,9 +149,10 @@ var (
 			},
 		},
 		&common.Order{
-			FromAssetID: assetID3,
-			ToAssetID:   assetID2,
-			Rate:        0.00096,
+			FromAssetID:      assetID3,
+			ToAssetID:        assetID2,
+			RatioNumerator:   96,
+			RatioDenominator: 100000,
 			Utxo: &common.MovUtxo{
 				SourceID:       &bc.Hash{V0: 33},
 				Amount:         1,
@@ -150,9 +161,10 @@ var (
 			},
 		},
 		&common.Order{
-			FromAssetID: assetID4,
-			ToAssetID:   assetID2,
-			Rate:        0.00095,
+			FromAssetID:      assetID4,
+			ToAssetID:        assetID2,
+			RatioNumerator:   95,
+			RatioDenominator: 100000,
 			Utxo: &common.MovUtxo{
 				SourceID:       &bc.Hash{V0: 34},
 				Amount:         1,
@@ -161,9 +173,10 @@ var (
 			},
 		},
 		&common.Order{
-			FromAssetID: assetID4,
-			ToAssetID:   assetID2,
-			Rate:        0.00096,
+			FromAssetID:      assetID4,
+			ToAssetID:        assetID2,
+			RatioNumerator:   96,
+			RatioDenominator: 100000,
 			Utxo: &common.MovUtxo{
 				SourceID:       &bc.Hash{V0: 36},
 				Amount:         1,
@@ -172,9 +185,10 @@ var (
 			},
 		},
 		&common.Order{
-			FromAssetID: assetID5,
-			ToAssetID:   assetID2,
-			Rate:        0.00096,
+			FromAssetID:      assetID5,
+			ToAssetID:        assetID2,
+			RatioNumerator:   96,
+			RatioDenominator: 100000,
 			Utxo: &common.MovUtxo{
 				SourceID:       &bc.Hash{V0: 37},
 				Amount:         1,
@@ -183,9 +197,10 @@ var (
 			},
 		},
 		&common.Order{
-			FromAssetID: assetID6,
-			ToAssetID:   assetID2,
-			Rate:        0.00098,
+			FromAssetID:      assetID6,
+			ToAssetID:        assetID2,
+			RatioNumerator:   98,
+			RatioDenominator: 100000,
 			Utxo: &common.MovUtxo{
 				SourceID:       &bc.Hash{V0: 38},
 				Amount:         1,
@@ -236,9 +251,10 @@ func TestSortOrderKey(t *testing.T) {
 		{
 			orders: []*common.Order{
 				&common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        1.00090,
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   100090,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 21},
 						Amount:         1,
@@ -247,9 +263,10 @@ func TestSortOrderKey(t *testing.T) {
 					},
 				},
 				&common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00090,
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   90,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 22},
 						Amount:         1,
@@ -258,9 +275,10 @@ func TestSortOrderKey(t *testing.T) {
 					},
 				},
 				&common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00097,
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   97,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 23},
 						Amount:         1,
@@ -269,9 +287,10 @@ func TestSortOrderKey(t *testing.T) {
 					},
 				},
 				&common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00098,
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   98,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 13},
 						Amount:         1,
@@ -280,9 +299,10 @@ func TestSortOrderKey(t *testing.T) {
 					},
 				},
 				&common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00098,
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   98,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 24},
 						Amount:         10,
@@ -291,9 +311,10 @@ func TestSortOrderKey(t *testing.T) {
 					},
 				},
 				&common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00098,
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   98,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 25},
 						Amount:         10,
@@ -302,9 +323,10 @@ func TestSortOrderKey(t *testing.T) {
 					},
 				},
 				&common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00098,
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   98,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 26},
 						Amount:         10,
@@ -313,9 +335,10 @@ func TestSortOrderKey(t *testing.T) {
 					},
 				},
 				&common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00098,
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   98,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 27},
 						Amount:         10,
@@ -324,9 +347,10 @@ func TestSortOrderKey(t *testing.T) {
 					},
 				},
 				&common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00099,
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   99,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 24},
 						Amount:         1,
@@ -335,9 +359,10 @@ func TestSortOrderKey(t *testing.T) {
 					},
 				},
 				&common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00096,
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   96,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 25},
 						Amount:         1,
@@ -346,9 +371,10 @@ func TestSortOrderKey(t *testing.T) {
 					},
 				},
 				&common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00095,
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   95,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 26},
 						Amount:         1,
@@ -357,9 +383,10 @@ func TestSortOrderKey(t *testing.T) {
 					},
 				},
 				&common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00091,
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   91,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 26},
 						Amount:         1,
@@ -368,9 +395,10 @@ func TestSortOrderKey(t *testing.T) {
 					},
 				},
 				&common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00092,
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   92,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 27},
 						Amount:         1,
@@ -379,9 +407,10 @@ func TestSortOrderKey(t *testing.T) {
 					},
 				},
 				&common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00093,
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   93,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 28},
 						Amount:         1,
@@ -390,9 +419,10 @@ func TestSortOrderKey(t *testing.T) {
 					},
 				},
 				&common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00094,
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   94,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 29},
 						Amount:         1,
@@ -401,9 +431,10 @@ func TestSortOrderKey(t *testing.T) {
 					},
 				},
 				&common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00077,
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   77,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 30},
 						Amount:         1,
@@ -412,9 +443,10 @@ func TestSortOrderKey(t *testing.T) {
 					},
 				},
 				&common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00088,
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   88,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 31},
 						Amount:         1,
@@ -423,9 +455,10 @@ func TestSortOrderKey(t *testing.T) {
 					},
 				},
 				&common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        999999.9521,
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   9999999521,
+					RatioDenominator: 10000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 32},
 						Amount:         1,
@@ -434,9 +467,10 @@ func TestSortOrderKey(t *testing.T) {
 					},
 				},
 				&common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        888888.7954,
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   8888887954,
+					RatioDenominator: 10000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 33},
 						Amount:         1,
@@ -528,7 +562,7 @@ func TestSortOrderKey(t *testing.T) {
 
 	for i, c := range cases {
 		for _, order := range c.orders {
-			key := calcOrderKey(order.FromAssetID, order.ToAssetID, order.UTXOHash(), order.Rate)
+			key := calcOrderKey(order.FromAssetID, order.ToAssetID, order.UTXOHash(), order.Rate())
 			data, err := json.Marshal(order.Utxo)
 			if err != nil {
 				t.Fatal(err)
@@ -674,7 +708,7 @@ func TestMovStore(t *testing.T) {
 			wantDBState:    &common.MovDatabaseState{Height: 2, Hash: &bc.Hash{V0: 3724755213446347384, V1: 158878632373345042, V2: 18283800951484248781, V3: 7520797730449067221}},
 		},
 		{
-			desc: "Add and delete the same trade pair", //Add and delete different transaction pairs
+			desc: "Add and delete the same trade pair", // Add and delete different transaction pairs
 			beforeOrders: []*common.Order{
 				mockOrders[0],
 				mockOrders[1],
@@ -816,35 +850,35 @@ func TestMovStore(t *testing.T) {
 
 		var gotOrders []*common.Order
 
-		tmp, err := movStore.ListOrders(&common.Order{FromAssetID: assetID1, ToAssetID: assetID2, Rate: 0})
+		tmp, err := movStore.ListOrders(&common.Order{FromAssetID: assetID1, ToAssetID: assetID2, RatioNumerator: 0, RatioDenominator: 1})
 		if err != nil {
 			t.Fatalf("case %d: ListOrders(assetID1 and assetID2) error %v.", i, err)
 		}
 
 		gotOrders = append(gotOrders, tmp...)
 
-		tmp, err = movStore.ListOrders(&common.Order{FromAssetID: assetID3, ToAssetID: assetID2, Rate: 0})
+		tmp, err = movStore.ListOrders(&common.Order{FromAssetID: assetID3, ToAssetID: assetID2, RatioNumerator: 0, RatioDenominator: 1})
 		if err != nil {
 			t.Fatalf("case %d: ListOrders(assetID3 and assetID2)  error %v.", i, err)
 		}
 
 		gotOrders = append(gotOrders, tmp...)
 
-		tmp, err = movStore.ListOrders(&common.Order{FromAssetID: assetID4, ToAssetID: assetID2, Rate: 0})
+		tmp, err = movStore.ListOrders(&common.Order{FromAssetID: assetID4, ToAssetID: assetID2, RatioNumerator: 0, RatioDenominator: 1})
 		if err != nil {
 			t.Fatalf("case %d: ListOrders(assetID4 and assetID2)  error %v.", i, err)
 		}
 
 		gotOrders = append(gotOrders, tmp...)
 
-		tmp, err = movStore.ListOrders(&common.Order{FromAssetID: assetID5, ToAssetID: assetID2, Rate: 0})
+		tmp, err = movStore.ListOrders(&common.Order{FromAssetID: assetID5, ToAssetID: assetID2, RatioNumerator: 0, RatioDenominator: 1})
 		if err != nil {
 			t.Fatalf("case %d: ListOrders(assetID5 and assetID2)  error %v.", i, err)
 		}
 
 		gotOrders = append(gotOrders, tmp...)
 
-		tmp, err = movStore.ListOrders(&common.Order{FromAssetID: assetID6, ToAssetID: assetID2, Rate: 0})
+		tmp, err = movStore.ListOrders(&common.Order{FromAssetID: assetID6, ToAssetID: assetID2, RatioNumerator: 0, RatioDenominator: 1})
 		if err != nil {
 			t.Fatalf("case %d: ListOrders(assetID6 and assetID2)  error %v.", i, err)
 		}

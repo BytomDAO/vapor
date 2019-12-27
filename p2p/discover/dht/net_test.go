@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vapor/common"
-	"github.com/vapor/p2p/signlib"
+	"github.com/bytom/vapor/common"
+	"github.com/bytom/vapor/p2p/signlib"
 )
 
 func TestNetwork_Lookup(t *testing.T) {

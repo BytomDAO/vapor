@@ -4,8 +4,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 
-	"github.com/vapor/toolbar/federation/config"
-	serverCommon "github.com/vapor/toolbar/server"
+	"github.com/bytom/vapor/toolbar/federation/config"
+	serverCommon "github.com/bytom/vapor/toolbar/server"
 )
 
 type Server struct {
