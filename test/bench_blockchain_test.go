@@ -142,7 +142,7 @@ func GenerateChainData(dirPath string, testDB dbm.DB, txNumber, otherAssetNum in
 	store := database.NewStore(testDB)
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
-	chain, err := protocol.NewChain(store, txPool, dispatcher)
+	chain, err := protocol.NewChain(store, txPool, dispatcher, -1)
 	if err != nil {
 		return nil, nil, nil, err
 	}

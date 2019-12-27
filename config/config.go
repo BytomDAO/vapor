@@ -117,7 +117,7 @@ type BaseConfig struct {
 	// log file name
 	LogFile string `mapstructure:"log_file"`
 
-	// start height, the result which is detached!
+	// rollback to which height!
 	Rollback int64 `mapstructure:"rollback"`
 
 	PrivateKeyFile string `mapstructure:"private_key_file"`
