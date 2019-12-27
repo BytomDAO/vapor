@@ -83,11 +83,11 @@ func NewChain(store Store, txPool *TxPool, subProtocols []Protocoler, eventDispa
 		return nil, err
 	}
 
-	// for _, p := range c.subProtocols {
-	// 	if err := c.syncProtocolStatus(p); err != nil {
-	// 		return nil, errors.Wrap(err, p.Name(), "sync sub protocol status")
-	// 	}
-	// }
+	for _, p := range c.subProtocols {
+		if err := c.syncProtocolStatus(p); err != nil {
+			return nil, errors.Wrap(err, p.Name(), "sync sub protocol status")
+		}
+	}
 
 	go c.blockProcesser()
 	return c, nil

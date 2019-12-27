@@ -399,11 +399,7 @@ func TestValidateBlock(t *testing.T) {
 				},
 			},
 			verifyResults: []*bc.TxVerifyResult{{StatusFail: false}},
-<<<<<<< HEAD
-			wantError:     errNumeratorOfRatioIsOverflow,
-=======
 			wantError:     errRequestAmountMath,
->>>>>>> ccf77741ae2821cdeee5575cfd642e13e6b4fc0a
 		},
 	}
 
