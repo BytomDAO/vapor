@@ -118,7 +118,7 @@ type BaseConfig struct {
 	LogFile string `mapstructure:"log_file"`
 
 	// rollback to which height!
-	Rollback int64 `mapstructure:"rollback"`
+	RollbackHeight int64 `mapstructure:"rollback_height"`
 
 	PrivateKeyFile string `mapstructure:"private_key_file"`
 	XPrv           *chainkd.XPrv
@@ -140,7 +140,7 @@ func DefaultBaseConfig() BaseConfig {
 		LogFile:            "log",
 		PrivateKeyFile:     "node_key.txt",
 		FederationFileName: "federation.json",
-		Rollback:           -1,
+		RollbackHeight:     -1,
 	}
 }
 

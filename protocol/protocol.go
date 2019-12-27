@@ -35,7 +35,7 @@ type Chain struct {
 	knownTxs *common.OrderedSet
 }
 
-func DetachHeight(c *Chain, store Store, height int64) error {
+func Rollback(c *Chain, store Store, height int64) error {
 	if height <= -1 {
 		return nil
 	}
@@ -46,7 +46,11 @@ func DetachHeight(c *Chain, store Store, height int64) error {
 	}
 
 	var detachBlockHeader *types.BlockHeader
-	for detachBlockHeader = c.bestBlockHeader; detachBlockHeader.Height > uint64(height) && detachBlockHeader != c.lastIrrBlockHeader; {
+	for detachBlockHeader = c.bestBlockHeader; detachBlockHeader.Height > uint64(height); {
+		if c.isIrreversible(detachBlockHeader) {
+			break
+		}
+
 		detachHash := detachBlockHeader.Hash()
 		block, err := c.GetBlockByHash(&detachHash)
 		if err != nil {
@@ -64,7 +68,6 @@ func DetachHeight(c *Chain, store Store, height int64) error {
 		}
 
 		txStatus, err := c.GetTransactionStatus(&detachBlock.ID)
-
 		if err != nil {
 			return err
 		}
@@ -85,15 +88,12 @@ func DetachHeight(c *Chain, store Store, height int64) error {
 		}
 	}
 
-	if err := c.setState(detachBlockHeader, c.lastIrrBlockHeader, nil, utxoView, []*state.ConsensusResult{consensusResult.Fork()}); err != nil {
-		return err
-	}
+	return c.setState(detachBlockHeader, c.lastIrrBlockHeader, nil, utxoView, []*state.ConsensusResult{consensusResult.Fork()})
 
-	return nil
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
-func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher, rollback int64) (*Chain, error) {
+func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher, rollbackHeight int64) (*Chain, error) {
 	knownTxs, _ := common.NewOrderedSet(maxKnownTxs)
 	c := &Chain{
 		orphanManage:    NewOrphanManage(),
@@ -125,8 +125,7 @@ func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher, ro
 		return nil, err
 	}
 
-	err = DetachHeight(c, store, rollback)
-	if err != nil {
+	if err = Rollback(c, store, rollbackHeight); err != nil {
 		return nil, err
 	}
 

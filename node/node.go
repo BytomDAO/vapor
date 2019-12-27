@@ -96,7 +96,7 @@ func NewNode(config *cfg.Config) *Node {
 
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
-	chain, err := protocol.NewChain(store, txPool, dispatcher, config.Rollback)
+	chain, err := protocol.NewChain(store, txPool, dispatcher, config.RollbackHeight)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 	}
