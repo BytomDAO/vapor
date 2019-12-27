@@ -2,7 +2,10 @@
 from flask import Flask
 from gevent.pywsgi import WSGIServer
 from views import tele
+from flask_cors import CORS
 app = Flask(__name__)
+CORS(app, supports_credentials=True)
+
 app.debug = True
 
 
