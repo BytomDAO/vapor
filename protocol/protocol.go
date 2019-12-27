@@ -82,11 +82,11 @@ func NewChain(store Store, txPool *TxPool, subProtocols []Protocoler, eventDispa
 		return nil, err
 	}
 
-	for _, p := range c.subProtocols {
-		if err := c.syncProtocolStatus(p); err != nil {
-			return nil, errors.Wrap(err, p.Name(), "sync sub protocol status")
-		}
-	}
+	// for _, p := range c.subProtocols {
+	// 	if err := c.syncProtocolStatus(p); err != nil {
+	// 		return nil, errors.Wrap(err, p.Name(), "sync sub protocol status")
+	// 	}
+	// }
 
 	go c.blockProcesser()
 	return c, nil
@@ -227,7 +227,7 @@ func (c *Chain) syncProtocolStatus(subProtocol Protocoler) error {
 			return errors.Wrap(err, subProtocol.Name(), "sub protocol detach block err")
 		}
 
-		protocolHeight, protocolHash = block.Height -1, &block.PreviousBlockHash
+		protocolHeight, protocolHash = block.Height-1, &block.PreviousBlockHash
 	}
 
 	for height := protocolHeight + 1; height <= c.BestBlockHeight(); height++ {
