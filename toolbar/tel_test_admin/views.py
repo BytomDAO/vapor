@@ -10,17 +10,17 @@ LOGINED_UUID = []
 NODE_LIST = [
     {
         "IP": "52.82.39.131",
-        "level": "hight",
+        "level": "high",
         "is_connect": True
     },
     {
         "IP": "52.82.39.21",
-        "level": "hight",
+        "level": "high",
         "is_connect": True
     },
 {
         "IP": "52.82.25.183",
-        "level": "hight",
+        "level": "high",
         "is_connect": True
     }
 ]
