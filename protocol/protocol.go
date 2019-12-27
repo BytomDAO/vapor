@@ -35,8 +35,66 @@ type Chain struct {
 	knownTxs *common.OrderedSet
 }
 
+func runDetachHeight(c *Chain, store Store, height uint64) error {
+	bestHeight := c.bestBlockHeader.Height
+	if height == 0 {
+		return nil
+	}
+	utxoView := state.NewUtxoViewpoint()
+	consensusResults := []*state.ConsensusResult{}
+	consensusResult, err := c.GetConsensusResultByHash(store.GetStoreStatus().Hash)
+	if err != nil {
+		return err
+	}
+
+	var detachBlockHeader *types.BlockHeader
+	for nowHeight := bestHeight; nowHeight > height; nowHeight-- {
+		detachBlockHeader, err = c.GetHeaderByHeight(nowHeight)
+		if err != nil {
+			return err
+		}
+		block, err := c.GetBlockByHeight(nowHeight)
+		if err != nil {
+			return err
+		}
+
+		detachBlock := types.MapBlock(block)
+
+		if err := consensusResult.DetachBlock(block); err != nil {
+			return err
+		}
+
+		if err := c.store.GetTransactionsUtxo(utxoView, detachBlock.Transactions); err != nil {
+			return err
+		}
+
+		txStatus, err := c.GetTransactionStatus(&detachBlock.ID)
+		if err != nil {
+			return err
+		}
+
+		if err := utxoView.DetachBlock(detachBlock, txStatus); err != nil {
+			return err
+		}
+
+		blockHash := detachBlockHeader.Hash()
+		log.WithFields(log.Fields{"module": logModule, "height": nowHeight, "hash": blockHash.String()}).Debug("detach from mainchain")
+
+		store.DeleteBlock(block)
+	}
+
+	irrBlockHeader := c.lastIrrBlockHeader
+
+	consensusResults = append(consensusResults, consensusResult.Fork())
+	if err := c.setState(detachBlockHeader, irrBlockHeader, nil, utxoView, consensusResults); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // NewChain returns a new Chain using store as the underlying storage.
-func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*Chain, error) {
+func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher, detachHeight uint64) (*Chain, error) {
 	knownTxs, _ := common.NewOrderedSet(maxKnownTxs)
 	c := &Chain{
 		orphanManage:    NewOrphanManage(),
@@ -58,6 +116,16 @@ func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*
 	}
 
 	var err error
+	c.bestBlockHeader, err = c.store.GetBlockHeader(storeStatus.Hash)
+	if err != nil {
+		return nil, err
+	}
+
+	err = runDetachHeight(c, store, detachHeight)
+	if err != nil {
+		return nil, err
+	}
+
 	c.bestBlockHeader, err = c.store.GetBlockHeader(storeStatus.Hash)
 	if err != nil {
 		return nil, err
