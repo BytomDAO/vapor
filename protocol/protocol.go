@@ -35,25 +35,20 @@ type Chain struct {
 	knownTxs *common.OrderedSet
 }
 
-func runDetachHeight(c *Chain, store Store, height uint64) error {
-	bestHeight := c.bestBlockHeader.Height
-	if height == 0 {
+func DetachHeight(c *Chain, store Store, height int64) error {
+	if height <= -1 {
 		return nil
 	}
 	utxoView := state.NewUtxoViewpoint()
-	consensusResults := []*state.ConsensusResult{}
-	consensusResult, err := c.GetConsensusResultByHash(store.GetStoreStatus().Hash)
+	consensusResult, err := c.getBestConsensusResult()
 	if err != nil {
 		return err
 	}
 
 	var detachBlockHeader *types.BlockHeader
-	for nowHeight := bestHeight; nowHeight > height; nowHeight-- {
-		detachBlockHeader, err = c.GetHeaderByHeight(nowHeight)
-		if err != nil {
-			return err
-		}
-		block, err := c.GetBlockByHeight(nowHeight)
+	for detachBlockHeader = c.bestBlockHeader; detachBlockHeader.Height > uint64(height) && detachBlockHeader != c.lastIrrBlockHeader; {
+		detachHash := detachBlockHeader.Hash()
+		block, err := c.GetBlockByHash(&detachHash)
 		if err != nil {
 			return err
 		}
@@ -69,6 +64,7 @@ func runDetachHeight(c *Chain, store Store, height uint64) error {
 		}
 
 		txStatus, err := c.GetTransactionStatus(&detachBlock.ID)
+
 		if err != nil {
 			return err
 		}
@@ -78,15 +74,18 @@ func runDetachHeight(c *Chain, store Store, height uint64) error {
 		}
 
 		blockHash := detachBlockHeader.Hash()
-		log.WithFields(log.Fields{"module": logModule, "height": nowHeight, "hash": blockHash.String()}).Debug("detach from mainchain")
+		log.WithFields(log.Fields{"module": logModule, "height": detachBlockHeader.Height, "hash": blockHash.String()}).Debug("detach from mainchain")
 
 		store.DeleteBlock(block)
+
+		prevBlockHash := detachBlockHeader.PreviousBlockHash
+		detachBlockHeader, err = c.GetHeaderByHash(&prevBlockHash)
+		if err != nil {
+			return err
+		}
 	}
 
-	irrBlockHeader := c.lastIrrBlockHeader
-
-	consensusResults = append(consensusResults, consensusResult.Fork())
-	if err := c.setState(detachBlockHeader, irrBlockHeader, nil, utxoView, consensusResults); err != nil {
+	if err := c.setState(detachBlockHeader, c.lastIrrBlockHeader, nil, utxoView, []*state.ConsensusResult{consensusResult.Fork()}); err != nil {
 		return err
 	}
 
@@ -94,7 +93,7 @@ func runDetachHeight(c *Chain, store Store, height uint64) error {
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
-func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher, detachHeight uint64) (*Chain, error) {
+func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher, rollback int64) (*Chain, error) {
 	knownTxs, _ := common.NewOrderedSet(maxKnownTxs)
 	c := &Chain{
 		orphanManage:    NewOrphanManage(),
@@ -121,20 +120,16 @@ func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher, de
 		return nil, err
 	}
 
-	err = runDetachHeight(c, store, detachHeight)
-	if err != nil {
-		return nil, err
-	}
-
-	c.bestBlockHeader, err = c.store.GetBlockHeader(storeStatus.Hash)
-	if err != nil {
-		return nil, err
-	}
-
 	c.lastIrrBlockHeader, err = c.store.GetBlockHeader(storeStatus.IrreversibleHash)
 	if err != nil {
 		return nil, err
 	}
+
+	err = DetachHeight(c, store, rollback)
+	if err != nil {
+		return nil, err
+	}
+
 	go c.blockProcesser()
 	return c, nil
 }

@@ -118,7 +118,7 @@ type BaseConfig struct {
 	LogFile string `mapstructure:"log_file"`
 
 	// start height, the result which is detached!
-	DetachHeight uint64 `mapstructure:"detach_height"`
+	Rollback int64 `mapstructure:"rollback"`
 
 	PrivateKeyFile string `mapstructure:"private_key_file"`
 	XPrv           *chainkd.XPrv
@@ -140,7 +140,7 @@ func DefaultBaseConfig() BaseConfig {
 		LogFile:            "log",
 		PrivateKeyFile:     "node_key.txt",
 		FederationFileName: "federation.json",
-		DetachHeight:       0,
+		Rollback:           -1,
 	}
 }
 
