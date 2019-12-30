@@ -329,8 +329,9 @@ func (c *ConsensusResult) GetCoinbaseRewards(blockHeight uint64) ([]CoinbaseRewa
 func federationNodes() map[string]*ConsensusNode {
 	consensusResult := map[string]*ConsensusNode{}
 	for i, xpub := range config.CommonConfig.Federation.Xpubs {
-		derivedXPub := xpub.Derive(fedConsensusPath)
-		consensusResult[derivedXPub.String()] = &ConsensusNode{XPub: derivedXPub, VoteNum: 0, Order: uint64(i)}
+		// derivedXPub := xpub.Derive(fedConsensusPath)
+		// consensusResult[derivedXPub.String()] = &ConsensusNode{XPub: derivedXPub, VoteNum: 0, Order: uint64(i)}
+		consensusResult[xpub.String()] = &ConsensusNode{XPub: xpub, VoteNum: 0, Order: uint64(i)}
 	}
 	return consensusResult
 }

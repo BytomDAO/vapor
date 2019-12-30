@@ -118,7 +118,7 @@ type BaseConfig struct {
 	LogFile string `mapstructure:"log_file"`
 
 	// rollback to which height!
-	RollbackHeight int64 `mapstructure:"rollback_height"`
+	RollbackHeight int64 `mapstructure:"rollback"`
 
 	PrivateKeyFile string `mapstructure:"private_key_file"`
 	XPrv           *chainkd.XPrv
