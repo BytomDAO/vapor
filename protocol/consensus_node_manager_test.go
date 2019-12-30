@@ -741,6 +741,10 @@ func (s *dummyStore) SaveBlock(block *types.Block, _ *bc.TransactionStatus) erro
 	return nil
 }
 
+func (s *dummyStore) DeleteBlock(block *types.Block) error {
+	return nil
+}
+
 func (s *dummyStore) SaveBlockHeader(header *types.BlockHeader) error {
 	hash := header.Hash()
 	s.blockHeaders[hash.String()] = header

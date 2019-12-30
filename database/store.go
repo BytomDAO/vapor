@@ -262,6 +262,28 @@ func (s *Store) GetConsensusResult(seq uint64) (*state.ConsensusResult, error) {
 	return s.cache.lookupConsensusResult(seq)
 }
 
+// DeleteBlock delete a new block in the protocol.
+func (s *Store) DeleteBlock(block *types.Block) error {
+	startTime := time.Now()
+	blockHash := block.Hash()
+
+	batch := s.db.NewBatch()
+	batch.Delete(calcBlockHashesPrefix(block.Height))
+	batch.Delete(calcBlockHeaderKey(&blockHash))
+	batch.Delete(calcBlockTransactionsKey(&blockHash))
+	batch.Delete(calcTxStatusKey(&blockHash))
+	batch.Write()
+
+	s.cache.removeBlockHashes(block.Height)
+	log.WithFields(log.Fields{
+		"module":   logModule,
+		"height":   block.Height,
+		"hash":     blockHash.String(),
+		"duration": time.Since(startTime),
+	}).Info("block deleted on disk")
+	return nil
+}
+
 // SaveBlock persists a new block in the protocol.
 func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 	startTime := time.Now()

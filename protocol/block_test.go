@@ -27,6 +27,7 @@ func (s *mStore) GetConsensusResult(uint64) (*state.ConsensusResult, error)    {
 func (s *mStore) GetMainChainHash(uint64) (*bc.Hash, error)                    { return nil, nil }
 func (s *mStore) GetBlockHashesByHeight(uint64) ([]*bc.Hash, error)            { return nil, nil }
 func (s *mStore) SaveBlock(*types.Block, *bc.TransactionStatus) error          { return nil }
+func (s *mStore) DeleteBlock(*types.Block) error                               { return nil }
 func (s *mStore) SaveBlockHeader(blockHeader *types.BlockHeader) error {
 	s.blockHeaders[blockHeader.Hash()] = blockHeader
 	return nil

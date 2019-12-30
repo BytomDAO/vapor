@@ -49,8 +49,77 @@ type Chain struct {
 	knownTxs *common.OrderedSet
 }
 
+func Rollback(c *Chain, store Store, height int64) error {
+	if height <= -1 {
+		return nil
+	}
+	utxoView := state.NewUtxoViewpoint()
+	consensusResult, err := c.getBestConsensusResult()
+	if err != nil {
+		return err
+	}
+
+	for _, p := range c.subProtocols {
+		if err := c.syncProtocolStatus(p); err != nil {
+			return errors.Wrap(err, p.Name(), "sync sub protocol status")
+		}
+	}
+
+	var detachBlockHeader *types.BlockHeader
+	for detachBlockHeader = c.bestBlockHeader; detachBlockHeader.Height > uint64(height); {
+		if c.isIrreversible(detachBlockHeader) {
+			break
+		}
+
+		detachHash := detachBlockHeader.Hash()
+		block, err := c.GetBlockByHash(&detachHash)
+		if err != nil {
+			return err
+		}
+
+		detachBlock := types.MapBlock(block)
+
+		if err := consensusResult.DetachBlock(block); err != nil {
+			return err
+		}
+
+		if err := c.store.GetTransactionsUtxo(utxoView, detachBlock.Transactions); err != nil {
+			return err
+		}
+
+		txStatus, err := c.GetTransactionStatus(&detachBlock.ID)
+		if err != nil {
+			return err
+		}
+
+		if err := utxoView.DetachBlock(detachBlock, txStatus); err != nil {
+			return err
+		}
+
+		for _, p := range c.subProtocols {
+			if err := p.DetachBlock(block); err != nil {
+				return errors.Wrap(err, p.Name(), "sub protocol detach block")
+			}
+		}
+
+		blockHash := detachBlockHeader.Hash()
+		log.WithFields(log.Fields{"module": logModule, "height": detachBlockHeader.Height, "hash": blockHash.String()}).Debug("detach from mainchain")
+
+		store.DeleteBlock(block)
+
+		prevBlockHash := detachBlockHeader.PreviousBlockHash
+		detachBlockHeader, err = c.GetHeaderByHash(&prevBlockHash)
+		if err != nil {
+			return err
+		}
+	}
+
+	return c.setState(detachBlockHeader, c.lastIrrBlockHeader, nil, utxoView, []*state.ConsensusResult{consensusResult.Fork()})
+
+}
+
 // NewChain returns a new Chain using store as the underlying storage.
-func NewChain(store Store, txPool *TxPool, subProtocols []Protocoler, eventDispatcher *event.Dispatcher) (*Chain, error) {
+func NewChain(store Store, txPool *TxPool, subProtocols []Protocoler, eventDispatcher *event.Dispatcher, rollbackHeight int64) (*Chain, error) {
 	knownTxs, _ := common.NewOrderedSet(maxKnownTxs)
 	c := &Chain{
 		orphanManage:    NewOrphanManage(),
@@ -89,6 +158,9 @@ func NewChain(store Store, txPool *TxPool, subProtocols []Protocoler, eventDispa
 		}
 	}
 
+	if err = Rollback(c, store, rollbackHeight); err != nil {
+		return nil, err
+	}
 	go c.blockProcesser()
 	return c, nil
 }
