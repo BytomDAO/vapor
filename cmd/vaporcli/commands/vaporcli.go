@@ -143,6 +143,7 @@ func AddCommands() {
 	VaporcliCmd.AddCommand(submitTransactionCmd)
 	VaporcliCmd.AddCommand(estimateTransactionGasCmd)
 
+	VaporcliCmd.AddCommand(rollbackCmd)
 	VaporcliCmd.AddCommand(getBlockCountCmd)
 	VaporcliCmd.AddCommand(getBlockHashCmd)
 	VaporcliCmd.AddCommand(getBlockCmd)

@@ -277,6 +277,8 @@ func (a *API) buildHandler() {
 	m.Handle("/get-block-header", jsonHandler(a.getBlockHeader))
 	m.Handle("/get-block-count", jsonHandler(a.getBlockCount))
 
+	m.Handle("/rollback-height", jsonHandler(a.rollbackHeight))
+
 	m.Handle("/is-mining", jsonHandler(a.isMining))
 	m.Handle("/set-mining", jsonHandler(a.setMining))
 

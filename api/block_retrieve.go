@@ -1,6 +1,8 @@
 package api
 
 import (
+	"context"
+	log "github.com/sirupsen/logrus"
 	set "gopkg.in/fatih/set.v0"
 
 	"github.com/bytom/vapor/blockchain/query"
@@ -19,6 +21,20 @@ func (a *API) getBestBlockHash() Response {
 func (a *API) getBlockCount() Response {
 	blockHeight := map[string]uint64{"block_count": a.chain.BestBlockHeight()}
 	return NewSuccessResponse(blockHeight)
+}
+
+// return rollback result
+func (a *API) rollbackHeight(ctx context.Context, x struct {
+	RollbackHeight int64 `json:"height"`
+}) Response {
+	height := x.RollbackHeight
+	err := a.chain.Rollback(height)
+	if err != nil {
+		log.Errorf("rollback: %v", err)
+		return NewErrorResponse(err)
+	}
+	result := map[string]int64{"result": 0}
+	return NewSuccessResponse(result)
 }
 
 // BlockTx is the tx struct for getBlock func

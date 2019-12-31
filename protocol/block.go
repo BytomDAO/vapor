@@ -137,6 +137,77 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	return nil
 }
 
+func (c *Chain) Rollback(height int64) error {
+	if height <= -1 {
+		return nil
+	}
+	c.cond.L.Lock()
+	defer c.cond.L.Unlock()
+
+	utxoView := state.NewUtxoViewpoint()
+	consensusResult, err := c.getBestConsensusResult()
+	if err != nil {
+		return err
+	}
+
+	for _, p := range c.subProtocols {
+		if err := c.syncProtocolStatus(p); err != nil {
+			return errors.Wrap(err, p.Name(), "sync sub protocol status")
+		}
+	}
+
+	var detachBlockHeader *types.BlockHeader
+	for detachBlockHeader = c.bestBlockHeader; detachBlockHeader.Height > uint64(height); {
+		if c.isIrreversible(detachBlockHeader) {
+			break
+		}
+
+		detachHash := detachBlockHeader.Hash()
+		block, err := c.GetBlockByHash(&detachHash)
+		if err != nil {
+			return err
+		}
+
+		detachBlock := types.MapBlock(block)
+
+		if err := consensusResult.DetachBlock(block); err != nil {
+			return err
+		}
+
+		if err := c.store.GetTransactionsUtxo(utxoView, detachBlock.Transactions); err != nil {
+			return err
+		}
+
+		txStatus, err := c.GetTransactionStatus(&detachBlock.ID)
+		if err != nil {
+			return err
+		}
+
+		if err := utxoView.DetachBlock(detachBlock, txStatus); err != nil {
+			return err
+		}
+
+		for _, p := range c.subProtocols {
+			if err := p.DetachBlock(block); err != nil {
+				return errors.Wrap(err, p.Name(), "sub protocol detach block")
+			}
+		}
+
+		blockHash := detachBlockHeader.Hash()
+		log.WithFields(log.Fields{"module": logModule, "height": detachBlockHeader.Height, "hash": blockHash.String()}).Debug("detach from mainchain")
+
+		c.store.DeleteBlock(block)
+
+		prevBlockHash := detachBlockHeader.PreviousBlockHash
+		detachBlockHeader, err = c.GetHeaderByHash(&prevBlockHash)
+		if err != nil {
+			return err
+		}
+	}
+
+	return c.setState(detachBlockHeader, c.lastIrrBlockHeader, nil, utxoView, []*state.ConsensusResult{consensusResult.Fork()})
+}
+
 func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 	attachBlockHeaders, detachBlockHeaders, err := c.calcReorganizeChain(blockHeader, c.bestBlockHeader)
 	if err != nil {

@@ -26,6 +26,43 @@ var (
 	blockHeight = 0
 )
 
+var rollbackCmd = &cobra.Command{
+	Use:   "rollback-height <height>",
+	Short: "rollback the chain to target height",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		var height int64
+		var err error
+
+		isNumber := true
+		for _, ch := range args[0] {
+			if !unicode.IsNumber(ch) {
+				isNumber = false
+			}
+		}
+		if isNumber {
+			height, err = strconv.ParseInt(args[0], 10, 64)
+			if err != nil {
+				jww.ERROR.Println(err)
+				os.Exit(util.ErrLocalExe)
+			}
+		} else {
+			jww.ERROR.Printf("Invalid height value")
+			os.Exit(util.ErrLocalExe)
+		}
+
+		rollbackReq := &struct {
+			RollbackHeight int64 `json:"height"`
+		}{RollbackHeight: height}
+
+		data, exitCode := util.ClientCall("/rollback-height", rollbackReq)
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+		printJSON(data)
+	},
+}
+
 var getBlockHashCmd = &cobra.Command{
 	Use:   "get-block-hash",
 	Short: "Get the hash of most recent block",

@@ -98,7 +98,7 @@ func NewNode(config *cfg.Config) *Node {
 	dispatcher := event.NewDispatcher()
 	movCore := mov.NewMovCore(config.DBBackend, config.DBDir(), consensus.ActiveNetParams.MovStartHeight)
 	txPool := protocol.NewTxPool(store, []protocol.DustFilterer{movCore}, dispatcher)
-	chain, err := protocol.NewChain(store, txPool, []protocol.Protocoler{movCore}, dispatcher, config.RollbackHeight)
+	chain, err := protocol.NewChain(store, txPool, []protocol.Protocoler{movCore}, dispatcher)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 	}
