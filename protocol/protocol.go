@@ -93,7 +93,7 @@ func Rollback(c *Chain, store Store, height int64) error {
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
-func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher, rollbackHeight int64) (*Chain, error) {
+func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*Chain, error) {
 	knownTxs, _ := common.NewOrderedSet(maxKnownTxs)
 	c := &Chain{
 		orphanManage:    NewOrphanManage(),
@@ -122,10 +122,6 @@ func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher, ro
 
 	c.lastIrrBlockHeader, err = c.store.GetBlockHeader(storeStatus.IrreversibleHash)
 	if err != nil {
-		return nil, err
-	}
-
-	if err = Rollback(c, store, rollbackHeight); err != nil {
 		return nil, err
 	}
 

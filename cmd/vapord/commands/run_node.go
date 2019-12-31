@@ -23,7 +23,6 @@ func init() {
 	runNodeCmd.Flags().Bool("mining", config.Mining, "Enable mining")
 
 	runNodeCmd.Flags().Bool("auth.disable", config.Auth.Disable, "Disable rpc access authenticate")
-	runNodeCmd.Flags().Int64("rollback", config.RollbackHeight, "To force rollback height to target height!")
 
 	runNodeCmd.Flags().Bool("wallet.disable", config.Wallet.Disable, "Disable wallet")
 	runNodeCmd.Flags().Bool("wallet.rescan", config.Wallet.Rescan, "Rescan wallet")

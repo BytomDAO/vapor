@@ -271,6 +271,8 @@ func (a *API) buildHandler() {
 	m.Handle("/list-unconfirmed-transactions", jsonHandler(a.listUnconfirmedTxs))
 	m.Handle("/decode-raw-transaction", jsonHandler(a.decodeRawTransaction))
 
+	m.Handle("/rollback-height", jsonHandler(a.rollbackHeight))
+
 	m.Handle("/get-block", jsonHandler(a.getBlock))
 	m.Handle("/get-raw-block", jsonHandler(a.getRawBlock))
 	m.Handle("/get-block-hash", jsonHandler(a.getBestBlockHash))
