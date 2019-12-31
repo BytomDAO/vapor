@@ -35,63 +35,6 @@ type Chain struct {
 	knownTxs *common.OrderedSet
 }
 
-func Rollback(c *Chain, store Store, height int64) error {
-	if height <= -1 {
-		return nil
-	}
-	utxoView := state.NewUtxoViewpoint()
-	consensusResult, err := c.getBestConsensusResult()
-	if err != nil {
-		return err
-	}
-
-	var detachBlockHeader *types.BlockHeader
-	for detachBlockHeader = c.bestBlockHeader; detachBlockHeader.Height > uint64(height); {
-		if c.isIrreversible(detachBlockHeader) {
-			break
-		}
-
-		detachHash := detachBlockHeader.Hash()
-		block, err := c.GetBlockByHash(&detachHash)
-		if err != nil {
-			return err
-		}
-
-		detachBlock := types.MapBlock(block)
-
-		if err := consensusResult.DetachBlock(block); err != nil {
-			return err
-		}
-
-		if err := c.store.GetTransactionsUtxo(utxoView, detachBlock.Transactions); err != nil {
-			return err
-		}
-
-		txStatus, err := c.GetTransactionStatus(&detachBlock.ID)
-		if err != nil {
-			return err
-		}
-
-		if err := utxoView.DetachBlock(detachBlock, txStatus); err != nil {
-			return err
-		}
-
-		blockHash := detachBlockHeader.Hash()
-		log.WithFields(log.Fields{"module": logModule, "height": detachBlockHeader.Height, "hash": blockHash.String()}).Debug("detach from mainchain")
-
-		store.DeleteBlock(block)
-
-		prevBlockHash := detachBlockHeader.PreviousBlockHash
-		detachBlockHeader, err = c.GetHeaderByHash(&prevBlockHash)
-		if err != nil {
-			return err
-		}
-	}
-
-	return c.setState(detachBlockHeader, c.lastIrrBlockHeader, nil, utxoView, []*state.ConsensusResult{consensusResult.Fork()})
-
-}
-
 // NewChain returns a new Chain using store as the underlying storage.
 func NewChain(store Store, txPool *TxPool, eventDispatcher *event.Dispatcher) (*Chain, error) {
 	knownTxs, _ := common.NewOrderedSet(maxKnownTxs)

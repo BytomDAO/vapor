@@ -125,6 +125,38 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	return nil
 }
 
+func (c *Chain) rollbackBlock(detachBlockHeader *types.BlockHeader, consensusResult *state.ConsensusResult, utxoView *state.UtxoViewpoint) (*types.Block, error) {
+	detachHash := detachBlockHeader.Hash()
+	block, err := c.store.GetBlock(&detachHash)
+	if err != nil {
+		return block, err
+	}
+
+	detachBlock := types.MapBlock(block)
+
+	if err := consensusResult.DetachBlock(block); err != nil {
+		return block, err
+	}
+
+	if err := c.store.GetTransactionsUtxo(utxoView, detachBlock.Transactions); err != nil {
+		return block, err
+	}
+
+	txStatus, err := c.GetTransactionStatus(&detachBlock.ID)
+	if err != nil {
+		return block, err
+	}
+
+	if err := utxoView.DetachBlock(detachBlock, txStatus); err != nil {
+		return block, err
+	}
+
+	blockHash := detachBlockHeader.Hash()
+	log.WithFields(log.Fields{"module": logModule, "height": detachBlockHeader.Height, "hash": blockHash.String()}).Debug("detach from mainchain")
+
+	return block, nil
+}
+
 func (c *Chain) Rollback(height int64) error {
 	if height <= -1 {
 		return nil
@@ -144,33 +176,10 @@ func (c *Chain) Rollback(height int64) error {
 			break
 		}
 
-		detachHash := detachBlockHeader.Hash()
-		block, err := c.GetBlockByHash(&detachHash)
+		block, err := c.rollbackBlock(detachBlockHeader, consensusResult, utxoView)
 		if err != nil {
 			return err
 		}
-
-		detachBlock := types.MapBlock(block)
-
-		if err := consensusResult.DetachBlock(block); err != nil {
-			return err
-		}
-
-		if err := c.store.GetTransactionsUtxo(utxoView, detachBlock.Transactions); err != nil {
-			return err
-		}
-
-		txStatus, err := c.GetTransactionStatus(&detachBlock.ID)
-		if err != nil {
-			return err
-		}
-
-		if err := utxoView.DetachBlock(detachBlock, txStatus); err != nil {
-			return err
-		}
-
-		blockHash := detachBlockHeader.Hash()
-		log.WithFields(log.Fields{"module": logModule, "height": detachBlockHeader.Height, "hash": blockHash.String()}).Debug("detach from mainchain")
 
 		c.store.DeleteBlock(block)
 
@@ -199,27 +208,10 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 
 	txsToRestore := map[bc.Hash]*types.Tx{}
 	for _, detachBlockHeader := range detachBlockHeaders {
-		detachHash := detachBlockHeader.Hash()
-		b, err := c.store.GetBlock(&detachHash)
+
+		b, err := c.rollbackBlock(detachBlockHeader, consensusResult, utxoView)
+
 		if err != nil {
-			return err
-		}
-
-		detachBlock := types.MapBlock(b)
-		if err := c.store.GetTransactionsUtxo(utxoView, detachBlock.Transactions); err != nil {
-			return err
-		}
-
-		txStatus, err := c.GetTransactionStatus(&detachBlock.ID)
-		if err != nil {
-			return err
-		}
-
-		if err := utxoView.DetachBlock(detachBlock, txStatus); err != nil {
-			return err
-		}
-
-		if err := consensusResult.DetachBlock(b); err != nil {
 			return err
 		}
 

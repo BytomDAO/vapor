@@ -57,10 +57,10 @@ type GetBlockResp struct {
 }
 
 // return rollback result
-func (a *API) rollbackHeight(ctx context.Context, x struct {
-	RollbackHeight int64 `json:"height"`
+func (a *API) rollback(ctx context.Context, x struct {
+	Height int64 `json:"height"`
 }) Response {
-	height := x.RollbackHeight
+	height := x.Height
 	err := a.chain.Rollback(height)
 	if err != nil {
 		log.Errorf("rollback: %v", err)
