@@ -27,7 +27,7 @@ var (
 )
 
 var rollbackCmd = &cobra.Command{
-	Use:   "rollback-height <height>",
+	Use:   "rollback <height>",
 	Short: "rollback the chain to target height",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -52,10 +52,10 @@ var rollbackCmd = &cobra.Command{
 		}
 
 		rollbackReq := &struct {
-			RollbackHeight int64 `json:"height"`
-		}{RollbackHeight: height}
+			Height int64 `json:"height"`
+		}{Height: height}
 
-		data, exitCode := util.ClientCall("/rollback-height", rollbackReq)
+		data, exitCode := util.ClientCall("/rollback", rollbackReq)
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
