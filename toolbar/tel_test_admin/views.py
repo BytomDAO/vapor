@@ -3,6 +3,7 @@ from functools import wraps
 from flask import request
 from uuid import uuid4
 import json
+
 tele = Blueprint('tele', __name__)
 
 # 全局变量
@@ -18,8 +19,13 @@ NODE_LIST = [
         "level": "high",
         "is_connect": True
     },
-{
+    {
         "IP": "52.82.25.183",
+        "level": "high",
+        "is_connect": True
+    },
+    {
+        "IP": "161.189.85.2",
         "level": "high",
         "is_connect": True
     }
@@ -62,7 +68,7 @@ def login():
 #     return response
 
 
-@tele.route('/get-all-node', methods=["GET","POST"])
+@tele.route('/get-all-node', methods=["GET", "POST"])
 def get_all_node():
     return jsonify({"code": 200, "msg": "", "data": NODE_LIST})
 
