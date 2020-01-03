@@ -28,6 +28,16 @@ NODE_LIST = [
         "IP": "161.189.85.2",
         "level": "high",
         "is_connect": True
+    },
+    {
+        "IP": "52.83.50.49",
+        "level": "high",
+        "is_connect": True
+    },
+    {
+        "IP": "52.82.29.91",
+        "level": "high",
+        "is_connect": True
     }
 ]
 
