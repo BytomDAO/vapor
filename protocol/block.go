@@ -250,8 +250,6 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 			txsToRestore[tx.ID] = tx
 		}
 
-		// blockHash := blockHeader.Hash()
-		// log.WithFields(log.Fields{"module": logModule, "height": blockHeader.Height, "hash": blockHash.String()}).Debug("detach from mainchain")
 	}
 
 	txsToRemove := map[bc.Hash]*types.Tx{}
