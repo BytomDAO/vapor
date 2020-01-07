@@ -1,0 +1,29 @@
+{
+  "api" : {
+    "is_release_mode": false
+  },
+  "mysql" : {
+    "connection" : {
+      "host": "52.82.122.197",
+      "port": 3306,
+      "username": "root",
+      "password": "g@eIu8(KbRmJ",
+      "database": "federation"
+    },
+    "log_mode" : true
+  },
+  "network" : "testnet",
+  "federation_prog" : "0020728a17cb5c10eec44059c9a59accfbf1f2d65b3deada709e9722d4c1b88434e0",
+  "mainchain" : {
+    "name" : "btm",
+    "confirmations" : 10,
+    "upstream" : "http://52.82.122.197:9888",
+    "sync_seconds" : 50
+  },
+  "sidechain" : {
+    "name" : "vapor",
+    "confirmations" : 300,
+    "upstream" : "http://52.82.122.197:9889",
+    "sync_seconds" : 50
+  }
+}
