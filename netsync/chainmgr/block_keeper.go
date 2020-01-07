@@ -200,7 +200,7 @@ func (bk *blockKeeper) checkSyncType() int {
 	bestHeight := bk.chain.BestBlockHeight()
 	peer := bk.peers.BestIrreversiblePeer(consensus.SFFullNode | consensus.SFFastSync)
 	if peer != nil {
-		if peerIrreversibleHeight := peer.IrreversibleHeight(); peerIrreversibleHeight >= bestHeight+minGapStartFastSync {
+		if peerIrreversibleHeight := peer.Height(); peerIrreversibleHeight >= bestHeight+minGapStartFastSync {
 			bk.fastSync.setSyncPeer(peer)
 			return fastSyncType
 		}
