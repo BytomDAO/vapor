@@ -88,6 +88,10 @@ func InitConfig(config *cfg.Config) error {
 func NodeRollback(config *cfg.Config, height int64) error {
 	err := InitConfig(config)
 
+	// Get store
+	if config.DBBackend != "memdb" && config.DBBackend != "leveldb" {
+		cmn.Exit(cmn.Fmt("Param db_backend [%v] is invalid, use leveldb or memdb", config.DBBackend))
+	}
 	coreDB := dbm.NewDB("core", config.DBBackend, config.DBDir())
 	dispatcher := event.NewDispatcher()
 	store := database.NewStore(coreDB)
