@@ -56,8 +56,7 @@ type Node struct {
 	miningEnable    bool
 }
 
-// NewNode create bytom node
-func NewNode(config *cfg.Config) *Node {
+func InitConfig(config *cfg.Config) error {
 	if err := lockDataDirectory(config); err != nil {
 		cmn.Exit("Error: " + err.Error())
 	}
@@ -83,6 +82,29 @@ func NewNode(config *cfg.Config) *Node {
 	}
 
 	initCommonConfig(config)
+	return nil
+}
+
+func NodeRollback(config *cfg.Config, height int64) error {
+	err := InitConfig(config)
+
+	coreDB := dbm.NewDB("core", config.DBBackend, config.DBDir())
+	dispatcher := event.NewDispatcher()
+	store := database.NewStore(coreDB)
+	txPool := protocol.NewTxPool(store, dispatcher)
+	chain, err := protocol.NewChain(store, txPool, dispatcher)
+	if err != nil {
+		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
+		return err
+	}
+
+	chain.Rollback(height)
+	return err
+}
+
+// NewNode create bytom node
+func NewNode(config *cfg.Config) *Node {
+	err := InitConfig(config)
 
 	// Get store
 	if config.DBBackend != "memdb" && config.DBBackend != "leveldb" {

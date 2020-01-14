@@ -1,9 +1,6 @@
 package api
 
 import (
-	"context"
-
-	log "github.com/sirupsen/logrus"
 	set "gopkg.in/fatih/set.v0"
 
 	"github.com/bytom/vapor/blockchain/query"
@@ -55,20 +52,6 @@ type GetBlockResp struct {
 	TransactionsMerkleRoot *bc.Hash             `json:"transaction_merkle_root"`
 	TransactionStatusHash  *bc.Hash             `json:"transaction_status_hash"`
 	Transactions           []*BlockTx           `json:"transactions"`
-}
-
-// return rollback result
-func (a *API) rollback(ctx context.Context, x struct {
-	Height int64 `json:"height"`
-}) Response {
-	height := x.Height
-	err := a.chain.Rollback(height)
-	if err != nil {
-		log.Errorf("rollback: %v", err)
-		return NewErrorResponse(err)
-	}
-	result := map[string]int64{"result": 0}
-	return NewSuccessResponse(result)
 }
 
 // return block by hash/height
