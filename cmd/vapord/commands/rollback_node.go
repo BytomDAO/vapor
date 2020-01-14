@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"fmt"
 	"os"
 	"strconv"
 	"unicode"
@@ -35,9 +34,7 @@ var rollbackCmd = &cobra.Command{
 				jww.ERROR.Println(err)
 				os.Exit(util.ErrLocalExe)
 			}
-			fmt.Print(height, "\n")
 			node.NodeRollback(config, height)
-			fmt.Print(height, "\n")
 
 		} else {
 			jww.ERROR.Printf("Invalid height value")
