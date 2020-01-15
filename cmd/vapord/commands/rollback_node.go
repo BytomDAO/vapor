@@ -18,10 +18,7 @@ var rollbackCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		setLogLevel(config.LogLevel)
 
-		var height int64
-		var err error
-
-		height, err = strconv.ParseInt(args[0], 10, 64)
+		height, err := strconv.ParseInt(args[0], 10, 64)
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal("failed to parse int")
 			os.Exit(util.ErrLocalExe)
