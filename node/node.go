@@ -172,8 +172,12 @@ func Rollback(config *cfg.Config, targetHeight int64) error {
 		return err
 	}
 
-	err = chain.Rollback(targetHeight)
-	return err
+	if err := chain.Rollback(targetHeight); err != nil {
+		return err
+	}
+
+	log.WithFields(log.Fields{"module": logModule}).Infof("success to rollback height of %d", chain.BestBlockHeight())
+	return nil
 }
 
 func initNodeConfig(config *cfg.Config) {

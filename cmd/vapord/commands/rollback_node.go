@@ -28,8 +28,6 @@ var rollbackCmd = &cobra.Command{
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal("failed to rollback")
 			os.Exit(util.ErrLocalExe)
 		}
-
-		log.WithFields(log.Fields{"module": logModule}).Infof("success to rollback height of %d", height)
 	},
 }
 
