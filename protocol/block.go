@@ -207,9 +207,7 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 
 	txsToRestore := map[bc.Hash]*types.Tx{}
 	for _, detachBlockHeader := range detachBlockHeaders {
-
 		b, err := c.rollbackBlock(detachBlockHeader, consensusResult, utxoView)
-
 		if err != nil {
 			return err
 		}
