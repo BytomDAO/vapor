@@ -4,8 +4,8 @@ import (
 	"os"
 	"strconv"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	jww "github.com/spf13/jwalterweatherman"
 
 	"github.com/bytom/vapor/node"
 	"github.com/bytom/vapor/util"
@@ -23,12 +23,12 @@ var rollbackCmd = &cobra.Command{
 
 		height, err = strconv.ParseInt(args[0], 10, 64)
 		if err != nil {
-			jww.ERROR.Println(err)
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal("failed to parse int")
 			os.Exit(util.ErrLocalExe)
 		}
-		err = node.Rollback(config, height)
-		if err != nil {
-			jww.ERROR.Println(err)
+
+		if err = node.Rollback(config, height); err != nil {
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal("failed to rollback")
 			os.Exit(util.ErrLocalExe)
 		}
 	},
