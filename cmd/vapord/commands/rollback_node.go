@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 
@@ -19,14 +20,18 @@ var rollbackCmd = &cobra.Command{
 		setLogLevel(config.LogLevel)
 
 		height, err := strconv.ParseInt(args[0], 10, 64)
+
+		fmt.Print("now go to rollback height:", height, "\n")
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal("failed to parse int")
 			os.Exit(util.ErrLocalExe)
+			fmt.Print("failed to parse int\n")
 		}
 
 		if err = node.Rollback(config, height); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal("failed to rollback")
 			os.Exit(util.ErrLocalExe)
+			fmt.Print("failed to rollback\n")
 		}
 	},
 }
