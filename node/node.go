@@ -56,14 +56,9 @@ type Node struct {
 	miningEnable    bool
 }
 
-func InitConfig(config *cfg.Config) {
-	if err := lockDataDirectory(config); err != nil {
-		cmn.Exit("Error: " + err.Error())
-	}
-
-	if err := cfg.LoadFederationFile(config.FederationFile(), config); err != nil {
-		cmn.Exit(cmn.Fmt("Failed to load federated information:[%s]", err.Error()))
-	}
+// NewNode create bytom node
+func NewNode(config *cfg.Config) *Node {
+	initNodeConfig(config)
 
 	if err := vaporLog.InitLogFile(config); err != nil {
 		log.WithField("err", err).Fatalln("InitLogFile failed")
@@ -76,37 +71,6 @@ func InitConfig(config *cfg.Config) {
 		"fed_quorum":         config.Federation.Quorum,
 		"fed_controlprogram": hex.EncodeToString(cfg.FederationWScript(config)),
 	}).Info()
-
-	if err := consensus.InitActiveNetParams(config.ChainID); err != nil {
-		log.Fatalf("Failed to init ActiveNetParams:[%s]", err.Error())
-	}
-
-	initCommonConfig(config)
-}
-
-func Rollback(config *cfg.Config, height int64) error {
-	InitConfig(config)
-
-	// Get store
-	if config.DBBackend != "memdb" && config.DBBackend != "leveldb" {
-		return errors.New("Param db_backend is invalid, use leveldb or memdb")
-	}
-	coreDB := dbm.NewDB("core", config.DBBackend, config.DBDir())
-	dispatcher := event.NewDispatcher()
-	store := database.NewStore(coreDB)
-	txPool := protocol.NewTxPool(store, dispatcher)
-	chain, err := protocol.NewChain(store, txPool, dispatcher)
-	if err != nil {
-		return err
-	}
-
-	err = chain.Rollback(height)
-	return err
-}
-
-// NewNode create bytom node
-func NewNode(config *cfg.Config) *Node {
-	InitConfig(config)
 
 	// Get store
 	if config.DBBackend != "memdb" && config.DBBackend != "leveldb" {
@@ -189,6 +153,43 @@ func NewNode(config *cfg.Config) *Node {
 	node.cpuMiner = blockproposer.NewBlockProposer(chain, accounts, txPool, dispatcher)
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 	return node
+}
+
+func Rollback(config *cfg.Config, targetHeight int64) error {
+	initNodeConfig(config)
+
+	// Get store
+	if config.DBBackend != "memdb" && config.DBBackend != "leveldb" {
+		return errors.New("Param db_backend is invalid, use leveldb or memdb")
+	}
+
+	coreDB := dbm.NewDB("core", config.DBBackend, config.DBDir())
+	dispatcher := event.NewDispatcher()
+	store := database.NewStore(coreDB)
+	txPool := protocol.NewTxPool(store, dispatcher)
+	chain, err := protocol.NewChain(store, txPool, dispatcher)
+	if err != nil {
+		return err
+	}
+
+	err = chain.Rollback(targetHeight)
+	return err
+}
+
+func initNodeConfig(config *cfg.Config) {
+	if err := lockDataDirectory(config); err != nil {
+		cmn.Exit("Error: " + err.Error())
+	}
+
+	if err := cfg.LoadFederationFile(config.FederationFile(), config); err != nil {
+		cmn.Exit(cmn.Fmt("Failed to load federated information:[%s]", err.Error()))
+	}
+
+	if err := consensus.InitActiveNetParams(config.ChainID); err != nil {
+		log.Fatalf("Failed to init ActiveNetParams:[%s]", err.Error())
+	}
+
+	initCommonConfig(config)
 }
 
 // find whether config xpubs equal genesis block xpubs

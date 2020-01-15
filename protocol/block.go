@@ -178,7 +178,9 @@ func (c *Chain) Rollback(targetHeight int64) error {
 			return err
 		}
 
-		c.store.DeleteBlock(block)
+		if err := c.store.DeleteBlock(block); err != nil {
+			return err
+		}
 
 		prevBlockHash := detachBlockHeader.PreviousBlockHash
 		detachBlockHeader, err = c.GetHeaderByHash(&prevBlockHash)
