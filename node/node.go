@@ -56,7 +56,7 @@ type Node struct {
 	miningEnable    bool
 }
 
-func InitConfig(config *cfg.Config) error {
+func InitConfig(config *cfg.Config) {
 	if err := lockDataDirectory(config); err != nil {
 		cmn.Exit("Error: " + err.Error())
 	}
@@ -82,15 +82,14 @@ func InitConfig(config *cfg.Config) error {
 	}
 
 	initCommonConfig(config)
-	return nil
 }
 
-func NodeRollback(config *cfg.Config, height int64) error {
-	err := InitConfig(config)
+func Rollback(config *cfg.Config, height int64) error {
+	InitConfig(config)
 
 	// Get store
 	if config.DBBackend != "memdb" && config.DBBackend != "leveldb" {
-		cmn.Exit(cmn.Fmt("Param db_backend [%v] is invalid, use leveldb or memdb", config.DBBackend))
+		return errors.New("Param db_backend is invalid, use leveldb or memdb")
 	}
 	coreDB := dbm.NewDB("core", config.DBBackend, config.DBDir())
 	dispatcher := event.NewDispatcher()
@@ -98,17 +97,16 @@ func NodeRollback(config *cfg.Config, height int64) error {
 	txPool := protocol.NewTxPool(store, dispatcher)
 	chain, err := protocol.NewChain(store, txPool, dispatcher)
 	if err != nil {
-		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 		return err
 	}
 
-	chain.Rollback(height)
+	err = chain.Rollback(height)
 	return err
 }
 
 // NewNode create bytom node
 func NewNode(config *cfg.Config) *Node {
-	err := InitConfig(config)
+	InitConfig(config)
 
 	// Get store
 	if config.DBBackend != "memdb" && config.DBBackend != "leveldb" {

@@ -3,7 +3,6 @@ package commands
 import (
 	"os"
 	"strconv"
-	"unicode"
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
@@ -22,22 +21,14 @@ var rollbackCmd = &cobra.Command{
 		var height int64
 		var err error
 
-		isNumber := true
-		for _, ch := range args[0] {
-			if !unicode.IsNumber(ch) {
-				isNumber = false
-			}
+		height, err = strconv.ParseInt(args[0], 10, 64)
+		if err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(util.ErrLocalExe)
 		}
-		if isNumber {
-			height, err = strconv.ParseInt(args[0], 10, 64)
-			if err != nil {
-				jww.ERROR.Println(err)
-				os.Exit(util.ErrLocalExe)
-			}
-			node.NodeRollback(config, height)
-
-		} else {
-			jww.ERROR.Printf("Invalid height value")
+		err = node.Rollback(config, height)
+		if err != nil {
+			jww.ERROR.Println(err)
 			os.Exit(util.ErrLocalExe)
 		}
 	},
