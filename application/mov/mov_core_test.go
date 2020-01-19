@@ -16,15 +16,9 @@ import (
 	"github.com/bytom/vapor/testutil"
 )
 
-/*
-	@addTest:BeforeProposalBlock: will gas affect generate tx? will be packed tx affect generate tx?
-	@addTest:TestApplyBlock: one block has two different trade pairs & different trade pair won't affect each order(attach & detach)
-	@addTest:TestApplyBlock: node packed maker tx and match transaction in random order(attach & detach)
-	@addTest:TestValidateBlock: one tx has trade input and cancel input mixed
-	@addTest:TestValidateBlock: regular match transaction's seller program is also a P2WMCProgram
-*/
+var initBlockHeader = &types.BlockHeader{Height: 1, PreviousBlockHash: bc.Hash{}}
+
 func TestApplyBlock(t *testing.T) {
-	initBlockHeader := &types.BlockHeader{Height: 1, PreviousBlockHash: bc.Hash{}}
 	cases := []struct {
 		desc        string
 		block       *types.Block
@@ -44,6 +38,26 @@ func TestApplyBlock(t *testing.T) {
 			},
 			blockFunc:   applyBlock,
 			wantOrders:  []*common.Order{mock.MustNewOrderFromOutput(mock.Btc2EthMakerTxs[0], 0), mock.MustNewOrderFromOutput(mock.Eth2BtcMakerTxs[0], 0)},
+			wantDBState: &common.MovDatabaseState{Height: 2, Hash: hashPtr(testutil.MustDecodeHash("88dbcde57bb2b53b107d7494f20f1f1a892307a019705980c3510890449c0020"))},
+		},
+		{
+			desc: "apply block has two different trade pairs & different trade pair won't affect each order",
+			block: &types.Block{
+				BlockHeader: types.BlockHeader{Height: 2, PreviousBlockHash: initBlockHeader.Hash()},
+				Transactions: []*types.Tx{
+					mock.Btc2EthMakerTxs[0],
+					mock.Eth2BtcMakerTxs[0],
+					mock.Eos2EtcMakerTxs[0],
+					mock.Eth2EosMakerTxs[0],
+				},
+			},
+			blockFunc: applyBlock,
+			wantOrders: []*common.Order{
+				mock.MustNewOrderFromOutput(mock.Btc2EthMakerTxs[0], 0),
+				mock.MustNewOrderFromOutput(mock.Eth2BtcMakerTxs[0], 0),
+				mock.MustNewOrderFromOutput(mock.Eos2EtcMakerTxs[0], 0),
+				mock.MustNewOrderFromOutput(mock.Eth2EosMakerTxs[0], 0),
+			},
 			wantDBState: &common.MovDatabaseState{Height: 2, Hash: hashPtr(testutil.MustDecodeHash("88dbcde57bb2b53b107d7494f20f1f1a892307a019705980c3510890449c0020"))},
 		},
 		{
@@ -101,6 +115,28 @@ func TestApplyBlock(t *testing.T) {
 			wantDBState: &common.MovDatabaseState{Height: 2, Hash: hashPtr(testutil.MustDecodeHash("88dbcde57bb2b53b107d7494f20f1f1a892307a019705980c3510890449c0020"))},
 		},
 		{
+			desc: "apply block which node packed maker tx and match transaction in random orde",
+			block: &types.Block{
+				BlockHeader: types.BlockHeader{Height: 2, PreviousBlockHash: initBlockHeader.Hash()},
+				Transactions: []*types.Tx{
+					mock.Eos2EtcMakerTxs[0],
+					mock.Btc2EthMakerTxs[0],
+					mock.MatchedTxs[4],
+					mock.Eth2EosMakerTxs[0],
+					mock.Eth2BtcMakerTxs[1],
+					mock.MatchedTxs[5],
+					mock.Etc2EosMakerTxs[0],
+				},
+			},
+			blockFunc:  applyBlock,
+			initOrders: []*common.Order{},
+			wantOrders: []*common.Order{
+				mock.MustNewOrderFromOutput(mock.MatchedTxs[4], 1),
+				mock.MustNewOrderFromOutput(mock.Eth2EosMakerTxs[0], 0),
+			},
+			wantDBState: &common.MovDatabaseState{Height: 2, Hash: hashPtr(testutil.MustDecodeHash("88dbcde57bb2b53b107d7494f20f1f1a892307a019705980c3510890449c0020"))},
+		},
+		{
 			desc: "detach block has pending order transaction",
 			block: &types.Block{
 				BlockHeader: *initBlockHeader,
@@ -110,6 +146,27 @@ func TestApplyBlock(t *testing.T) {
 			},
 			blockFunc:   detachBlock,
 			initOrders:  []*common.Order{mock.MustNewOrderFromOutput(mock.Btc2EthMakerTxs[0], 0), mock.MustNewOrderFromOutput(mock.Eth2BtcMakerTxs[1], 0)},
+			wantOrders:  []*common.Order{},
+			wantDBState: &common.MovDatabaseState{Height: 0, Hash: &bc.Hash{}},
+		},
+		{
+			desc: "detach block has two different trade pairs & different trade pair won't affect each order",
+			block: &types.Block{
+				BlockHeader: *initBlockHeader,
+				Transactions: []*types.Tx{
+					mock.Btc2EthMakerTxs[0],
+					mock.Eth2BtcMakerTxs[0],
+					mock.Eos2EtcMakerTxs[0],
+					mock.Eth2EosMakerTxs[0],
+				},
+			},
+			blockFunc: detachBlock,
+			initOrders: []*common.Order{
+				mock.MustNewOrderFromOutput(mock.Btc2EthMakerTxs[0], 0),
+				mock.MustNewOrderFromOutput(mock.Eth2BtcMakerTxs[0], 0),
+				mock.MustNewOrderFromOutput(mock.Eos2EtcMakerTxs[0], 0),
+				mock.MustNewOrderFromOutput(mock.Eth2EosMakerTxs[0], 0),
+			},
 			wantOrders:  []*common.Order{},
 			wantDBState: &common.MovDatabaseState{Height: 0, Hash: &bc.Hash{}},
 		},
@@ -150,6 +207,28 @@ func TestApplyBlock(t *testing.T) {
 			blockFunc:   detachBlock,
 			initOrders:  []*common.Order{mock.MustNewOrderFromOutput(mock.MatchedTxs[3], 1)},
 			wantOrders:  []*common.Order{mock.Btc2EthOrders[0], mock.Btc2EthOrders[1], mock.Eth2BtcOrders[2]},
+			wantDBState: &common.MovDatabaseState{Height: 0, Hash: &bc.Hash{}},
+		},
+		{
+			desc: "detach block which node packed maker tx and match transaction in random orde",
+			block: &types.Block{
+				BlockHeader: *initBlockHeader,
+				Transactions: []*types.Tx{
+					mock.Eos2EtcMakerTxs[0],
+					mock.Btc2EthMakerTxs[0],
+					mock.MatchedTxs[4],
+					mock.Eth2EosMakerTxs[0],
+					mock.Eth2BtcMakerTxs[1],
+					mock.MatchedTxs[5],
+					mock.Etc2EosMakerTxs[0],
+				},
+			},
+			blockFunc: detachBlock,
+			initOrders: []*common.Order{
+				mock.MustNewOrderFromOutput(mock.MatchedTxs[4], 1),
+				mock.MustNewOrderFromOutput(mock.Eth2EosMakerTxs[0], 0),
+			},
+			wantOrders:  []*common.Order{},
 			wantDBState: &common.MovDatabaseState{Height: 0, Hash: &bc.Hash{}},
 		},
 	}
@@ -408,6 +487,83 @@ func TestValidateBlock(t *testing.T) {
 		if err := movCore.ValidateBlock(c.block, c.verifyResults); err != c.wantError {
 			t.Errorf("#%d(%s):validate block want error(%v), got error(%v)", i, c.desc, c.wantError, err)
 		}
+	}
+}
+
+func TestBeforeProposalBlock(t *testing.T) {
+	cases := []struct {
+		desc           string
+		initOrders     []*common.Order
+		gasLeft        int64
+		wantMatchedTxs []*types.Tx
+	}{
+		{
+			desc:           "has matched tx, but gas left is zero",
+			initOrders:     []*common.Order{mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0]},
+			gasLeft:        0,
+			wantMatchedTxs: []*types.Tx{},
+		},
+		{
+			desc:           "has one matched tx, and gas is sufficient",
+			initOrders:     []*common.Order{mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0]},
+			gasLeft:        2000,
+			wantMatchedTxs: []*types.Tx{mock.MatchedTxs[1]},
+		},
+		{
+			desc: "has two matched tx, but gas is only enough to pack a matched tx",
+			initOrders: []*common.Order{
+				mock.Btc2EthOrders[0],
+				mock.Btc2EthOrders[1],
+				mock.Eth2BtcOrders[2],
+			},
+			gasLeft:        2000,
+			wantMatchedTxs: []*types.Tx{mock.MatchedTxs[2]},
+		},
+		{
+			desc: "has two matched tx, and gas left is sufficient",
+			initOrders: []*common.Order{
+				mock.Btc2EthOrders[0],
+				mock.Btc2EthOrders[1],
+				mock.Eth2BtcOrders[2],
+			},
+			gasLeft:        4000,
+			wantMatchedTxs: []*types.Tx{mock.MatchedTxs[2], mock.MatchedTxs[3]},
+		},
+	}
+
+	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		store := database.NewLevelDBMovStore(testDB)
+		if err := store.InitDBState(0, &bc.Hash{}); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := store.ProcessOrders(c.initOrders, nil, initBlockHeader); err != nil {
+			t.Fatal(err)
+		}
+
+		movCore := &MovCore{movStore: store}
+		gotMatchedTxs, err := movCore.BeforeProposalBlock(nil, []byte{0x51}, 2, c.gasLeft, func() bool { return false })
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		gotMatchedTxMap := make(map[string]interface{})
+		for _, matchedTx := range gotMatchedTxs {
+			gotMatchedTxMap[matchedTx.ID.String()] = nil
+		}
+
+		wantMatchedTxMap := make(map[string]interface{})
+		for _, matchedTx := range c.wantMatchedTxs {
+			wantMatchedTxMap[matchedTx.ID.String()] = nil
+		}
+
+		if !testutil.DeepEqual(gotMatchedTxMap, wantMatchedTxMap) {
+			t.Errorf("#%d(%s):want matched tx(%v) is not equals got matched tx(%v)", i, c.desc, c.wantMatchedTxs, gotMatchedTxs)
+		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
 	}
 }
 
