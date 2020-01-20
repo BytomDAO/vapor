@@ -207,6 +207,30 @@ var (
 		}),
 	}
 
+	Eos2EtcMakerTxs = []*types.Tx{
+		// Eos2Etc[0]
+		types.NewTx(types.TxData{
+			Inputs:  []*types.TxInput{types.NewSpendInput(nil, *Eos2EtcOrders[0].Utxo.SourceID, *Eos2EtcOrders[0].FromAssetID, Eos2EtcOrders[0].Utxo.Amount, Eos2EtcOrders[0].Utxo.SourcePos, []byte{0x51})},
+			Outputs: []*types.TxOutput{types.NewIntraChainOutput(*Eos2EtcOrders[0].FromAssetID, Eos2EtcOrders[0].Utxo.Amount, Eos2EtcOrders[0].Utxo.ControlProgram)},
+		}),
+	}
+
+	Etc2EosMakerTxs = []*types.Tx{
+		// Etc2Eos[0]
+		types.NewTx(types.TxData{
+			Inputs:  []*types.TxInput{types.NewSpendInput(nil, *Etc2EosOrders[0].Utxo.SourceID, *Etc2EosOrders[0].FromAssetID, Etc2EosOrders[0].Utxo.Amount, Etc2EosOrders[0].Utxo.SourcePos, []byte{0x51})},
+			Outputs: []*types.TxOutput{types.NewIntraChainOutput(*Etc2EosOrders[0].FromAssetID, Etc2EosOrders[0].Utxo.Amount, Etc2EosOrders[0].Utxo.ControlProgram)},
+		}),
+	}
+
+	Eth2EosMakerTxs = []*types.Tx{
+		// Eth2Eos[0]
+		types.NewTx(types.TxData{
+			Inputs:  []*types.TxInput{types.NewSpendInput(nil, *Eth2EosOrders[0].Utxo.SourceID, *Eth2EosOrders[0].FromAssetID, Eth2EosOrders[0].Utxo.Amount, Eth2EosOrders[0].Utxo.SourcePos, []byte{0x51})},
+			Outputs: []*types.TxOutput{types.NewIntraChainOutput(*Eth2EosOrders[0].FromAssetID, Eth2EosOrders[0].Utxo.Amount, Eth2EosOrders[0].Utxo.ControlProgram)},
+		}),
+	}
+
 	MatchedTxs = []*types.Tx{
 		// partial matched transaction from Btc2EthOrders[0], Eth2BtcOrders[1]
 		types.NewTx(types.TxData{
@@ -280,11 +304,11 @@ var (
 			},
 		}),
 
-		// full matched transaction from Btc2Eth Eth2Eos Eos2Btc
+		// full matched transaction from Eos2Etc[0] Etc2Eos[0]
 		types.NewTx(types.TxData{
 			Inputs: []*types.TxInput{
-				types.NewSpendInput([][]byte{vm.Int64Bytes(0), vm.Int64Bytes(1)}, *Eos2EtcOrders[0].Utxo.SourceID, *Eos2EtcOrders[0].FromAssetID, Eos2EtcOrders[0].Utxo.Amount, Eos2EtcOrders[0].Utxo.SourcePos, Eos2EtcOrders[0].Utxo.ControlProgram),
-				types.NewSpendInput([][]byte{vm.Int64Bytes(1), vm.Int64Bytes(1)}, *Etc2EosOrders[0].Utxo.SourceID, *Etc2EosOrders[0].FromAssetID, Etc2EosOrders[0].Utxo.Amount, Etc2EosOrders[0].Utxo.SourcePos, Etc2EosOrders[0].Utxo.ControlProgram),
+				types.NewSpendInput([][]byte{vm.Int64Bytes(0), vm.Int64Bytes(1)}, *MustNewOrderFromOutput(Eos2EtcMakerTxs[0], 0).Utxo.SourceID, *Eos2EtcOrders[0].FromAssetID, Eos2EtcOrders[0].Utxo.Amount, Eos2EtcOrders[0].Utxo.SourcePos, Eos2EtcOrders[0].Utxo.ControlProgram),
+				types.NewSpendInput([][]byte{vm.Int64Bytes(1), vm.Int64Bytes(1)}, *MustNewOrderFromOutput(Etc2EosMakerTxs[0], 0).Utxo.SourceID, *Etc2EosOrders[0].FromAssetID, Etc2EosOrders[0].Utxo.Amount, Etc2EosOrders[0].Utxo.SourcePos, Etc2EosOrders[0].Utxo.ControlProgram),
 			},
 			Outputs: []*types.TxOutput{
 				types.NewIntraChainOutput(*Eos2EtcOrders[0].ToAssetID, 50, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19255")),
@@ -292,7 +316,7 @@ var (
 			},
 		}),
 
-		// cycle matched
+		// cycle matched from Btc2Eth Eth2Eos Eos2Btc
 		types.NewTx(types.TxData{
 			Inputs: []*types.TxInput{
 				types.NewSpendInput([][]byte{vm.Int64Bytes(0), vm.Int64Bytes(1)}, *Btc2EthOrders[0].Utxo.SourceID, *Btc2EthOrders[0].FromAssetID, Btc2EthOrders[0].Utxo.Amount, Btc2EthOrders[0].Utxo.SourcePos, Btc2EthOrders[0].Utxo.ControlProgram),
