@@ -275,7 +275,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errors.New("incorrect asset_id while checking CrossChainInput")
 		}
 
-		prog := e.ControlProgram
+		prog := e.AssetDefinition.IssuanceProgram
 
 		if !common.IsOpenFederationIssueAsset(e.RawDefinitionByte) {
 			prog.Code = config.FederationWScript(config.CommonConfig)

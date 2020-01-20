@@ -144,7 +144,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			vetoInputs = append(vetoInputs, vetoInput)
 
 		case *CrossChainInput:
-			prog := &bc.Program{VmVersion: inp.VMVersion, Code: inp.IssuanceProgram}
+			prog := &bc.Program{VmVersion: inp.VMVersion, Code: inp.ControlProgram}
 			src := &bc.ValueSource{
 				Ref:      &inp.SourceID,
 				Value:    &inp.AssetAmount,
