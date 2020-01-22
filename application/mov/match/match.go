@@ -240,19 +240,13 @@ func IsMatched(orders []*common.Order) bool {
 		return false
 	}
 
-	rate := orderRatio(sortedOrders[0].RatioDenominator, sortedOrders[0].RatioNumerator)
-	oppositeRate := big.NewFloat(0).SetInt64(1)
+	rate := big.NewRat(sortedOrders[0].RatioDenominator, sortedOrders[0].RatioNumerator)
+	oppositeRate := big.NewRat(1, 1)
 	for i := 1; i < len(sortedOrders); i++ {
-		oppositeRate.Mul(oppositeRate, orderRatio(sortedOrders[i].RatioNumerator, sortedOrders[i].RatioDenominator))
+		oppositeRate.Mul(oppositeRate, big.NewRat(sortedOrders[i].RatioNumerator, sortedOrders[i].RatioDenominator))
 	}
 
 	return rate.Cmp(oppositeRate) >= 0
-}
-
-func orderRatio(numerator, denominator int64) *big.Float {
-	ratio := big.NewFloat(0).SetInt64(numerator)
-	ratio.Quo(ratio, big.NewFloat(0).SetInt64(denominator))
-	return ratio
 }
 
 func setMatchTxArguments(txInput *types.TxInput, isPartialTrade bool, position int, receiveAmounts uint64) {
