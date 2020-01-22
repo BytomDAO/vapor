@@ -10,7 +10,6 @@ import (
 	"github.com/bytom/vapor/consensus/segwit"
 	"github.com/bytom/vapor/errors"
 	vprMath "github.com/bytom/vapor/math"
-	"github.com/bytom/vapor/math/decimal"
 	"github.com/bytom/vapor/protocol/bc"
 	"github.com/bytom/vapor/protocol/bc/types"
 	"github.com/bytom/vapor/protocol/vm"
@@ -241,18 +240,20 @@ func IsMatched(orders []*common.Order) bool {
 		return false
 	}
 
-	rate := decimal.New(1, 0).Div(orderRatio(sortedOrders[0]))
-	oppositeRate := decimal.New(1, 0)
+	rate := orderRatio(sortedOrders[0].RatioDenominator, sortedOrders[0].RatioNumerator)
+	oppositeRate := big.NewFloat(0).SetInt64(1)
 	for i := 1; i < len(sortedOrders); i++ {
-		oppositeRate = oppositeRate.Mul(orderRatio(sortedOrders[i]))
+		oppositeRate.Mul(oppositeRate, orderRatio(sortedOrders[i].RatioNumerator, sortedOrders[i].RatioDenominator))
 	}
-	return rate.Cmp(oppositeRate) >= 0
+
+	one := big.NewFloat(0).SetInt64(1)
+	return one.Quo(one, rate).Cmp(oppositeRate) >= 0
 }
 
-func orderRatio(order *common.Order) *decimal.Decimal {
-	numerator := decimal.New(order.RatioNumerator, 0)
-	denominator := decimal.New(order.RatioDenominator, 0)
-	return numerator.Div(denominator)
+func orderRatio(numerator, denominator int64) *big.Float {
+	ratio := big.NewFloat(0).SetInt64(numerator)
+	ratio.Quo(ratio, big.NewFloat(0).SetInt64(denominator))
+	return ratio
 }
 
 func setMatchTxArguments(txInput *types.TxInput, isPartialTrade bool, position int, receiveAmounts uint64) {
