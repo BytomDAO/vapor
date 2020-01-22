@@ -246,8 +246,7 @@ func IsMatched(orders []*common.Order) bool {
 		oppositeRate.Mul(oppositeRate, orderRatio(sortedOrders[i].RatioNumerator, sortedOrders[i].RatioDenominator))
 	}
 
-	one := big.NewFloat(0).SetInt64(1)
-	return one.Quo(one, rate).Cmp(oppositeRate) >= 0
+	return rate.Cmp(oppositeRate) >= 0
 }
 
 func orderRatio(numerator, denominator int64) *big.Float {
