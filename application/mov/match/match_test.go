@@ -256,3 +256,163 @@ func TestValidateTradePairs(t *testing.T) {
 		}
 	}
 }
+
+func TestIsMatched(t *testing.T) {
+	cases := []struct {
+		desc        string
+		orders      []*common.Order
+		wantMatched bool
+	}{
+		{
+			desc: "ratio is equals",
+			orders: []*common.Order{
+				{
+					FromAssetID:      &mock.BTC,
+					ToAssetID:        &mock.ETH,
+					RatioNumerator:   6250,
+					RatioDenominator: 3,
+				},
+				{
+					FromAssetID:      &mock.ETH,
+					ToAssetID:        &mock.BTC,
+					RatioNumerator:   3,
+					RatioDenominator: 6250,
+				},
+			},
+			wantMatched: true,
+		},
+		{
+			desc: "ratio is equals, and numerator and denominator are multiples of the opposite",
+			orders: []*common.Order{
+				{
+					FromAssetID:      &mock.BTC,
+					ToAssetID:        &mock.ETH,
+					RatioNumerator:   6250,
+					RatioDenominator: 3,
+				},
+				{
+					FromAssetID:      &mock.ETH,
+					ToAssetID:        &mock.BTC,
+					RatioNumerator:   9,
+					RatioDenominator: 18750,
+				},
+			},
+			wantMatched: true,
+		},
+		{
+			desc: "matched with a slight diff",
+			orders: []*common.Order{
+				{
+					FromAssetID:      &mock.BTC,
+					ToAssetID:        &mock.ETH,
+					RatioNumerator:   62500000000000000,
+					RatioDenominator: 30000000000001,
+				},
+				{
+					FromAssetID:      &mock.ETH,
+					ToAssetID:        &mock.BTC,
+					RatioNumerator:   3,
+					RatioDenominator: 6250,
+				},
+			},
+			wantMatched: true,
+		},
+		{
+			desc: "not matched with a slight diff",
+			orders: []*common.Order{
+				{
+					FromAssetID:      &mock.BTC,
+					ToAssetID:        &mock.ETH,
+					RatioNumerator:   62500000000000001,
+					RatioDenominator: 30000000000000,
+				},
+				{
+					FromAssetID:      &mock.ETH,
+					ToAssetID:        &mock.BTC,
+					RatioNumerator:   3,
+					RatioDenominator: 6250,
+				},
+			},
+			wantMatched: false,
+		},
+		{
+			desc: "ring matched",
+			orders: []*common.Order{
+				{
+					FromAssetID:      &mock.BTC,
+					ToAssetID:        &mock.ETH,
+					RatioNumerator:   2000000003,
+					RatioDenominator: 100000001,
+				},
+				{
+					FromAssetID:      &mock.ETH,
+					ToAssetID:        &mock.EOS,
+					RatioNumerator:   400000000001,
+					RatioDenominator: 2000000003,
+				},
+				{
+					FromAssetID:      &mock.EOS,
+					ToAssetID:        &mock.BTC,
+					RatioNumerator:   100000001,
+					RatioDenominator: 400000000001,
+				},
+			},
+			wantMatched: true,
+		},
+		{
+			desc: "ring matched with a slight diff",
+			orders: []*common.Order{
+				{
+					FromAssetID:      &mock.BTC,
+					ToAssetID:        &mock.ETH,
+					RatioNumerator:   2000000003,
+					RatioDenominator: 100000001,
+				},
+				{
+					FromAssetID:      &mock.ETH,
+					ToAssetID:        &mock.EOS,
+					RatioNumerator:   400000000001,
+					RatioDenominator: 2000000003,
+				},
+				{
+					FromAssetID:      &mock.EOS,
+					ToAssetID:        &mock.BTC,
+					RatioNumerator:   100000000,
+					RatioDenominator: 400000000001,
+				},
+			},
+			wantMatched: true,
+		},
+		{
+			desc: "ring fail matched with a slight diff",
+			orders: []*common.Order{
+				{
+					FromAssetID:      &mock.BTC,
+					ToAssetID:        &mock.ETH,
+					RatioNumerator:   2000000003,
+					RatioDenominator: 100000001,
+				},
+				{
+					FromAssetID:      &mock.ETH,
+					ToAssetID:        &mock.EOS,
+					RatioNumerator:   400000000001,
+					RatioDenominator: 2000000003,
+				},
+				{
+					FromAssetID:      &mock.EOS,
+					ToAssetID:        &mock.BTC,
+					RatioNumerator:   100000002,
+					RatioDenominator: 400000000001,
+				},
+			},
+			wantMatched: false,
+		},
+	}
+
+	for i, c := range cases {
+		gotMatched := IsMatched(c.orders)
+		if gotMatched != c.wantMatched {
+			t.Errorf("#%d(%s) got matched:%v, want matched:%v", i, c.desc, gotMatched, c.wantMatched)
+		}
+	}
+}
