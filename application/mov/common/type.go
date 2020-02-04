@@ -26,9 +26,6 @@ type Order struct {
 	Utxo             *MovUtxo
 	RatioNumerator   int64
 	RatioDenominator int64
-
-	// cache result for UTXOHash function
-	utxoHash *bc.Hash
 }
 
 func (o *Order) Rate() float64 {
@@ -126,9 +123,6 @@ func (o *Order) TradePair() *TradePair {
 
 // UTXOHash calculate the utxo hash of this order
 func (o *Order) UTXOHash() *bc.Hash {
-	if o.utxoHash != nil {
-		return o.utxoHash
-	}
 	prog := &bc.Program{VmVersion: 1, Code: o.Utxo.ControlProgram}
 	src := &bc.ValueSource{
 		Ref:      o.Utxo.SourceID,
@@ -136,7 +130,6 @@ func (o *Order) UTXOHash() *bc.Hash {
 		Position: o.Utxo.SourcePos,
 	}
 	hash := bc.EntryID(bc.NewIntraChainOutput(src, prog, 0))
-	o.utxoHash = &hash
 	return &hash
 }
 

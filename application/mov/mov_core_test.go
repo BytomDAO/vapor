@@ -604,13 +604,11 @@ func queryAllOrders(store *database.LevelDBMovStore) []*common.Order {
 func ordersEquals(orders1 []*common.Order, orders2 []*common.Order) bool {
 	orderMap1 := make(map[string]*common.Order)
 	for _, order := range orders1 {
-		order.UTXOHash()
 		orderMap1[order.Key()] = order
 	}
 
 	orderMap2 := make(map[string]*common.Order)
 	for _, order := range orders2 {
-		order.UTXOHash()
 		orderMap2[order.Key()] = order
 	}
 	return testutil.DeepEqual(orderMap1, orderMap2)
