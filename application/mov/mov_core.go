@@ -1,6 +1,8 @@
 package mov
 
 import (
+	"sync"
+
 	"github.com/bytom/vapor/application/mov/common"
 	"github.com/bytom/vapor/application/mov/contract"
 	"github.com/bytom/vapor/application/mov/database"
@@ -80,33 +82,26 @@ func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, nodeProgram []byte, block
 		return nil, err
 	}
 
+	processCh := make(chan interface{})
+	resultCh := make(chan *matchTxResult, 1)
+	closeCh := make(chan struct{})
+
+	tradePairs := loadTradePairs(m.movStore)
 	matchEngine := match.NewEngine(orderBook, maxFeeRate, nodeProgram)
-	tradePairMap := make(map[string]bool)
-	tradePairIterator := database.NewTradePairIterator(m.movStore)
 
-	var packagedTxs []*types.Tx
-	for gasLeft > 0 && !isTimeout() && tradePairIterator.HasNext() {
-		tradePair := tradePairIterator.Next()
-		if tradePairMap[tradePair.Key()] {
-			continue
-		}
-		tradePairMap[tradePair.Key()] = true
-		tradePairMap[tradePair.Reverse().Key()] = true
-
-		for gasLeft > 0 && !isTimeout() && matchEngine.HasMatchedTx(tradePair, tradePair.Reverse()) {
-			matchedTx, err := matchEngine.NextMatchedTx(tradePair, tradePair.Reverse())
-			if err != nil {
-				return nil, err
-			}
-
-			gasUsed := calcMatchedTxGasUsed(matchedTx)
-			if gasLeft-gasUsed >= 0 {
-				packagedTxs = append(packagedTxs, matchedTx)
-			}
-			gasLeft -= gasUsed
-		}
+	var wg sync.WaitGroup
+	for _, tradePair := range tradePairs {
+		wg.Add(1)
+		go matchTxWorker(matchEngine, tradePair, processCh, closeCh, &wg)
 	}
-	return packagedTxs, nil
+	go matchTxCollector(gasLeft, isTimeout, len(tradePairs), processCh, resultCh, closeCh)
+
+	wg.Wait()
+	result := <-resultCh
+	if result.err != nil {
+		return nil, result.err
+	}
+	return result.matchedTxs, nil
 }
 
 // ChainStatus return the current block height and block hash in dex core
@@ -283,16 +278,23 @@ func validateMatchedTxFeeAmount(tx *types.Tx) error {
 }
 
 func (m *MovCore) validateMatchedTxSequence(txs []*types.Tx) error {
+	var matchedTxs []*types.Tx
+	for _, tx := range txs {
+		if common.IsMatchedTx(tx) {
+			matchedTxs = append(matchedTxs, tx)
+		}
+	}
+
+	if len(matchedTxs) == 0 {
+		return nil
+	}
+
 	orderBook, err := buildOrderBook(m.movStore, txs)
 	if err != nil {
 		return err
 	}
 
-	for _, matchedTx := range txs {
-		if !common.IsMatchedTx(matchedTx) {
-			continue
-		}
-
+	for _, matchedTx := range matchedTxs {
 		tradePairs, err := getTradePairsFromMatchedTx(matchedTx)
 		if err != nil {
 			return err
@@ -326,7 +328,6 @@ func (m *MovCore) validateMatchedTxSequence(txs []*types.Tx) error {
 	}
 	return nil
 }
-
 
 func validateSpendOrders(matchedTx *types.Tx, orders []*common.Order) error {
 	spendOutputIDs := make(map[string]bool)
@@ -451,6 +452,91 @@ func getTradePairsFromMatchedTx(tx *types.Tx) ([]*common.TradePair, error) {
 		tradePairs = append(tradePairs, &common.TradePair{FromAssetID: tx.AssetAmount().AssetId, ToAssetID: &contractArgs.RequestedAsset})
 	}
 	return tradePairs, nil
+}
+
+func loadTradePairs(movStore database.MovStore) []*common.TradePair {
+	var tradePairs []*common.TradePair
+	tradePairMap := make(map[string]bool)
+	tradePairIterator := database.NewTradePairIterator(movStore)
+	for tradePairIterator.HasNext() {
+		tradePair := tradePairIterator.Next()
+		if tradePairMap[tradePair.Key()] {
+			continue
+		}
+
+		tradePairs = append(tradePairs, tradePair)
+		tradePairMap[tradePair.Key()] = true
+		tradePairMap[tradePair.Reverse().Key()] = true
+	}
+	return tradePairs
+}
+
+type matchTxResult struct {
+	matchedTxs []*types.Tx
+	err        error
+}
+
+func matchTxCollector(gasLeft int64, isTimeout func() bool, lenOfTradePairs int, processCh <-chan interface{}, resultCh chan *matchTxResult, closeCh chan<- struct{}) {
+	var matchedTxs []*types.Tx
+	var completed int
+
+Loop:
+	for {
+		if isTimeout() {
+			close(closeCh)
+			break
+		}
+
+		if completed == lenOfTradePairs {
+			break
+		}
+
+		select {
+		case data := <-processCh:
+			switch obj := data.(type) {
+			case *types.Tx:
+				gasUsed := calcMatchedTxGasUsed(obj)
+				if gasLeft-gasUsed >= 0 {
+					matchedTxs = append(matchedTxs, obj)
+					gasLeft -= gasUsed
+				} else {
+					close(closeCh)
+					break Loop
+				}
+			case error:
+				close(closeCh)
+				resultCh <- &matchTxResult{err: obj}
+				return
+			default:
+				completed++
+			}
+		}
+	}
+	resultCh <- &matchTxResult{matchedTxs: matchedTxs}
+}
+
+func matchTxWorker(engine *match.Engine, tradePair *common.TradePair, processCh chan<- interface{}, closeCh <-chan struct{}, wg *sync.WaitGroup) {
+	for {
+		var data interface{}
+		var err error
+		if engine.HasMatchedTx(tradePair, tradePair.Reverse()) {
+			data, err = engine.NextMatchedTx(tradePair, tradePair.Reverse())
+			if err != nil {
+				data = err
+			}
+		}
+
+		select {
+		case <-closeCh:
+			wg.Done()
+			return
+		case processCh <- data:
+			if data == nil || err != nil {
+				wg.Done()
+				return
+			}
+		}
+	}
 }
 
 func mergeOrders(addOrderMap, deleteOrderMap map[string]*common.Order) ([]*common.Order, []*common.Order) {

@@ -38,7 +38,7 @@ func NewOrderBook(movStore database.MovStore, arrivalAddOrders, arrivalDelOrders
 func (o *OrderBook) AddOrder(order *common.Order) error {
 	tradePairKey := order.TradePair().Key()
 	orders := o.arrivalAddOrders[tradePairKey]
-	if len(orders) > 0 && order.Rate() > orders[len(orders)-1].Rate() {
+	if len(orders) > 0 && order.Cmp(orders[len(orders)-1]) > 0 {
 		return errors.New("rate of order must less than the min order in order table")
 	}
 
@@ -64,7 +64,7 @@ func (o *OrderBook) PeekOrder(tradePair *common.TradePair) *common.Order {
 	}
 
 	arrivalOrder := o.peekArrivalOrder(tradePair)
-	if nextOrder == nil || (arrivalOrder != nil && arrivalOrder.Rate() < nextOrder.Rate()) {
+	if nextOrder == nil || (arrivalOrder != nil && arrivalOrder.Cmp(nextOrder) < 0) {
 		nextOrder = arrivalOrder
 	}
 	return nextOrder
