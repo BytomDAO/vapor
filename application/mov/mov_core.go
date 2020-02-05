@@ -1,7 +1,6 @@
 package mov
 
 import (
-	"math"
 	"runtime"
 	"sync"
 
@@ -84,22 +83,22 @@ func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, nodeProgram []byte, block
 		return nil, err
 	}
 
+	workerNum := runtime.NumCPU()
 	processCh := make(chan interface{})
+	tradePairCh := make(chan *common.TradePair, workerNum)
 	resultCh := make(chan *matchTxResult, 1)
 	closeCh := make(chan struct{})
 
 	var wg sync.WaitGroup
-	tradePairs := loadTradePairs(m.movStore)
 	matchEngine := match.NewEngine(orderBook, maxFeeRate, nodeProgram)
-
-	workerNum := runtime.NumCPU()
-	jobs := splitMatchTxJobs(workerNum, tradePairs)
-
-	for _, job := range jobs {
+	for i := 0; i < workerNum; i++ {
 		wg.Add(1)
-		go matchTxWorker(matchEngine, job, processCh, closeCh, &wg)
+		go matchTxWorker(matchEngine, tradePairCh, processCh, closeCh, &wg)
 	}
-	go matchTxCollector(gasLeft, isTimeout, len(jobs), processCh, resultCh, closeCh)
+
+	wg.Add(1)
+	go tradePairProducer(m.movStore, tradePairCh, closeCh, &wg)
+	go matchTxCollector(gasLeft, isTimeout, workerNum, processCh, resultCh, closeCh)
 
 	wg.Wait()
 	result := <-resultCh
@@ -459,8 +458,12 @@ func getTradePairsFromMatchedTx(tx *types.Tx) ([]*common.TradePair, error) {
 	return tradePairs, nil
 }
 
-func loadTradePairs(movStore database.MovStore) []*common.TradePair {
-	var tradePairs []*common.TradePair
+type matchTxResult struct {
+	matchedTxs []*types.Tx
+	err        error
+}
+
+func tradePairProducer(movStore database.MovStore, tradePairCh chan<- *common.TradePair, closeCh chan struct{}, wg *sync.WaitGroup) {
 	tradePairMap := make(map[string]bool)
 	tradePairIterator := database.NewTradePairIterator(movStore)
 	for tradePairIterator.HasNext() {
@@ -469,16 +472,17 @@ func loadTradePairs(movStore database.MovStore) []*common.TradePair {
 			continue
 		}
 
-		tradePairs = append(tradePairs, tradePair)
 		tradePairMap[tradePair.Key()] = true
 		tradePairMap[tradePair.Reverse().Key()] = true
-	}
-	return tradePairs
-}
 
-type matchTxResult struct {
-	matchedTxs []*types.Tx
-	err        error
+		select {
+		case <-closeCh:
+			break
+		case tradePairCh <- tradePair:
+		}
+	}
+	close(tradePairCh)
+	wg.Done()
 }
 
 func matchTxCollector(gasLeft int64, isTimeout func() bool, numOfJobs int, processCh <-chan interface{}, resultCh chan *matchTxResult, closeCh chan<- struct{}) {
@@ -520,7 +524,7 @@ Loop:
 	resultCh <- &matchTxResult{matchedTxs: matchedTxs}
 }
 
-func matchTxWorker(engine *match.Engine, tradePairs []*common.TradePair, processCh chan<- interface{}, closeCh <-chan struct{}, wg *sync.WaitGroup) {
+func matchTxWorker(engine *match.Engine, tradePairCh <-chan *common.TradePair, processCh chan<- interface{}, closeCh <-chan struct{}, wg *sync.WaitGroup) {
 	dispatchData := func(data interface{}, err error) bool {
 		select {
 		case <-closeCh:
@@ -535,7 +539,7 @@ func matchTxWorker(engine *match.Engine, tradePairs []*common.TradePair, process
 		}
 	}
 
-	for _, tradePair := range tradePairs {
+	for tradePair := range tradePairCh {
 		var data interface{}
 		var err error
 		for engine.HasMatchedTx(tradePair, tradePair.Reverse()) {
@@ -566,22 +570,4 @@ func mergeOrders(addOrderMap, deleteOrderMap map[string]*common.Order) ([]*commo
 		deleteOrders = append(deleteOrders, order)
 	}
 	return addOrders, deleteOrders
-}
-
-func splitMatchTxJobs(workerNum int, tradePairs []*common.TradePair) [][]*common.TradePair {
-	sizeOfJobs := len(tradePairs)
-	numOfJobsPerWorker := int(math.Ceil(float64(sizeOfJobs) / float64(workerNum)))
-	var splitJobs [][]*common.TradePair
-	for i := 0; i < workerNum; i++ {
-		begin := i * numOfJobsPerWorker
-		end := (i + 1) * numOfJobsPerWorker
-		if end > sizeOfJobs {
-			end = sizeOfJobs
-		}
-		splitJobs = append(splitJobs, tradePairs[begin:end])
-		if end >= sizeOfJobs {
-			break
-		}
-	}
-	return splitJobs
 }
