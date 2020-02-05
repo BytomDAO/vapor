@@ -84,7 +84,7 @@ func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, nodeProgram []byte, block
 	}
 
 	workerNum := runtime.NumCPU()
-	processCh := make(chan *matchTxResult)
+	processCh := make(chan *matchTxResult, 32)
 	tradePairCh := make(chan *common.TradePair, workerNum)
 	closeCh := make(chan struct{})
 
@@ -484,37 +484,31 @@ type matchTxResult struct {
 func collectMatchedTxs(gasLeft int64, isTimeout func() bool, numOfJobs int, processCh <-chan *matchTxResult, closeCh chan<- struct{}) ([]*types.Tx, error) {
 	var matchedTxs []*types.Tx
 	var completed int
+	defer close(closeCh)
 
-Loop:
-	for {
+	for data := range processCh {
 		if isTimeout() {
-			close(closeCh)
 			break
+		}
+
+		if data.err != nil {
+			return nil, data.err
+		}
+
+		if data.matchedTx != nil {
+			gasUsed := calcMatchedTxGasUsed(data.matchedTx)
+			if gasLeft-gasUsed >= 0 {
+				matchedTxs = append(matchedTxs, data.matchedTx)
+				gasLeft -= gasUsed
+			} else {
+				break
+			}
+		} else {
+			completed++
 		}
 
 		if completed == numOfJobs {
 			break
-		}
-
-		select {
-		case data := <-processCh:
-			if data.err != nil {
-				close(closeCh)
-				return nil, data.err
-			}
-
-			if data.matchedTx != nil {
-				gasUsed := calcMatchedTxGasUsed(data.matchedTx)
-				if gasLeft-gasUsed >= 0 {
-					matchedTxs = append(matchedTxs, data.matchedTx)
-					gasLeft -= gasUsed
-				} else {
-					close(closeCh)
-					break Loop
-				}
-			} else {
-				completed++
-			}
 		}
 	}
 	return matchedTxs, nil
@@ -533,17 +527,27 @@ func matchTxWorker(engine *match.Engine, tradePairCh <-chan *common.TradePair, p
 		}
 	}
 
-	for tradePair := range tradePairCh {
-		for engine.HasMatchedTx(tradePair, tradePair.Reverse()) {
-			matchedTx, err := engine.NextMatchedTx(tradePair, tradePair.Reverse())
-			if done := dispatchData(&matchTxResult{matchedTx: matchedTx, err: err}); done {
+	for {
+		select {
+		case <-closeCh:
+			wg.Done()
+			return
+		case tradePair := <-tradePairCh:
+			if tradePair == nil {
+				dispatchData(&matchTxResult{})
 				wg.Done()
 				return
 			}
+			for engine.HasMatchedTx(tradePair, tradePair.Reverse()) {
+				matchedTx, err := engine.NextMatchedTx(tradePair, tradePair.Reverse())
+				if done := dispatchData(&matchTxResult{matchedTx: matchedTx, err: err}); done {
+					wg.Done()
+					return
+				}
+			}
 		}
+
 	}
-	dispatchData(&matchTxResult{})
-	wg.Done()
 }
 
 func mergeOrders(addOrderMap, deleteOrderMap map[string]*common.Order) ([]*common.Order, []*common.Order) {
