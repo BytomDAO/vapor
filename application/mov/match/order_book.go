@@ -15,7 +15,7 @@ type OrderBook struct {
 	// key of tradePair -> []order
 	dbOrders *sync.Map
 	// key of tradePair -> iterator
-	orderIterators map[string]*database.OrderIterator
+	orderIterators *sync.Map
 
 	// key of tradePair -> []order
 	arrivalAddOrders *sync.Map
@@ -28,7 +28,7 @@ func NewOrderBook(movStore database.MovStore, arrivalAddOrders, arrivalDelOrders
 	return &OrderBook{
 		movStore:       movStore,
 		dbOrders:       &sync.Map{},
-		orderIterators: make(map[string]*database.OrderIterator),
+		orderIterators: &sync.Map{},
 
 		arrivalAddOrders: arrangeArrivalAddOrders(arrivalAddOrders),
 		arrivalDelOrders: arrangeArrivalDelOrders(arrivalDelOrders),
@@ -158,13 +158,13 @@ func arrangeArrivalDelOrders(orders []*common.Order) *sync.Map {
 }
 
 func (o *OrderBook) extendDBOrders(tradePair *common.TradePair) {
-	iterator, ok := o.orderIterators[tradePair.Key()]
+	iterator, ok := o.orderIterators.Load(tradePair.Key())
 	if !ok {
 		iterator = database.NewOrderIterator(o.movStore, tradePair)
-		o.orderIterators[tradePair.Key()] = iterator
+		o.orderIterators.Store(tradePair.Key(), iterator)
 	}
 
-	nextOrders := iterator.NextBatch()
+	nextOrders := iterator.(*database.OrderIterator).NextBatch()
 	orders := o.getDBOrders(tradePair.Key())
 	for i := len(nextOrders) - 1; i >= 0; i-- {
 		orders = append(orders, nextOrders[i])
