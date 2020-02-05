@@ -84,9 +84,8 @@ func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, nodeProgram []byte, block
 	}
 
 	workerNum := runtime.NumCPU()
-	processCh := make(chan interface{})
+	processCh := make(chan *matchTxResult)
 	tradePairCh := make(chan *common.TradePair, workerNum)
-	resultCh := make(chan *matchTxResult, 1)
 	closeCh := make(chan struct{})
 
 	var wg sync.WaitGroup
@@ -98,14 +97,11 @@ func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, nodeProgram []byte, block
 
 	wg.Add(1)
 	go tradePairProducer(m.movStore, tradePairCh, closeCh, &wg)
-	go matchTxCollector(gasLeft, isTimeout, workerNum, processCh, resultCh, closeCh)
 
+	matchedTxs, err := collectMatchedTxs(gasLeft, isTimeout, workerNum, processCh, closeCh)
+	// wait for all goroutine release
 	wg.Wait()
-	result := <-resultCh
-	if result.err != nil {
-		return nil, result.err
-	}
-	return result.matchedTxs, nil
+	return matchedTxs, err
 }
 
 // ChainStatus return the current block height and block hash in dex core
@@ -458,11 +454,6 @@ func getTradePairsFromMatchedTx(tx *types.Tx) ([]*common.TradePair, error) {
 	return tradePairs, nil
 }
 
-type matchTxResult struct {
-	matchedTxs []*types.Tx
-	err        error
-}
-
 func tradePairProducer(movStore database.MovStore, tradePairCh chan<- *common.TradePair, closeCh chan struct{}, wg *sync.WaitGroup) {
 	tradePairMap := make(map[string]bool)
 	tradePairIterator := database.NewTradePairIterator(movStore)
@@ -485,7 +476,12 @@ func tradePairProducer(movStore database.MovStore, tradePairCh chan<- *common.Tr
 	wg.Done()
 }
 
-func matchTxCollector(gasLeft int64, isTimeout func() bool, numOfJobs int, processCh <-chan interface{}, resultCh chan *matchTxResult, closeCh chan<- struct{}) {
+type matchTxResult struct {
+	matchedTx *types.Tx
+	err       error
+}
+
+func collectMatchedTxs(gasLeft int64, isTimeout func() bool, numOfJobs int, processCh <-chan *matchTxResult, closeCh chan<- struct{}) ([]*types.Tx, error) {
 	var matchedTxs []*types.Tx
 	var completed int
 
@@ -502,37 +498,35 @@ Loop:
 
 		select {
 		case data := <-processCh:
-			switch obj := data.(type) {
-			case *types.Tx:
-				gasUsed := calcMatchedTxGasUsed(obj)
+			if data.err != nil {
+				close(closeCh)
+				return nil, data.err
+			}
+
+			if data.matchedTx != nil {
+				gasUsed := calcMatchedTxGasUsed(data.matchedTx)
 				if gasLeft-gasUsed >= 0 {
-					matchedTxs = append(matchedTxs, obj)
+					matchedTxs = append(matchedTxs, data.matchedTx)
 					gasLeft -= gasUsed
 				} else {
 					close(closeCh)
 					break Loop
 				}
-			case error:
-				close(closeCh)
-				resultCh <- &matchTxResult{err: obj}
-				return
-			default:
+			} else {
 				completed++
 			}
 		}
 	}
-	resultCh <- &matchTxResult{matchedTxs: matchedTxs}
+	return matchedTxs, nil
 }
 
-func matchTxWorker(engine *match.Engine, tradePairCh <-chan *common.TradePair, processCh chan<- interface{}, closeCh <-chan struct{}, wg *sync.WaitGroup) {
-	dispatchData := func(data interface{}, err error) bool {
+func matchTxWorker(engine *match.Engine, tradePairCh <-chan *common.TradePair, processCh chan<- *matchTxResult, closeCh <-chan struct{}, wg *sync.WaitGroup) {
+	dispatchData := func(data *matchTxResult) bool {
 		select {
 		case <-closeCh:
-			wg.Done()
 			return true
 		case processCh <- data:
-			if err != nil || data == nil {
-				wg.Done()
+			if data.err != nil {
 				return true
 			}
 			return false
@@ -540,20 +534,16 @@ func matchTxWorker(engine *match.Engine, tradePairCh <-chan *common.TradePair, p
 	}
 
 	for tradePair := range tradePairCh {
-		var data interface{}
-		var err error
 		for engine.HasMatchedTx(tradePair, tradePair.Reverse()) {
-			data, err = engine.NextMatchedTx(tradePair, tradePair.Reverse())
-			if err != nil {
-				data = err
-			}
-
-			if done := dispatchData(data, err); done {
+			matchedTx, err := engine.NextMatchedTx(tradePair, tradePair.Reverse())
+			if done := dispatchData(&matchTxResult{matchedTx: matchedTx, err: err}); done {
+				wg.Done()
 				return
 			}
 		}
 	}
-	dispatchData(nil, nil)
+	dispatchData(&matchTxResult{})
+	wg.Done()
 }
 
 func mergeOrders(addOrderMap, deleteOrderMap map[string]*common.Order) ([]*common.Order, []*common.Order) {
