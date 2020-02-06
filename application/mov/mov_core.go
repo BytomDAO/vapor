@@ -534,6 +534,7 @@ func matchTxWorker(engine *match.Engine, tradePairCh <-chan *common.TradePair, p
 			return
 		case tradePair := <-tradePairCh:
 			if tradePair == nil {
+				// send empty result represent the work is complete
 				dispatchData(&matchTxResult{})
 				wg.Done()
 				return
