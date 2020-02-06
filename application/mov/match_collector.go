@@ -63,6 +63,15 @@ func (m *matchCollector) collect() ([]*types.Tx, error) {
 	defer close(m.closeCh)
 
 	var matchedTxs []*types.Tx
+	appendMatchedTxs := func(data *matchTxResult) bool {
+		gasUsed := calcMatchedTxGasUsed(data.matchedTx)
+		if m.gasLeft -= gasUsed; m.gasLeft >= 0 {
+			matchedTxs = append(matchedTxs, data.matchedTx)
+			return false
+		}
+		return true
+	}
+
 	completed := 0
 	for !m.isTimeout() {
 		select {
@@ -71,14 +80,19 @@ func (m *matchCollector) collect() ([]*types.Tx, error) {
 				return nil, data.err
 			}
 
-			gasUsed := calcMatchedTxGasUsed(data.matchedTx)
-			if m.gasLeft -= gasUsed; m.gasLeft >= 0 {
-				matchedTxs = append(matchedTxs, data.matchedTx)
-			} else {
+			if done := appendMatchedTxs(data); done {
 				return matchedTxs, nil
 			}
 		case <-m.workerNumCh:
 			if completed++; completed == m.workerNum {
+				close(m.processCh)
+				for data := range m.processCh {
+					if data.err != nil {
+						return nil, data.err
+					}
+
+					appendMatchedTxs(data)
+				}
 				return matchedTxs, nil
 			}
 		}
