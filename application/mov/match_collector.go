@@ -85,6 +85,7 @@ func (m *matchCollector) collect() ([]*types.Tx, error) {
 			}
 		case <-m.workerNumCh:
 			if completed++; completed == m.workerNum {
+				// read the remaining process results
 				close(m.processCh)
 				for data := range m.processCh {
 					if data.err != nil {
