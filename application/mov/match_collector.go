@@ -127,22 +127,11 @@ func (m *matchCollector) tradePairProducer(wg *sync.WaitGroup) {
 }
 
 func (m *matchCollector) matchTxWorker(wg *sync.WaitGroup) {
-	dispatchData := func(data *matchTxResult) bool {
-		select {
-		case <-m.closeCh:
-			return true
-		case m.processCh <- data:
-			if data.err != nil {
-				return true
-			}
-			return false
-		}
-	}
-
 	defer func() {
 		m.workerNumCh <- 1
 		wg.Done()
 	}()
+
 	for {
 		select {
 		case <-m.closeCh:
@@ -153,8 +142,14 @@ func (m *matchCollector) matchTxWorker(wg *sync.WaitGroup) {
 			}
 			for m.engine.HasMatchedTx(tradePair, tradePair.Reverse()) {
 				matchedTx, err := m.engine.NextMatchedTx(tradePair, tradePair.Reverse())
-				if done := dispatchData(&matchTxResult{matchedTx: matchedTx, err: err}); done {
+				data := &matchTxResult{matchedTx: matchedTx, err: err}
+				select {
+				case <-m.closeCh:
 					return
+				case m.processCh <- data:
+					if data.err != nil {
+						return
+					}
 				}
 			}
 		}
