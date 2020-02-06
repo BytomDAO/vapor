@@ -529,6 +529,18 @@ func TestBeforeProposalBlock(t *testing.T) {
 			gasLeft:        4000,
 			wantMatchedTxs: []*types.Tx{mock.MatchedTxs[2], mock.MatchedTxs[3]},
 		},
+		{
+			desc: "has multiple trade pairs, and gas left is sufficient",
+			initOrders: []*common.Order{
+				mock.Btc2EthOrders[0],
+				mock.Btc2EthOrders[1],
+				mock.Eth2BtcOrders[2],
+				mock.Eos2EtcOrders[0],
+				mock.Etc2EosOrders[0],
+			},
+			gasLeft:        6000,
+			wantMatchedTxs: []*types.Tx{mock.MatchedTxs[2], mock.MatchedTxs[3], mock.MatchedTxs[5]},
+		},
 	}
 
 	for i, c := range cases {

@@ -38,16 +38,23 @@ func (o *Order) Rate() float64 {
 	return result
 }
 
+func (o *Order) Cmp(other *Order) int {
+	rate := big.NewRat(o.RatioNumerator, o.RatioDenominator)
+	otherRate := big.NewRat(other.RatioNumerator, other.RatioDenominator)
+	return rate.Cmp(otherRate)
+}
+
 // OrderSlice is define for order's sort
 type OrderSlice []*Order
 
 func (o OrderSlice) Len() int      { return len(o) }
 func (o OrderSlice) Swap(i, j int) { o[i], o[j] = o[j], o[i] }
 func (o OrderSlice) Less(i, j int) bool {
-	if o[i].Rate() == o[j].Rate() {
+	cmp := o[i].Cmp(o[j])
+	if cmp == 0 {
 		return hex.EncodeToString(o[i].UTXOHash().Bytes()) < hex.EncodeToString(o[j].UTXOHash().Bytes())
 	}
-	return o[i].Rate() < o[j].Rate()
+	return cmp < 0
 }
 
 // NewOrderFromOutput convert txinput to order

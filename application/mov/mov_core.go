@@ -81,32 +81,9 @@ func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, nodeProgram []byte, block
 	}
 
 	matchEngine := match.NewEngine(orderBook, maxFeeRate, nodeProgram)
-	tradePairMap := make(map[string]bool)
 	tradePairIterator := database.NewTradePairIterator(m.movStore)
-
-	var packagedTxs []*types.Tx
-	for gasLeft > 0 && !isTimeout() && tradePairIterator.HasNext() {
-		tradePair := tradePairIterator.Next()
-		if tradePairMap[tradePair.Key()] {
-			continue
-		}
-		tradePairMap[tradePair.Key()] = true
-		tradePairMap[tradePair.Reverse().Key()] = true
-
-		for gasLeft > 0 && !isTimeout() && matchEngine.HasMatchedTx(tradePair, tradePair.Reverse()) {
-			matchedTx, err := matchEngine.NextMatchedTx(tradePair, tradePair.Reverse())
-			if err != nil {
-				return nil, err
-			}
-
-			gasUsed := calcMatchedTxGasUsed(matchedTx)
-			if gasLeft-gasUsed >= 0 {
-				packagedTxs = append(packagedTxs, matchedTx)
-			}
-			gasLeft -= gasUsed
-		}
-	}
-	return packagedTxs, nil
+	matchCollector := newMatchTxCollector(matchEngine, tradePairIterator, gasLeft, isTimeout)
+	return matchCollector.result()
 }
 
 // ChainStatus return the current block height and block hash in dex core
@@ -283,16 +260,23 @@ func validateMatchedTxFeeAmount(tx *types.Tx) error {
 }
 
 func (m *MovCore) validateMatchedTxSequence(txs []*types.Tx) error {
+	var matchedTxs []*types.Tx
+	for _, tx := range txs {
+		if common.IsMatchedTx(tx) {
+			matchedTxs = append(matchedTxs, tx)
+		}
+	}
+
+	if len(matchedTxs) == 0 {
+		return nil
+	}
+
 	orderBook, err := buildOrderBook(m.movStore, txs)
 	if err != nil {
 		return err
 	}
 
-	for _, matchedTx := range txs {
-		if !common.IsMatchedTx(matchedTx) {
-			continue
-		}
-
+	for _, matchedTx := range matchedTxs {
 		tradePairs, err := getTradePairsFromMatchedTx(matchedTx)
 		if err != nil {
 			return err
@@ -326,7 +310,6 @@ func (m *MovCore) validateMatchedTxSequence(txs []*types.Tx) error {
 	}
 	return nil
 }
-
 
 func validateSpendOrders(matchedTx *types.Tx, orders []*common.Order) error {
 	spendOutputIDs := make(map[string]bool)
