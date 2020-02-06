@@ -64,12 +64,12 @@ func (m *matchCollector) collect() ([]*types.Tx, error) {
 
 	var matchedTxs []*types.Tx
 	for {
+		if m.isTimeout() {
+			return matchedTxs, nil
+		}
+
 		select {
 		case data := <-m.processCh:
-			if m.isTimeout() {
-				return matchedTxs, nil
-			}
-
 			if data.err != nil {
 				return nil, data.err
 			}
