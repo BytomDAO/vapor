@@ -16,8 +16,8 @@ type matchCollector struct {
 	gasLeft           int64
 	isTimeout         func() bool
 
-	workerNum   int32
-	workerNumCh chan int32
+	workerNum   int
+	workerNumCh chan int
 	processCh   chan *matchTxResult
 	tradePairCh chan *common.TradePair
 	closeCh     chan struct{}
@@ -33,8 +33,8 @@ func newMatchTxCollector(engine *match.Engine, iterator *database.TradePairItera
 	return &matchCollector{
 		engine:            engine,
 		tradePairIterator: iterator,
-		workerNum:         int32(workerNum),
-		workerNumCh:       make(chan int32, workerNum),
+		workerNum:         workerNum,
+		workerNumCh:       make(chan int, workerNum),
 		processCh:         make(chan *matchTxResult, 32),
 		tradePairCh:       make(chan *common.TradePair, workerNum),
 		closeCh:           make(chan struct{}),
@@ -63,7 +63,7 @@ func (m *matchCollector) collect() ([]*types.Tx, error) {
 	defer close(m.closeCh)
 
 	var matchedTxs []*types.Tx
-	var completed int32
+	completed := 0
 	for !m.isTimeout() {
 		select {
 		case data := <-m.processCh:
