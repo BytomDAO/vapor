@@ -1,14 +1,12 @@
 package commands
 
 import (
-	"os"
 	"strconv"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/bytom/vapor/node"
-	"github.com/bytom/vapor/util"
 )
 
 var rollbackCmd = &cobra.Command{
@@ -21,12 +19,10 @@ var rollbackCmd = &cobra.Command{
 		height, err := strconv.ParseInt(args[0], 10, 64)
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal("failed to parse int")
-			os.Exit(util.ErrLocalExe)
 		}
 
-		if err = node.Rollback(config, height); err != nil {
+		if err = node.Rollback(config, uint64(height)); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal("failed to rollback")
-			os.Exit(util.ErrLocalExe)
 		}
 	},
 }

@@ -155,12 +155,12 @@ func NewNode(config *cfg.Config) *Node {
 	return node
 }
 
-func Rollback(config *cfg.Config, targetHeight int64) error {
+func Rollback(config *cfg.Config, targetHeight uint64) error {
 	initNodeConfig(config)
 
 	// Get store
-	if config.DBBackend != "memdb" && config.DBBackend != "leveldb" {
-		return errors.New("Param db_backend is invalid, use leveldb or memdb")
+	if config.DBBackend != "leveldb" {
+		return errors.New("Param db_backend is invalid, use leveldb")
 	}
 
 	coreDB := dbm.NewDB("core", config.DBBackend, config.DBDir())
@@ -193,7 +193,7 @@ func initNodeConfig(config *cfg.Config) {
 		log.Fatalf("Failed to init ActiveNetParams:[%s]", err.Error())
 	}
 
-	initCommonConfig(config)
+	cfg.CommonConfig = config
 }
 
 // find whether config xpubs equal genesis block xpubs
@@ -219,10 +219,6 @@ func lockDataDirectory(config *cfg.Config) error {
 		return errors.New("datadir already used by another process")
 	}
 	return nil
-}
-
-func initCommonConfig(config *cfg.Config) {
-	cfg.CommonConfig = config
 }
 
 // Lanch web broser or not

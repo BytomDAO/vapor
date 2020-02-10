@@ -157,10 +157,11 @@ func (c *Chain) rollbackBlock(detachBlockHeader *types.BlockHeader, consensusRes
 	return block, nil
 }
 
-func (c *Chain) Rollback(targetHeight int64) error {
-	if targetHeight <= -1 {
+func (c *Chain) Rollback(targetHeight uint64) error {
+	if targetHeight < 1 {
 		return nil
 	}
+
 	utxoView := state.NewUtxoViewpoint()
 	consensusResult, err := c.getBestConsensusResult()
 	if err != nil {
@@ -168,7 +169,7 @@ func (c *Chain) Rollback(targetHeight int64) error {
 	}
 
 	var detachBlockHeader *types.BlockHeader
-	for detachBlockHeader = c.bestBlockHeader; detachBlockHeader.Height > uint64(targetHeight); {
+	for detachBlockHeader = c.bestBlockHeader; detachBlockHeader.Height > targetHeight; {
 		if c.isIrreversible(detachBlockHeader) {
 			break
 		}
