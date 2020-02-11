@@ -23,6 +23,28 @@ type OrderBook struct {
 	arrivalDelOrders *sync.Map
 }
 
+func arrangeArrivalAddOrders(orders []*common.Order) *sync.Map {
+	orderMap := make(map[string][]*common.Order)
+	for _, order := range orders {
+		orderMap[order.TradePair().Key()] = append(orderMap[order.TradePair().Key()], order)
+	}
+
+	arrivalOrderMap := &sync.Map{}
+	for key, orders := range orderMap {
+		sort.Sort(sort.Reverse(common.OrderSlice(orders)))
+		arrivalOrderMap.Store(key, orders)
+	}
+	return arrivalOrderMap
+}
+
+func arrangeArrivalDelOrders(orders []*common.Order) *sync.Map {
+	arrivalDelOrderMap := &sync.Map{}
+	for _, order := range orders {
+		arrivalDelOrderMap.Store(order.Key(), order)
+	}
+	return arrivalDelOrderMap
+}
+
 // NewOrderBook create a new OrderBook object
 func NewOrderBook(movStore database.MovStore, arrivalAddOrders, arrivalDelOrders []*common.Order) *OrderBook {
 	return &OrderBook{
@@ -35,7 +57,8 @@ func NewOrderBook(movStore database.MovStore, arrivalAddOrders, arrivalDelOrders
 	}
 }
 
-// AddOrder add the in memory temp order to order table
+// AddOrder add the in memory temp order to order table, because temp order is what left for the
+// partial trade order, so the price should be lowest.
 func (o *OrderBook) AddOrder(order *common.Order) error {
 	tradePairKey := order.TradePair().Key()
 	orders := o.getArrivalAddOrders(tradePairKey)
@@ -46,6 +69,11 @@ func (o *OrderBook) AddOrder(order *common.Order) error {
 	orders = append(orders, order)
 	o.arrivalAddOrders.Store(tradePairKey, orders)
 	return nil
+}
+
+// DelOrder mark the order has been deleted in order book
+func (o *OrderBook) DelOrder(order *common.Order) {
+	o.arrivalDelOrders.Store(order.Key(), order)
 }
 
 // PeekOrder return the next lowest order of given trade pair
@@ -95,12 +123,13 @@ func (o *OrderBook) PopOrder(tradePair *common.TradePair) {
 
 	orders := o.getDBOrders(tradePair.Key())
 	if len(orders) != 0 && orders[len(orders)-1].Key() == order.Key() {
-		o.dbOrders.Store(tradePair.Key(), orders[0 : len(orders)-1])
+		o.dbOrders.Store(tradePair.Key(), orders[0:len(orders)-1])
+		return
 	}
 
 	arrivalOrders := o.getArrivalAddOrders(tradePair.Key())
 	if len(arrivalOrders) != 0 && arrivalOrders[len(arrivalOrders)-1].Key() == order.Key() {
-		o.arrivalAddOrders.Store(tradePair.Key(), arrivalOrders[0 : len(arrivalOrders)-1])
+		o.arrivalAddOrders.Store(tradePair.Key(), arrivalOrders[0:len(arrivalOrders)-1])
 	}
 }
 
@@ -134,29 +163,6 @@ func (o *OrderBook) getArrivalDelOrders(orderKey string) *common.Order {
 	return nil
 }
 
-func arrangeArrivalAddOrders(orders []*common.Order) *sync.Map {
-	orderMap := make(map[string][]*common.Order)
-	for _, order := range orders {
-		orderMap[order.TradePair().Key()] = append(orderMap[order.TradePair().Key()], order)
-	}
-
-	arrivalOrderMap := &sync.Map{}
-	for key, orders := range orderMap {
-		sort.Sort(sort.Reverse(common.OrderSlice(orders)))
-		arrivalOrderMap.Store(key, orders)
-
-	}
-	return arrivalOrderMap
-}
-
-func arrangeArrivalDelOrders(orders []*common.Order) *sync.Map {
-	arrivalDelOrderMap := &sync.Map{}
-	for _, order := range orders {
-		arrivalDelOrderMap.Store(order.Key(), order)
-	}
-	return arrivalDelOrderMap
-}
-
 func (o *OrderBook) extendDBOrders(tradePair *common.TradePair) {
 	iterator, ok := o.orderIterators.Load(tradePair.Key())
 	if !ok {
@@ -173,8 +179,23 @@ func (o *OrderBook) extendDBOrders(tradePair *common.TradePair) {
 }
 
 func (o *OrderBook) peekArrivalOrder(tradePair *common.TradePair) *common.Order {
-	if arrivalAddOrders := o.getArrivalAddOrders(tradePair.Key()); len(arrivalAddOrders) > 0 {
-		return arrivalAddOrders[len(arrivalAddOrders)-1]
+	orders := o.getArrivalAddOrders(tradePair.Key())
+	delPos := len(orders)
+	for i := delPos - 1; i >= 0; i-- {
+		if o.getArrivalDelOrders(orders[i].Key()) != nil {
+			delPos = i
+		} else {
+			break
+		}
+	}
+
+	if delPos < len(orders) {
+		orders = orders[:delPos]
+		o.arrivalAddOrders.Store(tradePair.Key(), orders)
+	}
+
+	if size := len(orders); size > 0 {
+		return orders[size-1]
 	}
 	return nil
 }
