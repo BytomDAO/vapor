@@ -267,14 +267,34 @@ func (s *Store) DeleteBlock(block *types.Block) error {
 	startTime := time.Now()
 	blockHash := block.Hash()
 
+	hash := block.Hash()
+	blockHashes, err := s.GetBlockHashesByHeight(block.Height)
+	if err != nil {
+		return err
+	}
+	blockHashes = s.deleteHashFromHashes(&hash, blockHashes)
+
 	batch := s.db.NewBatch()
-	batch.Delete(calcBlockHashesPrefix(block.Height))
+	if len(blockHashes) == 0 {
+		batch.Delete(calcBlockHashesPrefix(block.Height))
+
+	} else {
+		binaryBlockHashes, err := json.Marshal(blockHashes)
+		if err != nil {
+			return errors.Wrap(err, "Marshal block hashes")
+		}
+
+		batch.Set(calcBlockHashesPrefix(block.Height), binaryBlockHashes)
+	}
+
 	batch.Delete(calcBlockHeaderKey(&blockHash))
 	batch.Delete(calcBlockTransactionsKey(&blockHash))
 	batch.Delete(calcTxStatusKey(&blockHash))
 	batch.Write()
 
 	s.cache.removeBlockHashes(block.Height)
+	s.cache.removeBlockHeader(&block.BlockHeader)
+
 	log.WithFields(log.Fields{
 		"module":   logModule,
 		"height":   block.Height,
@@ -410,4 +430,26 @@ func (s *Store) SaveChainStatus(blockHeader, irrBlockHeader *types.BlockHeader, 
 		clearCacheFunc()
 	}
 	return nil
+}
+
+func (s *Store) getHashIndexFromHashes(hash *bc.Hash, hashes []*bc.Hash) int {
+	for index := 0; index < len(hashes); index++ {
+		if hashes[index] == hash {
+			return index
+		}
+	}
+
+	return -1
+}
+
+func (s *Store) deleteHashFromHashes(hash *bc.Hash, hashes []*bc.Hash) []*bc.Hash {
+	if len(hashes) == 0 {
+		return hashes
+	}
+
+	if index := s.getHashIndexFromHashes(hash, hashes); index != -1 {
+		hashes = append(hashes[0:index], hashes[index+1:len(hashes)]...)
+	}
+
+	return hashes
 }

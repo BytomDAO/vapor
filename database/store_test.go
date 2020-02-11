@@ -290,3 +290,193 @@ func TestSaveBlockHeader(t *testing.T) {
 		}
 	}
 }
+
+func TestDeleteBlock(t *testing.T) {
+	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	defer func() {
+		testDB.Close()
+		os.RemoveAll("temp")
+	}()
+
+	store := NewStore(testDB)
+	coinbaseTxData := &types.TxData{
+		Version: 1,
+		Inputs: []*types.TxInput{
+			types.NewCoinbaseInput([]byte("Information is power. -- Jan/11/2013. Computing is power. -- Apr/24/2018.")),
+		},
+		Outputs: []*types.TxOutput{
+			types.NewVoteOutput(*consensus.BTMAssetID, uint64(10000), []byte{0x51}, []byte{0x51}),
+		},
+	}
+	coinbaseTx := types.NewTx(*coinbaseTxData)
+
+	cases := []struct {
+		blockHeaderData []*types.BlockHeader
+		txStatusData    []*bc.TransactionStatus
+
+		newBlockHeaderData []*types.BlockHeader
+		newTxStatusData    []*bc.TransactionStatus
+	}{
+		{
+			blockHeaderData: []*types.BlockHeader{
+				{
+					Version:   uint64(1),
+					Height:    uint64(1),
+					Timestamp: uint64(1528945000),
+				},
+				{
+					Version:   uint64(1),
+					Height:    uint64(2),
+					Timestamp: uint64(1528945005),
+				},
+			},
+			txStatusData: []*bc.TransactionStatus{
+				{
+					VerifyStatus: []*bc.TxVerifyResult{
+						{StatusFail: false},
+					},
+				},
+				{
+					VerifyStatus: []*bc.TxVerifyResult{
+						{StatusFail: false},
+					},
+				},
+			},
+			newBlockHeaderData: []*types.BlockHeader{
+				{
+					Version:   uint64(1),
+					Height:    uint64(1),
+					Timestamp: uint64(1528945030),
+				},
+				{
+					Version:   uint64(1),
+					Height:    uint64(2),
+					Timestamp: uint64(1528945050),
+				},
+			},
+			newTxStatusData: []*bc.TransactionStatus{
+				{
+					VerifyStatus: []*bc.TxVerifyResult{
+						{StatusFail: false},
+					},
+				},
+				{
+					VerifyStatus: []*bc.TxVerifyResult{
+						{StatusFail: false},
+					},
+				},
+			},
+		},
+		{
+			blockHeaderData: []*types.BlockHeader{
+				{
+					Version:   uint64(1),
+					Height:    uint64(2),
+					Timestamp: uint64(1528945005),
+				},
+			},
+			txStatusData: []*bc.TransactionStatus{
+				{
+					VerifyStatus: []*bc.TxVerifyResult{
+						{StatusFail: false},
+					},
+				},
+			},
+		},
+	}
+
+	for _, c := range cases {
+		txs := []*bc.Tx{coinbaseTx.Tx}
+		blockNum := len(c.blockHeaderData)
+		storeBlockData := []*types.Block{}
+		merkleRoot, _ := types.TxMerkleRoot(txs)
+		for i := 0; i < blockNum; i++ {
+			txStatusHash, _ := types.TxStatusMerkleRoot(c.txStatusData[i].VerifyStatus)
+			block := &types.Block{
+				BlockHeader: types.BlockHeader{
+					Version:   c.blockHeaderData[i].Version,
+					Height:    c.blockHeaderData[i].Height,
+					Timestamp: c.blockHeaderData[i].Timestamp,
+					BlockCommitment: types.BlockCommitment{
+						TransactionsMerkleRoot: merkleRoot,
+						TransactionStatusHash:  txStatusHash,
+					},
+				},
+			}
+			storeBlockData = append(storeBlockData, block)
+
+			if err := store.SaveBlock(block, c.txStatusData[i]); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		for i := len(storeBlockData) - 1; i >= 0; i-- {
+			block := storeBlockData[i]
+			blockHash := block.Hash()
+			if !store.BlockExist(&blockHash) {
+				t.Errorf("check0: block not exist :%v, expect exists!", block)
+			}
+
+			if err := store.DeleteBlock(block); err != nil {
+				t.Fatal(err)
+			}
+
+			if store.BlockExist(&blockHash) {
+				t.Errorf("check1: block exist :%v, expect delete it!", block)
+			}
+
+			if getBlock, err := store.GetBlock(&blockHash); err == nil {
+				t.Errorf("check2: block exist :%v", getBlock)
+			}
+
+		}
+
+		for i := len(storeBlockData) - 1; i >= 0; i-- {
+			block := storeBlockData[i]
+			blockHash := block.Hash()
+
+			if store.BlockExist(&blockHash) {
+				t.Errorf("check3: block exist :%v, expect delete it!", block)
+			}
+		}
+
+		newBlockNum := len(c.newBlockHeaderData)
+		for i := 0; i < newBlockNum; i++ {
+			txStatusHash, _ := types.TxStatusMerkleRoot(c.newTxStatusData[i].VerifyStatus)
+			block := &types.Block{
+				BlockHeader: types.BlockHeader{
+					Version:   c.newBlockHeaderData[i].Version,
+					Height:    c.newBlockHeaderData[i].Height,
+					Timestamp: c.newBlockHeaderData[i].Timestamp,
+					BlockCommitment: types.BlockCommitment{
+						TransactionsMerkleRoot: merkleRoot,
+						TransactionStatusHash:  txStatusHash,
+					},
+				},
+			}
+
+			if err := store.SaveBlock(block, c.newTxStatusData[i]); err != nil {
+				t.Fatal(err)
+			}
+
+			blockHash := block.Hash()
+			gotBlock, err := store.GetBlock(&blockHash)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !testutil.DeepEqual(gotBlock, block) {
+				t.Errorf("case %v: block mismatch: have %x, want %x", i, gotBlock, block)
+			}
+
+			getBlockHeader, err := store.GetBlockHeader(&blockHash)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !testutil.DeepEqual(block.BlockHeader, *getBlockHeader) {
+				t.Errorf("got block header:%v, expect block header:%v", getBlockHeader, block.BlockHeader)
+			}
+		}
+	}
+}
