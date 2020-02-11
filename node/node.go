@@ -156,7 +156,9 @@ func NewNode(config *cfg.Config) *Node {
 }
 
 func Rollback(config *cfg.Config, targetHeight uint64) error {
-	initNodeConfig(config)
+	if err := initNodeConfig(config); err != nil {
+		return err
+	}
 
 	// Get store
 	if config.DBBackend != "leveldb" {
@@ -180,13 +182,15 @@ func Rollback(config *cfg.Config, targetHeight uint64) error {
 	return nil
 }
 
-func initNodeConfig(config *cfg.Config) {
+func initNodeConfig(config *cfg.Config) error {
 	if err := lockDataDirectory(config); err != nil {
-		cmn.Exit("Error: " + err.Error())
+		log.WithField("err", err).Info("Error: " + err.Error())
+		return err
 	}
 
 	if err := cfg.LoadFederationFile(config.FederationFile(), config); err != nil {
-		cmn.Exit(cmn.Fmt("Failed to load federated information:[%s]", err.Error()))
+		log.WithField("err", err).Info("Failed to load federated information")
+		return err
 	}
 
 	if err := consensus.InitActiveNetParams(config.ChainID); err != nil {
@@ -194,6 +198,7 @@ func initNodeConfig(config *cfg.Config) {
 	}
 
 	cfg.CommonConfig = config
+	return nil
 }
 
 // find whether config xpubs equal genesis block xpubs
