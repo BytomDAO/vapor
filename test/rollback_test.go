@@ -1,6 +1,7 @@
 package test
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -74,7 +75,7 @@ func TestRollbackBlock(t *testing.T) {
 	for i := 0; i < 7; i++ {
 		mainChainBlockHeader = &types.BlockHeader{
 			PreviousBlockHash: mainChainBlockHeader.Hash(),
-			Height:            uint64(i),
+			Height:            uint64(i + 1),
 		}
 		mainBlock = &types.Block{
 			BlockHeader: types.BlockHeader{
@@ -88,6 +89,7 @@ func TestRollbackBlock(t *testing.T) {
 			},
 		}
 
+		chain.SetBestBlockHeader(mainChainBlockHeader)
 		blocks = append(blocks, mainBlock)
 
 		if err := store.SaveBlockHeader(mainChainBlockHeader); err != nil {
@@ -104,7 +106,13 @@ func TestRollbackBlock(t *testing.T) {
 	}
 
 	for i := 0; i < len(blocks); i++ {
+		block := blocks[i]
+		blockHash := block.Hash()
 
+		if getBlock, err := store.GetBlock(&blockHash); err == nil {
+			t.Errorf("check2: block exist :%v", getBlock)
+		}
 	}
 
+	fmt.Println("abcd!")
 }

@@ -1,6 +1,8 @@
 package protocol
 
 import (
+	"fmt"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/vapor/config"
@@ -157,15 +159,20 @@ func (c *Chain) rollbackBlock(detachBlockHeader *types.BlockHeader, consensusRes
 	return block, nil
 }
 
+func (c *Chain) SetBestBlockHeader(header *types.BlockHeader) {
+	c.bestBlockHeader = header
+}
+
 func (c *Chain) Rollback(targetHeight uint64) error {
 	utxoView := state.NewUtxoViewpoint()
 	consensusResult, err := c.getBestConsensusResult()
 	if err != nil {
 		return err
 	}
-
+	fmt.Println("c.bestBlockHeader", c.bestBlockHeader, "detachBlockHeader.Height", c.bestBlockHeader.Height)
 	var detachBlockHeader *types.BlockHeader
 	for detachBlockHeader = c.bestBlockHeader; detachBlockHeader.Height > targetHeight; {
+		fmt.Println("detachBlockHeader", detachBlockHeader)
 		if c.isIrreversible(detachBlockHeader) {
 			break
 		}
