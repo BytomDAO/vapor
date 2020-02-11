@@ -158,10 +158,6 @@ func (c *Chain) rollbackBlock(detachBlockHeader *types.BlockHeader, consensusRes
 }
 
 func (c *Chain) Rollback(targetHeight uint64) error {
-	if targetHeight < 1 {
-		return nil
-	}
-
 	utxoView := state.NewUtxoViewpoint()
 	consensusResult, err := c.getBestConsensusResult()
 	if err != nil {
