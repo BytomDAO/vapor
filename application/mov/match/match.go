@@ -208,6 +208,7 @@ func addMatchTxOutput(txData *types.TxData, txInput *types.TxInput, order *commo
 	return nil
 }
 
+// CalcRequestAmount is from amount * numerator / ratioDenominator
 func CalcRequestAmount(fromAmount uint64, contractArg *vmutil.MagneticContractArgs) uint64 {
 	res := big.NewInt(0).SetUint64(fromAmount)
 	res.Mul(res, big.NewInt(contractArg.RatioNumerator)).Quo(res, big.NewInt(contractArg.RatioDenominator))
@@ -234,6 +235,7 @@ func calcOppositeIndex(size int, selfIdx int) int {
 	return (selfIdx + 1) % size
 }
 
+// IsMatched check does the orders can be exchange
 func IsMatched(orders []*common.Order) bool {
 	sortedOrders := sortOrders(orders)
 	if len(sortedOrders) == 0 {
@@ -283,6 +285,10 @@ func validateTradePairs(tradePairs []*common.TradePair) error {
 }
 
 func sortOrders(orders []*common.Order) []*common.Order {
+	if len(orders) == 0 {
+		return nil
+	}
+
 	orderMap := make(map[bc.AssetID]*common.Order)
 	firstOrder := orders[0]
 	for i := 1; i < len(orders); i++ {

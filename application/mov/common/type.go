@@ -28,16 +28,17 @@ type Order struct {
 	RatioDenominator int64
 }
 
+// Rate return the exchange represented by float64
 func (o *Order) Rate() float64 {
 	if o.RatioDenominator == 0 {
 		return 0
 	}
-	rate := big.NewFloat(0).SetInt64(o.RatioNumerator)
-	rate.Quo(rate, big.NewFloat(0).SetInt64(o.RatioDenominator))
+	rate := big.NewRat(o.RatioNumerator, o.RatioDenominator)
 	result, _ := rate.Float64()
 	return result
 }
 
+// Cmp compares x and y and returns -1 if x <  y, 0 if x == y, +1 if x >  y
 func (o *Order) Cmp(other *Order) int {
 	rate := big.NewRat(o.RatioNumerator, o.RatioDenominator)
 	otherRate := big.NewRat(other.RatioNumerator, other.RatioDenominator)

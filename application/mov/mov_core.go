@@ -53,15 +53,13 @@ func (m *MovCore) ApplyBlock(block *types.Block) error {
 		if err := m.movStore.InitDBState(block.Height, &blockHash); err != nil {
 			return err
 		}
-
-		return nil
 	}
 
 	if err := m.validateMatchedTxSequence(block.Transactions); err != nil {
 		return err
 	}
 
-	addOrders, deleteOrders, err := applyTransactions(block.Transactions)
+	addOrders, deleteOrders, err := decodeTxsOrders(block.Transactions)
 	if err != nil {
 		return err
 	}
@@ -99,11 +97,11 @@ func (m *MovCore) ChainStatus() (uint64, *bc.Hash, error) {
 // DetachBlock parse pending order and cancel from the the transactions of block
 // and add cancel order to the dex db, remove pending order from dex db.
 func (m *MovCore) DetachBlock(block *types.Block) error {
-	if block.Height <= m.startBlockHeight {
+	if block.Height < m.startBlockHeight {
 		return nil
 	}
 
-	deleteOrders, addOrders, err := applyTransactions(block.Transactions)
+	deleteOrders, addOrders, err := decodeTxsOrders(block.Transactions)
 	if err != nil {
 		return err
 	}
@@ -147,15 +145,13 @@ func (m *MovCore) ValidateTxs(txs []*types.Tx, verifyResults []*bc.TxVerifyResul
 	return nil
 }
 
-// ValidateTxs validate one transaction.
+// ValidateTx validate one transaction.
 func (m *MovCore) ValidateTx(tx *types.Tx, verifyResult *bc.TxVerifyResult) error {
 	if common.IsMatchedTx(tx) {
 		if err := validateMatchedTx(tx, verifyResult); err != nil {
 			return err
 		}
-	}
-
-	if common.IsCancelOrderTx(tx) {
+	} else if common.IsCancelOrderTx(tx) {
 		if err := validateCancelOrderTx(tx, verifyResult); err != nil {
 			return err
 		}
@@ -260,49 +256,37 @@ func validateMatchedTxFeeAmount(tx *types.Tx) error {
 }
 
 func (m *MovCore) validateMatchedTxSequence(txs []*types.Tx) error {
-	var matchedTxs []*types.Tx
+	orderBook := match.NewOrderBook(m.movStore, nil, nil)
 	for _, tx := range txs {
 		if common.IsMatchedTx(tx) {
-			matchedTxs = append(matchedTxs, tx)
-		}
-	}
-
-	if len(matchedTxs) == 0 {
-		return nil
-	}
-
-	orderBook, err := buildOrderBook(m.movStore, txs)
-	if err != nil {
-		return err
-	}
-
-	for _, matchedTx := range matchedTxs {
-		tradePairs, err := getTradePairsFromMatchedTx(matchedTx)
-		if err != nil {
-			return err
-		}
-
-		orders := orderBook.PeekOrders(tradePairs)
-		if !match.IsMatched(orders) {
-			return errNotMatchedOrder
-		}
-
-		if err := validateSpendOrders(matchedTx, orders); err != nil {
-			return err
-		}
-
-		orderBook.PopOrders(tradePairs)
-
-		for i, output := range matchedTx.Outputs {
-			if !segwit.IsP2WMCScript(output.ControlProgram()) {
-				continue
-			}
-
-			order, err := common.NewOrderFromOutput(matchedTx, i)
+			tradePairs, err := getTradePairsFromMatchedTx(tx)
 			if err != nil {
 				return err
 			}
 
+			orders := orderBook.PeekOrders(tradePairs)
+			if err := validateSpendOrders(tx, orders); err != nil {
+				return err
+			}
+
+			orderBook.PopOrders(tradePairs)
+		} else if common.IsCancelOrderTx(tx) {
+			orders, err := getDeleteOrdersFromTx(tx)
+			if err != nil {
+				return err
+			}
+
+			for _, order := range orders {
+				orderBook.DelOrder(order)
+			}
+		}
+
+		addOrders, err := getAddOrdersFromTx(tx)
+		if err != nil {
+			return err
+		}
+
+		for _, order := range addOrders {
 			if err := orderBook.AddOrder(order); err != nil {
 				return err
 			}
@@ -311,9 +295,13 @@ func (m *MovCore) validateMatchedTxSequence(txs []*types.Tx) error {
 	return nil
 }
 
-func validateSpendOrders(matchedTx *types.Tx, orders []*common.Order) error {
+func validateSpendOrders(tx *types.Tx, orders []*common.Order) error {
+	if len(tx.Inputs) != len(orders) {
+		return errNotMatchedOrder
+	}
+
 	spendOutputIDs := make(map[string]bool)
-	for _, input := range matchedTx.Inputs {
+	for _, input := range tx.Inputs {
 		spendOutputID, err := input.SpentOutputID()
 		if err != nil {
 			return err
@@ -331,7 +319,7 @@ func validateSpendOrders(matchedTx *types.Tx, orders []*common.Order) error {
 	return nil
 }
 
-func applyTransactions(txs []*types.Tx) ([]*common.Order, []*common.Order, error) {
+func decodeTxsOrders(txs []*types.Tx) ([]*common.Order, []*common.Order, error) {
 	deleteOrderMap := make(map[string]*common.Order)
 	addOrderMap := make(map[string]*common.Order)
 	for _, tx := range txs {
@@ -383,10 +371,6 @@ func buildOrderBook(store database.MovStore, txs []*types.Tx) (*match.OrderBook,
 	}
 
 	return match.NewOrderBook(store, arrivalAddOrders, arrivalDelOrders), nil
-}
-
-func calcMatchedTxGasUsed(tx *types.Tx) int64 {
-	return int64(len(tx.Inputs))*150 + int64(tx.SerializedSize)
 }
 
 func getAddOrdersFromTx(tx *types.Tx) ([]*common.Order, error) {
