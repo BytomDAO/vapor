@@ -159,10 +159,6 @@ func (c *Chain) rollbackBlock(detachBlockHeader *types.BlockHeader, consensusRes
 	return block, nil
 }
 
-func (c *Chain) SetBestBlockHeader(header *types.BlockHeader) {
-	c.bestBlockHeader = header
-}
-
 func (c *Chain) Rollback(targetHeight uint64) error {
 	utxoView := state.NewUtxoViewpoint()
 	consensusResult, err := c.getBestConsensusResult()
