@@ -237,11 +237,11 @@ func calcOppositeIndex(size int, selfIdx int) int {
 
 // IsMatched check does the orders can be exchange
 func IsMatched(orders []*common.Order) bool {
-	if len(orders) == 0 {
+	sortedOrders := sortOrders(orders)
+	if len(sortedOrders) == 0 {
 		return false
 	}
 
-	sortedOrders := sortOrders(orders)
 	rate := big.NewRat(sortedOrders[0].RatioDenominator, sortedOrders[0].RatioNumerator)
 	oppositeRate := big.NewRat(1, 1)
 	for i := 1; i < len(sortedOrders); i++ {
@@ -285,6 +285,10 @@ func validateTradePairs(tradePairs []*common.TradePair) error {
 }
 
 func sortOrders(orders []*common.Order) []*common.Order {
+	if len(orders) == 0 {
+		return nil
+	}
+
 	orderMap := make(map[bc.AssetID]*common.Order)
 	firstOrder := orders[0]
 	for i := 1; i < len(orders); i++ {
