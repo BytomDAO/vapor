@@ -596,6 +596,126 @@ func TestBeforeProposalBlock(t *testing.T) {
 	}
 }
 
+func TestValidateMatchedTxSequence(t *testing.T) {
+	cases := []struct {
+		desc         string
+		initOrders   []*common.Order
+		transactions []*types.Tx
+		wantError    error
+	}{
+		{
+			desc:         "both db orders and transactions is empty",
+			initOrders:   []*common.Order{},
+			transactions: []*types.Tx{},
+			wantError:    nil,
+		},
+		{
+			desc:         "existing matched orders in db, and transactions is empty",
+			initOrders:   []*common.Order{mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0]},
+			transactions: []*types.Tx{},
+			wantError:    nil,
+		},
+		{
+			desc:         "db orders is empty, but transactions has matched tx",
+			initOrders:   []*common.Order{},
+			transactions: []*types.Tx{mock.MatchedTxs[1]},
+			wantError:    errNotMatchedOrder,
+		},
+		{
+			desc:         "existing matched orders in db, and corresponding matched tx in transactions",
+			initOrders:   []*common.Order{mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0]},
+			transactions: []*types.Tx{mock.MatchedTxs[1]},
+			wantError:    nil,
+		},
+		{
+			desc: "existing two matched orders in db, and only one corresponding matched tx in transactions",
+			initOrders: []*common.Order{
+				mock.Btc2EthOrders[3], mock.Eth2BtcOrders[2],
+				mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0],
+			},
+			transactions: []*types.Tx{mock.MatchedTxs[8]},
+			wantError:    nil,
+		},
+		{
+			desc: "existing two matched orders in db, and the sequence of match txs in incorrect",
+			initOrders: []*common.Order{
+				mock.Btc2EthOrders[3], mock.Eth2BtcOrders[2],
+				mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0],
+			},
+			transactions: []*types.Tx{mock.MatchedTxs[1], mock.MatchedTxs[8]},
+			wantError:    errSpendOutputIDIsIncorrect,
+		},
+		{
+			desc:         "package full matched tx from maker tx",
+			initOrders:   []*common.Order{},
+			transactions: []*types.Tx{mock.Btc2EthMakerTxs[0], mock.Eth2BtcMakerTxs[1], mock.MatchedTxs[4]},
+			wantError:    nil,
+		},
+		{
+			desc:         "package the matched tx first, then package match orders",
+			initOrders:   []*common.Order{},
+			transactions: []*types.Tx{mock.MatchedTxs[4], mock.Btc2EthMakerTxs[0], mock.Eth2BtcMakerTxs[1]},
+			wantError:    errNotMatchedOrder,
+		},
+		{
+			desc:         "cancel order in transactions",
+			initOrders:   []*common.Order{mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0]},
+			transactions: []*types.Tx{mock.Btc2EthCancelTxs[0], mock.MatchedTxs[1]},
+			wantError:    errNotMatchedOrder,
+		},
+		{
+			desc:         "package cancel order after match tx",
+			initOrders:   []*common.Order{mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0]},
+			transactions: []*types.Tx{mock.MatchedTxs[1], mock.Btc2EthCancelTxs[0]},
+			wantError:    nil,
+		},
+		{
+			desc: "package matched txs of different trade pairs",
+			initOrders: []*common.Order{
+				mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0],
+				mock.Eos2EtcOrders[0], mock.Etc2EosOrders[0],
+			},
+			transactions: []*types.Tx{mock.MatchedTxs[1], mock.MatchedTxs[9]},
+			wantError:    nil,
+		},
+		{
+			desc: "package matched txs of different trade pairs in different sequence",
+			initOrders: []*common.Order{
+				mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0],
+				mock.Eos2EtcOrders[0], mock.Etc2EosOrders[0],
+			},
+			transactions: []*types.Tx{mock.MatchedTxs[9], mock.MatchedTxs[1]},
+			wantError:    nil,
+		},
+		{
+			desc:         "package partial matched tx from db orders",
+			initOrders:   []*common.Order{mock.Btc2EthOrders[0], mock.Btc2EthOrders[1], mock.Eth2BtcOrders[2]},
+			transactions: []*types.Tx{mock.MatchedTxs[2], mock.MatchedTxs[3]},
+			wantError:    nil,
+		},
+	}
+
+	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		store := database.NewLevelDBMovStore(testDB)
+		if err := store.InitDBState(0, &bc.Hash{}); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := store.ProcessOrders(c.initOrders, nil, initBlockHeader); err != nil {
+			t.Fatal(err)
+		}
+
+		movCore := &MovCore{movStore: store}
+		if err := movCore.validateMatchedTxSequence(c.transactions); err != c.wantError {
+			t.Errorf("#%d(%s):wanet error(%v), got error(%v)", i, c.desc, c.wantError, err)
+		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
+	}
+}
+
 type testFun func(movCore *MovCore, block *types.Block) error
 
 func applyBlock(movCore *MovCore, block *types.Block) error {
