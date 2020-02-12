@@ -646,7 +646,7 @@ func TestValidateMatchedTxSequence(t *testing.T) {
 			wantError:    errSpendOutputIDIsIncorrect,
 		},
 		{
-			desc:         "package the matched tx",
+			desc:         "package full matched tx from maker tx",
 			initOrders:   []*common.Order{},
 			transactions: []*types.Tx{mock.Btc2EthMakerTxs[0], mock.Eth2BtcMakerTxs[1], mock.MatchedTxs[4]},
 			wantError:    nil,
@@ -685,6 +685,12 @@ func TestValidateMatchedTxSequence(t *testing.T) {
 				mock.Eos2EtcOrders[0], mock.Etc2EosOrders[0],
 			},
 			transactions: []*types.Tx{mock.MatchedTxs[9], mock.MatchedTxs[1]},
+			wantError:    nil,
+		},
+		{
+			desc:         "package partial matched tx from db orders",
+			initOrders:   []*common.Order{mock.Btc2EthOrders[0], mock.Btc2EthOrders[1], mock.Eth2BtcOrders[2]},
+			transactions: []*types.Tx{mock.MatchedTxs[2], mock.MatchedTxs[3]},
 			wantError:    nil,
 		},
 	}
