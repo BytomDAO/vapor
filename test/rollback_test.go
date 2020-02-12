@@ -55,56 +55,57 @@ func TestRollback(t *testing.T) {
 		{StatusFail: false},
 	})
 
-	mainChainBlockHeader := &types.BlockHeader{
-		Height:  0,
-		Version: 1,
+	mainBlock := &types.Block{
+		BlockHeader: types.BlockHeader{
+			Version:   1,
+			Height:    0,
+			Timestamp: uint64(1528945000),
+			BlockCommitment: types.BlockCommitment{
+				TransactionsMerkleRoot: merkleRoot,
+				TransactionStatusHash:  txStatusHash,
+			},
+		},
+	}
+	if err := store.SaveBlock(mainBlock, txStatus); err != nil {
+		t.Fatal(err)
 	}
 
-	initBlockHeaderArray = append(initBlockHeaderArray, mainChainBlockHeader)
+	initBlockHeaderArray = append(initBlockHeaderArray, &mainBlock.BlockHeader)
 	for i := 1; i <= InitBlockNum; i++ {
-		mainChainBlockHeader = &types.BlockHeader{
-			PreviousBlockHash: mainChainBlockHeader.Hash(),
-			Height:            uint64(i + 1),
-		}
-		initBlockHeaderArray = append(initBlockHeaderArray, mainChainBlockHeader)
-
 		mainBlock := &types.Block{
 			BlockHeader: types.BlockHeader{
-				Version:   mainChainBlockHeader.Version,
-				Height:    mainChainBlockHeader.Height,
-				Timestamp: mainChainBlockHeader.Timestamp,
+				PreviousBlockHash: mainBlock.Hash(),
+				Version:           1,
+				Height:            uint64(i),
+				Timestamp:         uint64(1528945000 + i),
 				BlockCommitment: types.BlockCommitment{
 					TransactionsMerkleRoot: merkleRoot,
 					TransactionStatusHash:  txStatusHash,
 				},
 			},
 		}
+		initBlockHeaderArray = append(initBlockHeaderArray, &mainBlock.BlockHeader)
 		initBlockArray = append(initBlockArray, mainBlock)
 
-		//fmt.Println()
 		if err := store.SaveBlock(mainBlock, txStatus); err != nil {
 			t.Fatal(err)
 		}
 	}
 
 	for i := 1; i <= appendBlockNum; i++ {
-		mainChainBlockHeader = &types.BlockHeader{
-			PreviousBlockHash: mainChainBlockHeader.Hash(),
-			Height:            uint64(InitBlockNum + 1),
-		}
-		appendBlockHeaderArray = append(appendBlockHeaderArray, mainChainBlockHeader)
-
 		mainBlock := &types.Block{
 			BlockHeader: types.BlockHeader{
-				Version:   mainChainBlockHeader.Version,
-				Height:    mainChainBlockHeader.Height,
-				Timestamp: mainChainBlockHeader.Timestamp,
+				PreviousBlockHash: mainBlock.Hash(),
+				Version:           1,
+				Height:            uint64(i + InitBlockNum),
+				Timestamp:         uint64(1528945000 + i + InitBlockNum),
 				BlockCommitment: types.BlockCommitment{
 					TransactionsMerkleRoot: merkleRoot,
 					TransactionStatusHash:  txStatusHash,
 				},
 			},
 		}
+		appendBlockHeaderArray = append(appendBlockHeaderArray, &mainBlock.BlockHeader)
 		appendBlockArray = append(appendBlockArray, mainBlock)
 
 		if err := store.SaveBlock(mainBlock, txStatus); err != nil {
