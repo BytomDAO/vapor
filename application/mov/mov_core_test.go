@@ -700,7 +700,7 @@ func TestValidateMatchedTxSequence(t *testing.T) {
 			wantError:    nil,
 		},
 		{
-			desc:         "package partial match tx from db orders, and the re-pending order continue to match",
+			desc:         "package partial matched tx from db orders, and the re-pending order continue to match",
 			initOrders:   []*common.Order{mock.Btc2EthOrders[0], mock.Btc2EthOrders[1], mock.Eth2BtcOrders[2]},
 			transactions: []*types.Tx{mock.MatchedTxs[2], mock.MatchedTxs[3]},
 			wantError:    nil,
