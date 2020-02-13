@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/vapor/crypto/ed25519/chainkd"
+	"github.com/bytom/vapor/protocol/bc"
 )
 
 var (
@@ -212,7 +213,7 @@ type WebsocketConfig struct {
 type FederationConfig struct {
 	Xpubs          []chainkd.XPub `json:"xpubs"`
 	Quorum         int            `json:"quorum"`
-	AssetWhitelist []string       `json:"asset_whitelist"`
+	AssetWhitelist []*bc.AssetID  `json:"asset_whitelist"`
 }
 
 // Default configurable rpc's auth parameters.
