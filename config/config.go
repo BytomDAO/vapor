@@ -210,8 +210,9 @@ type WebsocketConfig struct {
 }
 
 type FederationConfig struct {
-	Xpubs  []chainkd.XPub `json:"xpubs"`
-	Quorum int            `json:"quorum"`
+	Xpubs          []chainkd.XPub `json:"xpubs"`
+	Quorum         int            `json:"quorum"`
+	AssetWhitelist []string       `json:"asset_whitelist"`
 }
 
 // Default configurable rpc's auth parameters.
