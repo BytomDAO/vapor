@@ -6,7 +6,6 @@ import (
 
 	"github.com/bytom/vapor/application/mov/common"
 	"github.com/bytom/vapor/application/mov/database"
-	"github.com/bytom/vapor/errors"
 )
 
 // OrderBook is used to handle the mov orders in memory like stack
@@ -59,16 +58,16 @@ func NewOrderBook(movStore database.MovStore, arrivalAddOrders, arrivalDelOrders
 
 // AddOrder add the in memory temp order to order table, because temp order is what left for the
 // partial trade order, so the price should be lowest.
-func (o *OrderBook) AddOrder(order *common.Order) error {
+func (o *OrderBook) AddOrder(order *common.Order) {
 	tradePairKey := order.TradePair().Key()
 	orders := o.getArrivalAddOrders(tradePairKey)
-	if len(orders) > 0 && order.Cmp(orders[len(orders)-1]) > 0 {
-		return errors.New("rate of order must less than the min order in order table")
-	}
-
+	// use binary search to find the insert position
+	i := sort.Search(len(orders), func(i int) bool { return order.Cmp(orders[i]) > 0 })
 	orders = append(orders, order)
+	copy(orders[i+1:], orders[i:])
+	orders[i] = order
+
 	o.arrivalAddOrders.Store(tradePairKey, orders)
-	return nil
 }
 
 // DelOrder mark the order has been deleted in order book

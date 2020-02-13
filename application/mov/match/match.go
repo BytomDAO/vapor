@@ -113,9 +113,7 @@ func (e *Engine) addPartialTradeOrder(tx *types.Tx) error {
 			return err
 		}
 
-		if err := e.orderBook.AddOrder(order); err != nil {
-			return err
-		}
+		e.orderBook.AddOrder(order)
 	}
 	return nil
 }
