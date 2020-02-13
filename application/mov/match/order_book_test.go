@@ -300,3 +300,79 @@ func TestPeekArrivalOrder(t *testing.T) {
 		}
 	}
 }
+
+func TestAddOrder(t *testing.T) {
+	cases := []struct {
+		initOrders []*common.Order
+		wantOrders []*common.Order
+		addOrder   *common.Order
+	}{
+		{
+			initOrders: []*common.Order{},
+			addOrder:   &common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 53, RatioDenominator: 1},
+			wantOrders: []*common.Order{
+				&common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 53, RatioDenominator: 1},
+			},
+		},
+		{
+			initOrders: []*common.Order{
+				&common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 51, RatioDenominator: 1},
+			},
+			addOrder: &common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 50, RatioDenominator: 1},
+			wantOrders: []*common.Order{
+				&common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 51, RatioDenominator: 1},
+				&common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 50, RatioDenominator: 1},
+			},
+		},
+		{
+			initOrders: []*common.Order{
+				&common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 50, RatioDenominator: 1},
+				&common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 51, RatioDenominator: 1},
+				&common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 52, RatioDenominator: 1},
+			},
+			addOrder: &common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 53, RatioDenominator: 1},
+			wantOrders: []*common.Order{
+				&common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 53, RatioDenominator: 1},
+				&common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 52, RatioDenominator: 1},
+				&common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 51, RatioDenominator: 1},
+				&common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 50, RatioDenominator: 1},
+			},
+		},
+		{
+			initOrders: []*common.Order{
+				&common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 50, RatioDenominator: 1},
+				&common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 51, RatioDenominator: 1},
+				&common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 52, RatioDenominator: 1},
+			},
+			addOrder: &common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 49, RatioDenominator: 1},
+			wantOrders: []*common.Order{
+				&common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 52, RatioDenominator: 1},
+				&common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 51, RatioDenominator: 1},
+				&common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 50, RatioDenominator: 1},
+				&common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 49, RatioDenominator: 1},
+			},
+		},
+		{
+			initOrders: []*common.Order{
+				&common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 52, RatioDenominator: 1},
+				&common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 51, RatioDenominator: 1},
+				&common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 49, RatioDenominator: 1},
+			},
+			addOrder: &common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 50, RatioDenominator: 1},
+			wantOrders: []*common.Order{
+				&common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 52, RatioDenominator: 1},
+				&common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 51, RatioDenominator: 1},
+				&common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 50, RatioDenominator: 1},
+				&common.Order{FromAssetID: &mock.BTC, ToAssetID: &mock.ETH, RatioNumerator: 49, RatioDenominator: 1},
+			},
+		},
+	}
+
+	for i, c := range cases {
+		orderBook := NewOrderBook(mock.NewMovStore(nil, nil), c.initOrders, nil)
+		orderBook.AddOrder(c.addOrder)
+		if gotOrders := orderBook.getArrivalAddOrders(btc2eth.Key()); !testutil.DeepEqual(gotOrders, c.wantOrders) {
+			t.Fatalf("#%d: the gotOrders(%v) is differnt than wantOrders(%v)", i, gotOrders, c.wantOrders)
+		}
+	}
+}
