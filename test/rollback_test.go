@@ -1,287 +1,212 @@
 package test
 
 import (
+	"fmt"
+	"log"
 	"os"
 	"testing"
+	"time"
 
+	"github.com/bytom/vapor/config"
 	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/crypto/ed25519/chainkd"
 	"github.com/bytom/vapor/database"
 	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/errors"
+	"github.com/bytom/vapor/event"
+	"github.com/bytom/vapor/proposal"
+	"github.com/bytom/vapor/protocol"
 	"github.com/bytom/vapor/protocol/bc"
 	"github.com/bytom/vapor/protocol/bc/types"
-	"github.com/bytom/vapor/protocol/state"
-	"github.com/bytom/vapor/testutil"
 )
 
 const (
-	InitBlockNum   = 1 // 初始化用的block数量
-	appendBlockNum = 2 // 用于回滚的N的数量
+	n = 1 // 初始化用的block数量
 )
 
-func TestRollback(t *testing.T) {
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer func() {
-		testDB.Close()
-		os.RemoveAll("temp")
-	}()
-
-	// init database
-	store := database.NewStore(testDB)
-	coinbaseTxData := &types.TxData{
-		Version: 1,
-		Inputs: []*types.TxInput{
-			types.NewCoinbaseInput([]byte("Information is power. -- Jan/11/2013. Computing is power. -- Apr/24/2018.")),
-		},
-		Outputs: []*types.TxOutput{
-			types.NewVoteOutput(*consensus.BTMAssetID, uint64(10000), []byte{0x51}, []byte{0x51}),
-		},
-	}
-
-	initBlockHeaderArray := []*types.BlockHeader{}
-	initBlockArray := []*types.Block{}
-
-	appendBlockHeaderArray := []*types.BlockHeader{}
-	appendBlockArray := []*types.Block{}
-
-	coinbaseTx := types.NewTx(*coinbaseTxData)
-	txs := []*bc.Tx{coinbaseTx.Tx}
-	merkleRoot, _ := types.TxMerkleRoot(txs)
-	txStatus := &bc.TransactionStatus{
-		VerifyStatus: []*bc.TxVerifyResult{
-			{StatusFail: false},
-		},
-	}
-	txStatusHash, _ := types.TxStatusMerkleRoot([]*bc.TxVerifyResult{
-		{StatusFail: false},
-	})
-
-	mainBlock := &types.Block{
-		BlockHeader: types.BlockHeader{
-			Version:   1,
-			Height:    0,
-			Timestamp: uint64(1528945000),
-			BlockCommitment: types.BlockCommitment{
-				TransactionsMerkleRoot: merkleRoot,
-				TransactionStatusHash:  txStatusHash,
-			},
-		},
-	}
-	if err := store.SaveBlock(mainBlock, txStatus); err != nil {
-		t.Fatal(err)
-	}
-
-	initBlockHeaderArray = append(initBlockHeaderArray, &mainBlock.BlockHeader)
-	for i := 1; i <= InitBlockNum; i++ {
-		mainBlock := &types.Block{
-			BlockHeader: types.BlockHeader{
-				PreviousBlockHash: mainBlock.Hash(),
-				Version:           1,
-				Height:            uint64(i),
-				Timestamp:         uint64(1528945000 + i),
-				BlockCommitment: types.BlockCommitment{
-					TransactionsMerkleRoot: merkleRoot,
-					TransactionStatusHash:  txStatusHash,
-				},
-			},
-		}
-		initBlockHeaderArray = append(initBlockHeaderArray, &mainBlock.BlockHeader)
-		initBlockArray = append(initBlockArray, mainBlock)
-
-		if err := store.SaveBlock(mainBlock, txStatus); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	for i := 1; i <= appendBlockNum; i++ {
-		mainBlock := &types.Block{
-			BlockHeader: types.BlockHeader{
-				PreviousBlockHash: mainBlock.Hash(),
-				Version:           1,
-				Height:            uint64(i + InitBlockNum),
-				Timestamp:         uint64(1528945000 + i + InitBlockNum),
-				BlockCommitment: types.BlockCommitment{
-					TransactionsMerkleRoot: merkleRoot,
-					TransactionStatusHash:  txStatusHash,
-				},
-			},
-		}
-		appendBlockHeaderArray = append(appendBlockHeaderArray, &mainBlock.BlockHeader)
-		appendBlockArray = append(appendBlockArray, mainBlock)
-
-		if err := store.SaveBlock(mainBlock, txStatus); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	bestBlockHeader := initBlockHeaderArray[len(initBlockHeaderArray)-1]
-	irrBlockHeader := bestBlockHeader
-
-	if err := store.SaveChainStatus(bestBlockHeader, irrBlockHeader, initBlockHeaderArray, &state.UtxoViewpoint{}, []*state.ConsensusResult{}); err != nil {
-		t.Fatal(err)
-	}
-
-	// run chain
-	chain, store, _, err := MockChain(testDB)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	for i := 0; i < len(appendBlockArray); i++ {
-		mainBlock := appendBlockArray[i]
-		chain.ProcessBlock(mainBlock)
-	}
-
-	// rollback chain
-	chain.Rollback(InitBlockNum)
-
-	// compare status , and check
-	for i := 0; i < len(initBlockArray); i++ {
-		block := initBlockArray[i]
-		blockHash := block.Hash()
-
-		gotBlock, err := store.GetBlock(&blockHash)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if !testutil.DeepEqual(gotBlock, block) {
-			t.Errorf("check 1: block mismatch: have %x, want %x", gotBlock, block)
-		}
-	}
-
-	for i := 0; i < len(appendBlockArray); i++ {
-		block := appendBlockArray[i]
-		blockHash := block.Hash()
-
-		if getBlock, err := store.GetBlock(&blockHash); err == nil {
-			t.Errorf("check2: block exist :%v", getBlock)
-		}
-	}
-
+var fedConsensusPath = [][]byte{
+	[]byte{0xff, 0xff, 0xff, 0xff},
+	[]byte{0xff, 0x00, 0x00, 0x00},
+	[]byte{0xff, 0xff, 0xff, 0xff},
+	[]byte{0xff, 0x00, 0x00, 0x00},
+	[]byte{0xff, 0x00, 0x00, 0x00},
 }
 
-// func TestRollbackBlockOld(t *testing.T) {
-// 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-// 	defer func() {
-// 		testDB.Close()
-// 		os.RemoveAll("temp")
-// 	}()
+type byTime []*protocol.TxDesc
 
-// 	chain, store, _, err := MockChain(testDB)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
+func (a byTime) Len() int           { return len(a) }
+func (a byTime) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a byTime) Less(i, j int) bool { return a[i].Added.Before(a[j].Added) }
 
-// 	coinbaseTxData := &types.TxData{
-// 		Version: 1,
-// 		Inputs: []*types.TxInput{
-// 			types.NewCoinbaseInput([]byte("Information is power. -- Jan/11/2013. Computing is power. -- Apr/24/2018.")),
-// 		},
-// 		Outputs: []*types.TxOutput{
-// 			types.NewVoteOutput(*consensus.BTMAssetID, uint64(10000), []byte{0x51}, []byte{0x51}),
-// 		},
-// 	}
+func xpub(str string) (xpub chainkd.XPub) {
+	if err := xpub.UnmarshalText([]byte(str)); err != nil {
+		log.Panicf("Fail converts a string to xpub")
+	}
+	return xpub
+}
 
-// 	coinbaseTx := types.NewTx(*coinbaseTxData)
-// 	txs := []*bc.Tx{coinbaseTx.Tx}
-// 	merkleRoot, _ := types.TxMerkleRoot(txs)
+func xprv(str string) (xprv chainkd.XPrv) {
+	if err := xprv.UnmarshalText([]byte(str)); err != nil {
+		log.Panicf("Fail converts a string to xprv")
+	}
+	return xprv
+}
 
-// 	initBlockHeader := &types.BlockHeader{
-// 		Height:  0,
-// 		Version: 1,
-// 	}
-// 	if err := store.SaveBlockHeader(initBlockHeader); err != nil {
-// 		t.Fatal(err)
-// 	}
+var Xprvs = []chainkd.XPrv{
+	xprv("c87f8d0f4bb4b0acbb7f69f1954c4f34d4476e114fffa7b0c853992474a9954a273c2d8f2642a7baf94ebac88f1625af9f5eaf3b13a90de27eec3de78b9fb9ca"),
+	xprv("c80fbc34475fc9447753c00820d8448851c87f07e6bdde349260862c9bca5b4bb2e62c15e129067af869ebdf66e5829e61d6f2e47447395cc18c4166b06e8473"),
+}
 
-// 	blockHash := initBlockHeader.Hash() //Hash: bc.Hash{V0: 0, V1: 1, V2: 2, V3: 3}
-// 	view := &state.UtxoViewpoint{
-// 		Entries: map[bc.Hash]*storage.UtxoEntry{
-// 			bc.Hash{V0: 1, V1: 2, V2: 3, V3: 4}: &storage.UtxoEntry{Type: storage.NormalUTXOType, BlockHeight: 100, Spent: false},
-// 			bc.Hash{V0: 1, V1: 2, V2: 3, V3: 4}: &storage.UtxoEntry{Type: storage.CoinbaseUTXOType, BlockHeight: 100, Spent: true},
-// 			bc.Hash{V0: 1, V1: 1, V2: 3, V3: 4}: &storage.UtxoEntry{Type: storage.NormalUTXOType, BlockHeight: 100, Spent: true},
-// 			bc.Hash{V0: 1, V1: 1, V2: 3, V3: 5}: &storage.UtxoEntry{Type: storage.CrosschainUTXOType, BlockHeight: 100, Spent: false},
-// 			bc.Hash{V0: 1, V1: 1, V2: 3, V3: 6}: &storage.UtxoEntry{Type: storage.CrosschainUTXOType, BlockHeight: 100, Spent: true},
-// 			bc.Hash{V0: 1, V1: 3, V2: 3, V3: 7}: &storage.UtxoEntry{Type: storage.VoteUTXOType, BlockHeight: 100, Spent: false},
-// 			bc.Hash{V0: 1, V1: 3, V2: 3, V3: 7}: &storage.UtxoEntry{Type: storage.VoteUTXOType, BlockHeight: 100, Spent: true},
-// 		},
-// 	}
-// 	if err := store.SaveChainStatus(initBlockHeader, initBlockHeader, []*types.BlockHeader{initBlockHeader}, view, []*state.ConsensusResult{}); err != nil {
-// 		t.Fatal(err)
-// 	}
+// number 1
+// private key: 483355b66c0e15b0913829d709b04557749b871b3bf56ad1de8fda13d3a4954aa2a56121b8eab313b8f36939e8190fe8f267f19496decb91be5644e92b669914
+// public key: 32fe453097591f288315ef47b1ebdabf20e8bced8ede670f999980205cacddd4a2a56121b8eab313b8f36939e8190fe8f267f19496decb91be5644e92b669914
+// derivied private key: c87f8d0f4bb4b0acbb7f69f1954c4f34d4476e114fffa7b0c853992474a9954a273c2d8f2642a7baf94ebac88f1625af9f5eaf3b13a90de27eec3de78b9fb9ca
+// derivied public key: 4d6f710dae8094c111450ca20e054c3aed59dfcb2d29543c29901a5903755e69273c2d8f2642a7baf94ebac88f1625af9f5eaf3b13a90de27eec3de78b9fb9ca
 
-// 	expectStatus := &protocol.BlockStoreState{Height: initBlockHeader.Height, Hash: &blockHash, IrreversibleHeight: initBlockHeader.Height, IrreversibleHash: &blockHash}
-// 	if !testutil.DeepEqual(store.GetStoreStatus(), expectStatus) {
-// 		t.Errorf("got block status:%v, expect block status:%v", store.GetStoreStatus(), expectStatus)
-// 	}
+// number 2
+// private key: d8e786a4eafa3456e35b2a1467d37dd84f64ba36604f8076015b76a8eec55b4b83d4fac0f94d157cfc720b77602f21b6b8a7e86f95c571e4d7986210dbce44c9
+// public key: ebe1060254ec43bd7883e94583ff0a71ef0ec0e1ada4cd0f5ed7e9d37f1d244e83d4fac0f94d157cfc720b77602f21b6b8a7e86f95c571e4d7986210dbce44c9
+// derivied private key: c80fbc34475fc9447753c00820d8448851c87f07e6bdde349260862c9bca5b4bb2e62c15e129067af869ebdf66e5829e61d6f2e47447395cc18c4166b06e8473
+// derivied public key: 59184c0f1f4f13b8b256ac82df30dc12cfd66b6e09a28054933f848dc51b9a89b2e62c15e129067af869ebdf66e5829e61d6f2e47447395cc18c4166b06e8473
 
-// 	txStatus := &bc.TransactionStatus{
-// 		VerifyStatus: []*bc.TxVerifyResult{
-// 			{StatusFail: false},
-// 		},
-// 	}
-// 	txStatusHash, _ := types.TxStatusMerkleRoot([]*bc.TxVerifyResult{
-// 		{StatusFail: false},
-// 	})
+func getKey() {
+	xprv, _ := chainkd.NewXPrv(nil)
+	fmt.Println("secretkey_key:", xprv)
 
-// 	mainBlock := &types.Block{
-// 		BlockHeader: types.BlockHeader{
-// 			Version:   initBlockHeader.Version,
-// 			Height:    initBlockHeader.Height,
-// 			Timestamp: initBlockHeader.Timestamp,
-// 			BlockCommitment: types.BlockCommitment{
-// 				TransactionsMerkleRoot: merkleRoot,
-// 				TransactionStatusHash:  txStatusHash,
-// 			},
-// 		},
-// 	}
+	xpub := xprv.XPub()
+	fmt.Println("public_key:", xpub)
 
-// 	if err := store.SaveBlock(mainBlock, txStatus); err != nil {
-// 		t.Fatal(err)
-// 	}
+	derivate_key := xprv.Derive(fedConsensusPath)
+	fmt.Println("derivate_secret_key:", derivate_key)
 
-// 	blocks := []*types.Block{}
-// 	mainChainBlockHeader := initBlockHeader
-// 	for i := 0; i < 7; i++ {
-// 		mainChainBlockHeader = &types.BlockHeader{
-// 			PreviousBlockHash: mainChainBlockHeader.Hash(),
-// 			Height:            uint64(i + 1),
-// 		}
-// 		mainBlock = &types.Block{
-// 			BlockHeader: types.BlockHeader{
-// 				Version:   mainChainBlockHeader.Version,
-// 				Height:    mainChainBlockHeader.Height,
-// 				Timestamp: mainChainBlockHeader.Timestamp,
-// 				BlockCommitment: types.BlockCommitment{
-// 					TransactionsMerkleRoot: merkleRoot,
-// 					TransactionStatusHash:  txStatusHash,
-// 				},
-// 			},
-// 		}
+	derivate_public_key := derivate_key.XPub()
+	fmt.Println("derivate_public_key", derivate_public_key)
+}
 
-// 		blocks = append(blocks, mainBlock)
+func newFederationConfig() *config.FederationConfig {
+	return &config.FederationConfig{
+		Xpubs: []chainkd.XPub{
+			xpub("32fe453097591f288315ef47b1ebdabf20e8bced8ede670f999980205cacddd4a2a56121b8eab313b8f36939e8190fe8f267f19496decb91be5644e92b669914"),
+			xpub("ebe1060254ec43bd7883e94583ff0a71ef0ec0e1ada4cd0f5ed7e9d37f1d244e83d4fac0f94d157cfc720b77602f21b6b8a7e86f95c571e4d7986210dbce44c9"),
+		},
+		Quorum: 1,
+	}
+}
 
-// 		if err := store.SaveBlockHeader(mainChainBlockHeader); err != nil {
-// 			t.Fatal(err)
-// 		}
+func getBlockerOrder(startTimestamp, blockTimestamp, numOfConsensusNode uint64) uint64 {
+	// One round of product block time for all consensus nodes
+	roundBlockTime := consensus.ActiveNetParams.BlockNumEachNode * numOfConsensusNode * consensus.ActiveNetParams.BlockTimeInterval
+	// The start time of the last round of product block
+	lastRoundStartTime := startTimestamp + (blockTimestamp-startTimestamp)/roundBlockTime*roundBlockTime
+	// Order of blocker
+	return (blockTimestamp - lastRoundStartTime) / (consensus.ActiveNetParams.BlockNumEachNode * consensus.ActiveNetParams.BlockTimeInterval)
+}
 
-// 		if err := store.SaveBlock(mainBlock, txStatus); err != nil {
-// 			t.Fatal(err)
-// 		}
-// 	}
+func getPrevRoundLastBlock(c *protocol.Chain, store protocol.Store, prevBlockHash *bc.Hash) (*types.BlockHeader, error) {
+	blockHeader, err := store.GetBlockHeader(prevBlockHash)
+	if err != nil {
+		return nil, err
+	}
 
-// 	if err := chain.Rollback(0); err != nil {
-// 		t.Fatal(err)
-// 	}
+	for blockHeader.Height%consensus.ActiveNetParams.RoundVoteBlockNums != 0 {
+		blockHeader, err = store.GetBlockHeader(&blockHeader.PreviousBlockHash)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return blockHeader, nil
+}
 
-// 	for i := 0; i < len(blocks); i++ {
-// 		block := blocks[i]
-// 		blockHash := block.Hash()
+// according to getOrder
+func getXprv(c *protocol.Chain, store protocol.Store, timeStamp uint64) (*chainkd.XPrv, error) {
+	prevVoteRoundLastBlock, err := getPrevRoundLastBlock(c, store, c.BestBlockHash())
+	if err != nil {
+		return &(Xprvs[0]), err
+	}
 
-// 		if getBlock, err := store.GetBlock(&blockHash); err == nil {
-// 			t.Errorf("check2: block exist :%v", getBlock)
-// 		}
-// 	}
+	startTimestamp := prevVoteRoundLastBlock.Timestamp + consensus.ActiveNetParams.BlockTimeInterval
+	order := getBlockerOrder(startTimestamp, timeStamp, uint64(len(Xprvs)))
+	if order >= uint64(len(Xprvs)) {
+		return nil, errors.New("bad order")
+	}
+	return &(Xprvs[order]), nil
+}
 
-// 	fmt.Println("abcd!")
-// }
+func TestProposalTemplate(t *testing.T) {
+	db := dbm.NewDB("block_test_db", "leveldb", "block_test_db")
+	defer os.RemoveAll("block_test_db")
+
+	config.CommonConfig = config.DefaultConfig()
+	config.CommonConfig.Federation = newFederationConfig()
+
+	xp := xprv("c87f8d0f4bb4b0acbb7f69f1954c4f34d4476e114fffa7b0c853992474a9954a273c2d8f2642a7baf94ebac88f1625af9f5eaf3b13a90de27eec3de78b9fb9ca")
+	config.CommonConfig.XPrv = &xp
+
+	store := database.NewStore(db)
+	dispatcher := event.NewDispatcher()
+	txPool := protocol.NewTxPool(store, dispatcher)
+	chain, err := protocol.NewChain(store, txPool, dispatcher)
+
+	cases := []struct {
+		desc        string
+		startRunNum int
+		runBlockNum int
+	}{
+		{
+			desc:        "first round block",
+			startRunNum: 3,
+			runBlockNum: 2,
+		},
+	}
+
+	for _, c := range cases {
+		for i := 0; i < c.startRunNum; i++ {
+			timeStamp := uint64(time.Now().UnixNano()/1e6 + int64(i))
+			config.CommonConfig.XPrv, err = getXprv(chain, store, timeStamp)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			block, err := proposal.NewBlockTemplate(chain, txPool, nil, timeStamp)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if _, err := chain.ProcessBlock(block); err != nil {
+				t.Fatal(err)
+			}
+
+			time.Sleep(time.Duration(1) * time.Second)
+		}
+
+		nowHeight := chain.BestBlockHeight()
+		for i := 0; i < c.runBlockNum; i++ {
+			timeStamp := uint64(time.Now().UnixNano()/1e6 + int64(i))
+			config.CommonConfig.XPrv, err = getXprv(chain, store, timeStamp)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			block, err := proposal.NewBlockTemplate(chain, txPool, nil, timeStamp)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if _, err := chain.ProcessBlock(block); err != nil {
+				t.Fatal(err)
+			}
+
+			time.Sleep(time.Duration(1) * time.Second)
+		}
+
+		if err = chain.Rollback(nowHeight); err != nil {
+			t.Fatal(err)
+		}
+
+		afterHeight := chain.BestBlockHeight()
+
+		if nowHeight != afterHeight {
+			t.Fatalf("%s test failed, expected: %d, now: %d", c.desc, nowHeight, afterHeight)
+		}
+	}
+}
