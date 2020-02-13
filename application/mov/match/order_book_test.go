@@ -173,9 +173,7 @@ func TestOrderBook(t *testing.T) {
 	for i, c := range cases {
 		orderBook := NewOrderBook(c.initMovStore, c.initArrivalAddOrders, c.initArrivalDelOrders)
 		for _, order := range c.addOrders {
-			if err := orderBook.AddOrder(order); err != nil {
-				t.Fatal(err)
-			}
+			orderBook.AddOrder(order)
 		}
 
 		for _, tradePair := range c.popOrders {

@@ -58,7 +58,7 @@ func NewOrderBook(movStore database.MovStore, arrivalAddOrders, arrivalDelOrders
 
 // AddOrder add the in memory temp order to order table, because temp order is what left for the
 // partial trade order, so the price should be lowest.
-func (o *OrderBook) AddOrder(order *common.Order) error {
+func (o *OrderBook) AddOrder(order *common.Order) {
 	tradePairKey := order.TradePair().Key()
 	orders := o.getArrivalAddOrders(tradePairKey)
 	// use binary search to find the insert position
@@ -68,7 +68,6 @@ func (o *OrderBook) AddOrder(order *common.Order) error {
 	orders[i] = order
 
 	o.arrivalAddOrders.Store(tradePairKey, orders)
-	return nil
 }
 
 // DelOrder mark the order has been deleted in order book

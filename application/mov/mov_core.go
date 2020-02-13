@@ -287,9 +287,7 @@ func (m *MovCore) validateMatchedTxSequence(txs []*types.Tx) error {
 		}
 
 		for _, order := range addOrders {
-			if err := orderBook.AddOrder(order); err != nil {
-				return err
-			}
+			orderBook.AddOrder(order)
 		}
 	}
 	return nil
