@@ -628,6 +628,18 @@ func TestValidateMatchedTxSequence(t *testing.T) {
 			wantError:    nil,
 		},
 		{
+			desc:         "package matched tx, one order from db, and the another order from transactions",
+			initOrders:   []*common.Order{mock.Btc2EthOrders[0]},
+			transactions: []*types.Tx{mock.Eth2BtcMakerTxs[0], mock.MatchedTxs[10]},
+			wantError:    nil,
+		},
+		{
+			desc:         "two matched txs use the same orders",
+			initOrders:   []*common.Order{mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0]},
+			transactions: []*types.Tx{mock.MatchedTxs[1], mock.MatchedTxs[1]},
+			wantError:    errNotMatchedOrder,
+		},
+		{
 			desc: "existing two matched orders in db, and only one corresponding matched tx in transactions",
 			initOrders: []*common.Order{
 				mock.Btc2EthOrders[3], mock.Eth2BtcOrders[2],
@@ -646,7 +658,7 @@ func TestValidateMatchedTxSequence(t *testing.T) {
 			wantError:    errSpendOutputIDIsIncorrect,
 		},
 		{
-			desc:         "package full matched tx from maker tx",
+			desc:         "matched tx and orders from packaged transactions",
 			initOrders:   []*common.Order{},
 			transactions: []*types.Tx{mock.Btc2EthMakerTxs[0], mock.Eth2BtcMakerTxs[1], mock.MatchedTxs[4]},
 			wantError:    nil,
@@ -688,10 +700,16 @@ func TestValidateMatchedTxSequence(t *testing.T) {
 			wantError:    nil,
 		},
 		{
-			desc:         "package partial matched tx from db orders",
+			desc:         "package partial match tx from db orders, and the re-pending order continue to match",
 			initOrders:   []*common.Order{mock.Btc2EthOrders[0], mock.Btc2EthOrders[1], mock.Eth2BtcOrders[2]},
 			transactions: []*types.Tx{mock.MatchedTxs[2], mock.MatchedTxs[3]},
 			wantError:    nil,
+		},
+		{
+			desc:         "cancel the re-pending order",
+			initOrders:   []*common.Order{mock.Btc2EthOrders[0], mock.Btc2EthOrders[1], mock.Eth2BtcOrders[2]},
+			transactions: []*types.Tx{mock.MatchedTxs[2], mock.Btc2EthCancelTxs[1], mock.MatchedTxs[3]},
+			wantError:    errNotMatchedOrder,
 		},
 	}
 
