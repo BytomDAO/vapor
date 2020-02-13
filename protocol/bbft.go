@@ -141,6 +141,7 @@ func (c *Chain) validateSign(block *types.Block) error {
 		}
 
 		if err := c.checkNodeSign(&block.BlockHeader, node, block.Get(node.Order)); err == errDoubleSignBlock {
+			log.WithFields(log.Fields{"module": logModule, "blockHash": blockHash.String(), "pubKey": pubKey}).Warn("the consensus node double sign the same height of different block")
 			block.BlockWitness.Delete(node.Order)
 			continue
 		} else if err != nil {
