@@ -147,6 +147,7 @@ func (c *Chain) validateSign(block *types.Block) error {
 		} else if err != nil {
 			return err
 		}
+
 		if blocker == pubKey {
 			hasBlockerSign = true
 		}
