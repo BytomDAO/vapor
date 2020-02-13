@@ -5,6 +5,10 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+
+	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/protocol/bc/types"
 )
 
 func ExportFederationFile(fedFile string, config *Config) error {
@@ -27,4 +31,35 @@ func LoadFederationFile(fedFile string, config *Config) error {
 	defer file.Close()
 
 	return json.NewDecoder(file).Decode(config.Federation)
+}
+
+type FederationAssetFilter struct {
+	whitelist map[string]struct{}
+}
+
+func NewFederationAssetFilter(whitelist []*bc.AssetID) *FederationAssetFilter {
+	f := &FederationAssetFilter{whitelist: make(map[string]struct{})}
+	f.whitelist[consensus.BTMAssetID.String()] = struct{}{}
+	for _, asset := range whitelist {
+		f.whitelist[asset.String()] = struct{}{}
+	}
+	return f
+}
+
+func (f *FederationAssetFilter) IsDust(tx *types.Tx) bool {
+	for _, input := range tx.Inputs {
+		assetID := input.AssetID()
+		if _, ok := f.whitelist[assetID.String()]; !ok {
+			return true
+		}
+	}
+
+	for _, output := range tx.Outputs {
+		assetID := output.AssetAmount().AssetId
+		if _, ok := f.whitelist[assetID.String()]; !ok {
+			return true
+		}
+	}
+
+	return false
 }
