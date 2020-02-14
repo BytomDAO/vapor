@@ -437,7 +437,6 @@ func (s *Store) getHashIndexFromHashes(hash *bc.Hash, hashes []*bc.Hash) int {
 			return index
 		}
 	}
-
 	return -1
 }
 
@@ -449,6 +448,5 @@ func (s *Store) deleteHashFromHashes(hash *bc.Hash, hashes []*bc.Hash) []*bc.Has
 	if index := s.getHashIndexFromHashes(hash, hashes); index != -1 {
 		hashes = append(hashes[0:index], hashes[index+1:len(hashes)]...)
 	}
-
 	return hashes
 }
