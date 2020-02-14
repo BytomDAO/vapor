@@ -97,7 +97,7 @@ func NewNode(config *cfg.Config) *Node {
 
 	dispatcher := event.NewDispatcher()
 	movCore := mov.NewMovCore(config.DBBackend, config.DBDir(), consensus.ActiveNetParams.MovStartHeight)
-	assetFilter := cfg.NewFederationAssetFilter(config.Federation.AssetWhitelist)
+	assetFilter := protocol.NewAssetFilter(config.CrossChain.AssetWhitelist)
 	txPool := protocol.NewTxPool(store, []protocol.DustFilterer{movCore, assetFilter}, dispatcher)
 	chain, err := protocol.NewChain(store, txPool, []protocol.Protocoler{movCore}, dispatcher)
 	if err != nil {

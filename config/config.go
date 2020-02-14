@@ -11,7 +11,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/vapor/crypto/ed25519/chainkd"
-	"github.com/bytom/vapor/protocol/bc"
 )
 
 var (
@@ -29,6 +28,7 @@ type Config struct {
 	Web        *WebConfig        `mapstructure:"web"`
 	Websocket  *WebsocketConfig  `mapstructure:"ws"`
 	Federation *FederationConfig `mapstructure:"federation"`
+	CrossChain *CrossChainConfig `mapstructure:"cross_chain"`
 }
 
 // Default configurable parameters.
@@ -41,6 +41,7 @@ func DefaultConfig() *Config {
 		Web:        DefaultWebConfig(),
 		Websocket:  DefaultWebsocketConfig(),
 		Federation: DefaultFederationConfig(),
+		CrossChain: DefaultCrossChainConfig(),
 	}
 }
 
@@ -211,9 +212,12 @@ type WebsocketConfig struct {
 }
 
 type FederationConfig struct {
-	Xpubs          []chainkd.XPub `json:"xpubs"`
-	Quorum         int            `json:"quorum"`
-	AssetWhitelist []*bc.AssetID  `json:"asset_whitelist"`
+	Xpubs  []chainkd.XPub `json:"xpubs"`
+	Quorum int            `json:"quorum"`
+}
+
+type CrossChainConfig struct {
+	AssetWhitelist string `mapstructure:"asset_whitelist"`
 }
 
 // Default configurable rpc's auth parameters.
@@ -257,6 +261,10 @@ func DefaultFederationConfig() *FederationConfig {
 		},
 		Quorum: 2,
 	}
+}
+
+func DefaultCrossChainConfig() *CrossChainConfig {
+	return &CrossChainConfig{}
 }
 
 func xpub(str string) (xpub chainkd.XPub) {
