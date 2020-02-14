@@ -18,6 +18,7 @@ import (
 	"github.com/bytom/vapor/protocol"
 	"github.com/bytom/vapor/protocol/bc"
 	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/testutil"
 )
 
 const (
@@ -132,7 +133,7 @@ func getXprv(c *protocol.Chain, store protocol.Store, timeStamp uint64) (*chaink
 	return &(Xprvs[order]), nil
 }
 
-func TestProposalTemplate(t *testing.T) {
+func TestRollback(t *testing.T) {
 	db := dbm.NewDB("block_test_db", "leveldb", "block_test_db")
 	defer os.RemoveAll("block_test_db")
 
@@ -154,14 +155,22 @@ func TestProposalTemplate(t *testing.T) {
 	}{
 		{
 			desc:        "first round block",
+			startRunNum: 2,
+			runBlockNum: 3,
+		},
+		{
+			desc:        "second add blocks",
 			startRunNum: 3,
 			runBlockNum: 2,
 		},
 	}
 
-	for _, c := range cases {
+	for caseIndex, c := range cases {
+		before_blocks := []*types.Block{}
+		after_blocks := []*types.Block{}
+
 		for i := 0; i < c.startRunNum; i++ {
-			timeStamp := uint64(time.Now().UnixNano()/1e6 + int64(i))
+			timeStamp := uint64(time.Now().UnixNano() / 1e6)
 			config.CommonConfig.XPrv, err = getXprv(chain, store, timeStamp)
 			if err != nil {
 				t.Fatal(err)
@@ -173,15 +182,24 @@ func TestProposalTemplate(t *testing.T) {
 			}
 
 			if _, err := chain.ProcessBlock(block); err != nil {
+				t.Fatal(err)
+			}
+
+			blockHash := block.Hash()
+			fmt.Println("blockHash:", blockHash.String())
+			gotBlock, err := store.GetBlock(&blockHash)
+			before_blocks = append(before_blocks, gotBlock)
+			if err != nil {
 				t.Fatal(err)
 			}
 
 			time.Sleep(time.Duration(1) * time.Second)
 		}
 
+		expectChainStatus := store.GetStoreStatus()
 		nowHeight := chain.BestBlockHeight()
 		for i := 0; i < c.runBlockNum; i++ {
-			timeStamp := uint64(time.Now().UnixNano()/1e6 + int64(i))
+			timeStamp := uint64(time.Now().UnixNano() / 1e6)
 			config.CommonConfig.XPrv, err = getXprv(chain, store, timeStamp)
 			if err != nil {
 				t.Fatal(err)
@@ -193,6 +211,13 @@ func TestProposalTemplate(t *testing.T) {
 			}
 
 			if _, err := chain.ProcessBlock(block); err != nil {
+				t.Fatal(err)
+			}
+
+			blockHash := block.Hash()
+			gotBlock, err := store.GetBlock(&blockHash)
+			after_blocks = append(after_blocks, gotBlock)
+			if err != nil {
 				t.Fatal(err)
 			}
 
@@ -207,6 +232,41 @@ func TestProposalTemplate(t *testing.T) {
 
 		if nowHeight != afterHeight {
 			t.Fatalf("%s test failed, expected: %d, now: %d", c.desc, nowHeight, afterHeight)
+		}
+
+		if !testutil.DeepEqual(store.GetStoreStatus(), expectChainStatus) {
+			t.Errorf("got block status:%v, expect block status:%v", store.GetStoreStatus(), expectChainStatus)
+		}
+
+		for i := 0; i < len(before_blocks); i++ {
+			block := before_blocks[i]
+			blockHash := block.Hash()
+			gotBlock, err := store.GetBlock(&blockHash)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !testutil.DeepEqual(gotBlock, block) {
+				t.Errorf("case %v,%v: block mismatch: have %x, want %x", caseIndex, i, gotBlock, block)
+			}
+
+			gotBlockHeader, err := store.GetBlockHeader(&blockHash)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !testutil.DeepEqual(block.BlockHeader, *gotBlockHeader) {
+				t.Errorf("got block header:%v, expect block header:%v", gotBlockHeader, block.BlockHeader)
+			}
+		}
+
+		for i := 0; i < len(after_blocks); i++ {
+			block := after_blocks[i]
+			blockHash := block.Hash()
+			_, err := store.GetBlockHeader(&blockHash)
+			if err == nil {
+				t.Errorf("this block should not exists!")
+			}
 		}
 	}
 }
