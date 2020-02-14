@@ -186,7 +186,6 @@ func TestRollback(t *testing.T) {
 			}
 
 			blockHash := block.Hash()
-			fmt.Println("blockHash:", blockHash.String())
 			gotBlock, err := store.GetBlock(&blockHash)
 			before_blocks = append(before_blocks, gotBlock)
 			if err != nil {
@@ -197,7 +196,7 @@ func TestRollback(t *testing.T) {
 		}
 
 		expectChainStatus := store.GetStoreStatus()
-		nowHeight := chain.BestBlockHeight()
+		expectHeight := chain.BestBlockHeight()
 		for i := 0; i < c.runBlockNum; i++ {
 			timeStamp := uint64(time.Now().UnixNano() / 1e6)
 			config.CommonConfig.XPrv, err = getXprv(chain, store, timeStamp)
@@ -224,14 +223,14 @@ func TestRollback(t *testing.T) {
 			time.Sleep(time.Duration(1) * time.Second)
 		}
 
-		if err = chain.Rollback(nowHeight); err != nil {
+		if err = chain.Rollback(expectHeight); err != nil {
 			t.Fatal(err)
 		}
 
-		afterHeight := chain.BestBlockHeight()
+		nowHeight := chain.BestBlockHeight()
 
-		if nowHeight != afterHeight {
-			t.Fatalf("%s test failed, expected: %d, now: %d", c.desc, nowHeight, afterHeight)
+		if expectHeight != nowHeight {
+			t.Fatalf("%s test failed, expected: %d, now: %d", c.desc, expectHeight, nowHeight)
 		}
 
 		if !testutil.DeepEqual(store.GetStoreStatus(), expectChainStatus) {
