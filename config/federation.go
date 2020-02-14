@@ -48,6 +48,10 @@ func NewFederationAssetFilter(whitelist []*bc.AssetID) *FederationAssetFilter {
 
 func (f *FederationAssetFilter) IsDust(tx *types.Tx) bool {
 	for _, input := range tx.Inputs {
+		if input.TypedInput.(type) != types.CrossChainInput {
+			continue
+		}
+
 		assetID := input.AssetID()
 		if _, ok := f.whitelist[assetID.String()]; !ok {
 			return true
