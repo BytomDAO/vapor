@@ -54,12 +54,5 @@ func (f *FederationAssetFilter) IsDust(tx *types.Tx) bool {
 		}
 	}
 
-	for _, output := range tx.Outputs {
-		assetID := output.AssetAmount().AssetId
-		if _, ok := f.whitelist[assetID.String()]; !ok {
-			return true
-		}
-	}
-
 	return false
 }
