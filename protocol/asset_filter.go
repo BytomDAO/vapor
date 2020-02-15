@@ -14,8 +14,8 @@ type assetFilter struct {
 func NewAssetFilter(whitelist string) *assetFilter {
 	af := &assetFilter{whitelist: make(map[string]struct{})}
 	af.whitelist[consensus.BTMAssetID.String()] = struct{}{}
-	for _, asset := range strings.Split(whitelist, ",") {
-		af.whitelist[asset] = struct{}{}
+	for _, assetID := range strings.Split(whitelist, ",") {
+		af.whitelist[strings.ToLower(assetID)] = struct{}{}
 	}
 	return af
 }
