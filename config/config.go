@@ -244,6 +244,7 @@ func DefaultWalletConfig() *WalletConfig {
 	}
 }
 
+// Default configurable websocket parameters.
 func DefaultWebsocketConfig() *WebsocketConfig {
 	return &WebsocketConfig{
 		MaxNumWebsockets:     25,
@@ -251,6 +252,7 @@ func DefaultWebsocketConfig() *WebsocketConfig {
 	}
 }
 
+// Default configurable federation parameters.
 func DefaultFederationConfig() *FederationConfig {
 	return &FederationConfig{
 		Xpubs: []chainkd.XPub{
@@ -263,6 +265,7 @@ func DefaultFederationConfig() *FederationConfig {
 	}
 }
 
+// Default configurable crosschain parameters.
 func DefaultCrossChainConfig() *CrossChainConfig {
 	return &CrossChainConfig{}
 }
