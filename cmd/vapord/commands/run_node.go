@@ -21,6 +21,7 @@ var runNodeCmd = &cobra.Command{
 func init() {
 	runNodeCmd.Flags().String("prof_laddr", config.ProfListenAddress, "Use http to profile vapord programs")
 	runNodeCmd.Flags().Bool("mining", config.Mining, "Enable mining")
+	runNodeCmd.Flags().String("cross_chain.asset_whitelist", config.CrossChain.AssetWhitelist, "Cross-chain-allowed asset whitelist")
 
 	runNodeCmd.Flags().Bool("auth.disable", config.Auth.Disable, "Disable rpc access authenticate")
 
