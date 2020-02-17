@@ -253,7 +253,6 @@ func TestRollback(t *testing.T) {
 		}
 
 		nowHeight := chain.BestBlockHeight()
-
 		if expectHeight != nowHeight {
 			t.Fatalf("%s test failed, expected: %d, now: %d", c.desc, expectHeight, nowHeight)
 		}
