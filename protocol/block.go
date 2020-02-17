@@ -156,6 +156,7 @@ func (c *Chain) rollbackBlock(detachBlockHeader *types.BlockHeader, consensusRes
 	return block, nil
 }
 
+// Rollback rollback the chain from one blockHeight to targetBlockHeight
 func (c *Chain) Rollback(targetHeight uint64) error {
 	utxoView := state.NewUtxoViewpoint()
 	consensusResult, err := c.getBestConsensusResult()

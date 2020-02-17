@@ -133,6 +133,15 @@ func getXprv(c *protocol.Chain, store protocol.Store, timeStamp uint64) (*chaink
 	return &(Xprvs[order]), nil
 }
 
+func getConsensusResult(c *protocol.Chain, store *database.Store, seq uint64, blockHeader *types.BlockHeader) (*state.ConsensusResult, error) {
+	consensusResult, err := store.GetConsensusResult(seq)
+	if err != nil {
+		return nil, err
+	}
+
+	return consensusResult, nil
+}
+
 func TestRollback(t *testing.T) {
 	db := dbm.NewDB("block_test_db", "leveldb", "block_test_db")
 	defer os.RemoveAll("block_test_db")
@@ -142,6 +151,7 @@ func TestRollback(t *testing.T) {
 
 	xp := xprv("c87f8d0f4bb4b0acbb7f69f1954c4f34d4476e114fffa7b0c853992474a9954a273c2d8f2642a7baf94ebac88f1625af9f5eaf3b13a90de27eec3de78b9fb9ca")
 	config.CommonConfig.XPrv = &xp
+	consensus.ActiveNetParams.RoundVoteBlockNums = 3
 
 	store := database.NewStore(db)
 	dispatcher := event.NewDispatcher()
@@ -155,8 +165,8 @@ func TestRollback(t *testing.T) {
 	}{
 		{
 			desc:        "first round block",
-			startRunNum: 2,
-			runBlockNum: 3,
+			startRunNum: 5,
+			runBlockNum: 5,
 		},
 		{
 			desc:        "second add blocks",
@@ -174,7 +184,7 @@ func TestRollback(t *testing.T) {
 		beforeBlocks := []*types.Block{}
 		afterBlocks := []*types.Block{}
 		expectConsensusResultsMap := map[uint64]*state.ConsensusResult{}
-		afterConsensusResultsMap := map[uint64]*state.ConsensusResult{}
+		nowConsensusResultsMap := map[uint64]*state.ConsensusResult{}
 
 		for i := 0; i < c.startRunNum; i++ {
 			timeStamp := chain.BestBlockHeader().Timestamp + consensus.ActiveNetParams.BlockTimeInterval
@@ -279,19 +289,28 @@ func TestRollback(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			afterConsensusResultsMap[state.CalcVoteSeq(block.Height)] = consensusResult
+			nowConsensusResultsMap[state.CalcVoteSeq(block.Height)] = consensusResult
 		}
 
-		if !testutil.DeepEqual(expectConsensusResultsMap, afterConsensusResultsMap) {
+		if !testutil.DeepEqual(expectConsensusResultsMap, nowConsensusResultsMap) {
 			t.Errorf("consensusResult is not equal!")
 		}
 
+		finalSeq := state.CalcVoteSeq(chain.BestBlockHeight())
 		for i := 0; i < len(afterBlocks); i++ {
 			block := afterBlocks[i]
 			blockHash := block.Hash()
 			_, err := store.GetBlockHeader(&blockHash)
 			if err == nil {
 				t.Errorf("this block should not exists!")
+			}
+
+			seq := state.CalcVoteSeq(block.Height)
+			if seq > finalSeq {
+				consensusResult, err := getConsensusResult(chain, store, seq, &block.BlockHeader)
+				if err == nil {
+					t.Errorf("why this result existed! %v, %v", consensusResult, err)
+				}
 			}
 		}
 	}

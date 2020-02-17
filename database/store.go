@@ -266,6 +266,15 @@ func (s *Store) GetConsensusResult(seq uint64) (*state.ConsensusResult, error) {
 func (s *Store) DeleteBlock(block *types.Block) error {
 	startTime := time.Now()
 	blockHash := block.Hash()
+	prevBlockHash := block.PreviousBlockHash
+
+	prevBlock, err := s.GetBlock(&prevBlockHash)
+	if err != nil {
+		return err
+	}
+
+	prevSeq := state.CalcVoteSeq(prevBlock.Height)
+	currentSeq := state.CalcVoteSeq(block.Height)
 
 	hash := block.Hash()
 	blockHashes, err := s.GetBlockHashesByHeight(block.Height)
@@ -286,11 +295,20 @@ func (s *Store) DeleteBlock(block *types.Block) error {
 		batch.Set(calcBlockHashesPrefix(block.Height), binaryBlockHashes)
 	}
 
+	if prevSeq != currentSeq {
+		batch.Delete(calcConsensusResultKey(currentSeq))
+	}
 	batch.Delete(calcBlockHeaderKey(&blockHash))
 	batch.Delete(calcBlockTransactionsKey(&blockHash))
 	batch.Delete(calcTxStatusKey(&blockHash))
 	batch.Write()
 
+	if prevSeq != currentSeq {
+		consensusResult, err := s.GetConsensusResult(currentSeq)
+		if err == nil {
+			s.cache.removeConsensusResult(consensusResult)
+		}
+	}
 	s.cache.removeBlockHashes(block.Height)
 	s.cache.removeBlockHeader(&block.BlockHeader)
 
