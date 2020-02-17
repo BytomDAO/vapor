@@ -111,7 +111,7 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	}
 
 	irrBlockHeader := c.lastIrrBlockHeader
-	if c.isIrreversible(&block.BlockHeader) && block.Height > irrBlockHeader.Height {
+	if c.IsIrreversible(&block.BlockHeader) && block.Height > irrBlockHeader.Height {
 		irrBlockHeader = &block.BlockHeader
 	}
 
@@ -165,7 +165,7 @@ func (c *Chain) Rollback(targetHeight uint64) error {
 
 	var detachBlockHeader *types.BlockHeader
 	for detachBlockHeader = c.bestBlockHeader; detachBlockHeader.Height > targetHeight; {
-		if c.isIrreversible(detachBlockHeader) {
+		if c.IsIrreversible(detachBlockHeader) {
 			break
 		}
 
@@ -247,7 +247,7 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 			consensusResults = append(consensusResults, consensusResult.Fork())
 		}
 
-		if c.isIrreversible(attachBlockHeader) && attachBlockHeader.Height > irrBlockHeader.Height {
+		if c.IsIrreversible(attachBlockHeader) && attachBlockHeader.Height > irrBlockHeader.Height {
 			irrBlockHeader = attachBlockHeader
 		}
 

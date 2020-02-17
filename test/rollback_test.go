@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/bytom/vapor/config"
 	"github.com/bytom/vapor/consensus"
@@ -18,6 +17,7 @@ import (
 	"github.com/bytom/vapor/protocol"
 	"github.com/bytom/vapor/protocol/bc"
 	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/state"
 	"github.com/bytom/vapor/testutil"
 )
 
@@ -72,16 +72,16 @@ var Xprvs = []chainkd.XPrv{
 
 func getKey() {
 	xprv, _ := chainkd.NewXPrv(nil)
-	fmt.Println("secretkey_key:", xprv)
+	fmt.Println("secretKey:", xprv)
 
 	xpub := xprv.XPub()
-	fmt.Println("public_key:", xpub)
+	fmt.Println("publicKey:", xpub)
 
-	derivate_key := xprv.Derive(fedConsensusPath)
-	fmt.Println("derivate_secret_key:", derivate_key)
+	derivateKey := xprv.Derive(fedConsensusPath)
+	fmt.Println("derivateSecretKey:", derivateKey)
 
-	derivate_public_key := derivate_key.XPub()
-	fmt.Println("derivate_public_key", derivate_public_key)
+	derivate_public_key := derivateKey.XPub()
+	fmt.Println("derivatePublicKey", derivate_public_key)
 }
 
 func newFederationConfig() *config.FederationConfig {
@@ -163,14 +163,21 @@ func TestRollback(t *testing.T) {
 			startRunNum: 3,
 			runBlockNum: 2,
 		},
+		{
+			desc:        "third add blocks",
+			startRunNum: 100,
+			runBlockNum: 100,
+		},
 	}
 
 	for caseIndex, c := range cases {
-		before_blocks := []*types.Block{}
-		after_blocks := []*types.Block{}
+		beforeBlocks := []*types.Block{}
+		afterBlocks := []*types.Block{}
+		expectConsensusResultsMap := map[uint64]*state.ConsensusResult{}
+		afterConsensusResultsMap := map[uint64]*state.ConsensusResult{}
 
 		for i := 0; i < c.startRunNum; i++ {
-			timeStamp := uint64(time.Now().UnixNano() / 1e6)
+			timeStamp := chain.BestBlockHeader().Timestamp + consensus.ActiveNetParams.BlockTimeInterval
 			config.CommonConfig.XPrv, err = getXprv(chain, store, timeStamp)
 			if err != nil {
 				t.Fatal(err)
@@ -187,18 +194,28 @@ func TestRollback(t *testing.T) {
 
 			blockHash := block.Hash()
 			gotBlock, err := store.GetBlock(&blockHash)
-			before_blocks = append(before_blocks, gotBlock)
+			beforeBlocks = append(beforeBlocks, gotBlock)
 			if err != nil {
 				t.Fatal(err)
 			}
+		}
 
-			time.Sleep(time.Duration(1) * time.Second)
+		for i := 0; i < len(beforeBlocks); i++ {
+			block := beforeBlocks[i]
+			blockHash := block.Hash()
+			consensusResult, err := chain.GetConsensusResultByHash(&blockHash)
+			if err != nil {
+
+				t.Fatal(err)
+			}
+
+			expectConsensusResultsMap[state.CalcVoteSeq(block.Height)] = consensusResult
 		}
 
 		expectChainStatus := store.GetStoreStatus()
 		expectHeight := chain.BestBlockHeight()
 		for i := 0; i < c.runBlockNum; i++ {
-			timeStamp := uint64(time.Now().UnixNano() / 1e6)
+			timeStamp := chain.BestBlockHeader().Timestamp + consensus.ActiveNetParams.BlockTimeInterval
 			config.CommonConfig.XPrv, err = getXprv(chain, store, timeStamp)
 			if err != nil {
 				t.Fatal(err)
@@ -215,12 +232,10 @@ func TestRollback(t *testing.T) {
 
 			blockHash := block.Hash()
 			gotBlock, err := store.GetBlock(&blockHash)
-			after_blocks = append(after_blocks, gotBlock)
+			afterBlocks = append(afterBlocks, gotBlock)
 			if err != nil {
 				t.Fatal(err)
 			}
-
-			time.Sleep(time.Duration(1) * time.Second)
 		}
 
 		if err = chain.Rollback(expectHeight); err != nil {
@@ -237,8 +252,8 @@ func TestRollback(t *testing.T) {
 			t.Errorf("got block status:%v, expect block status:%v", store.GetStoreStatus(), expectChainStatus)
 		}
 
-		for i := 0; i < len(before_blocks); i++ {
-			block := before_blocks[i]
+		for i := 0; i < len(beforeBlocks); i++ {
+			block := beforeBlocks[i]
 			blockHash := block.Hash()
 			gotBlock, err := store.GetBlock(&blockHash)
 			if err != nil {
@@ -257,10 +272,22 @@ func TestRollback(t *testing.T) {
 			if !testutil.DeepEqual(block.BlockHeader, *gotBlockHeader) {
 				t.Errorf("got block header:%v, expect block header:%v", gotBlockHeader, block.BlockHeader)
 			}
+
+			consensusResult, err := chain.GetConsensusResultByHash(&blockHash)
+			if err != nil {
+
+				t.Fatal(err)
+			}
+
+			afterConsensusResultsMap[state.CalcVoteSeq(block.Height)] = consensusResult
 		}
 
-		for i := 0; i < len(after_blocks); i++ {
-			block := after_blocks[i]
+		if !testutil.DeepEqual(expectConsensusResultsMap, afterConsensusResultsMap) {
+			t.Errorf("consensusResult is not equal!")
+		}
+
+		for i := 0; i < len(afterBlocks); i++ {
+			block := afterBlocks[i]
 			blockHash := block.Hash()
 			_, err := store.GetBlockHeader(&blockHash)
 			if err == nil {

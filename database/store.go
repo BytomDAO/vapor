@@ -273,7 +273,7 @@ func (s *Store) DeleteBlock(block *types.Block) error {
 		return err
 	}
 
-	blockHashes = s.deleteHashFromHashes(&hash, blockHashes)
+	blockHashes = s.deleteOneHashFromHashes(&hash, blockHashes)
 	batch := s.db.NewBatch()
 	if len(blockHashes) == 0 {
 		batch.Delete(calcBlockHashesPrefix(block.Height))
@@ -440,7 +440,7 @@ func (s *Store) getHashIndexFromHashes(hash *bc.Hash, hashes []*bc.Hash) int {
 	return -1
 }
 
-func (s *Store) deleteHashFromHashes(hash *bc.Hash, hashes []*bc.Hash) []*bc.Hash {
+func (s *Store) deleteOneHashFromHashes(hash *bc.Hash, hashes []*bc.Hash) []*bc.Hash {
 	if len(hashes) == 0 {
 		return hashes
 	}

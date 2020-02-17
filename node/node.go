@@ -174,6 +174,20 @@ func Rollback(config *cfg.Config, targetHeight uint64) error {
 		return err
 	}
 
+	walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
+	walletStore := database.NewWalletStore(walletDB)
+	accountStore := database.NewAccountStore(walletDB)
+	accounts := account.NewManager(accountStore, chain)
+	assets := asset.NewRegistry(walletDB, chain)
+	wallet, err := w.NewWallet(walletStore, accounts, assets, nil, chain, dispatcher, config.Wallet.TxIndex)
+	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("init NewWallet")
+	}
+
+	if err := wallet.Rollback(targetHeight); err != nil {
+		return err
+	}
+
 	if err := chain.Rollback(targetHeight); err != nil {
 		return err
 	}

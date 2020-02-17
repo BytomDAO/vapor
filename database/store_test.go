@@ -299,16 +299,6 @@ func TestDeleteBlock(t *testing.T) {
 	}()
 
 	store := NewStore(testDB)
-	coinbaseTxData := &types.TxData{
-		Version: 1,
-		Inputs: []*types.TxInput{
-			types.NewCoinbaseInput([]byte("Information is power. -- Jan/11/2013. Computing is power. -- Apr/24/2018.")),
-		},
-		Outputs: []*types.TxOutput{
-			types.NewVoteOutput(*consensus.BTMAssetID, uint64(10000), []byte{0x51}, []byte{0x51}),
-		},
-	}
-	coinbaseTx := types.NewTx(*coinbaseTxData)
 
 	cases := []struct {
 		blockHeaderData []*types.BlockHeader
@@ -383,30 +373,59 @@ func TestDeleteBlock(t *testing.T) {
 				},
 			},
 		},
+		{
+			blockHeaderData: []*types.BlockHeader{
+				{
+					Version:   uint64(1),
+					Height:    uint64(4),
+					Timestamp: uint64(1528945005),
+				},
+				{
+					Version:   uint64(1),
+					Height:    uint64(4),
+					Timestamp: uint64(15289450053),
+				},
+			},
+			txStatusData: []*bc.TransactionStatus{
+				{
+					VerifyStatus: []*bc.TxVerifyResult{
+						{StatusFail: false},
+					},
+				},
+				{
+					VerifyStatus: []*bc.TxVerifyResult{
+						{StatusFail: false},
+					},
+				},
+			},
+		},
 	}
 
 	for _, c := range cases {
-		txs := []*bc.Tx{coinbaseTx.Tx}
 		blockNum := len(c.blockHeaderData)
 		storeBlockData := []*types.Block{}
-		merkleRoot, _ := types.TxMerkleRoot(txs)
 		for i := 0; i < blockNum; i++ {
-			txStatusHash, _ := types.TxStatusMerkleRoot(c.txStatusData[i].VerifyStatus)
 			block := &types.Block{
 				BlockHeader: types.BlockHeader{
 					Version:   c.blockHeaderData[i].Version,
 					Height:    c.blockHeaderData[i].Height,
 					Timestamp: c.blockHeaderData[i].Timestamp,
-					BlockCommitment: types.BlockCommitment{
-						TransactionsMerkleRoot: merkleRoot,
-						TransactionStatusHash:  txStatusHash,
-					},
 				},
 			}
 			storeBlockData = append(storeBlockData, block)
 
 			if err := store.SaveBlock(block, c.txStatusData[i]); err != nil {
 				t.Fatal(err)
+			}
+
+			blockHashes, err := store.GetBlockHashesByHeight(block.Height)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			blockHash := block.Hash()
+			if store.getHashIndexFromHashes(&blockHash, blockHashes) == -1 {
+				t.Fatalf("Not found block in hashes, %v", blockHashes)
 			}
 		}
 
@@ -429,6 +448,14 @@ func TestDeleteBlock(t *testing.T) {
 				t.Errorf("check2: block exist :%v", getBlock)
 			}
 
+			blockHashes, err := store.GetBlockHashesByHeight(block.Height)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if store.getHashIndexFromHashes(&blockHash, blockHashes) != -1 {
+				t.Fatalf("should not found hashes : %v %v", blockHashes, blockHash.String())
+			}
 		}
 
 		for i := len(storeBlockData) - 1; i >= 0; i-- {
@@ -442,16 +469,11 @@ func TestDeleteBlock(t *testing.T) {
 
 		newBlockNum := len(c.newBlockHeaderData)
 		for i := 0; i < newBlockNum; i++ {
-			txStatusHash, _ := types.TxStatusMerkleRoot(c.newTxStatusData[i].VerifyStatus)
 			block := &types.Block{
 				BlockHeader: types.BlockHeader{
 					Version:   c.newBlockHeaderData[i].Version,
 					Height:    c.newBlockHeaderData[i].Height,
 					Timestamp: c.newBlockHeaderData[i].Timestamp,
-					BlockCommitment: types.BlockCommitment{
-						TransactionsMerkleRoot: merkleRoot,
-						TransactionStatusHash:  txStatusHash,
-					},
 				},
 			}
 
