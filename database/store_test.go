@@ -4,6 +4,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bytom/vapor/consensus"
 	dbm "github.com/bytom/vapor/database/leveldb"
 	"github.com/bytom/vapor/database/storage"
@@ -12,7 +14,6 @@ import (
 	"github.com/bytom/vapor/protocol/bc/types"
 	"github.com/bytom/vapor/protocol/state"
 	"github.com/bytom/vapor/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSaveChainStatus(t *testing.T) {
@@ -306,42 +307,6 @@ func TestDeleteBlock(t *testing.T) {
 				Timestamp: uint64(1528945000),
 			},
 			wantBlocks: []*types.BlockHeader{},
-		},
-		{
-			initBlocks: []*types.BlockHeader{
-				{
-					Version:   uint64(1),
-					Height:    uint64(1),
-					Timestamp: uint64(1528945000),
-				},
-				{
-					Version:   uint64(1),
-					Height:    uint64(1),
-					Timestamp: uint64(1528945005),
-				},
-				{
-					Version:   uint64(1),
-					Height:    uint64(1),
-					Timestamp: uint64(1528945010),
-				},
-			},
-			deleteBlock: &types.BlockHeader{
-				Version:   uint64(1),
-				Height:    uint64(1),
-				Timestamp: uint64(1528945000),
-			},
-			wantBlocks: []*types.BlockHeader{
-				{
-					Version:   uint64(1),
-					Height:    uint64(1),
-					Timestamp: uint64(1528945005),
-				},
-				{
-					Version:   uint64(1),
-					Height:    uint64(1),
-					Timestamp: uint64(1528945010),
-				},
-			},
 		},
 		{
 			initBlocks: []*types.BlockHeader{
