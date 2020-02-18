@@ -290,3 +290,222 @@ func TestSaveBlockHeader(t *testing.T) {
 		}
 	}
 }
+
+func getHashIndexFromHashes(hash *bc.Hash, hashes []*bc.Hash) int {
+	for index := 0; index < len(hashes); index++ {
+		if hashes[index].String() == hash.String() {
+			return index
+		}
+	}
+	return -1
+}
+
+func TestDeleteBlock(t *testing.T) {
+	cases := []struct {
+		blockHeaderData []*types.BlockHeader
+		txStatusData    []*bc.TransactionStatus
+
+		newBlockHeaderData []*types.BlockHeader
+		newTxStatusData    []*bc.TransactionStatus
+	}{
+		{
+			blockHeaderData: []*types.BlockHeader{
+				{
+					Version:   uint64(1),
+					Height:    uint64(1),
+					Timestamp: uint64(1528945000),
+				},
+				{
+					Version:   uint64(1),
+					Height:    uint64(2),
+					Timestamp: uint64(1528945005),
+				},
+			},
+			txStatusData: []*bc.TransactionStatus{
+				{
+					VerifyStatus: []*bc.TxVerifyResult{
+						{StatusFail: false},
+					},
+				},
+				{
+					VerifyStatus: []*bc.TxVerifyResult{
+						{StatusFail: false},
+					},
+				},
+			},
+			newBlockHeaderData: []*types.BlockHeader{
+				{
+					Version:   uint64(1),
+					Height:    uint64(1),
+					Timestamp: uint64(1528945030),
+				},
+				{
+					Version:   uint64(1),
+					Height:    uint64(2),
+					Timestamp: uint64(1528945050),
+				},
+			},
+			newTxStatusData: []*bc.TransactionStatus{
+				{
+					VerifyStatus: []*bc.TxVerifyResult{
+						{StatusFail: false},
+					},
+				},
+				{
+					VerifyStatus: []*bc.TxVerifyResult{
+						{StatusFail: false},
+					},
+				},
+			},
+		},
+		{
+			blockHeaderData: []*types.BlockHeader{
+				{
+					Version:   uint64(1),
+					Height:    uint64(2),
+					Timestamp: uint64(1528945005),
+				},
+			},
+			txStatusData: []*bc.TransactionStatus{
+				{
+					VerifyStatus: []*bc.TxVerifyResult{
+						{StatusFail: false},
+					},
+				},
+			},
+		},
+		{
+			blockHeaderData: []*types.BlockHeader{
+				{
+					Version:   uint64(1),
+					Height:    uint64(4),
+					Timestamp: uint64(1528945005),
+				},
+				{
+					Version:   uint64(1),
+					Height:    uint64(4),
+					Timestamp: uint64(15289450053),
+				},
+			},
+			txStatusData: []*bc.TransactionStatus{
+				{
+					VerifyStatus: []*bc.TxVerifyResult{
+						{StatusFail: false},
+					},
+				},
+				{
+					VerifyStatus: []*bc.TxVerifyResult{
+						{StatusFail: false},
+					},
+				},
+			},
+		},
+	}
+
+	for _, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		store := NewStore(testDB)
+
+		blockNum := len(c.blockHeaderData)
+		storeBlockData := []*types.Block{}
+		for i := 0; i < blockNum; i++ {
+			block := &types.Block{
+				BlockHeader: types.BlockHeader{
+					Version:   c.blockHeaderData[i].Version,
+					Height:    c.blockHeaderData[i].Height,
+					Timestamp: c.blockHeaderData[i].Timestamp,
+				},
+			}
+			storeBlockData = append(storeBlockData, block)
+
+			if err := store.SaveBlock(block, c.txStatusData[i]); err != nil {
+				t.Fatal(err)
+			}
+
+			blockHashes, err := store.GetBlockHashesByHeight(block.Height)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			blockHash := block.Hash()
+			if getHashIndexFromHashes(&blockHash, blockHashes) == -1 {
+				t.Fatalf("Not found block in hashes, %v", blockHashes)
+			}
+		}
+
+		for i := len(storeBlockData) - 1; i >= 0; i-- {
+			block := storeBlockData[i]
+			blockHash := block.Hash()
+			if !store.BlockExist(&blockHash) {
+				t.Errorf("check0: block not exist :%v, expect exists!", block)
+			}
+
+			if err := store.DeleteBlock(block); err != nil {
+				t.Fatal(err)
+			}
+
+			if store.BlockExist(&blockHash) {
+				t.Errorf("check1: block exist :%v, expect delete it!", block)
+			}
+
+			if getBlock, err := store.GetBlock(&blockHash); err == nil {
+				t.Errorf("check2: block exist :%v", getBlock)
+			}
+
+			blockHashes, err := store.GetBlockHashesByHeight(block.Height)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if getHashIndexFromHashes(&blockHash, blockHashes) != -1 {
+				t.Fatalf("should not found hashes : %v %v", blockHashes, blockHash.String())
+			}
+		}
+
+		for i := len(storeBlockData) - 1; i >= 0; i-- {
+			block := storeBlockData[i]
+			blockHash := block.Hash()
+
+			if store.BlockExist(&blockHash) {
+				t.Errorf("check3: block exist :%v, expect delete it!", block)
+			}
+		}
+
+		newBlockNum := len(c.newBlockHeaderData)
+		for i := 0; i < newBlockNum; i++ {
+			block := &types.Block{
+				BlockHeader: types.BlockHeader{
+					Version:   c.newBlockHeaderData[i].Version,
+					Height:    c.newBlockHeaderData[i].Height,
+					Timestamp: c.newBlockHeaderData[i].Timestamp,
+				},
+			}
+
+			if err := store.SaveBlock(block, c.newTxStatusData[i]); err != nil {
+				t.Fatal(err)
+			}
+
+			blockHash := block.Hash()
+			gotBlock, err := store.GetBlock(&blockHash)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !testutil.DeepEqual(gotBlock, block) {
+				t.Errorf("case %v: block mismatch: have %x, want %x", i, gotBlock, block)
+			}
+
+			getBlockHeader, err := store.GetBlockHeader(&blockHash)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !testutil.DeepEqual(block.BlockHeader, *getBlockHeader) {
+				t.Errorf("got block header:%v, expect block header:%v", getBlockHeader, block.BlockHeader)
+			}
+		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
+	}
+}

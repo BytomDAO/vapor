@@ -59,13 +59,7 @@ type Node struct {
 
 // NewNode create bytom node
 func NewNode(config *cfg.Config) *Node {
-	if err := lockDataDirectory(config); err != nil {
-		cmn.Exit("Error: " + err.Error())
-	}
-
-	if err := cfg.LoadFederationFile(config.FederationFile(), config); err != nil {
-		cmn.Exit(cmn.Fmt("Failed to load federated information:[%s]", err.Error()))
-	}
+	initNodeConfig(config)
 
 	if err := vaporLog.InitLogFile(config); err != nil {
 		log.WithField("err", err).Fatalln("InitLogFile failed")
@@ -78,12 +72,6 @@ func NewNode(config *cfg.Config) *Node {
 		"fed_quorum":         config.Federation.Quorum,
 		"fed_controlprogram": hex.EncodeToString(cfg.FederationWScript(config)),
 	}).Info()
-
-	if err := consensus.InitActiveNetParams(config.ChainID); err != nil {
-		log.Fatalf("Failed to init ActiveNetParams:[%s]", err.Error())
-	}
-
-	initCommonConfig(config)
 
 	// Get store
 	if config.DBBackend != "memdb" && config.DBBackend != "leveldb" {
@@ -169,6 +157,55 @@ func NewNode(config *cfg.Config) *Node {
 	return node
 }
 
+// Rollback rollback chain from one height to targetHeight
+func Rollback(config *cfg.Config, targetHeight uint64) error {
+	if err := initNodeConfig(config); err != nil {
+		return err
+	}
+
+	// Get store
+	if config.DBBackend != "leveldb" {
+		return errors.New("Param db_backend is invalid, use leveldb")
+	}
+
+	coreDB := dbm.NewDB("core", config.DBBackend, config.DBDir())
+	store := database.NewStore(coreDB)
+
+	dispatcher := event.NewDispatcher()
+	movCore := mov.NewMovCore(config.DBBackend, config.DBDir(), consensus.ActiveNetParams.MovStartHeight)
+	txPool := protocol.NewTxPool(store, []protocol.DustFilterer{movCore}, dispatcher)
+	chain, err := protocol.NewChain(store, txPool, []protocol.Protocoler{movCore}, dispatcher)
+	if err != nil {
+		return err
+	}
+
+	if err := chain.Rollback(targetHeight); err != nil {
+		return err
+	}
+
+	log.WithFields(log.Fields{"module": logModule}).Infof("success to rollback height of %d", chain.BestBlockHeight())
+	return nil
+}
+
+func initNodeConfig(config *cfg.Config) error {
+	if err := lockDataDirectory(config); err != nil {
+		log.WithField("err", err).Info("Error: " + err.Error())
+		return err
+	}
+
+	if err := cfg.LoadFederationFile(config.FederationFile(), config); err != nil {
+		log.WithField("err", err).Info("Failed to load federated information")
+		return err
+	}
+
+	if err := consensus.InitActiveNetParams(config.ChainID); err != nil {
+		log.Fatalf("Failed to init ActiveNetParams:[%s]", err.Error())
+	}
+
+	cfg.CommonConfig = config
+	return nil
+}
+
 // find whether config xpubs equal genesis block xpubs
 func checkConfig(chain *protocol.Chain, config *cfg.Config) error {
 	fedpegScript := cfg.FederationWScript(config)
@@ -179,7 +216,7 @@ func checkConfig(chain *protocol.Chain, config *cfg.Config) error {
 	typedInput := genesisBlock.Transactions[0].Inputs[0].TypedInput
 	if v, ok := typedInput.(*types.CoinbaseInput); ok {
 		if !reflect.DeepEqual(fedpegScript, v.Arbitrary) {
-			return errors.New("config xpubs don't equal genesis block xpubs.")
+			return errors.New("config xpubs don't equal genesis block xpubs")
 		}
 	}
 	return nil
@@ -192,10 +229,6 @@ func lockDataDirectory(config *cfg.Config) error {
 		return errors.New("datadir already used by another process")
 	}
 	return nil
-}
-
-func initCommonConfig(config *cfg.Config) {
-	cfg.CommonConfig = config
 }
 
 // Lanch web broser or not
