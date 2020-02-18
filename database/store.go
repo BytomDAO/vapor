@@ -158,7 +158,6 @@ func GetConsensusResult(db dbm.DB, seq uint64) (*state.ConsensusResult, error) {
 
 // DeleteBlock delete a new block in the protocol.
 func (s *Store) DeleteBlock(block *types.Block) error {
-	startTime := time.Now()
 	blockHash := block.Hash()
 	hash := block.Hash()
 	blockHashes, err := s.GetBlockHashesByHeight(block.Height)
@@ -166,7 +165,13 @@ func (s *Store) DeleteBlock(block *types.Block) error {
 		return err
 	}
 
-	blockHashes = s.deleteOneHashFromHashes(&hash, blockHashes)
+	for i := 0; i < len(blockHashes); i++ {
+		if blockHashes[i].String() == hash.String() {
+			blockHashes = append(blockHashes[0:i], blockHashes[i+1:len(blockHashes)]...)
+			break
+		}
+	}
+
 	batch := s.db.NewBatch()
 	if len(blockHashes) == 0 {
 		batch.Delete(calcBlockHashesPrefix(block.Height))
@@ -187,12 +192,6 @@ func (s *Store) DeleteBlock(block *types.Block) error {
 	s.cache.removeBlockHashes(block.Height)
 	s.cache.removeBlockHeader(&block.BlockHeader)
 
-	log.WithFields(log.Fields{
-		"module":   logModule,
-		"height":   block.Height,
-		"hash":     blockHash.String(),
-		"duration": time.Since(startTime),
-	}).Info("block deleted on disk")
 	return nil
 }
 
@@ -428,14 +427,4 @@ func (s *Store) SaveChainStatus(blockHeader, irrBlockHeader *types.BlockHeader, 
 		clearCacheFunc()
 	}
 	return nil
-}
-
-func (s *Store) deleteOneHashFromHashes(hash *bc.Hash, hashes []*bc.Hash) []*bc.Hash {
-	for index := 0; index < len(hashes); index++ {
-		if hashes[index].String() == hash.String() {
-			hashes = append(hashes[0:index], hashes[index+1:len(hashes)]...)
-			break
-		}
-	}
-	return hashes
 }
