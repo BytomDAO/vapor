@@ -16,11 +16,11 @@ type matchCollector struct {
 	gasLeft           int64
 	isTimeout         func() bool
 
-	workerNum   int
-	workerNumCh chan int
-	processCh   chan *matchTxResult
-	tradePairCh chan *common.TradePair
-	closeCh     chan struct{}
+	workerNum     int
+	endWorkCh     chan int
+	tradePairCh   chan *common.TradePair
+	matchResultCh chan *matchTxResult
+	closeCh       chan struct{}
 }
 
 type matchTxResult struct {
@@ -33,13 +33,13 @@ func newMatchTxCollector(engine *match.Engine, iterator *database.TradePairItera
 	return &matchCollector{
 		engine:            engine,
 		tradePairIterator: iterator,
-		workerNum:         workerNum,
-		workerNumCh:       make(chan int, workerNum),
-		processCh:         make(chan *matchTxResult),
-		tradePairCh:       make(chan *common.TradePair, workerNum),
-		closeCh:           make(chan struct{}),
 		gasLeft:           gasLeft,
 		isTimeout:         isTimeout,
+		workerNum:         workerNum,
+		endWorkCh:         make(chan int, workerNum),
+		tradePairCh:       make(chan *common.TradePair, workerNum),
+		matchResultCh:     make(chan *matchTxResult),
+		closeCh:           make(chan struct{}),
 	}
 }
 
@@ -63,10 +63,9 @@ func (m *matchCollector) collect() ([]*types.Tx, error) {
 	defer close(m.closeCh)
 
 	var matchedTxs []*types.Tx
-	completed := 0
-	for !m.isTimeout() {
+	for completed := 0; !m.isTimeout(); {
 		select {
-		case data := <-m.processCh:
+		case data := <-m.matchResultCh:
 			if data.err != nil {
 				return nil, data.err
 			}
@@ -77,7 +76,7 @@ func (m *matchCollector) collect() ([]*types.Tx, error) {
 			} else {
 				return matchedTxs, nil
 			}
-		case <-m.workerNumCh:
+		case <-m.endWorkCh:
 			if completed++; completed == m.workerNum {
 				return matchedTxs, nil
 			}
@@ -113,7 +112,7 @@ func (m *matchCollector) tradePairProducer(wg *sync.WaitGroup) {
 
 func (m *matchCollector) matchTxWorker(wg *sync.WaitGroup) {
 	defer func() {
-		m.workerNumCh <- 1
+		m.endWorkCh <- 1
 		wg.Done()
 	}()
 
@@ -122,22 +121,26 @@ func (m *matchCollector) matchTxWorker(wg *sync.WaitGroup) {
 		case <-m.closeCh:
 			return
 		case tradePair := <-m.tradePairCh:
+			// end worker due to all trade pair has been matched
 			if tradePair == nil {
 				return
 			}
+
 			for m.engine.HasMatchedTx(tradePair, tradePair.Reverse()) {
 				matchedTx, err := m.engine.NextMatchedTx(tradePair, tradePair.Reverse())
-				data := &matchTxResult{matchedTx: matchedTx, err: err}
 				select {
 				case <-m.closeCh:
 					return
-				case m.processCh <- data:
-					if data.err != nil {
+				case m.matchResultCh <- &matchTxResult{matchedTx: matchedTx, err: err}:
+					if err != nil {
 						return
 					}
 				}
 			}
 		}
-
 	}
+}
+
+func calcMatchedTxGasUsed(tx *types.Tx) int64 {
+	return int64(len(tx.Inputs))*150 + int64(tx.SerializedSize)
 }

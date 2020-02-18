@@ -121,7 +121,6 @@ func (m *LevelDBMovStore) ListOrders(orderAfter *common.Order) ([]*common.Order,
 	orderPrefix = append(orderPrefix, orderAfter.ToAssetID.Bytes()...)
 
 	var startKey []byte
-
 	if orderAfter.Rate() > 0 {
 		startKey = calcOrderKey(orderAfter.FromAssetID, orderAfter.ToAssetID, orderAfter.UTXOHash(), orderAfter.Rate())
 	}

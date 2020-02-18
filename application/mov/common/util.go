@@ -12,7 +12,7 @@ func IsMatchedTx(tx *types.Tx) bool {
 		return false
 	}
 	for _, input := range tx.Inputs {
-		if input.InputType() == types.SpendInputType && contract.IsTradeClauseSelector(input) && segwit.IsP2WMCScript(input.ControlProgram()) {
+		if input.InputType() == types.SpendInputType && segwit.IsP2WMCScript(input.ControlProgram()) && contract.IsTradeClauseSelector(input) {
 			return true
 		}
 	}
@@ -22,7 +22,7 @@ func IsMatchedTx(tx *types.Tx) bool {
 // IsCancelOrderTx check if this transaction has cancel mov order input
 func IsCancelOrderTx(tx *types.Tx) bool {
 	for _, input := range tx.Inputs {
-		if input.InputType() == types.SpendInputType && contract.IsCancelClauseSelector(input) && segwit.IsP2WMCScript(input.ControlProgram()) {
+		if input.InputType() == types.SpendInputType && segwit.IsP2WMCScript(input.ControlProgram()) && contract.IsCancelClauseSelector(input) {
 			return true
 		}
 	}
