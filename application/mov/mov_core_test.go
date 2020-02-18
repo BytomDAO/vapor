@@ -121,11 +121,11 @@ func TestApplyBlock(t *testing.T) {
 				Transactions: []*types.Tx{
 					mock.Eos2EtcMakerTxs[0],
 					mock.Btc2EthMakerTxs[0],
+					mock.Eth2BtcMakerTxs[1],
 					mock.MatchedTxs[4],
 					mock.Eth2EosMakerTxs[0],
-					mock.Eth2BtcMakerTxs[1],
-					mock.MatchedTxs[5],
 					mock.Etc2EosMakerTxs[0],
+					mock.MatchedTxs[5],
 				},
 			},
 			blockFunc:  applyBlock,
@@ -134,6 +134,23 @@ func TestApplyBlock(t *testing.T) {
 				mock.MustNewOrderFromOutput(mock.MatchedTxs[4], 1),
 				mock.MustNewOrderFromOutput(mock.Eth2EosMakerTxs[0], 0),
 			},
+			wantDBState: &common.MovDatabaseState{Height: 2, Hash: hashPtr(testutil.MustDecodeHash("88dbcde57bb2b53b107d7494f20f1f1a892307a019705980c3510890449c0020"))},
+		},
+		{
+			desc: "apply block has partial matched transaction chain",
+			block: &types.Block{
+				BlockHeader: types.BlockHeader{Height: 2, PreviousBlockHash: initBlockHeader.Hash()},
+				Transactions: []*types.Tx{
+					mock.Btc2EthMakerTxs[0],
+					mock.Eth2BtcMakerTxs[1],
+					mock.MatchedTxs[4],
+					mock.Eth2BtcMakerTxs[0],
+					mock.MatchedTxs[7],
+				},
+			},
+			blockFunc:   applyBlock,
+			initOrders:  []*common.Order{},
+			wantOrders:  []*common.Order{mock.MustNewOrderFromOutput(mock.MatchedTxs[7], 2)},
 			wantDBState: &common.MovDatabaseState{Height: 2, Hash: hashPtr(testutil.MustDecodeHash("88dbcde57bb2b53b107d7494f20f1f1a892307a019705980c3510890449c0020"))},
 		},
 		{
@@ -572,6 +589,144 @@ func TestBeforeProposalBlock(t *testing.T) {
 
 		if !testutil.DeepEqual(gotMatchedTxMap, wantMatchedTxMap) {
 			t.Errorf("#%d(%s):want matched tx(%v) is not equals got matched tx(%v)", i, c.desc, c.wantMatchedTxs, gotMatchedTxs)
+		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
+	}
+}
+
+func TestValidateMatchedTxSequence(t *testing.T) {
+	cases := []struct {
+		desc         string
+		initOrders   []*common.Order
+		transactions []*types.Tx
+		wantError    error
+	}{
+		{
+			desc:         "both db orders and transactions is empty",
+			initOrders:   []*common.Order{},
+			transactions: []*types.Tx{},
+			wantError:    nil,
+		},
+		{
+			desc:         "existing matched orders in db, and transactions is empty",
+			initOrders:   []*common.Order{mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0]},
+			transactions: []*types.Tx{},
+			wantError:    nil,
+		},
+		{
+			desc:         "db orders is empty, but transactions has matched tx",
+			initOrders:   []*common.Order{},
+			transactions: []*types.Tx{mock.MatchedTxs[1]},
+			wantError:    errNotMatchedOrder,
+		},
+		{
+			desc:         "existing matched orders in db, and corresponding matched tx in transactions",
+			initOrders:   []*common.Order{mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0]},
+			transactions: []*types.Tx{mock.MatchedTxs[1]},
+			wantError:    nil,
+		},
+		{
+			desc:         "package matched tx, one order from db, and the another order from transactions",
+			initOrders:   []*common.Order{mock.Btc2EthOrders[0]},
+			transactions: []*types.Tx{mock.Eth2BtcMakerTxs[0], mock.MatchedTxs[10]},
+			wantError:    nil,
+		},
+		{
+			desc:         "two matched txs use the same orders",
+			initOrders:   []*common.Order{mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0]},
+			transactions: []*types.Tx{mock.MatchedTxs[1], mock.MatchedTxs[1]},
+			wantError:    errNotMatchedOrder,
+		},
+		{
+			desc: "existing two matched orders in db, and only one corresponding matched tx in transactions",
+			initOrders: []*common.Order{
+				mock.Btc2EthOrders[3], mock.Eth2BtcOrders[2],
+				mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0],
+			},
+			transactions: []*types.Tx{mock.MatchedTxs[8]},
+			wantError:    nil,
+		},
+		{
+			desc: "existing two matched orders in db, and the sequence of match txs in incorrect",
+			initOrders: []*common.Order{
+				mock.Btc2EthOrders[3], mock.Eth2BtcOrders[2],
+				mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0],
+			},
+			transactions: []*types.Tx{mock.MatchedTxs[1], mock.MatchedTxs[8]},
+			wantError:    errSpendOutputIDIsIncorrect,
+		},
+		{
+			desc:         "matched tx and orders from packaged transactions",
+			initOrders:   []*common.Order{},
+			transactions: []*types.Tx{mock.Btc2EthMakerTxs[0], mock.Eth2BtcMakerTxs[1], mock.MatchedTxs[4]},
+			wantError:    nil,
+		},
+		{
+			desc:         "package the matched tx first, then package match orders",
+			initOrders:   []*common.Order{},
+			transactions: []*types.Tx{mock.MatchedTxs[4], mock.Btc2EthMakerTxs[0], mock.Eth2BtcMakerTxs[1]},
+			wantError:    errNotMatchedOrder,
+		},
+		{
+			desc:         "cancel order in transactions",
+			initOrders:   []*common.Order{mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0]},
+			transactions: []*types.Tx{mock.Btc2EthCancelTxs[0], mock.MatchedTxs[1]},
+			wantError:    errNotMatchedOrder,
+		},
+		{
+			desc:         "package cancel order after match tx",
+			initOrders:   []*common.Order{mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0]},
+			transactions: []*types.Tx{mock.MatchedTxs[1], mock.Btc2EthCancelTxs[0]},
+			wantError:    nil,
+		},
+		{
+			desc: "package matched txs of different trade pairs",
+			initOrders: []*common.Order{
+				mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0],
+				mock.Eos2EtcOrders[0], mock.Etc2EosOrders[0],
+			},
+			transactions: []*types.Tx{mock.MatchedTxs[1], mock.MatchedTxs[9]},
+			wantError:    nil,
+		},
+		{
+			desc: "package matched txs of different trade pairs in different sequence",
+			initOrders: []*common.Order{
+				mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0],
+				mock.Eos2EtcOrders[0], mock.Etc2EosOrders[0],
+			},
+			transactions: []*types.Tx{mock.MatchedTxs[9], mock.MatchedTxs[1]},
+			wantError:    nil,
+		},
+		{
+			desc:         "package partial matched tx from db orders, and the re-pending order continue to match",
+			initOrders:   []*common.Order{mock.Btc2EthOrders[0], mock.Btc2EthOrders[1], mock.Eth2BtcOrders[2]},
+			transactions: []*types.Tx{mock.MatchedTxs[2], mock.MatchedTxs[3]},
+			wantError:    nil,
+		},
+		{
+			desc:         "cancel the re-pending order",
+			initOrders:   []*common.Order{mock.Btc2EthOrders[0], mock.Btc2EthOrders[1], mock.Eth2BtcOrders[2]},
+			transactions: []*types.Tx{mock.MatchedTxs[2], mock.Btc2EthCancelTxs[1], mock.MatchedTxs[3]},
+			wantError:    errNotMatchedOrder,
+		},
+	}
+
+	for i, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		store := database.NewLevelDBMovStore(testDB)
+		if err := store.InitDBState(0, &bc.Hash{}); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := store.ProcessOrders(c.initOrders, nil, initBlockHeader); err != nil {
+			t.Fatal(err)
+		}
+
+		movCore := &MovCore{movStore: store}
+		if err := movCore.validateMatchedTxSequence(c.transactions); err != c.wantError {
+			t.Errorf("#%d(%s):wanet error(%v), got error(%v)", i, c.desc, c.wantError, err)
 		}
 
 		testDB.Close()

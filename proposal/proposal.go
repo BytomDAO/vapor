@@ -94,6 +94,7 @@ func (b *blockBuilder) applyCoinbaseTransaction() error {
 	b.gasLeft -= gasState.GasUsed
 	return nil
 }
+
 func (b *blockBuilder) applyTransactions(txs []*types.Tx, timeoutStatus uint8) error {
 	tempTxs := []*types.Tx{}
 	for i := 0; i < len(txs); i++ {
@@ -258,6 +259,7 @@ func createCoinbaseTxByReward(accountManager *account.Manager, blockHeight uint6
 	if err = builder.AddInput(types.NewCoinbaseInput(arbitrary), &txbuilder.SigningInstruction{}); err != nil {
 		return nil, err
 	}
+
 	if err = builder.AddOutput(types.NewIntraChainOutput(*consensus.BTMAssetID, 0, script)); err != nil {
 		return nil, err
 	}
@@ -294,7 +296,6 @@ type validateTxResult struct {
 
 func preValidateTxs(txs []*types.Tx, chain *protocol.Chain, view *state.UtxoViewpoint, gasLeft int64) ([]*validateTxResult, int64) {
 	var results []*validateTxResult
-
 	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: chain.BestBlockHeight() + 1}}
 	bcTxs := make([]*bc.Tx, len(txs))
 	for i, tx := range txs {
