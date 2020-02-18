@@ -159,14 +159,13 @@ func GetConsensusResult(db dbm.DB, seq uint64) (*state.ConsensusResult, error) {
 // DeleteBlock delete a new block in the protocol.
 func (s *Store) DeleteBlock(block *types.Block) error {
 	blockHash := block.Hash()
-	hash := block.Hash()
 	blockHashes, err := s.GetBlockHashesByHeight(block.Height)
 	if err != nil {
 		return err
 	}
 
 	for i := 0; i < len(blockHashes); i++ {
-		if blockHashes[i].String() == hash.String() {
+		if blockHashes[i].String() == blockHash.String() {
 			blockHashes = append(blockHashes[0:i], blockHashes[i+1:len(blockHashes)]...)
 			break
 		}
