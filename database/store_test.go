@@ -294,21 +294,21 @@ func TestSaveBlockHeader(t *testing.T) {
 
 func TestDeleteBlock(t *testing.T) {
 	cases := []struct {
-		initBlock   []*types.BlockHeader
+		initBlocks  []*types.BlockHeader
 		deleteBlock *types.BlockHeader
-		wantBlock   []*types.BlockHeader
+		wantBlocks  []*types.BlockHeader
 	}{
 		{
-			initBlock: []*types.BlockHeader{},
+			initBlocks: []*types.BlockHeader{},
 			deleteBlock: &types.BlockHeader{
 				Version:   uint64(1),
 				Height:    uint64(1),
 				Timestamp: uint64(1528945000),
 			},
-			wantBlock: []*types.BlockHeader{},
+			wantBlocks: []*types.BlockHeader{},
 		},
 		{
-			initBlock: []*types.BlockHeader{
+			initBlocks: []*types.BlockHeader{
 				{
 					Version:   uint64(1),
 					Height:    uint64(1),
@@ -330,7 +330,7 @@ func TestDeleteBlock(t *testing.T) {
 				Height:    uint64(1),
 				Timestamp: uint64(1528945000),
 			},
-			wantBlock: []*types.BlockHeader{
+			wantBlocks: []*types.BlockHeader{
 				{
 					Version:   uint64(1),
 					Height:    uint64(2),
@@ -344,7 +344,7 @@ func TestDeleteBlock(t *testing.T) {
 			},
 		},
 		{
-			initBlock: []*types.BlockHeader{
+			initBlocks: []*types.BlockHeader{
 				{
 					Version:   uint64(1),
 					Height:    uint64(1),
@@ -366,7 +366,7 @@ func TestDeleteBlock(t *testing.T) {
 				Height:    uint64(2),
 				Timestamp: uint64(1528945005),
 			},
-			wantBlock: []*types.BlockHeader{
+			wantBlocks: []*types.BlockHeader{
 				{
 					Version:   uint64(1),
 					Height:    uint64(1),
@@ -380,7 +380,7 @@ func TestDeleteBlock(t *testing.T) {
 			},
 		},
 		{
-			initBlock: []*types.BlockHeader{
+			initBlocks: []*types.BlockHeader{
 				{
 					Version:   uint64(1),
 					Height:    uint64(1),
@@ -402,7 +402,7 @@ func TestDeleteBlock(t *testing.T) {
 				Height:    uint64(3),
 				Timestamp: uint64(1528945010),
 			},
-			wantBlock: []*types.BlockHeader{
+			wantBlocks: []*types.BlockHeader{
 				{
 					Version:   uint64(1),
 					Height:    uint64(1),
@@ -416,16 +416,16 @@ func TestDeleteBlock(t *testing.T) {
 			},
 		},
 		{
-			initBlock: []*types.BlockHeader{},
+			initBlocks: []*types.BlockHeader{},
 			deleteBlock: &types.BlockHeader{
 				Version:   uint64(1),
 				Height:    uint64(1),
 				Timestamp: uint64(1528945030),
 			},
-			wantBlock: []*types.BlockHeader{},
+			wantBlocks: []*types.BlockHeader{},
 		},
 		{
-			initBlock: []*types.BlockHeader{
+			initBlocks: []*types.BlockHeader{
 				{
 					Version:   uint64(1),
 					Height:    uint64(1),
@@ -437,7 +437,7 @@ func TestDeleteBlock(t *testing.T) {
 				Height:    uint64(3),
 				Timestamp: uint64(1528945030),
 			},
-			wantBlock: []*types.BlockHeader{
+			wantBlocks: []*types.BlockHeader{
 				{
 					Version:   uint64(1),
 					Height:    uint64(1),
@@ -453,8 +453,6 @@ func TestDeleteBlock(t *testing.T) {
 				{StatusFail: false},
 			},
 		}
-
-		initBlocks := c.initBlock
 		deleteBlock := &types.Block{
 			BlockHeader: types.BlockHeader{
 				Version:   c.deleteBlock.Version,
@@ -462,7 +460,6 @@ func TestDeleteBlock(t *testing.T) {
 				Timestamp: c.deleteBlock.Timestamp,
 			},
 		}
-		wantBlocks := c.wantBlock
 
 		dbA := dbm.NewDB("dbu", "leveldb", "tempA")
 		dbB := dbm.NewDB("dbc", "leveldb", "tempB")
@@ -470,12 +467,12 @@ func TestDeleteBlock(t *testing.T) {
 		storeA := NewStore(dbA)
 		storeB := NewStore(dbB)
 
-		for i := 0; i < len(initBlocks); i++ {
+		for i := 0; i < len(c.initBlocks); i++ {
 			block := &types.Block{
 				BlockHeader: types.BlockHeader{
-					Version:   initBlocks[i].Version,
-					Height:    initBlocks[i].Height,
-					Timestamp: initBlocks[i].Timestamp,
+					Version:   c.initBlocks[i].Version,
+					Height:    c.initBlocks[i].Height,
+					Timestamp: c.initBlocks[i].Timestamp,
 				},
 			}
 			if err := storeA.SaveBlock(block, verifyStatus); err != nil {
@@ -487,12 +484,12 @@ func TestDeleteBlock(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		for i := 0; i < len(wantBlocks); i++ {
+		for i := 0; i < len(c.wantBlocks); i++ {
 			block := &types.Block{
 				BlockHeader: types.BlockHeader{
-					Version:   wantBlocks[i].Version,
-					Height:    wantBlocks[i].Height,
-					Timestamp: wantBlocks[i].Timestamp,
+					Version:   c.wantBlocks[i].Version,
+					Height:    c.wantBlocks[i].Height,
+					Timestamp: c.wantBlocks[i].Timestamp,
 				},
 			}
 			if err := storeB.SaveBlock(block, verifyStatus); err != nil {
