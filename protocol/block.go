@@ -125,7 +125,7 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	return nil
 }
 
-func (c *Chain) rollbackBlock(detachBlockHeader *types.BlockHeader, consensusResult *state.ConsensusResult, utxoView *state.UtxoViewpoint) (*types.Block, error) {
+func (c *Chain) detachBlock(detachBlockHeader *types.BlockHeader, consensusResult *state.ConsensusResult, utxoView *state.UtxoViewpoint) (*types.Block, error) {
 	detachHash := detachBlockHeader.Hash()
 	block, err := c.store.GetBlock(&detachHash)
 	if err != nil {
@@ -170,7 +170,7 @@ func (c *Chain) Rollback(targetHeight uint64) error {
 			break
 		}
 
-		block, err := c.rollbackBlock(detachBlockHeader, consensusResult, utxoView)
+		block, err := c.detachBlock(detachBlockHeader, consensusResult, utxoView)
 		if err != nil {
 			return err
 		}
@@ -204,7 +204,7 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 
 	txsToRestore := map[bc.Hash]*types.Tx{}
 	for _, detachBlockHeader := range detachBlockHeaders {
-		b, err := c.rollbackBlock(detachBlockHeader, consensusResult, utxoView)
+		b, err := c.detachBlock(detachBlockHeader, consensusResult, utxoView)
 		if err != nil {
 			return err
 		}

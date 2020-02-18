@@ -291,15 +291,16 @@ func TestSaveBlockHeader(t *testing.T) {
 	}
 }
 
+func getHashIndexFromHashes(hash *bc.Hash, hashes []*bc.Hash) int {
+	for index := 0; index < len(hashes); index++ {
+		if hashes[index].String() == hash.String() {
+			return index
+		}
+	}
+	return -1
+}
+
 func TestDeleteBlock(t *testing.T) {
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer func() {
-		testDB.Close()
-		os.RemoveAll("temp")
-	}()
-
-	store := NewStore(testDB)
-
 	cases := []struct {
 		blockHeaderData []*types.BlockHeader
 		txStatusData    []*bc.TransactionStatus
@@ -402,6 +403,9 @@ func TestDeleteBlock(t *testing.T) {
 	}
 
 	for _, c := range cases {
+		testDB := dbm.NewDB("testdb", "leveldb", "temp")
+		store := NewStore(testDB)
+
 		blockNum := len(c.blockHeaderData)
 		storeBlockData := []*types.Block{}
 		for i := 0; i < blockNum; i++ {
@@ -424,7 +428,7 @@ func TestDeleteBlock(t *testing.T) {
 			}
 
 			blockHash := block.Hash()
-			if store.getHashIndexFromHashes(&blockHash, blockHashes) == -1 {
+			if getHashIndexFromHashes(&blockHash, blockHashes) == -1 {
 				t.Fatalf("Not found block in hashes, %v", blockHashes)
 			}
 		}
@@ -453,7 +457,7 @@ func TestDeleteBlock(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if store.getHashIndexFromHashes(&blockHash, blockHashes) != -1 {
+			if getHashIndexFromHashes(&blockHash, blockHashes) != -1 {
 				t.Fatalf("should not found hashes : %v %v", blockHashes, blockHash.String())
 			}
 		}
@@ -500,5 +504,8 @@ func TestDeleteBlock(t *testing.T) {
 				t.Errorf("got block header:%v, expect block header:%v", getBlockHeader, block.BlockHeader)
 			}
 		}
+
+		testDB.Close()
+		os.RemoveAll("temp")
 	}
 }

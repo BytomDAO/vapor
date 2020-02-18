@@ -266,16 +266,6 @@ func (s *Store) GetConsensusResult(seq uint64) (*state.ConsensusResult, error) {
 func (s *Store) DeleteBlock(block *types.Block) error {
 	startTime := time.Now()
 	blockHash := block.Hash()
-	prevBlockHash := block.PreviousBlockHash
-
-	prevBlock, err := s.GetBlock(&prevBlockHash)
-	if err != nil {
-		return err
-	}
-
-	prevSeq := state.CalcVoteSeq(prevBlock.Height)
-	currentSeq := state.CalcVoteSeq(block.Height)
-
 	hash := block.Hash()
 	blockHashes, err := s.GetBlockHashesByHeight(block.Height)
 	if err != nil {
@@ -295,20 +285,11 @@ func (s *Store) DeleteBlock(block *types.Block) error {
 		batch.Set(calcBlockHashesPrefix(block.Height), binaryBlockHashes)
 	}
 
-	if prevSeq != currentSeq {
-		batch.Delete(calcConsensusResultKey(currentSeq))
-	}
 	batch.Delete(calcBlockHeaderKey(&blockHash))
 	batch.Delete(calcBlockTransactionsKey(&blockHash))
 	batch.Delete(calcTxStatusKey(&blockHash))
 	batch.Write()
 
-	if prevSeq != currentSeq {
-		consensusResult, err := s.GetConsensusResult(currentSeq)
-		if err == nil {
-			s.cache.removeConsensusResult(consensusResult)
-		}
-	}
 	s.cache.removeBlockHashes(block.Height)
 	s.cache.removeBlockHeader(&block.BlockHeader)
 
@@ -449,22 +430,12 @@ func (s *Store) SaveChainStatus(blockHeader, irrBlockHeader *types.BlockHeader, 
 	return nil
 }
 
-func (s *Store) getHashIndexFromHashes(hash *bc.Hash, hashes []*bc.Hash) int {
+func (s *Store) deleteOneHashFromHashes(hash *bc.Hash, hashes []*bc.Hash) []*bc.Hash {
 	for index := 0; index < len(hashes); index++ {
 		if hashes[index].String() == hash.String() {
-			return index
+			hashes = append(hashes[0:index], hashes[index+1:len(hashes)]...)
+			break
 		}
-	}
-	return -1
-}
-
-func (s *Store) deleteOneHashFromHashes(hash *bc.Hash, hashes []*bc.Hash) []*bc.Hash {
-	if len(hashes) == 0 {
-		return hashes
-	}
-
-	if index := s.getHashIndexFromHashes(hash, hashes); index != -1 {
-		hashes = append(hashes[0:index], hashes[index+1:len(hashes)]...)
 	}
 	return hashes
 }
