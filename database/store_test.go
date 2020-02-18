@@ -351,7 +351,6 @@ func TestDeleteBlock2(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		//var mapA, mapB map[[]byte][]byte
 		verifyStatus := &bc.TransactionStatus{
 			VerifyStatus: []*bc.TxVerifyResult{
 				{StatusFail: false},
