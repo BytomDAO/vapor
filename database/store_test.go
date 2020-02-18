@@ -316,6 +316,42 @@ func TestDeleteBlock(t *testing.T) {
 				},
 				{
 					Version:   uint64(1),
+					Height:    uint64(1),
+					Timestamp: uint64(1528945005),
+				},
+				{
+					Version:   uint64(1),
+					Height:    uint64(1),
+					Timestamp: uint64(1528945010),
+				},
+			},
+			deleteBlock: &types.BlockHeader{
+				Version:   uint64(1),
+				Height:    uint64(1),
+				Timestamp: uint64(1528945000),
+			},
+			wantBlocks: []*types.BlockHeader{
+				{
+					Version:   uint64(1),
+					Height:    uint64(1),
+					Timestamp: uint64(1528945005),
+				},
+				{
+					Version:   uint64(1),
+					Height:    uint64(1),
+					Timestamp: uint64(1528945010),
+				},
+			},
+		},
+		{
+			initBlocks: []*types.BlockHeader{
+				{
+					Version:   uint64(1),
+					Height:    uint64(1),
+					Timestamp: uint64(1528945000),
+				},
+				{
+					Version:   uint64(1),
 					Height:    uint64(2),
 					Timestamp: uint64(1528945005),
 				},
