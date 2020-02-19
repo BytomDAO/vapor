@@ -156,6 +156,44 @@ func GetConsensusResult(db dbm.DB, seq uint64) (*state.ConsensusResult, error) {
 	return consensusResult, nil
 }
 
+// DeleteBlock delete a new block in the protocol.
+func (s *Store) DeleteBlock(block *types.Block) error {
+	blockHash := block.Hash()
+	blockHashes, err := s.GetBlockHashesByHeight(block.Height)
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i < len(blockHashes); i++ {
+		if blockHashes[i].String() == blockHash.String() {
+			blockHashes = append(blockHashes[0:i], blockHashes[i+1:len(blockHashes)]...)
+			break
+		}
+	}
+
+	batch := s.db.NewBatch()
+	if len(blockHashes) == 0 {
+		batch.Delete(calcBlockHashesPrefix(block.Height))
+	} else {
+		binaryBlockHashes, err := json.Marshal(blockHashes)
+		if err != nil {
+			return errors.Wrap(err, "Marshal block hashes")
+		}
+
+		batch.Set(calcBlockHashesPrefix(block.Height), binaryBlockHashes)
+	}
+
+	batch.Delete(calcBlockHeaderKey(&blockHash))
+	batch.Delete(calcBlockTransactionsKey(&blockHash))
+	batch.Delete(calcTxStatusKey(&blockHash))
+	batch.Write()
+
+	s.cache.removeBlockHashes(block.Height)
+	s.cache.removeBlockHeader(&block.BlockHeader)
+
+	return nil
+}
+
 // NewStore creates and returns a new Store object.
 func NewStore(db dbm.DB) *Store {
 	fillBlockHeaderFn := func(hash *bc.Hash) (*types.BlockHeader, error) {
