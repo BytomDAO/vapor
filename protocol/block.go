@@ -162,9 +162,9 @@ func (c *Chain) detachBlock(detachBlockHeader *types.BlockHeader, consensusResul
 		return block, err
 	}
 
-	if nowSeq := state.CalcVoteSeq(block.Height); block.Height > 0 && nowSeq != state.CalcVoteSeq(block.Height-1) {
-		if err := c.store.DeleteConsensusResult(nowSeq); err != nil {
-			return block, err
+	for _, p := range c.subProtocols {
+		if err := p.DetachBlock(block); err != nil {
+			return block, errors.Wrap(err, p.Name(), "sub protocol detach block")
 		}
 	}
 
@@ -189,6 +189,12 @@ func (c *Chain) Rollback(targetHeight uint64) error {
 
 		if err := c.store.DeleteBlock(block); err != nil {
 			return err
+		}
+
+		if nowSeq := state.CalcVoteSeq(block.Height); block.Height > 0 && nowSeq != state.CalcVoteSeq(block.Height-1) {
+			if err := c.store.DeleteConsensusResult(nowSeq); err != nil {
+				return err
+			}
 		}
 
 		prevBlockHash := detachBlockHeader.PreviousBlockHash
@@ -225,12 +231,6 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 		b, err := c.detachBlock(detachBlockHeader, consensusResult, utxoView)
 		if err != nil {
 			return err
-		}
-
-		for _, p := range c.subProtocols {
-			if err := p.DetachBlock(b); err != nil {
-				return errors.Wrap(err, p.Name(), "sub protocol detach block")
-			}
 		}
 
 		for _, tx := range b.Transactions {
