@@ -203,6 +203,10 @@ func Rollback(config *cfg.Config, targetHeight uint64) error {
 		return err
 	}
 
+	if err := chain.Rollback(targetHeight); err != nil {
+		return err
+	}
+
 	return nil
 }
 
