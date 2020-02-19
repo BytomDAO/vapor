@@ -86,7 +86,7 @@ func NewWallet(store WalletStore, account *account.Manager, asset *asset.Registr
 		return nil, err
 	}
 
-	if rollbackFlag {
+	if !rollbackFlag {
 		go w.walletUpdater()
 		go w.delUnconfirmedTx()
 		go w.MemPoolTxQueryLoop()
