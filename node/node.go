@@ -59,13 +59,7 @@ type Node struct {
 
 // NewNode create bytom node
 func NewNode(config *cfg.Config) *Node {
-	if err := lockDataDirectory(config); err != nil {
-		cmn.Exit("Error: " + err.Error())
-	}
-
-	if err := cfg.LoadFederationFile(config.FederationFile(), config); err != nil {
-		cmn.Exit(cmn.Fmt("Failed to load federated information:[%s]", err.Error()))
-	}
+	initNodeConfig(config)
 
 	if err := vaporLog.InitLogFile(config); err != nil {
 		log.WithField("err", err).Fatalln("InitLogFile failed")
@@ -78,12 +72,6 @@ func NewNode(config *cfg.Config) *Node {
 		"fed_quorum":         config.Federation.Quorum,
 		"fed_controlprogram": hex.EncodeToString(cfg.FederationWScript(config)),
 	}).Info()
-
-	if err := consensus.InitActiveNetParams(config.ChainID); err != nil {
-		log.Fatalf("Failed to init ActiveNetParams:[%s]", err.Error())
-	}
-
-	initCommonConfig(config)
 
 	// Get store
 	if config.DBBackend != "memdb" && config.DBBackend != "leveldb" {
@@ -128,6 +116,10 @@ func NewNode(config *cfg.Config) *Node {
 			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("init NewWallet")
 		}
 
+		if err = wallet.Run(); err != nil {
+			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("init NewWallet work running thread")
+		}
+
 		// trigger rescan wallet
 		if config.Wallet.Rescan {
 			wallet.RescanBlocks()
@@ -168,6 +160,69 @@ func NewNode(config *cfg.Config) *Node {
 	node.cpuMiner = blockproposer.NewBlockProposer(chain, accounts, txPool, dispatcher)
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 	return node
+}
+
+// Rollback rollback chain from one height to targetHeight
+func Rollback(config *cfg.Config, targetHeight uint64) error {
+	if err := initNodeConfig(config); err != nil {
+		return err
+	}
+
+	// Get store
+	if config.DBBackend != "leveldb" {
+		return errors.New("Param db_backend is invalid, use leveldb")
+	}
+
+	coreDB := dbm.NewDB("core", config.DBBackend, config.DBDir())
+	store := database.NewStore(coreDB)
+
+	dispatcher := event.NewDispatcher()
+	movCore := mov.NewMovCore(config.DBBackend, config.DBDir(), consensus.ActiveNetParams.MovStartHeight)
+	txPool := protocol.NewTxPool(store, []protocol.DustFilterer{movCore}, dispatcher)
+	chain, err := protocol.NewChain(store, txPool, []protocol.Protocoler{movCore}, dispatcher)
+	if err != nil {
+		return err
+	}
+
+	hsm, err := pseudohsm.New(config.KeysDir())
+	if err != nil {
+		return err
+	}
+
+	walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
+	walletStore := database.NewWalletStore(walletDB)
+	accountStore := database.NewAccountStore(walletDB)
+	accounts := account.NewManager(accountStore, chain)
+	assets := asset.NewRegistry(walletDB, chain)
+	wallet, err := w.NewWallet(walletStore, accounts, assets, hsm, chain, dispatcher, config.Wallet.TxIndex)
+	if err != nil {
+		return err
+	}
+
+	if err := wallet.Rollback(targetHeight); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func initNodeConfig(config *cfg.Config) error {
+	if err := lockDataDirectory(config); err != nil {
+		log.WithField("err", err).Info("Error: " + err.Error())
+		return err
+	}
+
+	if err := cfg.LoadFederationFile(config.FederationFile(), config); err != nil {
+		log.WithField("err", err).Info("Failed to load federated information")
+		return err
+	}
+
+	if err := consensus.InitActiveNetParams(config.ChainID); err != nil {
+		log.Fatalf("Failed to init ActiveNetParams:[%s]", err.Error())
+	}
+
+	cfg.CommonConfig = config
+	return nil
 }
 
 // find whether config xpubs equal genesis block xpubs
