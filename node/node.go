@@ -163,14 +163,14 @@ func NewNode(config *cfg.Config) *Node {
 }
 
 // Rollback rollback chain from one height to targetHeight
-func Rollback(config *cfg.Config, targetHeight uint64) error {
+func Rollback(config *cfg.Config, targetHeight uint64) (uint64, error) {
 	if err := initNodeConfig(config); err != nil {
-		return err
+		return 0, err
 	}
 
 	// Get store
 	if config.DBBackend != "leveldb" {
-		return errors.New("Param db_backend is invalid, use leveldb")
+		return 0, errors.New("Param db_backend is invalid, use leveldb")
 	}
 
 	coreDB := dbm.NewDB("core", config.DBBackend, config.DBDir())
@@ -181,12 +181,12 @@ func Rollback(config *cfg.Config, targetHeight uint64) error {
 	txPool := protocol.NewTxPool(store, []protocol.DustFilterer{movCore}, dispatcher)
 	chain, err := protocol.NewChain(store, txPool, []protocol.Protocoler{movCore}, dispatcher)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	hsm, err := pseudohsm.New(config.KeysDir())
 	if err != nil {
-		cmn.Exit(cmn.Fmt("initialize HSM failed: %v", err))
+		return 0, err
 	}
 
 	walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
@@ -196,15 +196,14 @@ func Rollback(config *cfg.Config, targetHeight uint64) error {
 	assets := asset.NewRegistry(walletDB, chain)
 	wallet, err := w.NewWallet(walletStore, accounts, assets, hsm, chain, dispatcher, config.Wallet.TxIndex)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if err := wallet.Rollback(targetHeight); err != nil {
-		return err
+		return 0, err
 	}
 
-	log.WithFields(log.Fields{"module": logModule}).Infof("success to rollback height of %d", chain.BestBlockHeight())
-	return nil
+	return chain.BestBlockHeight(), nil
 }
 
 func initNodeConfig(config *cfg.Config) error {

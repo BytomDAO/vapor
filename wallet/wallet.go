@@ -320,7 +320,7 @@ func (w *Wallet) Rollback(targetHeight uint64) error {
 		return err
 	}
 
-	for detachBlockHeader.Height > targetHeight {
+	for w.Status.WorkHeight > targetHeight {
 		blockHash := detachBlockHeader.Hash()
 		block, err := w.Chain.GetBlockByHash(&blockHash)
 		if err != nil {
