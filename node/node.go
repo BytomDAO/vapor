@@ -59,13 +59,7 @@ type Node struct {
 
 // NewNode create bytom node
 func NewNode(config *cfg.Config) *Node {
-	if err := lockDataDirectory(config); err != nil {
-		cmn.Exit("Error: " + err.Error())
-	}
-
-	if err := cfg.LoadFederationFile(config.FederationFile(), config); err != nil {
-		cmn.Exit(cmn.Fmt("Failed to load federated information:[%s]", err.Error()))
-	}
+	initNodeConfig(config)
 
 	if err := vaporLog.InitLogFile(config); err != nil {
 		log.WithField("err", err).Fatalln("InitLogFile failed")
@@ -78,12 +72,6 @@ func NewNode(config *cfg.Config) *Node {
 		"fed_quorum":         config.Federation.Quorum,
 		"fed_controlprogram": hex.EncodeToString(cfg.FederationWScript(config)),
 	}).Info()
-
-	if err := consensus.InitActiveNetParams(config.ChainID); err != nil {
-		log.Fatalf("Failed to init ActiveNetParams:[%s]", err.Error())
-	}
-
-	initCommonConfig(config)
 
 	// Get store
 	if config.DBBackend != "memdb" && config.DBBackend != "leveldb" {
@@ -192,9 +180,24 @@ func Rollback(config *cfg.Config, targetHeight uint64) error {
 		return err
 	}
 
-	// if err := chain.Rollback(targetHeight); err != nil {
-	// 	return err
-	// }
+	hsm, err := pseudohsm.New(config.KeysDir())
+	if err != nil {
+		cmn.Exit(cmn.Fmt("initialize HSM failed: %v", err))
+	}
+
+	walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
+	walletStore := database.NewWalletStore(walletDB)
+	accountStore := database.NewAccountStore(walletDB)
+	accounts := account.NewManager(accountStore, chain)
+	assets := asset.NewRegistry(walletDB, chain)
+	wallet, err := w.NewWallet(walletStore, accounts, assets, hsm, chain, dispatcher, config.Wallet.TxIndex)
+	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("init NewWallet")
+	}
+
+	if err := wallet.Rollback(targetHeight); err != nil {
+		return err
+	}
 
 	log.WithFields(log.Fields{"module": logModule}).Infof("success to rollback height of %d", chain.BestBlockHeight())
 	return nil
