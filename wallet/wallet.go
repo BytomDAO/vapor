@@ -59,7 +59,7 @@ type Wallet struct {
 }
 
 //NewWallet return a new wallet instance
-func NewWallet(store WalletStore, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) (*Wallet, error) {
+func NewWallet(store WalletStore, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool, rollbackFlag bool) (*Wallet, error) {
 	w := &Wallet{
 		Store:           store,
 		AccountMgr:      account,
@@ -86,9 +86,11 @@ func NewWallet(store WalletStore, account *account.Manager, asset *asset.Registr
 		return nil, err
 	}
 
-	go w.walletUpdater()
-	go w.delUnconfirmedTx()
-	go w.MemPoolTxQueryLoop()
+	if rollbackFlag {
+		go w.walletUpdater()
+		go w.delUnconfirmedTx()
+		go w.MemPoolTxQueryLoop()
+	}
 	return w, nil
 }
 

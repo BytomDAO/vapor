@@ -247,7 +247,7 @@ func (cfg *walletTestConfig) Run() error {
 	accountManager := account.NewManager(accountStore, chain)
 	assets := asset.NewRegistry(walletDB, chain)
 	dispatcher := event.NewDispatcher()
-	wallet, err := w.NewWallet(walletStore, accountManager, assets, hsm, chain, dispatcher, false)
+	wallet, err := w.NewWallet(walletStore, accountManager, assets, hsm, chain, dispatcher, false, false)
 	if err != nil {
 		return err
 	}
