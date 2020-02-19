@@ -182,10 +182,6 @@ func (c *Chain) Rollback(targetHeight uint64) error {
 
 	var detachBlockHeader *types.BlockHeader
 	for detachBlockHeader = c.bestBlockHeader; detachBlockHeader.Height > targetHeight; {
-		if c.isIrreversible(detachBlockHeader) {
-			break
-		}
-
 		block, err := c.detachBlock(detachBlockHeader, consensusResult, utxoView)
 		if err != nil {
 			return err
