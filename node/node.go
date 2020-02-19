@@ -111,9 +111,14 @@ func NewNode(config *cfg.Config) *Node {
 		accountStore := database.NewAccountStore(walletDB)
 		accounts = account.NewManager(accountStore, chain)
 		assets = asset.NewRegistry(walletDB, chain)
-		wallet, err = w.NewWallet(walletStore, accounts, assets, hsm, chain, dispatcher, config.Wallet.TxIndex, false)
+		wallet, err = w.NewWallet(walletStore, accounts, assets, hsm, chain, dispatcher, config.Wallet.TxIndex)
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("init NewWallet")
+		}
+
+		err = wallet.RunningWorkingThread()
+		if err != nil {
+			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("init NewWallet work running thread")
 		}
 
 		// trigger rescan wallet
@@ -190,7 +195,7 @@ func Rollback(config *cfg.Config, targetHeight uint64) error {
 	accountStore := database.NewAccountStore(walletDB)
 	accounts := account.NewManager(accountStore, chain)
 	assets := asset.NewRegistry(walletDB, chain)
-	wallet, err := w.NewWallet(walletStore, accounts, assets, hsm, chain, dispatcher, config.Wallet.TxIndex, true)
+	wallet, err := w.NewWallet(walletStore, accounts, assets, hsm, chain, dispatcher, config.Wallet.TxIndex)
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("init NewWallet")
 	}

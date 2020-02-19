@@ -59,7 +59,7 @@ type Wallet struct {
 }
 
 //NewWallet return a new wallet instance
-func NewWallet(store WalletStore, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool, rollbackFlag bool) (*Wallet, error) {
+func NewWallet(store WalletStore, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) (*Wallet, error) {
 	w := &Wallet{
 		Store:           store,
 		AccountMgr:      account,
@@ -80,18 +80,22 @@ func NewWallet(store WalletStore, account *account.Manager, asset *asset.Registr
 		return nil, err
 	}
 
+	return w, nil
+}
+
+// RunningWorkingThread go to run some wallet recorvery thread
+func (w *Wallet) RunningWorkingThread() error {
 	var err error
 	w.TxMsgSub, err = w.EventDispatcher.Subscribe(protocol.TxMsgEvent{})
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	if !rollbackFlag {
-		go w.walletUpdater()
-		go w.delUnconfirmedTx()
-		go w.MemPoolTxQueryLoop()
-	}
-	return w, nil
+	go w.walletUpdater()
+	go w.delUnconfirmedTx()
+	go w.MemPoolTxQueryLoop()
+
+	return nil
 }
 
 // MemPoolTxQueryLoop constantly pass a transaction accepted by mempool to the wallet.
