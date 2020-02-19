@@ -83,7 +83,7 @@ func NewWallet(store WalletStore, account *account.Manager, asset *asset.Registr
 	return w, nil
 }
 
-// RunningWorkingThread go to run some wallet recorvery thread
+// RunningWorkingThread go to run some wallet recorvery and clean tx thread
 func (w *Wallet) RunningWorkingThread() error {
 	var err error
 	w.TxMsgSub, err = w.EventDispatcher.Subscribe(protocol.TxMsgEvent{})
