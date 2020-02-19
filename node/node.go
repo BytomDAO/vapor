@@ -170,6 +170,55 @@ func NewNode(config *cfg.Config) *Node {
 	return node
 }
 
+// Rollback rollback chain from one height to targetHeight
+func Rollback(config *cfg.Config, targetHeight uint64) error {
+	if err := initNodeConfig(config); err != nil {
+		return err
+	}
+
+	// Get store
+	if config.DBBackend != "leveldb" {
+		return errors.New("Param db_backend is invalid, use leveldb")
+	}
+
+	coreDB := dbm.NewDB("core", config.DBBackend, config.DBDir())
+	store := database.NewStore(coreDB)
+
+	dispatcher := event.NewDispatcher()
+	movCore := mov.NewMovCore(config.DBBackend, config.DBDir(), consensus.ActiveNetParams.MovStartHeight)
+	txPool := protocol.NewTxPool(store, []protocol.DustFilterer{movCore}, dispatcher)
+	chain, err := protocol.NewChain(store, txPool, []protocol.Protocoler{movCore}, dispatcher)
+	if err != nil {
+		return err
+	}
+
+	// if err := chain.Rollback(targetHeight); err != nil {
+	// 	return err
+	// }
+
+	log.WithFields(log.Fields{"module": logModule}).Infof("success to rollback height of %d", chain.BestBlockHeight())
+	return nil
+}
+
+func initNodeConfig(config *cfg.Config) error {
+	if err := lockDataDirectory(config); err != nil {
+		log.WithField("err", err).Info("Error: " + err.Error())
+		return err
+	}
+
+	if err := cfg.LoadFederationFile(config.FederationFile(), config); err != nil {
+		log.WithField("err", err).Info("Failed to load federated information")
+		return err
+	}
+
+	if err := consensus.InitActiveNetParams(config.ChainID); err != nil {
+		log.Fatalf("Failed to init ActiveNetParams:[%s]", err.Error())
+	}
+
+	cfg.CommonConfig = config
+	return nil
+}
+
 // find whether config xpubs equal genesis block xpubs
 func checkConfig(chain *protocol.Chain, config *cfg.Config) error {
 	fedpegScript := cfg.FederationWScript(config)
