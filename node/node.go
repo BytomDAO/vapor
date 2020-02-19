@@ -116,8 +116,7 @@ func NewNode(config *cfg.Config) *Node {
 			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("init NewWallet")
 		}
 
-		err = wallet.RunningWorkingThread()
-		if err != nil {
+		if err = wallet.RunningWorkingThread(); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("init NewWallet work running thread")
 		}
 
@@ -197,7 +196,7 @@ func Rollback(config *cfg.Config, targetHeight uint64) error {
 	assets := asset.NewRegistry(walletDB, chain)
 	wallet, err := w.NewWallet(walletStore, accounts, assets, hsm, chain, dispatcher, config.Wallet.TxIndex)
 	if err != nil {
-		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("init NewWallet")
+		return err
 	}
 
 	if err := wallet.Rollback(targetHeight); err != nil {
