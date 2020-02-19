@@ -67,7 +67,7 @@ func (c *Chain) checkNodeSign(bh *types.BlockHeader, consensusNode *state.Consen
 	return c.checkDoubleSign(bh, consensusNode.XPub.String())
 }
 
-func (c *Chain) isIrreversible(blockHeader *types.BlockHeader) bool {
+func (c *Chain) IsIrreversible(blockHeader *types.BlockHeader) bool {
 	consensusNodes, err := c.getConsensusNodes(&blockHeader.PreviousBlockHash)
 	if err != nil {
 		return false
@@ -89,7 +89,7 @@ func (c *Chain) updateBlockSignature(blockHeader *types.BlockHeader, nodeOrder u
 		return err
 	}
 
-	if !c.isIrreversible(blockHeader) || blockHeader.Height <= c.lastIrrBlockHeader.Height {
+	if !c.IsIrreversible(blockHeader) || blockHeader.Height <= c.lastIrrBlockHeader.Height {
 		return nil
 	}
 
