@@ -123,7 +123,7 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	}
 
 	irrBlockHeader := c.lastIrrBlockHeader
-	if c.IsIrreversible(&block.BlockHeader) && block.Height > irrBlockHeader.Height {
+	if c.isIrreversible(&block.BlockHeader) && block.Height > irrBlockHeader.Height {
 		irrBlockHeader = &block.BlockHeader
 	}
 
@@ -237,7 +237,7 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 			return err
 		}
 
-		if c.IsIrreversible(attachBlockHeader) && attachBlockHeader.Height > irrBlockHeader.Height {
+		if c.isIrreversible(attachBlockHeader) && attachBlockHeader.Height > irrBlockHeader.Height {
 			irrBlockHeader = attachBlockHeader
 		}
 

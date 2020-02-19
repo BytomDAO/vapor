@@ -116,7 +116,7 @@ func NewNode(config *cfg.Config) *Node {
 			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("init NewWallet")
 		}
 
-		if err = wallet.RunningWorkingThread(); err != nil {
+		if err = wallet.Run(); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("init NewWallet work running thread")
 		}
 

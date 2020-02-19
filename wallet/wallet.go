@@ -83,8 +83,8 @@ func NewWallet(store WalletStore, account *account.Manager, asset *asset.Registr
 	return w, nil
 }
 
-// RunningWorkingThread go to run some wallet recorvery and clean tx thread
-func (w *Wallet) RunningWorkingThread() error {
+// Run go to run some wallet recorvery and clean tx thread
+func (w *Wallet) Run() error {
 	var err error
 	w.TxMsgSub, err = w.EventDispatcher.Subscribe(protocol.TxMsgEvent{})
 	if err != nil {
@@ -321,10 +321,6 @@ func (w *Wallet) Rollback(targetHeight uint64) error {
 	}
 
 	for detachBlockHeader.Height > targetHeight {
-		if w.Chain.IsIrreversible(detachBlockHeader) {
-			break
-		}
-
 		blockHash := detachBlockHeader.Hash()
 		block, err := w.Chain.GetBlockByHash(&blockHash)
 		if err != nil {
