@@ -315,25 +315,14 @@ func (w *Wallet) DeleteAccount(accountID string) (err error) {
 
 // Rollback wallet to target height
 func (w *Wallet) Rollback(targetHeight uint64) error {
-	detachBlockHeader, err := w.Chain.GetHeaderByHash(&w.Status.BestHash)
-	if err != nil {
-		return err
-	}
-
 	for w.Status.WorkHeight > targetHeight {
-		blockHash := detachBlockHeader.Hash()
+		blockHash := w.Status.BestHash
 		block, err := w.Chain.GetBlockByHash(&blockHash)
 		if err != nil {
 			return err
 		}
 
 		if err = w.DetachBlock(block); err != nil {
-			return err
-		}
-
-		prevBlockHash := detachBlockHeader.PreviousBlockHash
-		detachBlockHeader, err = w.Chain.GetHeaderByHash(&prevBlockHash)
-		if err != nil {
 			return err
 		}
 	}
