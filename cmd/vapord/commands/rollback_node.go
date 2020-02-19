@@ -25,12 +25,11 @@ var rollbackCmd = &cobra.Command{
 			log.WithFields(log.Fields{"module": logModule}).Fatal("height should >= 0")
 		}
 
-		var finalHeight uint64
-		if finalHeight, err = node.Rollback(config, uint64(height)); err != nil {
+		if err = node.Rollback(config, uint64(height)); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal("failed to rollback")
 		}
 
-		log.WithFields(log.Fields{"module": logModule}).Infof("success to rollback height of %d", finalHeight)
+		log.WithFields(log.Fields{"module": logModule}).Infof("success to rollback height of %d", height)
 	},
 }
 
