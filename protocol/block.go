@@ -172,21 +172,66 @@ func (c *Chain) detachBlock(detachBlockHeader *types.BlockHeader, consensusResul
 	return block, nil
 }
 
+func (c *Chain) syncSubProtocols() error {
+	for _, p := range c.subProtocols {
+		if err := c.syncProtocolStatus(p); err != nil {
+			return errors.Wrap(err, p.Name(), "sync sub protocol status")
+		}
+	}
+	return nil
+}
+
 // Rollback rollback the chain from one blockHeight to targetBlockHeight
+// WARNING: we recommend to use this only in commond line
 func (c *Chain) Rollback(targetHeight uint64) error {
+	c.cond.L.Lock()
+	defer c.cond.L.Unlock()
+
 	utxoView := state.NewUtxoViewpoint()
 	consensusResult, err := c.getBestConsensusResult()
 	if err != nil {
 		return err
 	}
 
-	var detachBlockHeader *types.BlockHeader
-	for detachBlockHeader = c.bestBlockHeader; detachBlockHeader.Height > targetHeight; {
+	if err = c.syncSubProtocols(); err != nil {
+		return err
+	}
+
+	var attachBlockHeader *types.BlockHeader
+	if attachBlockHeader, err = c.GetHeaderByHeight(targetHeight); err != nil {
+		return err
+	}
+
+	_, detachBlockHeaderss, err := c.calcReorganizeChain(attachBlockHeader, c.bestBlockHeader)
+	if err != nil {
+		return err
+	}
+
+	wantDeleteBlock := []*types.Block{}
+	for _, detachBlockHeader := range detachBlockHeaderss {
 		block, err := c.detachBlock(detachBlockHeader, consensusResult, utxoView)
 		if err != nil {
 			return err
 		}
 
+		wantDeleteBlock = append(wantDeleteBlock, block)
+	}
+
+	if c.lastIrrBlockHeader.Height > attachBlockHeader.Height {
+		for c.lastIrrBlockHeader = attachBlockHeader; !c.isIrreversible(c.lastIrrBlockHeader) && c.lastIrrBlockHeader.Height > 0; {
+			prevBlockHash := c.lastIrrBlockHeader.PreviousBlockHash
+			c.lastIrrBlockHeader, err = c.GetHeaderByHash(&prevBlockHash)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	if err = c.setState(attachBlockHeader, c.lastIrrBlockHeader, nil, utxoView, []*state.ConsensusResult{consensusResult.Fork()}); err != nil {
+		return err
+	}
+
+	for _, block := range wantDeleteBlock {
 		if err := c.store.DeleteBlock(block); err != nil {
 			return err
 		}
@@ -196,15 +241,8 @@ func (c *Chain) Rollback(targetHeight uint64) error {
 				return err
 			}
 		}
-
-		prevBlockHash := detachBlockHeader.PreviousBlockHash
-		detachBlockHeader, err = c.GetHeaderByHash(&prevBlockHash)
-		if err != nil {
-			return err
-		}
 	}
-
-	return c.setState(detachBlockHeader, c.lastIrrBlockHeader, nil, utxoView, []*state.ConsensusResult{consensusResult.Fork()})
+	return nil
 }
 
 func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
@@ -220,10 +258,8 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 		return err
 	}
 
-	for _, p := range c.subProtocols {
-		if err := c.syncProtocolStatus(p); err != nil {
-			return errors.Wrap(err, p.Name(), "sync sub protocol status")
-		}
+	if err = c.syncSubProtocols(); err != nil {
+		return err
 	}
 
 	txsToRestore := map[bc.Hash]*types.Tx{}
