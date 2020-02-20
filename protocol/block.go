@@ -262,7 +262,8 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 		return err
 	}
 
-	if err = c.syncSubProtocols(); err != nil {
+	err = c.syncSubProtocols()
+	if err != nil {
 		return err
 	}
 
