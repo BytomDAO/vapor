@@ -193,17 +193,16 @@ func (c *Chain) Rollback(targetHeight uint64) error {
 		return err
 	}
 
-	err = c.syncSubProtocols()
+	if err = c.syncSubProtocols(); err != nil {
+		return err
+	}
+
+	targetBlockHeader, err := c.GetHeaderByHeight(targetHeight)
 	if err != nil {
 		return err
 	}
 
-	var attachBlockHeader *types.BlockHeader
-	if attachBlockHeader, err = c.GetHeaderByHeight(targetHeight); err != nil {
-		return err
-	}
-
-	_, deletedBlockHeaders, err := c.calcReorganizeChain(attachBlockHeader, c.bestBlockHeader)
+	_, deletedBlockHeaders, err := c.calcReorganizeChain(targetBlockHeader, c.bestBlockHeader)
 	if err != nil {
 		return err
 	}
@@ -219,13 +218,13 @@ func (c *Chain) Rollback(targetHeight uint64) error {
 	}
 
 	setIrrBlockHeader := c.lastIrrBlockHeader
-	if c.lastIrrBlockHeader.Height > attachBlockHeader.Height {
-		setIrrBlockHeader = attachBlockHeader
+	if c.lastIrrBlockHeader.Height > targetBlockHeader.Height {
+		setIrrBlockHeader = targetBlockHeader
 	}
 
 	startSeq := state.CalcVoteSeq(c.bestBlockHeader.Height)
 
-	if err = c.setState(attachBlockHeader, setIrrBlockHeader, nil, utxoView, []*state.ConsensusResult{consensusResult.Fork()}); err != nil {
+	if err = c.setState(targetBlockHeader, setIrrBlockHeader, nil, utxoView, []*state.ConsensusResult{consensusResult.Fork()}); err != nil {
 		return err
 	}
 
@@ -258,8 +257,7 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 		return err
 	}
 
-	err = c.syncSubProtocols()
-	if err != nil {
+	if err = c.syncSubProtocols(); err != nil {
 		return err
 	}
 
