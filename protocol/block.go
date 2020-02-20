@@ -1,6 +1,8 @@
 package protocol
 
 import (
+	"fmt"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/vapor/errors"
@@ -184,8 +186,10 @@ func (c *Chain) syncSubProtocols() error {
 // Rollback rollback the chain from one blockHeight to targetBlockHeight
 // WARNING: we recommend to use this only in commond line
 func (c *Chain) Rollback(targetHeight uint64) error {
+	fmt.Println("before rollback...")
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
+	fmt.Println("begin rollback...")
 
 	utxoView := state.NewUtxoViewpoint()
 	consensusResult, err := c.getBestConsensusResult()
