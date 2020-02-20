@@ -203,14 +203,14 @@ func (c *Chain) Rollback(targetHeight uint64) error {
 		return err
 	}
 
-	_, detachBlockHeaders, err := c.calcReorganizeChain(attachBlockHeader, c.bestBlockHeader)
+	_, deletedBlockHeaders, err := c.calcReorganizeChain(attachBlockHeader, c.bestBlockHeader)
 	if err != nil {
 		return err
 	}
 
 	deletedBlocks := []*types.Block{}
-	for _, detachBlockHeader := range detachBlockHeaders {
-		block, err := c.detachBlock(detachBlockHeader, consensusResult, utxoView)
+	for _, deletedBlockHeader := range deletedBlockHeaders {
+		block, err := c.detachBlock(deletedBlockHeader, consensusResult, utxoView)
 		if err != nil {
 			return err
 		}
