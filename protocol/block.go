@@ -193,7 +193,8 @@ func (c *Chain) Rollback(targetHeight uint64) error {
 		return err
 	}
 
-	if err = c.syncSubProtocols(); err != nil {
+	err = c.syncSubProtocols()
+	if err != nil {
 		return err
 	}
 
@@ -202,46 +203,45 @@ func (c *Chain) Rollback(targetHeight uint64) error {
 		return err
 	}
 
-	_, detachBlockHeaderss, err := c.calcReorganizeChain(attachBlockHeader, c.bestBlockHeader)
+	_, detachBlockHeaders, err := c.calcReorganizeChain(attachBlockHeader, c.bestBlockHeader)
 	if err != nil {
 		return err
 	}
 
-	wantDeleteBlock := []*types.Block{}
-	for _, detachBlockHeader := range detachBlockHeaderss {
+	deletedBlocks := []*types.Block{}
+	for _, detachBlockHeader := range detachBlockHeaders {
 		block, err := c.detachBlock(detachBlockHeader, consensusResult, utxoView)
 		if err != nil {
 			return err
 		}
 
-		wantDeleteBlock = append(wantDeleteBlock, block)
+		deletedBlocks = append(deletedBlocks, block)
 	}
 
+	setIrrBlockHeader := c.lastIrrBlockHeader
 	if c.lastIrrBlockHeader.Height > attachBlockHeader.Height {
-		for c.lastIrrBlockHeader = attachBlockHeader; !c.isIrreversible(c.lastIrrBlockHeader) && c.lastIrrBlockHeader.Height > 0; {
-			prevBlockHash := c.lastIrrBlockHeader.PreviousBlockHash
-			c.lastIrrBlockHeader, err = c.GetHeaderByHash(&prevBlockHash)
-			if err != nil {
-				return err
-			}
-		}
+		setIrrBlockHeader = attachBlockHeader
 	}
 
-	if err = c.setState(attachBlockHeader, c.lastIrrBlockHeader, nil, utxoView, []*state.ConsensusResult{consensusResult.Fork()}); err != nil {
+	startSeq := state.CalcVoteSeq(c.bestBlockHeader.Height)
+
+	if err = c.setState(attachBlockHeader, setIrrBlockHeader, nil, utxoView, []*state.ConsensusResult{consensusResult.Fork()}); err != nil {
 		return err
 	}
 
-	for _, block := range wantDeleteBlock {
+	for _, block := range deletedBlocks {
 		if err := c.store.DeleteBlock(block); err != nil {
 			return err
 		}
+	}
 
-		if nowSeq := state.CalcVoteSeq(block.Height); block.Height > 0 && nowSeq != state.CalcVoteSeq(block.Height-1) {
-			if err := c.store.DeleteConsensusResult(nowSeq); err != nil {
-				return err
-			}
+	endSeq := state.CalcVoteSeq(targetHeight)
+	for nowSeq := startSeq; nowSeq > endSeq; nowSeq-- {
+		if err := c.store.DeleteConsensusResult(nowSeq); err != nil {
+			return err
 		}
 	}
+
 	return nil
 }
 
