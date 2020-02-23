@@ -80,16 +80,22 @@ func NewWallet(store WalletStore, account *account.Manager, asset *asset.Registr
 		return nil, err
 	}
 
+	return w, nil
+}
+
+// Run go to run some wallet recorvery and clean tx thread
+func (w *Wallet) Run() error {
 	var err error
 	w.TxMsgSub, err = w.EventDispatcher.Subscribe(protocol.TxMsgEvent{})
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	go w.walletUpdater()
 	go w.delUnconfirmedTx()
 	go w.MemPoolTxQueryLoop()
-	return w, nil
+
+	return nil
 }
 
 // MemPoolTxQueryLoop constantly pass a transaction accepted by mempool to the wallet.
@@ -304,6 +310,22 @@ func (w *Wallet) DeleteAccount(accountID string) (err error) {
 
 	w.Store.DeleteWalletTransactions()
 	w.RescanBlocks()
+	return nil
+}
+
+// Rollback wallet to target height
+func (w *Wallet) Rollback(targetHeight uint64) error {
+	for w.Status.WorkHeight > targetHeight {
+		block, err := w.Chain.GetBlockByHash(&w.Status.WorkHash)
+		if err != nil {
+			return err
+		}
+
+		if err = w.DetachBlock(block); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

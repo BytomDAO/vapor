@@ -156,6 +156,18 @@ func GetConsensusResult(db dbm.DB, seq uint64) (*state.ConsensusResult, error) {
 	return consensusResult, nil
 }
 
+// DeleteConsensusResult delete a consensusResult from cache and database
+func (s *Store) DeleteConsensusResult(seq uint64) error {
+	consensusResult, err := GetConsensusResult(s.db, seq)
+	if err != nil {
+		return err
+	}
+
+	s.db.Delete(calcConsensusResultKey(seq))
+	s.cache.removeConsensusResult(consensusResult)
+	return nil
+}
+
 // DeleteBlock delete a new block in the protocol.
 func (s *Store) DeleteBlock(block *types.Block) error {
 	blockHash := block.Hash()
