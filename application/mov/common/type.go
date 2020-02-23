@@ -38,8 +38,8 @@ func (o *Order) Rate() float64 {
 	return result
 }
 
-// CmpRate compares rate of x and y and returns -1 if x <  y, 0 if x == y, +1 if x >  y
-func (o *Order) CmpRate(other *Order) int {
+// cmpRate compares rate of x and y and returns -1 if x <  y, 0 if x == y, +1 if x >  y
+func (o *Order) cmpRate(other *Order) int {
 	rate := big.NewRat(o.RatioNumerator, o.RatioDenominator)
 	otherRate := big.NewRat(other.RatioNumerator, other.RatioDenominator)
 	return rate.Cmp(otherRate)
@@ -47,7 +47,7 @@ func (o *Order) CmpRate(other *Order) int {
 
 // Cmp first compare the rate, if rate is equals, then compare the utxo hash
 func (o *Order) Cmp(other *Order) int {
-	cmp := o.CmpRate(other)
+	cmp := o.cmpRate(other)
 	if cmp == 0 {
 		if hex.EncodeToString(o.UTXOHash().Bytes()) < hex.EncodeToString(other.UTXOHash().Bytes()) {
 			return -1
