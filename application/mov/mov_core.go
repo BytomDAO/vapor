@@ -53,6 +53,9 @@ func (m *MovCore) ApplyBlock(block *types.Block) error {
 		if err := m.movStore.InitDBState(block.Height, &blockHash); err != nil {
 			return err
 		}
+
+		// the next block can send orders
+		return nil
 	}
 
 	if err := m.validateMatchedTxSequence(block.Transactions); err != nil {

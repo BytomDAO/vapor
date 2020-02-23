@@ -251,6 +251,11 @@ func (cfg *walletTestConfig) Run() error {
 	if err != nil {
 		return err
 	}
+
+	if err = wallet.Run(); err != nil {
+		return err
+	}
+
 	ctx := &walletTestContext{
 		Wallet: wallet,
 		Chain:  chain,

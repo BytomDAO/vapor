@@ -26,6 +26,7 @@ func (s *mStore) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)                 {
 func (s *mStore) GetConsensusResult(uint64) (*state.ConsensusResult, error)    { return nil, nil }
 func (s *mStore) GetMainChainHash(uint64) (*bc.Hash, error)                    { return nil, nil }
 func (s *mStore) GetBlockHashesByHeight(uint64) ([]*bc.Hash, error)            { return nil, nil }
+func (s *mStore) DeleteConsensusResult(seq uint64) error                       { return nil }
 func (s *mStore) DeleteBlock(*types.Block) error                               { return nil }
 func (s *mStore) SaveBlock(*types.Block, *bc.TransactionStatus) error          { return nil }
 func (s *mStore) SaveBlockHeader(blockHeader *types.BlockHeader) error {

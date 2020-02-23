@@ -735,6 +735,10 @@ func (s *dummyStore) GetBlockHashesByHeight(uint64) ([]*bc.Hash, error) {
 	return nil, nil
 }
 
+func (s *dummyStore) DeleteConsensusResult(seq uint64) error {
+	return nil
+}
+
 func (s *dummyStore) SaveBlock(block *types.Block, _ *bc.TransactionStatus) error {
 	hash := block.Hash()
 	s.blocks[hash.String()] = block
