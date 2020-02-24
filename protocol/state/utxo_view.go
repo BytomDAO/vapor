@@ -233,6 +233,7 @@ func (view *UtxoViewpoint) detachOutputUtxo(tx *bc.Tx, statusFail bool) error {
 }
 
 func (view *UtxoViewpoint) detachSpendUtxo(tx *bc.Tx, statusFail bool) error {
+	fmt.Println("[detachSpendUtxo] ", len(tx.SpentOutputIDs))
 	for _, prevout := range tx.SpentOutputIDs {
 		entryOutput, err := tx.Entry(prevout)
 		if err != nil {
@@ -256,11 +257,13 @@ func (view *UtxoViewpoint) detachSpendUtxo(tx *bc.Tx, statusFail bool) error {
 		}
 
 		entry, ok := view.Entries[prevout]
+		fmt.Println("!entry.Spent prevout:", prevout.String())
 		if ok && !entry.Spent {
 			return errors.New("try to revert an unspent utxo")
 		}
 
 		if !ok {
+			fmt.Println("set false : prevout", prevout)
 			view.Entries[prevout] = storage.NewUtxoEntry(utxoType, 0, false)
 			continue
 		}

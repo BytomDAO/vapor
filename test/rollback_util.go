@@ -130,24 +130,14 @@ func (b *blockBuilder) applyVoteTransaction() error {
 	batch := b.db.NewBatch()
 	view := &state.UtxoViewpoint{
 		Entries: map[bc.Hash]*storage.UtxoEntry{
-			tx.Tx.SpentOutputIDs[0]: &storage.UtxoEntry{Type: storage.VoteUTXOType, BlockHeight: 0, Spent: false},
+			tx.Tx.SpentOutputIDs[0]: &storage.UtxoEntry{Type: storage.VoteUTXOType, BlockHeight: b.block.Height, Spent: false},
 		},
 	}
-	//fmt.Println("[important] applyVoteTransaction go to save SpentOutputIDs", tx.Tx.SpentOutputIDs[0].String())
+	fmt.Println("[important] applyVoteTransaction go to save SpentOutputIDs", tx.Tx.SpentOutputIDs[0].String())
 	if err := database.SaveUtxoView(batch, view); err != nil {
 		return err
 	}
 	batch.Write()
-	//fmt.Println("[important] batch write")
-
-	// prevout := tx.Tx.SpentOutputIDs[0]
-	// utxoEntry, err := database.GetUtxo(b.db, &prevout)
-	// fmt.Println("[important] utxoEntry:", utxoEntry.String(), "err", err)
-	// txs := []*types.Tx{}
-	// txs = append(txs, tx)
-	// if err := b.applyTransactions(txs, timeoutWarn); err != nil {
-	// 	return err
-	// }
 
 	return err
 }
@@ -312,7 +302,7 @@ func (b *blockBuilder) createVoteTx(accountManager *account.Manager, blockHeight
 	// 	return nil, err
 	// }
 
-	if err := builder.AddInput(types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 100000000, 0, script), &txbuilder.SigningInstruction{}); err != nil {
+	if err := builder.AddInput(types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 100000000+blockHeight, 0, script), &txbuilder.SigningInstruction{}); err != nil {
 		return nil, err
 	}
 	if err := builder.AddOutput(types.NewVoteOutput(*consensus.BTMAssetID, 100000000, script, testXpub)); err != nil {

@@ -18,20 +18,12 @@ func calcUtxoKey(hash *bc.Hash) []byte {
 }
 
 func getTransactionsUtxo(db dbm.DB, view *state.UtxoViewpoint, txs []*bc.Tx) error {
-	fmt.Println("[very important]")
 	for _, tx := range txs {
-		fmt.Println("[very important] getTransactionsUtxo tx.string()", tx.String())
 		for _, prevout := range tx.SpentOutputIDs {
-			fmt.Println("[very important] getTransactionsUtxo prevout", prevout.String())
 			if view.HasUtxo(&prevout) {
 				continue
 			}
 
-			utxoEntry, err := GetUtxo(db, &prevout)
-			fmt.Println("[why really important] prevout", prevout.String())
-			fmt.Println("[why really important] utxoEntry:", utxoEntry.String(), "err", err)
-
-			fmt.Println("calcKey:", calcUtxoKey(&prevout))
 			data := db.Get(calcUtxoKey(&prevout))
 			if data == nil {
 				fmt.Println("why data is not here")
@@ -39,7 +31,7 @@ func getTransactionsUtxo(db dbm.DB, view *state.UtxoViewpoint, txs []*bc.Tx) err
 			}
 
 			var utxo storage.UtxoEntry
-			fmt.Println("Unmarshal data", data)
+
 			if err := proto.Unmarshal(data, &utxo); err != nil {
 				return errors.Wrap(err, "unmarshaling utxo entry")
 			}
@@ -48,7 +40,6 @@ func getTransactionsUtxo(db dbm.DB, view *state.UtxoViewpoint, txs []*bc.Tx) err
 		}
 
 		for _, prevout := range tx.MainchainOutputIDs {
-			fmt.Println("MainchainOutputIDs preout", prevout.String())
 			if view.HasUtxo(&prevout) {
 				continue
 			}

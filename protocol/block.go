@@ -461,11 +461,6 @@ func (c *Chain) blockProcesser() {
 
 // ProcessBlock is the entry for handle block insert
 func (c *Chain) processBlock(block *types.Block) (bool, error) {
-	fmt.Println("[processBlock]")
-	prevOut := bc.Hash{V0: 13401662211606668461, V1: 16715925272045549698, V2: 14986839123336726356, V3: 599535074188477126}
-	entry, err := c.store.GetUtxo(&prevOut)
-	fmt.Println("processBlock entry:", entry, "err:", err)
-
 	blockHash := block.Hash()
 	if c.BlockExist(&blockHash) {
 		log.WithFields(log.Fields{"module": logModule, "hash": blockHash.String(), "height": block.Height}).Debug("block has been processed")

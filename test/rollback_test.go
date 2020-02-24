@@ -151,21 +151,16 @@ func getConsensusResult(c *protocol.Chain, store *database.Store, seq uint64, bl
 }
 
 func TestRollback(t *testing.T) {
-	fmt.Println("\n\n\n\n")
-	fmt.Println("consensus.ActiveNetParams.name", consensus.ActiveNetParams.Name)
-	consensus.ActiveNetParams.VotePendingBlockNumber = 0
-	fmt.Println("consensus.ActiveNetParams.VotePendingBlockNumber:", consensus.ActiveNetParams.VotePendingBlockNumber)
-	// genesisBlock := config.GenesisBlock()
 	testXpub, _ := hex.DecodeString("4d6f710dae8094c111450ca20e054c3aed59dfcb2d29543c29901a5903755e69273c2d8f2642a7baf94ebac88f1625af9f5eaf3b13a90de27eec3de78b9fb9ca")
+	xp := xprv("c87f8d0f4bb4b0acbb7f69f1954c4f34d4476e114fffa7b0c853992474a9954a273c2d8f2642a7baf94ebac88f1625af9f5eaf3b13a90de27eec3de78b9fb9ca")
 
 	db := dbm.NewDB("block_test_db", "leveldb", "block_test_db")
 	defer os.RemoveAll("block_test_db")
 
 	cfg.CommonConfig = cfg.DefaultConfig()
 	cfg.CommonConfig.Federation = newFederationConfig()
-
-	xp := xprv("c87f8d0f4bb4b0acbb7f69f1954c4f34d4476e114fffa7b0c853992474a9954a273c2d8f2642a7baf94ebac88f1625af9f5eaf3b13a90de27eec3de78b9fb9ca")
 	cfg.CommonConfig.XPrv = &xp
+	consensus.ActiveNetParams.VotePendingBlockNumber = 0
 	consensus.ActiveNetParams.RoundVoteBlockNums = 3
 
 	store := database.NewStore(db)
@@ -174,16 +169,6 @@ func TestRollback(t *testing.T) {
 	movCore := mov.NewMovCore(cfg.CommonConfig.DBBackend, cfg.CommonConfig.DBDir(), consensus.ActiveNetParams.MovStartHeight)
 	txPool := protocol.NewTxPool(store, []protocol.DustFilterer{movCore}, dispatcher)
 	chain, err := protocol.NewChain(store, txPool, []protocol.Protocoler{movCore}, dispatcher)
-
-	block, err := chain.GetBlockByHeight(0)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	fmt.Println("block.Timestamp", block.Timestamp)
-	fmt.Println(block.Transactions, len(block.Transactions))
-	tx := block.Transactions[0]
-	fmt.Println(tx.ID, tx.Inputs[0].ControlProgram(), tx.Outputs[0].ControlProgram())
 
 	hsm, err := pseudohsm.New(cfg.CommonConfig.KeysDir())
 	walletDB := dbm.NewDB("wallet", cfg.CommonConfig.DBBackend, cfg.CommonConfig.DBDir())
@@ -208,8 +193,8 @@ func TestRollback(t *testing.T) {
 	}{
 		{
 			desc:        "first round block",
-			startRunNum: 1,
-			runBlockNum: 1,
+			startRunNum: 3,
+			runBlockNum: 3,
 		},
 		// {
 		// 	desc:        "second add blocks",
@@ -271,12 +256,13 @@ func TestRollback(t *testing.T) {
 			blockHash := block.Hash()
 			consensusResult, err := chain.GetConsensusResultByHash(&blockHash)
 			if err != nil {
-
 				t.Fatal(err)
 			}
-
 			expectConsensusResultsMap[state.CalcVoteSeq(block.Height)] = consensusResult
 		}
+
+		bestBlockHash := chain.BestBlockHash()
+		expectConsensuReuslt, err := chain.GetConsensusResultByHash(bestBlockHash)
 
 		expectChainStatus := store.GetStoreStatus()
 		expectHeight := chain.BestBlockHeight()
@@ -287,18 +273,7 @@ func TestRollback(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			//block, err := proposal.NewBlockTemplate(chain, txPool, nil, timeStamp)
 			block, err := NewBlockTemplate(chain, db, accounts, timeStamp, warnDuration, criticalDuration)
-			//block.Transactions = transactions
-
-			// bcBlock := types.MapBlock(block)
-			// verifyStatus := bcBlock.TransactionStatus.VerifyStatus
-			// fmt.Println("rollback_test, verifyStatus", len(verifyStatus))
-			// for index := 0; index < len(verifyStatus); index++ {
-			// 	fmt.Println("verifyStatus[", index, "]", verifyStatus[index])
-			// }
-			// fmt.Println("i:", i, len(block.Transactions))
-			fmt.Println(block.Transactions[0].Inputs[0].ControlProgram(), block.Transactions[0].Outputs[0].ControlProgram())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -307,7 +282,6 @@ func TestRollback(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			//fmt.Println("end process Block")
 			blockHash := block.Hash()
 			gotBlock, err := store.GetBlock(&blockHash)
 			afterBlocks = append(afterBlocks, gotBlock)
@@ -318,6 +292,12 @@ func TestRollback(t *testing.T) {
 
 		if err = chain.Rollback(expectHeight); err != nil {
 			t.Fatal(err)
+		}
+
+		nowBlockHash := chain.BestBlockHash()
+		nowConsensuReuslt, err := chain.GetConsensusResultByHash(nowBlockHash)
+		if !testutil.DeepEqual(expectConsensuReuslt, nowConsensuReuslt) {
+			t.Fatalf("%s test failed, expected: %v, now: %v", c.desc, expectConsensuReuslt, nowConsensuReuslt)
 		}
 
 		nowHeight := chain.BestBlockHeight()
@@ -355,7 +335,6 @@ func TestRollback(t *testing.T) {
 
 				t.Fatal(err)
 			}
-
 			nowConsensusResultsMap[state.CalcVoteSeq(block.Height)] = consensusResult
 		}
 
@@ -363,7 +342,7 @@ func TestRollback(t *testing.T) {
 			t.Errorf("consensusResult is not equal!")
 		}
 
-		// finalSeq := state.CalcVoteSeq(chain.BestBlockHeight())
+		finalSeq := state.CalcVoteSeq(chain.BestBlockHeight())
 		for i := 0; i < len(afterBlocks); i++ {
 			block := afterBlocks[i]
 			blockHash := block.Hash()
@@ -372,16 +351,13 @@ func TestRollback(t *testing.T) {
 				t.Errorf("this block should not exists!")
 			}
 
-			// Code below tests will be update in later PR
-			// this code pr is too big
-			// to test consensusResult whether right or not
-			// seq := state.CalcVoteSeq(block.Height)
-			// if seq > finalSeq {
-			// 	consensusResult, err := getConsensusResult(chain, store, seq, &block.BlockHeader)
-			// 	if err == nil {
-			// 		t.Errorf("why this result existed! %v, %v", consensusResult, err)
-			// 	}
-			// }
+			seq := state.CalcVoteSeq(block.Height)
+			if seq > finalSeq {
+				consensusResult, err := getConsensusResult(chain, store, seq, &block.BlockHeader)
+				if err == nil {
+					t.Errorf("why this result existed! %v, %v", consensusResult, err)
+				}
+			}
 		}
 	}
 }
