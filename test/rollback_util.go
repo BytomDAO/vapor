@@ -12,6 +12,9 @@ import (
 	"github.com/bytom/vapor/account"
 	"github.com/bytom/vapor/blockchain/txbuilder"
 	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/database"
+	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/database/storage"
 	"github.com/bytom/vapor/errors"
 	"github.com/bytom/vapor/protocol"
 	"github.com/bytom/vapor/protocol/bc"
@@ -37,13 +40,15 @@ func (a byTime) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a byTime) Less(i, j int) bool { return a[i].Added.Before(a[j].Added) }
 
 // NewBlockTemplate returns a new block template that is ready to be solved
-func NewBlockTemplate(chain *protocol.Chain, accountManager *account.Manager, timestamp uint64, warnDuration, criticalDuration time.Duration) (*types.Block, error) {
-	builder := newBlockBuilder(chain, accountManager, timestamp, warnDuration, criticalDuration)
+func NewBlockTemplate(chain *protocol.Chain, db dbm.DB, accountManager *account.Manager, timestamp uint64, warnDuration, criticalDuration time.Duration) (*types.Block, error) {
+	fmt.Println("NewBlockTemplate")
+	builder := newBlockBuilder(chain, db, accountManager, timestamp, warnDuration, criticalDuration)
 	return builder.build()
 }
 
 type blockBuilder struct {
 	chain          *protocol.Chain
+	db             dbm.DB
 	accountManager *account.Manager
 
 	block    *types.Block
@@ -56,7 +61,7 @@ type blockBuilder struct {
 	gasLeft           int64
 }
 
-func newBlockBuilder(chain *protocol.Chain, accountManager *account.Manager, timestamp uint64, warnDuration, criticalDuration time.Duration) *blockBuilder {
+func newBlockBuilder(chain *protocol.Chain, db dbm.DB, accountManager *account.Manager, timestamp uint64, warnDuration, criticalDuration time.Duration) *blockBuilder {
 	preBlockHeader := chain.BestBlockHeader()
 	block := &types.Block{
 		BlockHeader: types.BlockHeader{
@@ -71,6 +76,7 @@ func newBlockBuilder(chain *protocol.Chain, accountManager *account.Manager, tim
 
 	builder := &blockBuilder{
 		chain:             chain,
+		db:                db,
 		accountManager:    accountManager,
 		block:             block,
 		txStatus:          bc.NewTransactionStatus(),
@@ -105,6 +111,7 @@ func (b *blockBuilder) applyCoinbaseTransaction() error {
 
 func (b *blockBuilder) applyVoteTransaction() error {
 	tx, err := b.createVoteTx(b.accountManager, b.block.Height)
+
 	if err != nil {
 		return errors.Wrap(err, "fail on create vote tx")
 	}
@@ -120,11 +127,32 @@ func (b *blockBuilder) applyVoteTransaction() error {
 	}
 	b.gasLeft -= gasState.GasUsed
 
+	batch := b.db.NewBatch()
+	view := &state.UtxoViewpoint{
+		Entries: map[bc.Hash]*storage.UtxoEntry{
+			tx.Tx.SpentOutputIDs[0]: &storage.UtxoEntry{Type: storage.VoteUTXOType, BlockHeight: 0, Spent: false},
+		},
+	}
+	//fmt.Println("[important] applyVoteTransaction go to save SpentOutputIDs", tx.Tx.SpentOutputIDs[0].String())
+	if err := database.SaveUtxoView(batch, view); err != nil {
+		return err
+	}
+	batch.Write()
+	//fmt.Println("[important] batch write")
+
+	// prevout := tx.Tx.SpentOutputIDs[0]
+	// utxoEntry, err := database.GetUtxo(b.db, &prevout)
+	// fmt.Println("[important] utxoEntry:", utxoEntry.String(), "err", err)
+	// txs := []*types.Tx{}
+	// txs = append(txs, tx)
+	// if err := b.applyTransactions(txs, timeoutWarn); err != nil {
+	// 	return err
+	// }
+
 	return err
 }
 
 func (b *blockBuilder) applyTransactions(txs []*types.Tx, timeoutStatus uint8) error {
-	fmt.Println("test.applyTransactions")
 	tempTxs := []*types.Tx{}
 	for i := 0; i < len(txs); i++ {
 		if tempTxs = append(tempTxs, txs[i]); len(tempTxs) < batchApplyNum && i != len(txs)-1 {
@@ -236,11 +264,6 @@ func (b *blockBuilder) calcBlockCommitment() (err error) {
 	}
 
 	b.block.BlockHeader.BlockCommitment.TransactionStatusHash, err = types.TxStatusMerkleRoot(b.txStatus.VerifyStatus)
-	for i := 0; i < len(b.txStatus.VerifyStatus); i++ {
-		fmt.Println("txStatus", i, b.txStatus.VerifyStatus[i])
-	}
-	fmt.Println("b.txStatus.VerifyStatus", b.txStatus.VerifyStatus, len(b.txStatus.VerifyStatus))
-	fmt.Println("b.block.BlockHeader.BlockCommitment.TransactionStatusHash", b.block.BlockHeader.BlockCommitment.TransactionStatusHash)
 	return err
 }
 
@@ -282,11 +305,17 @@ func (b *blockBuilder) createVoteTx(accountManager *account.Manager, blockHeight
 	}
 
 	builder := txbuilder.NewBuilder(time.Now())
-	if err = builder.AddInput(types.NewVetoInput(nil, bc.NewHash([32]byte{0xff}), *consensus.BTMAssetID, 100000000, 0, []byte{0x51}, testXpub), &txbuilder.SigningInstruction{}); err != nil {
+	// if err = builder.AddInput(types.NewVetoInput(nil, bc.NewHash([32]byte{0xff}), *consensus.BTMAssetID, 100000000, 0, []byte{0x51}, testXpub), &txbuilder.SigningInstruction{}); err != nil {
+	// 	return nil, err
+	// }
+	// if err = builder.AddOutput(types.NewIntraChainOutput(*consensus.BTMAssetID, 100000000, script)); err != nil {
+	// 	return nil, err
+	// }
+
+	if err := builder.AddInput(types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 100000000, 0, script), &txbuilder.SigningInstruction{}); err != nil {
 		return nil, err
 	}
-
-	if err = builder.AddOutput(types.NewIntraChainOutput(*consensus.BTMAssetID, 100000000, script)); err != nil {
+	if err := builder.AddOutput(types.NewVoteOutput(*consensus.BTMAssetID, 100000000, script, testXpub)); err != nil {
 		return nil, err
 	}
 
@@ -305,6 +334,13 @@ func (b *blockBuilder) createVoteTx(accountManager *account.Manager, blockHeight
 		TxData: *txData,
 		Tx:     types.MapTx(txData),
 	}
+
+	fmt.Println("tx.Tx.String", tx.Tx.String())
+	//a := tx.Tx.SpentOutputIDs
+	for _, prevout := range tx.Tx.SpentOutputIDs {
+		fmt.Println("createVoteTx SpentOutputIDs", prevout.String())
+	}
+
 	return tx, nil
 }
 
@@ -333,7 +369,7 @@ func createCoinbaseTxByReward(accountManager *account.Manager, blockHeight uint6
 		script, err = accountManager.GetCoinbaseControlProgram()
 		arbitrary = append(arbitrary, accountManager.GetCoinbaseArbitrary()...)
 	}
-	fmt.Println("blockHeight", blockHeight, "script:", script)
+
 	if err != nil {
 		return nil, err
 	}

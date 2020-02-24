@@ -20,7 +20,6 @@ import (
 	dbm "github.com/bytom/vapor/database/leveldb"
 	"github.com/bytom/vapor/errors"
 	"github.com/bytom/vapor/event"
-	"github.com/bytom/vapor/proposal"
 	"github.com/bytom/vapor/protocol"
 	"github.com/bytom/vapor/protocol/bc"
 	"github.com/bytom/vapor/protocol/bc/types"
@@ -152,6 +151,10 @@ func getConsensusResult(c *protocol.Chain, store *database.Store, seq uint64, bl
 }
 
 func TestRollback(t *testing.T) {
+	fmt.Println("\n\n\n\n")
+	fmt.Println("consensus.ActiveNetParams.name", consensus.ActiveNetParams.Name)
+	consensus.ActiveNetParams.VotePendingBlockNumber = 0
+	fmt.Println("consensus.ActiveNetParams.VotePendingBlockNumber:", consensus.ActiveNetParams.VotePendingBlockNumber)
 	// genesisBlock := config.GenesisBlock()
 	testXpub, _ := hex.DecodeString("4d6f710dae8094c111450ca20e054c3aed59dfcb2d29543c29901a5903755e69273c2d8f2642a7baf94ebac88f1625af9f5eaf3b13a90de27eec3de78b9fb9ca")
 
@@ -206,7 +209,7 @@ func TestRollback(t *testing.T) {
 		{
 			desc:        "first round block",
 			startRunNum: 1,
-			runBlockNum: 0,
+			runBlockNum: 1,
 		},
 		// {
 		// 	desc:        "second add blocks",
@@ -246,22 +249,10 @@ func TestRollback(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			block, err := NewBlockTemplate(chain, accounts, timeStamp, warnDuration, criticalDuration)
+			block, err := NewBlockTemplate(chain, db, accounts, timeStamp, warnDuration, criticalDuration)
 			if err != nil {
 				t.Fatal(err)
 			}
-
-			// bcBlock := types.MapBlock(block)
-			// verifyStatus := bcBlock.TransactionStatus.VerifyStatus
-			// fmt.Println("why", verifyStatus)
-			// fmt.Println("rollback_test, verifyStatus", len(verifyStatus))
-			// for index := 0; index < len(verifyStatus); index++ {
-			// 	fmt.Println("verifyStatus[", index, "]", verifyStatus[index])
-			// }
-			// fmt.Println("i:", i, len(block.Transactions))
-
-			// sleep(1)
-			// block.Transactions = append(block.Transactions, transactions...)
 
 			if _, err := chain.ProcessBlock(block); err != nil {
 				t.Fatal(err)
@@ -297,7 +288,7 @@ func TestRollback(t *testing.T) {
 			}
 
 			//block, err := proposal.NewBlockTemplate(chain, txPool, nil, timeStamp)
-			block, err := proposal.NewBlockTemplate(chain, accounts, timeStamp, warnDuration, criticalDuration)
+			block, err := NewBlockTemplate(chain, db, accounts, timeStamp, warnDuration, criticalDuration)
 			//block.Transactions = transactions
 
 			// bcBlock := types.MapBlock(block)

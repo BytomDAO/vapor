@@ -89,18 +89,20 @@ func (c *Chain) calcReorganizeChain(beginAttach *types.BlockHeader, beginDetach 
 }
 
 func (c *Chain) connectBlock(block *types.Block) (err error) {
+	prevOut := bc.Hash{V0: 13401662211606668461, V1: 16715925272045549698, V2: 14986839123336726356, V3: 599535074188477126}
+	entry, err := c.store.GetUtxo(&prevOut)
+	fmt.Println("connectBlock entry:", entry, "err:", err)
+
 	bcBlock := types.MapBlock(block)
 	if bcBlock.TransactionStatus, err = c.store.GetTransactionStatus(&bcBlock.ID); err != nil {
 		return err
 	}
 
-	fmt.Println("connectBlock abcd")
 	utxoView := state.NewUtxoViewpoint()
 	if err := c.store.GetTransactionsUtxo(utxoView, bcBlock.Transactions); err != nil {
 		return err
 	}
 
-	fmt.Println("utxoView.ApplyBlock")
 	//fmt.Println("bcBlock.TransactionStatus", bcBlock.TransactionStatus)
 	if err := utxoView.ApplyBlock(bcBlock, bcBlock.TransactionStatus); err != nil {
 		return err
@@ -388,23 +390,19 @@ func (c *Chain) saveBlock(block *types.Block) error {
 	}
 
 	bcBlock := types.MapBlock(block)
-	fmt.Println("validation.ValidateBlock")
 	if err := validation.ValidateBlock(bcBlock, parent, rewards); err != nil {
 		return errors.Sub(ErrBadBlock, err)
 	}
 
-	fmt.Println("block.go _, p := range c.subProtocols")
 	for _, p := range c.subProtocols {
 		if err := p.ValidateBlock(block, bcBlock.TransactionStatus.GetVerifyStatus()); err != nil {
 			return errors.Wrap(err, "sub protocol save block")
 		}
 	}
-	fmt.Println("end validation")
 
 	if err := c.store.SaveBlock(block, bcBlock.TransactionStatus); err != nil {
 		return err
 	}
-	fmt.Println("end save block")
 
 	c.orphanManage.Delete(&bcBlock.ID)
 	return nil
@@ -463,6 +461,11 @@ func (c *Chain) blockProcesser() {
 
 // ProcessBlock is the entry for handle block insert
 func (c *Chain) processBlock(block *types.Block) (bool, error) {
+	fmt.Println("[processBlock]")
+	prevOut := bc.Hash{V0: 13401662211606668461, V1: 16715925272045549698, V2: 14986839123336726356, V3: 599535074188477126}
+	entry, err := c.store.GetUtxo(&prevOut)
+	fmt.Println("processBlock entry:", entry, "err:", err)
+
 	blockHash := block.Hash()
 	if c.BlockExist(&blockHash) {
 		log.WithFields(log.Fields{"module": logModule, "hash": blockHash.String(), "height": block.Height}).Debug("block has been processed")
@@ -480,12 +483,8 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 		return false, err
 	}
 
-	fmt.Println("saveBlock")
-
 	bestBlock := c.saveSubBlock(block)
 	bestBlockHeader := &bestBlock.BlockHeader
-
-	fmt.Println("end save sub block")
 
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
@@ -495,7 +494,6 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 		return false, c.connectBlock(bestBlock)
 	}
 
-	fmt.Println("doing")
 	if bestBlockHeader.Height > c.bestBlockHeader.Height {
 		log.WithFields(log.Fields{"module": logModule}).Debug("start to reorganize chain")
 		return false, c.reorganizeChain(bestBlockHeader)

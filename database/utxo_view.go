@@ -1,12 +1,14 @@
 package database
 
 import (
-	"github.com/golang/protobuf/proto"
+	"fmt"
+
 	dbm "github.com/bytom/vapor/database/leveldb"
 	"github.com/bytom/vapor/database/storage"
 	"github.com/bytom/vapor/errors"
 	"github.com/bytom/vapor/protocol/bc"
 	"github.com/bytom/vapor/protocol/state"
+	"github.com/golang/protobuf/proto"
 )
 
 const utxoPreFix = "UT:"
@@ -16,18 +18,28 @@ func calcUtxoKey(hash *bc.Hash) []byte {
 }
 
 func getTransactionsUtxo(db dbm.DB, view *state.UtxoViewpoint, txs []*bc.Tx) error {
+	fmt.Println("[very important]")
 	for _, tx := range txs {
+		fmt.Println("[very important] getTransactionsUtxo tx.string()", tx.String())
 		for _, prevout := range tx.SpentOutputIDs {
+			fmt.Println("[very important] getTransactionsUtxo prevout", prevout.String())
 			if view.HasUtxo(&prevout) {
 				continue
 			}
 
+			utxoEntry, err := GetUtxo(db, &prevout)
+			fmt.Println("[why really important] prevout", prevout.String())
+			fmt.Println("[why really important] utxoEntry:", utxoEntry.String(), "err", err)
+
+			fmt.Println("calcKey:", calcUtxoKey(&prevout))
 			data := db.Get(calcUtxoKey(&prevout))
 			if data == nil {
+				fmt.Println("why data is not here")
 				continue
 			}
 
 			var utxo storage.UtxoEntry
+			fmt.Println("Unmarshal data", data)
 			if err := proto.Unmarshal(data, &utxo); err != nil {
 				return errors.Wrap(err, "unmarshaling utxo entry")
 			}
@@ -36,6 +48,7 @@ func getTransactionsUtxo(db dbm.DB, view *state.UtxoViewpoint, txs []*bc.Tx) err
 		}
 
 		for _, prevout := range tx.MainchainOutputIDs {
+			fmt.Println("MainchainOutputIDs preout", prevout.String())
 			if view.HasUtxo(&prevout) {
 				continue
 			}
@@ -70,14 +83,22 @@ func getUtxo(db dbm.DB, hash *bc.Hash) (*storage.UtxoEntry, error) {
 	return &utxo, nil
 }
 
+func GetUtxo(db dbm.DB, hash *bc.Hash) (*storage.UtxoEntry, error) {
+	return getUtxo(db, hash)
+}
+
 func saveUtxoView(batch dbm.Batch, view *state.UtxoViewpoint) error {
+	fmt.Println("[important] now go to saveUtxoView len entries:", len(view.Entries))
 	for key, entry := range view.Entries {
+		fmt.Println("[important] saveUtxoView key:", key.String(), " entry:", entry.String())
 		if entry.Type == storage.CrosschainUTXOType && !entry.Spent {
+			fmt.Println("[important] delete key:", calcUtxoKey(&key))
 			batch.Delete(calcUtxoKey(&key))
 			continue
 		}
 
 		if entry.Type == storage.NormalUTXOType && entry.Spent {
+			fmt.Println("[important] delete key:", calcUtxoKey(&key))
 			batch.Delete(calcUtxoKey(&key))
 			continue
 		}
@@ -86,6 +107,7 @@ func saveUtxoView(batch dbm.Batch, view *state.UtxoViewpoint) error {
 		if err != nil {
 			return errors.Wrap(err, "marshaling utxo entry")
 		}
+		fmt.Println("[important set] calcUtxoKey(&key)", calcUtxoKey(&key))
 		batch.Set(calcUtxoKey(&key), b)
 	}
 	return nil

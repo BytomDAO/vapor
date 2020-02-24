@@ -102,7 +102,7 @@ type Params struct {
 	// ProducerSubsidys defines the producer subsidy by block height
 	ProducerSubsidys []ProducerSubsidy
 
-	SoftForkPoint map[uint64]uint64
+	SoftForkPoint  map[uint64]uint64
 	MovStartHeight uint64
 }
 
