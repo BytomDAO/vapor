@@ -79,17 +79,13 @@ func GetUtxo(db dbm.DB, hash *bc.Hash) (*storage.UtxoEntry, error) {
 }
 
 func saveUtxoView(batch dbm.Batch, view *state.UtxoViewpoint) error {
-	fmt.Println("[important] now go to saveUtxoView len entries:", len(view.Entries))
 	for key, entry := range view.Entries {
-		fmt.Println("[important] saveUtxoView key:", key.String(), " entry:", entry.String())
 		if entry.Type == storage.CrosschainUTXOType && !entry.Spent {
-			fmt.Println("[important] delete key:", calcUtxoKey(&key))
 			batch.Delete(calcUtxoKey(&key))
 			continue
 		}
 
 		if entry.Type == storage.NormalUTXOType && entry.Spent {
-			fmt.Println("[important] delete key:", calcUtxoKey(&key))
 			batch.Delete(calcUtxoKey(&key))
 			continue
 		}
@@ -98,7 +94,6 @@ func saveUtxoView(batch dbm.Batch, view *state.UtxoViewpoint) error {
 		if err != nil {
 			return errors.Wrap(err, "marshaling utxo entry")
 		}
-		fmt.Println("[important set] calcUtxoKey(&key)", calcUtxoKey(&key))
 		batch.Set(calcUtxoKey(&key), b)
 	}
 	return nil

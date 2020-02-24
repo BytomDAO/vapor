@@ -78,16 +78,14 @@ const (
 // derivied private key: c80fbc34475fc9447753c00820d8448851c87f07e6bdde349260862c9bca5b4bb2e62c15e129067af869ebdf66e5829e61d6f2e47447395cc18c4166b06e8473
 // derivied public key: 59184c0f1f4f13b8b256ac82df30dc12cfd66b6e09a28054933f848dc51b9a89b2e62c15e129067af869ebdf66e5829e61d6f2e47447395cc18c4166b06e8473
 
+// example to get key , derivateKey
 func getKey() {
 	xprv, _ := chainkd.NewXPrv(nil)
 	fmt.Println("secretKey:", xprv)
-
 	xpub := xprv.XPub()
 	fmt.Println("publicKey:", xpub)
-
 	derivateKey := xprv.Derive(fedConsensusPath)
 	fmt.Println("derivateSecretKey:", derivateKey)
-
 	derivatePublicKey := derivateKey.XPub()
 	fmt.Println("derivatePublicKey", derivatePublicKey)
 }

@@ -111,7 +111,6 @@ func (b *blockBuilder) applyCoinbaseTransaction() error {
 
 func (b *blockBuilder) applyVoteTransaction() error {
 	tx, err := b.createVoteTx(b.accountManager, b.block.Height)
-
 	if err != nil {
 		return errors.Wrap(err, "fail on create vote tx")
 	}
@@ -125,18 +124,20 @@ func (b *blockBuilder) applyVoteTransaction() error {
 	if err := b.txStatus.SetStatus(1, false); err != nil {
 		return err
 	}
+
 	b.gasLeft -= gasState.GasUsed
+	entries := map[bc.Hash]*storage.UtxoEntry{}
+	for _, prevOut := range tx.Tx.SpentOutputIDs {
+		utxoEntry := &storage.UtxoEntry{Type: storage.VoteUTXOType, BlockHeight: b.block.Height, Spent: false}
+		entries[prevOut] = utxoEntry
+	}
 
 	batch := b.db.NewBatch()
-	view := &state.UtxoViewpoint{
-		Entries: map[bc.Hash]*storage.UtxoEntry{
-			tx.Tx.SpentOutputIDs[0]: &storage.UtxoEntry{Type: storage.VoteUTXOType, BlockHeight: b.block.Height, Spent: false},
-		},
-	}
-	fmt.Println("[important] applyVoteTransaction go to save SpentOutputIDs", tx.Tx.SpentOutputIDs[0].String())
+	view := &state.UtxoViewpoint{Entries: entries}
 	if err := database.SaveUtxoView(batch, view); err != nil {
 		return err
 	}
+
 	batch.Write()
 
 	return err
@@ -149,7 +150,6 @@ func (b *blockBuilder) applyTransactions(txs []*types.Tx, timeoutStatus uint8) e
 			continue
 		}
 
-		fmt.Println("test", "i=", i, "preValidateTxs")
 		results, gasLeft := preValidateTxs(tempTxs, b.chain, b.utxoView, b.gasLeft)
 		for _, result := range results {
 			if result.err != nil && !result.gasOnly {
@@ -295,16 +295,20 @@ func (b *blockBuilder) createVoteTx(accountManager *account.Manager, blockHeight
 	}
 
 	builder := txbuilder.NewBuilder(time.Now())
-	// if err = builder.AddInput(types.NewVetoInput(nil, bc.NewHash([32]byte{0xff}), *consensus.BTMAssetID, 100000000, 0, []byte{0x51}, testXpub), &txbuilder.SigningInstruction{}); err != nil {
-	// 	return nil, err
-	// }
-	// if err = builder.AddOutput(types.NewIntraChainOutput(*consensus.BTMAssetID, 100000000, script)); err != nil {
-	// 	return nil, err
-	// }
+
+	if blockHeight > 1 {
+		if err = builder.AddInput(types.NewVetoInput(nil, bc.NewHash([32]byte{0xff}), *consensus.BTMAssetID, 10000000+blockHeight, 0, []byte{0x51}, testXpub), &txbuilder.SigningInstruction{}); err != nil {
+			return nil, err
+		}
+		if err = builder.AddOutput(types.NewIntraChainOutput(*consensus.BTMAssetID, 10000000, script)); err != nil {
+			return nil, err
+		}
+	}
 
 	if err := builder.AddInput(types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 100000000+blockHeight, 0, script), &txbuilder.SigningInstruction{}); err != nil {
 		return nil, err
 	}
+
 	if err := builder.AddOutput(types.NewVoteOutput(*consensus.BTMAssetID, 100000000, script, testXpub)); err != nil {
 		return nil, err
 	}
@@ -323,12 +327,6 @@ func (b *blockBuilder) createVoteTx(accountManager *account.Manager, blockHeight
 	tx := &types.Tx{
 		TxData: *txData,
 		Tx:     types.MapTx(txData),
-	}
-
-	fmt.Println("tx.Tx.String", tx.Tx.String())
-	//a := tx.Tx.SpentOutputIDs
-	for _, prevout := range tx.Tx.SpentOutputIDs {
-		fmt.Println("createVoteTx SpentOutputIDs", prevout.String())
 	}
 
 	return tx, nil
