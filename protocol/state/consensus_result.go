@@ -2,6 +2,7 @@ package state
 
 import (
 	"encoding/hex"
+	"fmt"
 	"sort"
 
 	"github.com/bytom/vapor/common/arithmetic"
@@ -61,8 +62,10 @@ func CalCoinbaseReward(block *types.Block) (*CoinbaseReward, error) {
 	} else {
 		return nil, errors.New("not found coinbase receiver")
 	}
+	//fmt.Println("CalCoinbaseReward(block *types.Block) result.ControlProgram", result.ControlProgram)
 
 	result.Amount = consensus.BlockSubsidy(block.BlockHeader.Height)
+	//fmt.Println("CalCoinbaseReward(block *types.Block) result.Amount", result.Amount)
 	for _, tx := range block.Transactions {
 		txFee, err := arithmetic.CalculateTxFee(tx)
 		if err != nil {
@@ -71,6 +74,7 @@ func CalCoinbaseReward(block *types.Block) (*CoinbaseReward, error) {
 
 		result.Amount += txFee
 	}
+	//fmt.Println("CalCoinbaseReward(block *types.Block) result.Amount", result.Amount)
 	return result, nil
 }
 
@@ -108,6 +112,7 @@ func (c *ConsensusResult) ApplyBlock(block *types.Block) error {
 		return err
 	}
 
+	fmt.Println("ConsensusResult ApplyTransaction")
 	for _, tx := range block.Transactions {
 		if err := c.ApplyTransaction(tx); err != nil {
 			return err
@@ -122,13 +127,19 @@ func (c *ConsensusResult) ApplyBlock(block *types.Block) error {
 
 // ApplyTransaction calculate the consensus result for transaction
 func (c *ConsensusResult) ApplyTransaction(tx *types.Tx) error {
+	fmt.Println("(c *ConsensusResult) ApplyTransaction")
+	fmt.Println("ApplyTransaction", len(tx.Inputs))
+	fmt.Println("ApplyTransaction", len(tx.Outputs))
 	for _, input := range tx.Inputs {
 		vetoInput, ok := input.TypedInput.(*types.VetoInput)
+		fmt.Println("inputs ok:", ok)
 		if !ok {
 			continue
 		}
 
+		fmt.Println("vetoInput", vetoInput)
 		pubkey := hex.EncodeToString(vetoInput.Vote)
+		fmt.Println("pubkey", pubkey)
 		c.NumOfVote[pubkey], ok = checked.SubUint64(c.NumOfVote[pubkey], vetoInput.Amount)
 		if !ok {
 			return checked.ErrOverflow
@@ -141,6 +152,7 @@ func (c *ConsensusResult) ApplyTransaction(tx *types.Tx) error {
 
 	for _, output := range tx.Outputs {
 		voteOutput, ok := output.TypedOutput.(*types.VoteOutput)
+		fmt.Println("outputs ok:", ok)
 		if !ok {
 			continue
 		}
@@ -156,6 +168,8 @@ func (c *ConsensusResult) ApplyTransaction(tx *types.Tx) error {
 // AttachCoinbaseReward attach coinbase reward
 func (c *ConsensusResult) AttachCoinbaseReward(block *types.Block) error {
 	reward, err := CalCoinbaseReward(block)
+	//fmt.Println("AttachCoinbaseReward height", block.Height)
+	//fmt.Println("AttachCoinbaseReward reward amount, program", reward.Amount, reward.ControlProgram)
 	if err != nil {
 		return err
 	}
@@ -165,8 +179,11 @@ func (c *ConsensusResult) AttachCoinbaseReward(block *types.Block) error {
 	}
 
 	var ok bool
+	//fmt.Println("reward.ControlProgram:", reward.ControlProgram)
 	program := hex.EncodeToString(reward.ControlProgram)
+	//fmt.Println("program:", program)
 	c.CoinbaseReward[program], ok = checked.AddUint64(c.CoinbaseReward[program], reward.Amount)
+	fmt.Println("AttachCoinbaseReward c.CoinbaseReward[program]", program, c.CoinbaseReward[program])
 	if !ok {
 		return checked.ErrOverflow
 	}
@@ -311,6 +328,8 @@ func (c *ConsensusResult) GetCoinbaseRewards(blockHeight uint64) ([]CoinbaseRewa
 		return rewards, nil
 	}
 
+	//fmt.Println("(c *ConsensusResult) GetCoinbaseRewards", c.CoinbaseReward, "blockHeight:", blockHeight)
+	//fmt.Println("c.CoinbaseReward ", c.CoinbaseReward)
 	for p, amount := range c.CoinbaseReward {
 		program, err := hex.DecodeString(p)
 		if err != nil {
@@ -322,6 +341,7 @@ func (c *ConsensusResult) GetCoinbaseRewards(blockHeight uint64) ([]CoinbaseRewa
 			ControlProgram: program,
 		})
 	}
+	//fmt.Println("SortByAmount(rewards)")
 	sort.Sort(SortByAmount(rewards))
 	return rewards, nil
 }

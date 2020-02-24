@@ -1,6 +1,7 @@
-package proposal
+package test
 
 import (
+	"encoding/hex"
 	"fmt"
 	"sort"
 	"strconv"
@@ -28,6 +29,12 @@ const (
 	timeoutWarn
 	timeoutCritical
 )
+
+type byTime []*protocol.TxDesc
+
+func (a byTime) Len() int           { return len(a) }
+func (a byTime) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a byTime) Less(i, j int) bool { return a[i].Added.Before(a[j].Added) }
 
 // NewBlockTemplate returns a new block template that is ready to be solved
 func NewBlockTemplate(chain *protocol.Chain, accountManager *account.Manager, timestamp uint64, warnDuration, criticalDuration time.Duration) (*types.Block, error) {
@@ -96,15 +103,35 @@ func (b *blockBuilder) applyCoinbaseTransaction() error {
 	return nil
 }
 
+func (b *blockBuilder) applyVoteTransaction() error {
+	tx, err := b.createVoteTx(b.accountManager, b.block.Height)
+	if err != nil {
+		return errors.Wrap(err, "fail on create vote tx")
+	}
+
+	gasState, err := validation.ValidateTx(tx.Tx, &bc.Block{BlockHeader: &bc.BlockHeader{Height: b.block.Height}, Transactions: []*bc.Tx{tx.Tx}})
+	if err != nil {
+		return err
+	}
+
+	b.block.Transactions = append(b.block.Transactions, tx)
+	if err := b.txStatus.SetStatus(1, false); err != nil {
+		return err
+	}
+	b.gasLeft -= gasState.GasUsed
+
+	return err
+}
+
 func (b *blockBuilder) applyTransactions(txs []*types.Tx, timeoutStatus uint8) error {
-	fmt.Println("applyTransactions")
+	fmt.Println("test.applyTransactions")
 	tempTxs := []*types.Tx{}
 	for i := 0; i < len(txs); i++ {
 		if tempTxs = append(tempTxs, txs[i]); len(tempTxs) < batchApplyNum && i != len(txs)-1 {
 			continue
 		}
 
-		fmt.Println("i=", i, "preValidateTxs")
+		fmt.Println("test", "i=", i, "preValidateTxs")
 		results, gasLeft := preValidateTxs(tempTxs, b.chain, b.utxoView, b.gasLeft)
 		for _, result := range results {
 			if result.err != nil && !result.gasOnly {
@@ -174,6 +201,10 @@ func (b *blockBuilder) build() (*types.Block, error) {
 		return nil, err
 	}
 
+	if err := b.applyVoteTransaction(); err != nil {
+		return nil, err
+	}
+
 	if err := b.applyTransactionFromPool(); err != nil {
 		return nil, err
 	}
@@ -205,6 +236,11 @@ func (b *blockBuilder) calcBlockCommitment() (err error) {
 	}
 
 	b.block.BlockHeader.BlockCommitment.TransactionStatusHash, err = types.TxStatusMerkleRoot(b.txStatus.VerifyStatus)
+	for i := 0; i < len(b.txStatus.VerifyStatus); i++ {
+		fmt.Println("txStatus", i, b.txStatus.VerifyStatus[i])
+	}
+	fmt.Println("b.txStatus.VerifyStatus", b.txStatus.VerifyStatus, len(b.txStatus.VerifyStatus))
+	fmt.Println("b.block.BlockHeader.BlockCommitment.TransactionStatusHash", b.block.BlockHeader.BlockCommitment.TransactionStatusHash)
 	return err
 }
 
@@ -223,6 +259,53 @@ func (b *blockBuilder) createCoinbaseTx() (*types.Tx, error) {
 	}
 
 	return createCoinbaseTxByReward(b.accountManager, b.block.Height, rewards)
+}
+
+func (b *blockBuilder) createVoteTx(accountManager *account.Manager, blockHeight uint64) (*types.Tx, error) {
+	testXpub, _ := hex.DecodeString("f3f6bcf61b65fa9d1566455a5688ca8b395efdc22e654963134b5e5cb0a45d8be522d21abc384a73177a7b9d64eba915fcfe2862d86a508a3c46dc410bdd72ad")
+
+	arbitrary := append([]byte{0x00}, []byte(strconv.FormatUint(blockHeight, 10))...)
+	var script []byte
+	var err error
+	if accountManager == nil {
+		script, err = vmutil.DefaultCoinbaseProgram()
+	} else {
+		script, err = accountManager.GetCoinbaseControlProgram()
+		arbitrary = append(arbitrary, accountManager.GetCoinbaseArbitrary()...)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	if len(arbitrary) > consensus.ActiveNetParams.CoinbaseArbitrarySizeLimit {
+		return nil, validation.ErrCoinbaseArbitraryOversize
+	}
+
+	builder := txbuilder.NewBuilder(time.Now())
+	if err = builder.AddInput(types.NewVetoInput(nil, bc.NewHash([32]byte{0xff}), *consensus.BTMAssetID, 100000000, 0, []byte{0x51}, testXpub), &txbuilder.SigningInstruction{}); err != nil {
+		return nil, err
+	}
+
+	if err = builder.AddOutput(types.NewIntraChainOutput(*consensus.BTMAssetID, 100000000, script)); err != nil {
+		return nil, err
+	}
+
+	_, txData, err := builder.Build()
+	if err != nil {
+		return nil, err
+	}
+
+	byteData, err := txData.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+
+	txData.SerializedSize = uint64(len(byteData))
+	tx := &types.Tx{
+		TxData: *txData,
+		Tx:     types.MapTx(txData),
+	}
+	return tx, nil
 }
 
 func (b *blockBuilder) getTimeoutStatus() uint8 {
@@ -245,11 +328,9 @@ func createCoinbaseTxByReward(accountManager *account.Manager, blockHeight uint6
 	arbitrary := append([]byte{0x00}, []byte(strconv.FormatUint(blockHeight, 10))...)
 	var script []byte
 	if accountManager == nil {
-		fmt.Println("accountManager == nil ")
 		script, err = vmutil.DefaultCoinbaseProgram()
 	} else {
 		script, err = accountManager.GetCoinbaseControlProgram()
-		fmt.Println("script:", script)
 		arbitrary = append(arbitrary, accountManager.GetCoinbaseArbitrary()...)
 	}
 	fmt.Println("blockHeight", blockHeight, "script:", script)

@@ -1,6 +1,8 @@
 package state
 
 import (
+	"fmt"
+
 	"github.com/bytom/vapor/consensus"
 	"github.com/bytom/vapor/database/storage"
 	"github.com/bytom/vapor/errors"
@@ -20,10 +22,12 @@ func NewUtxoViewpoint() *UtxoViewpoint {
 }
 
 func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFail bool) error {
+	fmt.Println("UtxoViewpoint ApplyTransaction")
 	if err := view.applyCrossChainUtxo(block, tx); err != nil {
 		return err
 	}
 
+	fmt.Println("view.applySpendUtxo")
 	if err := view.applySpendUtxo(block, tx, statusFail); err != nil {
 		return err
 	}
@@ -38,6 +42,7 @@ func (view *UtxoViewpoint) ApplyBlock(block *bc.Block, txStatus *bc.TransactionS
 			return err
 		}
 
+		fmt.Println("UtxoViewpoint ApplyBlock", i, tx)
 		if err := view.ApplyTransaction(block, tx, statusFail); err != nil {
 			return err
 		}
@@ -154,6 +159,8 @@ func (view *UtxoViewpoint) applySpendUtxo(block *bc.Block, tx *bc.Tx, statusFail
 			continue
 		}
 
+		fmt.Println("assetID:", assetID)
+		fmt.Println("prevout", prevout)
 		entry, ok := view.Entries[prevout]
 		if !ok {
 			return errors.New("fail to find utxo entry")

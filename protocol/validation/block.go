@@ -3,6 +3,7 @@ package validation
 import (
 	"bytes"
 	"encoding/hex"
+	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -122,11 +123,19 @@ func ValidateBlock(b *bc.Block, parent *types.BlockHeader, rewards []state.Coinb
 		return errors.WithDetailf(errMismatchedMerkleRoot, "transaction id merkle root. compute: %v, given: %v", txMerkleRoot, *b.TransactionsRoot)
 	}
 
+	fmt.Println("b.TransactionStatus.VerifyStatus", b.TransactionStatus.VerifyStatus, len(b.TransactionStatus.VerifyStatus))
+	for i := 0; i < len(b.TransactionStatus.VerifyStatus); i++ {
+		fmt.Println("txStatus", i, b.TransactionStatus.VerifyStatus[i])
+	}
 	txStatusHash, err := types.TxStatusMerkleRoot(b.TransactionStatus.VerifyStatus)
 	if err != nil {
 		return errors.Wrap(err, "computing transaction status merkle root")
 	}
 	if txStatusHash != *b.TransactionStatusHash {
+		fmt.Println("!!! here !!")
+		fmt.Println("txStatusHash", txStatusHash)
+		fmt.Println("TransactionStatusHash", b.TransactionStatusHash)
+		fmt.Println("TransactionStatusHash", *b.TransactionStatusHash)
 		return errors.WithDetailf(errMismatchedMerkleRoot, "transaction status merkle root. compute: %v, given: %v", txStatusHash, *b.TransactionStatusHash)
 	}
 

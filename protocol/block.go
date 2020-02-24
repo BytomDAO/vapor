@@ -1,6 +1,8 @@
 package protocol
 
 import (
+	"fmt"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/vapor/errors"
@@ -92,10 +94,14 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
+	fmt.Println("connectBlock abcd")
 	utxoView := state.NewUtxoViewpoint()
 	if err := c.store.GetTransactionsUtxo(utxoView, bcBlock.Transactions); err != nil {
 		return err
 	}
+
+	fmt.Println("utxoView.ApplyBlock")
+	//fmt.Println("bcBlock.TransactionStatus", bcBlock.TransactionStatus)
 	if err := utxoView.ApplyBlock(bcBlock, bcBlock.TransactionStatus); err != nil {
 		return err
 	}
@@ -382,19 +388,23 @@ func (c *Chain) saveBlock(block *types.Block) error {
 	}
 
 	bcBlock := types.MapBlock(block)
+	fmt.Println("validation.ValidateBlock")
 	if err := validation.ValidateBlock(bcBlock, parent, rewards); err != nil {
 		return errors.Sub(ErrBadBlock, err)
 	}
 
+	fmt.Println("block.go _, p := range c.subProtocols")
 	for _, p := range c.subProtocols {
 		if err := p.ValidateBlock(block, bcBlock.TransactionStatus.GetVerifyStatus()); err != nil {
 			return errors.Wrap(err, "sub protocol save block")
 		}
 	}
+	fmt.Println("end validation")
 
 	if err := c.store.SaveBlock(block, bcBlock.TransactionStatus); err != nil {
 		return err
 	}
+	fmt.Println("end save block")
 
 	c.orphanManage.Delete(&bcBlock.ID)
 	return nil
@@ -470,16 +480,22 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 		return false, err
 	}
 
+	fmt.Println("saveBlock")
+
 	bestBlock := c.saveSubBlock(block)
 	bestBlockHeader := &bestBlock.BlockHeader
+
+	fmt.Println("end save sub block")
 
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
 	if bestBlockHeader.PreviousBlockHash == c.bestBlockHeader.Hash() {
 		log.WithFields(log.Fields{"module": logModule}).Debug("append block to the end of mainchain")
+		fmt.Println("go to connectBlock")
 		return false, c.connectBlock(bestBlock)
 	}
 
+	fmt.Println("doing")
 	if bestBlockHeader.Height > c.bestBlockHeader.Height {
 		log.WithFields(log.Fields{"module": logModule}).Debug("start to reorganize chain")
 		return false, c.reorganizeChain(bestBlockHeader)
