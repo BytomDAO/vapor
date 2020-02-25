@@ -128,7 +128,7 @@ func getXprv(c *protocol.Chain, store protocol.Store, timeStamp uint64) (*chaink
 	return &(Xprvs[order]), nil
 }
 
-func TestRollback(t *testing.T) {
+func ATestRollback(t *testing.T) {
 	cfg.CommonConfig = cfg.DefaultConfig()
 	cfg.CommonConfig.Federation = newFederationConfig()
 

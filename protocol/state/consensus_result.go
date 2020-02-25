@@ -2,6 +2,7 @@ package state
 
 import (
 	"encoding/hex"
+	"fmt"
 	"sort"
 
 	"github.com/bytom/vapor/common/arithmetic"
@@ -258,6 +259,9 @@ func (c *ConsensusResult) DetachCoinbaseReward(block *types.Block) error {
 
 	var ok bool
 	program := hex.EncodeToString(reward.ControlProgram)
+	fmt.Println("program:", program)
+	fmt.Println("c.CoinbaseReward[program]", c.CoinbaseReward[program])
+	fmt.Println("reward.Amount", reward.Amount)
 	if c.CoinbaseReward[program], ok = checked.SubUint64(c.CoinbaseReward[program], reward.Amount); !ok {
 		return checked.ErrOverflow
 	}

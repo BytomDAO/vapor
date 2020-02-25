@@ -1,6 +1,8 @@
 package protocol
 
 import (
+	"fmt"
+
 	"github.com/bytom/vapor/consensus"
 	"github.com/bytom/vapor/errors"
 	"github.com/bytom/vapor/protocol/bc"
@@ -15,6 +17,8 @@ var (
 
 func (c *Chain) getBestConsensusResult() (*state.ConsensusResult, error) {
 	bestBlockHeader := c.bestBlockHeader
+	hash := c.bestBlockHeader.Hash()
+	fmt.Println("bestBlockHeader:", c.bestBlockHeader, c.bestBlockHeader.Height, hash, hash.String())
 	seq := state.CalcVoteSeq(bestBlockHeader.Height)
 	return c.getConsensusResult(seq, bestBlockHeader)
 }
@@ -71,7 +75,9 @@ func (c *Chain) getConsensusNodes(prevBlockHash *bc.Hash) (map[string]*state.Con
 // blockHeader represent the chain in which the result of the vote is located
 // Voting results need to be adjusted according to the chain
 func (c *Chain) getConsensusResult(seq uint64, blockHeader *types.BlockHeader) (*state.ConsensusResult, error) {
+	fmt.Println("getConsensusResult seq:", seq)
 	consensusResult, err := c.store.GetConsensusResult(seq)
+	fmt.Println("consensusResult ", consensusResult)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +105,14 @@ func (c *Chain) getPrevRoundLastBlock(prevBlockHash *bc.Hash) (*types.BlockHeade
 }
 
 func (c *Chain) reorganizeConsensusResult(consensusResult *state.ConsensusResult, blockHeader *types.BlockHeader) error {
+	hash := blockHeader.Hash()
+	fmt.Println("wh1", consensusResult, blockHeader.Hash(), hash, hash.String(), blockHeader.Height)
+	fmt.Println("\n\nconsensusResult.BlockHash", consensusResult.BlockHash.String())
+	fmt.Println("wh2")
+	blockHash := consensusResult.BlockHash
+	fmt.Println("consensusResult.BlockHash", consensusResult.BlockHash, blockHash.String())
 	mainChainBlockHeader, err := c.store.GetBlockHeader(&consensusResult.BlockHash)
+	fmt.Println("mainChainBlockHeader", mainChainBlockHeader)
 	if err != nil {
 		return err
 	}

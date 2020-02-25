@@ -1,6 +1,8 @@
 package protocol
 
 import (
+	"fmt"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/vapor/errors"
@@ -59,7 +61,13 @@ func (c *Chain) calcReorganizeChain(beginAttach *types.BlockHeader, beginDetach 
 	var attachBlockHeaders []*types.BlockHeader
 	var detachBlockHeaders []*types.BlockHeader
 
+	//fmt.Println("beginAttach :", beginAttach, "height", beginAttach.Height, "beginDetach:", beginDetach, "height", beginDetach.Height)
+	h1 := beginAttach.Hash()
+	h2 := beginDetach.Hash()
+	fmt.Println("beginAttach", beginAttach.Height, beginAttach.Hash(), h1.String())
+	fmt.Println("beginDetach", beginDetach.Height, beginDetach.Hash(), h2.String())
 	for attachBlockHeader, detachBlockHeader := beginAttach, beginDetach; detachBlockHeader.Hash() != attachBlockHeader.Hash(); {
+		fmt.Println("running")
 		var attachRollback, detachRollBack bool
 		if attachRollback = attachBlockHeader.Height >= detachBlockHeader.Height; attachRollback {
 			attachBlockHeaders = append([]*types.BlockHeader{attachBlockHeader}, attachBlockHeaders...)
@@ -145,6 +153,7 @@ func (c *Chain) detachBlock(detachBlockHeader *types.BlockHeader, consensusResul
 	}
 
 	detachBlock := types.MapBlock(block)
+	fmt.Println("detachBlock consensusResult", consensusResult)
 	if err := consensusResult.DetachBlock(block); err != nil {
 		return block, err
 	}
@@ -153,6 +162,7 @@ func (c *Chain) detachBlock(detachBlockHeader *types.BlockHeader, consensusResul
 		return block, err
 	}
 
+	fmt.Println("detachBlock.ID", detachBlock.ID.String())
 	txStatus, err := c.GetTransactionStatus(&detachBlock.ID)
 	if err != nil {
 		return block, err
@@ -193,15 +203,22 @@ func (c *Chain) Rollback(targetHeight uint64) error {
 		return err
 	}
 
+	fmt.Println("[1] c.bestBlockHeader", c.bestBlockHeader)
 	if err = c.syncSubProtocols(); err != nil {
 		return err
 	}
+
+	fmt.Println("[2] c.bestBlockHeader", c.bestBlockHeader)
 
 	targetBlockHeader, err := c.GetHeaderByHeight(targetHeight)
 	if err != nil {
 		return err
 	}
 
+	fmt.Println("[3] c.bestBlockHeader", c.bestBlockHeader, c.bestBlockHeader.Height)
+	fmt.Println("targetBlockHeader", targetBlockHeader)
+	hashTarget := targetBlockHeader.Hash()
+	fmt.Println("targetHeight", targetHeight, "targetBlockHeader", targetBlockHeader.Height, "hashTarget", hashTarget.String())
 	_, deletedBlockHeaders, err := c.calcReorganizeChain(targetBlockHeader, c.bestBlockHeader)
 	if err != nil {
 		return err
@@ -209,6 +226,8 @@ func (c *Chain) Rollback(targetHeight uint64) error {
 
 	deletedBlocks := []*types.Block{}
 	for _, deletedBlockHeader := range deletedBlockHeaders {
+		hashDeleted := deletedBlockHeader.Hash()
+		fmt.Println("deletedBlockHeader", deletedBlockHeader.Height, hashDeleted.String())
 		block, err := c.detachBlock(deletedBlockHeader, consensusResult, utxoView)
 		if err != nil {
 			return err

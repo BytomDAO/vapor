@@ -1,6 +1,8 @@
 package state
 
 import (
+	"fmt"
+
 	"github.com/bytom/vapor/consensus"
 	"github.com/bytom/vapor/database/storage"
 	"github.com/bytom/vapor/errors"
@@ -64,11 +66,13 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 
 func (view *UtxoViewpoint) DetachBlock(block *bc.Block, txStatus *bc.TransactionStatus) error {
 	for i := len(block.Transactions) - 1; i >= 0; i-- {
+		fmt.Println("txStatus:", txStatus)
 		statusFail, err := txStatus.GetStatus(i)
 		if err != nil {
 			return err
 		}
 
+		fmt.Println("block.Transactions", block.Transactions)
 		if err := view.DetachTransaction(block.Transactions[i], statusFail); err != nil {
 			return err
 		}
@@ -181,6 +185,10 @@ func (view *UtxoViewpoint) applySpendUtxo(block *bc.Block, tx *bc.Tx, statusFail
 }
 
 func (view *UtxoViewpoint) detachCrossChainUtxo(tx *bc.Tx) error {
+	fmt.Println("detachCrossChainUtxo", tx)
+	for _, prevout := range tx.MainchainOutputIDs {
+		fmt.Println("prevout", prevout.String())
+	}
 	for _, prevout := range tx.MainchainOutputIDs {
 		entry, ok := view.Entries[prevout]
 		if !ok {
