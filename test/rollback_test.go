@@ -293,9 +293,9 @@ func TestRollback(t *testing.T) {
 
 			consensusResult, err := chain.GetConsensusResultByHash(&blockHash)
 			if err != nil {
-
 				t.Fatal(err)
 			}
+
 			nowConsensusResultsMap[state.CalcVoteSeq(block.Height)] = consensusResult
 		}
 
@@ -320,6 +320,5 @@ func TestRollback(t *testing.T) {
 				}
 			}
 		}
-
 	}
 }
