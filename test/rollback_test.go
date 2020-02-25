@@ -141,15 +141,6 @@ func getXprv(c *protocol.Chain, store protocol.Store, timeStamp uint64) (*chaink
 	return &(Xprvs[order]), nil
 }
 
-func getConsensusResult(c *protocol.Chain, store *database.Store, seq uint64, blockHeader *types.BlockHeader) (*state.ConsensusResult, error) {
-	consensusResult, err := store.GetConsensusResult(seq)
-	if err != nil {
-		return nil, err
-	}
-
-	return consensusResult, nil
-}
-
 func TestRollback(t *testing.T) {
 	testXpub, _ := hex.DecodeString("4d6f710dae8094c111450ca20e054c3aed59dfcb2d29543c29901a5903755e69273c2d8f2642a7baf94ebac88f1625af9f5eaf3b13a90de27eec3de78b9fb9ca")
 	xp := xprv("c87f8d0f4bb4b0acbb7f69f1954c4f34d4476e114fffa7b0c853992474a9954a273c2d8f2642a7baf94ebac88f1625af9f5eaf3b13a90de27eec3de78b9fb9ca")
@@ -353,7 +344,8 @@ func TestRollback(t *testing.T) {
 
 			seq := state.CalcVoteSeq(block.Height)
 			if seq > finalSeq {
-				consensusResult, err := getConsensusResult(chain, store, seq, &block.BlockHeader)
+				//consensusResult, err := getConsensusResult(chain, store, seq, &block.BlockHeader)
+				consensusResult, err := store.GetConsensusResult(seq)
 				if err == nil {
 					t.Errorf("why this result existed! %v, %v", consensusResult, err)
 				}
