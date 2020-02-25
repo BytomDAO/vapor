@@ -93,7 +93,7 @@ func (o *OrderBook) PeekOrder(tradePair *common.TradePair) *common.Order {
 	}
 
 	arrivalOrder := o.peekArrivalOrder(tradePair)
-	if nextOrder == nil || (arrivalOrder != nil && arrivalOrder.Cmp(nextOrder) < 0) {
+	if nextOrder == nil || (arrivalOrder != nil && arrivalOrder.CmpRate(nextOrder) < 0) {
 		nextOrder = arrivalOrder
 	}
 	return nextOrder
