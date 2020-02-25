@@ -585,7 +585,6 @@ func checkTimeRange(tx *bc.Tx, block *bc.Block) error {
 }
 
 func applySoftFork001(vs *validationState, err error) {
-	fmt.Println("applySoftFork001")
 	if err == nil || vs.block.Height < consensus.ActiveNetParams.SoftForkPoint[consensus.SoftFork001] {
 		return
 	}
@@ -597,8 +596,6 @@ func applySoftFork001(vs *validationState, err error) {
 
 // ValidateTx validates a transaction.
 func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
-	fmt.Println("tx", tx)
-	fmt.Println("block", block)
 	gasStatus := &GasState{GasValid: false}
 	if block.Version == 1 && tx.Version != 1 {
 		return gasStatus, errors.WithDetailf(ErrTxVersion, "block version %d, transaction version %d", block.Version, tx.Version)
@@ -623,7 +620,6 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
 
 	err := checkValid(vs, tx.TxHeader)
 	applySoftFork001(vs, err)
-	fmt.Println("vs.gasStatus", vs.gasStatus, "err", err)
 	return vs.gasStatus, err
 }
 

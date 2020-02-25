@@ -2,7 +2,6 @@
 package account
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 	"sync"
@@ -610,7 +609,6 @@ func (m *Manager) getProgramByAddress(address string) ([]byte, error) {
 }
 
 func (m *Manager) saveControlProgram(prog *CtrlProgram, updateIndex bool) error {
-	fmt.Println("saveControlProgram")
 	var hash [32]byte
 
 	sha3pool.Sum256(hash[:], prog.ControlProgram)
