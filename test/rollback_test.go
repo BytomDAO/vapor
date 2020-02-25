@@ -1,8 +1,6 @@
 package test
 
 import (
-	"encoding/hex"
-	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -25,9 +23,28 @@ import (
 	"github.com/bytom/vapor/testutil"
 )
 
-const (
-	n = 1 // 初始化用的block数量
-)
+// number 1
+// private key: 483355b66c0e15b0913829d709b04557749b871b3bf56ad1de8fda13d3a4954aa2a56121b8eab313b8f36939e8190fe8f267f19496decb91be5644e92b669914
+// public key: 32fe453097591f288315ef47b1ebdabf20e8bced8ede670f999980205cacddd4a2a56121b8eab313b8f36939e8190fe8f267f19496decb91be5644e92b669914
+// derivied private key: c87f8d0f4bb4b0acbb7f69f1954c4f34d4476e114fffa7b0c853992474a9954a273c2d8f2642a7baf94ebac88f1625af9f5eaf3b13a90de27eec3de78b9fb9ca
+// derivied public key: 4d6f710dae8094c111450ca20e054c3aed59dfcb2d29543c29901a5903755e69273c2d8f2642a7baf94ebac88f1625af9f5eaf3b13a90de27eec3de78b9fb9ca
+// number 2
+// private key: d8e786a4eafa3456e35b2a1467d37dd84f64ba36604f8076015b76a8eec55b4b83d4fac0f94d157cfc720b77602f21b6b8a7e86f95c571e4d7986210dbce44c9
+// public key: ebe1060254ec43bd7883e94583ff0a71ef0ec0e1ada4cd0f5ed7e9d37f1d244e83d4fac0f94d157cfc720b77602f21b6b8a7e86f95c571e4d7986210dbce44c9
+// derivied private key: c80fbc34475fc9447753c00820d8448851c87f07e6bdde349260862c9bca5b4bb2e62c15e129067af869ebdf66e5829e61d6f2e47447395cc18c4166b06e8473
+// derivied public key: 59184c0f1f4f13b8b256ac82df30dc12cfd66b6e09a28054933f848dc51b9a89b2e62c15e129067af869ebdf66e5829e61d6f2e47447395cc18c4166b06e8473
+//
+// example to get key , derivateKey
+// func getKey() {
+// 	xprv, _ := chainkd.NewXPrv(nil)
+// 	fmt.Println("secretKey:", xprv)
+// 	xpub := xprv.XPub()
+// 	fmt.Println("publicKey:", xpub)
+// 	derivateKey := xprv.Derive(fedConsensusPath)
+// 	fmt.Println("derivateSecretKey:", derivateKey)
+// 	derivatePublicKey := derivateKey.XPub()
+// 	fmt.Println("derivatePublicKey", derivatePublicKey)
+// }
 
 var fedConsensusPath = [][]byte{
 	[]byte{0xff, 0xff, 0xff, 0xff},
@@ -37,12 +54,12 @@ var fedConsensusPath = [][]byte{
 	[]byte{0xff, 0x00, 0x00, 0x00},
 }
 
-func xpub(str string) (xpub chainkd.XPub) {
-	if err := xpub.UnmarshalText([]byte(str)); err != nil {
-		log.Panicf("Fail converts a string to xpub")
-	}
-	return xpub
-}
+const (
+	warnTimeNum       = 2
+	warnTimeDenom     = 5
+	criticalTimeNum   = 4
+	criticalTimeDenom = 5
+)
 
 func xprv(str string) (xprv chainkd.XPrv) {
 	if err := xprv.UnmarshalText([]byte(str)); err != nil {
@@ -56,35 +73,11 @@ var Xprvs = []chainkd.XPrv{
 	xprv("c80fbc34475fc9447753c00820d8448851c87f07e6bdde349260862c9bca5b4bb2e62c15e129067af869ebdf66e5829e61d6f2e47447395cc18c4166b06e8473"),
 }
 
-const (
-	warnTimeNum       = 2
-	warnTimeDenom     = 5
-	criticalTimeNum   = 4
-	criticalTimeDenom = 5
-)
-
-// number 1
-// private key: 483355b66c0e15b0913829d709b04557749b871b3bf56ad1de8fda13d3a4954aa2a56121b8eab313b8f36939e8190fe8f267f19496decb91be5644e92b669914
-// public key: 32fe453097591f288315ef47b1ebdabf20e8bced8ede670f999980205cacddd4a2a56121b8eab313b8f36939e8190fe8f267f19496decb91be5644e92b669914
-// derivied private key: c87f8d0f4bb4b0acbb7f69f1954c4f34d4476e114fffa7b0c853992474a9954a273c2d8f2642a7baf94ebac88f1625af9f5eaf3b13a90de27eec3de78b9fb9ca
-// derivied public key: 4d6f710dae8094c111450ca20e054c3aed59dfcb2d29543c29901a5903755e69273c2d8f2642a7baf94ebac88f1625af9f5eaf3b13a90de27eec3de78b9fb9ca
-
-// number 2
-// private key: d8e786a4eafa3456e35b2a1467d37dd84f64ba36604f8076015b76a8eec55b4b83d4fac0f94d157cfc720b77602f21b6b8a7e86f95c571e4d7986210dbce44c9
-// public key: ebe1060254ec43bd7883e94583ff0a71ef0ec0e1ada4cd0f5ed7e9d37f1d244e83d4fac0f94d157cfc720b77602f21b6b8a7e86f95c571e4d7986210dbce44c9
-// derivied private key: c80fbc34475fc9447753c00820d8448851c87f07e6bdde349260862c9bca5b4bb2e62c15e129067af869ebdf66e5829e61d6f2e47447395cc18c4166b06e8473
-// derivied public key: 59184c0f1f4f13b8b256ac82df30dc12cfd66b6e09a28054933f848dc51b9a89b2e62c15e129067af869ebdf66e5829e61d6f2e47447395cc18c4166b06e8473
-
-// example to get key , derivateKey
-func getKey() {
-	xprv, _ := chainkd.NewXPrv(nil)
-	fmt.Println("secretKey:", xprv)
-	xpub := xprv.XPub()
-	fmt.Println("publicKey:", xpub)
-	derivateKey := xprv.Derive(fedConsensusPath)
-	fmt.Println("derivateSecretKey:", derivateKey)
-	derivatePublicKey := derivateKey.XPub()
-	fmt.Println("derivatePublicKey", derivatePublicKey)
+func xpub(str string) (xpub chainkd.XPub) {
+	if err := xpub.UnmarshalText([]byte(str)); err != nil {
+		log.Panicf("Fail converts a string to xpub")
+	}
+	return xpub
 }
 
 // reset the federationConfig config
@@ -139,15 +132,12 @@ func getXprv(c *protocol.Chain, store protocol.Store, timeStamp uint64) (*chaink
 }
 
 func TestRollback(t *testing.T) {
-	testXpub, _ := hex.DecodeString("4d6f710dae8094c111450ca20e054c3aed59dfcb2d29543c29901a5903755e69273c2d8f2642a7baf94ebac88f1625af9f5eaf3b13a90de27eec3de78b9fb9ca")
-	xp := xprv("c87f8d0f4bb4b0acbb7f69f1954c4f34d4476e114fffa7b0c853992474a9954a273c2d8f2642a7baf94ebac88f1625af9f5eaf3b13a90de27eec3de78b9fb9ca")
-
 	db := dbm.NewDB("block_test_db", "leveldb", "block_test_db")
 	defer os.RemoveAll("block_test_db")
 
 	cfg.CommonConfig = cfg.DefaultConfig()
 	cfg.CommonConfig.Federation = newFederationConfig()
-	cfg.CommonConfig.XPrv = &xp
+
 	consensus.ActiveNetParams.VotePendingBlockNumber = 0
 	consensus.ActiveNetParams.RoundVoteBlockNums = 3
 
@@ -187,16 +177,6 @@ func TestRollback(t *testing.T) {
 	warnDuration := time.Duration(consensus.ActiveNetParams.BlockTimeInterval*warnTimeNum/warnTimeDenom) * time.Millisecond
 	criticalDuration := time.Duration(consensus.ActiveNetParams.BlockTimeInterval*criticalTimeNum/criticalTimeDenom) * time.Millisecond
 
-	tx := &bc.Tx{ID: bc.Hash{V0: 1}}
-	transactions := []*types.Tx{}
-	transaction := &types.Tx{
-		TxData: types.TxData{
-			Inputs:  []*types.TxInput{types.NewVetoInput(nil, bc.NewHash([32]byte{0xff}), *consensus.BTMAssetID, 1000000, 0, []byte{0x51}, testXpub)},
-			Outputs: []*types.TxOutput{types.NewIntraChainOutput(*consensus.BTMAssetID, 10000000, []byte{0x51})},
-		},
-		Tx: tx,
-	}
-	transactions = append(transactions, transaction)
 	for caseIndex, c := range cases {
 		beforeBlocks := []*types.Block{}
 		afterBlocks := []*types.Block{}

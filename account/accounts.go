@@ -2,6 +2,7 @@
 package account
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"sync"
@@ -231,16 +232,19 @@ func (m *Manager) CreateAddress(accountID string, change bool) (cp *CtrlProgram,
 	defer m.addressMu.Unlock()
 
 	account, err := m.FindByID(accountID)
+	fmt.Println("account:", account, "err:", err)
 	if err != nil {
 		return nil, err
 	}
 
 	currentIdx, err := m.getCurrentContractIndex(account, change)
+	fmt.Println("currentIdx:", currentIdx, "err:", err)
 	if err != nil {
 		return nil, err
 	}
 
 	cp, err = CreateCtrlProgram(account, currentIdx+1, change)
+	fmt.Println("cp:", cp, "err:", err)
 	if err != nil {
 		return nil, err
 	}
@@ -609,6 +613,7 @@ func (m *Manager) getProgramByAddress(address string) ([]byte, error) {
 }
 
 func (m *Manager) saveControlProgram(prog *CtrlProgram, updateIndex bool) error {
+	fmt.Println("saveControlProgram")
 	var hash [32]byte
 
 	sha3pool.Sum256(hash[:], prog.ControlProgram)
