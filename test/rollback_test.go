@@ -10,8 +10,6 @@ import (
 
 	"github.com/bytom/vapor/account"
 	"github.com/bytom/vapor/application/mov"
-	"github.com/bytom/vapor/asset"
-	"github.com/bytom/vapor/blockchain/pseudohsm"
 	"github.com/bytom/vapor/config"
 	cfg "github.com/bytom/vapor/config"
 	"github.com/bytom/vapor/consensus"
@@ -25,7 +23,6 @@ import (
 	"github.com/bytom/vapor/protocol/bc/types"
 	"github.com/bytom/vapor/protocol/state"
 	"github.com/bytom/vapor/testutil"
-	w "github.com/bytom/vapor/wallet"
 )
 
 const (
@@ -161,21 +158,9 @@ func TestRollback(t *testing.T) {
 	txPool := protocol.NewTxPool(store, []protocol.DustFilterer{movCore}, dispatcher)
 	chain, err := protocol.NewChain(store, txPool, []protocol.Protocoler{movCore}, dispatcher)
 
-	hsm, err := pseudohsm.New(cfg.CommonConfig.KeysDir())
 	walletDB := dbm.NewDB("wallet", cfg.CommonConfig.DBBackend, cfg.CommonConfig.DBDir())
-	walletStore := database.NewWalletStore(walletDB)
 	accountStore := database.NewAccountStore(walletDB)
 	accounts := account.NewManager(accountStore, chain)
-	assets := asset.NewRegistry(walletDB, chain)
-	wallet, err := w.NewWallet(walletStore, accounts, assets, hsm, chain, dispatcher, cfg.CommonConfig.Wallet.TxIndex)
-	if err != nil {
-		t.Fatal("init NewWallet")
-	}
-
-	// trigger rescan wallet
-	if cfg.CommonConfig.Wallet.Rescan {
-		wallet.RescanBlocks()
-	}
 
 	cases := []struct {
 		desc        string
