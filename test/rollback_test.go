@@ -1,7 +1,6 @@
 package test
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -149,32 +148,41 @@ func TestRollback(t *testing.T) {
 			startRunNum: 3,
 			runBlockNum: 3,
 		},
-		// {
-		// 	desc:        "second add blocks",
-		// 	startRunNum: 0,
-		// 	runBlockNum: 2,
-		// },
-		// {
-		// 	desc:        "third add blocks",
-		// 	startRunNum: 100,
-		// 	runBlockNum: 100,
-		// },
+		{
+			desc:        "second add blocks",
+			startRunNum: 0,
+			runBlockNum: 2,
+		},
+		{
+			desc:        "third add blocks",
+			startRunNum: 100,
+			runBlockNum: 100,
+		},
 	}
 
+	db := dbm.NewDB("block_db", "leveldb", "block_db")
+	store := database.NewStore(db)
+	dispatcher := event.NewDispatcher()
+
+	// Because not found function to close mov db ,so when db start, we remove it
+	os.RemoveAll("mov_db")
+	movCore := mov.NewMovCore(cfg.CommonConfig.DBBackend, "mov_db", consensus.ActiveNetParams.MovStartHeight)
+	txPool := protocol.NewTxPool(store, []protocol.DustFilterer{movCore}, dispatcher)
+	chain, err := protocol.NewChain(store, txPool, []protocol.Protocoler{movCore}, dispatcher)
+
+	walletDB := dbm.NewDB("wallet_db", "leveldb", "wallet_db")
+	accountStore := database.NewAccountStore(walletDB)
+	accounts := account.NewManager(accountStore, chain)
+
+	defer func() {
+		walletDB.Close()
+		os.RemoveAll("wallet_db")
+		db.Close()
+		os.RemoveAll("block_db")
+		os.RemoveAll("mov_db")
+	}()
+
 	for caseIndex, c := range cases {
-		db := dbm.NewDB("block_db", "leveldb", "block_db")
-		store := database.NewStore(db)
-		dispatcher := event.NewDispatcher()
-
-		movCore := mov.NewMovCore(cfg.CommonConfig.DBBackend, cfg.CommonConfig.DBDir(), consensus.ActiveNetParams.MovStartHeight)
-		txPool := protocol.NewTxPool(store, []protocol.DustFilterer{movCore}, dispatcher)
-		chain, err := protocol.NewChain(store, txPool, []protocol.Protocoler{movCore}, dispatcher)
-
-		//walletDB := dbm.NewDB("wallet", cfg.CommonConfig.DBBackend, cfg.CommonConfig.DBDir())
-		walletDB := dbm.NewDB("wallet_db", "leveldb", "wallet_db")
-		accountStore := database.NewAccountStore(walletDB)
-		accounts := account.NewManager(accountStore, chain)
-
 		beforeBlocks := []*types.Block{}
 		afterBlocks := []*types.Block{}
 		expectConsensusResultsMap := map[uint64]*state.ConsensusResult{}
@@ -313,10 +321,5 @@ func TestRollback(t *testing.T) {
 			}
 		}
 
-		walletDB.Close()
-		os.RemoveAll("wallet_db")
-		db.Close()
-		fmt.Println("remove all")
-		os.RemoveAll("block_db")
 	}
 }
