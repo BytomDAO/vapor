@@ -1,6 +1,7 @@
 package test
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -23,6 +24,7 @@ import (
 	"github.com/bytom/vapor/testutil"
 )
 
+// Below is the key info we use
 // number 1
 // private key: 483355b66c0e15b0913829d709b04557749b871b3bf56ad1de8fda13d3a4954aa2a56121b8eab313b8f36939e8190fe8f267f19496decb91be5644e92b669914
 // public key: 32fe453097591f288315ef47b1ebdabf20e8bced8ede670f999980205cacddd4a2a56121b8eab313b8f36939e8190fe8f267f19496decb91be5644e92b669914
@@ -37,13 +39,9 @@ import (
 // example to get key , derivateKey
 // func getKey() {
 // 	xprv, _ := chainkd.NewXPrv(nil)
-// 	fmt.Println("secretKey:", xprv)
 // 	xpub := xprv.XPub()
-// 	fmt.Println("publicKey:", xpub)
 // 	derivateKey := xprv.Derive(fedConsensusPath)
-// 	fmt.Println("derivateSecretKey:", derivateKey)
 // 	derivatePublicKey := derivateKey.XPub()
-// 	fmt.Println("derivatePublicKey", derivatePublicKey)
 // }
 
 var fedConsensusPath = [][]byte{
@@ -132,25 +130,14 @@ func getXprv(c *protocol.Chain, store protocol.Store, timeStamp uint64) (*chaink
 }
 
 func TestRollback(t *testing.T) {
-	db := dbm.NewDB("block_test_db", "leveldb", "block_test_db")
-	defer os.RemoveAll("block_test_db")
-
 	cfg.CommonConfig = cfg.DefaultConfig()
 	cfg.CommonConfig.Federation = newFederationConfig()
 
 	consensus.ActiveNetParams.VotePendingBlockNumber = 0
 	consensus.ActiveNetParams.RoundVoteBlockNums = 3
 
-	store := database.NewStore(db)
-	dispatcher := event.NewDispatcher()
-
-	movCore := mov.NewMovCore(cfg.CommonConfig.DBBackend, cfg.CommonConfig.DBDir(), consensus.ActiveNetParams.MovStartHeight)
-	txPool := protocol.NewTxPool(store, []protocol.DustFilterer{movCore}, dispatcher)
-	chain, err := protocol.NewChain(store, txPool, []protocol.Protocoler{movCore}, dispatcher)
-
-	walletDB := dbm.NewDB("wallet", cfg.CommonConfig.DBBackend, cfg.CommonConfig.DBDir())
-	accountStore := database.NewAccountStore(walletDB)
-	accounts := account.NewManager(accountStore, chain)
+	warnDuration := time.Duration(consensus.ActiveNetParams.BlockTimeInterval*warnTimeNum/warnTimeDenom) * time.Millisecond
+	criticalDuration := time.Duration(consensus.ActiveNetParams.BlockTimeInterval*criticalTimeNum/criticalTimeDenom) * time.Millisecond
 
 	cases := []struct {
 		desc        string
@@ -162,22 +149,32 @@ func TestRollback(t *testing.T) {
 			startRunNum: 3,
 			runBlockNum: 3,
 		},
-		{
-			desc:        "second add blocks",
-			startRunNum: 0,
-			runBlockNum: 2,
-		},
-		{
-			desc:        "third add blocks",
-			startRunNum: 100,
-			runBlockNum: 100,
-		},
+		// {
+		// 	desc:        "second add blocks",
+		// 	startRunNum: 0,
+		// 	runBlockNum: 2,
+		// },
+		// {
+		// 	desc:        "third add blocks",
+		// 	startRunNum: 100,
+		// 	runBlockNum: 100,
+		// },
 	}
 
-	warnDuration := time.Duration(consensus.ActiveNetParams.BlockTimeInterval*warnTimeNum/warnTimeDenom) * time.Millisecond
-	criticalDuration := time.Duration(consensus.ActiveNetParams.BlockTimeInterval*criticalTimeNum/criticalTimeDenom) * time.Millisecond
-
 	for caseIndex, c := range cases {
+		db := dbm.NewDB("block_db", "leveldb", "block_db")
+		store := database.NewStore(db)
+		dispatcher := event.NewDispatcher()
+
+		movCore := mov.NewMovCore(cfg.CommonConfig.DBBackend, cfg.CommonConfig.DBDir(), consensus.ActiveNetParams.MovStartHeight)
+		txPool := protocol.NewTxPool(store, []protocol.DustFilterer{movCore}, dispatcher)
+		chain, err := protocol.NewChain(store, txPool, []protocol.Protocoler{movCore}, dispatcher)
+
+		//walletDB := dbm.NewDB("wallet", cfg.CommonConfig.DBBackend, cfg.CommonConfig.DBDir())
+		walletDB := dbm.NewDB("wallet_db", "leveldb", "wallet_db")
+		accountStore := database.NewAccountStore(walletDB)
+		accounts := account.NewManager(accountStore, chain)
+
 		beforeBlocks := []*types.Block{}
 		afterBlocks := []*types.Block{}
 		expectConsensusResultsMap := map[uint64]*state.ConsensusResult{}
@@ -315,5 +312,11 @@ func TestRollback(t *testing.T) {
 				}
 			}
 		}
+
+		walletDB.Close()
+		os.RemoveAll("wallet_db")
+		db.Close()
+		fmt.Println("remove all")
+		os.RemoveAll("block_db")
 	}
 }
