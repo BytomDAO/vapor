@@ -164,7 +164,7 @@ func TestRollback(t *testing.T) {
 	store := database.NewStore(db)
 	dispatcher := event.NewDispatcher()
 
-	// Because not found function to close mov db ,so when db start, we remove it
+	// Because not found function to close mov db ,so when db start, we remove db folder to avoid error
 	os.RemoveAll("mov_db")
 	movCore := mov.NewMovCore(cfg.CommonConfig.DBBackend, "mov_db", consensus.ActiveNetParams.MovStartHeight)
 	txPool := protocol.NewTxPool(store, []protocol.DustFilterer{movCore}, dispatcher)
