@@ -344,7 +344,6 @@ func TestRollback(t *testing.T) {
 
 			seq := state.CalcVoteSeq(block.Height)
 			if seq > finalSeq {
-				//consensusResult, err := getConsensusResult(chain, store, seq, &block.BlockHeader)
 				consensusResult, err := store.GetConsensusResult(seq)
 				if err == nil {
 					t.Errorf("why this result existed! %v, %v", consensusResult, err)
