@@ -72,7 +72,7 @@ func (view *UtxoViewpoint) DetachBlock(block *bc.Block, txStatus *bc.Transaction
 			return err
 		}
 
-		fmt.Println("block.Transactions", block.Transactions)
+		fmt.Println("[DetachBlock]", "block.Height", block.Height, "block.Transactions", block.Transactions)
 		if err := view.DetachTransaction(block.Transactions[i], statusFail); err != nil {
 			return err
 		}

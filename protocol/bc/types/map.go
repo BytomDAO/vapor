@@ -1,6 +1,8 @@
 package types
 
 import (
+	"fmt"
+
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/sha3"
 
@@ -263,7 +265,9 @@ func MapBlock(old *Block) *bc.Block {
 
 	b := new(bc.Block)
 	b.ID, b.BlockHeader = mapBlockHeader(&old.BlockHeader)
+	fmt.Println("[old.Transactions]", old.Transactions)
 	for _, oldTx := range old.Transactions {
+		fmt.Println("[oldTx]:", oldTx, oldTx.Tx)
 		b.Transactions = append(b.Transactions, oldTx.Tx)
 	}
 	return b

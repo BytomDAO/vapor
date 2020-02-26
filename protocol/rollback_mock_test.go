@@ -109,6 +109,7 @@ func TestRollbackMock(t *testing.T) {
 	cases := []struct {
 		desc                      string
 		bestBlockHeader           *types.BlockHeader
+		lastIrrBlockHeader        *types.BlockHeader
 		storedBlocks              []*types.Block
 		beforeBestConsensusResult *state.ConsensusResult
 		afterBestConsensusResult  *state.ConsensusResult
@@ -117,6 +118,10 @@ func TestRollbackMock(t *testing.T) {
 		{
 			desc: "first case",
 			bestBlockHeader: &types.BlockHeader{
+				Height:            1,
+				PreviousBlockHash: testutil.MustDecodeHash("39dee75363127a2857f554d2ad2706eb876407a2e09fbe0338683ca4ad4c2f90"),
+			},
+			lastIrrBlockHeader: &types.BlockHeader{
 				Height:            1,
 				PreviousBlockHash: testutil.MustDecodeHash("39dee75363127a2857f554d2ad2706eb876407a2e09fbe0338683ca4ad4c2f90"),
 			},
@@ -191,10 +196,14 @@ func TestRollbackMock(t *testing.T) {
 		// }
 
 		for _, block := range c.storedBlocks {
+			newTrans := []*types.Tx{}
 			status := bc.NewTransactionStatus()
-			for index, _ := range block.Transactions {
+			for index, tx := range block.Transactions {
 				status.SetStatus(index, false)
+				tx := &types.Tx{TxData: tx.TxData, Tx: types.MapTx(&tx.TxData)}
+				newTrans = append(newTrans, tx)
 			}
+			block.Transactions = newTrans
 			fmt.Println("block", block)
 			fmt.Println("what start:", block.Transactions, block.Transactions[0])
 			mockStore.SaveBlock(block, status)
@@ -203,9 +212,10 @@ func TestRollbackMock(t *testing.T) {
 		mockStore.SetConsensusResult(c.beforeBestConsensusResult)
 
 		chain := &Chain{
-			store:           mockStore,
-			subProtocols:    []Protocoler{mockProtocoler},
-			bestBlockHeader: c.bestBlockHeader,
+			store:              mockStore,
+			subProtocols:       []Protocoler{mockProtocoler},
+			bestBlockHeader:    c.bestBlockHeader,
+			lastIrrBlockHeader: c.lastIrrBlockHeader,
 		}
 
 		chain.cond.L = new(sync.Mutex)

@@ -148,11 +148,13 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 func (c *Chain) detachBlock(detachBlockHeader *types.BlockHeader, consensusResult *state.ConsensusResult, utxoView *state.UtxoViewpoint) (*types.Block, error) {
 	detachHash := detachBlockHeader.Hash()
 	block, err := c.store.GetBlock(&detachHash)
+	fmt.Println("[detachBlock] block ", block.Height, " transactions", block.Transactions)
 	if err != nil {
 		return block, err
 	}
 
 	detachBlock := types.MapBlock(block)
+	fmt.Println("[detachBlock mapBlock]", detachBlock.Height, "transactions", detachBlock.Transactions)
 	fmt.Println("detachBlock consensusResult", consensusResult)
 	if err := consensusResult.DetachBlock(block); err != nil {
 		return block, err
@@ -168,6 +170,7 @@ func (c *Chain) detachBlock(detachBlockHeader *types.BlockHeader, consensusResul
 		return block, err
 	}
 
+	fmt.Println("detachBlock", detachBlock)
 	if err := utxoView.DetachBlock(detachBlock, txStatus); err != nil {
 		return block, err
 	}
@@ -228,7 +231,9 @@ func (c *Chain) Rollback(targetHeight uint64) error {
 	for _, deletedBlockHeader := range deletedBlockHeaders {
 		hashDeleted := deletedBlockHeader.Hash()
 		fmt.Println("deletedBlockHeader", deletedBlockHeader.Height, hashDeleted.String())
+		fmt.Println("[Rollback]  go to start")
 		block, err := c.detachBlock(deletedBlockHeader, consensusResult, utxoView)
+		fmt.Println("[Rollback]  c.detachBlock")
 		if err != nil {
 			return err
 		}
