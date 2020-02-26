@@ -223,7 +223,6 @@ func (c *Chain) Rollback(targetHeight uint64) error {
 	}
 
 	startSeq := state.CalcVoteSeq(c.bestBlockHeader.Height)
-
 	if err = c.setState(targetBlockHeader, setIrrBlockHeader, nil, utxoView, []*state.ConsensusResult{consensusResult.Fork()}); err != nil {
 		return err
 	}
