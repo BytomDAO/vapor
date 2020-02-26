@@ -227,13 +227,16 @@ func (c *Chain) signBlockHeader(blockHeader *types.BlockHeader) ([]byte, error) 
 	xprv := config.CommonConfig.PrivateKey()
 	xpub := xprv.XPub()
 	node, err := c.getConsensusNode(&blockHeader.PreviousBlockHash, xpub.String())
+	blockHash := blockHeader.Hash().String()
 	if err == errNotFoundConsensusNode {
+		log.WithFields(log.Fields{"module": logModule, "blockHash": blockHash}).Warn("can't find consensus node of current node")
 		return nil, nil
 	} else if err != nil {
 		return nil, err
 	}
 
 	if err := c.checkDoubleSign(blockHeader, node.XPub.String()); err == errDoubleSignBlock {
+		log.WithFields(log.Fields{"module": logModule, "blockHash": blockHash}).Warn("current node has double sign the block")
 		return nil, nil
 	} else if err != nil {
 		return nil, err
