@@ -150,7 +150,7 @@ func TestGetTransactionsUtxo(t *testing.T) {
 					SpentOutputIDs: []bc.Hash{
 						bc.Hash{V0: 4},
 						bc.Hash{V0: 5},
-						bc.Hash{V0: 6},//no spentOutputID store
+						bc.Hash{V0: 6}, //no spentOutputID store
 					},
 				},
 			},

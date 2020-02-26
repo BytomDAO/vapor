@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
 
 	"github.com/bytom/vapor/application/mov/common"
@@ -248,6 +249,7 @@ func (m *LevelDBMovStore) calcNextDatabaseState(blockHeader *types.BlockHeader) 
 
 func (m *LevelDBMovStore) checkMovDatabaseState(header *types.BlockHeader) error {
 	state, err := m.GetMovDatabaseState()
+	fmt.Println("checkMovDatabaseState", header.Height, state.Height)
 	if err != nil {
 		return err
 	}

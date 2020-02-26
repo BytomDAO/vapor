@@ -744,18 +744,6 @@ func detachBlock(movCore *MovCore, block *types.Block) error {
 	return movCore.DetachBlock(block)
 }
 
-func queryAllOrders(store *database.LevelDBMovStore) []*common.Order {
-	var orders []*common.Order
-	tradePairIterator := database.NewTradePairIterator(store)
-	for tradePairIterator.HasNext() {
-		orderIterator := database.NewOrderIterator(store, tradePairIterator.Next())
-		for orderIterator.HasNext() {
-			orders = append(orders, orderIterator.NextBatch()...)
-		}
-	}
-	return orders
-}
-
 func ordersEquals(orders1 []*common.Order, orders2 []*common.Order) bool {
 	orderMap1 := make(map[string]*common.Order)
 	for _, order := range orders1 {

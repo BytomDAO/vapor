@@ -1,10 +1,13 @@
 package test
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
 	"github.com/bytom/vapor/application/mov"
+	"github.com/bytom/vapor/application/mov/common"
+	movDatabase "github.com/bytom/vapor/application/mov/database"
 	"github.com/bytom/vapor/consensus"
 	"github.com/bytom/vapor/database"
 	dbm "github.com/bytom/vapor/database/leveldb"
@@ -17,20 +20,28 @@ import (
 )
 
 func TestRollback(t *testing.T) {
+	// 1-->0
+	// 2-->0
+	// 2-->1
+	// 1200 个区块回滚 , 1201--> 1199 , 1201-->1200, 1200->1199
 	cases := []struct {
 		desc                        string
+		movStartHeight              uint64
 		beforeBestBlockHeader       *types.BlockHeader
 		beforeLastIrrBlockHeader    *types.BlockHeader
 		beforeUtxoViewPoint         *state.UtxoViewpoint
 		beforeStoredBlocks          []*types.Block
 		beforeStoredConsensusResult []*state.ConsensusResult
+		wantStoredBlocks            []*types.Block
 		wantBestBlockHeader         *types.BlockHeader
 		wantLastIrrBlockHeader      *types.BlockHeader
 		wantBestConsensusResult     *state.ConsensusResult
+		wantMovOrders               []*common.Order
 		rollbackToTargetHeight      uint64
 	}{
 		{
-			desc: "rollback from height 1 to 0",
+			desc:           "rollback from height 1 to 0",
+			movStartHeight: 10,
 			beforeBestBlockHeader: &types.BlockHeader{
 				Height:            1,
 				PreviousBlockHash: testutil.MustDecodeHash("39dee75363127a2857f554d2ad2706eb876407a2e09fbe0338683ca4ad4c2f90"),
@@ -45,6 +56,7 @@ func TestRollback(t *testing.T) {
 			wantLastIrrBlockHeader: &types.BlockHeader{
 				Height: 0,
 			},
+			wantMovOrders: []*common.Order{},
 			beforeUtxoViewPoint: &state.UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
 					testutil.MustDecodeHash("c094bdfd925b4f357a7cb373f8b9ec001181c9217fd7de8219ea1163a1bee93f"): &storage.UtxoEntry{Type: storage.VoteUTXOType, BlockHeight: 1, Spent: false},
@@ -89,6 +101,25 @@ func TestRollback(t *testing.T) {
 					},
 				},
 			},
+			wantStoredBlocks: []*types.Block{
+				{
+					BlockHeader: types.BlockHeader{
+						Height: 0,
+					},
+					Transactions: []*types.Tx{
+						{
+							TxData: types.TxData{
+								Inputs: []*types.TxInput{
+									types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 1000, 0, []byte{0, 1}),
+								},
+								Outputs: []*types.TxOutput{
+									types.NewVoteOutput(*consensus.BTMAssetID, 1000, []byte{0, 1}, testutil.MustDecodeHexString("36695997983028c279c3360ca345a90e3af1f9e3df2506119fca31cdc844be31630f9a421f4d1658e15d67a15ce29c36332dd45020d2a0147fcce4949ccd9a67")),
+								},
+							},
+						},
+					},
+				},
+			},
 			beforeStoredConsensusResult: []*state.ConsensusResult{
 				{
 					Seq: 1,
@@ -126,25 +157,37 @@ func TestRollback(t *testing.T) {
 
 	for _, c := range cases {
 		movDB := dbm.NewDB("mov_db", "leveldb", "mov_db")
-		movCore := mov.NewMovCoreWithDB(movDB, 10)
+		movStore := movDatabase.NewLevelDBMovStore(movDB)
+
+		movCore := mov.NewMovCoreWithDB(movStore, c.movStartHeight)
 		blockDB := dbm.NewDB("block_db", "leveldb", "block_db")
 		store := database.NewStore(blockDB)
 
-		mainChainBlocks := []*types.BlockHeader{}
+		mainChainBlockHeaders := []*types.BlockHeader{}
 		for _, block := range c.beforeStoredBlocks {
 			newTrans := []*types.Tx{}
 			status := bc.NewTransactionStatus()
 			for index, tx := range block.Transactions {
 				status.SetStatus(index, false)
+				byteData, err := tx.TxData.MarshalText()
+				if err != nil {
+					t.Fatal(err)
+				}
+				tx.TxData.SerializedSize = uint64(len(byteData))
+
 				tx := &types.Tx{TxData: tx.TxData, Tx: types.MapTx(&tx.TxData)}
 				newTrans = append(newTrans, tx)
 			}
-
+			block.Transactions = newTrans
 			store.SaveBlock(block, status)
-			mainChainBlocks = append(mainChainBlocks, &block.BlockHeader)
+
+			hash := block.Hash()
+			block, _ := store.GetBlock(&hash)
+
+			mainChainBlockHeaders = append(mainChainBlockHeaders, &block.BlockHeader)
 		}
 
-		if err := store.SaveChainStatus(c.beforeBestBlockHeader, c.beforeLastIrrBlockHeader, mainChainBlocks, c.beforeUtxoViewPoint, c.beforeStoredConsensusResult); err != nil {
+		if err := store.SaveChainStatus(c.beforeBestBlockHeader, c.beforeLastIrrBlockHeader, mainChainBlockHeaders, c.beforeUtxoViewPoint, c.beforeStoredConsensusResult); err != nil {
 			t.Fatal(err)
 		}
 
@@ -172,6 +215,52 @@ func TestRollback(t *testing.T) {
 
 		if !testutil.DeepEqual(nowConsensusResult, c.wantBestConsensusResult) {
 			t.Fatalf("wantBestConsensusResult is not right!")
+		}
+
+		nowBlocks := []*types.Block{}
+		for _, block := range c.beforeStoredBlocks {
+			if block.Height <= c.rollbackToTargetHeight {
+				gotBlock, err := chain.GetBlockByHeight(block.Height)
+				if err != nil {
+					t.Fatal(err)
+				}
+				nowBlocks = append(nowBlocks, gotBlock)
+			} else {
+				hash := block.Hash()
+				nowBlock, _ := store.GetBlock(&hash)
+				if nowBlock != nil {
+					t.Fatalf("this block height %d should not existed!", block.Height)
+				}
+			}
+		}
+
+		transferBlocks := []*types.Block{}
+		fmt.Println(nowBlocks, len(nowBlocks))
+		fmt.Println(c.wantStoredBlocks, len(c.wantStoredBlocks))
+
+		for _, block := range c.wantStoredBlocks {
+			newTrans := []*types.Tx{}
+			for _, tx := range block.Transactions {
+				byteData, err := tx.TxData.MarshalText()
+				if err != nil {
+					t.Fatal(err)
+				}
+				tx.TxData.SerializedSize = uint64(len(byteData))
+
+				tx := &types.Tx{TxData: tx.TxData, Tx: types.MapTx(&tx.TxData)}
+				newTrans = append(newTrans, tx)
+			}
+			block.Transactions = newTrans
+
+			transferBlocks = append(transferBlocks, block)
+		}
+
+		block1 := nowBlocks[0]
+		block2 := transferBlocks[0]
+		fmt.Println(block1)
+		fmt.Println(block2)
+		if !testutil.DeepEqual(nowBlocks, transferBlocks) {
+			t.Fatalf("blocks is not same")
 		}
 
 		blockDB.Close()
