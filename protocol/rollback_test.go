@@ -12,14 +12,17 @@ import (
 )
 
 type rProtocoler struct {
+	startHeight uint64
 }
 
-func newRProtocoler() *rProtocoler {
-	return &rProtocoler{}
+func newRProtocoler(height uint64) *rProtocoler {
+	return &rProtocoler{
+		startHeight: height,
+	}
 }
 
 func (p *rProtocoler) Name() string        { return "Mock" }
-func (p *rProtocoler) StartHeight() uint64 { return 10 }
+func (p *rProtocoler) StartHeight() uint64 { return p.startHeight }
 func (p *rProtocoler) BeforeProposalBlock(txs []*types.Tx, nodeProgram []byte, blockHeight uint64, gasLeft int64, isTimeout func() bool) ([]*types.Tx, error) {
 	return nil, nil
 }
@@ -37,6 +40,7 @@ func (p *rProtocoler) DetachBlock(block *types.Block) error                     
 func TestRollbackMock(t *testing.T) {
 	cases := []struct {
 		desc                      string
+		protocolerStartHeight     uint64
 		bestBlockHeader           *types.BlockHeader
 		lastIrrBlockHeader        *types.BlockHeader
 		storedBlocks              []*types.Block
@@ -48,7 +52,8 @@ func TestRollbackMock(t *testing.T) {
 		targetHeight              uint64
 	}{
 		{
-			desc: "first case",
+			desc:                  "first case",
+			protocolerStartHeight: 0,
 			bestBlockHeader: &types.BlockHeader{
 				Height:            1,
 				PreviousBlockHash: testutil.MustDecodeHash("39dee75363127a2857f554d2ad2706eb876407a2e09fbe0338683ca4ad4c2f90"),
@@ -149,7 +154,7 @@ func TestRollbackMock(t *testing.T) {
 
 	for _, c := range cases {
 		mockStore := newDummyStore()
-		mockProtocoler := newRProtocoler()
+		mockProtocoler := newRProtocoler(c.protocolerStartHeight)
 
 		for _, block := range c.storedBlocks {
 			newTrans := []*types.Tx{}
