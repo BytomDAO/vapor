@@ -678,16 +678,20 @@ func mustDecodeXPub(xpub string) chainkd.XPub {
 }
 
 type dummyStore struct {
-	blockHeaders     map[string]*types.BlockHeader
-	blocks           map[string]*types.Block
-	consensusResults map[uint64]*state.ConsensusResult
+	blockHeaders      map[string]*types.BlockHeader
+	blocks            map[string]*types.Block
+	consensusResults  map[uint64]*state.ConsensusResult
+	mainChainHash     map[uint64]*bc.Hash
+	transactionStatus map[string]*bc.TransactionStatus
 }
 
 func newDummyStore() *dummyStore {
 	return &dummyStore{
-		blockHeaders:     make(map[string]*types.BlockHeader),
-		consensusResults: make(map[uint64]*state.ConsensusResult),
-		blocks:           make(map[string]*types.Block),
+		blockHeaders:      make(map[string]*types.BlockHeader),
+		consensusResults:  make(map[uint64]*state.ConsensusResult),
+		blocks:            make(map[string]*types.Block),
+		mainChainHash:     make(map[uint64]*bc.Hash),
+		transactionStatus: make(map[string]*bc.TransactionStatus),
 	}
 }
 
@@ -707,8 +711,8 @@ func (s *dummyStore) GetStoreStatus() *BlockStoreState {
 	return nil
 }
 
-func (s *dummyStore) GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error) {
-	return nil, nil
+func (s *dummyStore) GetTransactionStatus(hash *bc.Hash) (*bc.TransactionStatus, error) {
+	return s.transactionStatus[hash.String()], nil
 }
 
 func (s *dummyStore) GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error {
@@ -727,8 +731,8 @@ func (s *dummyStore) SetConsensusResult(consensusResult *state.ConsensusResult) 
 	s.consensusResults[consensusResult.Seq] = consensusResult
 }
 
-func (s *dummyStore) GetMainChainHash(uint64) (*bc.Hash, error) {
-	return nil, nil
+func (s *dummyStore) GetMainChainHash(height uint64) (*bc.Hash, error) {
+	return s.mainChainHash[height], nil
 }
 
 func (s *dummyStore) GetBlockHashesByHeight(uint64) ([]*bc.Hash, error) {
@@ -736,11 +740,15 @@ func (s *dummyStore) GetBlockHashesByHeight(uint64) ([]*bc.Hash, error) {
 }
 
 func (s *dummyStore) DeleteConsensusResult(seq uint64) error {
+	delete(s.consensusResults, seq)
 	return nil
 }
 
-func (s *dummyStore) SaveBlock(block *types.Block, _ *bc.TransactionStatus) error {
+func (s *dummyStore) SaveBlock(block *types.Block, status *bc.TransactionStatus) error {
 	hash := block.Hash()
+	s.transactionStatus[hash.String()] = status
+	s.mainChainHash[block.Height] = &hash
+	s.blockHeaders[hash.String()] = &block.BlockHeader
 	s.blocks[hash.String()] = block
 	return nil
 }
