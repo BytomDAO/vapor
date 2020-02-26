@@ -108,7 +108,7 @@ func TestRollback(t *testing.T) {
 					},
 					BlockHash:      testutil.MustDecodeHash("39dee75363127a2857f554d2ad2706eb876407a2e09fbe0338683ca4ad4c2f90"),
 					BlockHeight:    0,
-					CoinbaseReward: map[string]uint64{"0001": 0},
+					CoinbaseReward: map[string]uint64{},
 				},
 			},
 			wantBestConsensusResult: &state.ConsensusResult{
