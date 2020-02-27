@@ -167,10 +167,12 @@ func TestSaveBlock(t *testing.T) {
 	}
 
 	for i, c := range cases {
+		trans := []*types.Tx{coinbaseTx}
 		txs := []*bc.Tx{coinbaseTx.Tx}
 		for _, tx := range c.txData {
 			t := types.NewTx(*tx)
 			txs = append(txs, t.Tx)
+			trans = append(trans, t)
 		}
 		merkleRoot, _ := types.TxMerkleRoot(txs)
 		txStatusHash, _ := types.TxStatusMerkleRoot(c.txStatus.VerifyStatus)
@@ -184,6 +186,7 @@ func TestSaveBlock(t *testing.T) {
 					TransactionStatusHash:  txStatusHash,
 				},
 			},
+			Transactions: trans,
 		}
 
 		if err := store.SaveBlock(block, c.txStatus); err != nil {
@@ -196,8 +199,16 @@ func TestSaveBlock(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if !testutil.DeepEqual(gotBlock, block) {
-			t.Errorf("case %v: block mismatch: have %x, want %x", i, gotBlock, block)
+		for index, tx := range gotBlock.Transactions {
+			wantTx := types.NewTx(block.Transactions[index].TxData)
+			if tx.ID != wantTx.ID {
+				x1, _ := tx.MarshalText()
+				x2, _ := block.Transactions[index].MarshalText()
+				a1 := string(x1)
+				b1 := string(x2)
+
+				t.Errorf("case  %d: transaction %d: block mismatch: have %s, want %s", i, index, a1, b1)
+			}
 		}
 
 		gotStatus, err := store.GetTransactionStatus(&blockHash)

@@ -1,12 +1,12 @@
 package database
 
 import (
-	"github.com/golang/protobuf/proto"
 	dbm "github.com/bytom/vapor/database/leveldb"
 	"github.com/bytom/vapor/database/storage"
 	"github.com/bytom/vapor/errors"
 	"github.com/bytom/vapor/protocol/bc"
 	"github.com/bytom/vapor/protocol/state"
+	"github.com/golang/protobuf/proto"
 )
 
 const utxoPreFix = "UT:"

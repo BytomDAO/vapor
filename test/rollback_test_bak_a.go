@@ -5,6 +5,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bytom/vapor/application/mov"
 	movDatabase "github.com/bytom/vapor/application/mov/database"
 	"github.com/bytom/vapor/consensus"
@@ -18,7 +20,85 @@ import (
 	"github.com/bytom/vapor/testutil"
 )
 
-func TestRollback(t *testing.T) {
+func compareDBSame(t *testing.T, dbA dbm.DB, dbB dbm.DB) bool {
+	iterA := dbA.Iterator()
+	iterB := dbB.Iterator()
+
+	for iterA.Next() && iterB.Next() {
+		require.Equal(t, iterA.Key(), iterB.Key())
+		require.Equal(t, iterA.Value(), iterB.Value())
+	}
+
+	if iterA.Next() || iterB.Next() {
+		t.Fatalf("why iterator is not finished")
+	}
+
+	return true
+}
+
+func ATestSmall(t *testing.T) {
+	wantStoredBlocks := []*types.Block{
+		{
+			BlockHeader: types.BlockHeader{
+				Height: 0,
+			},
+			Transactions: []*types.Tx{
+				types.NewTx(types.TxData{
+					Inputs: []*types.TxInput{
+						types.NewSpendInput(nil, bc.NewHash([32]byte{8}), *consensus.BTMAssetID, 1000, 0, []byte{0, 1}),
+					},
+					Outputs: []*types.TxOutput{
+						types.NewVoteOutput(*consensus.BTMAssetID, 1000, []byte{0, 1}, testutil.MustDecodeHexString("36695997983028c279c3360ca345a90e3af1f9e3df2506119fca31cdc844be31630f9a421f4d1658e15d67a15ce29c36332dd45020d2a0147fcce4949ccd9a67")),
+					},
+				}),
+			},
+		},
+		{
+			BlockHeader: types.BlockHeader{
+				Height: 1,
+			},
+			Transactions: []*types.Tx{
+				types.NewTx(types.TxData{
+					Inputs: []*types.TxInput{
+						types.NewSpendInput(nil, bc.NewHash([32]byte{8}), *consensus.BTMAssetID, 1000, 0, []byte{0, 1}),
+					},
+					Outputs: []*types.TxOutput{
+						types.NewVoteOutput(*consensus.BTMAssetID, 1000, []byte{0, 1}, testutil.MustDecodeHexString("36695997983028c279c3360ca345a90e3af1f9e3df2506119fca31cdc844be31630f9a421f4d1658e15d67a15ce29c36332dd45020d2a0147fcce4949ccd9a67")),
+					},
+				}),
+			},
+		},
+	}
+
+	dbA := dbm.NewDB("dba", "leveldb", "dba")
+	storeA := database.NewStore(dbA)
+	status := bc.NewTransactionStatus()
+	status.SetStatus(0, false)
+
+	storeA.SaveBlock(wantStoredBlocks[0], status)
+
+	//hash := wantStoredBlocks[0].Hash()
+	// block, _ := storeA.GetBlock(&hash)
+	// fmt.Println("!!!!!!!!!!", block)
+	// fmt.Println("????????", wantStoredBlocks[0])
+
+	//fmt.Println("amazing!")
+
+	dbB := dbm.NewDB("dbb", "leveldb", "dbb")
+	storeB := database.NewStore(dbB)
+	storeB.SaveBlock(wantStoredBlocks[0], status)
+	storeB.SaveBlock(wantStoredBlocks[1], status)
+
+	storeB.DeleteBlock(wantStoredBlocks[1])
+
+	compareDBSame(t, dbA, dbB)
+	dbA.Close()
+	dbB.Close()
+	os.RemoveAll("dba")
+	os.RemoveAll("dbb")
+}
+
+func ATestRollback(t *testing.T) {
 	// 1-->0
 	// 2-->0
 	// 2-->1
@@ -147,6 +227,7 @@ func TestRollback(t *testing.T) {
 			},
 			wantUtxoViewPoint: &state.UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
+					testutil.MustDecodeHash("51f538be366172bed5359a016dce26b952024c9607caf6af609ad723982c2e06"): &storage.UtxoEntry{Type: storage.VoteUTXOType, BlockHeight: 1, Spent: false},
 					testutil.MustDecodeHash("e2370262a129b90174195a76c298d872a56af042eae17657e154bcc46d41b3ba"): &storage.UtxoEntry{Type: storage.VoteUTXOType, BlockHeight: 0, Spent: true},
 				},
 			},
@@ -173,6 +254,9 @@ func TestRollback(t *testing.T) {
 		blockDB := dbm.NewDB("block_db", "leveldb", "block_db")
 		store := database.NewStore(blockDB)
 
+		compareDB := dbm.NewDB("compare_block_db", "leveldb", "compare_block_db")
+		compareStore := database.NewStore(compareDB)
+
 		mainChainBlockHeaders := []*types.BlockHeader{}
 		for _, block := range c.beforeStoredBlocks {
 			trans := block.Transactions
@@ -191,7 +275,22 @@ func TestRollback(t *testing.T) {
 			mainChainBlockHeaders = append(mainChainBlockHeaders, &block.BlockHeader)
 		}
 
+		wantMainChainBlockHeaders := []*types.BlockHeader{}
+		for _, block := range c.wantStoredBlocks {
+			status := bc.NewTransactionStatus()
+			for index := range block.Transactions {
+				status.SetStatus(index, false)
+			}
+			compareStore.SaveBlock(block, status)
+
+			wantMainChainBlockHeaders = append(wantMainChainBlockHeaders, &block.BlockHeader)
+		}
+
 		if err := store.SaveChainStatus(c.beforeBestBlockHeader, c.beforeLastIrrBlockHeader, mainChainBlockHeaders, c.beforeUtxoViewPoint, c.beforeStoredConsensusResult); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := compareStore.SaveChainStatus(c.wantBestBlockHeader, c.wantLastIrrBlockHeader, wantMainChainBlockHeaders, c.wantUtxoViewPoint, c.wantStoredConsensusResult); err != nil {
 			t.Fatal(err)
 		}
 
@@ -203,6 +302,22 @@ func TestRollback(t *testing.T) {
 		if err := chain.Rollback(c.rollbackToTargetHeight); err != nil {
 			t.Fatal(err)
 		}
+
+		hash := testutil.MustDecodeHash("e2370262a129b90174195a76c298d872a56af042eae17657e154bcc46d41b3ba")
+		utxo, err := store.GetUtxo(&hash)
+		fmt.Println("store e2370262a129b90174195a76c298d872a56af042eae17657e154bcc46d41b3ba", utxo, err)
+
+		hash = testutil.MustDecodeHash("51f538be366172bed5359a016dce26b952024c9607caf6af609ad723982c2e06")
+		utxo, err = store.GetUtxo(&hash)
+		fmt.Println("store 51f538be366172bed5359a016dce26b952024c9607caf6af609ad723982c2e06", utxo, err)
+
+		hash = testutil.MustDecodeHash("e2370262a129b90174195a76c298d872a56af042eae17657e154bcc46d41b3ba")
+		utxo, err = compareStore.GetUtxo(&hash)
+		fmt.Println("compareStore e2370262a129b90174195a76c298d872a56af042eae17657e154bcc46d41b3ba", utxo, err)
+
+		hash = testutil.MustDecodeHash("51f538be366172bed5359a016dce26b952024c9607caf6af609ad723982c2e06")
+		utxo, err = compareStore.GetUtxo(&hash)
+		fmt.Println("compareStore 51f538be366172bed5359a016dce26b952024c9607caf6af609ad723982c2e06", utxo, err)
 
 		if !testutil.DeepEqual(chain.LastIrreversibleHeader(), c.wantLastIrrBlockHeader) {
 			t.Fatalf("lastIrrBlockHeader is not right!")
@@ -221,12 +336,12 @@ func TestRollback(t *testing.T) {
 			t.Fatalf("wantBestConsensusResult is not right!")
 		}
 
-		transOldTx := []*bc.Tx{}
+		if !compareDBSame(t, blockDB, compareDB) {
+			t.Fatalf("the db is not same")
+		}
+
 		for _, block := range c.wantStoredBlocks {
 			hash := block.Hash()
-			for _, tx := range block.Transactions {
-				transOldTx = append(transOldTx, tx.Tx)
-			}
 			gotBlock, err := store.GetBlock(&hash)
 			if err != nil {
 				t.Fatal(err)
@@ -237,19 +352,12 @@ func TestRollback(t *testing.T) {
 			}
 		}
 
-		nowUtxoViewPoint := state.NewUtxoViewpoint()
-		if err = store.GetTransactionsUtxo(nowUtxoViewPoint, transOldTx); err != nil {
-			t.Fatal(err)
-		}
-
-		if !testutil.DeepEqual(nowUtxoViewPoint, c.wantUtxoViewPoint) {
-			t.Fatal(err)
-		}
-
 		blockDB.Close()
 		os.RemoveAll("block_db")
 		movDB.Close()
 		os.RemoveAll("mov_db")
 
+		compareDB.Close()
+		os.RemoveAll("compare_block_db")
 	}
 }
