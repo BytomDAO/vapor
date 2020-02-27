@@ -1,8 +1,6 @@
 package protocol
 
 import (
-	"fmt"
-
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/vapor/errors"
@@ -147,6 +145,7 @@ func (c *Chain) detachBlock(detachBlockHeader *types.BlockHeader, consensusResul
 	}
 
 	detachBlock := types.MapBlock(block)
+
 	if err := consensusResult.DetachBlock(block); err != nil {
 		return block, err
 	}
@@ -225,10 +224,6 @@ func (c *Chain) Rollback(targetHeight uint64) error {
 	}
 
 	startSeq := state.CalcVoteSeq(c.bestBlockHeader.Height)
-	entries := utxoView.Entries
-	for prevout, entry := range entries {
-		fmt.Println("final prevout", prevout.String(), entry)
-	}
 
 	if err = c.setState(targetBlockHeader, setIrrBlockHeader, nil, utxoView, []*state.ConsensusResult{consensusResult.Fork()}); err != nil {
 		return err

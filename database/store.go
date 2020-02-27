@@ -403,6 +403,7 @@ func (s *Store) SaveChainStatus(blockHeader, irrBlockHeader *types.BlockHeader, 
 		IrreversibleHeight: irrBlockHeader.Height,
 		IrreversibleHash:   &irrBlockHash,
 	})
+
 	if err != nil {
 		return err
 	}
@@ -433,7 +434,6 @@ func (s *Store) SaveChainStatus(blockHeader, irrBlockHeader *types.BlockHeader, 
 		}
 	}
 	batch.Write()
-
 	for _, clearCacheFunc := range clearCacheFuncs {
 		clearCacheFunc()
 	}
