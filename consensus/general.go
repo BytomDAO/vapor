@@ -102,7 +102,7 @@ type Params struct {
 	// ProducerSubsidys defines the producer subsidy by block height
 	ProducerSubsidys []ProducerSubsidy
 
-	SoftForkPoint map[uint64]uint64
+	SoftForkPoint  map[uint64]uint64
 	MovStartHeight uint64
 }
 
@@ -200,15 +200,15 @@ var SoloNetParams = Params{
 		MinConsensusNodeVoteNum: uint64(100000000000000),
 		MinVoteOutputAmount:     uint64(100000000),
 		BlockTimeInterval:       500,
-		RoundVoteBlockNums:      1200,
+		RoundVoteBlockNums:      120,
 		MaxTimeOffsetMs:         2000,
 	},
 	Checkpoints: []Checkpoint{},
 	ProducerSubsidys: []ProducerSubsidy{
-		{BeginBlock: 0, EndBlock: 0, Subsidy: 24},
-		{BeginBlock: 1, EndBlock: 840000, Subsidy: 24},
-		{BeginBlock: 840001, EndBlock: 1680000, Subsidy: 12},
-		{BeginBlock: 1680001, EndBlock: 3360000, Subsidy: 6},
+		{BeginBlock: 0, EndBlock: 0, Subsidy: 100000000},
+		{BeginBlock: 1, EndBlock: 100000000, Subsidy: 100000000},
+		{BeginBlock: 200000000, EndBlock: 200000000, Subsidy: 100000000},
+		{BeginBlock: 100000000, EndBlock: 100000000, Subsidy: 100000000},
 	},
 }
 
