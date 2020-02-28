@@ -279,10 +279,12 @@ func (c *ConsensusResult) DetachCoinbaseReward(block *types.Block) error {
 	if block.Height%consensus.ActiveNetParams.RoundVoteBlockNums == 1 {
 		c.CoinbaseReward = map[string]uint64{}
 		for i, output := range block.Transactions[0].Outputs {
+			fmt.Println("i:", i)
 			fmt.Println("ooi", output.ControlProgram(), output.AssetAmount().Amount)
 			if i == 0 {
 				continue
 			}
+			fmt.Println("???")
 			program := output.ControlProgram()
 			c.CoinbaseReward[hex.EncodeToString(program)] = output.AssetAmount().Amount
 		}
