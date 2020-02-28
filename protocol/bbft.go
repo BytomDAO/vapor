@@ -227,8 +227,7 @@ func (c *Chain) signBlockHeader(blockHeader *types.BlockHeader) ([]byte, error) 
 	xprv := config.CommonConfig.PrivateKey()
 	xpub := xprv.XPub()
 	node, err := c.getConsensusNode(&blockHeader.PreviousBlockHash, xpub.String())
-	var blockHash *bc.Hash
-	*blockHash = blockHeader.Hash()
+	blockHash := blockHeader.Hash()
 	blockHashStr := blockHash.String()
 	if err == errNotFoundConsensusNode {
 		log.WithFields(log.Fields{"module": logModule, "blockHash": blockHashStr}).Warn("can't find consensus node of current node")
