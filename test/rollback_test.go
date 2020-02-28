@@ -1097,7 +1097,6 @@ func TestRollback(t *testing.T) {
 
 		mainChainBlockHeaders := []*types.BlockHeader{}
 		for _, block := range c.beforeStoredBlocks {
-			trans := block.Transactions
 			status := bc.NewTransactionStatus()
 			for index := range block.Transactions {
 				status.SetStatus(index, false)
