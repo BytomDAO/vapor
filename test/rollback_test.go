@@ -307,21 +307,343 @@ func TestRollback(t *testing.T) {
 		// 		},
 		// 	},
 		// },
+		// {
+		// 	desc:               "rollback from height 2 to 1",
+		// 	movStartHeight:     10,
+		// 	RoundVoteBlockNums: 1200,
+		// 	beforeBestBlockHeader: &types.BlockHeader{
+		// 		Height:            2,
+		// 		PreviousBlockHash: testutil.MustDecodeHash("52463075c66259098f2a1fa711288cf3b866d7c57b4a7a78cd22a1dcd69a0514"),
+		// 	},
+		// 	wantBestBlockHeader: &types.BlockHeader{
+		// 		Height:            1,
+		// 		PreviousBlockHash: testutil.MustDecodeHash("39dee75363127a2857f554d2ad2706eb876407a2e09fbe0338683ca4ad4c2f90"),
+		// 	},
+		// 	beforeLastIrrBlockHeader: &types.BlockHeader{
+		// 		Height:            2,
+		// 		PreviousBlockHash: testutil.MustDecodeHash("52463075c66259098f2a1fa711288cf3b866d7c57b4a7a78cd22a1dcd69a0514"),
+		// 	},
+		// 	wantLastIrrBlockHeader: &types.BlockHeader{
+		// 		Height:            1,
+		// 		PreviousBlockHash: testutil.MustDecodeHash("39dee75363127a2857f554d2ad2706eb876407a2e09fbe0338683ca4ad4c2f90"),
+		// 	},
+		// 	beforeUtxoViewPoint: &state.UtxoViewpoint{
+		// 		Entries: map[bc.Hash]*storage.UtxoEntry{
+		// 			testutil.MustDecodeHash("afee09925bea1695424450a91ad082a378f20534627fa5cb63f036846347ee08"): &storage.UtxoEntry{Type: storage.VoteUTXOType, BlockHeight: 2, Spent: true},
+		// 			testutil.MustDecodeHash("51f538be366172bed5359a016dce26b952024c9607caf6af609ad723982c2e06"): &storage.UtxoEntry{Type: storage.VoteUTXOType, BlockHeight: 1, Spent: true},
+		// 			testutil.MustDecodeHash("e2370262a129b90174195a76c298d872a56af042eae17657e154bcc46d41b3ba"): &storage.UtxoEntry{Type: storage.VoteUTXOType, BlockHeight: 0, Spent: true},
+		// 		},
+		// 	},
+		// 	rollbackToTargetHeight: 1,
+		// 	beforeStoredBlocks: []*types.Block{
+		// 		{
+		// 			BlockHeader: types.BlockHeader{
+		// 				Height: 0,
+		// 			},
+		// 			Transactions: []*types.Tx{
+		// 				types.NewTx(types.TxData{
+		// 					Inputs: []*types.TxInput{
+		// 						types.NewSpendInput(nil, bc.NewHash([32]byte{8}), *consensus.BTMAssetID, 1000, 0, []byte{0, 1}),
+		// 					},
+		// 					Outputs: []*types.TxOutput{
+		// 						types.NewVoteOutput(*consensus.BTMAssetID, 1000, []byte{0, 1}, testutil.MustDecodeHexString("36695997983028c279c3360ca345a90e3af1f9e3df2506119fca31cdc844be31630f9a421f4d1658e15d67a15ce29c36332dd45020d2a0147fcce4949ccd9a67")),
+		// 					},
+		// 				}),
+		// 			},
+		// 		},
+		// 		{
+		// 			BlockHeader: types.BlockHeader{
+		// 				Height:            1,
+		// 				PreviousBlockHash: testutil.MustDecodeHash("39dee75363127a2857f554d2ad2706eb876407a2e09fbe0338683ca4ad4c2f90"),
+		// 			},
+		// 			Transactions: []*types.Tx{
+		// 				types.NewTx(types.TxData{
+		// 					Inputs: []*types.TxInput{
+		// 						types.NewSpendInput(nil, bc.NewHash([32]byte{8}), *consensus.BTMAssetID, 2000, 0, []byte{0, 1}),
+		// 					},
+		// 					Outputs: []*types.TxOutput{
+		// 						types.NewVoteOutput(*consensus.BTMAssetID, 2000, []byte{0, 1}, testutil.MustDecodeHexString("b7f463446a31b3792cd168d52b7a89b3657bca3e25d6854db1488c389ab6fc8d538155c25c1ee6975cc7def19710908c7d9b7463ca34a22058b456b45e498db9")),
+		// 					},
+		// 				}),
+		// 			},
+		// 		},
+		// 		{
+		// 			BlockHeader: types.BlockHeader{
+		// 				Height:            2,
+		// 				PreviousBlockHash: testutil.MustDecodeHash("52463075c66259098f2a1fa711288cf3b866d7c57b4a7a78cd22a1dcd69a0514"),
+		// 			},
+		// 			Transactions: []*types.Tx{
+		// 				types.NewTx(types.TxData{
+		// 					Inputs: []*types.TxInput{
+		// 						types.NewSpendInput(nil, bc.NewHash([32]byte{8}), *consensus.BTMAssetID, 3000, 0, []byte{0, 1}),
+		// 					},
+		// 					Outputs: []*types.TxOutput{
+		// 						types.NewVoteOutput(*consensus.BTMAssetID, 2500, []byte{0, 1}, testutil.MustDecodeHexString("b7f463446a31b3792cd168d52b7a89b3657bca3e25d6854db1488c389ab6fc8d538155c25c1ee6975cc7def19710908c7d9b7463ca34a22058b456b45e498db9")),
+		// 					},
+		// 				}),
+		// 			},
+		// 		},
+		// 	},
+		// 	wantStoredBlocks: []*types.Block{
+		// 		{
+		// 			BlockHeader: types.BlockHeader{
+		// 				Height: 0,
+		// 			},
+		// 			Transactions: []*types.Tx{
+		// 				types.NewTx(types.TxData{
+		// 					Inputs: []*types.TxInput{
+		// 						types.NewSpendInput(nil, bc.NewHash([32]byte{8}), *consensus.BTMAssetID, 1000, 0, []byte{0, 1}),
+		// 					},
+		// 					Outputs: []*types.TxOutput{
+		// 						types.NewVoteOutput(*consensus.BTMAssetID, 1000, []byte{0, 1}, testutil.MustDecodeHexString("36695997983028c279c3360ca345a90e3af1f9e3df2506119fca31cdc844be31630f9a421f4d1658e15d67a15ce29c36332dd45020d2a0147fcce4949ccd9a67")),
+		// 					},
+		// 				}),
+		// 			},
+		// 		},
+		// 		{
+		// 			BlockHeader: types.BlockHeader{
+		// 				Height:            1,
+		// 				PreviousBlockHash: testutil.MustDecodeHash("39dee75363127a2857f554d2ad2706eb876407a2e09fbe0338683ca4ad4c2f90"),
+		// 			},
+		// 			Transactions: []*types.Tx{
+		// 				types.NewTx(types.TxData{
+		// 					Inputs: []*types.TxInput{
+		// 						types.NewSpendInput(nil, bc.NewHash([32]byte{8}), *consensus.BTMAssetID, 2000, 0, []byte{0, 1}),
+		// 					},
+		// 					Outputs: []*types.TxOutput{
+		// 						types.NewVoteOutput(*consensus.BTMAssetID, 2000, []byte{0, 1}, testutil.MustDecodeHexString("b7f463446a31b3792cd168d52b7a89b3657bca3e25d6854db1488c389ab6fc8d538155c25c1ee6975cc7def19710908c7d9b7463ca34a22058b456b45e498db9")),
+		// 					},
+		// 				}),
+		// 			},
+		// 		},
+		// 	},
+		// 	beforeStoredConsensusResult: []*state.ConsensusResult{
+		// 		{
+		// 			Seq: 1,
+		// 			NumOfVote: map[string]uint64{
+		// 				"b7f463446a31b3792cd168d52b7a89b3657bca3e25d6854db1488c389ab6fc8d538155c25c1ee6975cc7def19710908c7d9b7463ca34a22058b456b45e498db9": 100004500,
+		// 				"36695997983028c279c3360ca345a90e3af1f9e3df2506119fca31cdc844be31630f9a421f4d1658e15d67a15ce29c36332dd45020d2a0147fcce4949ccd9a67": 100002000,
+		// 			},
+		// 			BlockHash:      testutil.MustDecodeHash("699d3f59d4afe7eea85df31814628d7d34ace7f5e76d6c9ebf4c54482d2cd333"),
+		// 			BlockHeight:    2,
+		// 			CoinbaseReward: map[string]uint64{"0001": consensus.BlockSubsidy(1) + consensus.BlockSubsidy(2) + 500},
+		// 		},
+		// 		{
+		// 			Seq: 0,
+		// 			NumOfVote: map[string]uint64{
+		// 				"b7f463446a31b3792cd168d52b7a89b3657bca3e25d6854db1488c389ab6fc8d538155c25c1ee6975cc7def19710908c7d9b7463ca34a22058b456b45e498db9": 100000000,
+		// 				"36695997983028c279c3360ca345a90e3af1f9e3df2506119fca31cdc844be31630f9a421f4d1658e15d67a15ce29c36332dd45020d2a0147fcce4949ccd9a67": 100002000,
+		// 			},
+		// 			BlockHash:      testutil.MustDecodeHash("39dee75363127a2857f554d2ad2706eb876407a2e09fbe0338683ca4ad4c2f90"),
+		// 			BlockHeight:    0,
+		// 			CoinbaseReward: map[string]uint64{},
+		// 		},
+		// 	},
+		// 	wantBestConsensusResult: &state.ConsensusResult{
+		// 		Seq: 1,
+		// 		NumOfVote: map[string]uint64{
+		// 			"b7f463446a31b3792cd168d52b7a89b3657bca3e25d6854db1488c389ab6fc8d538155c25c1ee6975cc7def19710908c7d9b7463ca34a22058b456b45e498db9": 100002000,
+		// 			"36695997983028c279c3360ca345a90e3af1f9e3df2506119fca31cdc844be31630f9a421f4d1658e15d67a15ce29c36332dd45020d2a0147fcce4949ccd9a67": 100002000,
+		// 		},
+		// 		BlockHash:      testutil.MustDecodeHash("52463075c66259098f2a1fa711288cf3b866d7c57b4a7a78cd22a1dcd69a0514"),
+		// 		BlockHeight:    1,
+		// 		CoinbaseReward: map[string]uint64{"0001": consensus.BlockSubsidy(1)},
+		// 	},
+		// 	wantUtxoViewPoint: &state.UtxoViewpoint{
+		// 		Entries: map[bc.Hash]*storage.UtxoEntry{
+		// 			testutil.MustDecodeHash("51f538be366172bed5359a016dce26b952024c9607caf6af609ad723982c2e06"): &storage.UtxoEntry{Type: storage.VoteUTXOType, BlockHeight: 1, Spent: true},
+		// 			testutil.MustDecodeHash("e2370262a129b90174195a76c298d872a56af042eae17657e154bcc46d41b3ba"): &storage.UtxoEntry{Type: storage.VoteUTXOType, BlockHeight: 0, Spent: true},
+		// 		},
+		// 	},
+		// 	wantStoredConsensusResult: []*state.ConsensusResult{
+		// 		{
+		// 			Seq: 0,
+		// 			NumOfVote: map[string]uint64{
+		// 				"b7f463446a31b3792cd168d52b7a89b3657bca3e25d6854db1488c389ab6fc8d538155c25c1ee6975cc7def19710908c7d9b7463ca34a22058b456b45e498db9": 100000000,
+		// 				"36695997983028c279c3360ca345a90e3af1f9e3df2506119fca31cdc844be31630f9a421f4d1658e15d67a15ce29c36332dd45020d2a0147fcce4949ccd9a67": 100002000,
+		// 			},
+		// 			BlockHash:      testutil.MustDecodeHash("39dee75363127a2857f554d2ad2706eb876407a2e09fbe0338683ca4ad4c2f90"),
+		// 			BlockHeight:    0,
+		// 			CoinbaseReward: map[string]uint64{},
+		// 		},
+		// 	},
+		// },
+		// {
+		// 	desc:               "rollback from height 2 to 1, RoundVoteBlockNums is 2",
+		// 	movStartHeight:     10,
+		// 	RoundVoteBlockNums: 2,
+		// 	beforeBestBlockHeader: &types.BlockHeader{
+		// 		Height:            2,
+		// 		PreviousBlockHash: testutil.MustDecodeHash("52463075c66259098f2a1fa711288cf3b866d7c57b4a7a78cd22a1dcd69a0514"),
+		// 	},
+		// 	wantBestBlockHeader: &types.BlockHeader{
+		// 		Height:            1,
+		// 		PreviousBlockHash: testutil.MustDecodeHash("39dee75363127a2857f554d2ad2706eb876407a2e09fbe0338683ca4ad4c2f90"),
+		// 	},
+		// 	beforeLastIrrBlockHeader: &types.BlockHeader{
+		// 		Height:            2,
+		// 		PreviousBlockHash: testutil.MustDecodeHash("52463075c66259098f2a1fa711288cf3b866d7c57b4a7a78cd22a1dcd69a0514"),
+		// 	},
+		// 	wantLastIrrBlockHeader: &types.BlockHeader{
+		// 		Height:            1,
+		// 		PreviousBlockHash: testutil.MustDecodeHash("39dee75363127a2857f554d2ad2706eb876407a2e09fbe0338683ca4ad4c2f90"),
+		// 	},
+		// 	beforeUtxoViewPoint: &state.UtxoViewpoint{
+		// 		Entries: map[bc.Hash]*storage.UtxoEntry{
+		// 			testutil.MustDecodeHash("afee09925bea1695424450a91ad082a378f20534627fa5cb63f036846347ee08"): &storage.UtxoEntry{Type: storage.VoteUTXOType, BlockHeight: 2, Spent: true},
+		// 			testutil.MustDecodeHash("51f538be366172bed5359a016dce26b952024c9607caf6af609ad723982c2e06"): &storage.UtxoEntry{Type: storage.VoteUTXOType, BlockHeight: 1, Spent: true},
+		// 			testutil.MustDecodeHash("e2370262a129b90174195a76c298d872a56af042eae17657e154bcc46d41b3ba"): &storage.UtxoEntry{Type: storage.VoteUTXOType, BlockHeight: 0, Spent: true},
+		// 		},
+		// 	},
+		// 	rollbackToTargetHeight: 1,
+		// 	beforeStoredBlocks: []*types.Block{
+		// 		{
+		// 			BlockHeader: types.BlockHeader{
+		// 				Height: 0,
+		// 			},
+		// 			Transactions: []*types.Tx{
+		// 				types.NewTx(types.TxData{
+		// 					Inputs: []*types.TxInput{
+		// 						types.NewSpendInput(nil, bc.NewHash([32]byte{8}), *consensus.BTMAssetID, 1000, 0, []byte{0, 1}),
+		// 					},
+		// 					Outputs: []*types.TxOutput{
+		// 						types.NewVoteOutput(*consensus.BTMAssetID, 1000, []byte{0, 1}, testutil.MustDecodeHexString("36695997983028c279c3360ca345a90e3af1f9e3df2506119fca31cdc844be31630f9a421f4d1658e15d67a15ce29c36332dd45020d2a0147fcce4949ccd9a67")),
+		// 					},
+		// 				}),
+		// 			},
+		// 		},
+		// 		{
+		// 			BlockHeader: types.BlockHeader{
+		// 				Height:            1,
+		// 				PreviousBlockHash: testutil.MustDecodeHash("39dee75363127a2857f554d2ad2706eb876407a2e09fbe0338683ca4ad4c2f90"),
+		// 			},
+		// 			Transactions: []*types.Tx{
+		// 				types.NewTx(types.TxData{
+		// 					Inputs: []*types.TxInput{
+		// 						types.NewSpendInput(nil, bc.NewHash([32]byte{8}), *consensus.BTMAssetID, 2000, 0, []byte{0, 1}),
+		// 					},
+		// 					Outputs: []*types.TxOutput{
+		// 						types.NewVoteOutput(*consensus.BTMAssetID, 2000, []byte{0, 1}, testutil.MustDecodeHexString("b7f463446a31b3792cd168d52b7a89b3657bca3e25d6854db1488c389ab6fc8d538155c25c1ee6975cc7def19710908c7d9b7463ca34a22058b456b45e498db9")),
+		// 					},
+		// 				}),
+		// 			},
+		// 		},
+		// 		{
+		// 			BlockHeader: types.BlockHeader{
+		// 				Height:            2,
+		// 				PreviousBlockHash: testutil.MustDecodeHash("52463075c66259098f2a1fa711288cf3b866d7c57b4a7a78cd22a1dcd69a0514"),
+		// 			},
+		// 			Transactions: []*types.Tx{
+		// 				types.NewTx(types.TxData{
+		// 					Inputs: []*types.TxInput{
+		// 						types.NewSpendInput(nil, bc.NewHash([32]byte{8}), *consensus.BTMAssetID, 3000, 0, []byte{0, 1}),
+		// 					},
+		// 					Outputs: []*types.TxOutput{
+		// 						types.NewVoteOutput(*consensus.BTMAssetID, 2500, []byte{0, 1}, testutil.MustDecodeHexString("b7f463446a31b3792cd168d52b7a89b3657bca3e25d6854db1488c389ab6fc8d538155c25c1ee6975cc7def19710908c7d9b7463ca34a22058b456b45e498db9")),
+		// 					},
+		// 				}),
+		// 			},
+		// 		},
+		// 	},
+		// 	wantStoredBlocks: []*types.Block{
+		// 		{
+		// 			BlockHeader: types.BlockHeader{
+		// 				Height: 0,
+		// 			},
+		// 			Transactions: []*types.Tx{
+		// 				types.NewTx(types.TxData{
+		// 					Inputs: []*types.TxInput{
+		// 						types.NewSpendInput(nil, bc.NewHash([32]byte{8}), *consensus.BTMAssetID, 1000, 0, []byte{0, 1}),
+		// 					},
+		// 					Outputs: []*types.TxOutput{
+		// 						types.NewVoteOutput(*consensus.BTMAssetID, 1000, []byte{0, 1}, testutil.MustDecodeHexString("36695997983028c279c3360ca345a90e3af1f9e3df2506119fca31cdc844be31630f9a421f4d1658e15d67a15ce29c36332dd45020d2a0147fcce4949ccd9a67")),
+		// 					},
+		// 				}),
+		// 			},
+		// 		},
+		// 		{
+		// 			BlockHeader: types.BlockHeader{
+		// 				Height:            1,
+		// 				PreviousBlockHash: testutil.MustDecodeHash("39dee75363127a2857f554d2ad2706eb876407a2e09fbe0338683ca4ad4c2f90"),
+		// 			},
+		// 			Transactions: []*types.Tx{
+		// 				types.NewTx(types.TxData{
+		// 					Inputs: []*types.TxInput{
+		// 						types.NewSpendInput(nil, bc.NewHash([32]byte{8}), *consensus.BTMAssetID, 2000, 0, []byte{0, 1}),
+		// 					},
+		// 					Outputs: []*types.TxOutput{
+		// 						types.NewVoteOutput(*consensus.BTMAssetID, 2000, []byte{0, 1}, testutil.MustDecodeHexString("b7f463446a31b3792cd168d52b7a89b3657bca3e25d6854db1488c389ab6fc8d538155c25c1ee6975cc7def19710908c7d9b7463ca34a22058b456b45e498db9")),
+		// 					},
+		// 				}),
+		// 			},
+		// 		},
+		// 	},
+		// 	beforeStoredConsensusResult: []*state.ConsensusResult{
+		// 		{
+		// 			Seq: 1,
+		// 			NumOfVote: map[string]uint64{
+		// 				"b7f463446a31b3792cd168d52b7a89b3657bca3e25d6854db1488c389ab6fc8d538155c25c1ee6975cc7def19710908c7d9b7463ca34a22058b456b45e498db9": 100004500,
+		// 				"36695997983028c279c3360ca345a90e3af1f9e3df2506119fca31cdc844be31630f9a421f4d1658e15d67a15ce29c36332dd45020d2a0147fcce4949ccd9a67": 100002000,
+		// 			},
+		// 			BlockHash:      testutil.MustDecodeHash("699d3f59d4afe7eea85df31814628d7d34ace7f5e76d6c9ebf4c54482d2cd333"),
+		// 			BlockHeight:    2,
+		// 			CoinbaseReward: map[string]uint64{"0001": consensus.BlockSubsidy(1) + consensus.BlockSubsidy(2) + 500},
+		// 		},
+		// 		{
+		// 			Seq: 0,
+		// 			NumOfVote: map[string]uint64{
+		// 				"b7f463446a31b3792cd168d52b7a89b3657bca3e25d6854db1488c389ab6fc8d538155c25c1ee6975cc7def19710908c7d9b7463ca34a22058b456b45e498db9": 100000000,
+		// 				"36695997983028c279c3360ca345a90e3af1f9e3df2506119fca31cdc844be31630f9a421f4d1658e15d67a15ce29c36332dd45020d2a0147fcce4949ccd9a67": 100002000,
+		// 			},
+		// 			BlockHash:      testutil.MustDecodeHash("39dee75363127a2857f554d2ad2706eb876407a2e09fbe0338683ca4ad4c2f90"),
+		// 			BlockHeight:    0,
+		// 			CoinbaseReward: map[string]uint64{},
+		// 		},
+		// 	},
+		// 	wantBestConsensusResult: &state.ConsensusResult{
+		// 		Seq: 1,
+		// 		NumOfVote: map[string]uint64{
+		// 			"b7f463446a31b3792cd168d52b7a89b3657bca3e25d6854db1488c389ab6fc8d538155c25c1ee6975cc7def19710908c7d9b7463ca34a22058b456b45e498db9": 100002000,
+		// 			"36695997983028c279c3360ca345a90e3af1f9e3df2506119fca31cdc844be31630f9a421f4d1658e15d67a15ce29c36332dd45020d2a0147fcce4949ccd9a67": 100002000,
+		// 		},
+		// 		BlockHash:      testutil.MustDecodeHash("52463075c66259098f2a1fa711288cf3b866d7c57b4a7a78cd22a1dcd69a0514"),
+		// 		BlockHeight:    1,
+		// 		CoinbaseReward: map[string]uint64{"0001": consensus.BlockSubsidy(1)},
+		// 	},
+		// 	wantUtxoViewPoint: &state.UtxoViewpoint{
+		// 		Entries: map[bc.Hash]*storage.UtxoEntry{
+		// 			testutil.MustDecodeHash("51f538be366172bed5359a016dce26b952024c9607caf6af609ad723982c2e06"): &storage.UtxoEntry{Type: storage.VoteUTXOType, BlockHeight: 1, Spent: true},
+		// 			testutil.MustDecodeHash("e2370262a129b90174195a76c298d872a56af042eae17657e154bcc46d41b3ba"): &storage.UtxoEntry{Type: storage.VoteUTXOType, BlockHeight: 0, Spent: true},
+		// 		},
+		// 	},
+		// 	wantStoredConsensusResult: []*state.ConsensusResult{
+		// 		{
+		// 			Seq: 0,
+		// 			NumOfVote: map[string]uint64{
+		// 				"b7f463446a31b3792cd168d52b7a89b3657bca3e25d6854db1488c389ab6fc8d538155c25c1ee6975cc7def19710908c7d9b7463ca34a22058b456b45e498db9": 100000000,
+		// 				"36695997983028c279c3360ca345a90e3af1f9e3df2506119fca31cdc844be31630f9a421f4d1658e15d67a15ce29c36332dd45020d2a0147fcce4949ccd9a67": 100002000,
+		// 			},
+		// 			BlockHash:      testutil.MustDecodeHash("39dee75363127a2857f554d2ad2706eb876407a2e09fbe0338683ca4ad4c2f90"),
+		// 			BlockHeight:    0,
+		// 			CoinbaseReward: map[string]uint64{},
+		// 		},
+		// 	},
+		// },
 		{
-			desc:               "rollback from height 2 to 1",
+			desc:               "rollback from height 3 to 1, RoundVoteBlockNums is 2",
 			movStartHeight:     10,
-			RoundVoteBlockNums: 1200,
+			RoundVoteBlockNums: 2,
 			beforeBestBlockHeader: &types.BlockHeader{
-				Height:            2,
-				PreviousBlockHash: testutil.MustDecodeHash("52463075c66259098f2a1fa711288cf3b866d7c57b4a7a78cd22a1dcd69a0514"),
+				Height:            3,
+				PreviousBlockHash: testutil.MustDecodeHash("699d3f59d4afe7eea85df31814628d7d34ace7f5e76d6c9ebf4c54482d2cd333"),
 			},
 			wantBestBlockHeader: &types.BlockHeader{
 				Height:            1,
 				PreviousBlockHash: testutil.MustDecodeHash("39dee75363127a2857f554d2ad2706eb876407a2e09fbe0338683ca4ad4c2f90"),
 			},
 			beforeLastIrrBlockHeader: &types.BlockHeader{
-				Height:            2,
-				PreviousBlockHash: testutil.MustDecodeHash("52463075c66259098f2a1fa711288cf3b866d7c57b4a7a78cd22a1dcd69a0514"),
+				Height:            3,
+				PreviousBlockHash: testutil.MustDecodeHash("699d3f59d4afe7eea85df31814628d7d34ace7f5e76d6c9ebf4c54482d2cd333"),
 			},
 			wantLastIrrBlockHeader: &types.BlockHeader{
 				Height:            1,
@@ -329,6 +651,7 @@ func TestRollback(t *testing.T) {
 			},
 			beforeUtxoViewPoint: &state.UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
+					testutil.MustDecodeHash("9fcee15deaa5ecddcfefbcb69ae8340c1f2b7f6c86dbf4a33632e4ee03adfcac"): &storage.UtxoEntry{Type: storage.VoteUTXOType, BlockHeight: 3, Spent: true},
 					testutil.MustDecodeHash("afee09925bea1695424450a91ad082a378f20534627fa5cb63f036846347ee08"): &storage.UtxoEntry{Type: storage.VoteUTXOType, BlockHeight: 2, Spent: true},
 					testutil.MustDecodeHash("51f538be366172bed5359a016dce26b952024c9607caf6af609ad723982c2e06"): &storage.UtxoEntry{Type: storage.VoteUTXOType, BlockHeight: 1, Spent: true},
 					testutil.MustDecodeHash("e2370262a129b90174195a76c298d872a56af042eae17657e154bcc46d41b3ba"): &storage.UtxoEntry{Type: storage.VoteUTXOType, BlockHeight: 0, Spent: true},
@@ -341,6 +664,10 @@ func TestRollback(t *testing.T) {
 						Height: 0,
 					},
 					Transactions: []*types.Tx{
+						types.NewTx(types.TxData{
+							Inputs:  []*types.TxInput{types.NewCoinbaseInput([]byte{0x01})},
+							Outputs: []*types.TxOutput{types.NewIntraChainOutput(bc.AssetID{}, consensus.BlockSubsidy(0), []byte{0x51})},
+						}),
 						types.NewTx(types.TxData{
 							Inputs: []*types.TxInput{
 								types.NewSpendInput(nil, bc.NewHash([32]byte{8}), *consensus.BTMAssetID, 1000, 0, []byte{0, 1}),
@@ -358,6 +685,10 @@ func TestRollback(t *testing.T) {
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
+							Inputs:  []*types.TxInput{types.NewCoinbaseInput([]byte{0x01})},
+							Outputs: []*types.TxOutput{types.NewIntraChainOutput(bc.AssetID{}, consensus.BlockSubsidy(1), []byte{0x51})},
+						}),
+						types.NewTx(types.TxData{
 							Inputs: []*types.TxInput{
 								types.NewSpendInput(nil, bc.NewHash([32]byte{8}), *consensus.BTMAssetID, 2000, 0, []byte{0, 1}),
 							},
@@ -374,11 +705,35 @@ func TestRollback(t *testing.T) {
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
+							Inputs:  []*types.TxInput{types.NewCoinbaseInput([]byte{0x01})},
+							Outputs: []*types.TxOutput{types.NewIntraChainOutput(bc.AssetID{}, consensus.BlockSubsidy(2)+500, []byte{0x51})},
+						}),
+						types.NewTx(types.TxData{
 							Inputs: []*types.TxInput{
 								types.NewSpendInput(nil, bc.NewHash([32]byte{8}), *consensus.BTMAssetID, 3000, 0, []byte{0, 1}),
 							},
 							Outputs: []*types.TxOutput{
 								types.NewVoteOutput(*consensus.BTMAssetID, 2500, []byte{0, 1}, testutil.MustDecodeHexString("b7f463446a31b3792cd168d52b7a89b3657bca3e25d6854db1488c389ab6fc8d538155c25c1ee6975cc7def19710908c7d9b7463ca34a22058b456b45e498db9")),
+							},
+						}),
+					},
+				},
+				{
+					BlockHeader: types.BlockHeader{
+						Height:            3,
+						PreviousBlockHash: testutil.MustDecodeHash("699d3f59d4afe7eea85df31814628d7d34ace7f5e76d6c9ebf4c54482d2cd333"),
+					},
+					Transactions: []*types.Tx{
+						types.NewTx(types.TxData{
+							Inputs:  []*types.TxInput{types.NewCoinbaseInput([]byte{0x01})},
+							Outputs: []*types.TxOutput{types.NewIntraChainOutput(bc.AssetID{}, consensus.BlockSubsidy(3)+2400, []byte{0x51})},
+						}),
+						types.NewTx(types.TxData{
+							Inputs: []*types.TxInput{
+								types.NewSpendInput(nil, bc.NewHash([32]byte{8}), *consensus.BTMAssetID, 4000, 0, []byte{0, 1}),
+							},
+							Outputs: []*types.TxOutput{
+								types.NewVoteOutput(*consensus.BTMAssetID, 1600, []byte{0, 1}, testutil.MustDecodeHexString("b7f463446a31b3792cd168d52b7a89b3657bca3e25d6854db1488c389ab6fc8d538155c25c1ee6975cc7def19710908c7d9b7463ca34a22058b456b45e498db9")),
 							},
 						}),
 					},
@@ -419,6 +774,16 @@ func TestRollback(t *testing.T) {
 			},
 			beforeStoredConsensusResult: []*state.ConsensusResult{
 				{
+					Seq: 2,
+					NumOfVote: map[string]uint64{
+						"b7f463446a31b3792cd168d52b7a89b3657bca3e25d6854db1488c389ab6fc8d538155c25c1ee6975cc7def19710908c7d9b7463ca34a22058b456b45e498db9": 100006100,
+						"36695997983028c279c3360ca345a90e3af1f9e3df2506119fca31cdc844be31630f9a421f4d1658e15d67a15ce29c36332dd45020d2a0147fcce4949ccd9a67": 100002000,
+					},
+					BlockHash:      testutil.MustDecodeHash("0c1cd1c0a6e6161f437c382cca21ce28921234ed7c4f252f7e4bbc9a523b74ac"),
+					BlockHeight:    3,
+					CoinbaseReward: map[string]uint64{"51": consensus.BlockSubsidy(3) + 2400},
+				},
+				{
 					Seq: 1,
 					NumOfVote: map[string]uint64{
 						"b7f463446a31b3792cd168d52b7a89b3657bca3e25d6854db1488c389ab6fc8d538155c25c1ee6975cc7def19710908c7d9b7463ca34a22058b456b45e498db9": 100004500,
@@ -426,7 +791,7 @@ func TestRollback(t *testing.T) {
 					},
 					BlockHash:      testutil.MustDecodeHash("699d3f59d4afe7eea85df31814628d7d34ace7f5e76d6c9ebf4c54482d2cd333"),
 					BlockHeight:    2,
-					CoinbaseReward: map[string]uint64{"0001": consensus.BlockSubsidy(1) + consensus.BlockSubsidy(2) + 500},
+					CoinbaseReward: map[string]uint64{"51": consensus.BlockSubsidy(1) + consensus.BlockSubsidy(2) + 500},
 				},
 				{
 					Seq: 0,
@@ -447,7 +812,7 @@ func TestRollback(t *testing.T) {
 				},
 				BlockHash:      testutil.MustDecodeHash("52463075c66259098f2a1fa711288cf3b866d7c57b4a7a78cd22a1dcd69a0514"),
 				BlockHeight:    1,
-				CoinbaseReward: map[string]uint64{"0001": consensus.BlockSubsidy(1)},
+				CoinbaseReward: map[string]uint64{"51": consensus.BlockSubsidy(1)},
 			},
 			wantUtxoViewPoint: &state.UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
@@ -487,7 +852,7 @@ func TestRollback(t *testing.T) {
 			trans := block.Transactions
 			for _, tx := range trans {
 				for _, prevout := range tx.SpentOutputIDs {
-					fmt.Println(prevout.String())
+					fmt.Println("prevout", prevout.String())
 				}
 			}
 

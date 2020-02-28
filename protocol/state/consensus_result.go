@@ -2,6 +2,7 @@ package state
 
 import (
 	"encoding/hex"
+	"fmt"
 	"sort"
 
 	"github.com/bytom/vapor/common/arithmetic"
@@ -63,6 +64,7 @@ func CalCoinbaseReward(block *types.Block) (*CoinbaseReward, error) {
 	}
 
 	result.Amount = consensus.BlockSubsidy(block.BlockHeader.Height)
+	fmt.Println("result.Amount", result.Amount, block.Height)
 	for _, tx := range block.Transactions {
 		txFee, err := arithmetic.CalculateTxFee(tx)
 		if err != nil {
@@ -71,6 +73,7 @@ func CalCoinbaseReward(block *types.Block) (*CoinbaseReward, error) {
 
 		result.Amount += txFee
 	}
+	fmt.Println("prog", result.ControlProgram, "amount", result.Amount)
 	return result, nil
 }
 
@@ -221,6 +224,7 @@ func (c *ConsensusResult) DetachBlock(block *types.Block) error {
 
 			pubkey := hex.EncodeToString(vetoInput.Vote)
 			if c.NumOfVote[pubkey], ok = checked.AddUint64(c.NumOfVote[pubkey], vetoInput.Amount); !ok {
+				fmt.Println("here abc")
 				return checked.ErrOverflow
 			}
 		}
@@ -232,10 +236,14 @@ func (c *ConsensusResult) DetachBlock(block *types.Block) error {
 			}
 
 			pubkey := hex.EncodeToString(voteOutput.Vote)
+			fmt.Println("before pubkey:", pubkey, c.NumOfVote[pubkey], voteOutput.Amount)
 			c.NumOfVote[pubkey], ok = checked.SubUint64(c.NumOfVote[pubkey], voteOutput.Amount)
+			fmt.Println("pubkey:", pubkey, c.NumOfVote[pubkey], voteOutput.Amount, ok)
 			if !ok {
+				fmt.Println("here ooo")
 				return checked.ErrOverflow
 			}
+			fmt.Println("not here")
 
 			if c.NumOfVote[pubkey] == 0 {
 				delete(c.NumOfVote, pubkey)
@@ -258,7 +266,9 @@ func (c *ConsensusResult) DetachCoinbaseReward(block *types.Block) error {
 
 	var ok bool
 	program := hex.EncodeToString(reward.ControlProgram)
+	fmt.Println("detach ", reward.ControlProgram, reward.Amount, "coinbaseReward", c.CoinbaseReward, "c.CoinbaseReward[program]", c.CoinbaseReward[program], reward.Amount)
 	if c.CoinbaseReward[program], ok = checked.SubUint64(c.CoinbaseReward[program], reward.Amount); !ok {
+		fmt.Println("DetachCoinbaseReward error here", c.CoinbaseReward[program], reward.Amount, c.BlockHeight, block.Height)
 		return checked.ErrOverflow
 	}
 
@@ -269,12 +279,14 @@ func (c *ConsensusResult) DetachCoinbaseReward(block *types.Block) error {
 	if block.Height%consensus.ActiveNetParams.RoundVoteBlockNums == 1 {
 		c.CoinbaseReward = map[string]uint64{}
 		for i, output := range block.Transactions[0].Outputs {
+			fmt.Println("ooi", output.ControlProgram(), output.AssetAmount().Amount)
 			if i == 0 {
 				continue
 			}
 			program := output.ControlProgram()
 			c.CoinbaseReward[hex.EncodeToString(program)] = output.AssetAmount().Amount
 		}
+		fmt.Println("print ooi,", c.CoinbaseReward)
 	}
 	return nil
 }

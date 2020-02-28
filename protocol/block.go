@@ -1,6 +1,8 @@
 package protocol
 
 import (
+	"fmt"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/vapor/errors"
@@ -190,6 +192,8 @@ func (c *Chain) Rollback(targetHeight uint64) error {
 
 	utxoView := state.NewUtxoViewpoint()
 	consensusResult, err := c.getBestConsensusResult()
+
+	fmt.Println("getBestConsensusResult:", consensusResult.BlockHeight, consensusResult.Seq, consensusResult.CoinbaseReward)
 	if err != nil {
 		return err
 	}
