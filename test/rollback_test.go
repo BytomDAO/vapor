@@ -17,7 +17,7 @@ import (
 	"github.com/bytom/vapor/testutil"
 )
 
-type ChainData struct {
+type chainData struct {
 	bestBlockHeader    *types.BlockHeader
 	lastIrrBlockHeader *types.BlockHeader
 	utxoViewPoint      *state.UtxoViewpoint
@@ -30,8 +30,8 @@ func TestRollback(t *testing.T) {
 		desc                   string
 		movStartHeight         uint64
 		RoundVoteBlockNums     uint64
-		beforeChainData        *ChainData
-		wantChainData          *ChainData
+		beforeChainData        *chainData
+		wantChainData          *chainData
 		rollbackToTargetHeight uint64
 	}{
 		{
@@ -39,7 +39,7 @@ func TestRollback(t *testing.T) {
 			movStartHeight:         10,
 			RoundVoteBlockNums:     1200,
 			rollbackToTargetHeight: 0,
-			beforeChainData: &ChainData{
+			beforeChainData: &chainData{
 				bestBlockHeader: &types.BlockHeader{
 					Height:            1,
 					PreviousBlockHash: testutil.MustDecodeHash("39dee75363127a2857f554d2ad2706eb876407a2e09fbe0338683ca4ad4c2f90"),
@@ -110,7 +110,7 @@ func TestRollback(t *testing.T) {
 					},
 				},
 			},
-			wantChainData: &ChainData{
+			wantChainData: &chainData{
 				bestBlockHeader: &types.BlockHeader{
 					Height: 0,
 				},
@@ -158,7 +158,7 @@ func TestRollback(t *testing.T) {
 			movStartHeight:         10,
 			RoundVoteBlockNums:     1200,
 			rollbackToTargetHeight: 0,
-			beforeChainData: &ChainData{
+			beforeChainData: &chainData{
 				bestBlockHeader: &types.BlockHeader{
 					Height:            2,
 					PreviousBlockHash: testutil.MustDecodeHash("52463075c66259098f2a1fa711288cf3b866d7c57b4a7a78cd22a1dcd69a0514"),
@@ -246,7 +246,7 @@ func TestRollback(t *testing.T) {
 					},
 				},
 			},
-			wantChainData: &ChainData{
+			wantChainData: &chainData{
 				bestBlockHeader: &types.BlockHeader{
 					Height: 0,
 				},
@@ -294,7 +294,7 @@ func TestRollback(t *testing.T) {
 			movStartHeight:         10,
 			RoundVoteBlockNums:     1200,
 			rollbackToTargetHeight: 1,
-			beforeChainData: &ChainData{
+			beforeChainData: &chainData{
 				bestBlockHeader: &types.BlockHeader{
 					Height:            2,
 					PreviousBlockHash: testutil.MustDecodeHash("52463075c66259098f2a1fa711288cf3b866d7c57b4a7a78cd22a1dcd69a0514"),
@@ -382,7 +382,7 @@ func TestRollback(t *testing.T) {
 					},
 				},
 			},
-			wantChainData: &ChainData{
+			wantChainData: &chainData{
 				bestBlockHeader: &types.BlockHeader{
 					Height:            1,
 					PreviousBlockHash: testutil.MustDecodeHash("39dee75363127a2857f554d2ad2706eb876407a2e09fbe0338683ca4ad4c2f90"),
@@ -459,7 +459,7 @@ func TestRollback(t *testing.T) {
 			movStartHeight:         10,
 			RoundVoteBlockNums:     2,
 			rollbackToTargetHeight: 1,
-			beforeChainData: &ChainData{
+			beforeChainData: &chainData{
 				bestBlockHeader: &types.BlockHeader{
 					Height:            2,
 					PreviousBlockHash: testutil.MustDecodeHash("52463075c66259098f2a1fa711288cf3b866d7c57b4a7a78cd22a1dcd69a0514"),
@@ -547,7 +547,7 @@ func TestRollback(t *testing.T) {
 					},
 				},
 			},
-			wantChainData: &ChainData{
+			wantChainData: &chainData{
 				bestBlockHeader: &types.BlockHeader{
 					Height:            1,
 					PreviousBlockHash: testutil.MustDecodeHash("39dee75363127a2857f554d2ad2706eb876407a2e09fbe0338683ca4ad4c2f90"),
@@ -624,7 +624,7 @@ func TestRollback(t *testing.T) {
 			movStartHeight:         10,
 			RoundVoteBlockNums:     2,
 			rollbackToTargetHeight: 1,
-			beforeChainData: &ChainData{
+			beforeChainData: &chainData{
 				bestBlockHeader: &types.BlockHeader{
 					Height:            3,
 					PreviousBlockHash: testutil.MustDecodeHash("699d3f59d4afe7eea85df31814628d7d34ace7f5e76d6c9ebf4c54482d2cd333"),
@@ -760,7 +760,7 @@ func TestRollback(t *testing.T) {
 					},
 				},
 			},
-			wantChainData: &ChainData{
+			wantChainData: &chainData{
 				bestBlockHeader: &types.BlockHeader{
 					Height:            1,
 					PreviousBlockHash: testutil.MustDecodeHash("39dee75363127a2857f554d2ad2706eb876407a2e09fbe0338683ca4ad4c2f90"),
@@ -845,7 +845,7 @@ func TestRollback(t *testing.T) {
 			movStartHeight:         10,
 			RoundVoteBlockNums:     2,
 			rollbackToTargetHeight: 2,
-			beforeChainData: &ChainData{
+			beforeChainData: &chainData{
 				bestBlockHeader: &types.BlockHeader{
 					Height:            3,
 					PreviousBlockHash: testutil.MustDecodeHash("699d3f59d4afe7eea85df31814628d7d34ace7f5e76d6c9ebf4c54482d2cd333"),
@@ -981,7 +981,7 @@ func TestRollback(t *testing.T) {
 					},
 				},
 			},
-			wantChainData: &ChainData{
+			wantChainData: &chainData{
 				bestBlockHeader: &types.BlockHeader{
 					Height:            2,
 					PreviousBlockHash: testutil.MustDecodeHash("52463075c66259098f2a1fa711288cf3b866d7c57b4a7a78cd22a1dcd69a0514"),
@@ -1089,7 +1089,7 @@ func TestRollback(t *testing.T) {
 			movStartHeight:         10,
 			RoundVoteBlockNums:     2,
 			rollbackToTargetHeight: 2,
-			beforeChainData: &ChainData{
+			beforeChainData: &chainData{
 				bestBlockHeader: &types.BlockHeader{
 					Height:            5,
 					Timestamp:         uint64(1528945008),
@@ -1336,7 +1336,7 @@ func TestRollback(t *testing.T) {
 					},
 				},
 			},
-			wantChainData: &ChainData{
+			wantChainData: &chainData{
 				bestBlockHeader: &types.BlockHeader{
 					Height:            2,
 					PreviousBlockHash: testutil.MustDecodeHash("52463075c66259098f2a1fa711288cf3b866d7c57b4a7a78cd22a1dcd69a0514"),
