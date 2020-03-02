@@ -25,70 +25,6 @@ type chainData struct {
 	consensusResults   []*state.ConsensusResult
 }
 
-func saveBlocks(blocks []*types.Block, store *database.Store) {
-	for _, block := range blocks {
-		status := bc.NewTransactionStatus()
-		for index := range block.Transactions {
-			status.SetStatus(index, false)
-		}
-		store.SaveBlock(block, status)
-	}
-}
-
-func getBlockHeadersFromBlocks(blocks []*types.Block) []*types.BlockHeader {
-	blockHeaders := []*types.BlockHeader{}
-	for _, block := range blocks {
-		blockHeaders = append(blockHeaders, &block.BlockHeader)
-	}
-	return blockHeaders
-}
-
-func getBlockHeadersFromBlocksReverse(blocks []*types.Block) []*types.BlockHeader {
-	blockHeaders := []*types.BlockHeader{}
-	for _, block := range blocks {
-		blockHeaders = append([]*types.BlockHeader{&block.BlockHeader}, blockHeaders...)
-	}
-	return blockHeaders
-}
-
-func getTransactionsFromBlocks(blocks []*types.Block) []*bc.Tx {
-	transOldTx := []*bc.Tx{}
-	for _, block := range blocks {
-		for _, tx := range block.Transactions {
-			transOldTx = append(transOldTx, tx.Tx)
-		}
-	}
-	return transOldTx
-}
-
-func getBlockHeadersAndConsensusResultsFromChain(t *testing.T, c *protocol.Chain) ([]*types.BlockHeader, []*state.ConsensusResult) {
-	var err error
-	blockHeaders := []*types.BlockHeader{}
-	consensusResults := []*state.ConsensusResult{}
-	preVoteNum := state.CalcVoteSeq(c.BestBlockHeader().Height) + 1
-	for nowHeader := c.BestBlockHeader(); nowHeader.Height >= 0; {
-		blockHeaders = append(blockHeaders, nowHeader)
-		hash := nowHeader.Hash()
-		if state.CalcVoteSeq(nowHeader.Height) != preVoteNum {
-			result, err := c.GetConsensusResultByHash(&hash)
-			if err != nil {
-				t.Error(err)
-			}
-			consensusResults = append(consensusResults, result)
-			preVoteNum = state.CalcVoteSeq(nowHeader.Height)
-		}
-		if nowHeader.Height == 0 {
-			break
-		}
-		preHash := nowHeader.PreviousBlockHash
-		nowHeader, err = c.GetHeaderByHash(&preHash)
-		if err != nil {
-			t.Error(err)
-		}
-	}
-	return blockHeaders, consensusResults
-}
-
 func TestRollback(t *testing.T) {
 	cases := []struct {
 		desc                   string
@@ -1505,18 +1441,21 @@ func TestRollback(t *testing.T) {
 		},
 	}
 
-	for cases, c := range cases {
+	for i, c := range cases {
 		consensus.ActiveNetParams.RoundVoteBlockNums = c.RoundVoteBlockNums
 
 		movDB := dbm.NewDB("mov_db", "leveldb", "mov_db")
-		movStore := movDatabase.NewLevelDBMovStore(movDB)
+		movCore := mov.NewMovCoreWithDB(movDatabase.NewLevelDBMovStore(movDB), c.movStartHeight)
 
-		movCore := mov.NewMovCoreWithDB(movStore, c.movStartHeight)
 		blockDB := dbm.NewDB("block_db", "leveldb", "block_db")
 		store := database.NewStore(blockDB)
 
-		saveBlocks(c.beforeChainData.storedBlocks, store)
-		mainChainBlockHeaders := getBlockHeadersFromBlocks(c.beforeChainData.storedBlocks)
+		mustSaveBlocks(c.beforeChainData.storedBlocks, store)
+
+		var mainChainBlockHeaders []*types.BlockHeader
+		for _, block := range c.beforeChainData.storedBlocks {
+			mainChainBlockHeaders = append(mainChainBlockHeaders, &block.BlockHeader)
+		}
 		if err := store.SaveChainStatus(c.beforeChainData.bestBlockHeader, c.beforeChainData.lastIrrBlockHeader, mainChainBlockHeaders, c.beforeChainData.utxoViewPoint, c.beforeChainData.consensusResults); err != nil {
 			t.Fatal(err)
 		}
@@ -1538,23 +1477,23 @@ func TestRollback(t *testing.T) {
 			t.Errorf("wantBestBlockHeader is not right!")
 		}
 
-		nowBlockHeaders, nowConsensusResults := getBlockHeadersAndConsensusResultsFromChain(t, chain)
-		if !testutil.DeepEqual(nowConsensusResults, c.wantChainData.consensusResults) {
-			t.Errorf("Cases:%d wantBestConsensusResult is not right!", cases)
+		gotConsensusResults := mustGetConsensusResultFromStore(store, chain)
+		if !testutil.DeepEqual(gotConsensusResults, c.wantChainData.consensusResults) {
+			t.Errorf("cases#%d(%s) wantBestConsensusResult is not right!", i, c.desc)
 		}
 
-		wanteBlockHeaders := getBlockHeadersFromBlocksReverse(c.wantChainData.storedBlocks)
-		if !testutil.DeepEqual(wanteBlockHeaders, nowBlockHeaders) {
-			t.Errorf("case %d the blocks is not same!", cases)
+		gotBlocks := mustGetBlocksFromStore(chain)
+		if !blocksEquals(gotBlocks, c.wantChainData.storedBlocks) {
+			t.Errorf("cases#%d(%s) the blocks is not same!", i, c.desc)
 		}
 
-		transOldTx := getTransactionsFromBlocks(c.wantChainData.storedBlocks)
-		nowUtxoViewPoint := state.NewUtxoViewpoint()
-		if err = store.GetTransactionsUtxo(nowUtxoViewPoint, transOldTx); err != nil {
+		gotTransactions := getBcTransactions(gotBlocks)
+		gotUtxoViewPoint := state.NewUtxoViewpoint()
+		if err = store.GetTransactionsUtxo(gotUtxoViewPoint, gotTransactions); err != nil {
 			t.Fatal(err)
 		}
 
-		if !testutil.DeepEqual(nowUtxoViewPoint, c.wantChainData.utxoViewPoint) {
+		if !testutil.DeepEqual(gotUtxoViewPoint, c.wantChainData.utxoViewPoint) {
 			t.Fatal(err)
 		}
 
@@ -1564,4 +1503,69 @@ func TestRollback(t *testing.T) {
 		os.RemoveAll("mov_db")
 
 	}
+}
+
+func blocksEquals(blocks1 []*types.Block, blocks2 []*types.Block) bool {
+	blockHashMap1 := make(map[string]interface{})
+	for _, block := range blocks1 {
+		hash := block.Hash()
+		blockHashMap1[hash.String()] = nil
+	}
+
+	blockHashMap2 := make(map[string]interface{})
+	for _, block := range blocks2 {
+		hash := block.Hash()
+		blockHashMap2[hash.String()] = nil
+	}
+	return testutil.DeepEqual(blockHashMap1, blockHashMap2)
+}
+
+func getBcTransactions(blocks []*types.Block) []*bc.Tx {
+	var txs []*bc.Tx
+	for _, block := range blocks {
+		for _, tx := range block.Transactions {
+			txs = append(txs, tx.Tx)
+		}
+	}
+	return txs
+}
+
+func mustSaveBlocks(blocks []*types.Block, store *database.Store) {
+	for _, block := range blocks {
+		status := bc.NewTransactionStatus()
+		for index := range block.Transactions {
+			if err := status.SetStatus(index, false); err != nil {
+				panic(err)
+			}
+		}
+		if err := store.SaveBlock(block, status); err != nil {
+			panic(err)
+		}
+	}
+}
+
+func mustGetBlocksFromStore(chain *protocol.Chain) []*types.Block {
+	var blocks []*types.Block
+	for height := int64(chain.BestBlockHeight()); height >= 0; height-- {
+		block, err := chain.GetBlockByHeight(uint64(height))
+		if err != nil {
+			panic(err)
+		}
+
+		blocks = append(blocks, block)
+	}
+	return blocks
+}
+
+func mustGetConsensusResultFromStore(store *database.Store, chain *protocol.Chain) []*state.ConsensusResult {
+	var consensusResults []*state.ConsensusResult
+	for seq := int64(state.CalcVoteSeq(chain.BestBlockHeight())); seq >= 0; seq-- {
+		consensusResult, err := store.GetConsensusResult(uint64(seq))
+		if err != nil {
+			panic(err)
+		}
+
+		consensusResults = append(consensusResults, consensusResult)
+	}
+	return consensusResults
 }
