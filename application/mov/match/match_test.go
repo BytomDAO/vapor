@@ -80,7 +80,7 @@ func TestGenerateMatchedTxs(t *testing.T) {
 
 	for i, c := range cases {
 		movStore := mock.NewMovStore([]*common.TradePair{btc2eth, eth2btc}, c.initStoreOrders)
-		matchEngine := NewEngine(NewOrderBook(movStore, nil, nil), 0.05, mock.NodeProgram)
+		matchEngine := NewEngine(NewOrderBook(movStore, nil, nil), 0.05, mock.RewardProgram)
 		var gotMatchedTxs []*types.Tx
 		for matchEngine.HasMatchedTx(c.tradePairs...) {
 			matchedTx, err := matchEngine.NextMatchedTx(c.tradePairs...)

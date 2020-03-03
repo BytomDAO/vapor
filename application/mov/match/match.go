@@ -18,14 +18,14 @@ import (
 
 // Engine is used to generate math transactions
 type Engine struct {
-	orderBook   *OrderBook
-	maxFeeRate  float64
-	nodeProgram []byte
+	orderBook     *OrderBook
+	maxFeeRate    float64
+	rewardProgram []byte
 }
 
 // NewEngine return a new Engine
-func NewEngine(orderBook *OrderBook, maxFeeRate float64, nodeProgram []byte) *Engine {
-	return &Engine{orderBook: orderBook, maxFeeRate: maxFeeRate, nodeProgram: nodeProgram}
+func NewEngine(orderBook *OrderBook, maxFeeRate float64, rewardProgram []byte) *Engine {
+	return &Engine{orderBook: orderBook, maxFeeRate: maxFeeRate, rewardProgram: rewardProgram}
 }
 
 // HasMatchedTx check does the input trade pair can generate a match deal
@@ -77,7 +77,7 @@ func (e *Engine) addMatchTxFeeOutput(txData *types.TxData) error {
 			feeAmount = matchTxFee.MaxFeeAmount
 			reminder = matchTxFee.FeeAmount - matchTxFee.MaxFeeAmount
 		}
-		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(assetID, uint64(feeAmount), e.nodeProgram))
+		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(assetID, uint64(feeAmount), e.rewardProgram))
 
 		// There is the remaining amount after paying the handling fee, assign it evenly to participants in the transaction
 		averageAmount := reminder / int64(len(txData.Inputs))

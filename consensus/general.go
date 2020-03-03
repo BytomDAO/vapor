@@ -103,7 +103,12 @@ type Params struct {
 	ProducerSubsidys []ProducerSubsidy
 
 	SoftForkPoint map[uint64]uint64
+
+	// Mov will only start when the block height is greater than this value
 	MovStartHeight uint64
+
+	// Used to receive rewards for matching transactions
+	MovRewardProgram string
 }
 
 // ActiveNetParams is the active NetParams

@@ -1,10 +1,13 @@
 package mov
 
 import (
+	"encoding/hex"
+
 	"github.com/bytom/vapor/application/mov/common"
 	"github.com/bytom/vapor/application/mov/contract"
 	"github.com/bytom/vapor/application/mov/database"
 	"github.com/bytom/vapor/application/mov/match"
+	"github.com/bytom/vapor/consensus"
 	"github.com/bytom/vapor/consensus/segwit"
 	dbm "github.com/bytom/vapor/database/leveldb"
 	"github.com/bytom/vapor/errors"
@@ -71,7 +74,7 @@ func (m *MovCore) ApplyBlock(block *types.Block) error {
 }
 
 // BeforeProposalBlock return all transactions than can be matched, and the number of transactions cannot exceed the given capacity.
-func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, nodeProgram []byte, blockHeight uint64, gasLeft int64, isTimeout func() bool) ([]*types.Tx, error) {
+func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, blockHeight uint64, gasLeft int64, isTimeout func() bool) ([]*types.Tx, error) {
 	if blockHeight <= m.startBlockHeight {
 		return nil, nil
 	}
@@ -81,7 +84,12 @@ func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, nodeProgram []byte, block
 		return nil, err
 	}
 
-	matchEngine := match.NewEngine(orderBook, maxFeeRate, nodeProgram)
+	rewardProgram, err := hex.DecodeString(consensus.ActiveNetParams.MovRewardProgram)
+	if err != nil {
+		return nil, err
+	}
+
+	matchEngine := match.NewEngine(orderBook, maxFeeRate, rewardProgram)
 	tradePairIterator := database.NewTradePairIterator(m.movStore)
 	matchCollector := newMatchTxCollector(matchEngine, tradePairIterator, gasLeft, isTimeout)
 	return matchCollector.result()
