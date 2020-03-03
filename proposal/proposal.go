@@ -139,11 +139,6 @@ func (b *blockBuilder) applyTransactionFromPool() error {
 }
 
 func (b *blockBuilder) applyTransactionFromSubProtocol() error {
-	cp, err := b.accountManager.GetCoinbaseControlProgram()
-	if err != nil {
-		return err
-	}
-
 	isTimeout := func() bool {
 		return b.getTimeoutStatus() > timeoutOk
 	}
@@ -153,7 +148,7 @@ func (b *blockBuilder) applyTransactionFromSubProtocol() error {
 			break
 		}
 
-		subTxs, err := p.BeforeProposalBlock(b.block.Transactions, cp, b.block.Height, b.gasLeft, isTimeout)
+		subTxs, err := p.BeforeProposalBlock(b.block.Transactions, b.block.Height, b.gasLeft, isTimeout)
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "index": i, "error": err}).Error("failed on sub protocol txs package")
 			continue

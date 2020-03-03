@@ -1,6 +1,7 @@
 package mov
 
 import (
+	"encoding/hex"
 	"math"
 	"os"
 	"testing"
@@ -508,6 +509,8 @@ func TestValidateBlock(t *testing.T) {
 }
 
 func TestBeforeProposalBlock(t *testing.T) {
+	consensus.ActiveNetParams.MovRewardProgram = hex.EncodeToString(mock.RewardProgram)
+
 	cases := []struct {
 		desc           string
 		initOrders     []*common.Order
@@ -572,7 +575,7 @@ func TestBeforeProposalBlock(t *testing.T) {
 		}
 
 		movCore := &MovCore{movStore: store}
-		gotMatchedTxs, err := movCore.BeforeProposalBlock(nil, []byte{0x51}, 2, c.gasLeft, func() bool { return false })
+		gotMatchedTxs, err := movCore.BeforeProposalBlock(nil, 2, c.gasLeft, func() bool { return false })
 		if err != nil {
 			t.Fatal(err)
 		}
