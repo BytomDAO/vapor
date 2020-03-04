@@ -143,13 +143,8 @@ func (m *MovCore) StartHeight() uint64 {
 // ValidateBlock no need to verify the block header, because the first module has been verified.
 // just need to verify the transactions in the block.
 func (m *MovCore) ValidateBlock(block *types.Block, verifyResults []*bc.TxVerifyResult) error {
-	return m.validateTxs(block.Transactions, verifyResults, block.Height)
-}
-
-// ValidateTxs validate the trade transaction.
-func (m *MovCore) validateTxs(txs []*types.Tx, verifyResults []*bc.TxVerifyResult, blockHeight uint64) error {
-	for i, tx := range txs {
-		if err := m.ValidateTx(tx, verifyResults[i], blockHeight); err != nil {
+	for i, tx := range block.Transactions {
+		if err := m.ValidateTx(tx, verifyResults[i], block.Height); err != nil {
 			return err
 		}
 	}
