@@ -509,7 +509,13 @@ func TestValidateBlock(t *testing.T) {
 }
 
 func TestBeforeProposalBlock(t *testing.T) {
-	consensus.ActiveNetParams.MovRewardProgram = hex.EncodeToString(mock.RewardProgram)
+	consensus.ActiveNetParams.MovRewardPrograms = []consensus.MovRewardProgram{
+		{
+			BeginBlock: 0,
+			EndBlock:   100,
+			Program:    hex.EncodeToString(mock.RewardProgram),
+		},
+	}
 
 	cases := []struct {
 		desc           string

@@ -75,6 +75,13 @@ type ProducerSubsidy struct {
 	Subsidy    uint64
 }
 
+// MovRewardProgram is a reward address corresponding to the range of the specified block height when matching transactions
+type MovRewardProgram struct {
+	BeginBlock uint64
+	EndBlock   uint64
+	Program    string
+}
+
 // Params store the config for different network
 type Params struct {
 	// Name defines a human-readable identifier for the network.
@@ -108,7 +115,7 @@ type Params struct {
 	MovStartHeight uint64
 
 	// Used to receive rewards for matching transactions
-	MovRewardProgram string
+	MovRewardPrograms []MovRewardProgram
 }
 
 // ActiveNetParams is the active NetParams

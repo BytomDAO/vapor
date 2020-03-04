@@ -145,8 +145,9 @@ func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, error) {
 
 // MatchedTxFee is object to record the mov tx's fee information
 type MatchedTxFee struct {
-	MaxFeeAmount int64
-	FeeAmount    int64
+	RewardProgram []byte
+	MaxFeeAmount  int64
+	FeeAmount     int64
 }
 
 // CalcMatchedTxFee is used to calculate tx's MatchedTxFees
@@ -182,6 +183,8 @@ func CalcMatchedTxFee(txData *types.TxData, maxFeeRate float64) (map[bc.AssetID]
 			if assetFeeMap[*assetAmount.AssetId].FeeAmount <= 0 {
 				delete(assetFeeMap, *assetAmount.AssetId)
 			}
+		} else {
+			assetFeeMap[*assetAmount.AssetId].RewardProgram = output.ControlProgram()
 		}
 	}
 	return assetFeeMap, nil

@@ -84,7 +84,7 @@ func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, blockHeight uint64, gasLe
 		return nil, err
 	}
 
-	rewardProgram, err := hex.DecodeString(consensus.ActiveNetParams.MovRewardProgram)
+	rewardProgram, err := getRewardProgram(blockHeight)
 	if err != nil {
 		return nil, err
 	}
@@ -143,13 +143,13 @@ func (m *MovCore) StartHeight() uint64 {
 // ValidateBlock no need to verify the block header, because the first module has been verified.
 // just need to verify the transactions in the block.
 func (m *MovCore) ValidateBlock(block *types.Block, verifyResults []*bc.TxVerifyResult) error {
-	return m.ValidateTxs(block.Transactions, verifyResults)
+	return m.validateTxs(block.Transactions, verifyResults, block.Height)
 }
 
 // ValidateTxs validate the trade transaction.
-func (m *MovCore) ValidateTxs(txs []*types.Tx, verifyResults []*bc.TxVerifyResult) error {
+func (m *MovCore) validateTxs(txs []*types.Tx, verifyResults []*bc.TxVerifyResult, blockHeight uint64) error {
 	for i, tx := range txs {
-		if err := m.ValidateTx(tx, verifyResults[i]); err != nil {
+		if err := m.ValidateTx(tx, verifyResults[i], blockHeight); err != nil {
 			return err
 		}
 	}
@@ -157,9 +157,9 @@ func (m *MovCore) ValidateTxs(txs []*types.Tx, verifyResults []*bc.TxVerifyResul
 }
 
 // ValidateTx validate one transaction.
-func (m *MovCore) ValidateTx(tx *types.Tx, verifyResult *bc.TxVerifyResult) error {
+func (m *MovCore) ValidateTx(tx *types.Tx, verifyResult *bc.TxVerifyResult, blockHeight uint64) error {
 	if common.IsMatchedTx(tx) {
-		if err := validateMatchedTx(tx, verifyResult); err != nil {
+		if err := validateMatchedTx(tx, verifyResult, blockHeight); err != nil {
 			return err
 		}
 	} else if common.IsCancelOrderTx(tx) {
@@ -220,7 +220,7 @@ func validateMagneticContractArgs(fromAssetAmount bc.AssetAmount, program []byte
 	return nil
 }
 
-func validateMatchedTx(tx *types.Tx, verifyResult *bc.TxVerifyResult) error {
+func validateMatchedTx(tx *types.Tx, verifyResult *bc.TxVerifyResult, blockHeight uint64) error {
 	if verifyResult.StatusFail {
 		return errStatusFailMustFalse
 	}
@@ -249,17 +249,21 @@ func validateMatchedTx(tx *types.Tx, verifyResult *bc.TxVerifyResult) error {
 		return errAssetIDMustUniqueInMatchedTx
 	}
 
-	return validateMatchedTxFeeAmount(tx)
+	return validateMatchedTxFeeAmount(tx, blockHeight)
 }
 
-func validateMatchedTxFeeAmount(tx *types.Tx) error {
+func validateMatchedTxFeeAmount(tx *types.Tx, blockHeight uint64) error {
 	txFee, err := match.CalcMatchedTxFee(&tx.TxData, maxFeeRate)
 	if err != nil {
 		return err
 	}
 
-	for _, amount := range txFee {
-		if amount.FeeAmount > amount.MaxFeeAmount {
+	for _, fee := range txFee {
+		if err := validateRewardProgram(blockHeight, hex.EncodeToString(fee.RewardProgram)); err != nil {
+			return err
+		}
+
+		if fee.FeeAmount > fee.MaxFeeAmount {
 			return errAmountOfFeeGreaterThanMaximum
 		}
 	}
@@ -443,4 +447,32 @@ func mergeOrders(addOrderMap, deleteOrderMap map[string]*common.Order) ([]*commo
 		deleteOrders = append(deleteOrders, order)
 	}
 	return addOrders, deleteOrders
+}
+
+func getRewardProgram(height uint64) ([]byte, error) {
+	rewardPrograms := consensus.ActiveNetParams.MovRewardPrograms
+	if len(rewardPrograms) == 0 {
+		return nil, errors.New("no reward program configured")
+	}
+
+	var program string
+	for _, rewardProgram := range rewardPrograms {
+		program = rewardProgram.Program
+		if height >= rewardProgram.BeginBlock && height <= rewardProgram.EndBlock {
+			break
+		}
+	}
+	return hex.DecodeString(program)
+}
+
+func validateRewardProgram(height uint64, program string) error {
+	for _, rewardProgram := range consensus.ActiveNetParams.MovRewardPrograms {
+		if height >= rewardProgram.BeginBlock && height <= rewardProgram.EndBlock {
+			if rewardProgram.Program != program {
+				return errors.New("the reward program is not correct")
+			}
+			return nil
+		}
+	}
+	return nil
 }
