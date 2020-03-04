@@ -288,6 +288,14 @@ func TestApplyBlock(t *testing.T) {
 }
 
 func TestValidateBlock(t *testing.T) {
+	consensus.ActiveNetParams.MovRewardPrograms = []consensus.MovRewardProgram{
+		{
+			BeginBlock: 0,
+			EndBlock:   100,
+			Program:    hex.EncodeToString(mock.RewardProgram),
+		},
+	}
+
 	cases := []struct {
 		desc          string
 		block         *types.Block
@@ -409,7 +417,7 @@ func TestValidateBlock(t *testing.T) {
 							types.NewIntraChainOutput(*mock.Btc2EthOrders[0].ToAssetID, 500, testutil.MustDecodeHexString("51")),
 							types.NewIntraChainOutput(*mock.Eth2BtcOrders[0].ToAssetID, 10, testutil.MustDecodeHexString("53")),
 							types.NewIntraChainOutput(*mock.Btc2EthOrders[0].ToAssetID, 10, []byte{0x51}),
-							types.NewIntraChainOutput(*consensus.BTMAssetID, 100, []byte{0x51}),
+							types.NewIntraChainOutput(*consensus.BTMAssetID, 100, mock.RewardProgram),
 						},
 					}),
 				},
@@ -428,7 +436,7 @@ func TestValidateBlock(t *testing.T) {
 						},
 						Outputs: []*types.TxOutput{
 							types.NewIntraChainOutput(*mock.Btc2EthOrders[0].FromAssetID, 10, testutil.MustDecodeHexString("51")),
-							types.NewIntraChainOutput(*consensus.BTMAssetID, 100, []byte{0x51}),
+							types.NewIntraChainOutput(*consensus.BTMAssetID, 100, mock.RewardProgram),
 						},
 					}),
 				},
@@ -446,12 +454,12 @@ func TestValidateBlock(t *testing.T) {
 							types.NewSpendInput([][]byte{vm.Int64Bytes(10), vm.Int64Bytes(1), vm.Int64Bytes(0)}, *mock.Eth2BtcOrders[2].Utxo.SourceID, *mock.Eth2BtcOrders[2].FromAssetID, mock.Eth2BtcOrders[2].Utxo.Amount, mock.Eth2BtcOrders[2].Utxo.SourcePos, mock.Eth2BtcOrders[2].Utxo.ControlProgram),
 						},
 						Outputs: []*types.TxOutput{
-							types.NewIntraChainOutput(*mock.Btc2EthOrders[0].ToAssetID, 500, testutil.MustDecodeHexString("51")),
-							types.NewIntraChainOutput(*mock.Eth2BtcOrders[2].ToAssetID, 10, testutil.MustDecodeHexString("55")),
+							types.NewIntraChainOutput(*mock.Btc2EthOrders[0].ToAssetID, 500, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19251")),
+							types.NewIntraChainOutput(*mock.Eth2BtcOrders[2].ToAssetID, 10, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19255")),
 							// re-order
 							types.NewIntraChainOutput(*mock.Eth2BtcOrders[2].FromAssetID, 270, mock.Eth2BtcOrders[2].Utxo.ControlProgram),
 							// fee
-							types.NewIntraChainOutput(*mock.Eth2BtcOrders[2].FromAssetID, 40, []byte{0x59}),
+							types.NewIntraChainOutput(*mock.Eth2BtcOrders[2].FromAssetID, 40, mock.RewardProgram),
 						},
 					}),
 				},
