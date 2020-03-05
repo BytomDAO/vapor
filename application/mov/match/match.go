@@ -39,22 +39,6 @@ func (e *Engine) HasMatchedTx(tradePairs ...*common.TradePair) bool {
 	return IsMatched(orders)
 }
 
-func (e *Engine) addMatchTxFeeOutput(txData *types.TxData, refundAmounts, feeAmounts []*bc.AssetAmount) error {
-	for _, feeAmount := range feeAmounts {
-		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*feeAmount.AssetId, feeAmount.Amount, e.rewardProgram))
-	}
-
-	for i, refundAmount := range refundAmounts {
-		contractArgs, err := segwit.DecodeP2WMCProgram(txData.Inputs[i].ControlProgram())
-		if err != nil {
-			return err
-		}
-
-		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*refundAmount.AssetId, refundAmount.Amount, contractArgs.SellerProgram))
-	}
-	return nil
-}
-
 // NextMatchedTx return the next matchable transaction by the specified trade pairs
 // the size of trade pairs at least 2, and the sequence of trade pairs can form a loop
 // for example, [assetA -> assetB, assetB -> assetC, assetC -> assetA]
@@ -76,6 +60,22 @@ func (e *Engine) NextMatchedTx(tradePairs ...*common.TradePair) (*types.Tx, erro
 		return nil, err
 	}
 	return tx, nil
+}
+
+func (e *Engine) addMatchTxFeeOutput(txData *types.TxData, refundAmounts, feeAmounts []*bc.AssetAmount) error {
+	for _, feeAmount := range feeAmounts {
+		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*feeAmount.AssetId, feeAmount.Amount, e.rewardProgram))
+	}
+
+	for i, refundAmount := range refundAmounts {
+		contractArgs, err := segwit.DecodeP2WMCProgram(txData.Inputs[i].ControlProgram())
+		if err != nil {
+			return err
+		}
+
+		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*refundAmount.AssetId, refundAmount.Amount, contractArgs.SellerProgram))
+	}
+	return nil
 }
 
 func (e *Engine) addPartialTradeOrder(tx *types.Tx) error {
