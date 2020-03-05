@@ -285,10 +285,10 @@ var (
 				// re-order
 				types.NewIntraChainOutput(*Eth2BtcOrders[2].FromAssetID, 270, Eth2BtcOrders[2].Utxo.ControlProgram),
 				// fee
-				types.NewIntraChainOutput(*Eth2BtcOrders[2].FromAssetID, 27, RewardProgram),
+				types.NewIntraChainOutput(*Eth2BtcOrders[2].FromAssetID, 25, RewardProgram),
 				// refund
-				types.NewIntraChainOutput(*Eth2BtcOrders[2].FromAssetID, 6, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19251")),
-				types.NewIntraChainOutput(*Eth2BtcOrders[2].FromAssetID, 7, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19255")),
+				types.NewIntraChainOutput(*Eth2BtcOrders[2].FromAssetID, 7, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19251")),
+				types.NewIntraChainOutput(*Eth2BtcOrders[2].FromAssetID, 8, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19255")),
 			},
 		}),
 		types.NewTx(types.TxData{

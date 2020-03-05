@@ -23,7 +23,6 @@ var (
 	errInputProgramMustP2WMCScript   = errors.New("input program of trade tx must p2wmc script")
 	errExistCancelOrderInMatchedTx   = errors.New("can't exist cancel order in the matched transaction")
 	errExistTradeInCancelOrderTx     = errors.New("can't exist trade in the cancel order transaction")
-	errAmountOfFeeGreaterThanMaximum = errors.New("amount of fee greater than max fee amount")
 	errAssetIDMustUniqueInMatchedTx  = errors.New("asset id must unique in matched transaction")
 	errRatioOfTradeLessThanZero      = errors.New("ratio arguments must greater than zero")
 	errSpendOutputIDIsIncorrect      = errors.New("spend output id of matched tx is not equals to actual matched tx")
@@ -89,7 +88,7 @@ func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, blockHeight uint64, gasLe
 		return nil, err
 	}
 
-	matchEngine := match.NewEngine(orderBook, maxFeeRate, rewardProgram)
+	matchEngine := match.NewEngine(orderBook, match.NewDefaultFeeStrategy(maxFeeRate), rewardProgram)
 	tradePairIterator := database.NewTradePairIterator(m.movStore)
 	matchCollector := newMatchTxCollector(matchEngine, tradePairIterator, gasLeft, isTimeout)
 	return matchCollector.result()
@@ -183,6 +182,33 @@ func (m *MovCore) ValidateTx(tx *types.Tx, verifyResult *bc.TxVerifyResult) erro
 	return nil
 }
 
+// calcFeeAmount return the amount of fee in the matching transaction
+func calcFeeAmount(matchedTx *types.Tx) (map[bc.AssetID]int64, error) {
+	assetFeeMap := make(map[bc.AssetID]int64)
+	dealProgMaps := make(map[string]bool)
+
+	for _, input := range matchedTx.Inputs {
+		assetFeeMap[input.AssetID()] = int64(input.AssetAmount().Amount)
+		contractArgs, err := segwit.DecodeP2WMCProgram(input.ControlProgram())
+		if err != nil {
+			return nil, err
+		}
+
+		dealProgMaps[hex.EncodeToString(contractArgs.SellerProgram)] = true
+	}
+
+	for _, output := range matchedTx.Outputs {
+		assetAmount := output.AssetAmount()
+		if _, ok := dealProgMaps[hex.EncodeToString(output.ControlProgram())]; ok || segwit.IsP2WMCScript(output.ControlProgram()) {
+			assetFeeMap[*assetAmount.AssetId] -= int64(assetAmount.Amount)
+			if assetFeeMap[*assetAmount.AssetId] <= 0 {
+				delete(assetFeeMap, *assetAmount.AssetId)
+			}
+		}
+	}
+	return assetFeeMap, nil
+}
+
 func validateCancelOrderTx(tx *types.Tx, verifyResult *bc.TxVerifyResult) error {
 	if verifyResult.StatusFail {
 		return errStatusFailMustFalse
@@ -214,7 +240,7 @@ func validateMagneticContractArgs(fromAssetAmount bc.AssetAmount, program []byte
 		return errRatioOfTradeLessThanZero
 	}
 
-	if match.CalcRequestAmount(fromAssetAmount.Amount, contractArgs) < 1 {
+	if match.CalcRequestAmount(fromAssetAmount.Amount, contractArgs.RatioNumerator, contractArgs.RatioDenominator) < 1 {
 		return errRequestAmountMath
 	}
 	return nil
@@ -253,17 +279,19 @@ func validateMatchedTx(tx *types.Tx, verifyResult *bc.TxVerifyResult) error {
 }
 
 func validateMatchedTxFeeAmount(tx *types.Tx) error {
-	txFee, err := match.CalcMatchedTxFee(&tx.TxData, maxFeeRate)
+	orders, err := getDeleteOrdersFromTx(tx)
 	if err != nil {
 		return err
 	}
 
-	for _, amount := range txFee {
-		if amount.FeeAmount > amount.MaxFeeAmount {
-			return errAmountOfFeeGreaterThanMaximum
-		}
+	receivedAmount, priceDiff := match.CalcReceivedAmount(orders)
+	feeAmounts, err := calcFeeAmount(tx)
+	if err != nil {
+		return err
 	}
-	return nil
+
+	feeStrategy := match.NewDefaultFeeStrategy(maxFeeRate)
+	return feeStrategy.Validate(receivedAmount, priceDiff, feeAmounts)
 }
 
 func (m *MovCore) validateMatchedTxSequence(txs []*types.Tx) error {

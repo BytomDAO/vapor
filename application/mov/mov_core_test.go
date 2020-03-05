@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytom/vapor/application/mov/common"
 	"github.com/bytom/vapor/application/mov/database"
+	"github.com/bytom/vapor/application/mov/match"
 	"github.com/bytom/vapor/application/mov/mock"
 	"github.com/bytom/vapor/consensus"
 	dbm "github.com/bytom/vapor/database/leveldb"
@@ -446,8 +447,8 @@ func TestValidateBlock(t *testing.T) {
 							types.NewSpendInput([][]byte{vm.Int64Bytes(10), vm.Int64Bytes(1), vm.Int64Bytes(0)}, *mock.Eth2BtcOrders[2].Utxo.SourceID, *mock.Eth2BtcOrders[2].FromAssetID, mock.Eth2BtcOrders[2].Utxo.Amount, mock.Eth2BtcOrders[2].Utxo.SourcePos, mock.Eth2BtcOrders[2].Utxo.ControlProgram),
 						},
 						Outputs: []*types.TxOutput{
-							types.NewIntraChainOutput(*mock.Btc2EthOrders[0].ToAssetID, 500, testutil.MustDecodeHexString("51")),
-							types.NewIntraChainOutput(*mock.Eth2BtcOrders[2].ToAssetID, 10, testutil.MustDecodeHexString("55")),
+							types.NewIntraChainOutput(*mock.Btc2EthOrders[0].ToAssetID, 500, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19251")),
+							types.NewIntraChainOutput(*mock.Eth2BtcOrders[2].ToAssetID, 10, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19255")),
 							// re-order
 							types.NewIntraChainOutput(*mock.Eth2BtcOrders[2].FromAssetID, 270, mock.Eth2BtcOrders[2].Utxo.ControlProgram),
 							// fee
@@ -457,7 +458,7 @@ func TestValidateBlock(t *testing.T) {
 				},
 			},
 			verifyResults: []*bc.TxVerifyResult{{StatusFail: false}},
-			wantError:     errAmountOfFeeGreaterThanMaximum,
+			wantError:     match.ErrAmountOfFeeExceedMaximum,
 		},
 		{
 			desc: "ratio numerator is zero",
@@ -504,6 +505,45 @@ func TestValidateBlock(t *testing.T) {
 		movCore := &MovCore{}
 		if err := movCore.ValidateBlock(c.block, c.verifyResults); err != c.wantError {
 			t.Errorf("#%d(%s):validate block want error(%v), got error(%v)", i, c.desc, c.wantError, err)
+		}
+	}
+}
+
+func TestCalcMatchedTxFee(t *testing.T) {
+	cases := []struct {
+		desc             string
+		tx               types.TxData
+		maxFeeRate       float64
+		wantMatchedTxFee map[bc.AssetID]int64
+	}{
+		{
+			desc:             "fee less than max fee",
+			maxFeeRate:       0.05,
+			wantMatchedTxFee: map[bc.AssetID]int64{mock.ETH: 10},
+			tx:               mock.MatchedTxs[1].TxData,
+		},
+		{
+			desc:             "fee refund in tx",
+			maxFeeRate:       0.05,
+			wantMatchedTxFee: map[bc.AssetID]int64{mock.ETH: 25},
+			tx:               mock.MatchedTxs[2].TxData,
+		},
+		{
+			desc:             "fee is zero",
+			maxFeeRate:       0.05,
+			wantMatchedTxFee: map[bc.AssetID]int64{},
+			tx:               mock.MatchedTxs[0].TxData,
+		},
+	}
+
+	for i, c := range cases {
+		gotMatchedTxFee, err := calcFeeAmount(types.NewTx(c.tx))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !testutil.DeepEqual(gotMatchedTxFee, c.wantMatchedTxFee) {
+			t.Errorf("#%d(%s):fail to caculate matched tx fee, got (%v), want (%v)", i, c.desc, gotMatchedTxFee, c.wantMatchedTxFee)
 		}
 	}
 }

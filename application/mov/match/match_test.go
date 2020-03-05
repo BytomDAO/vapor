@@ -8,7 +8,6 @@ import (
 	"github.com/bytom/vapor/protocol/bc"
 	"github.com/bytom/vapor/protocol/bc/types"
 	"github.com/bytom/vapor/protocol/validation"
-	"github.com/bytom/vapor/testutil"
 )
 
 func TestGenerateMatchedTxs(t *testing.T) {
@@ -80,7 +79,7 @@ func TestGenerateMatchedTxs(t *testing.T) {
 
 	for i, c := range cases {
 		movStore := mock.NewMovStore([]*common.TradePair{btc2eth, eth2btc}, c.initStoreOrders)
-		matchEngine := NewEngine(NewOrderBook(movStore, nil, nil), 0.05, mock.RewardProgram)
+		matchEngine := NewEngine(NewOrderBook(movStore, nil, nil), NewDefaultFeeStrategy(0.05), mock.RewardProgram)
 		var gotMatchedTxs []*types.Tx
 		for matchEngine.HasMatchedTx(c.tradePairs...) {
 			matchedTx, err := matchEngine.NextMatchedTx(c.tradePairs...)
@@ -96,61 +95,22 @@ func TestGenerateMatchedTxs(t *testing.T) {
 			continue
 		}
 
-		for i, gotMatchedTx := range gotMatchedTxs {
+		for j, gotMatchedTx := range gotMatchedTxs {
 			if _, err := validation.ValidateTx(gotMatchedTx.Tx, &bc.Block{BlockHeader: &bc.BlockHeader{Version: 1}}); err != nil {
 				t.Fatal(err)
 			}
 
-			c.wantMatchedTxs[i].Version = 1
-			byteData, err := c.wantMatchedTxs[i].MarshalText()
+			c.wantMatchedTxs[j].Version = 1
+			byteData, err := c.wantMatchedTxs[j].MarshalText()
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			c.wantMatchedTxs[i].SerializedSize = uint64(len(byteData))
-			wantMatchedTx := types.NewTx(c.wantMatchedTxs[i].TxData)
+			c.wantMatchedTxs[j].SerializedSize = uint64(len(byteData))
+			wantMatchedTx := types.NewTx(c.wantMatchedTxs[j].TxData)
 			if gotMatchedTx.ID != wantMatchedTx.ID {
 				t.Errorf("#%d(%s) the tx hash of got matched tx: %s is not equals want matched tx: %s", i, c.desc, gotMatchedTx.ID.String(), wantMatchedTx.ID.String())
 			}
-		}
-	}
-}
-
-func TestCalcMatchedTxFee(t *testing.T) {
-	cases := []struct {
-		desc             string
-		tx               *types.TxData
-		maxFeeRate       float64
-		wantMatchedTxFee map[bc.AssetID]*MatchedTxFee
-	}{
-		{
-			desc:             "fee less than max fee",
-			maxFeeRate:       0.05,
-			wantMatchedTxFee: map[bc.AssetID]*MatchedTxFee{mock.ETH: {FeeAmount: 10, MaxFeeAmount: 26}},
-			tx:               &mock.MatchedTxs[1].TxData,
-		},
-		{
-			desc:             "fee refund in tx",
-			maxFeeRate:       0.05,
-			wantMatchedTxFee: map[bc.AssetID]*MatchedTxFee{mock.ETH: {FeeAmount: 27, MaxFeeAmount: 27}},
-			tx:               &mock.MatchedTxs[2].TxData,
-		},
-		{
-			desc:             "fee is zero",
-			maxFeeRate:       0.05,
-			wantMatchedTxFee: map[bc.AssetID]*MatchedTxFee{},
-			tx:               &mock.MatchedTxs[0].TxData,
-		},
-	}
-
-	for i, c := range cases {
-		gotMatchedTxFee, err := CalcMatchedTxFee(c.tx, c.maxFeeRate)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if !testutil.DeepEqual(gotMatchedTxFee, c.wantMatchedTxFee) {
-			t.Errorf("#%d(%s):fail to caculate matched tx fee, got (%v), want (%v)", i, c.desc, gotMatchedTxFee, c.wantMatchedTxFee)
 		}
 	}
 }
