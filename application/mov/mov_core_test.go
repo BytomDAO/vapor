@@ -509,6 +509,45 @@ func TestValidateBlock(t *testing.T) {
 	}
 }
 
+func TestCalcMatchedTxFee(t *testing.T) {
+	cases := []struct {
+		desc             string
+		tx               types.TxData
+		maxFeeRate       float64
+		wantMatchedTxFee map[bc.AssetID]int64
+	}{
+		{
+			desc:             "fee less than max fee",
+			maxFeeRate:       0.05,
+			wantMatchedTxFee: map[bc.AssetID]int64{mock.ETH: 10},
+			tx:               mock.MatchedTxs[1].TxData,
+		},
+		{
+			desc:             "fee refund in tx",
+			maxFeeRate:       0.05,
+			wantMatchedTxFee: map[bc.AssetID]int64{mock.ETH: 25},
+			tx:               mock.MatchedTxs[2].TxData,
+		},
+		{
+			desc:             "fee is zero",
+			maxFeeRate:       0.05,
+			wantMatchedTxFee: map[bc.AssetID]int64{},
+			tx:               mock.MatchedTxs[0].TxData,
+		},
+	}
+
+	for i, c := range cases {
+		gotMatchedTxFee, err := calcFeeAmount(types.NewTx(c.tx))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !testutil.DeepEqual(gotMatchedTxFee, c.wantMatchedTxFee) {
+			t.Errorf("#%d(%s):fail to caculate matched tx fee, got (%v), want (%v)", i, c.desc, gotMatchedTxFee, c.wantMatchedTxFee)
+		}
+	}
+}
+
 func TestBeforeProposalBlock(t *testing.T) {
 	consensus.ActiveNetParams.MovRewardProgram = hex.EncodeToString(mock.RewardProgram)
 
