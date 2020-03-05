@@ -44,13 +44,13 @@ func (e *Engine) addMatchTxFeeOutput(txData *types.TxData, refundAmounts, feeAmo
 		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*feeAmount.AssetId, feeAmount.Amount, e.rewardProgram))
 	}
 
-	for i, returnAmount := range refundAmounts {
+	for i, refundAmount := range refundAmounts {
 		contractArgs, err := segwit.DecodeP2WMCProgram(txData.Inputs[i].ControlProgram())
 		if err != nil {
 			return err
 		}
 
-		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*returnAmount.AssetId, returnAmount.Amount, contractArgs.SellerProgram))
+		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*refundAmount.AssetId, refundAmount.Amount, contractArgs.SellerProgram))
 	}
 	return nil
 }

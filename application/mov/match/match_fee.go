@@ -67,18 +67,18 @@ func (d *DefaultFeeStrategy) Allocate(receiveAmounts []*bc.AssetAmount, priceDif
 		averageAmount = 1
 	}
 
-	var returnAmounts []*bc.AssetAmount
+	var refundAmounts []*bc.AssetAmount
 	for i := 0; i < len(receiveAmounts) && reminder > 0; i++ {
 		amount := averageAmount
 		if i == len(receiveAmounts)-1 {
 			amount = reminder
 		}
-		returnAmounts = append(returnAmounts, &bc.AssetAmount{AssetId: priceDiff.AssetId, Amount: uint64(amount)})
+		refundAmounts = append(refundAmounts, &bc.AssetAmount{AssetId: priceDiff.AssetId, Amount: uint64(amount)})
 		reminder -= averageAmount
 	}
 
 	feeAmounts := []*bc.AssetAmount{{AssetId: priceDiff.AssetId, Amount: uint64(feeAmount)}}
-	return realReceiveAmounts, returnAmounts, feeAmounts
+	return realReceiveAmounts, refundAmounts, feeAmounts
 }
 
 // Validate verify that the fee charged for a matching transaction is correct
