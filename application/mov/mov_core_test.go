@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytom/vapor/application/mov/common"
 	"github.com/bytom/vapor/application/mov/database"
+	"github.com/bytom/vapor/application/mov/match"
 	"github.com/bytom/vapor/application/mov/mock"
 	"github.com/bytom/vapor/consensus"
 	dbm "github.com/bytom/vapor/database/leveldb"
@@ -446,8 +447,8 @@ func TestValidateBlock(t *testing.T) {
 							types.NewSpendInput([][]byte{vm.Int64Bytes(10), vm.Int64Bytes(1), vm.Int64Bytes(0)}, *mock.Eth2BtcOrders[2].Utxo.SourceID, *mock.Eth2BtcOrders[2].FromAssetID, mock.Eth2BtcOrders[2].Utxo.Amount, mock.Eth2BtcOrders[2].Utxo.SourcePos, mock.Eth2BtcOrders[2].Utxo.ControlProgram),
 						},
 						Outputs: []*types.TxOutput{
-							types.NewIntraChainOutput(*mock.Btc2EthOrders[0].ToAssetID, 500, testutil.MustDecodeHexString("51")),
-							types.NewIntraChainOutput(*mock.Eth2BtcOrders[2].ToAssetID, 10, testutil.MustDecodeHexString("55")),
+							types.NewIntraChainOutput(*mock.Btc2EthOrders[0].ToAssetID, 500, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19251")),
+							types.NewIntraChainOutput(*mock.Eth2BtcOrders[2].ToAssetID, 10, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19255")),
 							// re-order
 							types.NewIntraChainOutput(*mock.Eth2BtcOrders[2].FromAssetID, 270, mock.Eth2BtcOrders[2].Utxo.ControlProgram),
 							// fee
@@ -457,7 +458,7 @@ func TestValidateBlock(t *testing.T) {
 				},
 			},
 			verifyResults: []*bc.TxVerifyResult{{StatusFail: false}},
-			wantError:     errAmountOfFeeGreaterThanMaximum,
+			wantError:     match.ErrAmountOfFeeExceedMaximum,
 		},
 		{
 			desc: "ratio numerator is zero",
