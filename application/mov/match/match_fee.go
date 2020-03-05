@@ -40,11 +40,11 @@ func NewDefaultFeeStrategy(maxFeeRate float64) *DefaultFeeStrategy {
 
 // Allocate will allocate the price differential in matching transaction to the participants and the fee
 func (d *DefaultFeeStrategy) Allocate(receiveAmounts []*bc.AssetAmount, priceDiff *bc.AssetAmount) ([]*bc.AssetAmount, []*bc.AssetAmount, []*bc.AssetAmount) {
-	realReceiveAmounts := make([]*bc.AssetAmount, len(receiveAmounts))
-	copy(realReceiveAmounts, receiveAmounts)
+	receivedAfterDeductFee := make([]*bc.AssetAmount, len(receiveAmounts))
+	copy(receivedAfterDeductFee, receiveAmounts)
 
 	if priceDiff.Amount == 0 {
-		return realReceiveAmounts, nil, nil
+		return receivedAfterDeductFee, nil, nil
 	}
 
 	var maxFeeAmount int64
@@ -78,7 +78,7 @@ func (d *DefaultFeeStrategy) Allocate(receiveAmounts []*bc.AssetAmount, priceDif
 	}
 
 	feeAmounts := []*bc.AssetAmount{{AssetId: priceDiff.AssetId, Amount: uint64(feeAmount)}}
-	return realReceiveAmounts, refundAmounts, feeAmounts
+	return receivedAfterDeductFee, refundAmounts, feeAmounts
 }
 
 // Validate verify that the fee charged for a matching transaction is correct

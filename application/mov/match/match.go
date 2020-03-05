@@ -102,8 +102,8 @@ func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, error) {
 	}
 
 	receivedAmounts, priceDiff := CalcReceivedAmount(orders)
-	realReceivedAmounts, refundAmounts, feeAmounts := e.feeStrategy.Allocate(receivedAmounts, priceDiff)
-	if err := addMatchTxOutput(txData, orders, receivedAmounts, realReceivedAmounts); err != nil {
+	receivedAfterDeductFee, refundAmounts, feeAmounts := e.feeStrategy.Allocate(receivedAmounts, priceDiff)
+	if err := addMatchTxOutput(txData, orders, receivedAmounts, receivedAfterDeductFee); err != nil {
 		return nil, err
 	}
 
@@ -120,7 +120,7 @@ func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, error) {
 	return types.NewTx(*txData), nil
 }
 
-func addMatchTxOutput(txData *types.TxData, orders []*common.Order, receivedAmounts, realReceivedAmounts []*bc.AssetAmount) error {
+func addMatchTxOutput(txData *types.TxData, orders []*common.Order, receivedAmounts, receivedAfterDeductFee []*bc.AssetAmount) error {
 	for i, order := range orders {
 		contractArgs, err := segwit.DecodeP2WMCProgram(order.Utxo.ControlProgram)
 		if err != nil {
@@ -132,8 +132,8 @@ func addMatchTxOutput(txData *types.TxData, orders []*common.Order, receivedAmou
 		shouldPayAmount := calcShouldPayAmount(receivedAmount, contractArgs.RatioNumerator, contractArgs.RatioDenominator)
 		isPartialTrade := requestAmount > receivedAmount
 
-		setMatchTxArguments(txData.Inputs[i], isPartialTrade, len(txData.Outputs), realReceivedAmounts[i].Amount)
-		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*order.ToAssetID, realReceivedAmounts[i].Amount, contractArgs.SellerProgram))
+		setMatchTxArguments(txData.Inputs[i], isPartialTrade, len(txData.Outputs), receivedAfterDeductFee[i].Amount)
+		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*order.ToAssetID, receivedAfterDeductFee[i].Amount, contractArgs.SellerProgram))
 		if isPartialTrade {
 			txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*order.FromAssetID, order.Utxo.Amount-shouldPayAmount, order.Utxo.ControlProgram))
 		}
