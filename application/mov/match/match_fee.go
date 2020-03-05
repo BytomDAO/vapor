@@ -83,11 +83,7 @@ func (d *DefaultFeeStrategy) Allocate(receiveAmounts []*bc.AssetAmount, priceDif
 
 // Validate verify that the fee charged for a matching transaction is correct
 func (d *DefaultFeeStrategy) Validate(receiveAmounts []*bc.AssetAmount, priceDiff *bc.AssetAmount, feeAmounts map[bc.AssetID]int64) error {
-	if priceDiff.Amount == 0 {
-		return nil
-	}
-
-	if len(feeAmounts) != 1 {
+	if len(feeAmounts) > 1 {
 		return ErrFeeMoreThanOneAsset
 	}
 
