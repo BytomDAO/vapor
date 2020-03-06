@@ -18,17 +18,18 @@ import (
 const maxFeeRate = 0.05
 
 var (
-	errInvalidTradePairs             = errors.New("The trade pairs in the tx input is invalid")
-	errStatusFailMustFalse           = errors.New("status fail of transaction does not allow to be true")
-	errInputProgramMustP2WMCScript   = errors.New("input program of trade tx must p2wmc script")
-	errExistCancelOrderInMatchedTx   = errors.New("can't exist cancel order in the matched transaction")
-	errExistTradeInCancelOrderTx     = errors.New("can't exist trade in the cancel order transaction")
-	errAmountOfFeeGreaterThanMaximum = errors.New("amount of fee greater than max fee amount")
-	errAssetIDMustUniqueInMatchedTx  = errors.New("asset id must unique in matched transaction")
-	errRatioOfTradeLessThanZero      = errors.New("ratio arguments must greater than zero")
-	errSpendOutputIDIsIncorrect      = errors.New("spend output id of matched tx is not equals to actual matched tx")
-	errRequestAmountMath             = errors.New("request amount of order less than one or big than max of int64")
-	errNotMatchedOrder               = errors.New("order in matched tx is not matched")
+	errInvalidTradePairs            = errors.New("The trade pairs in the tx input is invalid")
+	errStatusFailMustFalse          = errors.New("status fail of transaction does not allow to be true")
+	errInputProgramMustP2WMCScript  = errors.New("input program of trade tx must p2wmc script")
+	errExistCancelOrderInMatchedTx  = errors.New("can't exist cancel order in the matched transaction")
+	errExistTradeInCancelOrderTx    = errors.New("can't exist trade in the cancel order transaction")
+	errAssetIDMustUniqueInMatchedTx = errors.New("asset id must unique in matched transaction")
+	errRatioOfTradeLessThanZero     = errors.New("ratio arguments must greater than zero")
+	errSpendOutputIDIsIncorrect     = errors.New("spend output id of matched tx is not equals to actual matched tx")
+	errRequestAmountMath            = errors.New("request amount of order less than one or big than max of int64")
+	errNotMatchedOrder              = errors.New("order in matched tx is not matched")
+	errNoRewardProgramConfigured    = errors.New("no reward program configured")
+	errRewardProgramIsWrong         = errors.New("the reward program is not correct")
 )
 
 // MovCore represent the core logic of the match module, which include generate match transactions before packing the block,
@@ -89,7 +90,7 @@ func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, blockHeight uint64, gasLe
 		return nil, err
 	}
 
-	matchEngine := match.NewEngine(orderBook, maxFeeRate, rewardProgram)
+	matchEngine := match.NewEngine(orderBook, match.NewDefaultFeeStrategy(maxFeeRate), rewardProgram)
 	tradePairIterator := database.NewTradePairIterator(m.movStore)
 	matchCollector := newMatchTxCollector(matchEngine, tradePairIterator, gasLeft, isTimeout)
 	return matchCollector.result()
@@ -178,6 +179,41 @@ func (m *MovCore) ValidateTx(tx *types.Tx, verifyResult *bc.TxVerifyResult, bloc
 	return nil
 }
 
+// matchedTxFee is object to record the mov tx's fee information
+type matchedTxFee struct {
+	RewardProgram []byte
+	Amount        int64
+}
+
+// calcFeeAmount return the amount of fee in the matching transaction
+func calcFeeAmount(matchedTx *types.Tx) (map[bc.AssetID]*matchedTxFee, error) {
+	assetFeeMap := make(map[bc.AssetID]*matchedTxFee)
+	dealProgMaps := make(map[string]bool)
+
+	for _, input := range matchedTx.Inputs {
+		assetFeeMap[input.AssetID()] = &matchedTxFee{Amount: int64(input.AssetAmount().Amount)}
+		contractArgs, err := segwit.DecodeP2WMCProgram(input.ControlProgram())
+		if err != nil {
+			return nil, err
+		}
+
+		dealProgMaps[hex.EncodeToString(contractArgs.SellerProgram)] = true
+	}
+
+	for _, output := range matchedTx.Outputs {
+		assetAmount := output.AssetAmount()
+		if _, ok := dealProgMaps[hex.EncodeToString(output.ControlProgram())]; ok || segwit.IsP2WMCScript(output.ControlProgram()) {
+			assetFeeMap[*assetAmount.AssetId].Amount -= int64(assetAmount.Amount)
+			if assetFeeMap[*assetAmount.AssetId].Amount <= 0 {
+				delete(assetFeeMap, *assetAmount.AssetId)
+			}
+		} else {
+			assetFeeMap[*assetAmount.AssetId].RewardProgram = output.ControlProgram()
+		}
+	}
+	return assetFeeMap, nil
+}
+
 func validateCancelOrderTx(tx *types.Tx, verifyResult *bc.TxVerifyResult) error {
 	if verifyResult.StatusFail {
 		return errStatusFailMustFalse
@@ -209,7 +245,7 @@ func validateMagneticContractArgs(fromAssetAmount bc.AssetAmount, program []byte
 		return errRatioOfTradeLessThanZero
 	}
 
-	if match.CalcRequestAmount(fromAssetAmount.Amount, contractArgs) < 1 {
+	if match.CalcRequestAmount(fromAssetAmount.Amount, contractArgs.RatioNumerator, contractArgs.RatioDenominator) < 1 {
 		return errRequestAmountMath
 	}
 	return nil
@@ -244,25 +280,34 @@ func validateMatchedTx(tx *types.Tx, verifyResult *bc.TxVerifyResult, blockHeigh
 		return errAssetIDMustUniqueInMatchedTx
 	}
 
-	return validateMatchedTxFeeAmount(tx, blockHeight)
+	return validateMatchedTxFee(tx, blockHeight)
 }
 
-func validateMatchedTxFeeAmount(tx *types.Tx, blockHeight uint64) error {
-	txFee, err := match.CalcMatchedTxFee(&tx.TxData, maxFeeRate)
+func validateMatchedTxFee(tx *types.Tx, blockHeight uint64) error {
+	matchedTxFees, err := calcFeeAmount(tx)
 	if err != nil {
 		return err
 	}
 
-	for _, fee := range txFee {
+	for _, fee := range matchedTxFees {
 		if err := validateRewardProgram(blockHeight, hex.EncodeToString(fee.RewardProgram)); err != nil {
 			return err
 		}
-
-		if fee.FeeAmount > fee.MaxFeeAmount {
-			return errAmountOfFeeGreaterThanMaximum
-		}
 	}
-	return nil
+
+	orders, err := getDeleteOrdersFromTx(tx)
+	if err != nil {
+		return err
+	}
+
+	feeAmounts := make(map[bc.AssetID]int64)
+	for assetID, fee := range matchedTxFees {
+		feeAmounts[assetID] = fee.Amount
+	}
+
+	receivedAmount, priceDiff := match.CalcReceivedAmount(orders)
+	feeStrategy := match.NewDefaultFeeStrategy(maxFeeRate)
+	return feeStrategy.Validate(receivedAmount, priceDiff, feeAmounts)
 }
 
 func (m *MovCore) validateMatchedTxSequence(txs []*types.Tx) error {
@@ -447,7 +492,7 @@ func mergeOrders(addOrderMap, deleteOrderMap map[string]*common.Order) ([]*commo
 func getRewardProgram(height uint64) ([]byte, error) {
 	rewardPrograms := consensus.ActiveNetParams.MovRewardPrograms
 	if len(rewardPrograms) == 0 {
-		return nil, errors.New("no reward program configured")
+		return nil, errNoRewardProgramConfigured
 	}
 
 	var program string
@@ -464,7 +509,7 @@ func validateRewardProgram(height uint64, program string) error {
 	for _, rewardProgram := range consensus.ActiveNetParams.MovRewardPrograms {
 		if height >= rewardProgram.BeginBlock && height <= rewardProgram.EndBlock {
 			if rewardProgram.Program != program {
-				return errors.New("the reward program is not correct")
+				return errRewardProgramIsWrong
 			}
 			return nil
 		}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytom/vapor/application/mov/common"
 	"github.com/bytom/vapor/application/mov/database"
+	"github.com/bytom/vapor/application/mov/match"
 	"github.com/bytom/vapor/application/mov/mock"
 	"github.com/bytom/vapor/consensus"
 	dbm "github.com/bytom/vapor/database/leveldb"
@@ -465,7 +466,7 @@ func TestValidateBlock(t *testing.T) {
 				},
 			},
 			verifyResults: []*bc.TxVerifyResult{{StatusFail: false}},
-			wantError:     errAmountOfFeeGreaterThanMaximum,
+			wantError:     match.ErrAmountOfFeeExceedMaximum,
 		},
 		{
 			desc: "ratio numerator is zero",
@@ -512,6 +513,45 @@ func TestValidateBlock(t *testing.T) {
 		movCore := &MovCore{}
 		if err := movCore.ValidateBlock(c.block, c.verifyResults); err != c.wantError {
 			t.Errorf("#%d(%s):validate block want error(%v), got error(%v)", i, c.desc, c.wantError, err)
+		}
+	}
+}
+
+func TestCalcMatchedTxFee(t *testing.T) {
+	cases := []struct {
+		desc             string
+		tx               types.TxData
+		maxFeeRate       float64
+		wantMatchedTxFee map[bc.AssetID]*matchedTxFee
+	}{
+		{
+			desc:             "fee less than max fee",
+			maxFeeRate:       0.05,
+			wantMatchedTxFee: map[bc.AssetID]*matchedTxFee{mock.ETH: {Amount: 10, RewardProgram: mock.RewardProgram}},
+			tx:               mock.MatchedTxs[1].TxData,
+		},
+		{
+			desc:             "fee refund in tx",
+			maxFeeRate:       0.05,
+			wantMatchedTxFee: map[bc.AssetID]*matchedTxFee{mock.ETH: {Amount: 25, RewardProgram: mock.RewardProgram}},
+			tx:               mock.MatchedTxs[2].TxData,
+		},
+		{
+			desc:             "fee is zero",
+			maxFeeRate:       0.05,
+			wantMatchedTxFee: map[bc.AssetID]*matchedTxFee{},
+			tx:               mock.MatchedTxs[0].TxData,
+		},
+	}
+
+	for i, c := range cases {
+		gotMatchedTxFee, err := calcFeeAmount(types.NewTx(c.tx))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !testutil.DeepEqual(gotMatchedTxFee, c.wantMatchedTxFee) {
+			t.Errorf("#%d(%s):fail to caculate matched tx fee, got (%v), want (%v)", i, c.desc, gotMatchedTxFee, c.wantMatchedTxFee)
 		}
 	}
 }
