@@ -75,6 +75,16 @@ func TestGenerateMatchedTxs(t *testing.T) {
 				mock.MatchedTxs[6],
 			},
 		},
+		{
+			desc:       "multiple assets as a fee",
+			tradePairs: []*common.TradePair{btc2eth, eth2btc},
+			initStoreOrders: []*common.Order{
+				mock.Btc2EthOrders[0], mock.Eth2BtcOrders[3],
+			},
+			wantMatchedTxs: []*types.Tx{
+				mock.MatchedTxs[11],
+			},
+		},
 	}
 
 	for i, c := range cases {

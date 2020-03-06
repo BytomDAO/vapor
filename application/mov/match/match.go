@@ -62,18 +62,20 @@ func (e *Engine) NextMatchedTx(tradePairs ...*common.TradePair) (*types.Tx, erro
 	return tx, nil
 }
 
-func (e *Engine) addMatchTxFeeOutput(txData *types.TxData, refundAmounts, feeAmounts []*bc.AssetAmount) error {
-	for _, feeAmount := range feeAmounts {
+func (e *Engine) addMatchTxFeeOutput(txData *types.TxData, refunds []RefundAssets, fees []*bc.AssetAmount) error {
+	for _, feeAmount := range fees {
 		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*feeAmount.AssetId, feeAmount.Amount, e.rewardProgram))
 	}
 
-	for i, refundAmount := range refundAmounts {
-		contractArgs, err := segwit.DecodeP2WMCProgram(txData.Inputs[i].ControlProgram())
-		if err != nil {
-			return err
-		}
+	for i, refund := range refunds {
+		for _, assetAmount := range refund {
+			contractArgs, err := segwit.DecodeP2WMCProgram(txData.Inputs[i].ControlProgram())
+			if err != nil {
+				return err
+			}
 
-		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*refundAmount.AssetId, refundAmount.Amount, contractArgs.SellerProgram))
+			txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*assetAmount.AssetId, assetAmount.Amount, contractArgs.SellerProgram))
+		}
 	}
 	return nil
 }
@@ -102,12 +104,12 @@ func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, error) {
 	}
 
 	receivedAmounts, priceDiffs := CalcReceivedAmount(orders)
-	receivedAfterDeductFee, refundAmounts, feeAmounts := e.feeStrategy.Allocate(receivedAmounts, priceDiffs)
-	if err := addMatchTxOutput(txData, orders, receivedAmounts, receivedAfterDeductFee); err != nil {
+	allocatedAssets := e.feeStrategy.Allocate(receivedAmounts, priceDiffs)
+	if err := addMatchTxOutput(txData, orders, receivedAmounts, allocatedAssets.Received); err != nil {
 		return nil, err
 	}
 
-	if err := e.addMatchTxFeeOutput(txData, refundAmounts, feeAmounts); err != nil {
+	if err := e.addMatchTxFeeOutput(txData, allocatedAssets.Refunds, allocatedAssets.Fees); err != nil {
 		return nil, err
 	}
 
