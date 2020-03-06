@@ -284,14 +284,14 @@ func validateMatchedTxFeeAmount(tx *types.Tx) error {
 		return err
 	}
 
-	receivedAmount, priceDiff := match.CalcReceivedAmount(orders)
+	receivedAmount, priceDiffs := match.CalcReceivedAmount(orders)
 	feeAmounts, err := calcFeeAmount(tx)
 	if err != nil {
 		return err
 	}
 
 	feeStrategy := match.NewDefaultFeeStrategy(maxFeeRate)
-	return feeStrategy.Validate(receivedAmount, priceDiff, feeAmounts)
+	return feeStrategy.Validate(receivedAmount, feeAmounts, priceDiffs)
 }
 
 func (m *MovCore) validateMatchedTxSequence(txs []*types.Tx) error {
