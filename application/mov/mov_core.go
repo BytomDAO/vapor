@@ -28,7 +28,7 @@ var (
 	errSpendOutputIDIsIncorrect     = errors.New("spend output id of matched tx is not equals to actual matched tx")
 	errRequestAmountMath            = errors.New("request amount of order less than one or big than max of int64")
 	errNotMatchedOrder              = errors.New("order in matched tx is not matched")
-	errNoRewardProgramConfigured    = errors.New("no reward program configured")
+	errNotConfiguredRewardProgram   = errors.New("reward program is not configured properly")
 	errRewardProgramIsWrong         = errors.New("the reward program is not correct")
 )
 
@@ -85,9 +85,10 @@ func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, blockHeight uint64, gasLe
 		return nil, err
 	}
 
-	rewardProgram, err := getRewardProgram(blockHeight)
+	program, _ := getRewardProgram(blockHeight)
+	rewardProgram, err := hex.DecodeString(program)
 	if err != nil {
-		return nil, err
+		return nil, errNotConfiguredRewardProgram
 	}
 
 	matchEngine := match.NewEngine(orderBook, match.NewDefaultFeeStrategy(maxFeeRate), rewardProgram)
@@ -489,30 +490,30 @@ func mergeOrders(addOrderMap, deleteOrderMap map[string]*common.Order) ([]*commo
 	return addOrders, deleteOrders
 }
 
-func getRewardProgram(height uint64) ([]byte, error) {
+// getRewardProgram return the reward program by specified block height
+// if no reward program configured, then will return empty string
+// if reward program of 0-100 height is configured, but the specified height is 200, then will return  0-100's reward program
+// the second return value represent whether to find exactly
+func getRewardProgram(height uint64) (string, bool) {
 	rewardPrograms := consensus.ActiveNetParams.MovRewardPrograms
 	if len(rewardPrograms) == 0 {
-		return nil, errNoRewardProgramConfigured
+		return "", false
 	}
 
 	var program string
 	for _, rewardProgram := range rewardPrograms {
 		program = rewardProgram.Program
 		if height >= rewardProgram.BeginBlock && height <= rewardProgram.EndBlock {
-			break
+			return program, true
 		}
 	}
-	return hex.DecodeString(program)
+	return program, false
 }
 
 func validateRewardProgram(height uint64, program string) error {
-	for _, rewardProgram := range consensus.ActiveNetParams.MovRewardPrograms {
-		if height >= rewardProgram.BeginBlock && height <= rewardProgram.EndBlock {
-			if rewardProgram.Program != program {
-				return errRewardProgramIsWrong
-			}
-			return nil
-		}
+	rewardProgram, exact := getRewardProgram(height)
+	if exact && rewardProgram != program {
+		return errRewardProgramIsWrong
 	}
 	return nil
 }
