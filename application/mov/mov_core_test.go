@@ -289,6 +289,14 @@ func TestApplyBlock(t *testing.T) {
 }
 
 func TestValidateBlock(t *testing.T) {
+	consensus.ActiveNetParams.MovRewardPrograms = []consensus.MovRewardProgram{
+		{
+			BeginBlock: 0,
+			EndBlock:   100,
+			Program:    hex.EncodeToString(mock.RewardProgram),
+		},
+	}
+
 	cases := []struct {
 		desc          string
 		block         *types.Block
@@ -410,7 +418,7 @@ func TestValidateBlock(t *testing.T) {
 							types.NewIntraChainOutput(*mock.Btc2EthOrders[0].ToAssetID, 500, testutil.MustDecodeHexString("51")),
 							types.NewIntraChainOutput(*mock.Eth2BtcOrders[0].ToAssetID, 10, testutil.MustDecodeHexString("53")),
 							types.NewIntraChainOutput(*mock.Btc2EthOrders[0].ToAssetID, 10, []byte{0x51}),
-							types.NewIntraChainOutput(*consensus.BTMAssetID, 100, []byte{0x51}),
+							types.NewIntraChainOutput(*consensus.BTMAssetID, 100, mock.RewardProgram),
 						},
 					}),
 				},
@@ -429,7 +437,7 @@ func TestValidateBlock(t *testing.T) {
 						},
 						Outputs: []*types.TxOutput{
 							types.NewIntraChainOutput(*mock.Btc2EthOrders[0].FromAssetID, 10, testutil.MustDecodeHexString("51")),
-							types.NewIntraChainOutput(*consensus.BTMAssetID, 100, []byte{0x51}),
+							types.NewIntraChainOutput(*consensus.BTMAssetID, 100, mock.RewardProgram),
 						},
 					}),
 				},
@@ -452,7 +460,7 @@ func TestValidateBlock(t *testing.T) {
 							// re-order
 							types.NewIntraChainOutput(*mock.Eth2BtcOrders[2].FromAssetID, 270, mock.Eth2BtcOrders[2].Utxo.ControlProgram),
 							// fee
-							types.NewIntraChainOutput(*mock.Eth2BtcOrders[2].FromAssetID, 40, []byte{0x59}),
+							types.NewIntraChainOutput(*mock.Eth2BtcOrders[2].FromAssetID, 40, mock.RewardProgram),
 						},
 					}),
 				},
@@ -514,24 +522,24 @@ func TestCalcMatchedTxFee(t *testing.T) {
 		desc             string
 		tx               types.TxData
 		maxFeeRate       float64
-		wantMatchedTxFee map[bc.AssetID]int64
+		wantMatchedTxFee map[bc.AssetID]*matchedTxFee
 	}{
 		{
 			desc:             "fee less than max fee",
 			maxFeeRate:       0.05,
-			wantMatchedTxFee: map[bc.AssetID]int64{mock.ETH: 10},
+			wantMatchedTxFee: map[bc.AssetID]*matchedTxFee{mock.ETH: {amount: 10, rewardProgram: mock.RewardProgram}},
 			tx:               mock.MatchedTxs[1].TxData,
 		},
 		{
 			desc:             "fee refund in tx",
 			maxFeeRate:       0.05,
-			wantMatchedTxFee: map[bc.AssetID]int64{mock.ETH: 25},
+			wantMatchedTxFee: map[bc.AssetID]*matchedTxFee{mock.ETH: {amount: 25, rewardProgram: mock.RewardProgram}},
 			tx:               mock.MatchedTxs[2].TxData,
 		},
 		{
 			desc:             "fee is zero",
 			maxFeeRate:       0.05,
-			wantMatchedTxFee: map[bc.AssetID]int64{},
+			wantMatchedTxFee: map[bc.AssetID]*matchedTxFee{},
 			tx:               mock.MatchedTxs[0].TxData,
 		},
 	}
@@ -549,7 +557,13 @@ func TestCalcMatchedTxFee(t *testing.T) {
 }
 
 func TestBeforeProposalBlock(t *testing.T) {
-	consensus.ActiveNetParams.MovRewardProgram = hex.EncodeToString(mock.RewardProgram)
+	consensus.ActiveNetParams.MovRewardPrograms = []consensus.MovRewardProgram{
+		{
+			BeginBlock: 0,
+			EndBlock:   100,
+			Program:    hex.EncodeToString(mock.RewardProgram),
+		},
+	}
 
 	cases := []struct {
 		desc           string
