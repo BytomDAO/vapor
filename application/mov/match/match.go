@@ -62,18 +62,21 @@ func (e *Engine) NextMatchedTx(tradePairs ...*common.TradePair) (*types.Tx, erro
 	return tx, nil
 }
 
-func (e *Engine) addMatchTxFeeOutput(txData *types.TxData, refundAmounts, feeAmounts []*bc.AssetAmount) error {
-	for _, feeAmount := range feeAmounts {
+func (e *Engine) addMatchTxFeeOutput(txData *types.TxData, refunds []RefundAssets, fees []*bc.AssetAmount) error {
+	for _, feeAmount := range fees {
 		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*feeAmount.AssetId, feeAmount.Amount, e.rewardProgram))
 	}
 
-	for i, refundAmount := range refundAmounts {
-		contractArgs, err := segwit.DecodeP2WMCProgram(txData.Inputs[i].ControlProgram())
-		if err != nil {
-			return err
-		}
+	for i, refund := range refunds {
+		// each trading participant may be refunded multiple assets
+		for _, assetAmount := range refund {
+			contractArgs, err := segwit.DecodeP2WMCProgram(txData.Inputs[i].ControlProgram())
+			if err != nil {
+				return err
+			}
 
-		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*refundAmount.AssetId, refundAmount.Amount, contractArgs.SellerProgram))
+			txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*assetAmount.AssetId, assetAmount.Amount, contractArgs.SellerProgram))
+		}
 	}
 	return nil
 }
@@ -101,13 +104,13 @@ func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, error) {
 		txData.Inputs = append(txData.Inputs, input)
 	}
 
-	receivedAmounts, priceDiff := CalcReceivedAmount(orders)
-	receivedAfterDeductFee, refundAmounts, feeAmounts := e.feeStrategy.Allocate(receivedAmounts, priceDiff)
-	if err := addMatchTxOutput(txData, orders, receivedAmounts, receivedAfterDeductFee); err != nil {
+	receivedAmounts, priceDiffs := CalcReceivedAmount(orders)
+	allocatedAssets := e.feeStrategy.Allocate(receivedAmounts, priceDiffs)
+	if err := addMatchTxOutput(txData, orders, receivedAmounts, allocatedAssets.Received); err != nil {
 		return nil, err
 	}
 
-	if err := e.addMatchTxFeeOutput(txData, refundAmounts, feeAmounts); err != nil {
+	if err := e.addMatchTxFeeOutput(txData, allocatedAssets.Refunds, allocatedAssets.Fees); err != nil {
 		return nil, err
 	}
 
@@ -165,12 +168,8 @@ func calcShouldPayAmount(receiveAmount uint64, ratioNumerator, ratioDenominator 
 }
 
 // CalcReceivedAmount return amount of assets received by each participant in the matching transaction and the price difference
-func CalcReceivedAmount(orders []*common.Order) ([]*bc.AssetAmount, *bc.AssetAmount) {
-	priceDiff := &bc.AssetAmount{}
-	if len(orders) == 0 {
-		return nil, priceDiff
-	}
-
+func CalcReceivedAmount(orders []*common.Order) ([]*bc.AssetAmount, map[bc.AssetID]int64) {
+	priceDiffs := make(map[bc.AssetID]int64)
 	var receivedAmounts, shouldPayAmounts []*bc.AssetAmount
 	for i, order := range orders {
 		requestAmount := CalcRequestAmount(order.Utxo.Amount, order.RatioNumerator, order.RatioDenominator)
@@ -184,13 +183,12 @@ func CalcReceivedAmount(orders []*common.Order) ([]*bc.AssetAmount, *bc.AssetAmo
 	for i, receivedAmount := range receivedAmounts {
 		oppositeShouldPayAmount := shouldPayAmounts[calcOppositeIndex(len(orders), i)]
 		if oppositeShouldPayAmount.Amount > receivedAmount.Amount {
-			priceDiff.AssetId = oppositeShouldPayAmount.AssetId
-			priceDiff.Amount = oppositeShouldPayAmount.Amount - receivedAmount.Amount
-			// price differential can only produce once
-			break
+			assetId := oppositeShouldPayAmount.AssetId
+			amount := oppositeShouldPayAmount.Amount - receivedAmount.Amount
+			priceDiffs[*assetId] = int64(amount)
 		}
 	}
-	return receivedAmounts, priceDiff
+	return receivedAmounts, priceDiffs
 }
 
 // IsMatched check does the orders can be exchange
