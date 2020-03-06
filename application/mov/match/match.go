@@ -68,6 +68,7 @@ func (e *Engine) addMatchTxFeeOutput(txData *types.TxData, refunds []RefundAsset
 	}
 
 	for i, refund := range refunds {
+		// each trading participant may be refunded multiple assets
 		for _, assetAmount := range refund {
 			contractArgs, err := segwit.DecodeP2WMCProgram(txData.Inputs[i].ControlProgram())
 			if err != nil {
