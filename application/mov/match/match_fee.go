@@ -80,7 +80,7 @@ func (d *DefaultFeeStrategy) Allocate(receiveAmounts []*bc.AssetAmount, priceDif
 func (d *DefaultFeeStrategy) Validate(receiveAmounts []*bc.AssetAmount, feeAmounts, priceDiffs map[bc.AssetID]int64) error {
 	for _, receiveAmount := range receiveAmounts {
 		if feeAmount, ok := feeAmounts[*receiveAmount.AssetId]; ok {
-			if feeAmount > calcMaxFeeAmount(receiveAmount.Amount, d.maxFeeRate) {
+			if feeAmount > calcMaxFeeAmount(receiveAmount.Amount + uint64(priceDiffs[*receiveAmount.AssetId]), d.maxFeeRate) {
 				return ErrAmountOfFeeExceedMaximum
 			}
 		}
