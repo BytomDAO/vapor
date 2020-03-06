@@ -527,13 +527,13 @@ func TestCalcMatchedTxFee(t *testing.T) {
 		{
 			desc:             "fee less than max fee",
 			maxFeeRate:       0.05,
-			wantMatchedTxFee: map[bc.AssetID]*matchedTxFee{mock.ETH: {Amount: 10, RewardProgram: mock.RewardProgram}},
+			wantMatchedTxFee: map[bc.AssetID]*matchedTxFee{mock.ETH: {amount: 10, rewardProgram: mock.RewardProgram}},
 			tx:               mock.MatchedTxs[1].TxData,
 		},
 		{
 			desc:             "fee refund in tx",
 			maxFeeRate:       0.05,
-			wantMatchedTxFee: map[bc.AssetID]*matchedTxFee{mock.ETH: {Amount: 25, RewardProgram: mock.RewardProgram}},
+			wantMatchedTxFee: map[bc.AssetID]*matchedTxFee{mock.ETH: {amount: 25, rewardProgram: mock.RewardProgram}},
 			tx:               mock.MatchedTxs[2].TxData,
 		},
 		{
