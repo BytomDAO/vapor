@@ -75,7 +75,7 @@ func (m *MovCore) ApplyBlock(block *types.Block) error {
 }
 
 // BeforeProposalBlock return all transactions than can be matched, and the number of transactions cannot exceed the given capacity.
-func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, blockHeight uint64, gasLeft int64, isTimeout func() bool) ([]*types.Tx, error) {
+func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, blockHeight uint64, nodeProgram []byte, gasLeft int64, isTimeout func() bool) ([]*types.Tx, error) {
 	if blockHeight <= m.startBlockHeight {
 		return nil, nil
 	}
@@ -85,13 +85,7 @@ func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, blockHeight uint64, gasLe
 		return nil, err
 	}
 
-	program, _ := getRewardProgram(blockHeight)
-	rewardProgram, err := hex.DecodeString(program)
-	if err != nil {
-		return nil, errNotConfiguredRewardProgram
-	}
-
-	matchEngine := match.NewEngine(orderBook, match.NewDefaultFeeStrategy(maxFeeRate), rewardProgram)
+	matchEngine := match.NewEngine(orderBook, match.NewDefaultFeeStrategy(maxFeeRate), nodeProgram)
 	tradePairIterator := database.NewTradePairIterator(m.movStore)
 	matchCollector := newMatchTxCollector(matchEngine, tradePairIterator, gasLeft, isTimeout)
 	return matchCollector.result()
@@ -288,12 +282,6 @@ func validateMatchedTxFee(tx *types.Tx, blockHeight uint64) error {
 	matchedTxFees, err := calcFeeAmount(tx)
 	if err != nil {
 		return err
-	}
-
-	for _, fee := range matchedTxFees {
-		if err := validateRewardProgram(blockHeight, hex.EncodeToString(fee.rewardProgram)); err != nil {
-			return err
-		}
 	}
 
 	orders, err := getDeleteOrdersFromTx(tx)
@@ -508,12 +496,4 @@ func getRewardProgram(height uint64) (string, bool) {
 		}
 	}
 	return program, false
-}
-
-func validateRewardProgram(height uint64, program string) error {
-	rewardProgram, exact := getRewardProgram(height)
-	if exact && rewardProgram != program {
-		return errRewardProgramIsWrong
-	}
-	return nil
 }

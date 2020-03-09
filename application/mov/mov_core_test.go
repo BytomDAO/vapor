@@ -629,7 +629,7 @@ func TestBeforeProposalBlock(t *testing.T) {
 		}
 
 		movCore := &MovCore{movStore: store}
-		gotMatchedTxs, err := movCore.BeforeProposalBlock(nil, 2, c.gasLeft, func() bool { return false })
+		gotMatchedTxs, err := movCore.BeforeProposalBlock(nil, 2, mock.RewardProgram, c.gasLeft, func() bool { return false })
 		if err != nil {
 			t.Fatal(err)
 		}
