@@ -351,8 +351,9 @@ var (
 			},
 			Outputs: []*types.TxOutput{
 				types.NewIntraChainOutput(ETH, 500, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19251")),
-				types.NewIntraChainOutput(EOS, 1000, testutil.MustDecodeHexString("0014e3178c0f294a9a8f4b304236406507913091df86")),
+				types.NewIntraChainOutput(EOS, 999, testutil.MustDecodeHexString("0014e3178c0f294a9a8f4b304236406507913091df86")),
 				types.NewIntraChainOutput(BTC, 10, testutil.MustDecodeHexString("00144d0dfc8a0c5ce41d31d4f61d99aff70588bff8bc")),
+				types.NewIntraChainOutput(EOS, 1, RewardProgram),
 			},
 		}),
 

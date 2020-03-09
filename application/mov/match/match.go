@@ -106,7 +106,7 @@ func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, error) {
 
 	receivedAmounts, priceDiffs := CalcReceivedAmount(orders)
 	allocatedAssets := e.feeStrategy.Allocate(receivedAmounts, priceDiffs)
-	if err := addMatchTxOutput(txData, orders, receivedAmounts, allocatedAssets.Received); err != nil {
+	if err := addMatchTxOutput(txData, orders, receivedAmounts, allocatedAssets.Receives); err != nil {
 		return nil, err
 	}
 
@@ -168,8 +168,8 @@ func calcShouldPayAmount(receiveAmount uint64, ratioNumerator, ratioDenominator 
 }
 
 // CalcReceivedAmount return amount of assets received by each participant in the matching transaction and the price difference
-func CalcReceivedAmount(orders []*common.Order) ([]*bc.AssetAmount, map[bc.AssetID]int64) {
-	priceDiffs := make(map[bc.AssetID]int64)
+func CalcReceivedAmount(orders []*common.Order) ([]*bc.AssetAmount, map[bc.AssetID]uint64) {
+	priceDiffs := make(map[bc.AssetID]uint64)
 	var receivedAmounts, shouldPayAmounts []*bc.AssetAmount
 	for i, order := range orders {
 		requestAmount := CalcRequestAmount(order.Utxo.Amount, order.RatioNumerator, order.RatioDenominator)
@@ -185,7 +185,7 @@ func CalcReceivedAmount(orders []*common.Order) ([]*bc.AssetAmount, map[bc.Asset
 		if oppositeShouldPayAmount.Amount > receivedAmount.Amount {
 			assetId := oppositeShouldPayAmount.AssetId
 			amount := oppositeShouldPayAmount.Amount - receivedAmount.Amount
-			priceDiffs[*assetId] = int64(amount)
+			priceDiffs[*assetId] = amount
 		}
 	}
 	return receivedAmounts, priceDiffs

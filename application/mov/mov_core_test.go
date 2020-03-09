@@ -466,7 +466,7 @@ func TestValidateBlock(t *testing.T) {
 				},
 			},
 			verifyResults: []*bc.TxVerifyResult{{StatusFail: false}},
-			wantError:     match.ErrAmountOfFeeExceedMaximum,
+			wantError:     match.ErrAmountOfFeeOutOfRange,
 		},
 		{
 			desc: "ratio numerator is zero",
