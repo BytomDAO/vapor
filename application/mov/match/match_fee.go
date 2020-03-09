@@ -28,7 +28,7 @@ type FeeStrategy interface {
 	// @param receiveAmounts the amount of assets that the participants in the matching transaction can received when no fee is considered
 	// @param priceDiffs price differential of matching transaction
 	// @return reallocated assets after calculating fees
-	Allocate(receiveAmounts []*bc.AssetAmount, priceDiffs map[bc.AssetID]uint64) *AllocatedAssets
+	Allocate(receiveAmounts, priceDiffs []*bc.AssetAmount) *AllocatedAssets
 
 	// Validate verify that the fee charged for a matching transaction is correct
 	Validate(receiveAmounts []*bc.AssetAmount, feeAmounts map[bc.AssetID]uint64) error
@@ -45,10 +45,10 @@ func NewDefaultFeeStrategy(maxFeeRate float64) *DefaultFeeStrategy {
 }
 
 // Allocate will allocate the price differential in matching transaction to the participants and the fee
-func (d *DefaultFeeStrategy) Allocate(receiveAmounts []*bc.AssetAmount, priceDiffs map[bc.AssetID]uint64) *AllocatedAssets {
+func (d *DefaultFeeStrategy) Allocate(receiveAmounts, priceDiffs []*bc.AssetAmount) *AllocatedAssets {
 	feeMap := make(map[bc.AssetID]uint64)
-	for assetID, amount := range priceDiffs {
-		feeMap[assetID] = amount
+	for _, priceDiff := range priceDiffs {
+		feeMap[*priceDiff.AssetId] = priceDiff.Amount
 	}
 
 	var fees []*bc.AssetAmount

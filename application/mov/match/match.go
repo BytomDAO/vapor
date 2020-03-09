@@ -168,9 +168,8 @@ func calcShouldPayAmount(receiveAmount uint64, ratioNumerator, ratioDenominator 
 }
 
 // CalcReceivedAmount return amount of assets received by each participant in the matching transaction and the price difference
-func CalcReceivedAmount(orders []*common.Order) ([]*bc.AssetAmount, map[bc.AssetID]uint64) {
-	priceDiffs := make(map[bc.AssetID]uint64)
-	var receivedAmounts, shouldPayAmounts []*bc.AssetAmount
+func CalcReceivedAmount(orders []*common.Order) ([]*bc.AssetAmount, []*bc.AssetAmount) {
+	var receivedAmounts, priceDiffs, shouldPayAmounts []*bc.AssetAmount
 	for i, order := range orders {
 		requestAmount := CalcRequestAmount(order.Utxo.Amount, order.RatioNumerator, order.RatioDenominator)
 		oppositeOrder := orders[calcOppositeIndex(len(orders), i)]
@@ -185,7 +184,7 @@ func CalcReceivedAmount(orders []*common.Order) ([]*bc.AssetAmount, map[bc.Asset
 		if oppositeShouldPayAmount.Amount > receivedAmount.Amount {
 			assetId := oppositeShouldPayAmount.AssetId
 			amount := oppositeShouldPayAmount.Amount - receivedAmount.Amount
-			priceDiffs[*assetId] = amount
+			priceDiffs = append(priceDiffs, &bc.AssetAmount{AssetId: assetId, Amount: amount})
 		}
 	}
 	return receivedAmounts, priceDiffs
