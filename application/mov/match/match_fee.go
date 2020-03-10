@@ -104,7 +104,7 @@ func (d *DefaultFeeStrategy) Validate(receiveAmounts []*bc.AssetAmount, feeAmoun
 }
 
 func calcMinFeeAmount(amount uint64) uint64 {
-	return uint64(math.Floor(float64(amount) / 1000))
+	return uint64(math.Ceil(float64(amount) / 1000))
 }
 
 func calcMaxFeeAmount(amount uint64, maxFeeRate float64) uint64 {
