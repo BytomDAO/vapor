@@ -166,14 +166,16 @@ func P2WMCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 //                           standardProgram: Program,
 //                           sellerKey: PublicKey) locks valueAmount of valueAsset {
 //  clause partialTrade(exchangeAmount: Amount) {
-// 	 define actualAmount: Integer = exchangeAmount * ratioDenominator / ratioNumerator
-// 	 verify actualAmount > 0 && actualAmount < valueAmount
-//   lock exchangeAmount of requestedAsset with sellerProgram
+//   define actualAmount: Integer = exchangeAmount * ratioDenominator / ratioNumerator
+//   verify actualAmount > 0 && actualAmount < valueAmount
+//   define receiveAmount: Integer = exchangeAmount * 999 / 1000
+//   lock receiveAmount of requestedAsset with sellerProgram
 //   lock valueAmount-actualAmount of valueAsset with standardProgram
 //   unlock actualAmount of valueAsset
 //  }
 //  clause fullTrade() {
 //   define requestedAmount: Integer = valueAmount * ratioNumerator / ratioDenominator
+//   define requestedAmount: Integer = requestedAmount * 999 / 1000
 //   verify requestedAmount > 0
 //   lock requestedAmount of requestedAsset with sellerProgram
 //   unlock valueAmount of valueAsset
@@ -219,12 +221,15 @@ func P2WMCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 // TOALTSTACK               [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount <position>]
 // 6                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount <position> 6]
 // ROLL                     [... sellerKey standardProgram sellerProgram requestedAsset actualAmount <position> exchangeAmount]
-// 3                        [... sellerKey standardProgram sellerProgram requestedAsset actualAmount <position> exchangeAmount 3]
-// ROLL                     [... sellerKey standardProgram sellerProgram actualAmount <position> exchangeAmount requestedAsset]
-// 1                        [... sellerKey standardProgram sellerProgram actualAmount <position> exchangeAmount requestedAsset 1]
-// 5                        [... sellerKey standardProgram sellerProgram actualAmount <position> exchangeAmount requestedAsset 1 5]
-// ROLL                     [... sellerKey standardProgram actualAmount <position> exchangeAmount requestedAsset 1 sellerProgram]
-// CHECKOUTPUT              [... sellerKey standardProgram actualAmount checkOutput(exchangeAmount, requestedAsset, sellerProgram)]
+// 999                      [... sellerKey standardProgram sellerProgram requestedAsset actualAmount <position> exchangeAmount 999]
+// 1000                     [... sellerKey standardProgram sellerProgram requestedAsset actualAmount <position> exchangeAmount 1000]
+// MULFRACTION              [... sellerKey standardProgram sellerProgram requestedAsset actualAmount <position> receiveAmount]
+// 3                        [... sellerKey standardProgram sellerProgram requestedAsset actualAmount <position> receiveAmount 3]
+// ROLL                     [... sellerKey standardProgram sellerProgram actualAmount <position> receiveAmount requestedAsset]
+// 1                        [... sellerKey standardProgram sellerProgram actualAmount <position> receiveAmount requestedAsset 1]
+// 5                        [... sellerKey standardProgram sellerProgram actualAmount <position> receiveAmount requestedAsset 1 5]
+// ROLL                     [... sellerKey standardProgram actualAmount <position> receiveAmount requestedAsset 1 sellerProgram]
+// CHECKOUTPUT              [... sellerKey standardProgram actualAmount checkOutput(receiveAmount, requestedAsset, sellerProgram)]
 // VERIFY                   [... sellerKey standardProgram actualAmount]
 // FROMALTSTACK             [... sellerKey standardProgram actualAmount <position>]
 // 1                        [... sellerKey standardProgram actualAmount <position> 1]
@@ -245,6 +250,9 @@ func P2WMCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 // ROLL                     [... sellerKey standardProgram sellerProgram ratioDenominator requestedAsset valueAmount ratioNumerator]
 // 3                        [... sellerKey standardProgram sellerProgram ratioDenominator requestedAsset valueAmount ratioNumerator 3]
 // ROLL                     [... sellerKey standardProgram sellerProgram requestedAsset valueAmount ratioNumerator ratioDenominator]
+// MULFRACTION              [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount]
+// 999                      [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount 999]
+// 1000                     [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount 999 1000]
 // MULFRACTION              [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount]
 // DUP                      [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount requestedAmount]
 // 0                        [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount requestedAmount 0]
@@ -315,6 +323,9 @@ func P2MCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 	builder.AddOp(vm.OP_TOALTSTACK)
 	builder.AddOp(vm.OP_6)
 	builder.AddOp(vm.OP_ROLL)
+	builder.AddInt64(999)
+	builder.AddInt64(1000)
+	builder.AddOp(vm.OP_MULFRACTION)
 	builder.AddOp(vm.OP_3)
 	builder.AddOp(vm.OP_ROLL)
 	builder.AddOp(vm.OP_1)
@@ -339,6 +350,9 @@ func P2MCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 	builder.AddOp(vm.OP_ROT)
 	builder.AddOp(vm.OP_3)
 	builder.AddOp(vm.OP_ROLL)
+	builder.AddOp(vm.OP_MULFRACTION)
+	builder.AddInt64(999)
+	builder.AddInt64(1000)
 	builder.AddOp(vm.OP_MULFRACTION)
 	builder.AddOp(vm.OP_DUP)
 	builder.AddOp(vm.OP_0)
