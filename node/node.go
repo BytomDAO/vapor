@@ -203,7 +203,7 @@ func Rollback(config *cfg.Config, targetHeight uint64) error {
 		return err
 	}
 
-	return nil
+	return chain.Rollback(targetHeight)
 }
 
 func initNodeConfig(config *cfg.Config) error {

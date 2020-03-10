@@ -172,6 +172,78 @@ func (c *Chain) detachBlock(detachBlockHeader *types.BlockHeader, consensusResul
 	return block, nil
 }
 
+func (c *Chain) syncSubProtocols() error {
+	for _, p := range c.subProtocols {
+		if err := c.syncProtocolStatus(p); err != nil {
+			return errors.Wrap(err, p.Name(), "sync sub protocol status")
+		}
+	}
+	return nil
+}
+
+// Rollback rollback the chain from one blockHeight to targetBlockHeight
+// WARNING: we recommend to use this only in commond line
+func (c *Chain) Rollback(targetHeight uint64) error {
+	c.cond.L.Lock()
+	defer c.cond.L.Unlock()
+
+	utxoView := state.NewUtxoViewpoint()
+	consensusResult, err := c.getBestConsensusResult()
+	if err != nil {
+		return err
+	}
+
+	if err = c.syncSubProtocols(); err != nil {
+		return err
+	}
+
+	targetBlockHeader, err := c.GetHeaderByHeight(targetHeight)
+	if err != nil {
+		return err
+	}
+
+	_, deletedBlockHeaders, err := c.calcReorganizeChain(targetBlockHeader, c.bestBlockHeader)
+	if err != nil {
+		return err
+	}
+
+	deletedBlocks := []*types.Block{}
+	for _, deletedBlockHeader := range deletedBlockHeaders {
+		block, err := c.detachBlock(deletedBlockHeader, consensusResult, utxoView)
+		if err != nil {
+			return err
+		}
+
+		deletedBlocks = append(deletedBlocks, block)
+	}
+
+	setIrrBlockHeader := c.lastIrrBlockHeader
+	if c.lastIrrBlockHeader.Height > targetBlockHeader.Height {
+		setIrrBlockHeader = targetBlockHeader
+	}
+
+	startSeq := state.CalcVoteSeq(c.bestBlockHeader.Height)
+
+	if err = c.setState(targetBlockHeader, setIrrBlockHeader, nil, utxoView, []*state.ConsensusResult{consensusResult.Fork()}); err != nil {
+		return err
+	}
+
+	for _, block := range deletedBlocks {
+		if err := c.store.DeleteBlock(block); err != nil {
+			return err
+		}
+	}
+
+	endSeq := state.CalcVoteSeq(targetHeight)
+	for nowSeq := startSeq; nowSeq > endSeq; nowSeq-- {
+		if err := c.store.DeleteConsensusResult(nowSeq); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 	attachBlockHeaders, detachBlockHeaders, err := c.calcReorganizeChain(blockHeader, c.bestBlockHeader)
 	if err != nil {
@@ -185,10 +257,8 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 		return err
 	}
 
-	for _, p := range c.subProtocols {
-		if err := c.syncProtocolStatus(p); err != nil {
-			return errors.Wrap(err, p.Name(), "sync sub protocol status")
-		}
+	if err = c.syncSubProtocols(); err != nil {
+		return err
 	}
 
 	txsToRestore := map[bc.Hash]*types.Tx{}

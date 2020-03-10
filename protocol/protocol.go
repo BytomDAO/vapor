@@ -22,11 +22,10 @@ const (
 type Protocoler interface {
 	Name() string
 	StartHeight() uint64
-	BeforeProposalBlock(txs []*types.Tx, nodeProgram []byte, blockHeight uint64, gasLeft int64, isTimeout func() bool) ([]*types.Tx, error)
+	BeforeProposalBlock(txs []*types.Tx, blockHeight uint64, gasLeft int64, isTimeout func() bool) ([]*types.Tx, error)
 	ChainStatus() (uint64, *bc.Hash, error)
 	ValidateBlock(block *types.Block, verifyResults []*bc.TxVerifyResult) error
-	ValidateTxs(txs []*types.Tx, verifyResults []*bc.TxVerifyResult) error
-	ValidateTx(tx *types.Tx, verifyResult *bc.TxVerifyResult) error
+	ValidateTx(tx *types.Tx, verifyResult *bc.TxVerifyResult, blockHeight uint64) error
 	ApplyBlock(block *types.Block) error
 	DetachBlock(block *types.Block) error
 }

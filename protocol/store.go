@@ -27,6 +27,7 @@ type Store interface {
 	GetMainChainHash(uint64) (*bc.Hash, error)
 	GetBlockHashesByHeight(uint64) ([]*bc.Hash, error)
 
+	DeleteConsensusResult(uint64) error
 	DeleteBlock(*types.Block) error
 	SaveBlock(*types.Block, *bc.TransactionStatus) error
 	SaveBlockHeader(*types.BlockHeader) error
