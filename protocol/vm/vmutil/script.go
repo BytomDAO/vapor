@@ -166,9 +166,9 @@ func P2WMCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 //                           standardProgram: Program,
 //                           sellerKey: PublicKey) locks valueAmount of valueAsset {
 //  clause partialTrade(exchangeAmount: Amount) {
-// 	 define actualAmount: Integer = exchangeAmount * ratioDenominator / ratioNumerator
+//   define actualAmount: Integer = exchangeAmount * ratioDenominator / ratioNumerator
 //   actualAmount: Integer = actualAmount * 999 / 1000
-// 	 verify actualAmount > 0 && actualAmount < valueAmount
+//   verify actualAmount > 0 && actualAmount < valueAmount
 //   lock exchangeAmount of requestedAsset with sellerProgram
 //   lock valueAmount-actualAmount of valueAsset with standardProgram
 //   unlock actualAmount of valueAsset
