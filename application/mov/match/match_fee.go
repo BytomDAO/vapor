@@ -8,13 +8,13 @@ import (
 )
 
 var (
-	// ErrAmountOfFeeExceedMaximum represent The fee charged is exceeded the maximum
-	ErrAmountOfFeeExceedMaximum = errors.New("amount of fee greater than max fee amount")
+	// ErrAmountOfFeeOutOfRange represent The fee charged is out of range
+	ErrAmountOfFeeOutOfRange = errors.New("amount of fee is out of range")
 )
 
 // AllocatedAssets represent reallocated assets after calculating fees
 type AllocatedAssets struct {
-	Received []*bc.AssetAmount
+	Receives []*bc.AssetAmount
 	Refunds  []RefundAssets
 	Fees     []*bc.AssetAmount
 }
@@ -28,10 +28,10 @@ type FeeStrategy interface {
 	// @param receiveAmounts the amount of assets that the participants in the matching transaction can received when no fee is considered
 	// @param priceDiffs price differential of matching transaction
 	// @return reallocated assets after calculating fees
-	Allocate(receiveAmounts []*bc.AssetAmount, priceDiffs map[bc.AssetID]int64) *AllocatedAssets
+	Allocate(receiveAmounts, priceDiffs []*bc.AssetAmount) *AllocatedAssets
 
 	// Validate verify that the fee charged for a matching transaction is correct
-	Validate(receiveAmounts []*bc.AssetAmount, priceDiffs, feeAmounts map[bc.AssetID]int64) error
+	Validate(receiveAmounts []*bc.AssetAmount, feeAmounts map[bc.AssetID]uint64) error
 }
 
 // DefaultFeeStrategy represent the default fee charge strategy
@@ -45,59 +45,68 @@ func NewDefaultFeeStrategy(maxFeeRate float64) *DefaultFeeStrategy {
 }
 
 // Allocate will allocate the price differential in matching transaction to the participants and the fee
-func (d *DefaultFeeStrategy) Allocate(receiveAmounts []*bc.AssetAmount, priceDiffs map[bc.AssetID]int64) *AllocatedAssets {
-	var feeAmounts []*bc.AssetAmount
-	refundAmounts := make([]RefundAssets, len(receiveAmounts))
+func (d *DefaultFeeStrategy) Allocate(receiveAmounts, priceDiffs []*bc.AssetAmount) *AllocatedAssets {
+	feeMap := make(map[bc.AssetID]uint64)
+	for _, priceDiff := range priceDiffs {
+		feeMap[*priceDiff.AssetId] = priceDiff.Amount
+	}
 
-	for _, receiveAmount := range receiveAmounts {
-		if _, ok := priceDiffs[*receiveAmount.AssetId]; !ok {
-			continue
-		}
+	var fees []*bc.AssetAmount
+	refunds := make([]RefundAssets, len(receiveAmounts))
+	receives := make([]*bc.AssetAmount, len(receiveAmounts))
 
-		priceDiff := priceDiffs[*receiveAmount.AssetId]
-		maxFeeAmount := calcMaxFeeAmount(receiveAmount.Amount, d.maxFeeRate)
+	for i, receiveAmount := range receiveAmounts {
+		amount := receiveAmount.Amount
+		minFeeAmount := calcMinFeeAmount(amount)
+		receives[i] = &bc.AssetAmount{AssetId: receiveAmount.AssetId, Amount: amount - minFeeAmount}
+		feeMap[*receiveAmount.AssetId] += minFeeAmount
 
-		feeAmount, reminder := priceDiff, int64(0)
-		if priceDiff > maxFeeAmount {
+		maxFeeAmount := calcMaxFeeAmount(amount, d.maxFeeRate)
+		feeAmount, reminder := feeMap[*receiveAmount.AssetId], uint64(0)
+		if feeAmount > maxFeeAmount {
+			reminder = feeAmount - maxFeeAmount
 			feeAmount = maxFeeAmount
-			reminder = priceDiff - maxFeeAmount
 		}
 
-		feeAmounts = append(feeAmounts, &bc.AssetAmount{AssetId: receiveAmount.AssetId, Amount: uint64(feeAmount)})
+		if feeAmount > 0 {
+			fees = append(fees, &bc.AssetAmount{AssetId: receiveAmount.AssetId, Amount: feeAmount})
+		}
 
 		// There is the remaining amount after paying the handling fee, assign it evenly to participants in the transaction
-		averageAmount := reminder / int64(len(receiveAmounts))
+		averageAmount := reminder / uint64(len(receiveAmounts))
 		if averageAmount == 0 {
 			averageAmount = 1
 		}
 
-		for i := 0; i < len(receiveAmounts) && reminder > 0; i++ {
-			amount := averageAmount
-			if i == len(receiveAmounts)-1 {
-				amount = reminder
+		for j := 0; j < len(receiveAmounts) && reminder > 0; j++ {
+			refundAmount := averageAmount
+			if j == len(receiveAmounts)-1 {
+				refundAmount = reminder
 			}
-			refundAmounts[i] = append(refundAmounts[i], &bc.AssetAmount{AssetId: receiveAmount.AssetId, Amount: uint64(amount)})
+			refunds[j] = append(refunds[j], &bc.AssetAmount{AssetId: receiveAmount.AssetId, Amount: refundAmount})
 			reminder -= averageAmount
 		}
 	}
-
-	receivedAfterDeductFee := make([]*bc.AssetAmount, len(receiveAmounts))
-	copy(receivedAfterDeductFee, receiveAmounts)
-	return &AllocatedAssets{Received: receivedAfterDeductFee, Refunds: refundAmounts, Fees: feeAmounts}
+	return &AllocatedAssets{Receives: receives, Refunds: refunds, Fees: fees}
 }
 
 // Validate verify that the fee charged for a matching transaction is correct
-func (d *DefaultFeeStrategy) Validate(receiveAmounts []*bc.AssetAmount, feeAmounts, priceDiffs map[bc.AssetID]int64) error {
+func (d *DefaultFeeStrategy) Validate(receiveAmounts []*bc.AssetAmount, feeAmounts map[bc.AssetID]uint64) error {
 	for _, receiveAmount := range receiveAmounts {
-		if feeAmount, ok := feeAmounts[*receiveAmount.AssetId]; ok {
-			if feeAmount > calcMaxFeeAmount(receiveAmount.Amount+uint64(priceDiffs[*receiveAmount.AssetId]), d.maxFeeRate) {
-				return ErrAmountOfFeeExceedMaximum
-			}
+		feeAmount := feeAmounts[*receiveAmount.AssetId]
+		maxFeeAmount := calcMaxFeeAmount(receiveAmount.Amount, d.maxFeeRate)
+		minFeeAmount := calcMinFeeAmount(receiveAmount.Amount)
+		if feeAmount < minFeeAmount || feeAmount > maxFeeAmount {
+			return ErrAmountOfFeeOutOfRange
 		}
 	}
 	return nil
 }
 
-func calcMaxFeeAmount(amount uint64, maxFeeRate float64) int64 {
-	return int64(math.Ceil(float64(amount) * maxFeeRate))
+func calcMinFeeAmount(amount uint64) uint64 {
+	return uint64(math.Ceil(float64(amount) / 1000))
+}
+
+func calcMaxFeeAmount(amount uint64, maxFeeRate float64) uint64 {
+	return uint64(math.Ceil(float64(amount) * maxFeeRate))
 }

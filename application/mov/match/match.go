@@ -106,7 +106,7 @@ func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, error) {
 
 	receivedAmounts, priceDiffs := CalcReceivedAmount(orders)
 	allocatedAssets := e.feeStrategy.Allocate(receivedAmounts, priceDiffs)
-	if err := addMatchTxOutput(txData, orders, receivedAmounts, allocatedAssets.Received); err != nil {
+	if err := addMatchTxOutput(txData, orders, receivedAmounts, allocatedAssets.Receives); err != nil {
 		return nil, err
 	}
 
@@ -123,7 +123,7 @@ func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, error) {
 	return types.NewTx(*txData), nil
 }
 
-func addMatchTxOutput(txData *types.TxData, orders []*common.Order, receivedAmounts, receivedAfterDeductFee []*bc.AssetAmount) error {
+func addMatchTxOutput(txData *types.TxData, orders []*common.Order, receivedAmounts, deductFeeReceives []*bc.AssetAmount) error {
 	for i, order := range orders {
 		contractArgs, err := segwit.DecodeP2WMCProgram(order.Utxo.ControlProgram)
 		if err != nil {
@@ -135,8 +135,8 @@ func addMatchTxOutput(txData *types.TxData, orders []*common.Order, receivedAmou
 		shouldPayAmount := calcShouldPayAmount(receivedAmount, contractArgs.RatioNumerator, contractArgs.RatioDenominator)
 		isPartialTrade := requestAmount > receivedAmount
 
-		setMatchTxArguments(txData.Inputs[i], isPartialTrade, len(txData.Outputs), receivedAfterDeductFee[i].Amount)
-		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*order.ToAssetID, receivedAfterDeductFee[i].Amount, contractArgs.SellerProgram))
+		setMatchTxArguments(txData.Inputs[i], isPartialTrade, len(txData.Outputs), receivedAmounts[i].Amount)
+		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*order.ToAssetID, deductFeeReceives[i].Amount, contractArgs.SellerProgram))
 		if isPartialTrade {
 			txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*order.FromAssetID, order.Utxo.Amount-shouldPayAmount, order.Utxo.ControlProgram))
 		}
@@ -168,9 +168,8 @@ func calcShouldPayAmount(receiveAmount uint64, ratioNumerator, ratioDenominator 
 }
 
 // CalcReceivedAmount return amount of assets received by each participant in the matching transaction and the price difference
-func CalcReceivedAmount(orders []*common.Order) ([]*bc.AssetAmount, map[bc.AssetID]int64) {
-	priceDiffs := make(map[bc.AssetID]int64)
-	var receivedAmounts, shouldPayAmounts []*bc.AssetAmount
+func CalcReceivedAmount(orders []*common.Order) ([]*bc.AssetAmount, []*bc.AssetAmount) {
+	var receivedAmounts, priceDiffs, shouldPayAmounts []*bc.AssetAmount
 	for i, order := range orders {
 		requestAmount := CalcRequestAmount(order.Utxo.Amount, order.RatioNumerator, order.RatioDenominator)
 		oppositeOrder := orders[calcOppositeIndex(len(orders), i)]
@@ -185,7 +184,7 @@ func CalcReceivedAmount(orders []*common.Order) ([]*bc.AssetAmount, map[bc.Asset
 		if oppositeShouldPayAmount.Amount > receivedAmount.Amount {
 			assetId := oppositeShouldPayAmount.AssetId
 			amount := oppositeShouldPayAmount.Amount - receivedAmount.Amount
-			priceDiffs[*assetId] = int64(amount)
+			priceDiffs = append(priceDiffs, &bc.AssetAmount{AssetId: assetId, Amount: amount})
 		}
 	}
 	return receivedAmounts, priceDiffs

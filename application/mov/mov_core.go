@@ -183,7 +183,7 @@ func (m *MovCore) ValidateTx(tx *types.Tx, verifyResult *bc.TxVerifyResult, bloc
 // matchedTxFee is object to record the mov tx's fee information
 type matchedTxFee struct {
 	rewardProgram []byte
-	amount        int64
+	amount        uint64
 }
 
 // calcFeeAmount return the amount of fee in the matching transaction
@@ -192,7 +192,7 @@ func calcFeeAmount(matchedTx *types.Tx) (map[bc.AssetID]*matchedTxFee, error) {
 	dealProgMaps := make(map[string]bool)
 
 	for _, input := range matchedTx.Inputs {
-		assetFeeMap[input.AssetID()] = &matchedTxFee{amount: int64(input.AssetAmount().Amount)}
+		assetFeeMap[input.AssetID()] = &matchedTxFee{amount: input.AssetAmount().Amount}
 		contractArgs, err := segwit.DecodeP2WMCProgram(input.ControlProgram())
 		if err != nil {
 			return nil, err
@@ -204,7 +204,7 @@ func calcFeeAmount(matchedTx *types.Tx) (map[bc.AssetID]*matchedTxFee, error) {
 	for _, output := range matchedTx.Outputs {
 		assetAmount := output.AssetAmount()
 		if _, ok := dealProgMaps[hex.EncodeToString(output.ControlProgram())]; ok || segwit.IsP2WMCScript(output.ControlProgram()) {
-			assetFeeMap[*assetAmount.AssetId].amount -= int64(assetAmount.Amount)
+			assetFeeMap[*assetAmount.AssetId].amount -= assetAmount.Amount
 			if assetFeeMap[*assetAmount.AssetId].amount <= 0 {
 				delete(assetFeeMap, *assetAmount.AssetId)
 			}
@@ -301,14 +301,14 @@ func validateMatchedTxFee(tx *types.Tx, blockHeight uint64) error {
 		return err
 	}
 
-	feeAmounts := make(map[bc.AssetID]int64)
+	feeAmounts := make(map[bc.AssetID]uint64)
 	for assetID, fee := range matchedTxFees {
 		feeAmounts[assetID] = fee.amount
 	}
 
-	receivedAmount, priceDiffs := match.CalcReceivedAmount(orders)
+	receivedAmount, _ := match.CalcReceivedAmount(orders)
 	feeStrategy := match.NewDefaultFeeStrategy(maxFeeRate)
-	return feeStrategy.Validate(receivedAmount, feeAmounts, priceDiffs)
+	return feeStrategy.Validate(receivedAmount, feeAmounts)
 }
 
 func (m *MovCore) validateMatchedTxSequence(txs []*types.Tx) error {
