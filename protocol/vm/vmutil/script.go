@@ -167,6 +167,7 @@ func P2WMCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 //                           sellerKey: PublicKey) locks valueAmount of valueAsset {
 //  clause partialTrade(exchangeAmount: Amount) {
 // 	 define actualAmount: Integer = exchangeAmount * ratioDenominator / ratioNumerator
+//   actualAmount: Integer = actualAmount * 999 / 1000
 // 	 verify actualAmount > 0 && actualAmount < valueAmount
 //   lock exchangeAmount of requestedAsset with sellerProgram
 //   lock valueAmount-actualAmount of valueAsset with standardProgram
@@ -174,6 +175,7 @@ func P2WMCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 //  }
 //  clause fullTrade() {
 //   define requestedAmount: Integer = valueAmount * ratioNumerator / ratioDenominator
+//   define requestedAmount: Integer = requestedAmount * 999 / 1000
 //   verify requestedAmount > 0
 //   lock requestedAmount of requestedAsset with sellerProgram
 //   unlock valueAmount of valueAsset
@@ -202,6 +204,9 @@ func P2WMCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 // ROLL                     [... exchangeAmount sellerKey standardProgram sellerProgram ratioNumerator requestedAsset exchangeAmount ratioDenominator]
 // 3                        [... exchangeAmount sellerKey standardProgram sellerProgram ratioNumerator requestedAsset exchangeAmount ratioDenominator 3]
 // ROLL                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset exchangeAmount ratioDenominator ratioNumerator]
+// MULFRACTION              [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount]
+// 999                      [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount 999]
+// 1000                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount 999 1000]
 // MULFRACTION              [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount]
 // AMOUNT                   [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount valueAmount]
 // OVER                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount valueAmount actualAmount]
@@ -245,6 +250,9 @@ func P2WMCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 // ROLL                     [... sellerKey standardProgram sellerProgram ratioDenominator requestedAsset valueAmount ratioNumerator]
 // 3                        [... sellerKey standardProgram sellerProgram ratioDenominator requestedAsset valueAmount ratioNumerator 3]
 // ROLL                     [... sellerKey standardProgram sellerProgram requestedAsset valueAmount ratioNumerator ratioDenominator]
+// MULFRACTION              [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount]
+// 999                      [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount 999]
+// 1000                     [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount 999 1000]
 // MULFRACTION              [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount]
 // DUP                      [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount requestedAmount]
 // 0                        [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount requestedAmount 0]
@@ -300,6 +308,9 @@ func P2MCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 	builder.AddOp(vm.OP_3)
 	builder.AddOp(vm.OP_ROLL)
 	builder.AddOp(vm.OP_MULFRACTION)
+	builder.AddInt64(999)
+	builder.AddInt64(1000)
+	builder.AddOp(vm.OP_MULFRACTION)
 	builder.AddOp(vm.OP_AMOUNT)
 	builder.AddOp(vm.OP_OVER)
 	builder.AddOp(vm.OP_0)
@@ -339,6 +350,9 @@ func P2MCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 	builder.AddOp(vm.OP_ROT)
 	builder.AddOp(vm.OP_3)
 	builder.AddOp(vm.OP_ROLL)
+	builder.AddOp(vm.OP_MULFRACTION)
+	builder.AddInt64(999)
+	builder.AddInt64(1000)
 	builder.AddOp(vm.OP_MULFRACTION)
 	builder.AddOp(vm.OP_DUP)
 	builder.AddOp(vm.OP_0)
