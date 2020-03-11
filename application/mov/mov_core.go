@@ -15,8 +15,6 @@ import (
 	"github.com/bytom/vapor/protocol/bc/types"
 )
 
-const maxFeeRate = 0.05
-
 var (
 	errInvalidTradePairs            = errors.New("The trade pairs in the tx input is invalid")
 	errStatusFailMustFalse          = errors.New("status fail of transaction does not allow to be true")
@@ -91,7 +89,7 @@ func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, blockHeight uint64, gasLe
 		return nil, errNotConfiguredRewardProgram
 	}
 
-	matchEngine := match.NewEngine(orderBook, match.NewDefaultFeeStrategy(maxFeeRate), rewardProgram)
+	matchEngine := match.NewEngine(orderBook, match.NewDefaultFeeStrategy(), rewardProgram)
 	tradePairIterator := database.NewTradePairIterator(m.movStore)
 	matchCollector := newMatchTxCollector(matchEngine, tradePairIterator, gasLeft, isTimeout)
 	return matchCollector.result()
@@ -301,13 +299,13 @@ func validateMatchedTxFee(tx *types.Tx, blockHeight uint64) error {
 		return err
 	}
 
+	receivedAmount, _ := match.CalcReceivedAmount(orders)
 	feeAmounts := make(map[bc.AssetID]uint64)
 	for assetID, fee := range matchedTxFees {
 		feeAmounts[assetID] = fee.amount
 	}
 
-	receivedAmount, _ := match.CalcReceivedAmount(orders)
-	feeStrategy := match.NewDefaultFeeStrategy(maxFeeRate)
+	feeStrategy := match.NewDefaultFeeStrategy()
 	return feeStrategy.Validate(receivedAmount, feeAmounts)
 }
 
