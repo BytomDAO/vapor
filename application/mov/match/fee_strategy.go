@@ -35,13 +35,11 @@ type FeeStrategy interface {
 }
 
 // DefaultFeeStrategy represent the default fee charge strategy
-type DefaultFeeStrategy struct {
-	maxFeeRate float64
-}
+type DefaultFeeStrategy struct {}
 
 // NewDefaultFeeStrategy return a new instance of DefaultFeeStrategy
-func NewDefaultFeeStrategy(maxFeeRate float64) *DefaultFeeStrategy {
-	return &DefaultFeeStrategy{maxFeeRate: maxFeeRate}
+func NewDefaultFeeStrategy() *DefaultFeeStrategy {
+	return &DefaultFeeStrategy{}
 }
 
 // Allocate will allocate the price differential in matching transaction to the participants and the fee
@@ -57,20 +55,18 @@ func (d *DefaultFeeStrategy) Allocate(receiveAmounts, priceDiffs []*bc.AssetAmou
 
 	for i, receiveAmount := range receiveAmounts {
 		amount := receiveAmount.Amount
-		minFeeAmount := calcMinFeeAmount(amount)
+		minFeeAmount := d.calcMinFeeAmount(amount)
 		receives[i] = &bc.AssetAmount{AssetId: receiveAmount.AssetId, Amount: amount - minFeeAmount}
 		feeMap[*receiveAmount.AssetId] += minFeeAmount
 
-		maxFeeAmount := calcMaxFeeAmount(amount, d.maxFeeRate)
+		maxFeeAmount := d.calcMaxFeeAmount(amount)
 		feeAmount, reminder := feeMap[*receiveAmount.AssetId], uint64(0)
 		if feeAmount > maxFeeAmount {
 			reminder = feeAmount - maxFeeAmount
 			feeAmount = maxFeeAmount
 		}
 
-		if feeAmount > 0 {
-			fees = append(fees, &bc.AssetAmount{AssetId: receiveAmount.AssetId, Amount: feeAmount})
-		}
+		fees = append(fees, &bc.AssetAmount{AssetId: receiveAmount.AssetId, Amount: feeAmount})
 
 		// There is the remaining amount after paying the handling fee, assign it evenly to participants in the transaction
 		averageAmount := reminder / uint64(len(receiveAmounts))
@@ -94,8 +90,8 @@ func (d *DefaultFeeStrategy) Allocate(receiveAmounts, priceDiffs []*bc.AssetAmou
 func (d *DefaultFeeStrategy) Validate(receiveAmounts []*bc.AssetAmount, feeAmounts map[bc.AssetID]uint64) error {
 	for _, receiveAmount := range receiveAmounts {
 		feeAmount := feeAmounts[*receiveAmount.AssetId]
-		maxFeeAmount := calcMaxFeeAmount(receiveAmount.Amount, d.maxFeeRate)
-		minFeeAmount := calcMinFeeAmount(receiveAmount.Amount)
+		maxFeeAmount := d.calcMaxFeeAmount(receiveAmount.Amount)
+		minFeeAmount := d.calcMinFeeAmount(receiveAmount.Amount)
 		if feeAmount < minFeeAmount || feeAmount > maxFeeAmount {
 			return ErrAmountOfFeeOutOfRange
 		}
@@ -103,10 +99,10 @@ func (d *DefaultFeeStrategy) Validate(receiveAmounts []*bc.AssetAmount, feeAmoun
 	return nil
 }
 
-func calcMinFeeAmount(amount uint64) uint64 {
+func (d *DefaultFeeStrategy) calcMinFeeAmount(amount uint64) uint64 {
 	return uint64(math.Ceil(float64(amount) / 1000))
 }
 
-func calcMaxFeeAmount(amount uint64, maxFeeRate float64) uint64 {
-	return uint64(math.Ceil(float64(amount) * maxFeeRate))
+func (d *DefaultFeeStrategy) calcMaxFeeAmount(amount uint64) uint64 {
+	return uint64(math.Ceil(float64(amount) * 0.05))
 }
