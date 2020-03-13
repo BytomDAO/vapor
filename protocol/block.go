@@ -3,9 +3,9 @@ package protocol
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/vapor/config"
+	//"github.com/bytom/vapor/config"
 	"github.com/bytom/vapor/errors"
-	"github.com/bytom/vapor/event"
+	//"github.com/bytom/vapor/event"
 	"github.com/bytom/vapor/protocol/bc"
 	"github.com/bytom/vapor/protocol/bc/types"
 	"github.com/bytom/vapor/protocol/state"
@@ -279,22 +279,26 @@ func (c *Chain) saveBlock(block *types.Block) error {
 		return errors.Sub(ErrBadBlock, err)
 	}
 
-	signature, err := c.SignBlock(block)
-	if err != nil {
-		return errors.Sub(ErrBadBlock, err)
-	}
+	/*
+		signature, err := c.SignBlock(block)
+		if err != nil {
+			return errors.Sub(ErrBadBlock, err)
+		}
+	*/
 
 	if err := c.store.SaveBlock(block, bcBlock.TransactionStatus); err != nil {
 		return err
 	}
 	c.orphanManage.Delete(&bcBlock.ID)
 
-	if len(signature) != 0 {
-		xPub := config.CommonConfig.PrivateKey().XPub()
-		if err := c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: block.Hash(), Signature: signature, XPub: xPub[:]}); err != nil {
-			return err
+	/*
+		if len(signature) != 0 {
+			xPub := config.CommonConfig.PrivateKey().XPub()
+			if err := c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: block.Hash(), Signature: signature, XPub: xPub[:]}); err != nil {
+				return err
+			}
 		}
-	}
+	*/
 	return nil
 }
 
