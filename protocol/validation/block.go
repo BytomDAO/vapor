@@ -110,9 +110,11 @@ func ValidateBlock(b *bc.Block, parent *types.BlockHeader, rewards []state.Coinb
 		}
 	}
 
-	if err := checkCoinbaseTx(b, rewards); err != nil {
-		return err
-	}
+	/*
+		if err := checkCoinbaseTx(b, rewards); err != nil {
+			return err
+		}
+	*/
 
 	txMerkleRoot, err := types.TxMerkleRoot(b.Transactions)
 	if err != nil {

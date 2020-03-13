@@ -251,27 +251,31 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 
 // SaveBlock will validate and save block into storage
 func (c *Chain) saveBlock(block *types.Block) error {
-	if err := c.validateSign(block); err != nil {
-		return errors.Sub(ErrBadBlock, err)
-	}
+	/*
+		if err := c.validateSign(block); err != nil {
+			return errors.Sub(ErrBadBlock, err)
+		}
+	*/
 
 	parent, err := c.store.GetBlockHeader(&block.PreviousBlockHash)
 	if err != nil {
 		return err
 	}
 
-	consensusResult, err := c.GetConsensusResultByHash(&block.PreviousBlockHash)
-	if err != nil {
-		return err
-	}
+	/*
+		consensusResult, err := c.GetConsensusResultByHash(&block.PreviousBlockHash)
+		if err != nil {
+			return err
+		}
 
-	rewards, err := consensusResult.GetCoinbaseRewards(parent.Height)
-	if err != nil {
-		return err
-	}
+		rewards, err := consensusResult.GetCoinbaseRewards(parent.Height)
+		if err != nil {
+			return err
+		}
+	*/
 
 	bcBlock := types.MapBlock(block)
-	if err := validation.ValidateBlock(bcBlock, parent, rewards); err != nil {
+	if err := validation.ValidateBlock(bcBlock, parent, nil); err != nil {
 		return errors.Sub(ErrBadBlock, err)
 	}
 
