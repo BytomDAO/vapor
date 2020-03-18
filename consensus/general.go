@@ -75,6 +75,13 @@ type ProducerSubsidy struct {
 	Subsidy    uint64
 }
 
+// MovRewardProgram is a reward address corresponding to the range of the specified block height when matching transactions
+type MovRewardProgram struct {
+	BeginBlock uint64
+	EndBlock   uint64
+	Program    string
+}
+
 // Params store the config for different network
 type Params struct {
 	// Name defines a human-readable identifier for the network.
@@ -103,7 +110,12 @@ type Params struct {
 	ProducerSubsidys []ProducerSubsidy
 
 	SoftForkPoint map[uint64]uint64
+
+	// Mov will only start when the block height is greater than this value
 	MovStartHeight uint64
+
+	// Used to receive rewards for matching transactions
+	MovRewardPrograms []MovRewardProgram
 }
 
 // ActiveNetParams is the active NetParams
@@ -145,7 +157,8 @@ var MainNetParams = Params{
 	ProducerSubsidys: []ProducerSubsidy{
 		{BeginBlock: 1, EndBlock: 63072000, Subsidy: 9512938},
 	},
-	SoftForkPoint: map[uint64]uint64{SoftFork001: 10461600},
+	SoftForkPoint:  map[uint64]uint64{SoftFork001: 10461600},
+	MovStartHeight: 42000000,
 }
 
 // TestNetParams is the config for vapor-testnet

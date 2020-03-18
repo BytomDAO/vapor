@@ -101,6 +101,13 @@ func ValidateBlock(b *bc.Block, parent *types.BlockHeader, rewards []state.Coinb
 			return errors.Wrapf(validateResult.err, "validate of transaction %d of %d", i, len(b.Transactions))
 		}
 
+		// for support flash swap running on vapor, status fail txs need to be
+		// rejected. Or the attacker can steal BTM from any BTM/* trade pair by
+		// using status fail charge fee rule.
+		if b.Height >= consensus.ActiveNetParams.MovStartHeight && validateResult.err != nil {
+			return errors.New("the chain currently didn't support status fail tx")
+		}
+
 		if err := b.TransactionStatus.SetStatus(i, validateResult.err != nil); err != nil {
 			return err
 		}
