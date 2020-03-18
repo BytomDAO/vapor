@@ -20,8 +20,5 @@ func IsOpenFederationIssueAsset(rawDefinitionByte []byte) bool {
 		return false
 	}
 
-	if issueAssetAction != "cross_chain" {
-		return false
-	}
-	return true
+	return issueAssetAction == "open_federation_cross_chain"
 }
