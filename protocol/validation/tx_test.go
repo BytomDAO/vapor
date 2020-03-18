@@ -1172,16 +1172,16 @@ func TestValidateOpenFederationIssueAsset(t *testing.T) {
 	tx := &types.Tx{TxData: types.TxData{Version: 1}}
 	tx.Inputs = append(tx.Inputs, types.NewCrossChainInput(nil,
 		testutil.MustDecodeHash("449143cb95389d19a1939879681168f78cc62614f4e0fb41f17b3232528a709d"),
-		testutil.MustDecodeAsset("ed9d55880b4c88d8579e6c542b0e714eb8c05226ae84b6794a18aad2e1124f70"),
+		testutil.MustDecodeAsset("60b550a772ddde42717ef3ab1178cf4f712a02fc9faf3678aa5468facff128f5"),
 		100000000,
 		0,
 		1,
-		testutil.MustDecodeHexString("7b0a202022646563696d616c73223a20382c0a2020226465736372697074696f6e223a207b0a202020202269737375655f61737365745f616374696f6e223a202263726f73735f636861696e220a20207d2c0a2020226e616d65223a2022454f53222c0a20202271756f72756d223a20312c0a20202272656973737565223a202274727565222c0a20202273796d626f6c223a2022454f53220a7d"),
+		testutil.MustDecodeHexString("7b0a202022646563696d616c73223a20382c0a2020226465736372697074696f6e223a207b0a202020202269737375655f61737365745f616374696f6e223a20226f70656e5f66656465726174696f6e5f63726f73735f636861696e220a20207d2c0a2020226e616d65223a2022454f53222c0a20202271756f72756d223a20312c0a20202272656973737565223a202274727565222c0a20202273796d626f6c223a2022454f53220a7d"),
 		testutil.MustDecodeHexString("ae20d827c281d47f5de93f98544b20468feaac046bf8b89bd51102f6e971f09d215920be43bb856fe337b37f5f09040c2b6cdbe23eaf5aa4770b16ea51fdfc45514c295152ad"),
 	))
 
 	tx.Outputs = append(tx.Outputs, types.NewIntraChainOutput(
-		testutil.MustDecodeAsset("ed9d55880b4c88d8579e6c542b0e714eb8c05226ae84b6794a18aad2e1124f70"),
+		testutil.MustDecodeAsset("60b550a772ddde42717ef3ab1178cf4f712a02fc9faf3678aa5468facff128f5"),
 		100000000,
 		testutil.MustDecodeHexString("0014d8dd58f374f58cffb1b1a7cc1e18a712b4fe67b5"),
 	))
@@ -1204,7 +1204,7 @@ func TestValidateOpenFederationIssueAsset(t *testing.T) {
 	}
 }
 
-func toByte64(str string) [64]byte{
+func toByte64(str string) [64]byte {
 	var result [64]byte
 	bytes := testutil.MustDecodeHexString(str)
 	for i := range bytes {
@@ -1212,6 +1212,7 @@ func toByte64(str string) [64]byte{
 	}
 	return result
 }
+
 // A txFixture is returned by sample (below) to produce a sample
 // transaction, which takes a separate, optional _input_ txFixture to
 // affect the transaction that's built. The components of the
