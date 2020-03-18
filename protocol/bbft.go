@@ -142,8 +142,13 @@ func (c *Chain) validateSign(block *types.Block) error {
 
 		if err := c.checkNodeSign(&block.BlockHeader, node, block.Get(node.Order)); err == errDoubleSignBlock {
 			log.WithFields(log.Fields{"module": logModule, "blockHash": blockHash.String(), "pubKey": pubKey}).Warn("the consensus node double sign the same height of different block")
-			block.BlockWitness.Delete(node.Order)
-			continue
+			// if the blocker double sign & become the mainchain, that means
+			// all the side chain will reject the main chain make the chain
+			// fork. All the node will ban each other & can't roll back
+			if blocker != pubKey {
+				block.BlockWitness.Delete(node.Order)
+				continue
+			}
 		} else if err != nil {
 			return err
 		}
