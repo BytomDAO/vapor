@@ -197,11 +197,11 @@ func IsMatched(orders []*common.Order) bool {
 		return false
 	}
 
-	one := big.NewRat(1, 1)
 	product := big.NewRat(1, 1)
 	for _, order := range orders {
 		product.Mul(product, big.NewRat(order.RatioNumerator, order.RatioDenominator))
 	}
+	one := big.NewRat(1, 1)
 	return product.Cmp(one) <= 0
 }
 
