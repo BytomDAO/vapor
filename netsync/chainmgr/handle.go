@@ -154,7 +154,12 @@ func (m *Manager) handleGetBlockMsg(peer *peers.Peer, msg *msgs.GetBlockMessage)
 }
 
 func (m *Manager) handleGetBlocksMsg(peer *peers.Peer, msg *msgs.GetBlocksMessage) {
-	blocks, err := m.blockKeeper.locateBlocks(msg.GetBlockLocator(), msg.GetStopHash())
+	endTime := time.Now().Add(requireBlocksTimeout / 2)
+	isTimeout := func() bool {
+		return time.Now().After(endTime)
+	}
+
+	blocks, err := m.blockKeeper.locateBlocks(msg.GetBlockLocator(), msg.GetStopHash(), isTimeout)
 	if err != nil || len(blocks) == 0 {
 		return
 	}
