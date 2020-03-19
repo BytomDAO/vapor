@@ -24,7 +24,7 @@ const (
 var (
 	requireBlockTimeout      = 20 * time.Second
 	requireHeadersTimeout    = 30 * time.Second
-	requireBlocksTimeout     = 50 * time.Second
+	requireBlocksTimeout     = 90 * time.Second
 	checkSyncPeerNumInterval = 5 * time.Second
 
 	errRequestBlocksTimeout = errors.New("request blocks timeout")
