@@ -197,13 +197,12 @@ func IsMatched(orders []*common.Order) bool {
 		return false
 	}
 
-	rate := big.NewRat(sortedOrders[0].RatioDenominator, sortedOrders[0].RatioNumerator)
-	oppositeRate := big.NewRat(1, 1)
-	for i := 1; i < len(sortedOrders); i++ {
-		oppositeRate.Mul(oppositeRate, big.NewRat(sortedOrders[i].RatioNumerator, sortedOrders[i].RatioDenominator))
+	product := big.NewRat(1, 1)
+	for _, order := range orders {
+		product.Mul(product, big.NewRat(order.RatioNumerator, order.RatioDenominator))
 	}
-
-	return rate.Cmp(oppositeRate) >= 0
+	one := big.NewRat(1, 1)
+	return product.Cmp(one) <= 0
 }
 
 func setMatchTxArguments(txInput *types.TxInput, isPartialTrade bool, position int, receiveAmounts uint64) {
