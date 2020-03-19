@@ -43,6 +43,11 @@ func NewMovCore(dbBackend, dbDir string, startBlockHeight uint64) *MovCore {
 	return &MovCore{movStore: database.NewLevelDBMovStore(movDB), startBlockHeight: startBlockHeight}
 }
 
+// NewMovCoreWithDB return a instance of MovCore by movStore
+func NewMovCoreWithDB(store *database.LevelDBMovStore, startBlockHeight uint64) *MovCore {
+	return &MovCore{movStore: store, startBlockHeight: startBlockHeight}
+}
+
 // ApplyBlock parse pending order and cancel from the the transactions of block
 // and add pending order to the dex db, remove cancel order from dex db.
 func (m *MovCore) ApplyBlock(block *types.Block) error {
