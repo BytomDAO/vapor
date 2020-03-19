@@ -3,6 +3,7 @@ package chainmgr
 import (
 	"errors"
 	"reflect"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -38,6 +39,7 @@ type Chain interface {
 	ValidateTx(*types.Tx) (bool, error)
 }
 
+// Switch is the interface for network layer
 type Switch interface {
 	AddReactor(name string, reactor p2p.Reactor) p2p.Reactor
 	Start() (bool, error)
@@ -90,6 +92,7 @@ func NewManager(config *cfg.Config, sw Switch, chain Chain, mempool Mempool, dis
 	return manager, nil
 }
 
+// AddPeer add the network layer peer to logic layer
 func (m *Manager) AddPeer(peer peers.BasePeer) {
 	m.peers.AddPeer(peer)
 }
@@ -154,7 +157,12 @@ func (m *Manager) handleGetBlockMsg(peer *peers.Peer, msg *msgs.GetBlockMessage)
 }
 
 func (m *Manager) handleGetBlocksMsg(peer *peers.Peer, msg *msgs.GetBlocksMessage) {
-	blocks, err := m.blockKeeper.locateBlocks(msg.GetBlockLocator(), msg.GetStopHash())
+	endTime := time.Now().Add(requireBlocksTimeout / 2)
+	isTimeout := func() bool {
+		return time.Now().After(endTime)
+	}
+
+	blocks, err := m.blockKeeper.locateBlocks(msg.GetBlockLocator(), msg.GetStopHash(), isTimeout)
 	if err != nil || len(blocks) == 0 {
 		return
 	}
@@ -354,10 +362,12 @@ func (m *Manager) processMsg(basePeer peers.BasePeer, msgType byte, msg msgs.Blo
 	}
 }
 
+// RemovePeer delete peer for peer set
 func (m *Manager) RemovePeer(peerID string) {
 	m.peers.RemovePeer(peerID)
 }
 
+// SendStatus sent the current self status to remote peer
 func (m *Manager) SendStatus(peer peers.BasePeer) error {
 	p := m.peers.GetPeer(peer.ID())
 	if p == nil {
@@ -371,6 +381,7 @@ func (m *Manager) SendStatus(peer peers.BasePeer) error {
 	return nil
 }
 
+// Start the network logic layer
 func (m *Manager) Start() error {
 	var err error
 	m.txMsgSub, err = m.eventDispatcher.Subscribe(core.TxMsgEvent{})
