@@ -29,12 +29,12 @@ var (
 type fastSync struct {
 	chain          Chain
 	msgFetcher     MsgFetcher
-	blockProcessor BlockProcessor
+	blockProcessor *blockProcessor
 	peers          *peers.PeerSet
 	mainSyncPeer   *peers.Peer
 }
 
-func newFastSync(chain Chain, msgFetcher MsgFetcher, storage Storage, peers *peers.PeerSet) *fastSync {
+func newFastSync(chain Chain, msgFetcher MsgFetcher, storage *storage, peers *peers.PeerSet) *fastSync {
 	return &fastSync{
 		chain:          chain,
 		msgFetcher:     msgFetcher,

@@ -27,11 +27,7 @@ var (
 	maxNumOfBlocksRegularSync = uint64(128)
 )
 
-type FastSync interface {
-	process() error
-	setSyncPeer(peer *peers.Peer)
-}
-
+// Fetcher is the interface for fetch struct
 type Fetcher interface {
 	processBlock(peerID string, block *types.Block)
 	processBlocks(peerID string, blocks []*types.Block)
@@ -56,7 +52,7 @@ type headersMsg struct {
 
 type blockKeeper struct {
 	chain      Chain
-	fastSync   FastSync
+	fastSync   *fastSync
 	msgFetcher Fetcher
 	peers      *peers.PeerSet
 	syncPeer   *peers.Peer
@@ -76,7 +72,7 @@ func newBlockKeeper(chain Chain, peers *peers.PeerSet, fastSyncDB dbm.DB) *block
 	}
 }
 
-func (bk *blockKeeper) locateBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*types.Block, error) {
+func (bk *blockKeeper) locateBlocks(locator []*bc.Hash, stopHash *bc.Hash, isTimeout func() bool) ([]*types.Block, error) {
 	headers, err := bk.locateHeaders(locator, stopHash, 0, maxNumOfBlocksPerMsg)
 	if err != nil {
 		return nil, err
@@ -91,6 +87,9 @@ func (bk *blockKeeper) locateBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*t
 		}
 
 		blocks = append(blocks, block)
+		if isTimeout() {
+			break
+		}
 	}
 	return blocks, nil
 }

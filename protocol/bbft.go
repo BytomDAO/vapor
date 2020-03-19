@@ -234,7 +234,7 @@ func (c *Chain) signBlockHeader(blockHeader *types.BlockHeader) ([]byte, error) 
 	node, err := c.getConsensusNode(&blockHeader.PreviousBlockHash, xpub.String())
 	blockHash := blockHeader.Hash()
 	if err == errNotFoundConsensusNode {
-		log.WithFields(log.Fields{"module": logModule, "blockHash": blockHash.String()}).Warn("can't find consensus node of current node")
+		log.WithFields(log.Fields{"module": logModule, "blockHash": blockHash.String()}).Debug("can't find consensus node of current node")
 		return nil, nil
 	} else if err != nil {
 		return nil, err
