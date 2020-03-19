@@ -33,6 +33,7 @@ var (
 	errSendMsg              = errors.New("send message error")
 )
 
+// MsgFetcher is the interface for msg fetch struct
 type MsgFetcher interface {
 	resetParameter()
 	addSyncPeer(peerID string)
@@ -51,7 +52,7 @@ type fetchBlocksResult struct {
 }
 
 type msgFetcher struct {
-	storage          Storage
+	storage          *storage
 	syncPeers        *fastSyncPeers
 	peers            *peers.PeerSet
 	blockProcessCh   chan *blockMsg
@@ -61,7 +62,7 @@ type msgFetcher struct {
 	mux              sync.RWMutex
 }
 
-func newMsgFetcher(storage Storage, peers *peers.PeerSet) *msgFetcher {
+func newMsgFetcher(storage *storage, peers *peers.PeerSet) *msgFetcher {
 	return &msgFetcher{
 		storage:          storage,
 		syncPeers:        newFastSyncPeers(),

@@ -27,11 +27,7 @@ var (
 	maxNumOfBlocksRegularSync = uint64(128)
 )
 
-type FastSync interface {
-	process() error
-	setSyncPeer(peer *peers.Peer)
-}
-
+// Fetcher is the interface for fetch struct
 type Fetcher interface {
 	processBlock(peerID string, block *types.Block)
 	processBlocks(peerID string, blocks []*types.Block)
@@ -56,7 +52,7 @@ type headersMsg struct {
 
 type blockKeeper struct {
 	chain      Chain
-	fastSync   FastSync
+	fastSync   *fastSync
 	msgFetcher Fetcher
 	peers      *peers.PeerSet
 	syncPeer   *peers.Peer
