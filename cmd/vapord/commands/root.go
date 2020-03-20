@@ -15,6 +15,7 @@ var (
 	config = cfg.DefaultConfig()
 )
 
+// RootCmd is the command for run node
 var RootCmd = &cobra.Command{
 	Use:   "vapord",
 	Short: "Multiple asset management.",

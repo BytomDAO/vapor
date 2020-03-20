@@ -30,4 +30,5 @@ func NewVoteOutput(assetID bc.AssetID, amount uint64, controlProgram []byte, vot
 	}
 }
 
+// OutputType implement the txout interface
 func (it *VoteOutput) OutputType() uint8 { return VoteOutputType }

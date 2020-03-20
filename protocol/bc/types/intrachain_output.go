@@ -28,4 +28,5 @@ func NewIntraChainOutput(assetID bc.AssetID, amount uint64, controlProgram []byt
 	}
 }
 
+// OutputType implement the txout interface
 func (it *IntraChainOutput) OutputType() uint8 { return IntraChainOutputType }

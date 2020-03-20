@@ -83,7 +83,7 @@ func (e *Engine) addMatchTxFeeOutput(txData *types.TxData, refunds []RefundAsset
 
 func (e *Engine) addPartialTradeOrder(tx *types.Tx) error {
 	for i, output := range tx.Outputs {
-		if !segwit.IsP2WMCScript(output.ControlProgram()) {
+		if !segwit.IsP2WMCScript(output.ControlProgram()) || output.AssetAmount().Amount == 0 {
 			continue
 		}
 
@@ -182,9 +182,9 @@ func CalcReceivedAmount(orders []*common.Order) ([]*bc.AssetAmount, []*bc.AssetA
 	for i, receivedAmount := range receivedAmounts {
 		oppositeShouldPayAmount := shouldPayAmounts[calcOppositeIndex(len(orders), i)]
 		if oppositeShouldPayAmount.Amount > receivedAmount.Amount {
-			assetId := oppositeShouldPayAmount.AssetId
+			assetID := oppositeShouldPayAmount.AssetId
 			amount := oppositeShouldPayAmount.Amount - receivedAmount.Amount
-			priceDiffs = append(priceDiffs, &bc.AssetAmount{AssetId: assetId, Amount: amount})
+			priceDiffs = append(priceDiffs, &bc.AssetAmount{AssetId: assetID, Amount: amount})
 		}
 	}
 	return receivedAmounts, priceDiffs

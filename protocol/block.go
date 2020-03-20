@@ -104,6 +104,7 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	if err != nil {
 		return err
 	}
+
 	if err := consensusResult.ApplyBlock(block); err != nil {
 		return err
 	}

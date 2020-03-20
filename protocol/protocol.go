@@ -19,6 +19,7 @@ const (
 	maxKnownTxs           = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
 )
 
+// Protocoler is interface for layer 2 consensus protocol
 type Protocoler interface {
 	Name() string
 	StartHeight() uint64
@@ -173,6 +174,7 @@ func (c *Chain) InMainChain(hash bc.Hash) bool {
 	return *blockHash == hash
 }
 
+// SubProtocols return list of layer 2 consensus protocol
 func (c *Chain) SubProtocols() []Protocoler {
 	return c.subProtocols
 }

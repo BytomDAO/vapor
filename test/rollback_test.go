@@ -1445,7 +1445,7 @@ func TestRollback(t *testing.T) {
 		consensus.ActiveNetParams.RoundVoteBlockNums = c.RoundVoteBlockNums
 
 		movDB := dbm.NewDB("mov_db", "leveldb", "mov_db")
-		movCore := mov.NewMovCoreWithDB(movDatabase.NewLevelDBMovStore(movDB), c.movStartHeight)
+		movCore := mov.NewCoreWithDB(movDatabase.NewLevelDBMovStore(movDB), c.movStartHeight)
 
 		blockDB := dbm.NewDB("block_db", "leveldb", "block_db")
 		store := database.NewStore(blockDB)

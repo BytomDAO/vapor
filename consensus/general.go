@@ -254,6 +254,7 @@ func BytomMainNetParams(vaporParam *Params) *Params {
 	return &Params{Bech32HRPSegwit: bech32HRPSegwit}
 }
 
+// InitActiveNetParams load the config by chain ID
 func InitActiveNetParams(chainID string) error {
 	var exist bool
 	if ActiveNetParams, exist = NetParams[chainID]; !exist {
