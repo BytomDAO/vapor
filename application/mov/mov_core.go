@@ -153,7 +153,7 @@ func (m *Core) ValidateBlock(block *types.Block, verifyResults []*bc.TxVerifyRes
 
 // ValidateTx validate one transaction.
 func (m *Core) ValidateTx(tx *types.Tx, verifyResult *bc.TxVerifyResult, blockHeight uint64) error {
-	if blockHeight < m.startBlockHeight {
+	if blockHeight <= m.startBlockHeight {
 		return nil
 	}
 
