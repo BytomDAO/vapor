@@ -516,6 +516,7 @@ func TestValidateBlock(t *testing.T) {
 
 	for i, c := range cases {
 		movCore := &Core{}
+		c.block.Height = 3456786543
 		if err := movCore.ValidateBlock(c.block, c.verifyResults); err != c.wantError {
 			t.Errorf("#%d(%s):validate block want error(%v), got error(%v)", i, c.desc, c.wantError, err)
 		}
