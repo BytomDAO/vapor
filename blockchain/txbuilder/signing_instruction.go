@@ -8,6 +8,7 @@ import (
 	"github.com/bytom/vapor/errors"
 )
 
+// AddDataWitness append data to the witness array
 func (si *SigningInstruction) AddDataWitness(data chainjson.HexBytes) {
 	dw := DataWitness(data)
 	si.WitnessComponents = append(si.WitnessComponents, &dw)

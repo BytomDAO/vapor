@@ -9,6 +9,7 @@ import (
 	"github.com/bytom/vapor/protocol/state"
 )
 
+// predefine errors
 var (
 	ErrNotFoundConsensusResult = errors.New("can't find the vote result by given sequence")
 )

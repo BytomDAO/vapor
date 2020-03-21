@@ -43,10 +43,12 @@ var (
 	ErrDustTx = errors.New("transaction is dust tx")
 )
 
+// DustFilterer is inerface for dust transaction filter rule
 type DustFilterer interface {
 	IsDust(tx *types.Tx) bool
 }
 
+// TxMsgEvent is message wrap for subscribe event
 type TxMsgEvent struct{ TxMsg *TxPoolMsg }
 
 // TxDesc store tx and related info for mining strategy

@@ -240,15 +240,15 @@ func (c *Chain) signBlockHeader(blockHeader *types.BlockHeader) ([]byte, error) 
 		return nil, err
 	}
 
+	if len(blockHeader.Get(node.Order)) != 0 {
+		return nil, nil
+	}
+
 	if err := c.checkDoubleSign(blockHeader, node.XPub.String()); err == errDoubleSignBlock {
 		log.WithFields(log.Fields{"module": logModule, "blockHash": blockHash.String()}).Warn("current node has double sign the block")
 		return nil, nil
 	} else if err != nil {
 		return nil, err
-	}
-
-	if signature := blockHeader.Get(node.Order); len(signature) != 0 {
-		return nil, nil
 	}
 
 	signature := xprv.Sign(blockHeader.Hash().Bytes())

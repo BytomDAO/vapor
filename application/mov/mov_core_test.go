@@ -264,7 +264,7 @@ func TestApplyBlock(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		movCore := &MovCore{movStore: store}
+		movCore := &Core{movStore: store}
 		if err := c.blockFunc(movCore, c.block); err != c.wantError {
 			t.Errorf("#%d(%s):apply block want error(%v), got error(%v)", i, c.desc, c.wantError, err)
 		}
@@ -515,7 +515,8 @@ func TestValidateBlock(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		movCore := &MovCore{}
+		movCore := &Core{}
+		c.block.Height = 3456786543
 		if err := movCore.ValidateBlock(c.block, c.verifyResults); err != c.wantError {
 			t.Errorf("#%d(%s):validate block want error(%v), got error(%v)", i, c.desc, c.wantError, err)
 		}
@@ -539,22 +540,22 @@ func TestCalcMatchedTxFee(t *testing.T) {
 			tx: mock.MatchedTxs[1].TxData,
 		},
 		{
-			desc:             "fee refund in tx",
-			maxFeeRate:       0.05,
+			desc:       "fee refund in tx",
+			maxFeeRate: 0.05,
 			wantMatchedTxFee: map[bc.AssetID]*matchedTxFee{
 				mock.ETH: {amount: 25, rewardProgram: mock.RewardProgram},
 				mock.BTC: {amount: 1, rewardProgram: mock.RewardProgram},
 			},
-			tx:               mock.MatchedTxs[2].TxData,
+			tx: mock.MatchedTxs[2].TxData,
 		},
 		{
-			desc:             "no price diff",
-			maxFeeRate:       0.05,
+			desc:       "no price diff",
+			maxFeeRate: 0.05,
 			wantMatchedTxFee: map[bc.AssetID]*matchedTxFee{
 				mock.ETH: {amount: 1, rewardProgram: mock.RewardProgram},
 				mock.BTC: {amount: 1, rewardProgram: mock.RewardProgram},
 			},
-			tx:               mock.MatchedTxs[0].TxData,
+			tx: mock.MatchedTxs[0].TxData,
 		},
 	}
 
@@ -642,7 +643,7 @@ func TestBeforeProposalBlock(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		movCore := &MovCore{movStore: store}
+		movCore := &Core{movStore: store}
 		gotMatchedTxs, err := movCore.BeforeProposalBlock(nil, 2, c.gasLeft, func() bool { return false })
 		if err != nil {
 			t.Fatal(err)
@@ -795,7 +796,7 @@ func TestValidateMatchedTxSequence(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		movCore := &MovCore{movStore: store}
+		movCore := &Core{movStore: store}
 		if err := movCore.validateMatchedTxSequence(c.transactions); err != c.wantError {
 			t.Errorf("#%d(%s):wanet error(%v), got error(%v)", i, c.desc, c.wantError, err)
 		}
@@ -805,13 +806,13 @@ func TestValidateMatchedTxSequence(t *testing.T) {
 	}
 }
 
-type testFun func(movCore *MovCore, block *types.Block) error
+type testFun func(movCore *Core, block *types.Block) error
 
-func applyBlock(movCore *MovCore, block *types.Block) error {
+func applyBlock(movCore *Core, block *types.Block) error {
 	return movCore.ApplyBlock(block)
 }
 
-func detachBlock(movCore *MovCore, block *types.Block) error {
+func detachBlock(movCore *Core, block *types.Block) error {
 	return movCore.DetachBlock(block)
 }
 
