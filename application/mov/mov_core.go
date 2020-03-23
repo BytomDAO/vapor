@@ -491,7 +491,7 @@ func mergeOrders(addOrderMap, deleteOrderMap map[string]*common.Order) ([]*commo
 func getRewardProgram(height uint64) (string, bool) {
 	rewardPrograms := consensus.ActiveNetParams.MovRewardPrograms
 	if len(rewardPrograms) == 0 {
-		return "", false
+		return "51", false
 	}
 
 	var program string
