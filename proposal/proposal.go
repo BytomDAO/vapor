@@ -102,7 +102,7 @@ func (b *blockBuilder) applyTransactions(txs []*types.Tx, timeoutStatus uint8) e
 			continue
 		}
 
-		results, gasLeft := preValidateTxs(tempTxs, b.chain, b.utxoView, b.gasLeft)
+		results, gasLeft := b.preValidateTxs(tempTxs, b.chain, b.utxoView, b.gasLeft)
 		for _, result := range results {
 			if result.err != nil && !result.gasOnly {
 				log.WithFields(log.Fields{"module": logModule, "error": result.err}).Error("mining block generation: skip tx due to")
@@ -139,11 +139,6 @@ func (b *blockBuilder) applyTransactionFromPool() error {
 }
 
 func (b *blockBuilder) applyTransactionFromSubProtocol() error {
-	cp, err := b.accountManager.GetCoinbaseControlProgram()
-	if err != nil {
-		return err
-	}
-
 	isTimeout := func() bool {
 		return b.getTimeoutStatus() > timeoutOk
 	}
@@ -153,7 +148,7 @@ func (b *blockBuilder) applyTransactionFromSubProtocol() error {
 			break
 		}
 
-		subTxs, err := p.BeforeProposalBlock(b.block.Transactions, cp, b.block.Height, b.gasLeft, isTimeout)
+		subTxs, err := p.BeforeProposalBlock(b.block.Transactions, b.block.Height, b.gasLeft, isTimeout)
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "index": i, "error": err}).Error("failed on sub protocol txs package")
 			continue
@@ -294,7 +289,7 @@ type validateTxResult struct {
 	err     error
 }
 
-func preValidateTxs(txs []*types.Tx, chain *protocol.Chain, view *state.UtxoViewpoint, gasLeft int64) ([]*validateTxResult, int64) {
+func (b *blockBuilder) preValidateTxs(txs []*types.Tx, chain *protocol.Chain, view *state.UtxoViewpoint, gasLeft int64) ([]*validateTxResult, int64) {
 	var results []*validateTxResult
 	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: chain.BestBlockHeight() + 1}}
 	bcTxs := make([]*bc.Tx, len(txs))
@@ -328,7 +323,7 @@ func preValidateTxs(txs []*types.Tx, chain *protocol.Chain, view *state.UtxoView
 			continue
 		}
 
-		if err := validateBySubProtocols(txs[i], validateResults[i].GetError() != nil, chain.SubProtocols()); err != nil {
+		if err := b.validateBySubProtocols(txs[i], validateResults[i].GetError() != nil, chain.SubProtocols()); err != nil {
 			results = append(results, &validateTxResult{tx: txs[i], err: err})
 			continue
 		}
@@ -339,10 +334,10 @@ func preValidateTxs(txs []*types.Tx, chain *protocol.Chain, view *state.UtxoView
 	return results, gasLeft
 }
 
-func validateBySubProtocols(tx *types.Tx, statusFail bool, subProtocols []protocol.Protocoler) error {
+func (b *blockBuilder) validateBySubProtocols(tx *types.Tx, statusFail bool, subProtocols []protocol.Protocoler) error {
 	for _, subProtocol := range subProtocols {
 		verifyResult := &bc.TxVerifyResult{StatusFail: statusFail}
-		if err := subProtocol.ValidateTx(tx, verifyResult); err != nil {
+		if err := subProtocol.ValidateTx(tx, verifyResult, b.block.Height); err != nil {
 			return err
 		}
 	}

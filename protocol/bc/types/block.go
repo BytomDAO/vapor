@@ -102,6 +102,7 @@ func (b *Block) readFrom(r *blockchain.Reader) error {
 	return nil
 }
 
+// WriteTo write block to io.Writer
 func (b *Block) WriteTo(w io.Writer) (int64, error) {
 	ew := errors.NewWriter(w)
 	if err := b.writeTo(ew, SerBlockFull); err != nil {

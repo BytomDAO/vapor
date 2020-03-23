@@ -1,12 +1,14 @@
 package mov
 
 import (
+	"encoding/hex"
 	"math"
 	"os"
 	"testing"
 
 	"github.com/bytom/vapor/application/mov/common"
 	"github.com/bytom/vapor/application/mov/database"
+	"github.com/bytom/vapor/application/mov/match"
 	"github.com/bytom/vapor/application/mov/mock"
 	"github.com/bytom/vapor/consensus"
 	dbm "github.com/bytom/vapor/database/leveldb"
@@ -262,7 +264,7 @@ func TestApplyBlock(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		movCore := &MovCore{movStore: store}
+		movCore := &Core{movStore: store}
 		if err := c.blockFunc(movCore, c.block); err != c.wantError {
 			t.Errorf("#%d(%s):apply block want error(%v), got error(%v)", i, c.desc, c.wantError, err)
 		}
@@ -287,6 +289,14 @@ func TestApplyBlock(t *testing.T) {
 }
 
 func TestValidateBlock(t *testing.T) {
+	consensus.ActiveNetParams.MovRewardPrograms = []consensus.MovRewardProgram{
+		{
+			BeginBlock: 0,
+			EndBlock:   100,
+			Program:    hex.EncodeToString(mock.RewardProgram),
+		},
+	}
+
 	cases := []struct {
 		desc          string
 		block         *types.Block
@@ -362,9 +372,11 @@ func TestValidateBlock(t *testing.T) {
 							types.NewSpendInput([][]byte{vm.Int64Bytes(1), vm.Int64Bytes(1)}, *mock.Eth2BtcOrders[0].Utxo.SourceID, *mock.Btc2EthOrders[0].FromAssetID, mock.Eth2BtcOrders[0].Utxo.Amount, mock.Eth2BtcOrders[0].Utxo.SourcePos, mock.Eth2BtcOrders[0].Utxo.ControlProgram),
 						},
 						Outputs: []*types.TxOutput{
-							types.NewIntraChainOutput(*mock.Btc2EthOrders[0].ToAssetID, 500, testutil.MustDecodeHexString("51")),
-							types.NewIntraChainOutput(*mock.Eth2BtcOrders[0].ToAssetID, 10, testutil.MustDecodeHexString("53")),
-							types.NewIntraChainOutput(*mock.Btc2EthOrders[0].ToAssetID, 10, []byte{0x51}),
+							types.NewIntraChainOutput(*mock.Btc2EthOrders[0].ToAssetID, 499, testutil.MustDecodeHexString("51")),
+							types.NewIntraChainOutput(*mock.Eth2BtcOrders[0].ToAssetID, 9, testutil.MustDecodeHexString("53")),
+							// fee
+							types.NewIntraChainOutput(*mock.Btc2EthOrders[0].ToAssetID, 11, mock.RewardProgram),
+							types.NewIntraChainOutput(*mock.Eth2BtcOrders[0].ToAssetID, 1, mock.RewardProgram),
 						},
 					}),
 				},
@@ -383,9 +395,10 @@ func TestValidateBlock(t *testing.T) {
 							types.NewSpendInput(nil, testutil.MustDecodeHash("28b7b53d8dc90006bf97e0a4eaae2a72ec3d869873188698b694beaf20789f21"), *consensus.BTMAssetID, 100, 0, []byte{0x51}),
 						},
 						Outputs: []*types.TxOutput{
-							types.NewIntraChainOutput(*mock.Btc2EthOrders[0].ToAssetID, 500, testutil.MustDecodeHexString("51")),
-							types.NewIntraChainOutput(*mock.Eth2BtcOrders[0].ToAssetID, 10, testutil.MustDecodeHexString("53")),
-							types.NewIntraChainOutput(*mock.Btc2EthOrders[0].ToAssetID, 10, []byte{0x51}),
+							types.NewIntraChainOutput(*mock.Btc2EthOrders[0].ToAssetID, 499, testutil.MustDecodeHexString("51")),
+							types.NewIntraChainOutput(*mock.Eth2BtcOrders[0].ToAssetID, 9, testutil.MustDecodeHexString("53")),
+							types.NewIntraChainOutput(*mock.Btc2EthOrders[0].ToAssetID, 11, mock.RewardProgram),
+							types.NewIntraChainOutput(*mock.Eth2BtcOrders[0].ToAssetID, 1, mock.RewardProgram),
 							types.NewIntraChainOutput(*consensus.BTMAssetID, 100, []byte{0x51}),
 						},
 					}),
@@ -405,10 +418,11 @@ func TestValidateBlock(t *testing.T) {
 							types.NewSpendInput([][]byte{{}, {}, vm.Int64Bytes(2)}, *mock.Btc2EthOrders[0].Utxo.SourceID, *mock.Btc2EthOrders[0].FromAssetID, mock.Btc2EthOrders[0].Utxo.Amount, mock.Btc2EthOrders[0].Utxo.SourcePos, mock.Btc2EthOrders[0].Utxo.ControlProgram),
 						},
 						Outputs: []*types.TxOutput{
-							types.NewIntraChainOutput(*mock.Btc2EthOrders[0].ToAssetID, 500, testutil.MustDecodeHexString("51")),
-							types.NewIntraChainOutput(*mock.Eth2BtcOrders[0].ToAssetID, 10, testutil.MustDecodeHexString("53")),
-							types.NewIntraChainOutput(*mock.Btc2EthOrders[0].ToAssetID, 10, []byte{0x51}),
-							types.NewIntraChainOutput(*consensus.BTMAssetID, 100, []byte{0x51}),
+							types.NewIntraChainOutput(*mock.Btc2EthOrders[0].ToAssetID, 499, testutil.MustDecodeHexString("51")),
+							types.NewIntraChainOutput(*mock.Eth2BtcOrders[0].ToAssetID, 9, testutil.MustDecodeHexString("53")),
+							types.NewIntraChainOutput(*mock.Btc2EthOrders[0].ToAssetID, 11, mock.RewardProgram),
+							types.NewIntraChainOutput(*mock.Eth2BtcOrders[0].ToAssetID, 1, mock.RewardProgram),
+							types.NewIntraChainOutput(*mock.Btc2EthOrders[0].FromAssetID, 10, testutil.MustDecodeHexString("51")),
 						},
 					}),
 				},
@@ -427,7 +441,7 @@ func TestValidateBlock(t *testing.T) {
 						},
 						Outputs: []*types.TxOutput{
 							types.NewIntraChainOutput(*mock.Btc2EthOrders[0].FromAssetID, 10, testutil.MustDecodeHexString("51")),
-							types.NewIntraChainOutput(*consensus.BTMAssetID, 100, []byte{0x51}),
+							types.NewIntraChainOutput(*consensus.BTMAssetID, 100, mock.RewardProgram),
 						},
 					}),
 				},
@@ -445,18 +459,19 @@ func TestValidateBlock(t *testing.T) {
 							types.NewSpendInput([][]byte{vm.Int64Bytes(10), vm.Int64Bytes(1), vm.Int64Bytes(0)}, *mock.Eth2BtcOrders[2].Utxo.SourceID, *mock.Eth2BtcOrders[2].FromAssetID, mock.Eth2BtcOrders[2].Utxo.Amount, mock.Eth2BtcOrders[2].Utxo.SourcePos, mock.Eth2BtcOrders[2].Utxo.ControlProgram),
 						},
 						Outputs: []*types.TxOutput{
-							types.NewIntraChainOutput(*mock.Btc2EthOrders[0].ToAssetID, 500, testutil.MustDecodeHexString("51")),
-							types.NewIntraChainOutput(*mock.Eth2BtcOrders[2].ToAssetID, 10, testutil.MustDecodeHexString("55")),
+							types.NewIntraChainOutput(*mock.Btc2EthOrders[0].ToAssetID, 499, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19251")),
+							types.NewIntraChainOutput(*mock.Eth2BtcOrders[2].ToAssetID, 9, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19255")),
 							// re-order
 							types.NewIntraChainOutput(*mock.Eth2BtcOrders[2].FromAssetID, 270, mock.Eth2BtcOrders[2].Utxo.ControlProgram),
 							// fee
-							types.NewIntraChainOutput(*mock.Eth2BtcOrders[2].FromAssetID, 40, []byte{0x59}),
+							types.NewIntraChainOutput(*mock.Btc2EthOrders[2].ToAssetID, 41, mock.RewardProgram),
+							types.NewIntraChainOutput(*mock.Eth2BtcOrders[2].ToAssetID, 1, mock.RewardProgram),
 						},
 					}),
 				},
 			},
 			verifyResults: []*bc.TxVerifyResult{{StatusFail: false}},
-			wantError:     errAmountOfFeeGreaterThanMaximum,
+			wantError:     match.ErrAmountOfFeeOutOfRange,
 		},
 		{
 			desc: "ratio numerator is zero",
@@ -500,14 +515,71 @@ func TestValidateBlock(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		movCore := &MovCore{}
+		movCore := &Core{}
+		c.block.Height = 3456786543
 		if err := movCore.ValidateBlock(c.block, c.verifyResults); err != c.wantError {
 			t.Errorf("#%d(%s):validate block want error(%v), got error(%v)", i, c.desc, c.wantError, err)
 		}
 	}
 }
 
+func TestCalcMatchedTxFee(t *testing.T) {
+	cases := []struct {
+		desc             string
+		tx               types.TxData
+		maxFeeRate       float64
+		wantMatchedTxFee map[bc.AssetID]*matchedTxFee
+	}{
+		{
+			desc:       "fee less than max fee",
+			maxFeeRate: 0.05,
+			wantMatchedTxFee: map[bc.AssetID]*matchedTxFee{
+				mock.ETH: {amount: 11, rewardProgram: mock.RewardProgram},
+				mock.BTC: {amount: 1, rewardProgram: mock.RewardProgram},
+			},
+			tx: mock.MatchedTxs[1].TxData,
+		},
+		{
+			desc:       "fee refund in tx",
+			maxFeeRate: 0.05,
+			wantMatchedTxFee: map[bc.AssetID]*matchedTxFee{
+				mock.ETH: {amount: 25, rewardProgram: mock.RewardProgram},
+				mock.BTC: {amount: 1, rewardProgram: mock.RewardProgram},
+			},
+			tx: mock.MatchedTxs[2].TxData,
+		},
+		{
+			desc:       "no price diff",
+			maxFeeRate: 0.05,
+			wantMatchedTxFee: map[bc.AssetID]*matchedTxFee{
+				mock.ETH: {amount: 1, rewardProgram: mock.RewardProgram},
+				mock.BTC: {amount: 1, rewardProgram: mock.RewardProgram},
+			},
+			tx: mock.MatchedTxs[0].TxData,
+		},
+	}
+
+	for i, c := range cases {
+		gotMatchedTxFee, err := calcFeeAmount(types.NewTx(c.tx))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !testutil.DeepEqual(gotMatchedTxFee, c.wantMatchedTxFee) {
+			t.Errorf("#%d(%s):fail to caculate matched tx fee, got (%v), want (%v)", i, c.desc, gotMatchedTxFee, c.wantMatchedTxFee)
+		}
+	}
+}
+
 func TestBeforeProposalBlock(t *testing.T) {
+	consensus.ActiveNetParams.MovRewardPrograms = []consensus.MovRewardProgram{
+		{
+			BeginBlock: 0,
+			EndBlock:   100,
+			Program:    hex.EncodeToString(mock.RewardProgram),
+		},
+	}
+
 	cases := []struct {
 		desc           string
 		initOrders     []*common.Order
@@ -571,8 +643,8 @@ func TestBeforeProposalBlock(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		movCore := &MovCore{movStore: store}
-		gotMatchedTxs, err := movCore.BeforeProposalBlock(nil, []byte{0x51}, 2, c.gasLeft, func() bool { return false })
+		movCore := &Core{movStore: store}
+		gotMatchedTxs, err := movCore.BeforeProposalBlock(nil, 2, c.gasLeft, func() bool { return false })
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -724,7 +796,7 @@ func TestValidateMatchedTxSequence(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		movCore := &MovCore{movStore: store}
+		movCore := &Core{movStore: store}
 		if err := movCore.validateMatchedTxSequence(c.transactions); err != c.wantError {
 			t.Errorf("#%d(%s):wanet error(%v), got error(%v)", i, c.desc, c.wantError, err)
 		}
@@ -734,13 +806,13 @@ func TestValidateMatchedTxSequence(t *testing.T) {
 	}
 }
 
-type testFun func(movCore *MovCore, block *types.Block) error
+type testFun func(movCore *Core, block *types.Block) error
 
-func applyBlock(movCore *MovCore, block *types.Block) error {
+func applyBlock(movCore *Core, block *types.Block) error {
 	return movCore.ApplyBlock(block)
 }
 
-func detachBlock(movCore *MovCore, block *types.Block) error {
+func detachBlock(movCore *Core, block *types.Block) error {
 	return movCore.DetachBlock(block)
 }
 

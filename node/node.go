@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	// debug tool
 	_ "net/http/pprof"
 	"path/filepath"
 	"reflect"
@@ -84,7 +85,7 @@ func NewNode(config *cfg.Config) *Node {
 	accessTokens := accesstoken.NewStore(tokenDB)
 
 	dispatcher := event.NewDispatcher()
-	movCore := mov.NewMovCore(config.DBBackend, config.DBDir(), consensus.ActiveNetParams.MovStartHeight)
+	movCore := mov.NewCore(config.DBBackend, config.DBDir(), consensus.ActiveNetParams.MovStartHeight)
 	assetFilter := protocol.NewAssetFilter(config.CrossChain.AssetWhitelist)
 	txPool := protocol.NewTxPool(store, []protocol.DustFilterer{movCore, assetFilter}, dispatcher)
 	chain, err := protocol.NewChain(store, txPool, []protocol.Protocoler{movCore}, dispatcher)
@@ -177,7 +178,7 @@ func Rollback(config *cfg.Config, targetHeight uint64) error {
 	store := database.NewStore(coreDB)
 
 	dispatcher := event.NewDispatcher()
-	movCore := mov.NewMovCore(config.DBBackend, config.DBDir(), consensus.ActiveNetParams.MovStartHeight)
+	movCore := mov.NewCore(config.DBBackend, config.DBDir(), consensus.ActiveNetParams.MovStartHeight)
 	txPool := protocol.NewTxPool(store, []protocol.DustFilterer{movCore}, dispatcher)
 	chain, err := protocol.NewChain(store, txPool, []protocol.Protocoler{movCore}, dispatcher)
 	if err != nil {
@@ -235,7 +236,7 @@ func checkConfig(chain *protocol.Chain, config *cfg.Config) error {
 	typedInput := genesisBlock.Transactions[0].Inputs[0].TypedInput
 	if v, ok := typedInput.(*types.CoinbaseInput); ok {
 		if !reflect.DeepEqual(fedpegScript, v.Arbitrary) {
-			return errors.New("config xpubs don't equal genesis block xpubs.")
+			return errors.New("config xpubs don't equal genesis block xpubs")
 		}
 	}
 	return nil
@@ -272,6 +273,7 @@ func (n *Node) initAndstartAPIServer() {
 	n.api.StartServer(*listenAddr)
 }
 
+// OnStart implements BaseService
 func (n *Node) OnStart() error {
 	if n.miningEnable {
 		if _, err := n.wallet.AccountMgr.GetMiningAddress(); err != nil {
@@ -303,6 +305,7 @@ func (n *Node) OnStart() error {
 	return nil
 }
 
+// OnStop implements BaseService
 func (n *Node) OnStop() {
 	n.notificationMgr.Shutdown()
 	n.notificationMgr.WaitForShutdown()
@@ -316,6 +319,7 @@ func (n *Node) OnStop() {
 	n.eventDispatcher.Stop()
 }
 
+// RunForever listen to the stop signal
 func (n *Node) RunForever() {
 	// Sleep forever and then...
 	cmn.TrapSignal(func() {

@@ -448,7 +448,8 @@ func TestLocateBlocks(t *testing.T) {
 			want = append(want, blocks[i])
 		}
 
-		got, err := bk.locateBlocks(locator, &c.stopHash)
+		mockTimeout := func() bool { return false }
+		got, err := bk.locateBlocks(locator, &c.stopHash, mockTimeout)
 		if err != c.wantErr {
 			t.Errorf("case %d: got %v want err = %v", i, err, c.wantErr)
 		}

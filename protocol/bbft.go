@@ -142,8 +142,13 @@ func (c *Chain) validateSign(block *types.Block) error {
 
 		if err := c.checkNodeSign(&block.BlockHeader, node, block.Get(node.Order)); err == errDoubleSignBlock {
 			log.WithFields(log.Fields{"module": logModule, "blockHash": blockHash.String(), "pubKey": pubKey}).Warn("the consensus node double sign the same height of different block")
-			block.BlockWitness.Delete(node.Order)
-			continue
+			// if the blocker double sign & become the mainchain, that means
+			// all the side chain will reject the main chain make the chain
+			// fork. All the node will ban each other & can't roll back
+			if blocker != pubKey {
+				block.BlockWitness.Delete(node.Order)
+				continue
+			}
 		} else if err != nil {
 			return err
 		}
@@ -228,23 +233,22 @@ func (c *Chain) signBlockHeader(blockHeader *types.BlockHeader) ([]byte, error) 
 	xpub := xprv.XPub()
 	node, err := c.getConsensusNode(&blockHeader.PreviousBlockHash, xpub.String())
 	blockHash := blockHeader.Hash()
-	blockHashStr := blockHash.String()
 	if err == errNotFoundConsensusNode {
-		log.WithFields(log.Fields{"module": logModule, "blockHash": blockHashStr}).Warn("can't find consensus node of current node")
+		log.WithFields(log.Fields{"module": logModule, "blockHash": blockHash.String()}).Debug("can't find consensus node of current node")
 		return nil, nil
 	} else if err != nil {
 		return nil, err
+	}
+
+	if len(blockHeader.Get(node.Order)) != 0 {
+		return nil, nil
 	}
 
 	if err := c.checkDoubleSign(blockHeader, node.XPub.String()); err == errDoubleSignBlock {
-		log.WithFields(log.Fields{"module": logModule, "blockHash": blockHashStr}).Warn("current node has double sign the block")
+		log.WithFields(log.Fields{"module": logModule, "blockHash": blockHash.String()}).Warn("current node has double sign the block")
 		return nil, nil
 	} else if err != nil {
 		return nil, err
-	}
-
-	if signature := blockHeader.Get(node.Order); len(signature) != 0 {
-		return nil, nil
 	}
 
 	signature := xprv.Sign(blockHeader.Hash().Bytes())

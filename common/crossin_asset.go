@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 )
 
+// IsOpenFederationIssueAsset check if the asset definition satisfy ofmf asset
 func IsOpenFederationIssueAsset(rawDefinitionByte []byte) bool {
 	var defMap map[string]interface{}
 	if err := json.Unmarshal(rawDefinitionByte, &defMap); err != nil {
@@ -20,8 +21,5 @@ func IsOpenFederationIssueAsset(rawDefinitionByte []byte) bool {
 		return false
 	}
 
-	if issueAssetAction != "cross_chain" {
-		return false
-	}
-	return true
+	return issueAssetAction == "open_federation_cross_chain"
 }

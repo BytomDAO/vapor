@@ -1,10 +1,13 @@
 package mov
 
 import (
+	"encoding/hex"
+
 	"github.com/bytom/vapor/application/mov/common"
 	"github.com/bytom/vapor/application/mov/contract"
 	"github.com/bytom/vapor/application/mov/database"
 	"github.com/bytom/vapor/application/mov/match"
+	"github.com/bytom/vapor/consensus"
 	"github.com/bytom/vapor/consensus/segwit"
 	dbm "github.com/bytom/vapor/database/leveldb"
 	"github.com/bytom/vapor/errors"
@@ -12,50 +15,49 @@ import (
 	"github.com/bytom/vapor/protocol/bc/types"
 )
 
-const maxFeeRate = 0.05
-
 var (
-	errInvalidTradePairs             = errors.New("The trade pairs in the tx input is invalid")
-	errStatusFailMustFalse           = errors.New("status fail of transaction does not allow to be true")
-	errInputProgramMustP2WMCScript   = errors.New("input program of trade tx must p2wmc script")
-	errExistCancelOrderInMatchedTx   = errors.New("can't exist cancel order in the matched transaction")
-	errExistTradeInCancelOrderTx     = errors.New("can't exist trade in the cancel order transaction")
-	errAmountOfFeeGreaterThanMaximum = errors.New("amount of fee greater than max fee amount")
-	errAssetIDMustUniqueInMatchedTx  = errors.New("asset id must unique in matched transaction")
-	errRatioOfTradeLessThanZero      = errors.New("ratio arguments must greater than zero")
-	errSpendOutputIDIsIncorrect      = errors.New("spend output id of matched tx is not equals to actual matched tx")
-	errRequestAmountMath             = errors.New("request amount of order less than one or big than max of int64")
-	errNotMatchedOrder               = errors.New("order in matched tx is not matched")
+	errInvalidTradePairs            = errors.New("The trade pairs in the tx input is invalid")
+	errStatusFailMustFalse          = errors.New("status fail of transaction does not allow to be true")
+	errInputProgramMustP2WMCScript  = errors.New("input program of trade tx must p2wmc script")
+	errExistCancelOrderInMatchedTx  = errors.New("can't exist cancel order in the matched transaction")
+	errExistTradeInCancelOrderTx    = errors.New("can't exist trade in the cancel order transaction")
+	errAssetIDMustUniqueInMatchedTx = errors.New("asset id must unique in matched transaction")
+	errRatioOfTradeLessThanZero     = errors.New("ratio arguments must greater than zero")
+	errSpendOutputIDIsIncorrect     = errors.New("spend output id of matched tx is not equals to actual matched tx")
+	errRequestAmountMath            = errors.New("request amount of order less than one or big than max of int64")
+	errNotMatchedOrder              = errors.New("order in matched tx is not matched")
+	errNotConfiguredRewardProgram   = errors.New("reward program is not configured properly")
+	errRewardProgramIsWrong         = errors.New("the reward program is not correct")
 )
 
-// MovCore represent the core logic of the match module, which include generate match transactions before packing the block,
+// Core represent the core logic of the match module, which include generate match transactions before packing the block,
 // verify the match transaction in block is correct, and update the order table according to the transaction.
-type MovCore struct {
+type Core struct {
 	movStore         database.MovStore
 	startBlockHeight uint64
 }
 
-// NewMovCore return a instance of MovCore by path of mov db
-func NewMovCore(dbBackend, dbDir string, startBlockHeight uint64) *MovCore {
+// NewCore return a instance of Core by path of mov db
+func NewCore(dbBackend, dbDir string, startBlockHeight uint64) *Core {
 	movDB := dbm.NewDB("mov", dbBackend, dbDir)
-	return &MovCore{movStore: database.NewLevelDBMovStore(movDB), startBlockHeight: startBlockHeight}
+	return &Core{movStore: database.NewLevelDBMovStore(movDB), startBlockHeight: startBlockHeight}
+}
+
+// NewCoreWithDB return a instance of Core by movStore
+func NewCoreWithDB(store *database.LevelDBMovStore, startBlockHeight uint64) *Core {
+	return &Core{movStore: store, startBlockHeight: startBlockHeight}
 }
 
 // ApplyBlock parse pending order and cancel from the the transactions of block
 // and add pending order to the dex db, remove cancel order from dex db.
-func (m *MovCore) ApplyBlock(block *types.Block) error {
+func (m *Core) ApplyBlock(block *types.Block) error {
 	if block.Height < m.startBlockHeight {
 		return nil
 	}
 
 	if block.Height == m.startBlockHeight {
 		blockHash := block.Hash()
-		if err := m.movStore.InitDBState(block.Height, &blockHash); err != nil {
-			return err
-		}
-
-		// the next block can send orders
-		return nil
+		return m.movStore.InitDBState(block.Height, &blockHash)
 	}
 
 	if err := m.validateMatchedTxSequence(block.Transactions); err != nil {
@@ -71,7 +73,7 @@ func (m *MovCore) ApplyBlock(block *types.Block) error {
 }
 
 // BeforeProposalBlock return all transactions than can be matched, and the number of transactions cannot exceed the given capacity.
-func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, nodeProgram []byte, blockHeight uint64, gasLeft int64, isTimeout func() bool) ([]*types.Tx, error) {
+func (m *Core) BeforeProposalBlock(txs []*types.Tx, blockHeight uint64, gasLeft int64, isTimeout func() bool) ([]*types.Tx, error) {
 	if blockHeight <= m.startBlockHeight {
 		return nil, nil
 	}
@@ -81,14 +83,20 @@ func (m *MovCore) BeforeProposalBlock(txs []*types.Tx, nodeProgram []byte, block
 		return nil, err
 	}
 
-	matchEngine := match.NewEngine(orderBook, maxFeeRate, nodeProgram)
+	program, _ := getRewardProgram(blockHeight)
+	rewardProgram, err := hex.DecodeString(program)
+	if err != nil {
+		return nil, errNotConfiguredRewardProgram
+	}
+
+	matchEngine := match.NewEngine(orderBook, match.NewDefaultFeeStrategy(), rewardProgram)
 	tradePairIterator := database.NewTradePairIterator(m.movStore)
 	matchCollector := newMatchTxCollector(matchEngine, tradePairIterator, gasLeft, isTimeout)
 	return matchCollector.result()
 }
 
 // ChainStatus return the current block height and block hash in dex core
-func (m *MovCore) ChainStatus() (uint64, *bc.Hash, error) {
+func (m *Core) ChainStatus() (uint64, *bc.Hash, error) {
 	state, err := m.movStore.GetMovDatabaseState()
 	if err != nil {
 		return 0, nil, err
@@ -99,7 +107,7 @@ func (m *MovCore) ChainStatus() (uint64, *bc.Hash, error) {
 
 // DetachBlock parse pending order and cancel from the the transactions of block
 // and add cancel order to the dex db, remove pending order from dex db.
-func (m *MovCore) DetachBlock(block *types.Block) error {
+func (m *Core) DetachBlock(block *types.Block) error {
 	if block.Height < m.startBlockHeight {
 		return nil
 	}
@@ -113,7 +121,7 @@ func (m *MovCore) DetachBlock(block *types.Block) error {
 }
 
 // IsDust block the transaction that are not generated by the match engine
-func (m *MovCore) IsDust(tx *types.Tx) bool {
+func (m *Core) IsDust(tx *types.Tx) bool {
 	for _, input := range tx.Inputs {
 		if segwit.IsP2WMCScript(input.ControlProgram()) && !contract.IsCancelClauseSelector(input) {
 			return true
@@ -123,25 +131,20 @@ func (m *MovCore) IsDust(tx *types.Tx) bool {
 }
 
 // Name return the name of current module
-func (m *MovCore) Name() string {
+func (m *Core) Name() string {
 	return "MOV"
 }
 
 // StartHeight return the start block height of current module
-func (m *MovCore) StartHeight() uint64 {
+func (m *Core) StartHeight() uint64 {
 	return m.startBlockHeight
 }
 
 // ValidateBlock no need to verify the block header, because the first module has been verified.
 // just need to verify the transactions in the block.
-func (m *MovCore) ValidateBlock(block *types.Block, verifyResults []*bc.TxVerifyResult) error {
-	return m.ValidateTxs(block.Transactions, verifyResults)
-}
-
-// ValidateTxs validate the trade transaction.
-func (m *MovCore) ValidateTxs(txs []*types.Tx, verifyResults []*bc.TxVerifyResult) error {
-	for i, tx := range txs {
-		if err := m.ValidateTx(tx, verifyResults[i]); err != nil {
+func (m *Core) ValidateBlock(block *types.Block, verifyResults []*bc.TxVerifyResult) error {
+	for i, tx := range block.Transactions {
+		if err := m.ValidateTx(tx, verifyResults[i], block.Height); err != nil {
 			return err
 		}
 	}
@@ -149,9 +152,17 @@ func (m *MovCore) ValidateTxs(txs []*types.Tx, verifyResults []*bc.TxVerifyResul
 }
 
 // ValidateTx validate one transaction.
-func (m *MovCore) ValidateTx(tx *types.Tx, verifyResult *bc.TxVerifyResult) error {
+func (m *Core) ValidateTx(tx *types.Tx, verifyResult *bc.TxVerifyResult, blockHeight uint64) error {
+	if blockHeight <= m.startBlockHeight {
+		return nil
+	}
+
+	if verifyResult.StatusFail {
+		return errStatusFailMustFalse
+	}
+
 	if common.IsMatchedTx(tx) {
-		if err := validateMatchedTx(tx, verifyResult); err != nil {
+		if err := validateMatchedTx(tx, verifyResult, blockHeight); err != nil {
 			return err
 		}
 	} else if common.IsCancelOrderTx(tx) {
@@ -164,9 +175,6 @@ func (m *MovCore) ValidateTx(tx *types.Tx, verifyResult *bc.TxVerifyResult) erro
 		if !segwit.IsP2WMCScript(output.ControlProgram()) {
 			continue
 		}
-		if verifyResult.StatusFail {
-			return errStatusFailMustFalse
-		}
 
 		if err := validateMagneticContractArgs(output.AssetAmount(), output.ControlProgram()); err != nil {
 			return err
@@ -175,11 +183,44 @@ func (m *MovCore) ValidateTx(tx *types.Tx, verifyResult *bc.TxVerifyResult) erro
 	return nil
 }
 
-func validateCancelOrderTx(tx *types.Tx, verifyResult *bc.TxVerifyResult) error {
-	if verifyResult.StatusFail {
-		return errStatusFailMustFalse
+// matchedTxFee is object to record the mov tx's fee information
+type matchedTxFee struct {
+	rewardProgram []byte
+	amount        uint64
+}
+
+// calcFeeAmount return the amount of fee in the matching transaction
+func calcFeeAmount(matchedTx *types.Tx) (map[bc.AssetID]*matchedTxFee, error) {
+	assetFeeMap := make(map[bc.AssetID]*matchedTxFee)
+	dealProgMaps := make(map[string]bool)
+
+	for _, input := range matchedTx.Inputs {
+		assetFeeMap[input.AssetID()] = &matchedTxFee{amount: input.AssetAmount().Amount}
+		contractArgs, err := segwit.DecodeP2WMCProgram(input.ControlProgram())
+		if err != nil {
+			return nil, err
+		}
+
+		dealProgMaps[hex.EncodeToString(contractArgs.SellerProgram)] = true
 	}
 
+	for _, output := range matchedTx.Outputs {
+		assetAmount := output.AssetAmount()
+		if _, ok := dealProgMaps[hex.EncodeToString(output.ControlProgram())]; ok || segwit.IsP2WMCScript(output.ControlProgram()) {
+			assetFeeMap[*assetAmount.AssetId].amount -= assetAmount.Amount
+			if assetFeeMap[*assetAmount.AssetId].amount <= 0 {
+				delete(assetFeeMap, *assetAmount.AssetId)
+			}
+		} else if assetFeeMap[*assetAmount.AssetId].rewardProgram == nil {
+			assetFeeMap[*assetAmount.AssetId].rewardProgram = output.ControlProgram()
+		} else {
+			return nil, errors.Wrap(errRewardProgramIsWrong, "double reward program")
+		}
+	}
+	return assetFeeMap, nil
+}
+
+func validateCancelOrderTx(tx *types.Tx, verifyResult *bc.TxVerifyResult) error {
 	for _, input := range tx.Inputs {
 		if !segwit.IsP2WMCScript(input.ControlProgram()) {
 			return errInputProgramMustP2WMCScript
@@ -206,17 +247,13 @@ func validateMagneticContractArgs(fromAssetAmount bc.AssetAmount, program []byte
 		return errRatioOfTradeLessThanZero
 	}
 
-	if match.CalcRequestAmount(fromAssetAmount.Amount, contractArgs) < 1 {
+	if match.CalcRequestAmount(fromAssetAmount.Amount, contractArgs.RatioNumerator, contractArgs.RatioDenominator) < 1 {
 		return errRequestAmountMath
 	}
 	return nil
 }
 
-func validateMatchedTx(tx *types.Tx, verifyResult *bc.TxVerifyResult) error {
-	if verifyResult.StatusFail {
-		return errStatusFailMustFalse
-	}
-
+func validateMatchedTx(tx *types.Tx, verifyResult *bc.TxVerifyResult, blockHeight uint64) error {
 	fromAssetIDMap := make(map[string]bool)
 	toAssetIDMap := make(map[string]bool)
 	for i, input := range tx.Inputs {
@@ -241,24 +278,37 @@ func validateMatchedTx(tx *types.Tx, verifyResult *bc.TxVerifyResult) error {
 		return errAssetIDMustUniqueInMatchedTx
 	}
 
-	return validateMatchedTxFeeAmount(tx)
+	return validateMatchedTxFee(tx, blockHeight)
 }
 
-func validateMatchedTxFeeAmount(tx *types.Tx) error {
-	txFee, err := match.CalcMatchedTxFee(&tx.TxData, maxFeeRate)
+func validateMatchedTxFee(tx *types.Tx, blockHeight uint64) error {
+	matchedTxFees, err := calcFeeAmount(tx)
 	if err != nil {
 		return err
 	}
 
-	for _, amount := range txFee {
-		if amount.FeeAmount > amount.MaxFeeAmount {
-			return errAmountOfFeeGreaterThanMaximum
+	for _, fee := range matchedTxFees {
+		if err := validateRewardProgram(blockHeight, hex.EncodeToString(fee.rewardProgram)); err != nil {
+			return err
 		}
 	}
-	return nil
+
+	orders, err := getDeleteOrdersFromTx(tx)
+	if err != nil {
+		return err
+	}
+
+	receivedAmount, _ := match.CalcReceivedAmount(orders)
+	feeAmounts := make(map[bc.AssetID]uint64)
+	for assetID, fee := range matchedTxFees {
+		feeAmounts[assetID] = fee.amount
+	}
+
+	feeStrategy := match.NewDefaultFeeStrategy()
+	return feeStrategy.Validate(receivedAmount, feeAmounts)
 }
 
-func (m *MovCore) validateMatchedTxSequence(txs []*types.Tx) error {
+func (m *Core) validateMatchedTxSequence(txs []*types.Tx) error {
 	orderBook := match.NewOrderBook(m.movStore, nil, nil)
 	for _, tx := range txs {
 		if common.IsMatchedTx(tx) {
@@ -348,15 +398,8 @@ func decodeTxsOrders(txs []*types.Tx) ([]*common.Order, []*common.Order, error) 
 }
 
 func buildOrderBook(store database.MovStore, txs []*types.Tx) (*match.OrderBook, error) {
-	var nonMatchedTxs []*types.Tx
-	for _, tx := range txs {
-		if !common.IsMatchedTx(tx) {
-			nonMatchedTxs = append(nonMatchedTxs, tx)
-		}
-	}
-
 	var arrivalAddOrders, arrivalDelOrders []*common.Order
-	for _, tx := range nonMatchedTxs {
+	for _, tx := range txs {
 		addOrders, err := getAddOrdersFromTx(tx)
 		if err != nil {
 			return nil, err
@@ -378,6 +421,10 @@ func getAddOrdersFromTx(tx *types.Tx) ([]*common.Order, error) {
 	var orders []*common.Order
 	for i, output := range tx.Outputs {
 		if output.OutputType() != types.IntraChainOutputType || !segwit.IsP2WMCScript(output.ControlProgram()) {
+			continue
+		}
+
+		if output.AssetAmount().Amount == 0 {
 			continue
 		}
 
@@ -435,4 +482,32 @@ func mergeOrders(addOrderMap, deleteOrderMap map[string]*common.Order) ([]*commo
 		deleteOrders = append(deleteOrders, order)
 	}
 	return addOrders, deleteOrders
+}
+
+// getRewardProgram return the reward program by specified block height
+// if no reward program configured, then will return empty string
+// if reward program of 0-100 height is configured, but the specified height is 200, then will return  0-100's reward program
+// the second return value represent whether to find exactly
+func getRewardProgram(height uint64) (string, bool) {
+	rewardPrograms := consensus.ActiveNetParams.MovRewardPrograms
+	if len(rewardPrograms) == 0 {
+		return "", false
+	}
+
+	var program string
+	for _, rewardProgram := range rewardPrograms {
+		program = rewardProgram.Program
+		if height >= rewardProgram.BeginBlock && height <= rewardProgram.EndBlock {
+			return program, true
+		}
+	}
+	return program, false
+}
+
+func validateRewardProgram(height uint64, program string) error {
+	rewardProgram, exact := getRewardProgram(height)
+	if exact && rewardProgram != program {
+		return errRewardProgramIsWrong
+	}
+	return nil
 }

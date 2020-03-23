@@ -15,13 +15,7 @@ var (
 	errDBFindBlock      = errors.New("can't find block from DB")
 )
 
-type Storage interface {
-	resetParameter()
-	writeBlocks(peerID string, blocks []*types.Block) error
-	readBlock(height uint64) (*blockStorage, error)
-	deleteBlock(height uint64)
-}
-
+// LocalStore is the interface for persistent storage
 type LocalStore interface {
 	writeBlock(block *types.Block) error
 	readBlock(height uint64) (*types.Block, error)
