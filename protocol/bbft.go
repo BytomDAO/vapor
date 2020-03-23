@@ -142,8 +142,13 @@ func (c *Chain) validateSign(block *types.Block) error {
 
 		if err := c.checkNodeSign(&block.BlockHeader, node, block.Get(node.Order)); err == errDoubleSignBlock {
 			log.WithFields(log.Fields{"module": logModule, "blockHash": blockHash.String(), "pubKey": pubKey}).Warn("the consensus node double sign the same height of different block")
-			block.BlockWitness.Delete(node.Order)
-			continue
+			// if the blocker double sign & become the mainchain, that means
+			// all the side chain will reject the main chain make the chain
+			// fork. All the node will ban each other & can't roll back
+			if blocker != pubKey {
+				block.BlockWitness.Delete(node.Order)
+				continue
+			}
 		} else if err != nil {
 			return err
 		}
@@ -199,27 +204,54 @@ func (c *Chain) ProcessBlockSignature(signature, xPub []byte, blockHash *bc.Hash
 	return c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: *blockHash, Signature: signature, XPub: xPub})
 }
 
-// SignBlock signing the block if current node is consensus node
-func (c *Chain) SignBlock(block *types.Block) ([]byte, error) {
-	xprv := config.CommonConfig.PrivateKey()
-	xpubStr := xprv.XPub().String()
-	node, err := c.getConsensusNode(&block.PreviousBlockHash, xpubStr)
-	if err == errNotFoundConsensusNode {
-		return nil, nil
-	} else if err != nil {
-		return nil, err
+// SignBlockHeader signing the block if current node is consensus node
+func (c *Chain) SignBlockHeader(blockHeader *types.BlockHeader) error {
+	_, err := c.signBlockHeader(blockHeader)
+	return err
+}
+
+func (c *Chain) applyBlockSign(blockHeader *types.BlockHeader) error {
+	signature, err := c.signBlockHeader(blockHeader)
+	if err != nil {
+		return err
 	}
 
-	if err := c.checkDoubleSign(&block.BlockHeader, node.XPub.String()); err == errDoubleSignBlock {
-		return nil, nil
-	} else if err != nil {
-		return nil, err
-	}
-
-	signature := block.Get(node.Order)
 	if len(signature) == 0 {
-		signature = xprv.Sign(block.Hash().Bytes())
-		block.Set(node.Order, signature)
+		return nil
 	}
+
+	if err := c.store.SaveBlockHeader(blockHeader); err != nil {
+		return err
+	}
+
+	xpub := config.CommonConfig.PrivateKey().XPub()
+	return c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: blockHeader.Hash(), Signature: signature, XPub: xpub[:]})
+}
+
+func (c *Chain) signBlockHeader(blockHeader *types.BlockHeader) ([]byte, error) {
+	xprv := config.CommonConfig.PrivateKey()
+	xpub := xprv.XPub()
+	node, err := c.getConsensusNode(&blockHeader.PreviousBlockHash, xpub.String())
+	blockHash := blockHeader.Hash()
+	if err == errNotFoundConsensusNode {
+		log.WithFields(log.Fields{"module": logModule, "blockHash": blockHash.String()}).Debug("can't find consensus node of current node")
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+
+	if len(blockHeader.Get(node.Order)) != 0 {
+		return nil, nil
+	}
+
+	if err := c.checkDoubleSign(blockHeader, node.XPub.String()); err == errDoubleSignBlock {
+		log.WithFields(log.Fields{"module": logModule, "blockHash": blockHash.String()}).Warn("current node has double sign the block")
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+
+	signature := xprv.Sign(blockHeader.Hash().Bytes())
+	blockHeader.Set(node.Order, signature)
 	return signature, nil
 }

@@ -4,6 +4,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bytom/vapor/consensus"
 	dbm "github.com/bytom/vapor/database/leveldb"
 	"github.com/bytom/vapor/database/storage"
@@ -288,5 +290,229 @@ func TestSaveBlockHeader(t *testing.T) {
 		if !testutil.DeepEqual(gotBlockHeader, c.blockHeader) {
 			t.Errorf("case %v: block header mismatch: have %x, want %x", i, gotBlockHeader, c.blockHeader)
 		}
+	}
+}
+
+func TestDeleteBlock(t *testing.T) {
+	cases := []struct {
+		initBlocks  []*types.BlockHeader
+		deleteBlock *types.BlockHeader
+		wantBlocks  []*types.BlockHeader
+	}{
+		{
+			initBlocks: []*types.BlockHeader{},
+			deleteBlock: &types.BlockHeader{
+				Version:   uint64(1),
+				Height:    uint64(1),
+				Timestamp: uint64(1528945000),
+			},
+			wantBlocks: []*types.BlockHeader{},
+		},
+		{
+			initBlocks: []*types.BlockHeader{
+				{
+					Version:   uint64(1),
+					Height:    uint64(1),
+					Timestamp: uint64(1528945000),
+				},
+				{
+					Version:   uint64(1),
+					Height:    uint64(1),
+					Timestamp: uint64(1528945005),
+				},
+				{
+					Version:   uint64(1),
+					Height:    uint64(1),
+					Timestamp: uint64(1528945010),
+				},
+			},
+			deleteBlock: &types.BlockHeader{
+				Version:   uint64(1),
+				Height:    uint64(1),
+				Timestamp: uint64(1528945000),
+			},
+			wantBlocks: []*types.BlockHeader{
+				{
+					Version:   uint64(1),
+					Height:    uint64(1),
+					Timestamp: uint64(1528945005),
+				},
+				{
+					Version:   uint64(1),
+					Height:    uint64(1),
+					Timestamp: uint64(1528945010),
+				},
+			},
+		},
+		{
+			initBlocks: []*types.BlockHeader{
+				{
+					Version:   uint64(1),
+					Height:    uint64(1),
+					Timestamp: uint64(1528945000),
+				},
+				{
+					Version:   uint64(1),
+					Height:    uint64(1),
+					Timestamp: uint64(1528945005),
+				},
+				{
+					Version:   uint64(1),
+					Height:    uint64(1),
+					Timestamp: uint64(1528945010),
+				},
+			},
+			deleteBlock: &types.BlockHeader{
+				Version:   uint64(1),
+				Height:    uint64(1),
+				Timestamp: uint64(1528945005),
+			},
+			wantBlocks: []*types.BlockHeader{
+				{
+					Version:   uint64(1),
+					Height:    uint64(1),
+					Timestamp: uint64(1528945000),
+				},
+				{
+					Version:   uint64(1),
+					Height:    uint64(1),
+					Timestamp: uint64(1528945010),
+				},
+			},
+		},
+		{
+			initBlocks: []*types.BlockHeader{
+				{
+					Version:   uint64(1),
+					Height:    uint64(1),
+					Timestamp: uint64(1528945000),
+				},
+				{
+					Version:   uint64(1),
+					Height:    uint64(1),
+					Timestamp: uint64(1528945005),
+				},
+				{
+					Version:   uint64(1),
+					Height:    uint64(1),
+					Timestamp: uint64(1528945010),
+				},
+			},
+			deleteBlock: &types.BlockHeader{
+				Version:   uint64(1),
+				Height:    uint64(1),
+				Timestamp: uint64(1528945010),
+			},
+			wantBlocks: []*types.BlockHeader{
+				{
+					Version:   uint64(1),
+					Height:    uint64(1),
+					Timestamp: uint64(1528945000),
+				},
+				{
+					Version:   uint64(1),
+					Height:    uint64(1),
+					Timestamp: uint64(1528945005),
+				},
+			},
+		},
+		{
+			initBlocks: []*types.BlockHeader{},
+			deleteBlock: &types.BlockHeader{
+				Version:   uint64(1),
+				Height:    uint64(1),
+				Timestamp: uint64(1528945030),
+			},
+			wantBlocks: []*types.BlockHeader{},
+		},
+		{
+			initBlocks: []*types.BlockHeader{
+				{
+					Version:   uint64(1),
+					Height:    uint64(1),
+					Timestamp: uint64(1528945000),
+				},
+			},
+			deleteBlock: &types.BlockHeader{
+				Version:   uint64(1),
+				Height:    uint64(1),
+				Timestamp: uint64(1528945030),
+			},
+			wantBlocks: []*types.BlockHeader{
+				{
+					Version:   uint64(1),
+					Height:    uint64(1),
+					Timestamp: uint64(1528945000),
+				},
+			},
+		},
+	}
+
+	for _, c := range cases {
+		verifyStatus := &bc.TransactionStatus{
+			VerifyStatus: []*bc.TxVerifyResult{
+				{StatusFail: false},
+			},
+		}
+		deleteBlock := &types.Block{
+			BlockHeader: types.BlockHeader{
+				Version:   c.deleteBlock.Version,
+				Height:    c.deleteBlock.Height,
+				Timestamp: c.deleteBlock.Timestamp,
+			},
+		}
+
+		dbA := dbm.NewDB("dbu", "leveldb", "tempA")
+		dbB := dbm.NewDB("dbc", "leveldb", "tempB")
+
+		storeA := NewStore(dbA)
+		storeB := NewStore(dbB)
+
+		for i := 0; i < len(c.initBlocks); i++ {
+			block := &types.Block{
+				BlockHeader: types.BlockHeader{
+					Version:   c.initBlocks[i].Version,
+					Height:    c.initBlocks[i].Height,
+					Timestamp: c.initBlocks[i].Timestamp,
+				},
+			}
+			if err := storeA.SaveBlock(block, verifyStatus); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		if err := storeA.DeleteBlock(deleteBlock); err != nil {
+			t.Fatal(err)
+		}
+
+		for i := 0; i < len(c.wantBlocks); i++ {
+			block := &types.Block{
+				BlockHeader: types.BlockHeader{
+					Version:   c.wantBlocks[i].Version,
+					Height:    c.wantBlocks[i].Height,
+					Timestamp: c.wantBlocks[i].Timestamp,
+				},
+			}
+			if err := storeB.SaveBlock(block, verifyStatus); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		iterA := dbA.Iterator()
+		iterB := dbB.Iterator()
+
+		for iterA.Next() && iterB.Next() {
+			require.Equal(t, iterA.Key(), iterB.Key())
+			require.Equal(t, iterA.Value(), iterB.Value())
+		}
+
+		if iterA.Next() || iterB.Next() {
+			t.Fatalf("why iterator is not finished")
+		}
+
+		dbA.Close()
+		os.RemoveAll("tempA")
+		dbB.Close()
+		os.RemoveAll("tempB")
 	}
 }

@@ -31,6 +31,7 @@ const (
 	recoveryKey //recoveryKey key for db store recovery info.
 )
 
+// pre-define variables
 var (
 	walletStore         = []byte("WS:")
 	SUTXOPrefix         = append(walletStore, sutxoPrefix, colon)
@@ -66,10 +67,12 @@ func calcUnconfirmedTxKey(formatKey string) []byte {
 	return append(UnconfirmedTxPrefix, []byte(formatKey)...)
 }
 
+// CalcGlobalTxIndexKey calculate tx hash index key
 func CalcGlobalTxIndexKey(txID string) []byte {
 	return append(GlobalTxIndexPrefix, []byte(txID)...)
 }
 
+// CalcGlobalTxIndex calcuate the block index + position index key
 func CalcGlobalTxIndex(blockHash *bc.Hash, position uint64) []byte {
 	txIdx := make([]byte, 40)
 	copy(txIdx[:32], blockHash.Bytes())
@@ -109,7 +112,7 @@ func (store *WalletStore) InitBatch() wallet.WalletStore {
 // CommitBatch commit batch
 func (store *WalletStore) CommitBatch() error {
 	if store.batch == nil {
-		return errors.New("WalletStore commit fail, store batch is nil.")
+		return errors.New("walletStore commit fail, store batch is nil")
 	}
 
 	store.batch.Write()
@@ -347,6 +350,7 @@ func (store *WalletStore) ListAccountUTXOs(id string, isSmartContract bool) ([]*
 	return confirmedUTXOs, nil
 }
 
+// ListTransactions list tx by filter args
 func (store *WalletStore) ListTransactions(accountID string, StartTxID string, count uint, unconfirmed bool) ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
 	var startKey []byte

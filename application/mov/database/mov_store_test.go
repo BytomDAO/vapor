@@ -10,10 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bytom/vapor/application/mov/common"
-	"github.com/bytom/vapor/consensus"
 	"github.com/bytom/vapor/database/leveldb"
 	dbm "github.com/bytom/vapor/database/leveldb"
-	chainjson "github.com/bytom/vapor/encoding/json"
 	"github.com/bytom/vapor/protocol/bc"
 	"github.com/bytom/vapor/protocol/bc/types"
 	"github.com/bytom/vapor/testutil"
@@ -28,31 +26,203 @@ var (
 	assetID6 = &bc.AssetID{V0: 6}
 	assetID7 = &bc.AssetID{V0: 7}
 	assetID8 = &bc.AssetID{V0: 8}
-)
 
-func TestCalcUTXOHash(t *testing.T) {
-	wantHash := "7cbaf92f950f2a6bededd6cc5ec08c924505f5365b0a8af963e1d52912c99667"
-	controlProgramStr := "0014ab5acbea076f269bfdc8ededbed7d0a13e6e0b19"
-
-	var controlProgram chainjson.HexBytes
-	controlProgram.UnmarshalText([]byte(controlProgramStr))
-
-	sourceID := testutil.MustDecodeHash("ca2faf5fcbf8ee2b43560a32594f608528b12a1fe79cee85252564f886f91060")
-	order := &common.Order{
-		FromAssetID: consensus.BTMAssetID,
-		Utxo: &common.MovUtxo{
-			SourceID:       &sourceID,
-			SourcePos:      0,
-			Amount:         31249300000,
-			ControlProgram: controlProgram[:],
+	mockOrders = []*common.Order{
+		&common.Order{
+			FromAssetID:      assetID1,
+			ToAssetID:        assetID2,
+			RatioNumerator:   100090,
+			RatioDenominator: 100000,
+			Utxo: &common.MovUtxo{
+				SourceID:       &bc.Hash{V0: 21},
+				Amount:         1,
+				SourcePos:      0,
+				ControlProgram: []byte("aa"),
+			},
+		},
+		&common.Order{
+			FromAssetID:      assetID1,
+			ToAssetID:        assetID2,
+			RatioNumerator:   90,
+			RatioDenominator: 100000,
+			Utxo: &common.MovUtxo{
+				SourceID:       &bc.Hash{V0: 22},
+				Amount:         1,
+				SourcePos:      0,
+				ControlProgram: []byte("aa"),
+			},
+		},
+		&common.Order{
+			FromAssetID:      assetID1,
+			ToAssetID:        assetID2,
+			RatioNumerator:   97,
+			RatioDenominator: 100000,
+			Utxo: &common.MovUtxo{
+				SourceID:       &bc.Hash{V0: 23},
+				Amount:         1,
+				SourcePos:      0,
+				ControlProgram: []byte("aa"),
+			},
+		},
+		&common.Order{
+			FromAssetID:      assetID1,
+			ToAssetID:        assetID2,
+			RatioNumerator:   98,
+			RatioDenominator: 100000,
+			Utxo: &common.MovUtxo{
+				SourceID:       &bc.Hash{V0: 13},
+				Amount:         1,
+				SourcePos:      0,
+				ControlProgram: []byte("aa"),
+			},
+		},
+		&common.Order{
+			FromAssetID:      assetID1,
+			ToAssetID:        assetID2,
+			RatioNumerator:   98,
+			RatioDenominator: 100000,
+			Utxo: &common.MovUtxo{
+				SourceID:       &bc.Hash{V0: 24},
+				Amount:         10,
+				SourcePos:      1,
+				ControlProgram: []byte("aa"),
+			},
+		},
+		&common.Order{
+			FromAssetID:      assetID1,
+			ToAssetID:        assetID2,
+			RatioNumerator:   99,
+			RatioDenominator: 100000,
+			Utxo: &common.MovUtxo{
+				SourceID:       &bc.Hash{V0: 24},
+				Amount:         1,
+				SourcePos:      0,
+				ControlProgram: []byte("aa"),
+			},
+		},
+		&common.Order{
+			FromAssetID:      assetID1,
+			ToAssetID:        assetID2,
+			RatioNumerator:   96,
+			RatioDenominator: 100000,
+			Utxo: &common.MovUtxo{
+				SourceID:       &bc.Hash{V0: 25},
+				Amount:         1,
+				SourcePos:      0,
+				ControlProgram: []byte("aa"),
+			},
+		},
+		&common.Order{
+			FromAssetID:      assetID1,
+			ToAssetID:        assetID2,
+			RatioNumerator:   95,
+			RatioDenominator: 100000,
+			Utxo: &common.MovUtxo{
+				SourceID:       &bc.Hash{V0: 26},
+				Amount:         1,
+				SourcePos:      0,
+				ControlProgram: []byte("aa"),
+			},
+		},
+		&common.Order{
+			FromAssetID:      assetID1,
+			ToAssetID:        assetID2,
+			RatioNumerator:   90,
+			RatioDenominator: 100000,
+			Utxo: &common.MovUtxo{
+				SourceID:       &bc.Hash{V0: 1},
+				Amount:         1,
+				SourcePos:      0,
+				ControlProgram: []byte("aa"),
+			},
+		},
+		&common.Order{
+			FromAssetID:      assetID1,
+			ToAssetID:        assetID2,
+			RatioNumerator:   90,
+			RatioDenominator: 100000,
+			Utxo: &common.MovUtxo{
+				SourceID:       &bc.Hash{V0: 2},
+				Amount:         1,
+				SourcePos:      0,
+				ControlProgram: []byte("aa"),
+			},
+		},
+		&common.Order{
+			FromAssetID:      assetID3,
+			ToAssetID:        assetID2,
+			RatioNumerator:   96,
+			RatioDenominator: 100000,
+			Utxo: &common.MovUtxo{
+				SourceID:       &bc.Hash{V0: 33},
+				Amount:         1,
+				SourcePos:      0,
+				ControlProgram: []byte("aa"),
+			},
+		},
+		&common.Order{
+			FromAssetID:      assetID4,
+			ToAssetID:        assetID2,
+			RatioNumerator:   95,
+			RatioDenominator: 100000,
+			Utxo: &common.MovUtxo{
+				SourceID:       &bc.Hash{V0: 34},
+				Amount:         1,
+				SourcePos:      0,
+				ControlProgram: []byte("aa"),
+			},
+		},
+		&common.Order{
+			FromAssetID:      assetID4,
+			ToAssetID:        assetID2,
+			RatioNumerator:   96,
+			RatioDenominator: 100000,
+			Utxo: &common.MovUtxo{
+				SourceID:       &bc.Hash{V0: 36},
+				Amount:         1,
+				SourcePos:      0,
+				ControlProgram: []byte("aa"),
+			},
+		},
+		&common.Order{
+			FromAssetID:      assetID5,
+			ToAssetID:        assetID2,
+			RatioNumerator:   96,
+			RatioDenominator: 100000,
+			Utxo: &common.MovUtxo{
+				SourceID:       &bc.Hash{V0: 37},
+				Amount:         1,
+				SourcePos:      0,
+				ControlProgram: []byte("aa"),
+			},
+		},
+		&common.Order{
+			FromAssetID:      assetID6,
+			ToAssetID:        assetID2,
+			RatioNumerator:   98,
+			RatioDenominator: 100000,
+			Utxo: &common.MovUtxo{
+				SourceID:       &bc.Hash{V0: 38},
+				Amount:         1,
+				SourcePos:      0,
+				ControlProgram: []byte("aa"),
+			},
 		},
 	}
+)
 
-	hash := calcUTXOHash(order)
-	if hash.String() != wantHash {
-		t.Fatal("The function is incorrect")
+func TestGetAssetIDFromTradePairKey(t *testing.T) {
+	b := calcTradePairKey(assetID1, assetID2)
+	gotA := getAssetIDFromTradePairKey(b, fromAssetIDPos)
+	gotB := getAssetIDFromTradePairKey(b, toAssetIDPos)
+
+	if *gotA != *assetID1 {
+		t.Fatalf("got wrong from asset id got %s, want %s", gotA.String(), assetID1.String())
 	}
 
+	if *gotB != *assetID2 {
+		t.Fatalf("got wrong to asset id got %s, want %s", gotB.String(), assetID2.String())
+	}
 }
 
 func TestSortOrderKey(t *testing.T) {
@@ -75,15 +245,16 @@ func TestSortOrderKey(t *testing.T) {
 	}
 
 	cases := []struct {
-		orders []common.Order
+		orders []*common.Order
 		want   []expectedData
 	}{
 		{
-			orders: []common.Order{
-				common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        1.00090,
+			orders: []*common.Order{
+				&common.Order{
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   100090,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 21},
 						Amount:         1,
@@ -91,10 +262,11 @@ func TestSortOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00090,
+				&common.Order{
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   90,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 22},
 						Amount:         1,
@@ -102,10 +274,11 @@ func TestSortOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00097,
+				&common.Order{
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   97,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 23},
 						Amount:         1,
@@ -113,10 +286,11 @@ func TestSortOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00098,
+				&common.Order{
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   98,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 13},
 						Amount:         1,
@@ -124,10 +298,11 @@ func TestSortOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00098,
+				&common.Order{
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   98,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 24},
 						Amount:         10,
@@ -135,10 +310,47 @@ func TestSortOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00099,
+				&common.Order{
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   98,
+					RatioDenominator: 100000,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 25},
+						Amount:         10,
+						SourcePos:      1,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   98,
+					RatioDenominator: 100000,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 26},
+						Amount:         10,
+						SourcePos:      1,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   98,
+					RatioDenominator: 100000,
+					Utxo: &common.MovUtxo{
+						SourceID:       &bc.Hash{V0: 27},
+						Amount:         10,
+						SourcePos:      1,
+						ControlProgram: []byte("aa"),
+					},
+				},
+				&common.Order{
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   99,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 24},
 						Amount:         1,
@@ -146,10 +358,11 @@ func TestSortOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00096,
+				&common.Order{
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   96,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 25},
 						Amount:         1,
@@ -157,10 +370,11 @@ func TestSortOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00095,
+				&common.Order{
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   95,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 26},
 						Amount:         1,
@@ -168,10 +382,11 @@ func TestSortOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00091,
+				&common.Order{
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   91,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 26},
 						Amount:         1,
@@ -179,10 +394,11 @@ func TestSortOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00092,
+				&common.Order{
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   92,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 27},
 						Amount:         1,
@@ -190,10 +406,11 @@ func TestSortOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00093,
+				&common.Order{
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   93,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 28},
 						Amount:         1,
@@ -201,10 +418,11 @@ func TestSortOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00094,
+				&common.Order{
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   94,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 29},
 						Amount:         1,
@@ -212,10 +430,11 @@ func TestSortOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00077,
+				&common.Order{
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   77,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 30},
 						Amount:         1,
@@ -223,10 +442,11 @@ func TestSortOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        0.00088,
+				&common.Order{
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   88,
+					RatioDenominator: 100000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 31},
 						Amount:         1,
@@ -234,10 +454,11 @@ func TestSortOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        999999.9521,
+				&common.Order{
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   9999999521,
+					RatioDenominator: 10000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 32},
 						Amount:         1,
@@ -245,10 +466,11 @@ func TestSortOrderKey(t *testing.T) {
 						ControlProgram: []byte("aa"),
 					},
 				},
-				common.Order{
-					FromAssetID: &bc.AssetID{V0: 1},
-					ToAssetID:   &bc.AssetID{V0: 0},
-					Rate:        888888.7954,
+				&common.Order{
+					FromAssetID:      &bc.AssetID{V0: 1},
+					ToAssetID:        &bc.AssetID{V0: 0},
+					RatioNumerator:   8888887954,
+					RatioDenominator: 10000,
 					Utxo: &common.MovUtxo{
 						SourceID:       &bc.Hash{V0: 33},
 						Amount:         1,
@@ -300,7 +522,19 @@ func TestSortOrderKey(t *testing.T) {
 				},
 				expectedData{
 					rate:     0.00098,
+					utxoHash: "14b51a6103f75d9cacdf0f9551467588c687ed3b029e25c646d276720569e227",
+				},
+				expectedData{
+					rate:     0.00098,
 					utxoHash: "1fa9fae83d0a5401a4e92f80636966486e763eecca588aa11dff02b415320602",
+				},
+				expectedData{
+					rate:     0.00098,
+					utxoHash: "6687d18ddbe4e7381a844e393ca3032a412285c9da6988eff182106e28ba09ca",
+				},
+				expectedData{
+					rate:     0.00098,
+					utxoHash: "841b1de7c871dfe6e2d1886809d9ae12ec45e570233b03879305232b096fda43",
 				},
 				expectedData{
 					rate:     0.00098,
@@ -328,7 +562,7 @@ func TestSortOrderKey(t *testing.T) {
 
 	for i, c := range cases {
 		for _, order := range c.orders {
-			key := calcOrderKey(order.FromAssetID, order.ToAssetID, calcUTXOHash(&order), order.Rate)
+			key := calcOrderKey(order.FromAssetID, order.ToAssetID, order.UTXOHash(), order.Rate())
 			data, err := json.Marshal(order.Utxo)
 			if err != nil {
 				t.Fatal(err)
@@ -338,7 +572,6 @@ func TestSortOrderKey(t *testing.T) {
 		}
 
 		got := []expectedData{}
-
 		itr := db.IteratorPrefixWithStart(nil, nil, false)
 		for itr.Next() {
 			key := itr.Key()
@@ -347,9 +580,8 @@ func TestSortOrderKey(t *testing.T) {
 			copy(b[:], key[pos+8:])
 			utxoHash := bc.NewHash(b)
 
-			rate := getRateFromOrderKey(key, ordersPrefix)
 			got = append(got, expectedData{
-				rate:     rate,
+				rate:     getRateFromOrderKey(key),
 				utxoHash: utxoHash.String(),
 			})
 		}
@@ -358,7 +590,6 @@ func TestSortOrderKey(t *testing.T) {
 		if !testutil.DeepEqual(c.want, got) {
 			t.Errorf("case %v: got recovery status, got: %v, want: %v.", i, got, c.want)
 		}
-
 	}
 }
 
@@ -378,185 +609,25 @@ func TestMovStore(t *testing.T) {
 		{
 			desc: "add order",
 			addOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        1.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 21},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 22},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00097,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 23},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 13},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         10,
-						SourcePos:      1,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00099,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00096,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 25},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00095,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 26},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[0],
+				mockOrders[1],
+				mockOrders[2],
+				mockOrders[3],
+				mockOrders[4],
+				mockOrders[5],
+				mockOrders[6],
+				mockOrders[7],
 			},
 			blockHeader: &types.BlockHeader{Height: 1, PreviousBlockHash: bc.Hash{V0: 524821139490765641, V1: 2484214155808702787, V2: 9108473449351508820, V3: 7972721253564512122}},
 			wantOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 22},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00095,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 26},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00096,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 25},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00097,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 23},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 13},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         10,
-						SourcePos:      1,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00099,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        1.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 21},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[1],
+				mockOrders[7],
+				mockOrders[6],
+				mockOrders[2],
+				mockOrders[3],
+				mockOrders[4],
+				mockOrders[5],
+				mockOrders[0],
 			},
 			wantTradePairs: []*common.TradePair{
 				&common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2, Count: 8},
@@ -566,94 +637,14 @@ func TestMovStore(t *testing.T) {
 		{
 			desc: "del some order",
 			beforeOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        1.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 21},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 22},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00097,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 23},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 13},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         10,
-						SourcePos:      1,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00099,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00096,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 25},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00095,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 26},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[0],
+				mockOrders[1],
+				mockOrders[2],
+				mockOrders[3],
+				mockOrders[4],
+				mockOrders[5],
+				mockOrders[6],
+				mockOrders[7],
 			},
 			beforeTradePairs: []*common.TradePair{
 				&common.TradePair{
@@ -664,97 +655,17 @@ func TestMovStore(t *testing.T) {
 			},
 			beforeDBStatus: &common.MovDatabaseState{Height: 1, Hash: &bc.Hash{V0: 14213576368347360351, V1: 16287398171800437029, V2: 9513543230620030445, V3: 8534035697182508177}},
 			delOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        1.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 21},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 22},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00097,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 23},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[0],
+				mockOrders[1],
+				mockOrders[2],
 			},
 			blockHeader: &types.BlockHeader{Height: 2, PreviousBlockHash: bc.Hash{V0: 14213576368347360351, V1: 16287398171800437029, V2: 9513543230620030445, V3: 8534035697182508177}},
 			wantOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00095,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 26},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00096,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 25},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 13},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         10,
-						SourcePos:      1,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00099,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[7],
+				mockOrders[6],
+				mockOrders[3],
+				mockOrders[4],
+				mockOrders[5],
 			},
 			wantTradePairs: []*common.TradePair{
 				&common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2, Count: 5},
@@ -764,94 +675,14 @@ func TestMovStore(t *testing.T) {
 		{
 			desc: "del all order",
 			beforeOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        1.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 21},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 22},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00097,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 23},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 13},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         10,
-						SourcePos:      1,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00099,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00096,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 25},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00095,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 26},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[0],
+				mockOrders[1],
+				mockOrders[2],
+				mockOrders[3],
+				mockOrders[4],
+				mockOrders[5],
+				mockOrders[6],
+				mockOrders[7],
 			},
 			beforeTradePairs: []*common.TradePair{
 				&common.TradePair{
@@ -862,94 +693,14 @@ func TestMovStore(t *testing.T) {
 			},
 			beforeDBStatus: &common.MovDatabaseState{Height: 1, Hash: &bc.Hash{V0: 14213576368347360351, V1: 16287398171800437029, V2: 9513543230620030445, V3: 8534035697182508177}},
 			delOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        1.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 21},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 22},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00097,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 23},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 13},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         10,
-						SourcePos:      1,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00099,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00096,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 25},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00095,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 26},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[0],
+				mockOrders[1],
+				mockOrders[2],
+				mockOrders[3],
+				mockOrders[4],
+				mockOrders[5],
+				mockOrders[6],
+				mockOrders[7],
 			},
 			blockHeader:    &types.BlockHeader{Height: 2, PreviousBlockHash: bc.Hash{V0: 14213576368347360351, V1: 16287398171800437029, V2: 9513543230620030445, V3: 8534035697182508177}},
 			wantOrders:     []*common.Order{},
@@ -957,96 +708,16 @@ func TestMovStore(t *testing.T) {
 			wantDBState:    &common.MovDatabaseState{Height: 2, Hash: &bc.Hash{V0: 3724755213446347384, V1: 158878632373345042, V2: 18283800951484248781, V3: 7520797730449067221}},
 		},
 		{
-			desc: "Add and delete the same trade pair", //Add and delete different transaction pairs
+			desc: "Add and delete the same trade pair", // Add and delete different transaction pairs
 			beforeOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        1.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 21},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 22},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00097,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 23},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 13},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         10,
-						SourcePos:      1,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00099,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00096,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 25},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00095,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 26},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[0],
+				mockOrders[1],
+				mockOrders[2],
+				mockOrders[3],
+				mockOrders[4],
+				mockOrders[5],
+				mockOrders[6],
+				mockOrders[7],
 			},
 			beforeTradePairs: []*common.TradePair{
 				&common.TradePair{
@@ -1057,143 +728,23 @@ func TestMovStore(t *testing.T) {
 			},
 			beforeDBStatus: &common.MovDatabaseState{Height: 1, Hash: &bc.Hash{V0: 14213576368347360351, V1: 16287398171800437029, V2: 9513543230620030445, V3: 8534035697182508177}},
 			addOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        1.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 1},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 2},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[8],
+				mockOrders[9],
 			},
 			delOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        1.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 21},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 22},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00097,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 23},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 13},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         10,
-						SourcePos:      1,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00099,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00096,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 25},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00095,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 26},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[0],
+				mockOrders[1],
+				mockOrders[2],
+				mockOrders[3],
+				mockOrders[4],
+				mockOrders[5],
+				mockOrders[6],
+				mockOrders[7],
 			},
 			blockHeader: &types.BlockHeader{Height: 2, PreviousBlockHash: bc.Hash{V0: 14213576368347360351, V1: 16287398171800437029, V2: 9513543230620030445, V3: 8534035697182508177}},
 			wantOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 2},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        1.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 1},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[9],
+				mockOrders[8],
 			},
 			wantTradePairs: []*common.TradePair{
 				&common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2, Count: 2},
@@ -1203,116 +754,16 @@ func TestMovStore(t *testing.T) {
 		{
 			desc: "Add and delete different transaction pairs",
 			beforeOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        1.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 21},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 22},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00097,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 23},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 13},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         10,
-						SourcePos:      1,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00099,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00096,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 25},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00095,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 26},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID3,
-					ToAssetID:   assetID2,
-					Rate:        0.00096,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 33},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID4,
-					ToAssetID:   assetID2,
-					Rate:        0.00095,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 34},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[0],
+				mockOrders[1],
+				mockOrders[2],
+				mockOrders[3],
+				mockOrders[4],
+				mockOrders[5],
+				mockOrders[6],
+				mockOrders[7],
+				mockOrders[10],
+				mockOrders[11],
 			},
 			beforeTradePairs: []*common.TradePair{
 				&common.TradePair{
@@ -1333,187 +784,27 @@ func TestMovStore(t *testing.T) {
 			},
 			beforeDBStatus: &common.MovDatabaseState{Height: 1, Hash: &bc.Hash{V0: 14213576368347360351, V1: 16287398171800437029, V2: 9513543230620030445, V3: 8534035697182508177}},
 			addOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID4,
-					ToAssetID:   assetID2,
-					Rate:        0.00096,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 36},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID5,
-					ToAssetID:   assetID2,
-					Rate:        0.00096,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 37},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID6,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 38},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[12],
+				mockOrders[13],
+				mockOrders[14],
 			},
 			delOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        1.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 21},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 22},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00097,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 23},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 13},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         10,
-						SourcePos:      1,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00099,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00096,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 25},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00095,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 26},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID3,
-					ToAssetID:   assetID2,
-					Rate:        0.00096,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 33},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[0],
+				mockOrders[1],
+				mockOrders[2],
+				mockOrders[3],
+				mockOrders[4],
+				mockOrders[5],
+				mockOrders[6],
+				mockOrders[7],
+				mockOrders[10],
 			},
 			blockHeader: &types.BlockHeader{Height: 2, PreviousBlockHash: bc.Hash{V0: 14213576368347360351, V1: 16287398171800437029, V2: 9513543230620030445, V3: 8534035697182508177}},
 			wantOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID4,
-					ToAssetID:   assetID2,
-					Rate:        0.00095,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 34},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID4,
-					ToAssetID:   assetID2,
-					Rate:        0.00096,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 36},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID5,
-					ToAssetID:   assetID2,
-					Rate:        0.00096,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 37},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID6,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 38},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[11],
+				mockOrders[12],
+				mockOrders[13],
+				mockOrders[14],
 			},
 			wantTradePairs: []*common.TradePair{
 				&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID2, Count: 2},
@@ -1535,18 +826,18 @@ func TestMovStore(t *testing.T) {
 	defer os.RemoveAll("temp")
 	for i, c := range cases {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
-		movStore, err := NewMovStore(testDB, height, &hash)
-		if err != nil {
-			t.Fatalf("case %d: NewMovStore error %v.", i, err)
+		movStore := NewLevelDBMovStore(testDB)
+		if err := movStore.InitDBState(height, &hash); err != nil {
+			t.Fatalf("case %d: InitDBState error %v.", i, err)
 		}
 
 		batch := movStore.db.NewBatch()
-		tradePairsCnt := make(map[common.TradePair]int)
+		tradePairsCnt := make(map[string]*common.TradePair)
 		movStore.addOrders(batch, c.beforeOrders, tradePairsCnt)
 		if len(c.beforeOrders) > 0 {
-			tradePairsCnt = make(map[common.TradePair]int)
+			tradePairsCnt = make(map[string]*common.TradePair)
 			for _, tradePair := range c.beforeTradePairs {
-				tradePairsCnt[*tradePair] = tradePair.Count
+				tradePairsCnt[tradePair.Key()] = tradePair
 			}
 			movStore.updateTradePairs(batch, tradePairsCnt)
 			movStore.saveMovDatabaseState(batch, c.beforeDBStatus)
@@ -1559,35 +850,35 @@ func TestMovStore(t *testing.T) {
 
 		var gotOrders []*common.Order
 
-		tmp, err := movStore.ListOrders(&common.Order{FromAssetID: assetID1, ToAssetID: assetID2, Rate: 0})
+		tmp, err := movStore.ListOrders(&common.Order{FromAssetID: assetID1, ToAssetID: assetID2, RatioNumerator: 0, RatioDenominator: 1})
 		if err != nil {
 			t.Fatalf("case %d: ListOrders(assetID1 and assetID2) error %v.", i, err)
 		}
 
 		gotOrders = append(gotOrders, tmp...)
 
-		tmp, err = movStore.ListOrders(&common.Order{FromAssetID: assetID3, ToAssetID: assetID2, Rate: 0})
+		tmp, err = movStore.ListOrders(&common.Order{FromAssetID: assetID3, ToAssetID: assetID2, RatioNumerator: 0, RatioDenominator: 1})
 		if err != nil {
 			t.Fatalf("case %d: ListOrders(assetID3 and assetID2)  error %v.", i, err)
 		}
 
 		gotOrders = append(gotOrders, tmp...)
 
-		tmp, err = movStore.ListOrders(&common.Order{FromAssetID: assetID4, ToAssetID: assetID2, Rate: 0})
+		tmp, err = movStore.ListOrders(&common.Order{FromAssetID: assetID4, ToAssetID: assetID2, RatioNumerator: 0, RatioDenominator: 1})
 		if err != nil {
 			t.Fatalf("case %d: ListOrders(assetID4 and assetID2)  error %v.", i, err)
 		}
 
 		gotOrders = append(gotOrders, tmp...)
 
-		tmp, err = movStore.ListOrders(&common.Order{FromAssetID: assetID5, ToAssetID: assetID2, Rate: 0})
+		tmp, err = movStore.ListOrders(&common.Order{FromAssetID: assetID5, ToAssetID: assetID2, RatioNumerator: 0, RatioDenominator: 1})
 		if err != nil {
 			t.Fatalf("case %d: ListOrders(assetID5 and assetID2)  error %v.", i, err)
 		}
 
 		gotOrders = append(gotOrders, tmp...)
 
-		tmp, err = movStore.ListOrders(&common.Order{FromAssetID: assetID6, ToAssetID: assetID2, Rate: 0})
+		tmp, err = movStore.ListOrders(&common.Order{FromAssetID: assetID6, ToAssetID: assetID2, RatioNumerator: 0, RatioDenominator: 1})
 		if err != nil {
 			t.Fatalf("case %d: ListOrders(assetID6 and assetID2)  error %v.", i, err)
 		}
@@ -1636,324 +927,45 @@ func TestListOrders(t *testing.T) {
 		{
 			desc: "query from first",
 			storeOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        1.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 21},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 22},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00097,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 23},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 13},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         10,
-						SourcePos:      1,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00099,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00096,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 25},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00095,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 26},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[0],
+				mockOrders[1],
+				mockOrders[2],
+				mockOrders[3],
+				mockOrders[4],
+				mockOrders[5],
+				mockOrders[6],
+				mockOrders[7],
+				mockOrders[10],
 			},
 			query: &common.Order{FromAssetID: assetID1, ToAssetID: assetID2},
 			wantOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 22},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00095,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 26},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00096,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 25},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00097,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 23},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 13},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         10,
-						SourcePos:      1,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00099,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        1.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 21},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[1],
+				mockOrders[7],
+				mockOrders[6],
+				mockOrders[2],
+				mockOrders[3],
+				mockOrders[4],
+				mockOrders[5],
+				mockOrders[0],
 			},
 		},
 		{
 			desc: "query from middle",
 			storeOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        1.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 21},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 22},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00097,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 23},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 13},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         10,
-						SourcePos:      1,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00099,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00096,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 25},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00095,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 26},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[0],
+				mockOrders[1],
+				mockOrders[2],
+				mockOrders[3],
+				mockOrders[4],
+				mockOrders[5],
+				mockOrders[6],
+				mockOrders[7],
 			},
-			query: &common.Order{
-				FromAssetID: assetID1,
-				ToAssetID:   assetID2,
-				Rate:        0.00098,
-				Utxo: &common.MovUtxo{
-					SourceID:       &bc.Hash{V0: 13},
-					Amount:         1,
-					SourcePos:      0,
-					ControlProgram: []byte("aa"),
-				},
-			},
+			query: mockOrders[3],
 			wantOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         10,
-						SourcePos:      1,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00099,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        1.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 21},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[4],
+				mockOrders[5],
+				mockOrders[0],
 			},
 		},
 	}
@@ -1969,13 +981,13 @@ func TestListOrders(t *testing.T) {
 	defer os.RemoveAll("temp")
 	for i, c := range cases {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
-		movStore, err := NewMovStore(testDB, height, &hash)
-		if err != nil {
-			t.Fatalf("case %d: NewMovStore error %v.", i, err)
+		movStore := NewLevelDBMovStore(testDB)
+		if err := movStore.InitDBState(height, &hash); err != nil {
+			t.Fatalf("case %d: InitDBState error %v.", i, err)
 		}
 
 		batch := movStore.db.NewBatch()
-		tradePairsCnt := make(map[common.TradePair]int)
+		tradePairsCnt := make(map[string]*common.TradePair)
 		movStore.addOrders(batch, c.storeOrders, tradePairsCnt)
 		movStore.updateTradePairs(batch, tradePairsCnt)
 		batch.Write()
@@ -2004,369 +1016,49 @@ func TestAddOrders(t *testing.T) {
 		{
 			desc: "empty",
 			addOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        1.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 21},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 22},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00097,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 23},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 13},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         10,
-						SourcePos:      1,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00099,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00096,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 25},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00095,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 26},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[0],
+				mockOrders[1],
+				mockOrders[2],
+				mockOrders[3],
+				mockOrders[4],
+				mockOrders[5],
+				mockOrders[6],
+				mockOrders[7],
 			},
 			wantOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 22},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00095,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 26},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00096,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 25},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00097,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 23},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 13},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         10,
-						SourcePos:      1,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00099,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        1.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 21},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[1],
+				mockOrders[7],
+				mockOrders[6],
+				mockOrders[2],
+				mockOrders[3],
+				mockOrders[4],
+				mockOrders[5],
+				mockOrders[0],
 			},
 		},
 		{
 			desc: "Stored data already exists",
 			beforeOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        1.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 21},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 22},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00097,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 23},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 13},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[0],
+				mockOrders[1],
+				mockOrders[2],
+				mockOrders[3],
 			},
 			addOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         10,
-						SourcePos:      1,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00099,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00096,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 25},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00095,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 26},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[4],
+				mockOrders[5],
+				mockOrders[6],
+				mockOrders[7],
 			},
 			wantOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 22},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00095,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 26},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00096,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 25},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00097,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 23},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 13},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         10,
-						SourcePos:      1,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00099,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        1.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 21},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[1],
+				mockOrders[7],
+				mockOrders[6],
+				mockOrders[2],
+				mockOrders[3],
+				mockOrders[4],
+				mockOrders[5],
+				mockOrders[0],
 			},
 		},
 	}
@@ -2382,18 +1074,18 @@ func TestAddOrders(t *testing.T) {
 	defer os.RemoveAll("temp")
 	for i, c := range cases {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
-		movStore, err := NewMovStore(testDB, height, &hash)
-		if err != nil {
-			t.Fatalf("case %d: NewMovStore error %v.", i, err)
+		movStore := NewLevelDBMovStore(testDB)
+		if err := movStore.InitDBState(height, &hash); err != nil {
+			t.Fatalf("case %d: InitDBState error %v.", i, err)
 		}
 
 		batch := movStore.db.NewBatch()
-		tradePairsCnt := make(map[common.TradePair]int)
+		tradePairsCnt := make(map[string]*common.TradePair)
 		movStore.addOrders(batch, c.beforeOrders, tradePairsCnt)
 		movStore.updateTradePairs(batch, tradePairsCnt)
 		batch.Write()
 
-		tradePairsCnt = make(map[common.TradePair]int)
+		tradePairsCnt = make(map[string]*common.TradePair)
 		movStore.addOrders(batch, c.addOrders, tradePairsCnt)
 		batch.Write()
 
@@ -2422,28 +1114,8 @@ func TestDelOrders(t *testing.T) {
 		{
 			desc: "empty",
 			delOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        1.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 21},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 22},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[0],
+				mockOrders[1],
 			},
 			wantOrders: []*common.Order{},
 			err:        errors.New("don't find trade pair"),
@@ -2451,260 +1123,40 @@ func TestDelOrders(t *testing.T) {
 		{
 			desc: "Delete existing data",
 			beforeOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 22},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00095,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 26},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00096,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 25},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00097,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 23},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 13},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         10,
-						SourcePos:      1,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00099,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        1.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 21},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[1],
+				mockOrders[7],
+				mockOrders[6],
+				mockOrders[2],
+				mockOrders[3],
+				mockOrders[4],
+				mockOrders[5],
+				mockOrders[0],
 			},
 			delOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         10,
-						SourcePos:      1,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00099,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00096,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 25},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00095,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 26},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[4],
+				mockOrders[5],
+				mockOrders[6],
+				mockOrders[7],
 			},
 			wantOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 22},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00097,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 23},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00098,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 13},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        1.00090,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 21},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[1],
+				mockOrders[2],
+				mockOrders[3],
+				mockOrders[0],
 			},
 			err: nil,
 		},
 		{
 			desc: "Delete all data",
 			beforeOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00095,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 26},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00096,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 25},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00099,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[7],
+				mockOrders[6],
+				mockOrders[5],
 			},
 			delOrders: []*common.Order{
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00099,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 24},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00096,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 25},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
-				&common.Order{
-					FromAssetID: assetID1,
-					ToAssetID:   assetID2,
-					Rate:        0.00095,
-					Utxo: &common.MovUtxo{
-						SourceID:       &bc.Hash{V0: 26},
-						Amount:         1,
-						SourcePos:      0,
-						ControlProgram: []byte("aa"),
-					},
-				},
+				mockOrders[5],
+				mockOrders[6],
+				mockOrders[7],
 			},
 			wantOrders: []*common.Order{},
 			err:        nil,
@@ -2722,18 +1174,18 @@ func TestDelOrders(t *testing.T) {
 	defer os.RemoveAll("temp")
 	for i, c := range cases {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
-		movStore, err := NewMovStore(testDB, height, &hash)
-		if err != nil {
-			t.Fatalf("case %d: NewMovStore error %v.", i, err)
+		movStore := NewLevelDBMovStore(testDB)
+		if err := movStore.InitDBState(height, &hash); err != nil {
+			t.Fatalf("case %d: InitDBState error %v.", i, err)
 		}
 
 		batch := movStore.db.NewBatch()
-		tradePairsCnt := make(map[common.TradePair]int)
+		tradePairsCnt := make(map[string]*common.TradePair)
 		movStore.addOrders(batch, c.beforeOrders, tradePairsCnt)
 		movStore.updateTradePairs(batch, tradePairsCnt)
 		batch.Write()
 
-		tradePairsCnt = make(map[common.TradePair]int)
+		tradePairsCnt = make(map[string]*common.TradePair)
 		movStore.deleteOrders(batch, c.delOrders, tradePairsCnt)
 		movStore.updateTradePairs(batch, tradePairsCnt)
 		batch.Write()
@@ -2755,7 +1207,7 @@ func TestDelOrders(t *testing.T) {
 func TestListTradePairsWithStart(t *testing.T) {
 	cases := []struct {
 		desc            string
-		storeTradePairs map[common.TradePair]int
+		storeTradePairs map[string]*common.TradePair
 		query           *common.TradePair
 		wantTradePairs  []*common.TradePair
 	}{
@@ -2766,13 +1218,13 @@ func TestListTradePairsWithStart(t *testing.T) {
 		},
 		{
 			desc: "query from first",
-			storeTradePairs: map[common.TradePair]int{
-				common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}: 1,
-				common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3}: 2,
-				common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4}: 3,
-				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}: 4,
-				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}: 5,
-				common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}: 6,
+			storeTradePairs: map[string]*common.TradePair{
+				(&common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}).Key(): {FromAssetID: assetID1, ToAssetID: assetID2, Count: 1},
+				(&common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3}).Key(): {FromAssetID: assetID2, ToAssetID: assetID3, Count: 2},
+				(&common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4}).Key(): {FromAssetID: assetID3, ToAssetID: assetID4, Count: 3},
+				(&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}).Key(): {FromAssetID: assetID4, ToAssetID: assetID5, Count: 4},
+				(&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}).Key(): {FromAssetID: assetID4, ToAssetID: assetID6, Count: 5},
+				(&common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}).Key(): {FromAssetID: assetID5, ToAssetID: assetID7, Count: 6},
 			},
 			query: &common.TradePair{},
 			wantTradePairs: []*common.TradePair{
@@ -2786,14 +1238,14 @@ func TestListTradePairsWithStart(t *testing.T) {
 		},
 		{
 			desc: "query from middle",
-			storeTradePairs: map[common.TradePair]int{
-				common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}: 1,
-				common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3}: 2,
-				common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4}: 3,
-				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}: 4,
-				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}: 5,
-				common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}: 6,
-				common.TradePair{FromAssetID: assetID6, ToAssetID: assetID8}: 7,
+			storeTradePairs: map[string]*common.TradePair{
+				(&common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}).Key(): {FromAssetID: assetID1, ToAssetID: assetID2, Count: 1},
+				(&common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3}).Key(): {FromAssetID: assetID2, ToAssetID: assetID3, Count: 2},
+				(&common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4}).Key(): {FromAssetID: assetID3, ToAssetID: assetID4, Count: 3},
+				(&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}).Key(): {FromAssetID: assetID4, ToAssetID: assetID5, Count: 4},
+				(&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}).Key(): {FromAssetID: assetID4, ToAssetID: assetID6, Count: 5},
+				(&common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}).Key(): {FromAssetID: assetID5, ToAssetID: assetID7, Count: 6},
+				(&common.TradePair{FromAssetID: assetID6, ToAssetID: assetID8}).Key(): {FromAssetID: assetID6, ToAssetID: assetID8, Count: 7},
 			},
 			query: &common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4, Count: 3},
 			wantTradePairs: []*common.TradePair{
@@ -2816,9 +1268,9 @@ func TestListTradePairsWithStart(t *testing.T) {
 	defer os.RemoveAll("temp")
 	for i, c := range cases {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
-		movStore, err := NewMovStore(testDB, height, &hash)
-		if err != nil {
-			t.Fatalf("case %d: NewMovStore error %v.", i, err)
+		movStore := NewLevelDBMovStore(testDB)
+		if err := movStore.InitDBState(height, &hash); err != nil {
+			t.Fatalf("case %d: InitDBState error %v.", i, err)
 		}
 
 		batch := movStore.db.NewBatch()
@@ -2842,20 +1294,20 @@ func TestListTradePairsWithStart(t *testing.T) {
 func TestUpdateTradePairs(t *testing.T) {
 	cases := []struct {
 		desc             string
-		beforeTradePairs map[common.TradePair]int
-		addTradePairs    map[common.TradePair]int
-		delTradePairs    map[common.TradePair]int
+		beforeTradePairs map[string]*common.TradePair
+		addTradePairs    map[string]*common.TradePair
+		delTradePairs    map[string]*common.TradePair
 		wantTradePairs   []*common.TradePair
 	}{
 		{
 			desc: "empty",
-			addTradePairs: map[common.TradePair]int{
-				common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}: 1,
-				common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3}: 2,
-				common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4}: 3,
-				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}: 4,
-				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}: 5,
-				common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}: 6,
+			addTradePairs: map[string]*common.TradePair{
+				(&common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}).Key(): {FromAssetID: assetID1, ToAssetID: assetID2, Count: 1},
+				(&common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3}).Key(): {FromAssetID: assetID2, ToAssetID: assetID3, Count: 2},
+				(&common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4}).Key(): {FromAssetID: assetID3, ToAssetID: assetID4, Count: 3},
+				(&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}).Key(): {FromAssetID: assetID4, ToAssetID: assetID5, Count: 4},
+				(&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}).Key(): {FromAssetID: assetID4, ToAssetID: assetID6, Count: 5},
+				(&common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}).Key(): {FromAssetID: assetID5, ToAssetID: assetID7, Count: 6},
 			},
 			wantTradePairs: []*common.TradePair{
 				&common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2, Count: 1},
@@ -2868,15 +1320,15 @@ func TestUpdateTradePairs(t *testing.T) {
 		},
 		{
 			desc: "Stored data already exists",
-			beforeTradePairs: map[common.TradePair]int{
-				common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}: 1,
-				common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3}: 2,
-				common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4}: 3,
+			beforeTradePairs: map[string]*common.TradePair{
+				(&common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}).Key(): {FromAssetID: assetID1, ToAssetID: assetID2, Count: 1},
+				(&common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3}).Key(): {FromAssetID: assetID2, ToAssetID: assetID3, Count: 2},
+				(&common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4}).Key(): {FromAssetID: assetID3, ToAssetID: assetID4, Count: 3},
 			},
-			addTradePairs: map[common.TradePair]int{
-				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}: 4,
-				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}: 5,
-				common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}: 6,
+			addTradePairs: map[string]*common.TradePair{
+				(&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}).Key(): {FromAssetID: assetID4, ToAssetID: assetID5, Count: 4},
+				(&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}).Key(): {FromAssetID: assetID4, ToAssetID: assetID6, Count: 5},
+				(&common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}).Key(): {FromAssetID: assetID5, ToAssetID: assetID7, Count: 6},
 			},
 			wantTradePairs: []*common.TradePair{
 				&common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2, Count: 1},
@@ -2889,19 +1341,19 @@ func TestUpdateTradePairs(t *testing.T) {
 		},
 		{
 			desc: "delete some data",
-			beforeTradePairs: map[common.TradePair]int{
-				common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}: 1,
-				common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3}: 2,
-				common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4}: 3,
-				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}: 4,
-				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}: 5,
-				common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}: 6,
+			beforeTradePairs: map[string]*common.TradePair{
+				(&common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}).Key(): {FromAssetID: assetID1, ToAssetID: assetID2, Count: 1},
+				(&common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3}).Key(): {FromAssetID: assetID2, ToAssetID: assetID3, Count: 2},
+				(&common.TradePair{FromAssetID: assetID3, ToAssetID: assetID4}).Key(): {FromAssetID: assetID3, ToAssetID: assetID4, Count: 3},
+				(&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}).Key(): {FromAssetID: assetID4, ToAssetID: assetID5, Count: 4},
+				(&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}).Key(): {FromAssetID: assetID4, ToAssetID: assetID6, Count: 5},
+				(&common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}).Key(): {FromAssetID: assetID5, ToAssetID: assetID7, Count: 6},
 			},
-			delTradePairs: map[common.TradePair]int{
-				common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}: -1,
-				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}: -4,
-				common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}: -2,
-				common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}: -4,
+			delTradePairs: map[string]*common.TradePair{
+				(&common.TradePair{FromAssetID: assetID1, ToAssetID: assetID2}).Key(): {FromAssetID: assetID1, ToAssetID: assetID2, Count: -1},
+				(&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID5}).Key(): {FromAssetID: assetID4, ToAssetID: assetID5, Count: -4},
+				(&common.TradePair{FromAssetID: assetID4, ToAssetID: assetID6}).Key(): {FromAssetID: assetID4, ToAssetID: assetID6, Count: -2},
+				(&common.TradePair{FromAssetID: assetID5, ToAssetID: assetID7}).Key(): {FromAssetID: assetID5, ToAssetID: assetID7, Count: -4},
 			},
 			wantTradePairs: []*common.TradePair{
 				&common.TradePair{FromAssetID: assetID2, ToAssetID: assetID3, Count: 2},
@@ -2923,9 +1375,9 @@ func TestUpdateTradePairs(t *testing.T) {
 	defer os.RemoveAll("temp")
 	for i, c := range cases {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
-		movStore, err := NewMovStore(testDB, height, &hash)
-		if err != nil {
-			t.Fatalf("case %d: NewMovStore error %v.", i, err)
+		movStore := NewLevelDBMovStore(testDB)
+		if err := movStore.InitDBState(height, &hash); err != nil {
+			t.Fatalf("case %d: InitDBState error %v.", i, err)
 		}
 
 		batch := movStore.db.NewBatch()
@@ -2995,9 +1447,9 @@ func TestCheckMovDatabaseState(t *testing.T) {
 	defer os.RemoveAll("temp")
 	for i, c := range cases {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
-		movStore, err := NewMovStore(testDB, height, &hash)
-		if err != nil {
-			t.Fatalf("case %d: NewMovStore error %v.", i, err)
+		movStore := NewLevelDBMovStore(testDB)
+		if err := movStore.InitDBState(height, &hash); err != nil {
+			t.Fatalf("case %d: InitDBState error %v.", i, err)
 		}
 
 		batch := movStore.db.NewBatch()

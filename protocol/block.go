@@ -3,9 +3,7 @@ package protocol
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/vapor/config"
 	"github.com/bytom/vapor/errors"
-	"github.com/bytom/vapor/event"
 	"github.com/bytom/vapor/protocol/bc"
 	"github.com/bytom/vapor/protocol/bc/types"
 	"github.com/bytom/vapor/protocol/state"
@@ -106,7 +104,22 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	if err != nil {
 		return err
 	}
+
 	if err := consensusResult.ApplyBlock(block); err != nil {
+		return err
+	}
+
+	for _, p := range c.subProtocols {
+		if err := c.syncProtocolStatus(p); err != nil {
+			return errors.Wrap(err, p.Name(), "sync sub protocol status")
+		}
+
+		if err := p.ApplyBlock(block); err != nil {
+			return errors.Wrap(err, p.Name(), "sub protocol connect block")
+		}
+	}
+
+	if err := c.applyBlockSign(&block.BlockHeader); err != nil {
 		return err
 	}
 
@@ -125,6 +138,113 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	return nil
 }
 
+func (c *Chain) detachBlock(detachBlockHeader *types.BlockHeader, consensusResult *state.ConsensusResult, utxoView *state.UtxoViewpoint) (*types.Block, error) {
+	detachHash := detachBlockHeader.Hash()
+	block, err := c.store.GetBlock(&detachHash)
+	if err != nil {
+		return block, err
+	}
+
+	detachBlock := types.MapBlock(block)
+	if err := consensusResult.DetachBlock(block); err != nil {
+		return block, err
+	}
+
+	if err := c.store.GetTransactionsUtxo(utxoView, detachBlock.Transactions); err != nil {
+		return block, err
+	}
+
+	txStatus, err := c.GetTransactionStatus(&detachBlock.ID)
+	if err != nil {
+		return block, err
+	}
+
+	if err := utxoView.DetachBlock(detachBlock, txStatus); err != nil {
+		return block, err
+	}
+
+	for _, p := range c.subProtocols {
+		if err := p.DetachBlock(block); err != nil {
+			return block, errors.Wrap(err, p.Name(), "sub protocol detach block")
+		}
+	}
+
+	log.WithFields(log.Fields{"module": logModule, "height": detachBlockHeader.Height, "hash": detachHash.String()}).Debug("detach from mainchain")
+	return block, nil
+}
+
+func (c *Chain) syncSubProtocols() error {
+	for _, p := range c.subProtocols {
+		if err := c.syncProtocolStatus(p); err != nil {
+			return errors.Wrap(err, p.Name(), "sync sub protocol status")
+		}
+	}
+	return nil
+}
+
+// Rollback rollback the chain from one blockHeight to targetBlockHeight
+// WARNING: we recommend to use this only in commond line
+func (c *Chain) Rollback(targetHeight uint64) error {
+	c.cond.L.Lock()
+	defer c.cond.L.Unlock()
+
+	utxoView := state.NewUtxoViewpoint()
+	consensusResult, err := c.getBestConsensusResult()
+	if err != nil {
+		return err
+	}
+
+	if err = c.syncSubProtocols(); err != nil {
+		return err
+	}
+
+	targetBlockHeader, err := c.GetHeaderByHeight(targetHeight)
+	if err != nil {
+		return err
+	}
+
+	_, deletedBlockHeaders, err := c.calcReorganizeChain(targetBlockHeader, c.bestBlockHeader)
+	if err != nil {
+		return err
+	}
+
+	deletedBlocks := []*types.Block{}
+	for _, deletedBlockHeader := range deletedBlockHeaders {
+		block, err := c.detachBlock(deletedBlockHeader, consensusResult, utxoView)
+		if err != nil {
+			return err
+		}
+
+		deletedBlocks = append(deletedBlocks, block)
+	}
+
+	setIrrBlockHeader := c.lastIrrBlockHeader
+	if c.lastIrrBlockHeader.Height > targetBlockHeader.Height {
+		setIrrBlockHeader = targetBlockHeader
+	}
+
+	startSeq := state.CalcVoteSeq(c.bestBlockHeader.Height)
+
+	if err = c.setState(targetBlockHeader, setIrrBlockHeader, nil, utxoView, []*state.ConsensusResult{consensusResult.Fork()}); err != nil {
+		return err
+	}
+
+	for _, block := range deletedBlocks {
+		if err := c.store.DeleteBlock(block); err != nil {
+			return err
+		}
+	}
+
+	endSeq := state.CalcVoteSeq(targetHeight)
+	for nowSeq := startSeq; nowSeq > endSeq; nowSeq-- {
+		if err := c.store.DeleteConsensusResult(nowSeq); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 	attachBlockHeaders, detachBlockHeaders, err := c.calcReorganizeChain(blockHeader, c.bestBlockHeader)
 	if err != nil {
@@ -138,38 +258,20 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 		return err
 	}
 
+	if err = c.syncSubProtocols(); err != nil {
+		return err
+	}
+
 	txsToRestore := map[bc.Hash]*types.Tx{}
 	for _, detachBlockHeader := range detachBlockHeaders {
-		detachHash := detachBlockHeader.Hash()
-		b, err := c.store.GetBlock(&detachHash)
+		b, err := c.detachBlock(detachBlockHeader, consensusResult, utxoView)
 		if err != nil {
-			return err
-		}
-
-		detachBlock := types.MapBlock(b)
-		if err := c.store.GetTransactionsUtxo(utxoView, detachBlock.Transactions); err != nil {
-			return err
-		}
-
-		txStatus, err := c.GetTransactionStatus(&detachBlock.ID)
-		if err != nil {
-			return err
-		}
-
-		if err := utxoView.DetachBlock(detachBlock, txStatus); err != nil {
-			return err
-		}
-
-		if err := consensusResult.DetachBlock(b); err != nil {
 			return err
 		}
 
 		for _, tx := range b.Transactions {
 			txsToRestore[tx.ID] = tx
 		}
-
-		blockHash := blockHeader.Hash()
-		log.WithFields(log.Fields{"module": logModule, "height": blockHeader.Height, "hash": blockHash.String()}).Debug("detach from mainchain")
 	}
 
 	txsToRemove := map[bc.Hash]*types.Tx{}
@@ -199,8 +301,18 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 			return err
 		}
 
+		for _, p := range c.subProtocols {
+			if err := p.ApplyBlock(b); err != nil {
+				return errors.Wrap(err, p.Name(), "sub protocol attach block")
+			}
+		}
+
 		if consensusResult.IsFinalize() {
 			consensusResults = append(consensusResults, consensusResult.Fork())
+		}
+
+		if err := c.applyBlockSign(attachBlockHeader); err != nil {
+			return err
 		}
 
 		if c.isIrreversible(attachBlockHeader) && attachBlockHeader.Height > irrBlockHeader.Height {
@@ -275,22 +387,17 @@ func (c *Chain) saveBlock(block *types.Block) error {
 		return errors.Sub(ErrBadBlock, err)
 	}
 
-	signature, err := c.SignBlock(block)
-	if err != nil {
-		return errors.Sub(ErrBadBlock, err)
+	for _, p := range c.subProtocols {
+		if err := p.ValidateBlock(block, bcBlock.TransactionStatus.GetVerifyStatus()); err != nil {
+			return errors.Wrap(err, "sub protocol save block")
+		}
 	}
 
 	if err := c.store.SaveBlock(block, bcBlock.TransactionStatus); err != nil {
 		return err
 	}
-	c.orphanManage.Delete(&bcBlock.ID)
 
-	if len(signature) != 0 {
-		xPub := config.CommonConfig.PrivateKey().XPub()
-		if err := c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: block.Hash(), Signature: signature, XPub: xPub[:]}); err != nil {
-			return err
-		}
-	}
+	c.orphanManage.Delete(&bcBlock.ID)
 	return nil
 }
 

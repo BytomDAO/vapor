@@ -6,7 +6,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/bytom/vapor/crypto/ed25519/chainkd"
-
 	"github.com/bytom/vapor/toolbar/common"
 )
 

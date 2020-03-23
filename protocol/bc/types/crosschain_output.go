@@ -28,4 +28,5 @@ func NewCrossChainOutput(assetID bc.AssetID, amount uint64, controlProgram []byt
 	}
 }
 
+// OutputType implement the txout interface
 func (it *CrossChainOutput) OutputType() uint8 { return CrossChainOutputType }

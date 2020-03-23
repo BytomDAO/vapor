@@ -12,17 +12,13 @@ import (
 
 var errOrphanBlock = errors.New("fast sync inserting orphan block")
 
-type BlockProcessor interface {
-	process(chan struct{}, chan struct{}, uint64, *sync.WaitGroup)
-}
-
 type blockProcessor struct {
 	chain   Chain
-	storage Storage
+	storage *storage
 	peers   *peers.PeerSet
 }
 
-func newBlockProcessor(chain Chain, storage Storage, peers *peers.PeerSet) *blockProcessor {
+func newBlockProcessor(chain Chain, storage *storage, peers *peers.PeerSet) *blockProcessor {
 	return &blockProcessor{
 		chain:   chain,
 		peers:   peers,

@@ -17,7 +17,7 @@ func BenchmarkNewBlockTpl(b *testing.B) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 
-	chain, _, txPool, err := test.MockChain(testDB)
+	chain, _, _, err := test.MockChain(testDB)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -26,6 +26,6 @@ func BenchmarkNewBlockTpl(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		proposal.NewBlockTemplate(chain, txPool, accountManager, uint64(time.Now().UnixNano()/1e6))
+		proposal.NewBlockTemplate(chain, accountManager, uint64(time.Now().UnixNano()/1e6), time.Minute, time.Minute)
 	}
 }

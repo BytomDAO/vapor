@@ -28,6 +28,7 @@ type Config struct {
 	Web        *WebConfig        `mapstructure:"web"`
 	Websocket  *WebsocketConfig  `mapstructure:"ws"`
 	Federation *FederationConfig `mapstructure:"federation"`
+	CrossChain *CrossChainConfig `mapstructure:"cross_chain"`
 }
 
 // Default configurable parameters.
@@ -40,6 +41,7 @@ func DefaultConfig() *Config {
 		Web:        DefaultWebConfig(),
 		Websocket:  DefaultWebsocketConfig(),
 		Federation: DefaultFederationConfig(),
+		CrossChain: DefaultCrossChainConfig(),
 	}
 }
 
@@ -214,6 +216,10 @@ type FederationConfig struct {
 	Quorum int            `json:"quorum"`
 }
 
+type CrossChainConfig struct {
+	AssetWhitelist string `mapstructure:"asset_whitelist"`
+}
+
 // Default configurable rpc's auth parameters.
 func DefaultRPCAuthConfig() *RPCAuthConfig {
 	return &RPCAuthConfig{
@@ -238,6 +244,7 @@ func DefaultWalletConfig() *WalletConfig {
 	}
 }
 
+// Default configurable websocket parameters.
 func DefaultWebsocketConfig() *WebsocketConfig {
 	return &WebsocketConfig{
 		MaxNumWebsockets:     25,
@@ -245,6 +252,7 @@ func DefaultWebsocketConfig() *WebsocketConfig {
 	}
 }
 
+// Default configurable federation parameters.
 func DefaultFederationConfig() *FederationConfig {
 	return &FederationConfig{
 		Xpubs: []chainkd.XPub{
@@ -255,6 +263,11 @@ func DefaultFederationConfig() *FederationConfig {
 		},
 		Quorum: 2,
 	}
+}
+
+// Default configurable crosschain parameters.
+func DefaultCrossChainConfig() *CrossChainConfig {
+	return &CrossChainConfig{}
 }
 
 func xpub(str string) (xpub chainkd.XPub) {

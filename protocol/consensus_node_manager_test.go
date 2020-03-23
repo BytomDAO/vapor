@@ -299,7 +299,7 @@ func TestGetConsensusNodes(t *testing.T) {
 					Height:            1202,
 					PreviousBlockHash: testutil.MustDecodeHash("a5be1d1177eb027327baedb869f902f74850476d0b9432a30391a3165d3af7cc"),
 				},
-				// fork chain, fork height in 1198, rollback 1200, 1199, append 1199, 1200 
+				// fork chain, fork height in 1198, rollback 1200, 1199, append 1199, 1200
 				{
 					Height:            1199,
 					PreviousBlockHash: testutil.MustDecodeHash("ef24de31371b4d34363011b6c8b065b1acaad9264d9abae2253d584e0d3a8739"),
@@ -735,9 +735,17 @@ func (s *dummyStore) GetBlockHashesByHeight(uint64) ([]*bc.Hash, error) {
 	return nil, nil
 }
 
+func (s *dummyStore) DeleteConsensusResult(seq uint64) error {
+	return nil
+}
+
 func (s *dummyStore) SaveBlock(block *types.Block, _ *bc.TransactionStatus) error {
 	hash := block.Hash()
 	s.blocks[hash.String()] = block
+	return nil
+}
+
+func (s *dummyStore) DeleteBlock(block *types.Block) error {
 	return nil
 }
 

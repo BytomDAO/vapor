@@ -24,7 +24,7 @@ const (
 var (
 	requireBlockTimeout      = 20 * time.Second
 	requireHeadersTimeout    = 30 * time.Second
-	requireBlocksTimeout     = 50 * time.Second
+	requireBlocksTimeout     = 90 * time.Second
 	checkSyncPeerNumInterval = 5 * time.Second
 
 	errRequestBlocksTimeout = errors.New("request blocks timeout")
@@ -33,6 +33,7 @@ var (
 	errSendMsg              = errors.New("send message error")
 )
 
+// MsgFetcher is the interface for msg fetch struct
 type MsgFetcher interface {
 	resetParameter()
 	addSyncPeer(peerID string)
@@ -51,7 +52,7 @@ type fetchBlocksResult struct {
 }
 
 type msgFetcher struct {
-	storage          Storage
+	storage          *storage
 	syncPeers        *fastSyncPeers
 	peers            *peers.PeerSet
 	blockProcessCh   chan *blockMsg
@@ -61,7 +62,7 @@ type msgFetcher struct {
 	mux              sync.RWMutex
 }
 
-func newMsgFetcher(storage Storage, peers *peers.PeerSet) *msgFetcher {
+func newMsgFetcher(storage *storage, peers *peers.PeerSet) *msgFetcher {
 	return &msgFetcher{
 		storage:          storage,
 		syncPeers:        newFastSyncPeers(),

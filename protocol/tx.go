@@ -52,6 +52,14 @@ func (c *Chain) validateTx(tx *types.Tx, bh *types.BlockHeader) (bool, error) {
 		return false, err
 	}
 
+	txVerifyResult := &bc.TxVerifyResult{StatusFail: err != nil}
+	for _, p := range c.subProtocols {
+		if err := p.ValidateTx(tx, txVerifyResult, bh.Height); err != nil {
+			c.txPool.AddErrCache(&tx.ID, err)
+			return false, err
+		}
+	}
+
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "tx_id": tx.Tx.ID.String(), "error": err}).Info("transaction status fail")
 	}
