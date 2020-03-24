@@ -505,6 +505,10 @@ func getRewardProgram(height uint64) (string, bool) {
 }
 
 func validateRewardProgram(height uint64, program string) error {
+	if program == "" {
+		return nil
+	}
+
 	rewardProgram, exact := getRewardProgram(height)
 	if exact && rewardProgram != program {
 		return errRewardProgramIsWrong
