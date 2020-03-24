@@ -38,9 +38,9 @@ asset_whitelist = ""
 var testNetConfigTmpl = `chain_id = "testnet"
 [p2p]
 laddr = "tcp://0.0.0.0:56657"
-seeds = "52.82.7.233:56657,52.82.109.252:56657,52.82.29.30:56657"
+seeds = "52.82.22.99:56657,52.82.24.162:56657"
 [cross_chain]
-asset_whitelist = ""
+asset_whitelist = "a0be88520f6b537b1244c10abe0eb917681ce9cd0c5a8aeebd867bdc882e72ab,9090fa534ec05423663be7c78e9571d7a04d6d5f567ce2df71eee838f944ff61,19994d5c0e967b899d822147a32d62c3dad0f27b10a15906e34eff53fe809c28,128d768781522a3c8b1d8b14975f04d6b0b2261b00af4f8b5aca49b1018036a8,ef7c49f350073ed51e2da6a76db5a9f368b0550d216ed33bde30e735fd811ac1"
 `
 
 var soloNetConfigTmpl = `chain_id = "solonet"

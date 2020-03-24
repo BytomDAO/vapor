@@ -197,6 +197,13 @@ var TestNetParams = Params{
 	ProducerSubsidys: []ProducerSubsidy{
 		{BeginBlock: 1, EndBlock: 63072000, Subsidy: 15000000},
 	},
+	MovRewardPrograms: []MovRewardProgram{
+		{
+			BeginBlock: 1,
+			EndBlock:   126144000,
+			Program:    "001461dc8df915737b59a98572611869eb72c2d280d2",
+		},
+	},
 }
 
 // SoloNetParams is the config for vapor solonet

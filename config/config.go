@@ -82,17 +82,17 @@ func (cfg *Config) PrivateKey() *chainkd.XPrv {
 	return cfg.XPrv
 }
 
-//-----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 // BaseConfig
 type BaseConfig struct {
 	// The root directory for all data.
 	// This should be set in viper so it can unmarshal into this struct
 	RootDir string `mapstructure:"home"`
 
-	//The ID of the network to json
+	// The ID of the network to json
 	ChainID string `mapstructure:"chain_id"`
 
-	//log level to set
+	// log level to set
 	LogLevel string `mapstructure:"log_level"`
 
 	// A custom human readable name for this node
@@ -190,7 +190,7 @@ func DefaultP2PConfig() *P2PConfig {
 	}
 }
 
-//-----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 type WalletConfig struct {
 	Disable  bool   `mapstructure:"disable"`
 	Rescan   bool   `mapstructure:"rescan"`
@@ -256,12 +256,10 @@ func DefaultWebsocketConfig() *WebsocketConfig {
 func DefaultFederationConfig() *FederationConfig {
 	return &FederationConfig{
 		Xpubs: []chainkd.XPub{
-			xpub("580daf48fa8962100047cb1391da890bb7f2c849fdbc9b368cb4394a4c7cbb0977e2e7ebbf055dc0ef90af6a0d2af01ce7ec56b735d016aab597815ec48552e5"),
 			xpub("f3f6bcf61b65fa9d1566455a5688ca8b395efdc22e654963134b5e5cb0a45d8be522d21abc384a73177a7b9d64eba915fcfe2862d86a508a3c46dc410bdd72ad"),
-			xpub("53559612f2b7bcada18948b7de39d63947a0e2bd7336d07db1350c54ba5743996b84bf9d18ff7a2457e1a5c70ce5013e4a3b62666ddb03294c53051d5f5c70c0"),
-			xpub("7c88cc58adfc71818b08308d43c29de22460b0ea6895449cbec6e458d7dc09e0aea243fa5075ee6621da0d805bd047f6bb207329c5bd2ca3253b172fb323b512"),
+			xpub("78634c3ecf494be68950e34c1911bd7827cc78f98022d3fd0b7dd8c0990c4819c0ecc19c611fe337365381f6cc30248afedb69930bafa38a531c0b936a84948a"),
 		},
-		Quorum: 2,
+		Quorum: 1,
 	}
 }
 
@@ -277,7 +275,7 @@ func xpub(str string) (xpub chainkd.XPub) {
 	return xpub
 }
 
-//-----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 // Utils
 
 // helper function to make config creation independent of root dir
