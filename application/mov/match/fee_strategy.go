@@ -32,8 +32,7 @@ func (r RefundAssets) Add(index int, asset bc.AssetID, amount uint64) {
 	for _, assetAmount := range r[index] {
 		if *assetAmount.AssetId == asset {
 			assetAmount.Amount += amount
-			found = true
-			break
+			return
 		}
 	}
 	if !found {
