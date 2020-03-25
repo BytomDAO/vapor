@@ -15,7 +15,6 @@ var (
 // AllocatedAssets represent reallocated assets after calculating fees
 type AllocatedAssets struct {
 	Receives []*bc.AssetAmount
-	Refunds  RefundAssets
 	Fees     []*bc.AssetAmount
 }
 
@@ -43,14 +42,14 @@ type FeeStrategy interface {
 	// @param receiveAmounts the amount of assets that the participants in the matching transaction can received when no fee is considered
 	// @param priceDiffs price differential of matching transaction
 	// @return reallocated assets after calculating fees
-	Allocate(receiveAmounts, priceDiffs []*bc.AssetAmount) *AllocatedAssets
+	Allocate(receiveAmounts []*bc.AssetAmount) *AllocatedAssets
 
 	// Validate verify that the fee charged for a matching transaction is correct
 	Validate(receiveAmounts []*bc.AssetAmount, feeAmounts map[bc.AssetID]uint64) error
 }
 
 // DefaultFeeStrategy represent the default fee charge strategy
-type DefaultFeeStrategy struct {}
+type DefaultFeeStrategy struct{}
 
 // NewDefaultFeeStrategy return a new instance of DefaultFeeStrategy
 func NewDefaultFeeStrategy() *DefaultFeeStrategy {
@@ -58,47 +57,17 @@ func NewDefaultFeeStrategy() *DefaultFeeStrategy {
 }
 
 // Allocate will allocate the price differential in matching transaction to the participants and the fee
-func (d *DefaultFeeStrategy) Allocate(receiveAmounts, priceDiffs []*bc.AssetAmount) *AllocatedAssets {
-	feeMap := make(map[bc.AssetID]uint64)
-	for _, priceDiff := range priceDiffs {
-		feeMap[*priceDiff.AssetId] = priceDiff.Amount
-	}
-
-	var fees []*bc.AssetAmount
-	refunds := make([][]*bc.AssetAmount, len(receiveAmounts))
+func (d *DefaultFeeStrategy) Allocate(receiveAmounts []*bc.AssetAmount) *AllocatedAssets {
 	receives := make([]*bc.AssetAmount, len(receiveAmounts))
+	fees := make([]*bc.AssetAmount, len(receiveAmounts))
 
 	for i, receiveAmount := range receiveAmounts {
 		amount := receiveAmount.Amount
 		minFeeAmount := d.calcMinFeeAmount(amount)
 		receives[i] = &bc.AssetAmount{AssetId: receiveAmount.AssetId, Amount: amount - minFeeAmount}
-		feeMap[*receiveAmount.AssetId] += minFeeAmount
-
-		maxFeeAmount := d.calcMaxFeeAmount(amount)
-		feeAmount, reminder := feeMap[*receiveAmount.AssetId], uint64(0)
-		if feeAmount > maxFeeAmount {
-			reminder = feeAmount - maxFeeAmount
-			feeAmount = maxFeeAmount
-		}
-
-		fees = append(fees, &bc.AssetAmount{AssetId: receiveAmount.AssetId, Amount: feeAmount})
-
-		// There is the remaining amount after paying the handling fee, assign it evenly to participants in the transaction
-		averageAmount := reminder / uint64(len(receiveAmounts))
-		if averageAmount == 0 {
-			averageAmount = 1
-		}
-
-		for j := 0; j < len(receiveAmounts) && reminder > 0; j++ {
-			refundAmount := averageAmount
-			if j == len(receiveAmounts)-1 {
-				refundAmount = reminder
-			}
-			refunds[j] = append(refunds[j], &bc.AssetAmount{AssetId: receiveAmount.AssetId, Amount: refundAmount})
-			reminder -= averageAmount
-		}
+		fees[i] = &bc.AssetAmount{AssetId: receiveAmount.AssetId, Amount: minFeeAmount}
 	}
-	return &AllocatedAssets{Receives: receives, Refunds: refunds, Fees: fees}
+	return &AllocatedAssets{Receives: receives, Fees: fees}
 }
 
 // Validate verify that the fee charged for a matching transaction is correct
