@@ -44,12 +44,13 @@ func (d *DefaultFeeStrategy) Allocate(receiveAmounts, priceDiffs []*bc.AssetAmou
 	fees := make([]*bc.AssetAmount, len(receiveAmounts))
 
 	for i, receiveAmount := range receiveAmounts {
-		fee := d.calcMinFeeAmount(receiveAmount.Amount) + priceDiffs[i].Amount
+		standFee := d.calcMinFeeAmount(receiveAmount.Amount)
+		fee := standFee + priceDiffs[i].Amount
 		if maxFeeAmount := d.calcMaxFeeAmount(receiveAmount.Amount); fee > maxFeeAmount {
 			fee = maxFeeAmount
 		}
 
-		receives[i] = &bc.AssetAmount{AssetId: receiveAmount.AssetId, Amount: receiveAmount.Amount - fee}
+		receives[i] = &bc.AssetAmount{AssetId: receiveAmount.AssetId, Amount: receiveAmount.Amount - standFee}
 		fees[i] = &bc.AssetAmount{AssetId: receiveAmount.AssetId, Amount: fee}
 	}
 	return &AllocatedAssets{Receives: receives, Fees: fees}
