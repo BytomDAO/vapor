@@ -206,7 +206,10 @@ func CalcReceivedAmount(orders []*common.Order) ([]*bc.AssetAmount, []*bc.AssetA
 
 	for i, receivedAmount := range receivedAmounts {
 		oppositeShouldPayAmount := shouldPayAmounts[calcOppositeIndex(len(orders), i)]
-		priceDiffs = append(priceDiffs, &bc.AssetAmount{AssetId: oppositeShouldPayAmount.AssetId, Amount: oppositeShouldPayAmount.Amount - receivedAmount.Amount})
+		priceDiffs = append(priceDiffs, &bc.AssetAmount{AssetId: oppositeShouldPayAmount.AssetId, Amount: 0})
+		if oppositeShouldPayAmount.Amount > receivedAmount.Amount {
+			priceDiffs[i].Amount = oppositeShouldPayAmount.Amount - receivedAmount.Amount
+		}
 	}
 	return receivedAmounts, priceDiffs
 }
