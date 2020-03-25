@@ -44,9 +44,8 @@ func (d *DefaultFeeStrategy) Allocate(receiveAmounts []*bc.AssetAmount) *Allocat
 	fees := make([]*bc.AssetAmount, len(receiveAmounts))
 
 	for i, receiveAmount := range receiveAmounts {
-		amount := receiveAmount.Amount
-		minFeeAmount := d.calcMinFeeAmount(amount)
-		receives[i] = &bc.AssetAmount{AssetId: receiveAmount.AssetId, Amount: amount - minFeeAmount}
+		minFeeAmount := d.calcMinFeeAmount(receiveAmount.Amount)
+		receives[i] = &bc.AssetAmount{AssetId: receiveAmount.AssetId, Amount: receiveAmount.Amount - minFeeAmount}
 		fees[i] = &bc.AssetAmount{AssetId: receiveAmount.AssetId, Amount: minFeeAmount}
 	}
 	return &AllocatedAssets{Receives: receives, Fees: fees}

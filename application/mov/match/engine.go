@@ -82,9 +82,6 @@ func (e *Engine) addMatchTxFeeOutput(txData *types.TxData, fees []*bc.AssetAmoun
 	for _, output := range txData.Outputs {
 		assetAmount := output.AssetAmount()
 		refoundAmount[*assetAmount.AssetId] -= assetAmount.Amount
-		if refoundAmount[*assetAmount.AssetId] == 0 {
-			delete(refoundAmount, *assetAmount.AssetId)
-		}
 	}
 
 	refoundCount := len(refoundScript)
@@ -95,6 +92,9 @@ func (e *Engine) addMatchTxFeeOutput(txData *types.TxData, fees []*bc.AssetAmoun
 		}
 
 		for i := 0; i < refoundCount && amount > 0; i++ {
+			if i == refoundCount {
+				averageAmount = amount
+			}
 			txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(assetID, averageAmount, refoundScript[i]))
 			amount -= averageAmount
 		}
