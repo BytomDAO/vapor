@@ -457,7 +457,6 @@ var (
 				types.NewIntraChainOutput(*Eth2BtcOrders[3].ToAssetID, 3, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19256")),
 				types.NewIntraChainOutput(*Btc2EthOrders[0].ToAssetID, 38, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19251")),
 				types.NewIntraChainOutput(*Btc2EthOrders[0].ToAssetID, 38, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19256")),
-
 			},
 		}),
 	}
