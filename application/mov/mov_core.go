@@ -162,11 +162,11 @@ func (m *Core) ValidateTx(tx *types.Tx, verifyResult *bc.TxVerifyResult, blockHe
 	}
 
 	if common.IsMatchedTx(tx) {
-		if err := validateMatchedTx(tx, verifyResult, blockHeight); err != nil {
+		if err := validateMatchedTx(tx, blockHeight); err != nil {
 			return err
 		}
 	} else if common.IsCancelOrderTx(tx) {
-		if err := validateCancelOrderTx(tx, verifyResult); err != nil {
+		if err := validateCancelOrderTx(tx); err != nil {
 			return err
 		}
 	}
@@ -220,7 +220,7 @@ func calcFeeAmount(matchedTx *types.Tx) (map[bc.AssetID]*matchedTxFee, error) {
 	return assetFeeMap, nil
 }
 
-func validateCancelOrderTx(tx *types.Tx, verifyResult *bc.TxVerifyResult) error {
+func validateCancelOrderTx(tx *types.Tx) error {
 	for _, input := range tx.Inputs {
 		if !segwit.IsP2WMCScript(input.ControlProgram()) {
 			return errInputProgramMustP2WMCScript
@@ -253,7 +253,7 @@ func validateMagneticContractArgs(fromAssetAmount bc.AssetAmount, program []byte
 	return nil
 }
 
-func validateMatchedTx(tx *types.Tx, verifyResult *bc.TxVerifyResult, blockHeight uint64) error {
+func validateMatchedTx(tx *types.Tx, blockHeight uint64) error {
 	fromAssetIDMap := make(map[string]bool)
 	toAssetIDMap := make(map[string]bool)
 	for i, input := range tx.Inputs {

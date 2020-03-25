@@ -62,7 +62,7 @@ func (e *Engine) NextMatchedTx(tradePairs ...*common.TradePair) (*types.Tx, erro
 	return tx, nil
 }
 
-func (e *Engine) addMatchTxFeeOutput(txData *types.TxData, refunds []RefundAssets, fees []*bc.AssetAmount) error {
+func (e *Engine) addMatchTxFeeOutput(txData *types.TxData, refunds RefundAssets, fees []*bc.AssetAmount) error {
 	for _, feeAmount := range fees {
 		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*feeAmount.AssetId, feeAmount.Amount, e.rewardProgram))
 	}
@@ -106,7 +106,7 @@ func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, error) {
 
 	receivedAmounts, priceDiffs := CalcReceivedAmount(orders)
 	allocatedAssets := e.feeStrategy.Allocate(receivedAmounts, priceDiffs)
-	if err := addMatchTxOutput(txData, orders, receivedAmounts, allocatedAssets.Receives); err != nil {
+	if err := addMatchTxOutput(txData, orders, receivedAmounts, allocatedAssets); err != nil {
 		return nil, err
 	}
 
@@ -123,22 +123,25 @@ func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, error) {
 	return types.NewTx(*txData), nil
 }
 
-func addMatchTxOutput(txData *types.TxData, orders []*common.Order, receivedAmounts, deductFeeReceives []*bc.AssetAmount) error {
+func addMatchTxOutput(txData *types.TxData, orders []*common.Order, receivedAmounts []*bc.AssetAmount, allocatedAssets *AllocatedAssets) error {
 	for i, order := range orders {
 		contractArgs, err := segwit.DecodeP2WMCProgram(order.Utxo.ControlProgram)
 		if err != nil {
 			return err
 		}
 
-		requestAmount := CalcRequestAmount(order.Utxo.Amount, contractArgs.RatioNumerator, contractArgs.RatioDenominator)
 		receivedAmount := receivedAmounts[i].Amount
 		shouldPayAmount := calcShouldPayAmount(receivedAmount, contractArgs.RatioNumerator, contractArgs.RatioDenominator)
-		isPartialTrade := requestAmount > receivedAmount
 
-		setMatchTxArguments(txData.Inputs[i], isPartialTrade, len(txData.Outputs), receivedAmounts[i].Amount)
-		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*order.ToAssetID, deductFeeReceives[i].Amount, contractArgs.SellerProgram))
+		exchangeAmount := order.Utxo.Amount - shouldPayAmount
+		isPartialTrade := CalcRequestAmount(exchangeAmount, contractArgs.RatioNumerator, contractArgs.RatioDenominator) >= 1
+
+		setMatchTxArguments(txData.Inputs[i], isPartialTrade, len(txData.Outputs), receivedAmount)
+		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*order.ToAssetID, allocatedAssets.Receives[i].Amount, contractArgs.SellerProgram))
 		if isPartialTrade {
-			txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*order.FromAssetID, order.Utxo.Amount-shouldPayAmount, order.Utxo.ControlProgram))
+			txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*order.FromAssetID, exchangeAmount, order.Utxo.ControlProgram))
+		} else if exchangeAmount > 0 {
+			allocatedAssets.Refunds.Add(i, *order.FromAssetID, exchangeAmount)
 		}
 	}
 	return nil
