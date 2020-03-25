@@ -15,12 +15,31 @@ var (
 // AllocatedAssets represent reallocated assets after calculating fees
 type AllocatedAssets struct {
 	Receives []*bc.AssetAmount
-	Refunds  []RefundAssets
+	Refunds  RefundAssets
 	Fees     []*bc.AssetAmount
 }
 
 // RefundAssets represent alias for assetAmount array, because each transaction participant can be refunded multiple assets
-type RefundAssets []*bc.AssetAmount
+type RefundAssets [][]*bc.AssetAmount
+
+// Add used to add a refund to specify order
+func (r RefundAssets) Add(index int, asset bc.AssetID, amount uint64) {
+	if index >= len(r) {
+		return
+	}
+
+	var found bool
+	for _, assetAmount := range r[index] {
+		if *assetAmount.AssetId == asset {
+			assetAmount.Amount += amount
+			found = true
+			break
+		}
+	}
+	if !found {
+		r[index] = append(r[index], &bc.AssetAmount{AssetId: &asset, Amount: amount})
+	}
+}
 
 // FeeStrategy used to indicate how to charge a matching fee
 type FeeStrategy interface {
@@ -50,7 +69,7 @@ func (d *DefaultFeeStrategy) Allocate(receiveAmounts, priceDiffs []*bc.AssetAmou
 	}
 
 	var fees []*bc.AssetAmount
-	refunds := make([]RefundAssets, len(receiveAmounts))
+	refunds := make([][]*bc.AssetAmount, len(receiveAmounts))
 	receives := make([]*bc.AssetAmount, len(receiveAmounts))
 
 	for i, receiveAmount := range receiveAmounts {
