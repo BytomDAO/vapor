@@ -39,12 +39,12 @@ func NewDefaultFeeStrategy() *DefaultFeeStrategy {
 }
 
 // Allocate will allocate the price differential in matching transaction to the participants and the fee
-func (d *DefaultFeeStrategy) Allocate(receiveAmounts, priceDiff []*bc.AssetAmount) *AllocatedAssets {
+func (d *DefaultFeeStrategy) Allocate(receiveAmounts, priceDiffs []*bc.AssetAmount) *AllocatedAssets {
 	receives := make([]*bc.AssetAmount, len(receiveAmounts))
 	fees := make([]*bc.AssetAmount, len(receiveAmounts))
 
 	for i, receiveAmount := range receiveAmounts {
-		fee := d.calcMinFeeAmount(receiveAmount.Amount) + priceDiff[i].Amount
+		fee := d.calcMinFeeAmount(receiveAmount.Amount) + priceDiffs[i].Amount
 		if maxFeeAmount := d.calcMaxFeeAmount(receiveAmount.Amount); fee > maxFeeAmount {
 			fee = maxFeeAmount
 		}
