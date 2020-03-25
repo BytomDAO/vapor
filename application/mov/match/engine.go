@@ -62,13 +62,13 @@ func (e *Engine) NextMatchedTx(tradePairs ...*common.TradePair) (*types.Tx, erro
 	return tx, nil
 }
 
-func (e *Engine) addMatchTxFeeOutput(txData *types.TxData, orders []*common.Order, fees []*bc.AssetAmount) error {
+func (e *Engine) addMatchTxFeeOutput(txData *types.TxData, fees []*bc.AssetAmount) error {
 	for _, feeAmount := range fees {
 		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*feeAmount.AssetId, feeAmount.Amount, e.rewardProgram))
 	}
 
 	refoundAmount := map[bc.AssetID]uint64{}
-	refoundAddress := [][]byte{}
+	refoundScript := [][]byte{}
 	for _, input := range txData.Inputs {
 		refoundAmount[input.AssetID()] += input.Amount()
 		contractArgs, err := segwit.DecodeP2WMCProgram(input.ControlProgram())
@@ -76,7 +76,7 @@ func (e *Engine) addMatchTxFeeOutput(txData *types.TxData, orders []*common.Orde
 			return err
 		}
 
-		refoundAddress = append(refoundAddress, contractArgs.SellerProgram)
+		refoundScript = append(refoundScript, contractArgs.SellerProgram)
 	}
 
 	for _, output := range txData.Outputs {
@@ -87,16 +87,15 @@ func (e *Engine) addMatchTxFeeOutput(txData *types.TxData, orders []*common.Orde
 		}
 	}
 
-	refoundCount := len(refoundAddress)
-	for asset, amount := range refoundAmount {
+	refoundCount := len(refoundScript)
+	for assetID, amount := range refoundAmount {
 		averageAmount := amount / uint64(refoundCount)
 		if averageAmount == 0 {
 			averageAmount = 1
 		}
 
 		for i := 0; i < refoundCount && amount > 0; i++ {
-			txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(asset,
-				averageAmount, refoundAddress[i]))
+			txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(assetID, averageAmount, refoundScript[i]))
 			amount -= averageAmount
 		}
 	}
@@ -132,7 +131,7 @@ func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, error) {
 		return nil, err
 	}
 
-	if err := e.addMatchTxFeeOutput(txData, orders, allocatedAssets.Fees); err != nil {
+	if err := e.addMatchTxFeeOutput(txData, allocatedAssets.Fees); err != nil {
 		return nil, err
 	}
 

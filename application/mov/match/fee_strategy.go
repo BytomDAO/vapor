@@ -18,24 +18,6 @@ type AllocatedAssets struct {
 	Fees     []*bc.AssetAmount
 }
 
-// RefundAssets represent alias for assetAmount array, because each transaction participant can be refunded multiple assets
-type RefundAssets [][]*bc.AssetAmount
-
-// Add used to add a refund to specify order
-func (r RefundAssets) Add(index int, asset bc.AssetID, amount uint64) {
-	if index >= len(r) {
-		index = 0
-	}
-
-	for _, assetAmount := range r[index] {
-		if *assetAmount.AssetId == asset {
-			assetAmount.Amount += amount
-			return
-		}
-	}
-	r[index] = append(r[index], &bc.AssetAmount{AssetId: &asset, Amount: amount})
-}
-
 // FeeStrategy used to indicate how to charge a matching fee
 type FeeStrategy interface {
 	// Allocate will allocate the price differential in matching transaction to the participants and the fee
