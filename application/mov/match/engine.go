@@ -68,6 +68,7 @@ func (e *Engine) addMatchTxFeeOutput(txData *types.TxData, fees []*bc.AssetAmoun
 	}
 
 	refoundAmount := map[bc.AssetID]uint64{}
+	assetIDs := []bc.AssetID{}
 	refoundScript := [][]byte{}
 	for _, input := range txData.Inputs {
 		refoundAmount[input.AssetID()] += input.Amount()
@@ -76,6 +77,7 @@ func (e *Engine) addMatchTxFeeOutput(txData *types.TxData, fees []*bc.AssetAmoun
 			return err
 		}
 
+		assetIDs = append(assetIDs, input.AssetID())
 		refoundScript = append(refoundScript, contractArgs.SellerProgram)
 	}
 
@@ -85,7 +87,8 @@ func (e *Engine) addMatchTxFeeOutput(txData *types.TxData, fees []*bc.AssetAmoun
 	}
 
 	refoundCount := len(refoundScript)
-	for assetID, amount := range refoundAmount {
+	for _, assetID := range assetIDs {
+		amount := refoundAmount[assetID]
 		averageAmount := amount / uint64(refoundCount)
 		if averageAmount == 0 {
 			averageAmount = 1
