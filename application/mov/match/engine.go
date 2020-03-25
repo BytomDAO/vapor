@@ -130,10 +130,9 @@ func addMatchTxOutput(txData *types.TxData, orders []*common.Order, receivedAmou
 			return err
 		}
 
-		requestAmount := CalcRequestAmount(order.Utxo.Amount, contractArgs.RatioNumerator, contractArgs.RatioDenominator)
 		receivedAmount := receivedAmounts[i].Amount
 		shouldPayAmount := calcShouldPayAmount(receivedAmount, contractArgs.RatioNumerator, contractArgs.RatioDenominator)
-		isPartialTrade := requestAmount > receivedAmount
+		isPartialTrade := order.Utxo.Amount > shouldPayAmount
 
 		setMatchTxArguments(txData.Inputs[i], isPartialTrade, len(txData.Outputs), receivedAmounts[i].Amount)
 		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*order.ToAssetID, deductFeeReceives[i].Amount, contractArgs.SellerProgram))
