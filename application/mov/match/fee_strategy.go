@@ -25,19 +25,16 @@ type RefundAssets [][]*bc.AssetAmount
 // Add used to add a refund to specify order
 func (r RefundAssets) Add(index int, asset bc.AssetID, amount uint64) {
 	if index >= len(r) {
-		return
+		index = 0
 	}
 
-	var found bool
 	for _, assetAmount := range r[index] {
 		if *assetAmount.AssetId == asset {
 			assetAmount.Amount += amount
 			return
 		}
 	}
-	if !found {
-		r[index] = append(r[index], &bc.AssetAmount{AssetId: &asset, Amount: amount})
-	}
+	r[index] = append(r[index], &bc.AssetAmount{AssetId: &asset, Amount: amount})
 }
 
 // FeeStrategy used to indicate how to charge a matching fee
