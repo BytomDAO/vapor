@@ -95,7 +95,7 @@ func (e *Engine) addMatchTxFeeOutput(txData *types.TxData, fees []*bc.AssetAmoun
 		}
 
 		for i := 0; i < refoundCount && amount > 0; i++ {
-			if i == refoundCount {
+			if i == refoundCount-1 {
 				averageAmount = amount
 			}
 			txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(assetID, averageAmount, refoundScript[i]))
