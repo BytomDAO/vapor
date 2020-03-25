@@ -125,8 +125,8 @@ func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, error) {
 		txData.Inputs = append(txData.Inputs, input)
 	}
 
-	receivedAmounts := CalcReceivedAmount(orders)
-	allocatedAssets := e.feeStrategy.Allocate(receivedAmounts)
+	receivedAmounts, priceDiff := CalcReceivedAmount(orders)
+	allocatedAssets := e.feeStrategy.Allocate(receivedAmounts, priceDiff)
 	if err := addMatchTxOutput(txData, orders, receivedAmounts, allocatedAssets); err != nil {
 		return nil, err
 	}
@@ -190,16 +190,25 @@ func calcShouldPayAmount(receiveAmount uint64, ratioNumerator, ratioDenominator 
 }
 
 // CalcReceivedAmount return amount of assets received by each participant in the matching transaction and the price difference
-func CalcReceivedAmount(orders []*common.Order) []*bc.AssetAmount {
-	var receivedAmounts []*bc.AssetAmount
+func CalcReceivedAmount(orders []*common.Order) ([]*bc.AssetAmount, []*bc.AssetAmount) {
+	var receivedAmounts, priceDiffs, shouldPayAmounts []*bc.AssetAmount
 	for i, order := range orders {
 		requestAmount := CalcRequestAmount(order.Utxo.Amount, order.RatioNumerator, order.RatioDenominator)
 		oppositeOrder := orders[calcOppositeIndex(len(orders), i)]
 		receiveAmount := vprMath.MinUint64(oppositeOrder.Utxo.Amount, requestAmount)
+		shouldPayAmount := calcShouldPayAmount(receiveAmount, order.RatioNumerator, order.RatioDenominator)
 		receivedAmounts = append(receivedAmounts, &bc.AssetAmount{AssetId: order.ToAssetID, Amount: receiveAmount})
+		shouldPayAmounts = append(shouldPayAmounts, &bc.AssetAmount{AssetId: order.FromAssetID, Amount: shouldPayAmount})
 	}
 
-	return receivedAmounts
+	for i, receivedAmount := range receivedAmounts {
+		oppositeShouldPayAmount := shouldPayAmounts[calcOppositeIndex(len(orders), i)]
+		priceDiffs = append(priceDiffs, &bc.AssetAmount{AssetId: oppositeShouldPayAmount.AssetId, Amount: 0})
+		if oppositeShouldPayAmount.Amount > receivedAmount.Amount {
+			priceDiffs[i].Amount = oppositeShouldPayAmount.Amount - receivedAmount.Amount
+		}
+	}
+	return receivedAmounts, priceDiffs
 }
 
 // IsMatched check does the orders can be exchange
