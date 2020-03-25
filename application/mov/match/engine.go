@@ -125,8 +125,8 @@ func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, error) {
 		txData.Inputs = append(txData.Inputs, input)
 	}
 
-	receivedAmounts, priceDiff := CalcReceivedAmount(orders)
-	allocatedAssets := e.feeStrategy.Allocate(receivedAmounts, priceDiff)
+	receivedAmounts, priceDiffs := CalcReceivedAmount(orders)
+	allocatedAssets := e.feeStrategy.Allocate(receivedAmounts, priceDiffs)
 	if err := addMatchTxOutput(txData, orders, receivedAmounts, allocatedAssets); err != nil {
 		return nil, err
 	}

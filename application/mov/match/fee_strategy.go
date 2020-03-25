@@ -24,7 +24,7 @@ type FeeStrategy interface {
 	// @param receiveAmounts the amount of assets that the participants in the matching transaction can received when no fee is considered
 	// @param priceDiffs price differential of matching transaction
 	// @return reallocated assets after calculating fees
-	Allocate(receiveAmounts, priceDiff []*bc.AssetAmount) *AllocatedAssets
+	Allocate(receiveAmounts, priceDiffs []*bc.AssetAmount) *AllocatedAssets
 
 	// Validate verify that the fee charged for a matching transaction is correct
 	Validate(receiveAmounts []*bc.AssetAmount, feeAmounts map[bc.AssetID]uint64) error
