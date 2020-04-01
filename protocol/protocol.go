@@ -228,7 +228,7 @@ func (c *Chain) syncProtocolStatus(subProtocol SubProtocol) error {
 	}
 
 	protocolHeight, protocolHash, err := subProtocol.ChainStatus()
-	if err != ErrNotInitSubProtocolChainStatus {
+	if err == ErrNotInitSubProtocolChainStatus {
 		startHash, err := c.store.GetMainChainHash(subProtocol.StartHeight())
 		if err != nil {
 			return errors.Wrap(err, subProtocol.Name(), "can't get block hash by height")
@@ -239,6 +239,8 @@ func (c *Chain) syncProtocolStatus(subProtocol SubProtocol) error {
 		}
 
 		protocolHeight, protocolHash = subProtocol.StartHeight(), startHash
+	} else {
+		return errors.Wrap(err, subProtocol.Name(), "can't get chain status")
 	}
 
 	if *protocolHash == c.bestBlockHeader.Hash() {
