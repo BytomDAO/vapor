@@ -94,7 +94,7 @@ func (h *HSM) ImportKeyFromMnemonic(alias string, auth string, mnemonic string, 
 		return nil, mnem.ErrInvalidMnemonic
 	}
 
-	xpub, err := h.createKeyFromMnemonic(alias, auth, mnemonic)
+	xpub, err := h.createKeyFromMnemonic(normalizedAlias, auth, mnemonic)
 	if err != nil {
 		return nil, err
 	}
