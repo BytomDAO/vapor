@@ -334,7 +334,7 @@ func (b *blockBuilder) preValidateTxs(txs []*types.Tx, chain *protocol.Chain, vi
 	return results, gasLeft
 }
 
-func (b *blockBuilder) validateBySubProtocols(tx *types.Tx, statusFail bool, subProtocols []protocol.Protocoler) error {
+func (b *blockBuilder) validateBySubProtocols(tx *types.Tx, statusFail bool, subProtocols []protocol.SubProtocol) error {
 	for _, subProtocol := range subProtocols {
 		verifyResult := &bc.TxVerifyResult{StatusFail: statusFail}
 		if err := subProtocol.ValidateTx(tx, verifyResult, b.block.Height); err != nil {
