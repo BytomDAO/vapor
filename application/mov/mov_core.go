@@ -17,6 +17,7 @@ import (
 )
 
 var (
+	errChainStatusHasAlreadyInit    = errors.New("mov chain status has already initialized")
 	errInvalidTradePairs            = errors.New("The trade pairs in the tx input is invalid")
 	errStatusFailMustFalse          = errors.New("status fail of transaction does not allow to be true")
 	errInputProgramMustP2WMCScript  = errors.New("input program of trade tx must p2wmc script")
@@ -127,6 +128,10 @@ func (m *Core) DetachBlock(block *types.Block) error {
 
 // InitChainStatus used to init the start block height and start block hash to store
 func (m *Core) InitChainStatus(startHash *bc.Hash) error {
+	if _, err := m.movStore.GetMovDatabaseState(); err == nil {
+		return errChainStatusHasAlreadyInit
+	}
+
 	return m.movStore.InitDBState(m.startBlockHeight, startHash)
 }
 
