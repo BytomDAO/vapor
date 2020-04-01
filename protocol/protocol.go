@@ -239,7 +239,7 @@ func (c *Chain) syncProtocolStatus(subProtocol SubProtocol) error {
 		}
 
 		protocolHeight, protocolHash = subProtocol.StartHeight(), startHash
-	} else {
+	} else if err != nil {
 		return errors.Wrap(err, subProtocol.Name(), "can't get chain status")
 	}
 
