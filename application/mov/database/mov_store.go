@@ -97,19 +97,12 @@ func NewLevelDBMovStore(db dbm.DB) *LevelDBMovStore {
 func (m *LevelDBMovStore) Clear() {
 	batch := m.db.NewBatch()
 
-	orderItr := m.db.IteratorPrefix(ordersPrefix)
-	defer orderItr.Release()
-	for orderItr.Next() {
-		batch.Delete(orderItr.Key())
-	}
+	iter := m.db.IteratorPrefix([]byte{})
+	defer iter.Release()
 
-	tradePairItr := m.db.IteratorPrefix(tradePairsPrefix)
-	defer tradePairItr.Release()
-	for tradePairItr.Next() {
-		batch.Delete(orderItr.Key())
+	for iter.Next() {
+		batch.Delete(iter.Key())
 	}
-
-	batch.Delete(bestMatchStore)
 	batch.Write()
 }
 
