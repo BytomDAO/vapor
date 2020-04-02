@@ -1460,7 +1460,7 @@ func TestRollback(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		chain, err := protocol.NewChain(store, nil, []protocol.Protocoler{movCore}, nil)
+		chain, err := protocol.NewChain(store, nil, []protocol.SubProtocol{movCore}, nil)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -12,8 +12,12 @@ import (
 	"github.com/bytom/vapor/protocol/bc/types"
 )
 
+// ErrNotInitDBState represent the database state of mov store is not initialized
+var ErrNotInitDBState = errors.New("database state of mov store is not initialized")
+
 // MovStore is the interface for mov's persistent storage
 type MovStore interface {
+	Clear()
 	GetMovDatabaseState() (*common.MovDatabaseState, error)
 	InitDBState(height uint64, hash *bc.Hash) error
 	ListOrders(orderAfter *common.Order) ([]*common.Order, error)
@@ -89,6 +93,19 @@ func NewLevelDBMovStore(db dbm.DB) *LevelDBMovStore {
 	return &LevelDBMovStore{db: db}
 }
 
+// Clear will clear all the data of store
+func (m *LevelDBMovStore) Clear() {
+	batch := m.db.NewBatch()
+
+	iter := m.db.Iterator()
+	defer iter.Release()
+
+	for iter.Next() {
+		batch.Delete(iter.Key())
+	}
+	batch.Write()
+}
+
 // GetMovDatabaseState return the current DB's image status
 func (m *LevelDBMovStore) GetMovDatabaseState() (*common.MovDatabaseState, error) {
 	if value := m.db.Get(bestMatchStore); value != nil {
@@ -96,7 +113,7 @@ func (m *LevelDBMovStore) GetMovDatabaseState() (*common.MovDatabaseState, error
 		return state, json.Unmarshal(value, state)
 	}
 
-	return nil, errors.New("don't find state of mov-database")
+	return nil, ErrNotInitDBState
 }
 
 // InitDBState set the DB's image status

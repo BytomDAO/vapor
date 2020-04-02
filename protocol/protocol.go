@@ -19,12 +19,19 @@ const (
 	maxKnownTxs           = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
 )
 
-// Protocoler is interface for layer 2 consensus protocol
-type Protocoler interface {
+// ErrNotInitSubProtocolChainStatus represent the node state of sub protocol has not been initialized
+var ErrNotInitSubProtocolChainStatus = errors.New("node state of sub protocol has not been initialized")
+
+// SubProtocol is interface for layer 2 consensus protocol
+type SubProtocol interface {
 	Name() string
 	StartHeight() uint64
 	BeforeProposalBlock(txs []*types.Tx, blockHeight uint64, gasLeft int64, isTimeout func() bool) ([]*types.Tx, error)
+
+	// ChainStatus return the the current block height and block hash of sub protocol.
+	// it will return ErrNotInitSubProtocolChainStatus if not initialized.
 	ChainStatus() (uint64, *bc.Hash, error)
+	InitChainStatus(*bc.Hash) error
 	ValidateBlock(block *types.Block, verifyResults []*bc.TxVerifyResult) error
 	ValidateTx(tx *types.Tx, verifyResult *bc.TxVerifyResult, blockHeight uint64) error
 	ApplyBlock(block *types.Block) error
@@ -37,7 +44,7 @@ type Chain struct {
 	txPool         *TxPool
 	store          Store
 	processBlockCh chan *processBlockMsg
-	subProtocols   []Protocoler
+	subProtocols   []SubProtocol
 
 	signatureCache  *common.Cache
 	eventDispatcher *event.Dispatcher
@@ -50,7 +57,7 @@ type Chain struct {
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
-func NewChain(store Store, txPool *TxPool, subProtocols []Protocoler, eventDispatcher *event.Dispatcher) (*Chain, error) {
+func NewChain(store Store, txPool *TxPool, subProtocols []SubProtocol, eventDispatcher *event.Dispatcher) (*Chain, error) {
 	knownTxs, _ := common.NewOrderedSet(maxKnownTxs)
 	c := &Chain{
 		orphanManage:    NewOrphanManage(),
@@ -175,7 +182,7 @@ func (c *Chain) InMainChain(hash bc.Hash) bool {
 }
 
 // SubProtocols return list of layer 2 consensus protocol
-func (c *Chain) SubProtocols() []Protocoler {
+func (c *Chain) SubProtocols() []SubProtocol {
 	return c.subProtocols
 }
 
@@ -215,14 +222,25 @@ func (c *Chain) markTransactions(txs ...*types.Tx) {
 	}
 }
 
-func (c *Chain) syncProtocolStatus(subProtocol Protocoler) error {
+func (c *Chain) syncProtocolStatus(subProtocol SubProtocol) error {
 	if c.bestBlockHeader.Height < subProtocol.StartHeight() {
 		return nil
 	}
 
 	protocolHeight, protocolHash, err := subProtocol.ChainStatus()
-	if err != nil {
-		return errors.Wrap(err, "failed on get sub protocol status")
+	if err == ErrNotInitSubProtocolChainStatus {
+		startHash, err := c.store.GetMainChainHash(subProtocol.StartHeight())
+		if err != nil {
+			return errors.Wrap(err, subProtocol.Name(), "can't get block hash by height")
+		}
+
+		if err := subProtocol.InitChainStatus(startHash); err != nil {
+			return errors.Wrap(err, subProtocol.Name(), "fail init chain status")
+		}
+
+		protocolHeight, protocolHash = subProtocol.StartHeight(), startHash
+	} else if err != nil {
+		return errors.Wrap(err, subProtocol.Name(), "can't get chain status")
 	}
 
 	if *protocolHash == c.bestBlockHeader.Hash() {
