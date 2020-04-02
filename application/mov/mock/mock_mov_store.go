@@ -30,6 +30,12 @@ func NewMovStore(tradePairs []*common.TradePair, orders []*common.Order) *MovSto
 	}
 }
 
+func (m *MovStore) Clear() {
+	m.tradePairs = nil
+	m.dbState = nil
+	m.orderMap = make(map[string][]*common.Order)
+}
+
 func (m *MovStore) GetMovDatabaseState() (*common.MovDatabaseState, error) {
 	return m.dbState, nil
 }
