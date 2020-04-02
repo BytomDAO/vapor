@@ -97,7 +97,7 @@ func NewLevelDBMovStore(db dbm.DB) *LevelDBMovStore {
 func (m *LevelDBMovStore) Clear() {
 	batch := m.db.NewBatch()
 
-	iter := m.db.IteratorPrefix([]byte{})
+	iter := m.db.Iterator()
 	defer iter.Release()
 
 	for iter.Next() {
