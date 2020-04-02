@@ -105,7 +105,7 @@ func (m *LevelDBMovStore) Clear() {
 
 	tradePairItr := m.db.IteratorPrefix(tradePairsPrefix)
 	defer tradePairItr.Release()
-	for orderItr.Next() {
+	for tradePairItr.Next() {
 		batch.Delete(orderItr.Key())
 	}
 
