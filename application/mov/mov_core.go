@@ -53,8 +53,13 @@ func NewCoreWithDB(store *database.LevelDBMovStore, startBlockHeight uint64) *Co
 // ApplyBlock parse pending order and cancel from the the transactions of block
 // and add pending order to the dex db, remove cancel order from dex db.
 func (m *Core) ApplyBlock(block *types.Block) error {
-	if block.Height <= m.startBlockHeight {
+	if block.Height < m.startBlockHeight {
 		return nil
+	}
+
+	if block.Height == m.startBlockHeight {
+		blockHash := block.Hash()
+		return m.InitChainStatus(&blockHash)
 	}
 
 	if err := m.validateMatchedTxSequence(block.Transactions); err != nil {
@@ -110,6 +115,11 @@ func (m *Core) ChainStatus() (uint64, *bc.Hash, error) {
 // and add cancel order to the dex db, remove pending order from dex db.
 func (m *Core) DetachBlock(block *types.Block) error {
 	if block.Height < m.startBlockHeight {
+		return nil
+	}
+
+	if block.Height == m.startBlockHeight {
+		m.movStore.Clear()
 		return nil
 	}
 

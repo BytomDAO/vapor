@@ -17,6 +17,7 @@ var ErrNotInitDBState = errors.New("database state of mov store is not initializ
 
 // MovStore is the interface for mov's persistent storage
 type MovStore interface {
+	Clear()
 	GetMovDatabaseState() (*common.MovDatabaseState, error)
 	InitDBState(height uint64, hash *bc.Hash) error
 	ListOrders(orderAfter *common.Order) ([]*common.Order, error)
@@ -90,6 +91,26 @@ type LevelDBMovStore struct {
 // NewLevelDBMovStore create a new LevelDBMovStore object
 func NewLevelDBMovStore(db dbm.DB) *LevelDBMovStore {
 	return &LevelDBMovStore{db: db}
+}
+
+// Clear will clear all the data of store
+func (m *LevelDBMovStore) Clear() {
+	batch := m.db.NewBatch()
+
+	orderItr := m.db.IteratorPrefix(ordersPrefix)
+	defer orderItr.Release()
+	for orderItr.Next() {
+		batch.Delete(orderItr.Key())
+	}
+
+	tradePairItr := m.db.IteratorPrefix(tradePairsPrefix)
+	defer tradePairItr.Release()
+	for orderItr.Next() {
+		batch.Delete(orderItr.Key())
+	}
+
+	batch.Delete(bestMatchStore)
+	batch.Write()
 }
 
 // GetMovDatabaseState return the current DB's image status
