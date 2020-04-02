@@ -118,6 +118,29 @@ func TestSyncProtocolStatus(t *testing.T) {
 			},
 		},
 		{
+			desc: "start height from 1, state of mov is not sync completed",
+			savedBlocks: []*chainBlock{
+				{
+					block:       blocks[0][0],
+					inMainChain: true,
+				},
+				{
+					block:       blocks[1][0],
+					inMainChain: true,
+				},
+				{
+					block:       blocks[2][0],
+					inMainChain: true,
+				},
+			},
+			startHeight: 1,
+			startHash:   hashPtr(blocks[1][0].Hash()),
+			wantChainStatus: &chainStatus{
+				blockHeight: 2,
+				blockHash:   blocks[2][0].Hash(),
+			},
+		},
+		{
 			desc: "chain status of mov is forked",
 			savedBlocks: []*chainBlock{
 				{
