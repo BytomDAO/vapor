@@ -57,11 +57,6 @@ func (m *Core) ApplyBlock(block *types.Block) error {
 		return nil
 	}
 
-	if _, _, err := m.ChainStatus(); err == protocol.ErrNotInitSubProtocolChainStatus && block.Height == m.startBlockHeight {
-		blockHash := block.Hash()
-		return m.InitChainStatus(&blockHash)
-	}
-
 	if err := m.validateMatchedTxSequence(block.Transactions); err != nil {
 		return err
 	}
