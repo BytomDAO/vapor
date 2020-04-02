@@ -53,7 +53,7 @@ func NewCoreWithDB(store *database.LevelDBMovStore, startBlockHeight uint64) *Co
 // ApplyBlock parse pending order and cancel from the the transactions of block
 // and add pending order to the dex db, remove cancel order from dex db.
 func (m *Core) ApplyBlock(block *types.Block) error {
-	if block.Height < m.startBlockHeight {
+	if block.Height <= m.startBlockHeight {
 		return nil
 	}
 
