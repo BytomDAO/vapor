@@ -57,7 +57,7 @@ func (m *Core) ApplyBlock(block *types.Block) error {
 		return nil
 	}
 
-	if block.Height == m.startBlockHeight {
+	if _, _, err := m.ChainStatus(); err == protocol.ErrNotInitSubProtocolChainStatus && block.Height == m.startBlockHeight {
 		blockHash := block.Hash()
 		return m.InitChainStatus(&blockHash)
 	}
