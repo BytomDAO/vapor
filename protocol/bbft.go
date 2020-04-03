@@ -206,7 +206,9 @@ func (c *Chain) ProcessBlockSignature(signature, xPub []byte, blockHash *bc.Hash
 
 // SignBlockHeader signing the block if current node is consensus node
 func (c *Chain) SignBlockHeader(blockHeader *types.BlockHeader) error {
+	c.cond.L.Lock()
 	_, err := c.signBlockHeader(blockHeader)
+	c.cond.L.Unlock()
 	return err
 }
 
