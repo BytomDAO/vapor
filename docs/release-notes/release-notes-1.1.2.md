@@ -13,7 +13,7 @@ Please report bugs using the issue tracker at github:
 ================
 __Vapor Node__
 
-+ `PR #53`
++ `PR #533`
     - Support BTC asset cross-chain.
 + `PR #527`
     - Support update to mov node for the nodes not updated at specified time and add some related test case.
