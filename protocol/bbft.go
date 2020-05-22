@@ -30,6 +30,7 @@ func signCacheKey(blockHash, pubkey string) string {
 }
 
 func (c *Chain) checkDoubleSign(bh *types.BlockHeader, xPub string) error {
+	return nil
 	blockHashes, err := c.store.GetBlockHashesByHeight(bh.Height)
 	if err != nil {
 		return err
