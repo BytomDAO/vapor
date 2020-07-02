@@ -478,7 +478,7 @@ func MustCreateP2WMCProgram(requestAsset bc.AssetID, sellerProgram []byte, ratio
 }
 
 func MustNewOrderFromOutput(tx *types.Tx, outputIndex int) *common.Order {
-	order, err := common.NewOrderFromOutput(tx, outputIndex)
+	order, err := common.NewOrderFromOutput(tx, outputIndex, 0, 0)
 	if err != nil {
 		panic(err)
 	}

@@ -8,8 +8,8 @@ import (
 )
 
 var (
-	// ErrAmountOfFeeOutOfRange represent The fee charged is out of range
-	ErrAmountOfFeeOutOfRange = errors.New("amount of fee is out of range")
+	// ErrInvalidAmountOfFee represent The fee charged is invalid
+	ErrInvalidAmountOfFee = errors.New("amount of fee is invalid")
 )
 
 // AllocatedAssets represent reallocated assets after calculating fees
@@ -22,12 +22,12 @@ type AllocatedAssets struct {
 type FeeStrategy interface {
 	// Allocate will allocate the price differential in matching transaction to the participants and the fee
 	// @param receiveAmounts the amount of assets that the participants in the matching transaction can received when no fee is considered
-	// @param priceDiffs price differential of matching transaction
+	// @param isMakers[i] represent whether i'th input is maker
 	// @return reallocated assets after calculating fees
-	Allocate(receiveAmounts, priceDiffs []*bc.AssetAmount) *AllocatedAssets
+	Allocate(receiveAmounts []*bc.AssetAmount, isMakers []bool) *AllocatedAssets
 
 	// Validate verify that the fee charged for a matching transaction is correct
-	Validate(receiveAmounts []*bc.AssetAmount, feeAmounts map[bc.AssetID]uint64) error
+	Validate(receiveAmounts []*bc.AssetAmount, feeAmounts map[bc.AssetID]uint64, isMakers []bool) error
 }
 
 // DefaultFeeStrategy represent the default fee charge strategy
@@ -39,40 +39,33 @@ func NewDefaultFeeStrategy() *DefaultFeeStrategy {
 }
 
 // Allocate will allocate the price differential in matching transaction to the participants and the fee
-func (d *DefaultFeeStrategy) Allocate(receiveAmounts, priceDiffs []*bc.AssetAmount) *AllocatedAssets {
+func (d *DefaultFeeStrategy) Allocate(receiveAmounts []*bc.AssetAmount, isMakers []bool) *AllocatedAssets {
 	receives := make([]*bc.AssetAmount, len(receiveAmounts))
 	fees := make([]*bc.AssetAmount, len(receiveAmounts))
 
 	for i, receiveAmount := range receiveAmounts {
-		standFee := d.calcMinFeeAmount(receiveAmount.Amount)
-		fee := standFee + priceDiffs[i].Amount
-		if maxFeeAmount := d.calcMaxFeeAmount(receiveAmount.Amount); fee > maxFeeAmount {
-			fee = maxFeeAmount
-		}
-
-		receives[i] = &bc.AssetAmount{AssetId: receiveAmount.AssetId, Amount: receiveAmount.Amount - standFee}
+		fee := d.calcFeeAmount(receiveAmount.Amount, isMakers[i])
+		receives[i] = &bc.AssetAmount{AssetId: receiveAmount.AssetId, Amount: receiveAmount.Amount - fee}
 		fees[i] = &bc.AssetAmount{AssetId: receiveAmount.AssetId, Amount: fee}
 	}
 	return &AllocatedAssets{Receives: receives, Fees: fees}
 }
 
 // Validate verify that the fee charged for a matching transaction is correct
-func (d *DefaultFeeStrategy) Validate(receiveAmounts []*bc.AssetAmount, feeAmounts map[bc.AssetID]uint64) error {
-	for _, receiveAmount := range receiveAmounts {
-		feeAmount := feeAmounts[*receiveAmount.AssetId]
-		maxFeeAmount := d.calcMaxFeeAmount(receiveAmount.Amount)
-		minFeeAmount := d.calcMinFeeAmount(receiveAmount.Amount)
-		if feeAmount < minFeeAmount || feeAmount > maxFeeAmount {
-			return ErrAmountOfFeeOutOfRange
+func (d *DefaultFeeStrategy) Validate(receiveAmounts []*bc.AssetAmount, feeAmounts map[bc.AssetID]uint64, isMakers []bool) error {
+	for i, receiveAmount := range receiveAmounts {
+		realFeeAmount := feeAmounts[*receiveAmount.AssetId]
+		feeAmount := d.calcFeeAmount(receiveAmount.Amount, isMakers[i])
+		if realFeeAmount != feeAmount {
+			return ErrInvalidAmountOfFee
 		}
 	}
 	return nil
 }
 
-func (d *DefaultFeeStrategy) calcMinFeeAmount(amount uint64) uint64 {
+func (d *DefaultFeeStrategy) calcFeeAmount(amount uint64, isMaker bool) uint64 {
+	if isMaker {
+		return 0
+	}
 	return uint64(math.Ceil(float64(amount) / 1000))
-}
-
-func (d *DefaultFeeStrategy) calcMaxFeeAmount(amount uint64) uint64 {
-	return uint64(math.Ceil(float64(amount) * 0.05))
 }

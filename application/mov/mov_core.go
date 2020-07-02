@@ -62,11 +62,11 @@ func (m *Core) ApplyBlock(block *types.Block) error {
 		return m.InitChainStatus(&blockHash)
 	}
 
-	if err := m.validateMatchedTxSequence(block.Transactions); err != nil {
+	if err := m.validateMatchedTxSequence(movTxs(block)); err != nil {
 		return err
 	}
 
-	addOrders, deleteOrders, err := decodeTxsOrders(block.Transactions)
+	addOrders, deleteOrders, err := decodeTxsOrders(movTxs(block))
 	if err != nil {
 		return err
 	}
@@ -74,24 +74,36 @@ func (m *Core) ApplyBlock(block *types.Block) error {
 	return m.movStore.ProcessOrders(addOrders, deleteOrders, &block.BlockHeader)
 }
 
+// Tx contains raw transaction and the sequence of tx in block
+type Tx struct {
+	rawTx       *types.Tx
+	blockHeight uint64
+	sequence    int
+}
+
+// NewTx create a new Tx instance
+func NewTx(tx *types.Tx, blockHeight uint64, sequence int) *Tx {
+	return &Tx{rawTx: tx, blockHeight: blockHeight, sequence: sequence}
+}
+
 // BeforeProposalBlock return all transactions than can be matched, and the number of transactions cannot exceed the given capacity.
-func (m *Core) BeforeProposalBlock(txs []*types.Tx, blockHeight uint64, gasLeft int64, isTimeout func() bool) ([]*types.Tx, error) {
-	if blockHeight <= m.startBlockHeight {
+func (m *Core) BeforeProposalBlock(block *types.Block, gasLeft int64, isTimeout func() bool) ([]*types.Tx, error) {
+	if block.Height <= m.startBlockHeight {
 		return nil, nil
 	}
 
-	orderBook, err := buildOrderBook(m.movStore, txs)
+	orderBook, err := buildOrderBook(m.movStore, movTxs(block))
 	if err != nil {
 		return nil, err
 	}
 
-	program, _ := getRewardProgram(blockHeight)
+	program, _ := getRewardProgram(block.Height)
 	rewardProgram, err := hex.DecodeString(program)
 	if err != nil {
 		return nil, errNotConfiguredRewardProgram
 	}
 
-	matchEngine := match.NewEngine(orderBook, match.NewDefaultFeeStrategy(), rewardProgram)
+	matchEngine := match.NewEngine(orderBook, rewardProgram)
 	tradePairIterator := database.NewTradePairIterator(m.movStore)
 	matchCollector := newMatchTxCollector(matchEngine, tradePairIterator, gasLeft, isTimeout)
 	return matchCollector.result()
@@ -123,7 +135,7 @@ func (m *Core) DetachBlock(block *types.Block) error {
 		return nil
 	}
 
-	deleteOrders, addOrders, err := decodeTxsOrders(block.Transactions)
+	deleteOrders, addOrders, err := decodeTxsOrders(movTxs(block))
 	if err != nil {
 		return err
 	}
@@ -294,7 +306,8 @@ func validateMatchedTx(tx *types.Tx, blockHeight uint64) error {
 		toAssetIDMap[order.ToAssetID.String()] = true
 	}
 
-	if len(fromAssetIDMap) != len(tx.Inputs) || len(toAssetIDMap) != len(tx.Inputs) {
+	inputSize := len(tx.Inputs)
+	if len(fromAssetIDMap) != inputSize || len(toAssetIDMap) != inputSize {
 		return errAssetIDMustUniqueInMatchedTx
 	}
 
@@ -313,7 +326,7 @@ func validateMatchedTxFee(tx *types.Tx, blockHeight uint64) error {
 		}
 	}
 
-	orders, err := getDeleteOrdersFromTx(tx)
+	orders, err := parseDeleteOrdersFromTx(tx)
 	if err != nil {
 		return err
 	}
@@ -325,26 +338,26 @@ func validateMatchedTxFee(tx *types.Tx, blockHeight uint64) error {
 	}
 
 	feeStrategy := match.NewDefaultFeeStrategy()
-	return feeStrategy.Validate(receivedAmount, feeAmounts)
+	return feeStrategy.Validate(receivedAmount, feeAmounts, match.MakerFlags(orders))
 }
 
-func (m *Core) validateMatchedTxSequence(txs []*types.Tx) error {
+func (m *Core) validateMatchedTxSequence(txs []*Tx) error {
 	orderBook := match.NewOrderBook(m.movStore, nil, nil)
 	for _, tx := range txs {
-		if common.IsMatchedTx(tx) {
-			tradePairs, err := getTradePairsFromMatchedTx(tx)
+		if common.IsMatchedTx(tx.rawTx) {
+			tradePairs, err := parseTradePairsFromMatchedTx(tx.rawTx)
 			if err != nil {
 				return err
 			}
 
 			orders := orderBook.PeekOrders(tradePairs)
-			if err := validateSpendOrders(tx, orders); err != nil {
+			if err := validateSpendOrders(tx.rawTx, orders); err != nil {
 				return err
 			}
 
 			orderBook.PopOrders(tradePairs)
-		} else if common.IsCancelOrderTx(tx) {
-			orders, err := getDeleteOrdersFromTx(tx)
+		} else if common.IsCancelOrderTx(tx.rawTx) {
+			orders, err := parseDeleteOrdersFromTx(tx.rawTx)
 			if err != nil {
 				return err
 			}
@@ -354,7 +367,7 @@ func (m *Core) validateMatchedTxSequence(txs []*types.Tx) error {
 			}
 		}
 
-		addOrders, err := getAddOrdersFromTx(tx)
+		addOrders, err := parseAddOrdersFromTx(tx)
 		if err != nil {
 			return err
 		}
@@ -390,11 +403,11 @@ func validateSpendOrders(tx *types.Tx, orders []*common.Order) error {
 	return nil
 }
 
-func decodeTxsOrders(txs []*types.Tx) ([]*common.Order, []*common.Order, error) {
+func decodeTxsOrders(txs []*Tx) ([]*common.Order, []*common.Order, error) {
 	deleteOrderMap := make(map[string]*common.Order)
 	addOrderMap := make(map[string]*common.Order)
 	for _, tx := range txs {
-		addOrders, err := getAddOrdersFromTx(tx)
+		addOrders, err := parseAddOrdersFromTx(tx)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -403,7 +416,7 @@ func decodeTxsOrders(txs []*types.Tx) ([]*common.Order, []*common.Order, error) 
 			addOrderMap[order.Key()] = order
 		}
 
-		deleteOrders, err := getDeleteOrdersFromTx(tx)
+		deleteOrders, err := parseDeleteOrdersFromTx(tx.rawTx)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -417,15 +430,15 @@ func decodeTxsOrders(txs []*types.Tx) ([]*common.Order, []*common.Order, error) 
 	return addOrders, deleteOrders, nil
 }
 
-func buildOrderBook(store database.MovStore, txs []*types.Tx) (*match.OrderBook, error) {
+func buildOrderBook(store database.MovStore, txs []*Tx) (*match.OrderBook, error) {
 	var arrivalAddOrders, arrivalDelOrders []*common.Order
 	for _, tx := range txs {
-		addOrders, err := getAddOrdersFromTx(tx)
+		addOrders, err := parseAddOrdersFromTx(tx)
 		if err != nil {
 			return nil, err
 		}
 
-		delOrders, err := getDeleteOrdersFromTx(tx)
+		delOrders, err := parseDeleteOrdersFromTx(tx.rawTx)
 		if err != nil {
 			return nil, err
 		}
@@ -437,9 +450,9 @@ func buildOrderBook(store database.MovStore, txs []*types.Tx) (*match.OrderBook,
 	return match.NewOrderBook(store, arrivalAddOrders, arrivalDelOrders), nil
 }
 
-func getAddOrdersFromTx(tx *types.Tx) ([]*common.Order, error) {
+func parseAddOrdersFromTx(tx *Tx) ([]*common.Order, error) {
 	var orders []*common.Order
-	for i, output := range tx.Outputs {
+	for i, output := range tx.rawTx.Outputs {
 		if output.OutputType() != types.IntraChainOutputType || !segwit.IsP2WMCScript(output.ControlProgram()) {
 			continue
 		}
@@ -448,7 +461,7 @@ func getAddOrdersFromTx(tx *types.Tx) ([]*common.Order, error) {
 			continue
 		}
 
-		order, err := common.NewOrderFromOutput(tx, i)
+		order, err := common.NewOrderFromOutput(tx.rawTx, i, tx.sequence, tx.blockHeight)
 		if err != nil {
 			return nil, err
 		}
@@ -458,7 +471,7 @@ func getAddOrdersFromTx(tx *types.Tx) ([]*common.Order, error) {
 	return orders, nil
 }
 
-func getDeleteOrdersFromTx(tx *types.Tx) ([]*common.Order, error) {
+func parseDeleteOrdersFromTx(tx *types.Tx) ([]*common.Order, error) {
 	var orders []*common.Order
 	for i, input := range tx.Inputs {
 		if input.InputType() != types.SpendInputType || !segwit.IsP2WMCScript(input.ControlProgram()) {
@@ -475,7 +488,7 @@ func getDeleteOrdersFromTx(tx *types.Tx) ([]*common.Order, error) {
 	return orders, nil
 }
 
-func getTradePairsFromMatchedTx(tx *types.Tx) ([]*common.TradePair, error) {
+func parseTradePairsFromMatchedTx(tx *types.Tx) ([]*common.TradePair, error) {
 	var tradePairs []*common.TradePair
 	for _, tx := range tx.Inputs {
 		contractArgs, err := segwit.DecodeP2WMCProgram(tx.ControlProgram())
@@ -502,6 +515,14 @@ func mergeOrders(addOrderMap, deleteOrderMap map[string]*common.Order) ([]*commo
 		deleteOrders = append(deleteOrders, order)
 	}
 	return addOrders, deleteOrders
+}
+
+func movTxs(block *types.Block) []*Tx {
+	var movTxs []*Tx
+	for i, tx := range block.Transactions {
+		movTxs = append(movTxs, NewTx(tx, block.Height, i))
+	}
+	return movTxs
 }
 
 // getRewardProgram return the reward program by specified block height
