@@ -20,6 +20,13 @@ const (
 	CancelClauseSelector
 )
 
+const (
+	// Maker place in the input arguments indicate current input is maker when in a match transaction
+	Maker int64 = iota
+	// Taker indicate current input is taker
+	Taker
+)
+
 // IsCancelClauseSelector check if input select cancel clause
 func IsCancelClauseSelector(input *types.TxInput) bool {
 	return len(input.Arguments()) == sizeOfCancelClauseArgs && hex.EncodeToString(input.Arguments()[len(input.Arguments())-1]) == hex.EncodeToString(vm.Int64Bytes(CancelClauseSelector))
