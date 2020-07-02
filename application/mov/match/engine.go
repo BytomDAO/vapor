@@ -17,7 +17,6 @@ type Engine struct {
 	orderBook     *OrderBook
 	feeStrategy   FeeStrategy
 	rewardProgram []byte
-	blockHeight   uint64
 }
 
 // NewEngine return a new Engine
