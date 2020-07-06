@@ -12,6 +12,12 @@ var (
 	ErrInvalidAmountOfFee = errors.New("amount of fee is invalid")
 )
 
+const (
+	// rate of fee in units of 10000
+	makerFeeRate int64 = 0
+	takerFeeRate int64 = 3
+)
+
 // AllocatedAssets represent reallocated assets after calculating fees
 type AllocatedAssets struct {
 	Receives []*bc.AssetAmount
@@ -64,8 +70,9 @@ func (d *DefaultFeeStrategy) Validate(receiveAmounts []*bc.AssetAmount, feeAmoun
 }
 
 func (d *DefaultFeeStrategy) calcFeeAmount(amount uint64, isMaker bool) uint64 {
+	feeRate := takerFeeRate
 	if isMaker {
-		return 0
+		feeRate = makerFeeRate
 	}
-	return uint64(math.Ceil(float64(amount) / 1000))
+	return uint64(math.Ceil(float64(amount) * float64(feeRate) / 1E4))
 }
