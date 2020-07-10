@@ -10,10 +10,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bytom/vapor/application/mov/common"
+	"github.com/bytom/vapor/consensus/segwit"
 	"github.com/bytom/vapor/database/leveldb"
 	dbm "github.com/bytom/vapor/database/leveldb"
 	"github.com/bytom/vapor/protocol/bc"
 	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/vm/vmutil"
 	"github.com/bytom/vapor/testutil"
 )
 
@@ -26,6 +28,9 @@ var (
 	assetID6 = &bc.AssetID{V0: 6}
 	assetID7 = &bc.AssetID{V0: 7}
 	assetID8 = &bc.AssetID{V0: 8}
+	
+	orderProgram = testutil.MustDecodeHexString("0020184e1cc4ee4845023888810a79eed7a42c02c544cf2c61ceac05e176d575bd4603ed4e0e0210272200204775b9e167e2c1ffe57ae3e5088af69e518be010529b5fdadf4be97656084eec20a3e21b55f44403884457166ad5847fdb5489512ba9611eee466efb9f94319143")
+	contractArgs = mustDecodeContractArgs(orderProgram)
 
 	mockOrders = []*common.Order{
 		&common.Order{
@@ -37,8 +42,9 @@ var (
 				SourceID:       &bc.Hash{V0: 21},
 				Amount:         1,
 				SourcePos:      0,
-				ControlProgram: []byte("aa"),
+				ControlProgram: orderProgram,
 			},
+			ContractArgs: contractArgs,
 		},
 		&common.Order{
 			FromAssetID:      assetID1,
@@ -49,8 +55,9 @@ var (
 				SourceID:       &bc.Hash{V0: 22},
 				Amount:         1,
 				SourcePos:      0,
-				ControlProgram: []byte("aa"),
+				ControlProgram: orderProgram,
 			},
+			ContractArgs: contractArgs,
 		},
 		&common.Order{
 			FromAssetID:      assetID1,
@@ -61,8 +68,9 @@ var (
 				SourceID:       &bc.Hash{V0: 23},
 				Amount:         1,
 				SourcePos:      0,
-				ControlProgram: []byte("aa"),
+				ControlProgram: orderProgram,
 			},
+			ContractArgs: contractArgs,
 		},
 		&common.Order{
 			FromAssetID:      assetID1,
@@ -73,8 +81,9 @@ var (
 				SourceID:       &bc.Hash{V0: 13},
 				Amount:         1,
 				SourcePos:      0,
-				ControlProgram: []byte("aa"),
+				ControlProgram: orderProgram,
 			},
+			ContractArgs: contractArgs,
 		},
 		&common.Order{
 			FromAssetID:      assetID1,
@@ -85,8 +94,9 @@ var (
 				SourceID:       &bc.Hash{V0: 24},
 				Amount:         10,
 				SourcePos:      1,
-				ControlProgram: []byte("aa"),
+				ControlProgram: orderProgram,
 			},
+			ContractArgs: contractArgs,
 		},
 		&common.Order{
 			FromAssetID:      assetID1,
@@ -97,8 +107,9 @@ var (
 				SourceID:       &bc.Hash{V0: 24},
 				Amount:         1,
 				SourcePos:      0,
-				ControlProgram: []byte("aa"),
+				ControlProgram: orderProgram,
 			},
+			ContractArgs: contractArgs,
 		},
 		&common.Order{
 			FromAssetID:      assetID1,
@@ -109,8 +120,9 @@ var (
 				SourceID:       &bc.Hash{V0: 25},
 				Amount:         1,
 				SourcePos:      0,
-				ControlProgram: []byte("aa"),
+				ControlProgram: orderProgram,
 			},
+			ContractArgs: contractArgs,
 		},
 		&common.Order{
 			FromAssetID:      assetID1,
@@ -121,8 +133,9 @@ var (
 				SourceID:       &bc.Hash{V0: 26},
 				Amount:         1,
 				SourcePos:      0,
-				ControlProgram: []byte("aa"),
+				ControlProgram: orderProgram,
 			},
+			ContractArgs: contractArgs,
 		},
 		&common.Order{
 			FromAssetID:      assetID1,
@@ -133,8 +146,9 @@ var (
 				SourceID:       &bc.Hash{V0: 1},
 				Amount:         1,
 				SourcePos:      0,
-				ControlProgram: []byte("aa"),
+				ControlProgram: orderProgram,
 			},
+			ContractArgs: contractArgs,
 		},
 		&common.Order{
 			FromAssetID:      assetID1,
@@ -145,8 +159,9 @@ var (
 				SourceID:       &bc.Hash{V0: 2},
 				Amount:         1,
 				SourcePos:      0,
-				ControlProgram: []byte("aa"),
+				ControlProgram: orderProgram,
 			},
+			ContractArgs: contractArgs,
 		},
 		&common.Order{
 			FromAssetID:      assetID3,
@@ -157,8 +172,9 @@ var (
 				SourceID:       &bc.Hash{V0: 33},
 				Amount:         1,
 				SourcePos:      0,
-				ControlProgram: []byte("aa"),
+				ControlProgram: orderProgram,
 			},
+			ContractArgs: contractArgs,
 		},
 		&common.Order{
 			FromAssetID:      assetID4,
@@ -169,8 +185,9 @@ var (
 				SourceID:       &bc.Hash{V0: 34},
 				Amount:         1,
 				SourcePos:      0,
-				ControlProgram: []byte("aa"),
+				ControlProgram: orderProgram,
 			},
+			ContractArgs: contractArgs,
 		},
 		&common.Order{
 			FromAssetID:      assetID4,
@@ -181,8 +198,9 @@ var (
 				SourceID:       &bc.Hash{V0: 36},
 				Amount:         1,
 				SourcePos:      0,
-				ControlProgram: []byte("aa"),
+				ControlProgram: orderProgram,
 			},
+			ContractArgs: contractArgs,
 		},
 		&common.Order{
 			FromAssetID:      assetID5,
@@ -193,8 +211,9 @@ var (
 				SourceID:       &bc.Hash{V0: 37},
 				Amount:         1,
 				SourcePos:      0,
-				ControlProgram: []byte("aa"),
+				ControlProgram: orderProgram,
 			},
+			ContractArgs: contractArgs,
 		},
 		&common.Order{
 			FromAssetID:      assetID6,
@@ -205,8 +224,9 @@ var (
 				SourceID:       &bc.Hash{V0: 38},
 				Amount:         1,
 				SourcePos:      0,
-				ControlProgram: []byte("aa"),
+				ControlProgram: orderProgram,
 			},
+			ContractArgs: contractArgs,
 		},
 	}
 )
@@ -624,8 +644,8 @@ func TestMovStore(t *testing.T) {
 				mockOrders[7],
 				mockOrders[6],
 				mockOrders[2],
-				mockOrders[3],
 				mockOrders[4],
+				mockOrders[3],
 				mockOrders[5],
 				mockOrders[0],
 			},
@@ -663,8 +683,8 @@ func TestMovStore(t *testing.T) {
 			wantOrders: []*common.Order{
 				mockOrders[7],
 				mockOrders[6],
-				mockOrders[3],
 				mockOrders[4],
+				mockOrders[3],
 				mockOrders[5],
 			},
 			wantTradePairs: []*common.TradePair{
@@ -943,8 +963,8 @@ func TestListOrders(t *testing.T) {
 				mockOrders[7],
 				mockOrders[6],
 				mockOrders[2],
-				mockOrders[3],
 				mockOrders[4],
+				mockOrders[3],
 				mockOrders[5],
 				mockOrders[0],
 			},
@@ -963,7 +983,6 @@ func TestListOrders(t *testing.T) {
 			},
 			query: mockOrders[3],
 			wantOrders: []*common.Order{
-				mockOrders[4],
 				mockOrders[5],
 				mockOrders[0],
 			},
@@ -1030,8 +1049,8 @@ func TestAddOrders(t *testing.T) {
 				mockOrders[7],
 				mockOrders[6],
 				mockOrders[2],
-				mockOrders[3],
 				mockOrders[4],
+				mockOrders[3],
 				mockOrders[5],
 				mockOrders[0],
 			},
@@ -1055,8 +1074,8 @@ func TestAddOrders(t *testing.T) {
 				mockOrders[7],
 				mockOrders[6],
 				mockOrders[2],
-				mockOrders[3],
 				mockOrders[4],
+				mockOrders[3],
 				mockOrders[5],
 				mockOrders[0],
 			},
@@ -1464,4 +1483,13 @@ func TestCheckMovDatabaseState(t *testing.T) {
 		os.RemoveAll("temp")
 	}
 
+}
+
+func mustDecodeContractArgs(program []byte) *vmutil.MagneticContractArgs {
+	contractArgs, err := segwit.DecodeP2WMCProgram(program)
+	if err != nil {
+		panic(err)
+	}
+
+	return contractArgs
 }

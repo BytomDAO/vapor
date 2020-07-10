@@ -39,7 +39,7 @@ func TestApplyBlock(t *testing.T) {
 				},
 			},
 			blockFunc:   applyBlock,
-			wantOrders:  []*common.Order{mock.MustNewOrderFromOutput(mock.Btc2EthMakerTxs[0], 0), mock.MustNewOrderFromOutput(mock.Eth2BtcMakerTxs[0], 0)},
+			wantOrders:  []*common.Order{mock.MustNewOrderFromOutputV2(mock.Btc2EthMakerTxs[0], 0, 2, 0), mock.MustNewOrderFromOutputV2(mock.Eth2BtcMakerTxs[0], 0, 2, 1)},
 			wantDBState: &common.MovDatabaseState{Height: 2, Hash: hashPtr(testutil.MustDecodeHash("88dbcde57bb2b53b107d7494f20f1f1a892307a019705980c3510890449c0020"))},
 		},
 		{
@@ -55,10 +55,10 @@ func TestApplyBlock(t *testing.T) {
 			},
 			blockFunc: applyBlock,
 			wantOrders: []*common.Order{
-				mock.MustNewOrderFromOutput(mock.Btc2EthMakerTxs[0], 0),
-				mock.MustNewOrderFromOutput(mock.Eth2BtcMakerTxs[0], 0),
-				mock.MustNewOrderFromOutput(mock.Eos2EtcMakerTxs[0], 0),
-				mock.MustNewOrderFromOutput(mock.Eth2EosMakerTxs[0], 0),
+				mock.MustNewOrderFromOutputV2(mock.Btc2EthMakerTxs[0], 0, 2, 0),
+				mock.MustNewOrderFromOutputV2(mock.Eth2BtcMakerTxs[0], 0, 2, 1),
+				mock.MustNewOrderFromOutputV2(mock.Eos2EtcMakerTxs[0], 0, 2, 2),
+				mock.MustNewOrderFromOutputV2(mock.Eth2EosMakerTxs[0], 0, 2, 3),
 			},
 			wantDBState: &common.MovDatabaseState{Height: 2, Hash: hashPtr(testutil.MustDecodeHash("88dbcde57bb2b53b107d7494f20f1f1a892307a019705980c3510890449c0020"))},
 		},
@@ -85,7 +85,7 @@ func TestApplyBlock(t *testing.T) {
 			},
 			blockFunc:   applyBlock,
 			initOrders:  []*common.Order{mock.Btc2EthOrders[0], mock.Eth2BtcOrders[1]},
-			wantOrders:  []*common.Order{mock.MustNewOrderFromOutput(mock.MatchedTxs[0], 1)},
+			wantOrders:  []*common.Order{mock.MustNewOrderFromOutputV2(mock.MatchedTxs[0], 1, 2, 0)},
 			wantDBState: &common.MovDatabaseState{Height: 2, Hash: hashPtr(testutil.MustDecodeHash("88dbcde57bb2b53b107d7494f20f1f1a892307a019705980c3510890449c0020"))},
 		},
 		{
@@ -98,7 +98,7 @@ func TestApplyBlock(t *testing.T) {
 			},
 			blockFunc:   applyBlock,
 			initOrders:  []*common.Order{mock.Btc2EthOrders[0], mock.Btc2EthOrders[1], mock.Eth2BtcOrders[2]},
-			wantOrders:  []*common.Order{mock.MustNewOrderFromOutput(mock.MatchedTxs[3], 1)},
+			wantOrders:  []*common.Order{mock.MustNewOrderFromOutputV2(mock.MatchedTxs[3], 1, 2, 1)},
 			wantDBState: &common.MovDatabaseState{Height: 2, Hash: hashPtr(testutil.MustDecodeHash("88dbcde57bb2b53b107d7494f20f1f1a892307a019705980c3510890449c0020"))},
 		},
 		{
@@ -113,7 +113,7 @@ func TestApplyBlock(t *testing.T) {
 			},
 			blockFunc:   applyBlock,
 			initOrders:  []*common.Order{},
-			wantOrders:  []*common.Order{mock.MustNewOrderFromOutput(mock.MatchedTxs[4], 1)},
+			wantOrders:  []*common.Order{mock.MustNewOrderFromOutputV2(mock.MatchedTxs[4], 1, 2, 2)},
 			wantDBState: &common.MovDatabaseState{Height: 2, Hash: hashPtr(testutil.MustDecodeHash("88dbcde57bb2b53b107d7494f20f1f1a892307a019705980c3510890449c0020"))},
 		},
 		{
@@ -133,8 +133,8 @@ func TestApplyBlock(t *testing.T) {
 			blockFunc:  applyBlock,
 			initOrders: []*common.Order{},
 			wantOrders: []*common.Order{
-				mock.MustNewOrderFromOutput(mock.MatchedTxs[4], 1),
-				mock.MustNewOrderFromOutput(mock.Eth2EosMakerTxs[0], 0),
+				mock.MustNewOrderFromOutputV2(mock.MatchedTxs[4], 1, 2, 3),
+				mock.MustNewOrderFromOutputV2(mock.Eth2EosMakerTxs[0], 0, 2, 4),
 			},
 			wantDBState: &common.MovDatabaseState{Height: 2, Hash: hashPtr(testutil.MustDecodeHash("88dbcde57bb2b53b107d7494f20f1f1a892307a019705980c3510890449c0020"))},
 		},
@@ -152,7 +152,7 @@ func TestApplyBlock(t *testing.T) {
 			},
 			blockFunc:   applyBlock,
 			initOrders:  []*common.Order{},
-			wantOrders:  []*common.Order{mock.MustNewOrderFromOutput(mock.MatchedTxs[7], 2)},
+			wantOrders:  []*common.Order{mock.MustNewOrderFromOutputV2(mock.MatchedTxs[7], 2, 2, 4)},
 			wantDBState: &common.MovDatabaseState{Height: 2, Hash: hashPtr(testutil.MustDecodeHash("88dbcde57bb2b53b107d7494f20f1f1a892307a019705980c3510890449c0020"))},
 		},
 		{
@@ -199,7 +199,11 @@ func TestApplyBlock(t *testing.T) {
 			},
 			blockFunc:   detachBlock,
 			initOrders:  []*common.Order{mock.Btc2EthOrders[1]},
-			wantOrders:  []*common.Order{mock.Btc2EthOrders[0], mock.Btc2EthOrders[1], mock.Eth2BtcOrders[0]},
+			wantOrders:  []*common.Order{
+				orderWithHeightAndTxIndex(mock.Btc2EthOrders[0], 0, 0),
+				mock.Btc2EthOrders[1],
+				orderWithHeightAndTxIndex(mock.Eth2BtcOrders[0], 0, 0),
+			},
 			wantDBState: &common.MovDatabaseState{Height: 0, Hash: &bc.Hash{}},
 		},
 		{
@@ -211,8 +215,11 @@ func TestApplyBlock(t *testing.T) {
 				},
 			},
 			blockFunc:   detachBlock,
-			initOrders:  []*common.Order{mock.MustNewOrderFromOutput(mock.MatchedTxs[0], 1)},
-			wantOrders:  []*common.Order{mock.Btc2EthOrders[0], mock.Eth2BtcOrders[1]},
+			initOrders:  []*common.Order{mock.MustNewOrderFromOutputV2(mock.MatchedTxs[0], 1, 1, 0)},
+			wantOrders:  []*common.Order{
+				orderWithHeightAndTxIndex(mock.Btc2EthOrders[0], 0, 0),
+				orderWithHeightAndTxIndex(mock.Eth2BtcOrders[1], 0, 0),
+			},
 			wantDBState: &common.MovDatabaseState{Height: 0, Hash: &bc.Hash{}},
 		},
 		{
@@ -225,7 +232,11 @@ func TestApplyBlock(t *testing.T) {
 			},
 			blockFunc:   detachBlock,
 			initOrders:  []*common.Order{mock.MustNewOrderFromOutput(mock.MatchedTxs[3], 1)},
-			wantOrders:  []*common.Order{mock.Btc2EthOrders[0], mock.Btc2EthOrders[1], mock.Eth2BtcOrders[2]},
+			wantOrders:  []*common.Order{
+				orderWithHeightAndTxIndex(mock.Btc2EthOrders[0], 0, 0),
+				orderWithHeightAndTxIndex(mock.Btc2EthOrders[1], 0, 0),
+				orderWithHeightAndTxIndex(mock.Eth2BtcOrders[2], 0, 0),
+			},
 			wantDBState: &common.MovDatabaseState{Height: 0, Hash: &bc.Hash{}},
 		},
 		{
@@ -266,12 +277,12 @@ func TestApplyBlock(t *testing.T) {
 
 		movCore := &Core{movStore: store}
 		if err := c.blockFunc(movCore, c.block); err != c.wantError {
-			t.Errorf("#%d(%s):apply block want error(%v), got error(%v)", i, c.desc, c.wantError, err)
+			t.Errorf("#%d(%s):want error(%v), got error(%v)", i, c.desc, c.wantError, err)
 		}
 
 		gotOrders := queryAllOrders(store)
 		if !ordersEquals(c.wantOrders, gotOrders) {
-			t.Errorf("#%d(%s):apply block want orders(%v), got orders(%v)", i, c.desc, c.wantOrders, gotOrders)
+			t.Errorf("#%d(%s):want orders(%v), got orders(%v)", i, c.desc, c.wantOrders, gotOrders)
 		}
 
 		dbState, err := store.GetMovDatabaseState()
@@ -280,7 +291,7 @@ func TestApplyBlock(t *testing.T) {
 		}
 
 		if !testutil.DeepEqual(c.wantDBState, dbState) {
-			t.Errorf("#%d(%s):apply block want db state(%v), got db state(%v)", i, c.desc, c.wantDBState, dbState)
+			t.Errorf("#%d(%s):want db state(%v), got db state(%v)", i, c.desc, c.wantDBState, dbState)
 		}
 
 		testDB.Close()
@@ -527,32 +538,25 @@ func TestCalcMatchedTxFee(t *testing.T) {
 	cases := []struct {
 		desc             string
 		tx               types.TxData
-		maxFeeRate       float64
 		wantMatchedTxFee map[bc.AssetID]*matchedTxFee
 	}{
 		{
-			desc:       "fee less than max fee",
-			maxFeeRate: 0.05,
+			desc: "fee less than max fee",
 			wantMatchedTxFee: map[bc.AssetID]*matchedTxFee{
-				mock.ETH: {amount: 11, rewardProgram: mock.RewardProgram},
-				mock.BTC: {amount: 1, rewardProgram: mock.RewardProgram},
+				mock.ETH: {amount: 1, rewardProgram: mock.RewardProgram},
 			},
 			tx: mock.MatchedTxs[1].TxData,
 		},
 		{
-			desc:       "fee refund in tx",
-			maxFeeRate: 0.05,
+			desc: "fee refund in tx",
 			wantMatchedTxFee: map[bc.AssetID]*matchedTxFee{
-				mock.ETH: {amount: 25, rewardProgram: mock.RewardProgram},
 				mock.BTC: {amount: 1, rewardProgram: mock.RewardProgram},
 			},
 			tx: mock.MatchedTxs[2].TxData,
 		},
 		{
-			desc:       "no price diff",
-			maxFeeRate: 0.05,
+			desc: "no price diff",
 			wantMatchedTxFee: map[bc.AssetID]*matchedTxFee{
-				mock.ETH: {amount: 1, rewardProgram: mock.RewardProgram},
 				mock.BTC: {amount: 1, rewardProgram: mock.RewardProgram},
 			},
 			tx: mock.MatchedTxs[0].TxData,
@@ -644,7 +648,7 @@ func TestBeforeProposalBlock(t *testing.T) {
 		}
 
 		movCore := &Core{movStore: store}
-		gotMatchedTxs, err := movCore.BeforeProposalBlock(nil, 2, c.gasLeft, func() bool { return false })
+		gotMatchedTxs, err := movCore.BeforeProposalBlock(&types.Block{BlockHeader: types.BlockHeader{Height: 2}}, c.gasLeft, func() bool { return false })
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -672,43 +676,43 @@ func TestValidateMatchedTxSequence(t *testing.T) {
 	cases := []struct {
 		desc         string
 		initOrders   []*common.Order
-		transactions []*types.Tx
+		transactions []*Tx
 		wantError    error
 	}{
 		{
 			desc:         "both db orders and transactions is empty",
 			initOrders:   []*common.Order{},
-			transactions: []*types.Tx{},
+			transactions: []*Tx{},
 			wantError:    nil,
 		},
 		{
 			desc:         "existing matched orders in db, and transactions is empty",
 			initOrders:   []*common.Order{mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0]},
-			transactions: []*types.Tx{},
+			transactions: []*Tx{},
 			wantError:    nil,
 		},
 		{
 			desc:         "db orders is empty, but transactions has matched tx",
 			initOrders:   []*common.Order{},
-			transactions: []*types.Tx{mock.MatchedTxs[1]},
+			transactions: []*Tx{{rawTx: mock.MatchedTxs[1]}},
 			wantError:    errNotMatchedOrder,
 		},
 		{
 			desc:         "existing matched orders in db, and corresponding matched tx in transactions",
 			initOrders:   []*common.Order{mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0]},
-			transactions: []*types.Tx{mock.MatchedTxs[1]},
+			transactions: []*Tx{{rawTx: mock.MatchedTxs[1]}},
 			wantError:    nil,
 		},
 		{
 			desc:         "package matched tx, one order from db, and the another order from transactions",
 			initOrders:   []*common.Order{mock.Btc2EthOrders[0]},
-			transactions: []*types.Tx{mock.Eth2BtcMakerTxs[0], mock.MatchedTxs[10]},
+			transactions: []*Tx{{rawTx: mock.Eth2BtcMakerTxs[0]}, {rawTx: mock.MatchedTxs[10]}},
 			wantError:    nil,
 		},
 		{
 			desc:         "two matched txs use the same orders",
 			initOrders:   []*common.Order{mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0]},
-			transactions: []*types.Tx{mock.MatchedTxs[1], mock.MatchedTxs[1]},
+			transactions: []*Tx{{rawTx: mock.MatchedTxs[1]}, {rawTx: mock.MatchedTxs[1]}},
 			wantError:    errNotMatchedOrder,
 		},
 		{
@@ -717,7 +721,7 @@ func TestValidateMatchedTxSequence(t *testing.T) {
 				mock.Btc2EthOrders[3], mock.Eth2BtcOrders[2],
 				mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0],
 			},
-			transactions: []*types.Tx{mock.MatchedTxs[8]},
+			transactions: []*Tx{{rawTx: mock.MatchedTxs[8]}},
 			wantError:    nil,
 		},
 		{
@@ -726,31 +730,31 @@ func TestValidateMatchedTxSequence(t *testing.T) {
 				mock.Btc2EthOrders[3], mock.Eth2BtcOrders[2],
 				mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0],
 			},
-			transactions: []*types.Tx{mock.MatchedTxs[1], mock.MatchedTxs[8]},
+			transactions: []*Tx{{rawTx: mock.MatchedTxs[1]}, {rawTx: mock.MatchedTxs[8]}},
 			wantError:    errSpendOutputIDIsIncorrect,
 		},
 		{
 			desc:         "matched tx and orders from packaged transactions",
 			initOrders:   []*common.Order{},
-			transactions: []*types.Tx{mock.Btc2EthMakerTxs[0], mock.Eth2BtcMakerTxs[1], mock.MatchedTxs[4]},
+			transactions: []*Tx{{rawTx: mock.Btc2EthMakerTxs[0]}, {rawTx: mock.Eth2BtcMakerTxs[1]}, {rawTx: mock.MatchedTxs[4]}},
 			wantError:    nil,
 		},
 		{
 			desc:         "package the matched tx first, then package match orders",
 			initOrders:   []*common.Order{},
-			transactions: []*types.Tx{mock.MatchedTxs[4], mock.Btc2EthMakerTxs[0], mock.Eth2BtcMakerTxs[1]},
+			transactions: []*Tx{{rawTx: mock.MatchedTxs[4]}, {rawTx: mock.Btc2EthMakerTxs[0]}, {rawTx: mock.Eth2BtcMakerTxs[1]}},
 			wantError:    errNotMatchedOrder,
 		},
 		{
 			desc:         "cancel order in transactions",
 			initOrders:   []*common.Order{mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0]},
-			transactions: []*types.Tx{mock.Btc2EthCancelTxs[0], mock.MatchedTxs[1]},
+			transactions: []*Tx{{rawTx: mock.Btc2EthCancelTxs[0]}, {rawTx: mock.MatchedTxs[1]}},
 			wantError:    errNotMatchedOrder,
 		},
 		{
 			desc:         "package cancel order after match tx",
 			initOrders:   []*common.Order{mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0]},
-			transactions: []*types.Tx{mock.MatchedTxs[1], mock.Btc2EthCancelTxs[0]},
+			transactions: []*Tx{{rawTx: mock.MatchedTxs[1]}, {rawTx: mock.Btc2EthCancelTxs[0]}},
 			wantError:    nil,
 		},
 		{
@@ -759,7 +763,7 @@ func TestValidateMatchedTxSequence(t *testing.T) {
 				mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0],
 				mock.Eos2EtcOrders[0], mock.Etc2EosOrders[0],
 			},
-			transactions: []*types.Tx{mock.MatchedTxs[1], mock.MatchedTxs[9]},
+			transactions: []*Tx{{rawTx: mock.MatchedTxs[1]}, {rawTx: mock.MatchedTxs[9]}},
 			wantError:    nil,
 		},
 		{
@@ -768,19 +772,19 @@ func TestValidateMatchedTxSequence(t *testing.T) {
 				mock.Btc2EthOrders[0], mock.Eth2BtcOrders[0],
 				mock.Eos2EtcOrders[0], mock.Etc2EosOrders[0],
 			},
-			transactions: []*types.Tx{mock.MatchedTxs[9], mock.MatchedTxs[1]},
+			transactions: []*Tx{{rawTx: mock.MatchedTxs[9]}, {rawTx: mock.MatchedTxs[1]}},
 			wantError:    nil,
 		},
 		{
 			desc:         "package partial matched tx from db orders, and the re-pending order continue to match",
 			initOrders:   []*common.Order{mock.Btc2EthOrders[0], mock.Btc2EthOrders[1], mock.Eth2BtcOrders[2]},
-			transactions: []*types.Tx{mock.MatchedTxs[2], mock.MatchedTxs[3]},
+			transactions: []*Tx{{rawTx: mock.MatchedTxs[2]}, {rawTx: mock.MatchedTxs[3]}},
 			wantError:    nil,
 		},
 		{
 			desc:         "cancel the re-pending order",
 			initOrders:   []*common.Order{mock.Btc2EthOrders[0], mock.Btc2EthOrders[1], mock.Eth2BtcOrders[2]},
-			transactions: []*types.Tx{mock.MatchedTxs[2], mock.Btc2EthCancelTxs[1], mock.MatchedTxs[3]},
+			transactions: []*Tx{{rawTx: mock.MatchedTxs[2]}, {rawTx: mock.Btc2EthCancelTxs[1]}, {rawTx: mock.MatchedTxs[3]}},
 			wantError:    errNotMatchedOrder,
 		},
 	}
@@ -843,4 +847,10 @@ func ordersEquals(orders1 []*common.Order, orders2 []*common.Order) bool {
 
 func hashPtr(hash bc.Hash) *bc.Hash {
 	return &hash
+}
+
+func orderWithHeightAndTxIndex(order *common.Order, blockHeight uint64, txIndex int) *common.Order {
+	order.BlockHeight = blockHeight
+	order.TxIndex = txIndex
+	return order
 }

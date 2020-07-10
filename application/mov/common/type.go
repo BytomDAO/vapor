@@ -28,8 +28,8 @@ type Order struct {
 	RatioNumerator   int64
 	RatioDenominator int64
 	BlockHeight      uint64
-	Sequence         int
-	ContractArgs     *vmutil.MagneticContractArgs `json:"-"`
+	TxIndex          int
+	ContractArgs     *vmutil.MagneticContractArgs
 }
 
 // Rate return the exchange represented by float64
@@ -71,7 +71,7 @@ func (o OrderSlice) Less(i, j int) bool {
 }
 
 // NewOrderFromOutput convert txinput to order
-func NewOrderFromOutput(tx *types.Tx, outputIndex int, txSeq int, blockHeight uint64) (*Order, error) {
+func NewOrderFromOutput(tx *types.Tx, outputIndex int, blockHeight uint64, txIndex int) (*Order, error) {
 	outputID := tx.OutputID(outputIndex)
 	output, err := tx.IntraChainOutput(*outputID)
 	if err != nil {
@@ -89,8 +89,8 @@ func NewOrderFromOutput(tx *types.Tx, outputIndex int, txSeq int, blockHeight ui
 		ToAssetID:        &contractArgs.RequestedAsset,
 		RatioNumerator:   contractArgs.RatioNumerator,
 		RatioDenominator: contractArgs.RatioDenominator,
-		Sequence:         txSeq,
 		BlockHeight:      blockHeight,
+		TxIndex:          txIndex,
 		ContractArgs:     contractArgs,
 		Utxo: &MovUtxo{
 			SourceID:       output.Source.Ref,

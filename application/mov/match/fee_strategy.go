@@ -28,12 +28,11 @@ type AllocatedAssets struct {
 type FeeStrategy interface {
 	// Allocate will allocate the price differential in matching transaction to the participants and the fee
 	// @param receiveAmounts the amount of assets that the participants in the matching transaction can received when no fee is considered
-	// @param isMakers[i] represent whether i'th input is maker
 	// @return reallocated assets after calculating fees
 	Allocate(receiveAmounts []*bc.AssetAmount, isMakers []bool) *AllocatedAssets
 
 	// Validate verify that the fee charged for a matching transaction is correct
-	Validate(receiveAmounts []*bc.AssetAmount, feeAmounts map[bc.AssetID]uint64, isMakers []bool) error
+	Validate(receiveAmounts []*bc.AssetAmount, feeAmounts map[bc.AssetID]uint64) error
 }
 
 // DefaultFeeStrategy represent the default fee charge strategy
@@ -58,11 +57,11 @@ func (d *DefaultFeeStrategy) Allocate(receiveAmounts []*bc.AssetAmount, isMakers
 }
 
 // Validate verify that the fee charged for a matching transaction is correct
-func (d *DefaultFeeStrategy) Validate(receiveAmounts []*bc.AssetAmount, feeAmounts map[bc.AssetID]uint64, isMakers []bool) error {
-	for i, receiveAmount := range receiveAmounts {
+func (d *DefaultFeeStrategy) Validate(receiveAmounts []*bc.AssetAmount, feeAmounts map[bc.AssetID]uint64) error {
+	for _, receiveAmount := range receiveAmounts {
 		realFeeAmount := feeAmounts[*receiveAmount.AssetId]
-		feeAmount := d.calcFeeAmount(receiveAmount.Amount, isMakers[i])
-		if realFeeAmount != feeAmount {
+		feeAmount := d.calcFeeAmount(receiveAmount.Amount, false)
+		if realFeeAmount > feeAmount {
 			return ErrInvalidAmountOfFee
 		}
 	}

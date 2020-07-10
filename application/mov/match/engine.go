@@ -5,6 +5,7 @@ import (
 
 	"github.com/bytom/vapor/application/mov/common"
 	"github.com/bytom/vapor/application/mov/contract"
+	"github.com/bytom/vapor/consensus/segwit"
 	"github.com/bytom/vapor/errors"
 	vprMath "github.com/bytom/vapor/math"
 	"github.com/bytom/vapor/protocol/bc"
@@ -55,8 +56,8 @@ func (e *Engine) NextMatchedTx(tradePairs ...*common.TradePair) (*types.Tx, erro
 		e.orderBook.PopOrder(tradePair)
 	}
 
-	for _, order := range partialOrders {
-		e.orderBook.AddOrder(order)
+	if err := e.addReOrder(partialOrders, tx); err != nil {
+		return nil, err
 	}
 	return tx, nil
 }
@@ -67,6 +68,25 @@ func addMatchTxFeeOutput(txData *types.TxData, fees []*bc.AssetAmount, rewardPro
 			txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*feeAmount.AssetId, feeAmount.Amount, rewardProgram))
 		}
 	}
+}
+
+func (e *Engine) addReOrder(partialOrders []*common.Order, tx *types.Tx) error {
+	index := 0
+	for i, output := range tx.Outputs {
+		if !segwit.IsP2WMCScript(output.ControlProgram()) || output.AssetAmount().Amount == 0 {
+			continue
+		}
+
+		partialOrder := partialOrders[index]
+		order, err := common.NewOrderFromOutput(tx, i, partialOrder.BlockHeight, partialOrder.TxIndex)
+		if err != nil {
+			return err
+		}
+
+		index++
+		e.orderBook.AddOrder(order)
+	}
+	return nil
 }
 
 func addRefundOutput(txData *types.TxData, orders []*common.Order) {
@@ -102,20 +122,27 @@ func addRefundOutput(txData *types.TxData, orders []*common.Order) {
 	}
 }
 
-func addTakerOutput(txData *types.TxData, orders []*common.Order, priceDiffs []*bc.AssetAmount, isMakers []bool) {
+func addTakerOutput(txData *types.TxData, orders []*common.Order, priceDiffs []*bc.AssetAmount, isMakers []bool) []*common.Order {
+	var partialOrders []*common.Order
 	for i, order := range orders {
 		if isMakers[i] {
 			continue
 		}
 		for _, priceDiff := range priceDiffs {
-			if priceDiff.AssetId.String() == orders[i].FromAssetID.String() {
+			if priceDiff.Amount == 0 {
+				continue
+			}
+
+			if priceDiff.AssetId.String() == orders[i].FromAssetID.String() && CalcRequestAmount(priceDiff.Amount, order.ContractArgs.RatioNumerator, order.ContractArgs.RatioDenominator) >= 1 {
 				txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*priceDiff.AssetId, priceDiff.Amount, order.Utxo.ControlProgram))
+				partialOrders = append(partialOrders, order)
 			} else {
 				txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*priceDiff.AssetId, priceDiff.Amount, orders[i].ContractArgs.SellerProgram))
 			}
 		}
 		break
 	}
+	return partialOrders
 }
 
 func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, []*common.Order, error) {
@@ -135,7 +162,7 @@ func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, []*common.Orde
 	}
 
 	addMatchTxFeeOutput(txData, allocatedAssets.Fees, e.rewardProgram)
-	addTakerOutput(txData, orders, priceDiffs, isMakers)
+	partialOrders = append(partialOrders, addTakerOutput(txData, orders, priceDiffs, isMakers)...)
 	addRefundOutput(txData, orders)
 
 	byteData, err := txData.MarshalText()
@@ -163,12 +190,7 @@ func addMatchTxOutput(txData *types.TxData, orders []*common.Order, receivedAmou
 		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*order.ToAssetID, allocatedAssets.Receives[i].Amount, contractArgs.SellerProgram))
 		if isPartialTrade {
 			txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*order.FromAssetID, exchangeAmount, order.Utxo.ControlProgram))
-			partialOrder, err := common.NewOrderFromOutput(&types.Tx{TxData: *txData}, len(txData.Outputs)-1, order.Sequence, order.BlockHeight)
-			if err != nil {
-				return nil, err
-			}
-
-			partialOrders = append(partialOrders, partialOrder)
+			partialOrders = append(partialOrders, order)
 		}
 	}
 	return partialOrders, nil
@@ -238,7 +260,7 @@ func IsMatched(orders []*common.Order) bool {
 func MakerFlags(orders []*common.Order) []bool {
 	isMakers := make([]bool, len(orders))
 	for i, order := range orders {
-		isMakers[i] = isMaker(order, orders[calcOppositeIndex(i, len(orders))])
+		isMakers[i] = isMaker(order, orders[calcOppositeIndex(len(orders), i)])
 	}
 	return isMakers
 }
@@ -255,7 +277,10 @@ func isMaker(order, oppositeOrder *common.Order) bool {
 		return order.UTXOHash().String() < oppositeOrder.UTXOHash().String()
 	}
 	if order.BlockHeight == oppositeOrder.BlockHeight {
-		return order.Sequence < oppositeOrder.Sequence
+		if order.TxIndex == oppositeOrder.TxIndex {
+			return order.UTXOHash().String() < oppositeOrder.UTXOHash().String()
+		}
+		return order.TxIndex < oppositeOrder.TxIndex
 	}
 	return order.BlockHeight < oppositeOrder.BlockHeight
 }
@@ -272,7 +297,7 @@ func setMatchTxArguments(txInput *types.TxInput, isPartialTrade bool, position i
 	if isPartialTrade {
 		arguments = [][]byte{vm.Int64Bytes(int64(receiveAmounts)), vm.Int64Bytes(int64(position)), vm.Int64Bytes(contract.PartialTradeClauseSelector), vm.Int64Bytes(feeRate)}
 	} else {
-		arguments = [][]byte{vm.Int64Bytes(int64(position)), vm.Int64Bytes(contract.FullTradeClauseSelector), vm.Int64Bytes(traderType)}
+		arguments = [][]byte{vm.Int64Bytes(int64(position)), vm.Int64Bytes(contract.FullTradeClauseSelector), vm.Int64Bytes(traderType), vm.Int64Bytes(feeRate)}
 	}
 	txInput.SetArguments(arguments)
 }

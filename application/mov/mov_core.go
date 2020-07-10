@@ -78,12 +78,12 @@ func (m *Core) ApplyBlock(block *types.Block) error {
 type Tx struct {
 	rawTx       *types.Tx
 	blockHeight uint64
-	sequence    int
+	txIndex     int
 }
 
 // NewTx create a new Tx instance
 func NewTx(tx *types.Tx, blockHeight uint64, sequence int) *Tx {
-	return &Tx{rawTx: tx, blockHeight: blockHeight, sequence: sequence}
+	return &Tx{rawTx: tx, blockHeight: blockHeight, txIndex: sequence}
 }
 
 // BeforeProposalBlock return all transactions than can be matched, and the number of transactions cannot exceed the given capacity.
@@ -338,7 +338,7 @@ func validateMatchedTxFee(tx *types.Tx, blockHeight uint64) error {
 	}
 
 	feeStrategy := match.NewDefaultFeeStrategy()
-	return feeStrategy.Validate(receivedAmount, feeAmounts, match.MakerFlags(orders))
+	return feeStrategy.Validate(receivedAmount, feeAmounts)
 }
 
 func (m *Core) validateMatchedTxSequence(txs []*Tx) error {
@@ -461,7 +461,7 @@ func parseAddOrdersFromTx(tx *Tx) ([]*common.Order, error) {
 			continue
 		}
 
-		order, err := common.NewOrderFromOutput(tx.rawTx, i, tx.sequence, tx.blockHeight)
+		order, err := common.NewOrderFromOutput(tx.rawTx, i, tx.blockHeight, tx.txIndex)
 		if err != nil {
 			return nil, err
 		}
