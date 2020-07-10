@@ -286,10 +286,8 @@ func isMaker(order, oppositeOrder *common.Order) bool {
 }
 
 func setMatchTxArguments(txInput *types.TxInput, isPartialTrade bool, position int, receiveAmounts uint64, isMaker bool) {
-	traderType := contract.Taker
 	feeRate := takerFeeRate
 	if isMaker {
-		traderType = contract.Maker
 		feeRate = makerFeeRate
 	}
 
@@ -297,7 +295,7 @@ func setMatchTxArguments(txInput *types.TxInput, isPartialTrade bool, position i
 	if isPartialTrade {
 		arguments = [][]byte{vm.Int64Bytes(int64(receiveAmounts)), vm.Int64Bytes(int64(position)), vm.Int64Bytes(contract.PartialTradeClauseSelector), vm.Int64Bytes(feeRate)}
 	} else {
-		arguments = [][]byte{vm.Int64Bytes(int64(position)), vm.Int64Bytes(contract.FullTradeClauseSelector), vm.Int64Bytes(traderType), vm.Int64Bytes(feeRate)}
+		arguments = [][]byte{vm.Int64Bytes(int64(position)), vm.Int64Bytes(contract.FullTradeClauseSelector), vm.Int64Bytes(feeRate)}
 	}
 	txInput.SetArguments(arguments)
 }
