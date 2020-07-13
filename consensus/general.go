@@ -263,3 +263,4 @@ func InitActiveNetParams(chainID string) error {
 	}
 	return nil
 }
+
