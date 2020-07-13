@@ -156,6 +156,7 @@ var MainNetParams = Params{
 	Checkpoints: []Checkpoint{},
 	ProducerSubsidys: []ProducerSubsidy{
 		{BeginBlock: 1, EndBlock: 63072000, Subsidy: 9512938},
+		{BeginBlock: 63072001, EndBlock: 126144000, Subsidy: 9512938},
 	},
 	SoftForkPoint:  map[uint64]uint64{SoftFork001: 10461600},
 	MovStartHeight: 42884800,
