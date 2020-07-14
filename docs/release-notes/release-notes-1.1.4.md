@@ -16,7 +16,7 @@ __Vapor Node__
 + `PR #538`
     - Add the height interval of the next round of block rewards.
 + `PR #536`
-    Support cross-chain of USDC and DAI.
+    - Support cross-chain of USDC and DAI.
 + `PR #535`
     - Fix the bug when the trader only received 1 unit of assets during the match transaction and the magnet contract report error.
 
