@@ -15,7 +15,7 @@ var (
 const (
 	// rate of fee in units of 10000
 	makerFeeRate int64 = 0
-	takerFeeRate int64 = 3
+	takerFeeRate int64 = 10
 )
 
 // AllocatedAssets represent reallocated assets after calculating fees
@@ -70,8 +70,8 @@ func (d *DefaultFeeStrategy) Validate(receiveAmounts []*bc.AssetAmount, feeAmoun
 
 func (d *DefaultFeeStrategy) calcFeeAmount(amount uint64, isMaker bool) uint64 {
 	feeRate := takerFeeRate
-	if isMaker {
-		feeRate = makerFeeRate
-	}
+	// if isMaker {
+	// 	feeRate = makerFeeRate
+	// }
 	return uint64(math.Ceil(float64(amount) * float64(feeRate) / 1E4))
 }
