@@ -32,7 +32,6 @@ Thanks to everyone who directly contributed to this release:
 - langyu
 - Paladz
 - shenao78
-- shengling2008
 - oysheng
 - zcc0721
 - ZhitingLin
