@@ -273,9 +273,6 @@ func isMaker(order, oppositeOrder *common.Order) bool {
 	if order.BlockHeight != 0 && oppositeOrder.BlockHeight == 0 {
 		return false
 	}
-	if order.BlockHeight == 0 && oppositeOrder.BlockHeight == 0 {
-		return order.UTXOHash().String() < oppositeOrder.UTXOHash().String()
-	}
 	if order.BlockHeight == oppositeOrder.BlockHeight {
 		if order.TxIndex == oppositeOrder.TxIndex {
 			return order.UTXOHash().String() < oppositeOrder.UTXOHash().String()
