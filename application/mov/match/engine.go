@@ -122,9 +122,8 @@ func addRefundOutput(txData *types.TxData, orders []*common.Order) {
 	}
 }
 
-func addTakerOutput(txData *types.TxData, orders []*common.Order, priceDiffs []*bc.AssetAmount, isMakers []bool) []*common.Order {
-	var partialOrders []*common.Order
-	for i, order := range orders {
+func addTakerOutput(txData *types.TxData, orders []*common.Order, priceDiffs []*bc.AssetAmount, isMakers []bool) {
+	for i := range orders {
 		if isMakers[i] {
 			continue
 		}
@@ -133,16 +132,10 @@ func addTakerOutput(txData *types.TxData, orders []*common.Order, priceDiffs []*
 				continue
 			}
 
-			if priceDiff.AssetId.String() == orders[i].FromAssetID.String() && CalcRequestAmount(priceDiff.Amount, order.ContractArgs.RatioNumerator, order.ContractArgs.RatioDenominator) >= 1 {
-				txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*priceDiff.AssetId, priceDiff.Amount, order.Utxo.ControlProgram))
-				partialOrders = append(partialOrders, order)
-			} else {
-				txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*priceDiff.AssetId, priceDiff.Amount, orders[i].ContractArgs.SellerProgram))
-			}
+			txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*priceDiff.AssetId, priceDiff.Amount, orders[i].ContractArgs.SellerProgram))
 		}
 		break
 	}
-	return partialOrders
 }
 
 func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, []*common.Order, error) {
@@ -162,7 +155,7 @@ func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, []*common.Orde
 	}
 
 	addMatchTxFeeOutput(txData, allocatedAssets.Fees, e.rewardProgram)
-	partialOrders = append(partialOrders, addTakerOutput(txData, orders, priceDiffs, isMakers)...)
+	addTakerOutput(txData, orders, priceDiffs, isMakers)
 	addRefundOutput(txData, orders)
 
 	byteData, err := txData.MarshalText()
