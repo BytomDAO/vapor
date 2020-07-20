@@ -331,7 +331,7 @@ func validateMatchedTxFee(tx *types.Tx, blockHeight uint64) error {
 		return err
 	}
 
-	receivedAmount, _ := match.CalcReceivedAmount(orders)
+	receivedAmount, priceDiffs := match.CalcReceivedAmount(orders)
 	feeAmounts := make(map[bc.AssetID]uint64)
 	for assetID, fee := range matchedTxFees {
 		feeAmounts[assetID] = fee.amount
