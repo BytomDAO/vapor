@@ -147,7 +147,7 @@ func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, []*common.Orde
 
 	isMakers := MakerFlags(orders)
 	receivedAmounts, priceDiffs := CalcReceivedAmount(orders)
-	allocatedAssets := e.feeStrategy.Allocate(receivedAmounts, isMakers)
+	allocatedAssets := e.feeStrategy.Allocate(receivedAmounts, priceDiffs, isMakers)
 
 	partialOrders, err := addMatchTxOutput(txData, orders, receivedAmounts, allocatedAssets, isMakers)
 	if err != nil {

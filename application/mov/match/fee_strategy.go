@@ -28,8 +28,9 @@ type AllocatedAssets struct {
 type FeeStrategy interface {
 	// Allocate will allocate the price differential in matching transaction to the participants and the fee
 	// @param receiveAmounts the amount of assets that the participants in the matching transaction can received when no fee is considered
+	// @param priceDiffs price differential of matching transaction, it will be refunded to the taker
 	// @return reallocated assets after calculating fees
-	Allocate(receiveAmounts []*bc.AssetAmount, isMakers []bool) *AllocatedAssets
+	Allocate(receiveAmounts, priceDiffs []*bc.AssetAmount, isMakers []bool) *AllocatedAssets
 
 	// Validate verify that the fee charged for a matching transaction is correct
 	Validate(receiveAmounts []*bc.AssetAmount, feeAmounts map[bc.AssetID]uint64) error
@@ -44,7 +45,7 @@ func NewDefaultFeeStrategy() *DefaultFeeStrategy {
 }
 
 // Allocate will allocate the price differential in matching transaction to the participants and the fee
-func (d *DefaultFeeStrategy) Allocate(receiveAmounts []*bc.AssetAmount, isMakers []bool) *AllocatedAssets {
+func (d *DefaultFeeStrategy) Allocate(receiveAmounts, priceDiffs []*bc.AssetAmount, isMakers []bool) *AllocatedAssets {
 	receives := make([]*bc.AssetAmount, len(receiveAmounts))
 	fees := make([]*bc.AssetAmount, len(receiveAmounts))
 
@@ -52,6 +53,16 @@ func (d *DefaultFeeStrategy) Allocate(receiveAmounts []*bc.AssetAmount, isMakers
 		fee := d.calcFeeAmount(receiveAmount.Amount, isMakers[i])
 		receives[i] = &bc.AssetAmount{AssetId: receiveAmount.AssetId, Amount: receiveAmount.Amount - fee}
 		fees[i] = &bc.AssetAmount{AssetId: receiveAmount.AssetId, Amount: fee}
+
+		if !isMakers[i] {
+			for _, priceDiff := range priceDiffs {
+				if *priceDiff.AssetId == *receiveAmount.AssetId {
+					fee = d.calcFeeAmount(priceDiff.Amount, false)
+					priceDiff.Amount -= fee
+					fees[i].Amount += fee
+				}
+			}
+		}
 	}
 	return &AllocatedAssets{Receives: receives, Fees: fees}
 }
