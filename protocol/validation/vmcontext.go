@@ -111,6 +111,10 @@ func witnessProgram(prog []byte) []byte {
 		if witnessProg, err := segwit.ConvertP2MCProgram(prog); err == nil {
 			return witnessProg
 		}
+	case segwit.IsP2WMCScriptV2(prog):
+		if witnessProg, err := segwit.ConvertP2MCProgramV2(prog); err == nil {
+			return witnessProg
+		}
 	}
 	return prog
 }
