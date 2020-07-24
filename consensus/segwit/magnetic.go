@@ -70,29 +70,8 @@ func IsP2WMCScriptV2(prog []byte) bool {
 	return isMagneticScript(prog, magneticV2)
 }
 
-// convertP2MCProgram convert standard P2WMC program into P2MC program and contract version
-func convertP2MCProgram(prog []byte, version int) ([]byte, error) {
-	magneticContractArgs, err := DecodeP2WMCProgram(prog)
-	if err != nil {
-		return nil, err
-	}
-
-	switch version {
-	case magneticV1:
-		return vmutil.P2MCProgram(*magneticContractArgs)
-	case magneticV2:
-		return vmutil.P2MCProgramV2(*magneticContractArgs)
-	default:
-		return nil, errors.New("invalid magnetic contract version")
-	}
-}
-
 // DecodeP2WMCProgram parse standard P2WMC arguments to magneticContractArgs
 func DecodeP2WMCProgram(prog []byte) (*vmutil.MagneticContractArgs, error) {
-	if !IsP2WMCScript(prog) && !IsP2WMCScriptV2(prog) {
-		return nil, errors.New("invalid P2MC program")
-	}
-
 	insts, err := vm.ParseProgram(prog)
 	if err != nil {
 		return nil, err
@@ -119,10 +98,28 @@ func DecodeP2WMCProgram(prog []byte) (*vmutil.MagneticContractArgs, error) {
 
 // ConvertP2MCProgram convert standard P2WMC program into the v1 P2MC program
 func ConvertP2MCProgram(prog []byte) ([]byte, error) {
-	return convertP2MCProgram(prog, magneticV1)
+	if !IsP2WMCScript(prog) {
+		return nil, errors.New("invalid the v1 of magnetic P2MC program")
+	}
+
+	magneticContractArgs, err := DecodeP2WMCProgram(prog)
+	if err != nil {
+		return nil, err
+	}
+
+	return vmutil.P2MCProgram(*magneticContractArgs)
 }
 
 // ConvertP2MCProgramV2 convert standard P2WMC program into the v2 P2MC program
 func ConvertP2MCProgramV2(prog []byte) ([]byte, error) {
-	return convertP2MCProgram(prog, magneticV2)
+	if !IsP2WMCScriptV2(prog) {
+		return nil, errors.New("invalid the v2 of magnetic P2MC program")
+	}
+
+	magneticContractArgs, err := DecodeP2WMCProgram(prog)
+	if err != nil {
+		return nil, err
+	}
+
+	return vmutil.P2MCProgramV2(*magneticContractArgs)
 }
