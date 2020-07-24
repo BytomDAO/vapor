@@ -18,11 +18,11 @@ func P2WMCProgramV2(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 //
 // MagneticV2 contract source code:
 // contract MagneticV2(requestedAsset: Asset,
-// 					   	ratioNumerator: Integer,
-// 					   	ratioDenominator: Integer,
-// 						sellerProgram: Program,
-// 						standardProgram: Program,
-// 						sellerKey: PublicKey) locks valueAmount of valueAsset {
+//                     ratioNumerator: Integer,
+//                     ratioDenominator: Integer,
+//                     sellerProgram: Program,
+//                     standardProgram: Program,
+//                     sellerKey: PublicKey) locks valueAmount of valueAsset {
 //  clause partialTrade(exchangeAmount: Amount, fee: Amount) {
 // 		define actualAmount: Integer = exchangeAmount * ratioDenominator / ratioNumerator
 // 		verify actualAmount >= 0 && actualAmount < valueAmount
