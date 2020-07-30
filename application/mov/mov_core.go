@@ -30,6 +30,7 @@ var (
 	errNotMatchedOrder              = errors.New("order in matched tx is not matched")
 	errNotConfiguredRewardProgram   = errors.New("reward program is not configured properly")
 	errRewardProgramIsWrong         = errors.New("the reward program is not correct")
+	errInvalidFeeRate               = errors.New("fee rate from input witness is invalid")
 )
 
 // Core represent the core logic of the match module, which include generate match transactions before packing the block,
@@ -331,14 +332,42 @@ func validateMatchedTxFee(tx *types.Tx, blockHeight uint64) error {
 		return err
 	}
 
-	receivedAmount, _ := match.CalcReceivedAmount(orders)
+	receivedAmount, priceDiffs := match.CalcReceivedAmount(orders)
 	feeAmounts := make(map[bc.AssetID]uint64)
 	for assetID, fee := range matchedTxFees {
 		feeAmounts[assetID] = fee.amount
 	}
 
+	makerFlags := make([]*match.MakerFlag, len(orders))
+	for i, order := range orders {
+		isMaker, err := isMakerByWitness(tx.Inputs[i], order.ContractArgs.Version)
+		if err != nil {
+			return err
+		}
+
+		makerFlags[i].IsMaker = isMaker
+		makerFlags[i].ContractVersion = order.ContractArgs.Version
+	}
+
 	feeStrategy := match.NewDefaultFeeStrategy()
-	return feeStrategy.Validate(receivedAmount, feeAmounts)
+	return feeStrategy.Validate(receivedAmount, priceDiffs, feeAmounts, makerFlags)
+}
+
+func isMakerByWitness(input *types.TxInput, contractVersion int) (bool, error) {
+	if contractVersion == segwit.MagneticV1 {
+		return true, nil
+	}
+
+	feeRate, err := contract.FeeRate(input)
+	if err != nil {
+		return false, err
+	}
+
+	if feeRate != match.MakerFeeRate && feeRate != match.TakerFeeRate {
+		return false, errInvalidFeeRate
+	}
+
+	return feeRate == match.MakerFeeRate, nil
 }
 
 func (m *Core) validateMatchedTxSequence(txs []*Tx) error {

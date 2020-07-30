@@ -20,6 +20,7 @@ type MagneticContractArgs struct {
 	RatioDenominator int64
 	SellerProgram    []byte
 	SellerKey        []byte
+	Version          int
 }
 
 // IsUnspendable checks if a contorl program is absolute failed

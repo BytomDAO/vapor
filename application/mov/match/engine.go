@@ -122,9 +122,9 @@ func addRefundOutput(txData *types.TxData, orders []*common.Order) {
 	}
 }
 
-func addTakerOutput(txData *types.TxData, orders []*common.Order, priceDiffs []*bc.AssetAmount, isMakers []bool) {
+func addTakerOutput(txData *types.TxData, orders []*common.Order, priceDiffs []*bc.AssetAmount, makerFlags []*MakerFlag) {
 	for i := range orders {
-		if isMakers[i] {
+		if makerFlags[i].IsMaker {
 			continue
 		}
 		for _, priceDiff := range priceDiffs {
@@ -167,7 +167,7 @@ func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, []*common.Orde
 	return types.NewTx(*txData), partialOrders, nil
 }
 
-func addMatchTxOutput(txData *types.TxData, orders []*common.Order, receivedAmounts []*bc.AssetAmount, allocatedAssets *AllocatedAssets, isMakers []bool) ([]*common.Order, error) {
+func addMatchTxOutput(txData *types.TxData, orders []*common.Order, receivedAmounts []*bc.AssetAmount, allocatedAssets *AllocatedAssets, makerFlags []*MakerFlag) ([]*common.Order, error) {
 	var partialOrders []*common.Order
 	for i, order := range orders {
 		contractArgs := order.ContractArgs
@@ -178,7 +178,7 @@ func addMatchTxOutput(txData *types.TxData, orders []*common.Order, receivedAmou
 		exchangeAmount := order.Utxo.Amount - shouldPayAmount
 		isPartialTrade := requestAmount > receivedAmount && CalcRequestAmount(exchangeAmount, contractArgs.RatioNumerator, contractArgs.RatioDenominator) >= 1
 
-		setMatchTxArguments(txData.Inputs[i], isPartialTrade, len(txData.Outputs), receivedAmount, isMakers[i])
+		setMatchTxArguments(txData.Inputs[i], isPartialTrade, len(txData.Outputs), receivedAmount, makerFlags[i].IsMaker, contractArgs.Version)
 
 		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*order.ToAssetID, allocatedAssets.Receives[i].Amount, contractArgs.SellerProgram))
 		if isPartialTrade {
@@ -249,13 +249,20 @@ func IsMatched(orders []*common.Order) bool {
 	return product.Cmp(one) <= 0
 }
 
+// MakerFlag represent whether the order is isMaker and include the contract version of order
+type MakerFlag struct {
+	IsMaker         bool
+	ContractVersion int
+}
+
 // MakerFlags return a slice of array indicate whether orders[i] is maker
-func MakerFlags(orders []*common.Order) []bool {
-	isMakers := make([]bool, len(orders))
+func MakerFlags(orders []*common.Order) []*MakerFlag {
+	makerFlags := make([]*MakerFlag, len(orders))
 	for i, order := range orders {
-		isMakers[i] = isMaker(order, orders[calcOppositeIndex(len(orders), i)])
+		makerFlags[i].IsMaker = isMaker(order, orders[calcOppositeIndex(len(orders), i)])
+		makerFlags[i].ContractVersion = order.ContractArgs.Version
 	}
-	return isMakers
+	return makerFlags
 }
 
 func isMaker(order, oppositeOrder *common.Order) bool {
@@ -275,17 +282,24 @@ func isMaker(order, oppositeOrder *common.Order) bool {
 	return order.BlockHeight < oppositeOrder.BlockHeight
 }
 
-func setMatchTxArguments(txInput *types.TxInput, isPartialTrade bool, position int, receiveAmounts uint64, isMaker bool) {
-	feeRate := takerFeeRate
+func setMatchTxArguments(txInput *types.TxInput, isPartialTrade bool, position int, receiveAmounts uint64, isMaker bool, contractVersion int) {
+	feeRate := TakerFeeRate
 	if isMaker {
-		feeRate = makerFeeRate
+		feeRate = MakerFeeRate
 	}
 
 	var arguments [][]byte
 	if isPartialTrade {
-		arguments = [][]byte{vm.Int64Bytes(int64(receiveAmounts)), vm.Int64Bytes(int64(position)), vm.Int64Bytes(contract.PartialTradeClauseSelector), vm.Int64Bytes(feeRate)}
+		arguments = [][]byte{vm.Int64Bytes(int64(receiveAmounts))}
+		if contractVersion == segwit.MagneticV2 {
+			arguments = append(arguments, vm.Int64Bytes(feeRate))
+		}
+		arguments = append(arguments, vm.Int64Bytes(int64(position)), vm.Int64Bytes(contract.PartialTradeClauseSelector))
 	} else {
-		arguments = [][]byte{vm.Int64Bytes(int64(position)), vm.Int64Bytes(contract.FullTradeClauseSelector), vm.Int64Bytes(feeRate)}
+		if contractVersion == segwit.MagneticV2 {
+			arguments = append(arguments, vm.Int64Bytes(feeRate))
+		}
+		arguments = [][]byte{vm.Int64Bytes(int64(position)), vm.Int64Bytes(contract.FullTradeClauseSelector)}
 	}
 	txInput.SetArguments(arguments)
 }

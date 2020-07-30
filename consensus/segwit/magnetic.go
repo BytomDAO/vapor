@@ -9,8 +9,10 @@ import (
 )
 
 const (
-	magneticV1 = iota + 1
-	magneticV2
+	// MagneticV1 represent the V1 version of magnetic
+	MagneticV1 = iota + 1
+	// MagneticV2 represent the v2 version of magnetic
+	MagneticV2
 )
 
 // isMagneticScript is used to determine whether it is a Magnetic script with specific version or not
@@ -25,11 +27,11 @@ func isMagneticScript(prog []byte, version int) bool {
 	}
 
 	switch version {
-	case magneticV1:
+	case MagneticV1:
 		if insts[0].Op != vm.OP_0 {
 			return false
 		}
-	case magneticV2:
+	case MagneticV2:
 		if insts[0].Op != vm.OP_1 {
 			return false
 		}
@@ -62,12 +64,12 @@ func isMagneticScript(prog []byte, version int) bool {
 
 // IsP2WMCScript is used to determine whether it is the v1 P2WMC script or not
 func IsP2WMCScript(prog []byte) bool {
-	return isMagneticScript(prog, magneticV1)
+	return isMagneticScript(prog, MagneticV1)
 }
 
 // IsP2WMCScriptV2 is used to determine whether it is the v2 P2WMC script or not
 func IsP2WMCScriptV2(prog []byte) bool {
-	return isMagneticScript(prog, magneticV2)
+	return isMagneticScript(prog, MagneticV2)
 }
 
 // DecodeP2WMCProgram parse standard P2WMC arguments to magneticContractArgs
@@ -81,6 +83,12 @@ func DecodeP2WMCProgram(prog []byte) (*vmutil.MagneticContractArgs, error) {
 		SellerProgram: insts[4].Data,
 		SellerKey:     insts[5].Data,
 	}
+
+	magneticContractArgs.Version = MagneticV2
+	if insts[0].Op == vm.OP_0 {
+		magneticContractArgs.Version = MagneticV1
+	}
+
 	requestedAsset := [32]byte{}
 	copy(requestedAsset[:], insts[1].Data)
 	magneticContractArgs.RequestedAsset = bc.NewAssetID(requestedAsset)

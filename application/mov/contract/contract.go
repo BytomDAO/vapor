@@ -3,17 +3,20 @@ package contract
 import (
 	"encoding/hex"
 
+	"github.com/bytom/vapor/errors"
 	"github.com/bytom/vapor/protocol/bc/types"
 	"github.com/bytom/vapor/protocol/vm"
 )
 
 const (
-	sizeOfCancelClauseArgs       = 3
-	sizeOfPartialTradeClauseArgs = 3
-	sizeOfFullTradeClauseArgs    = 2
+	sizeOfCancelClauseArgs         = 3
+	sizeOfPartialTradeClauseArgsV1 = 3
+	sizeOfFullTradeClauseArgsV1    = 2
+	sizeOfPartialTradeClauseArgsV2 = 4
+	sizeOfFullTradeClauseArgsV2    = 3
 )
 
-// smart contract clause select for differnet unlock method
+// smart contract clause select for different unlock method
 const (
 	PartialTradeClauseSelector int64 = iota
 	FullTradeClauseSelector
@@ -32,10 +35,33 @@ func IsTradeClauseSelector(input *types.TxInput) bool {
 
 // IsPartialTradeClauseSelector check if input select partial trade clause
 func IsPartialTradeClauseSelector(input *types.TxInput) bool {
-	return len(input.Arguments()) == sizeOfPartialTradeClauseArgs && hex.EncodeToString(input.Arguments()[len(input.Arguments())-1]) == hex.EncodeToString(vm.Int64Bytes(PartialTradeClauseSelector))
+	if len(input.Arguments()) == sizeOfPartialTradeClauseArgsV1 || len(input.Arguments()) == sizeOfPartialTradeClauseArgsV2 {
+		return hex.EncodeToString(input.Arguments()[len(input.Arguments())-1]) == hex.EncodeToString(vm.Int64Bytes(PartialTradeClauseSelector))
+	}
+	return false
 }
 
 // IsFullTradeClauseSelector check if input select full trade clause
 func IsFullTradeClauseSelector(input *types.TxInput) bool {
-	return len(input.Arguments()) == sizeOfFullTradeClauseArgs && hex.EncodeToString(input.Arguments()[len(input.Arguments())-1]) == hex.EncodeToString(vm.Int64Bytes(FullTradeClauseSelector))
+	if len(input.Arguments()) == sizeOfFullTradeClauseArgsV1 || len(input.Arguments()) == sizeOfFullTradeClauseArgsV2 {
+		return hex.EncodeToString(input.Arguments()[len(input.Arguments())-1]) == hex.EncodeToString(vm.Int64Bytes(FullTradeClauseSelector))
+	}
+	return false
+}
+
+// FeeRate return the rate of fee from input witness
+func FeeRate(input *types.TxInput) (int64, error) {
+	if IsFullTradeClauseSelector(input) {
+		if len(input.Arguments()) == sizeOfFullTradeClauseArgsV1 {
+			return 10, nil
+		}
+		return vm.AsInt64(input.Arguments()[0])
+	}
+	if IsPartialTradeClauseSelector(input) {
+		if len(input.Arguments()) == sizeOfPartialTradeClauseArgsV1 {
+			return 10, nil
+		}
+		return vm.AsInt64(input.Arguments()[1])
+	}
+	return 0, errors.New("invalid trade input")
 }
