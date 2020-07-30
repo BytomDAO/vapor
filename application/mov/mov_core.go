@@ -338,7 +338,7 @@ func validateMatchedTxFee(tx *types.Tx, blockHeight uint64) error {
 		feeAmounts[assetID] = fee.amount
 	}
 
-	makerFlags := make([]*match.MakerFlag, len(orders))
+	makerFlags := make([]match.MakerFlag, len(orders))
 	for i, order := range orders {
 		isMaker, err := isMakerByWitness(tx.Inputs[i], order.ContractArgs.Version)
 		if err != nil {

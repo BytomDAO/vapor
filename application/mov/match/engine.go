@@ -122,7 +122,7 @@ func addRefundOutput(txData *types.TxData, orders []*common.Order) {
 	}
 }
 
-func addTakerOutput(txData *types.TxData, orders []*common.Order, priceDiffs []*bc.AssetAmount, makerFlags []*MakerFlag) {
+func addTakerOutput(txData *types.TxData, orders []*common.Order, priceDiffs []*bc.AssetAmount, makerFlags []MakerFlag) {
 	for i := range orders {
 		if makerFlags[i].IsMaker {
 			continue
@@ -167,7 +167,7 @@ func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, []*common.Orde
 	return types.NewTx(*txData), partialOrders, nil
 }
 
-func addMatchTxOutput(txData *types.TxData, orders []*common.Order, receivedAmounts []*bc.AssetAmount, allocatedAssets *AllocatedAssets, makerFlags []*MakerFlag) ([]*common.Order, error) {
+func addMatchTxOutput(txData *types.TxData, orders []*common.Order, receivedAmounts []*bc.AssetAmount, allocatedAssets *AllocatedAssets, makerFlags []MakerFlag) ([]*common.Order, error) {
 	var partialOrders []*common.Order
 	for i, order := range orders {
 		contractArgs := order.ContractArgs
@@ -256,8 +256,8 @@ type MakerFlag struct {
 }
 
 // MakerFlags return a slice of array indicate whether orders[i] is maker
-func MakerFlags(orders []*common.Order) []*MakerFlag {
-	makerFlags := make([]*MakerFlag, len(orders))
+func MakerFlags(orders []*common.Order) []MakerFlag {
+	makerFlags := make([]MakerFlag, len(orders))
 	for i, order := range orders {
 		makerFlags[i].IsMaker = isMaker(order, orders[calcOppositeIndex(len(orders), i)])
 		makerFlags[i].ContractVersion = order.ContractArgs.Version
