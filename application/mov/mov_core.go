@@ -338,36 +338,36 @@ func validateMatchedTxFee(tx *types.Tx, blockHeight uint64) error {
 		feeAmounts[assetID] = fee.amount
 	}
 
-	makerFlags := make([]match.MakerFlag, len(orders))
-	for i, order := range orders {
-		isMaker, err := isMakerByWitness(tx.Inputs[i], order.ContractArgs.Version)
-		if err != nil {
-			return err
-		}
-
-		makerFlags[i].IsMaker = isMaker
-		makerFlags[i].ContractVersion = order.ContractArgs.Version
+	makerFlags, err := makerFlagsByWitness(tx.Inputs, orders)
+	if err != nil {
+		return err
 	}
 
 	feeStrategy := match.NewDefaultFeeStrategy()
 	return feeStrategy.Validate(receivedAmount, priceDiffs, feeAmounts, makerFlags)
 }
 
-func isMakerByWitness(input *types.TxInput, contractVersion int) (bool, error) {
-	if contractVersion == segwit.MagneticV1 {
-		return true, nil
-	}
+func makerFlagsByWitness(inputs []*types.TxInput, orders []*common.Order) ([]match.MakerFlag, error) {
+	makerFlags := make([]match.MakerFlag, len(orders))
+	for i, order := range orders {
+		makerFlags[i].ContractVersion = order.ContractArgs.Version
+		if order.ContractArgs.Version == segwit.MagneticV1 {
+			// no need to know if the order is maker
+			continue
+		}
 
-	feeRate, err := contract.FeeRate(input)
-	if err != nil {
-		return false, err
-	}
+		feeRate, err := contract.FeeRate(inputs[i])
+		if err != nil {
+			return nil, err
+		}
 
-	if feeRate != match.MakerFeeRate && feeRate != match.TakerFeeRate {
-		return false, errInvalidFeeRate
-	}
+		if feeRate != match.MakerFeeRate && feeRate != match.TakerFeeRate {
+			return nil, errInvalidFeeRate
+		}
 
-	return feeRate == match.MakerFeeRate, nil
+		makerFlags[i].IsMaker = feeRate == match.MakerFeeRate
+	}
+	return makerFlags, nil
 }
 
 func (m *Core) validateMatchedTxSequence(txs []*Tx) error {
