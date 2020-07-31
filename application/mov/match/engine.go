@@ -299,7 +299,7 @@ func setMatchTxArguments(txInput *types.TxInput, isPartialTrade bool, position i
 		if contractVersion == segwit.MagneticV2 {
 			arguments = append(arguments, vm.Int64Bytes(feeRate))
 		}
-		arguments = [][]byte{vm.Int64Bytes(int64(position)), vm.Int64Bytes(contract.FullTradeClauseSelector)}
+		arguments = append(arguments, vm.Int64Bytes(int64(position)), vm.Int64Bytes(contract.FullTradeClauseSelector))
 	}
 	txInput.SetArguments(arguments)
 }
