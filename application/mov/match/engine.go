@@ -73,7 +73,7 @@ func addMatchTxFeeOutput(txData *types.TxData, fees []*bc.AssetAmount, rewardPro
 func (e *Engine) addReOrder(partialOrders []*common.Order, tx *types.Tx) error {
 	index := 0
 	for i, output := range tx.Outputs {
-		if !segwit.IsP2WMCScript(output.ControlProgram()) || output.AssetAmount().Amount == 0 {
+		if !contract.IsP2WMCScript(output.ControlProgram()) || output.AssetAmount().Amount == 0 {
 			continue
 		}
 

@@ -3,6 +3,7 @@ package contract
 import (
 	"encoding/hex"
 
+	"github.com/bytom/vapor/consensus/segwit"
 	"github.com/bytom/vapor/errors"
 	"github.com/bytom/vapor/protocol/bc/types"
 	"github.com/bytom/vapor/protocol/vm"
@@ -64,4 +65,9 @@ func FeeRate(input *types.TxInput) (int64, error) {
 		return vm.AsInt64(input.Arguments()[1])
 	}
 	return 0, errors.New("invalid trade input")
+}
+
+// IsP2WMCScript is used to determine whether it is the v1 or v2 P2WMC script or not
+func IsP2WMCScript(prog []byte) bool {
+	return segwit.IsP2WMCScriptV2(prog) || segwit.IsP2WMCScript(prog)
 }
