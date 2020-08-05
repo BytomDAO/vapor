@@ -150,7 +150,7 @@ func (c *Chain) validateSign(block *types.Block) error {
 				continue
 			}
 
-			return errors.New("current blocker has double signed the block")
+			return errors.New("the blocker has double signed the block")
 		} else if err != nil {
 			return err
 		}
