@@ -178,7 +178,7 @@ func (b *blockBuilder) build() (*types.Block, error) {
 		return nil, err
 	}
 
-	if err := b.chain.SignBlockHeader(&b.block.BlockHeader); err != nil {
+	if _, err := b.chain.SignBlockHeader(&b.block.BlockHeader); err != nil {
 		return nil, err
 	}
 
