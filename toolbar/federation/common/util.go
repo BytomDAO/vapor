@@ -2,6 +2,7 @@ package common
 
 import (
 	"encoding/hex"
+	"errors"
 
 	log "github.com/sirupsen/logrus"
 
@@ -23,4 +24,15 @@ func ProgToAddress(prog []byte, netParams *consensus.Params) string {
 		return wallet.BuildP2SHAddress(hash, netParams)
 	}
 	return ""
+}
+
+func Status2Str(status uint8) (string, error) {
+	switch status {
+	case CrossTxPendingStatus:
+		return CrossTxPendingStatusLabel, nil
+	case CrossTxCompletedStatus:
+		return CrossTxCompletedStatusLabel, nil
+	default:
+		return "", errors.New("unknown cross-chain tx status")
+	}
 }
