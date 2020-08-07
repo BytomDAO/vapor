@@ -34,7 +34,7 @@ func (bp *blockProcessor) insert(blockStorage *blockStorage) error {
 		return errOrphanBlock
 	}
 
-	if err != nil && err != protocol.ErrDoubleSignBlock {
+	if err != nil && errors.Root(err) != protocol.ErrDoubleSignBlock {
 		bp.peers.ProcessIllegal(blockStorage.peerID, security.LevelMsgIllegal, err.Error())
 	}
 	return err
