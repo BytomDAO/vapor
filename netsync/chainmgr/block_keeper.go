@@ -171,8 +171,10 @@ func (bk *blockKeeper) regularBlockSync() error {
 		}
 
 		isOrphan, err := bk.chain.ProcessBlock(block)
-		if err != nil && errors.Root(err) != protocol.ErrDoubleSignBlock {
-			bk.peers.ProcessIllegal(bk.syncPeer.ID(), security.LevelMsgIllegal, err.Error())
+		if err != nil {
+			if errors.Root(err) != protocol.ErrDoubleSignBlock {
+				bk.peers.ProcessIllegal(bk.syncPeer.ID(), security.LevelMsgIllegal, err.Error())
+			}
 			return err
 		}
 
