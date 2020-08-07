@@ -20,9 +20,9 @@ const (
 )
 
 var (
-	errDoubleSignBlock  = errors.New("the consensus is double sign in same height of different block")
+	// ErrDoubleSignBlock represent the consensus is double sign in same height of different block
+	ErrDoubleSignBlock  = errors.New("the consensus is double sign in same height of different block")
 	errInvalidSignature = errors.New("the signature of block is invalid")
-	errSignForkChain    = errors.New("can not sign fork before the irreversible block")
 )
 
 func signCacheKey(blockHash, pubkey string) string {
@@ -53,7 +53,7 @@ func (c *Chain) checkDoubleSign(bh *types.BlockHeader, xPub string) error {
 		}
 
 		if blockHeader.BlockWitness.Get(consensusNode.Order) != nil {
-			return errDoubleSignBlock
+			return ErrDoubleSignBlock
 		}
 	}
 	return nil
@@ -140,7 +140,7 @@ func (c *Chain) validateSign(block *types.Block) error {
 			}
 		}
 
-		if err := c.checkNodeSign(&block.BlockHeader, node, block.Get(node.Order)); err == errDoubleSignBlock {
+		if err := c.checkNodeSign(&block.BlockHeader, node, block.Get(node.Order)); err == ErrDoubleSignBlock {
 			log.WithFields(log.Fields{"module": logModule, "blockHash": blockHash.String(), "pubKey": pubKey}).Warn("the consensus node double sign the same height of different block")
 			// if the blocker double sign & become the mainchain, that means
 			// all the side chain will reject the main chain make the chain
@@ -149,6 +149,8 @@ func (c *Chain) validateSign(block *types.Block) error {
 				block.BlockWitness.Delete(node.Order)
 				continue
 			}
+
+			return err
 		} else if err != nil {
 			return err
 		}
@@ -246,7 +248,7 @@ func (c *Chain) signBlockHeader(blockHeader *types.BlockHeader) ([]byte, error) 
 		return nil, nil
 	}
 
-	if err := c.checkDoubleSign(blockHeader, node.XPub.String()); err == errDoubleSignBlock {
+	if err := c.checkDoubleSign(blockHeader, node.XPub.String()); err == ErrDoubleSignBlock {
 		log.WithFields(log.Fields{"module": logModule, "blockHash": blockHash.String()}).Warn("current node has double sign the block")
 		return nil, nil
 	} else if err != nil {
