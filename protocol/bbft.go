@@ -150,7 +150,7 @@ func (c *Chain) validateSign(block *types.Block) error {
 				continue
 			}
 
-			return ErrDoubleSignBlock
+			return err
 		} else if err != nil {
 			return err
 		}
@@ -206,8 +206,16 @@ func (c *Chain) ProcessBlockSignature(signature, xPub []byte, blockHash *bc.Hash
 	return c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: *blockHash, Signature: signature, XPub: xPub})
 }
 
+// SignBlockHeader signing the block if current node is consensus node
+func (c *Chain) SignBlockHeader(blockHeader *types.BlockHeader) error {
+	c.cond.L.Lock()
+	_, err := c.signBlockHeader(blockHeader)
+	c.cond.L.Unlock()
+	return err
+}
+
 func (c *Chain) applyBlockSign(blockHeader *types.BlockHeader) error {
-	signature, err := c.SignBlockHeader(blockHeader)
+	signature, err := c.signBlockHeader(blockHeader)
 	if err != nil {
 		return err
 	}
@@ -224,8 +232,7 @@ func (c *Chain) applyBlockSign(blockHeader *types.BlockHeader) error {
 	return c.eventDispatcher.Post(event.BlockSignatureEvent{BlockHash: blockHeader.Hash(), Signature: signature, XPub: xpub[:]})
 }
 
-// SignBlockHeader signing the block if current node is consensus node
-func (c *Chain) SignBlockHeader(blockHeader *types.BlockHeader) ([]byte, error) {
+func (c *Chain) signBlockHeader(blockHeader *types.BlockHeader) ([]byte, error) {
 	xprv := config.CommonConfig.PrivateKey()
 	xpub := xprv.XPub()
 	node, err := c.getConsensusNode(&blockHeader.PreviousBlockHash, xpub.String())
