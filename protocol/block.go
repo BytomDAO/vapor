@@ -224,14 +224,25 @@ func (c *Chain) Rollback(targetHeight uint64) error {
 	}
 
 	startSeq := state.CalcVoteSeq(c.bestBlockHeader.Height)
-
 	if err = c.setState(targetBlockHeader, setIrrBlockHeader, nil, utxoView, []*state.ConsensusResult{consensusResult.Fork()}); err != nil {
 		return err
 	}
 
 	for _, block := range deletedBlocks {
-		if err := c.store.DeleteBlock(block); err != nil {
+		hashes, err := c.store.GetBlockHashesByHeight(block.Height)
+		if err != nil{
 			return err
+		}
+
+		for _, hash := range hashes{
+			block, err := c.store.GetBlock(hash)
+			if err != nil{
+				return err
+			}
+
+			if err := c.store.DeleteBlock(block); err != nil{
+				return err
+			}
 		}
 	}
 
