@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net"
 	"net/http"
+
 	// debug tool
 	_ "net/http/pprof"
 	"path/filepath"
@@ -88,7 +89,7 @@ func NewNode(config *cfg.Config) *Node {
 	movCore := mov.NewCore(config.DBBackend, config.DBDir(), consensus.ActiveNetParams.MovStartHeight)
 	assetFilter := protocol.NewAssetFilter(config.CrossChain.AssetWhitelist)
 	txPool := protocol.NewTxPool(store, []protocol.DustFilterer{movCore, assetFilter}, dispatcher)
-	chain, err := protocol.NewChain(store, txPool, []protocol.Protocoler{movCore}, dispatcher)
+	chain, err := protocol.NewChain(store, txPool, []protocol.SubProtocol{movCore}, dispatcher)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 	}
@@ -180,7 +181,7 @@ func Rollback(config *cfg.Config, targetHeight uint64) error {
 	dispatcher := event.NewDispatcher()
 	movCore := mov.NewCore(config.DBBackend, config.DBDir(), consensus.ActiveNetParams.MovStartHeight)
 	txPool := protocol.NewTxPool(store, []protocol.DustFilterer{movCore}, dispatcher)
-	chain, err := protocol.NewChain(store, txPool, []protocol.Protocoler{movCore}, dispatcher)
+	chain, err := protocol.NewChain(store, txPool, []protocol.SubProtocol{movCore}, dispatcher)
 	if err != nil {
 		return err
 	}

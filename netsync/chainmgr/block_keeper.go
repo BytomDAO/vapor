@@ -7,8 +7,10 @@ import (
 
 	"github.com/bytom/vapor/consensus"
 	dbm "github.com/bytom/vapor/database/leveldb"
+	"github.com/bytom/vapor/errors"
 	"github.com/bytom/vapor/netsync/peers"
 	"github.com/bytom/vapor/p2p/security"
+	"github.com/bytom/vapor/protocol"
 	"github.com/bytom/vapor/protocol/bc"
 	"github.com/bytom/vapor/protocol/bc/types"
 )
@@ -170,7 +172,9 @@ func (bk *blockKeeper) regularBlockSync() error {
 
 		isOrphan, err := bk.chain.ProcessBlock(block)
 		if err != nil {
-			bk.peers.ProcessIllegal(bk.syncPeer.ID(), security.LevelMsgIllegal, err.Error())
+			if errors.Root(err) != protocol.ErrDoubleSignBlock {
+				bk.peers.ProcessIllegal(bk.syncPeer.ID(), security.LevelMsgIllegal, err.Error())
+			}
 			return err
 		}
 

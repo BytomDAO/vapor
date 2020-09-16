@@ -167,7 +167,7 @@ func P2WMCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 //                           sellerKey: PublicKey) locks valueAmount of valueAsset {
 //  clause partialTrade(exchangeAmount: Amount) {
 //   define actualAmount: Integer = exchangeAmount * ratioDenominator / ratioNumerator
-//   verify actualAmount > 0 && actualAmount < valueAmount
+//   verify actualAmount >= 0 && actualAmount < valueAmount
 //   define receiveAmount: Integer = exchangeAmount * 999 / 1000
 //   lock receiveAmount of requestedAsset with sellerProgram
 //   lock valueAmount-actualAmount of valueAsset with standardProgram
@@ -176,7 +176,7 @@ func P2WMCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 //  clause fullTrade() {
 //   define requestedAmount: Integer = valueAmount * ratioNumerator / ratioDenominator
 //   define requestedAmount: Integer = requestedAmount * 999 / 1000
-//   verify requestedAmount > 0
+//   verify requestedAmount >= 0
 //   lock requestedAmount of requestedAsset with sellerProgram
 //   unlock valueAmount of valueAsset
 //  }
@@ -208,7 +208,7 @@ func P2WMCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 // AMOUNT                   [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount valueAmount]
 // OVER                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount valueAmount actualAmount]
 // 0                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount valueAmount actualAmount 0]
-// GREATERTHAN              [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount valueAmount (actualAmount > 0)]
+// GREATERTHANOREQUAL       [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount valueAmount (actualAmount > 0)]
 // 2                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount valueAmount (actualAmount > 0) 2]
 // PICK                     [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount valueAmount (actualAmount > 0) actualAmount]
 // 2                        [... exchangeAmount sellerKey standardProgram sellerProgram requestedAsset actualAmount valueAmount (actualAmount > 0) actualAmount 2]
@@ -256,7 +256,7 @@ func P2WMCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 // MULFRACTION              [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount]
 // DUP                      [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount requestedAmount]
 // 0                        [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount requestedAmount 0]
-// GREATERTHAN              [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount (requestedAmount > 0)]
+// GREATERTHANOREQUAL       [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount (requestedAmount > 0)]
 // VERIFY                   [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount]
 // FROMALTSTACK             [... sellerKey standardProgram sellerProgram requestedAsset requestedAmount <position>]
 // SWAP                     [... sellerKey standardProgram sellerProgram requestedAsset <position> requestedAmount]
@@ -311,7 +311,7 @@ func P2MCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 	builder.AddOp(vm.OP_AMOUNT)
 	builder.AddOp(vm.OP_OVER)
 	builder.AddOp(vm.OP_0)
-	builder.AddOp(vm.OP_GREATERTHAN)
+	builder.AddOp(vm.OP_GREATERTHANOREQUAL)
 	builder.AddOp(vm.OP_2)
 	builder.AddOp(vm.OP_PICK)
 	builder.AddOp(vm.OP_ROT)
@@ -356,7 +356,7 @@ func P2MCProgram(magneticContractArgs MagneticContractArgs) ([]byte, error) {
 	builder.AddOp(vm.OP_MULFRACTION)
 	builder.AddOp(vm.OP_DUP)
 	builder.AddOp(vm.OP_0)
-	builder.AddOp(vm.OP_GREATERTHAN)
+	builder.AddOp(vm.OP_GREATERTHANOREQUAL)
 	builder.AddOp(vm.OP_VERIFY)
 	builder.AddOp(vm.OP_FROMALTSTACK)
 	builder.AddOp(vm.OP_SWAP)
