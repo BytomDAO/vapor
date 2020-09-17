@@ -157,6 +157,8 @@ func (w *Wallet) BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInp
 		in.ControlProgram = orig.ControlProgram()
 		in.Address = w.getAddressFromControlProgram(in.ControlProgram, false)
 		in.SpentOutputID = e.SpentOutputId
+		_, assetDefinition := w.getAliasDefinition(in.AssetID)
+		in.AssetDefinition = &assetDefinition
 		arguments := orig.Arguments()
 		for _, arg := range arguments {
 			in.WitnessArguments = append(in.WitnessArguments, arg)
@@ -180,6 +182,8 @@ func (w *Wallet) BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInp
 		in.Address = w.getAddressFromControlProgram(in.ControlProgram, false)
 		in.SpentOutputID = e.SpentOutputId
 		arguments := orig.Arguments()
+		_, assetDefinition := w.getAliasDefinition(in.AssetID)
+		in.AssetDefinition = &assetDefinition
 		for _, arg := range arguments {
 			in.WitnessArguments = append(in.WitnessArguments, arg)
 		}
@@ -187,6 +191,8 @@ func (w *Wallet) BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInp
 	case *bc.Coinbase:
 		in.Type = "coinbase"
 		in.Arbitrary = e.Arbitrary
+		_, assetDefinition := w.getAliasDefinition(in.AssetID)
+		in.AssetDefinition = &assetDefinition
 	}
 	return in
 }
@@ -246,15 +252,21 @@ func (w *Wallet) BuildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOut
 	case *bc.IntraChainOutput:
 		out.Type = "control"
 		isMainchainAddress = false
+		_, assetDefinition := w.getAliasDefinition(out.AssetID)
+		out.AssetDefinition = &assetDefinition
 
 	case *bc.CrossChainOutput:
 		out.Type = "cross_chain_out"
 		isMainchainAddress = true
+		_, assetDefinition := w.getAliasDefinition(out.AssetID)
+		out.AssetDefinition = &assetDefinition
 
 	case *bc.VoteOutput:
 		out.Type = "vote"
 		out.Vote = e.Vote
 		isMainchainAddress = false
+		_, assetDefinition := w.getAliasDefinition(out.AssetID)
+		out.AssetDefinition = &assetDefinition
 	}
 
 	out.Address = w.getAddressFromControlProgram(orig.ControlProgram(), isMainchainAddress)
