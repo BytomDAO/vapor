@@ -29,7 +29,7 @@ func (c *Chain) ValidateTx(tx *types.Tx) (bool, error) {
 
 	bh := c.BestBlockHeader()
 	isOrphan, err := c.validateTx(tx, bh)
-	if err == nil {
+	if err == nil && !isOrphan {
 		c.markTransactions(tx)
 	}
 	return isOrphan, err
