@@ -281,10 +281,6 @@ func (s *sidechainKeeper) syncBlock() (bool, error) {
 		return true, nil
 	}
 
-	if height <= chain.BlockHeight+s.cfg.Confirmations {
-		return false, nil
-	}
-
 	nextBlockStr, txStatus, err := s.node.GetBlockByHeight(chain.BlockHeight + 1)
 	if err != nil {
 		return false, err
