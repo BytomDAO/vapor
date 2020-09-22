@@ -38,7 +38,7 @@ func (n *Node) GetBlockCount() (uint64, error) {
 }
 
 func (n *Node) GetNetInfo() (*api.NetInfo, error) {
-	url := "/get-block-count"
+	url := "/net-info"
 	res := &api.NetInfo{}
 	return res, n.request(url, nil, res)
 }
