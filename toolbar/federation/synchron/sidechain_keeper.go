@@ -270,12 +270,12 @@ func (s *sidechainKeeper) syncBlock() (bool, error) {
 		return false, errors.Wrap(err, "query chain")
 	}
 
-	height, err := s.node.GetBlockCount()
+	netInfo, err := s.node.GetNetInfo()
 	if err != nil {
 		return false, err
 	}
 
-	if height <= chain.BlockHeight+s.cfg.Confirmations {
+	if netInfo.IrreversibleBlock <= chain.BlockHeight {
 		return false, nil
 	}
 
