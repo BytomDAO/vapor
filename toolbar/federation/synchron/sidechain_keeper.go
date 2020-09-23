@@ -319,12 +319,3 @@ func (s *sidechainKeeper) tryAttachBlock(block *types.Block, txStatus *bc.Transa
 	}
 	return dbTx.Commit().Error
 }
-
-func (s *sidechainKeeper) shouldUpdate(currentHeight uint64) (bool, error) {
-	netInfo, err := s.node.GetNetInfo()
-	if err != nil {
-		return false, err
-	}
-
-	return netInfo.IrreversibleBlock > currentHeight+s.cfg.Confirmations, nil
-}
