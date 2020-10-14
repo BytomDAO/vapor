@@ -149,7 +149,7 @@ func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, []*common.Orde
 	receivedAmounts, priceDiffs := CalcReceivedAmount(orders)
 	allocatedAssets := e.feeStrategy.Allocate(receivedAmounts, priceDiffs, isMakers)
 
-	partialOrders, err := addMatchTxOutput(txData, orders, receivedAmounts, allocatedAssets, isMakers)
+	partialOrders, err := addMatchTxOutput(txData, orders, receivedAmounts, allocatedAssets)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -167,7 +167,7 @@ func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, []*common.Orde
 	return types.NewTx(*txData), partialOrders, nil
 }
 
-func addMatchTxOutput(txData *types.TxData, orders []*common.Order, receivedAmounts []*bc.AssetAmount, allocatedAssets *AllocatedAssets, isMakers []bool) ([]*common.Order, error) {
+func addMatchTxOutput(txData *types.TxData, orders []*common.Order, receivedAmounts []*bc.AssetAmount, allocatedAssets *AllocatedAssets) ([]*common.Order, error) {
 	var partialOrders []*common.Order
 	for i, order := range orders {
 		contractArgs := order.ContractArgs
@@ -178,7 +178,7 @@ func addMatchTxOutput(txData *types.TxData, orders []*common.Order, receivedAmou
 		exchangeAmount := order.Utxo.Amount - shouldPayAmount
 		isPartialTrade := requestAmount > receivedAmount && CalcRequestAmount(exchangeAmount, contractArgs.RatioNumerator, contractArgs.RatioDenominator) >= 1
 
-		setMatchTxArguments(txData.Inputs[i], isPartialTrade, len(txData.Outputs), receivedAmount, isMakers[i])
+		setMatchTxArguments(txData.Inputs[i], isPartialTrade, len(txData.Outputs), receivedAmount)
 
 		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*order.ToAssetID, allocatedAssets.Receives[i].Amount, contractArgs.SellerProgram))
 		if isPartialTrade {
@@ -275,17 +275,12 @@ func isMaker(order, oppositeOrder *common.Order) bool {
 	return order.BlockHeight < oppositeOrder.BlockHeight
 }
 
-func setMatchTxArguments(txInput *types.TxInput, isPartialTrade bool, position int, receiveAmounts uint64, isMaker bool) {
-	feeRate := takerFeeRate
-	if isMaker {
-		feeRate = makerFeeRate
-	}
-
+func setMatchTxArguments(txInput *types.TxInput, isPartialTrade bool, position int, receiveAmounts uint64) {
 	var arguments [][]byte
 	if isPartialTrade {
-		arguments = [][]byte{vm.Int64Bytes(int64(receiveAmounts)), vm.Int64Bytes(int64(position)), vm.Int64Bytes(contract.PartialTradeClauseSelector), vm.Int64Bytes(feeRate)}
+		arguments = [][]byte{vm.Int64Bytes(int64(receiveAmounts)), vm.Int64Bytes(int64(position)), vm.Int64Bytes(contract.PartialTradeClauseSelector)}
 	} else {
-		arguments = [][]byte{vm.Int64Bytes(int64(position)), vm.Int64Bytes(contract.FullTradeClauseSelector), vm.Int64Bytes(feeRate)}
+		arguments = [][]byte{vm.Int64Bytes(int64(position)), vm.Int64Bytes(contract.FullTradeClauseSelector)}
 	}
 	txInput.SetArguments(arguments)
 }
