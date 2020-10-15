@@ -64,9 +64,7 @@ func (e *Engine) NextMatchedTx(tradePairs ...*common.TradePair) (*types.Tx, erro
 
 func addMatchTxFeeOutput(txData *types.TxData, fees []*bc.AssetAmount, rewardProgram []byte) {
 	for _, feeAmount := range fees {
-		if feeAmount.Amount != 0 {
-			txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*feeAmount.AssetId, feeAmount.Amount, rewardProgram))
-		}
+		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*feeAmount.AssetId, feeAmount.Amount, rewardProgram))
 	}
 }
 
@@ -96,7 +94,7 @@ func addRefundOutput(txData *types.TxData, orders []*common.Order) {
 	for i, input := range txData.Inputs {
 		refundAmount[input.AssetID()] += input.Amount()
 		assetIDs = append(assetIDs, input.AssetID())
-		refundScript = append(refundScript, orders[i].ContractArgs.SellerProgram)
+		refundScript = append(refundScript, orders[i].SellerProgram)
 	}
 
 	for _, output := range txData.Outputs {
@@ -132,7 +130,7 @@ func addTakerOutput(txData *types.TxData, orders []*common.Order, priceDiffs []*
 				continue
 			}
 
-			txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*priceDiff.AssetId, priceDiff.Amount, orders[i].ContractArgs.SellerProgram))
+			txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*priceDiff.AssetId, priceDiff.Amount, orders[i].SellerProgram))
 		}
 		break
 	}
@@ -170,17 +168,16 @@ func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, []*common.Orde
 func addMatchTxOutput(txData *types.TxData, orders []*common.Order, receivedAmounts []*bc.AssetAmount, allocatedAssets *AllocatedAssets) ([]*common.Order, error) {
 	var partialOrders []*common.Order
 	for i, order := range orders {
-		contractArgs := order.ContractArgs
 		receivedAmount := receivedAmounts[i].Amount
-		shouldPayAmount := calcShouldPayAmount(receivedAmount, contractArgs.RatioNumerator, contractArgs.RatioDenominator)
+		shouldPayAmount := calcShouldPayAmount(receivedAmount, order.RatioNumerator, order.RatioDenominator)
 
 		requestAmount := CalcRequestAmount(order.Utxo.Amount, order.RatioNumerator, order.RatioDenominator)
 		exchangeAmount := order.Utxo.Amount - shouldPayAmount
-		isPartialTrade := requestAmount > receivedAmount && CalcRequestAmount(exchangeAmount, contractArgs.RatioNumerator, contractArgs.RatioDenominator) >= 1
+		isPartialTrade := requestAmount > receivedAmount && CalcRequestAmount(exchangeAmount, order.RatioNumerator, order.RatioDenominator) >= 1
 
 		setMatchTxArguments(txData.Inputs[i], isPartialTrade, len(txData.Outputs), receivedAmount)
 
-		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*order.ToAssetID, allocatedAssets.Receives[i].Amount, contractArgs.SellerProgram))
+		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*order.ToAssetID, allocatedAssets.Receives[i].Amount, order.SellerProgram))
 		if isPartialTrade {
 			txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(*order.FromAssetID, exchangeAmount, order.Utxo.ControlProgram))
 			partialOrders = append(partialOrders, order)
@@ -259,20 +256,15 @@ func MakerFlags(orders []*common.Order) []bool {
 }
 
 func isMaker(order, oppositeOrder *common.Order) bool {
-	// old version of order's block height and tx sequence is 0
-	if order.BlockHeight == 0 && oppositeOrder.BlockHeight != 0 {
-		return true
+	if order.BlockHeight != oppositeOrder.BlockHeight {
+		return order.BlockHeight < oppositeOrder.BlockHeight
 	}
-	if order.BlockHeight != 0 && oppositeOrder.BlockHeight == 0 {
-		return false
-	}
-	if order.BlockHeight == oppositeOrder.BlockHeight {
-		if order.TxIndex == oppositeOrder.TxIndex {
-			return order.UTXOHash().String() < oppositeOrder.UTXOHash().String()
-		}
+
+	if order.TxIndex != oppositeOrder.TxIndex {
 		return order.TxIndex < oppositeOrder.TxIndex
 	}
-	return order.BlockHeight < oppositeOrder.BlockHeight
+
+	return order.UTXOHash().String() < oppositeOrder.UTXOHash().String()
 }
 
 func setMatchTxArguments(txInput *types.TxInput, isPartialTrade bool, position int, receiveAmounts uint64) {

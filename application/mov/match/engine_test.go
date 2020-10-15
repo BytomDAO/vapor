@@ -6,6 +6,7 @@ import (
 	"github.com/bytom/vapor/application/mov/common"
 	"github.com/bytom/vapor/application/mov/mock"
 	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/protocol/validation"
 )
 
 func TestGenerateMatchedTxs(t *testing.T) {
@@ -104,9 +105,9 @@ func TestGenerateMatchedTxs(t *testing.T) {
 		}
 
 		for j, gotMatchedTx := range gotMatchedTxs {
-			// if _, err := validation.ValidateTx(gotMatchedTx.Tx, &bc.Block{BlockHeader: &bc.BlockHeader{Version: 1}}); err != nil {
-			// 	t.Fatal(err)
-			// }
+			if _, err := validation.ValidateTx(gotMatchedTx.Tx, &bc.Block{BlockHeader: &bc.BlockHeader{Version: 1}}); err != nil {
+				t.Fatal(err)
+			}
 
 			c.wantMatchedTxs[j].Version = 1
 			byteData, err := c.wantMatchedTxs[j].MarshalText()

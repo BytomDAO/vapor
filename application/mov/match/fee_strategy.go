@@ -64,7 +64,7 @@ func (d *DefaultFeeStrategy) Validate(receiveAmounts []*bc.AssetAmount, feeAmoun
 	for _, receiveAmount := range receiveAmounts {
 		realFeeAmount := feeAmounts[*receiveAmount.AssetId]
 		feeAmount := d.calcFeeAmount(receiveAmount.Amount)
-		if realFeeAmount != feeAmount {
+		if realFeeAmount < feeAmount {
 			return ErrInvalidAmountOfFee
 		}
 	}

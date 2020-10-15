@@ -9,7 +9,6 @@ import (
 	"github.com/bytom/vapor/errors"
 	"github.com/bytom/vapor/protocol/bc"
 	"github.com/bytom/vapor/protocol/bc/types"
-	"github.com/bytom/vapor/protocol/vm/vmutil"
 )
 
 // MovUtxo store the utxo information for mov order
@@ -27,9 +26,9 @@ type Order struct {
 	Utxo             *MovUtxo
 	RatioNumerator   int64
 	RatioDenominator int64
+	SellerProgram    []byte
 	BlockHeight      uint64
 	TxIndex          int
-	ContractArgs     *vmutil.MagneticContractArgs
 }
 
 // Rate return the exchange represented by float64
@@ -89,9 +88,9 @@ func NewOrderFromOutput(tx *types.Tx, outputIndex int, blockHeight uint64, txInd
 		ToAssetID:        &contractArgs.RequestedAsset,
 		RatioNumerator:   contractArgs.RatioNumerator,
 		RatioDenominator: contractArgs.RatioDenominator,
+		SellerProgram:    contractArgs.SellerProgram,
 		BlockHeight:      blockHeight,
 		TxIndex:          txIndex,
-		ContractArgs:     contractArgs,
 		Utxo: &MovUtxo{
 			SourceID:       output.Source.Ref,
 			Amount:         assetAmount.Amount,
@@ -118,7 +117,7 @@ func NewOrderFromInput(tx *types.Tx, inputIndex int) (*Order, error) {
 		ToAssetID:        &contractArgs.RequestedAsset,
 		RatioNumerator:   contractArgs.RatioNumerator,
 		RatioDenominator: contractArgs.RatioDenominator,
-		ContractArgs:     contractArgs,
+		SellerProgram:    contractArgs.SellerProgram,
 		Utxo: &MovUtxo{
 			SourceID:       &input.SourceID,
 			Amount:         input.Amount,
