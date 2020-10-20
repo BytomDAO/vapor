@@ -306,8 +306,7 @@ func validateMatchedTx(tx *types.Tx, blockHeight uint64) error {
 		toAssetIDMap[order.ToAssetID.String()] = true
 	}
 
-	inputSize := len(tx.Inputs)
-	if len(fromAssetIDMap) != inputSize || len(toAssetIDMap) != inputSize {
+	if inputSize := len(tx.Inputs); len(fromAssetIDMap) != inputSize || len(toAssetIDMap) != inputSize {
 		return errAssetIDMustUniqueInMatchedTx
 	}
 
@@ -331,14 +330,14 @@ func validateMatchedTxFee(tx *types.Tx, blockHeight uint64) error {
 		return err
 	}
 
-	receivedAmount, _ := match.CalcReceivedAmount(orders)
+	receivedAmount, priceDiffs := match.CalcReceivedAmount(orders)
 	feeAmounts := make(map[bc.AssetID]uint64)
 	for assetID, fee := range matchedTxFees {
 		feeAmounts[assetID] = fee.amount
 	}
 
 	feeStrategy := match.NewDefaultFeeStrategy()
-	return feeStrategy.Validate(receivedAmount, feeAmounts)
+	return feeStrategy.Validate(receivedAmount, priceDiffs, feeAmounts, blockHeight)
 }
 
 func (m *Core) validateMatchedTxSequence(txs []*Tx) error {

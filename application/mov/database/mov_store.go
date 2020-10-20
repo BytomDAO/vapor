@@ -168,7 +168,7 @@ func (m *LevelDBMovStore) ListOrders(orderAfter *common.Order) ([]*common.Order,
 			RatioDenominator: orderData.RatioDenominator,
 			BlockHeight:      orderData.BlockHeight,
 			TxIndex:          orderData.TxIndex,
-			ContractArgs:     contractArgs,
+			SellerProgram:    contractArgs.SellerProgram,
 		})
 	}
 	return orders, nil

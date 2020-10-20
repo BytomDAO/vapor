@@ -23,10 +23,10 @@ type FeeStrategy interface {
 	// Allocate will allocate the price differential in matching transaction to the participants and the fee
 	// @param receiveAmounts the amount of assets that the participants in the matching transaction can received when no fee is considered
 	// @return reallocated assets after calculating fees
-	Allocate(receiveAmounts, priceDiffs []*bc.AssetAmount, isMakers []bool) *AllocatedAssets
+	Allocate(receiveAmounts, priceDiffs []*bc.AssetAmount, takerPos int) *AllocatedAssets
 
 	// Validate verify that the fee charged for a matching transaction is correct
-	Validate(receiveAmounts []*bc.AssetAmount, feeAmounts map[bc.AssetID]uint64) error
+	Validate(receiveAmounts, priceDiffs []*bc.AssetAmount, feeAmounts map[bc.AssetID]uint64, blockHeight uint64) error
 }
 
 // DefaultFeeStrategy represent the default fee charge strategy
@@ -38,19 +38,19 @@ func NewDefaultFeeStrategy() *DefaultFeeStrategy {
 }
 
 // Allocate will allocate the price differential in matching transaction to the participants and the fee
-func (d *DefaultFeeStrategy) Allocate(receiveAmounts, priceDiffs []*bc.AssetAmount, isMakers []bool) *AllocatedAssets {
+func (d *DefaultFeeStrategy) Allocate(receiveAmounts, priceDiffs []*bc.AssetAmount, takerPos int) *AllocatedAssets {
 	receives := make([]*bc.AssetAmount, len(receiveAmounts))
 	fees := make([]*bc.AssetAmount, len(receiveAmounts))
 
 	for i, receiveAmount := range receiveAmounts {
-		fee := d.calcFeeAmount(receiveAmount.Amount)
+		fee := d.calcMinFeeAmount(receiveAmount.Amount)
 		receives[i] = &bc.AssetAmount{AssetId: receiveAmount.AssetId, Amount: receiveAmount.Amount - fee}
 		fees[i] = &bc.AssetAmount{AssetId: receiveAmount.AssetId, Amount: fee}
 
-		if !isMakers[i] {
+		if i == takerPos {
 			for _, priceDiff := range priceDiffs {
 				if *priceDiff.AssetId == *receiveAmount.AssetId {
-					fee = d.calcFeeAmount(priceDiff.Amount)
+					fee = d.calcMinFeeAmount(priceDiff.Amount)
 					priceDiff.Amount -= fee
 					fees[i].Amount += fee
 				}
@@ -59,18 +59,44 @@ func (d *DefaultFeeStrategy) Allocate(receiveAmounts, priceDiffs []*bc.AssetAmou
 	}
 	return &AllocatedAssets{Receives: receives, Fees: fees}
 }
+
+const forkBlockHeight = 83000000
+
 // Validate verify that the fee charged for a matching transaction is correct
-func (d *DefaultFeeStrategy) Validate(receiveAmounts []*bc.AssetAmount, feeAmounts map[bc.AssetID]uint64) error {
+func (d *DefaultFeeStrategy) Validate(receiveAmounts, priceDiffs []*bc.AssetAmount, feeAmounts map[bc.AssetID]uint64, blockHeight uint64) error {
+	existTaker := false
 	for _, receiveAmount := range receiveAmounts {
 		realFeeAmount := feeAmounts[*receiveAmount.AssetId]
-		feeAmount := d.calcFeeAmount(receiveAmount.Amount)
-		if realFeeAmount < feeAmount {
-			return ErrInvalidAmountOfFee
+		minFeeAmount := d.calcMinFeeAmount(receiveAmount.Amount)
+		if blockHeight <= forkBlockHeight {
+			maxFeeAmount := d.calcMaxFeeAmount(receiveAmount.Amount)
+			if realFeeAmount < minFeeAmount || realFeeAmount > maxFeeAmount {
+				return ErrInvalidAmountOfFee
+			}
+		} else {
+			if realFeeAmount != minFeeAmount && existTaker {
+				return ErrInvalidAmountOfFee
+			}
+
+			for _, priceDiff := range priceDiffs {
+				if priceDiff.AssetId == receiveAmount.AssetId {
+					minFeeAmount += d.calcMinFeeAmount(priceDiff.Amount)
+				}
+			}
+
+			if realFeeAmount != minFeeAmount {
+				return ErrInvalidAmountOfFee
+			}
+			existTaker = true
 		}
 	}
 	return nil
 }
 
-func (d *DefaultFeeStrategy) calcFeeAmount(amount uint64) uint64 {
+func (d *DefaultFeeStrategy) calcMinFeeAmount(amount uint64) uint64 {
 	return uint64(math.Ceil(float64(amount) / 1000))
+}
+
+func (d *DefaultFeeStrategy) calcMaxFeeAmount(amount uint64) uint64 {
+	return uint64(math.Ceil(float64(amount) * 0.05))
 }
