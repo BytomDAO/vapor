@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/bytom/vapor/common"
-	"github.com/bytom/vapor/consensus"
 	"github.com/bytom/vapor/protocol/bc/types"
 )
 
@@ -17,7 +16,6 @@ type AssetFilter struct {
 // which is a strings list cancated via comma
 func NewAssetFilter(whitelist string) *AssetFilter {
 	af := &AssetFilter{whitelist: make(map[string]struct{})}
-	af.whitelist[consensus.BTMAssetID.String()] = struct{}{}
 	for _, assetID := range strings.Split(whitelist, ",") {
 		af.whitelist[strings.ToLower(assetID)] = struct{}{}
 	}
