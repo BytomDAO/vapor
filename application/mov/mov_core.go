@@ -78,12 +78,12 @@ func (m *Core) ApplyBlock(block *types.Block) error {
 type Tx struct {
 	rawTx       *types.Tx
 	blockHeight uint64
-	txIndex     int
+	txIndex     uint64
 }
 
 // NewTx create a new Tx instance
-func NewTx(tx *types.Tx, blockHeight uint64, sequence int) *Tx {
-	return &Tx{rawTx: tx, blockHeight: blockHeight, txIndex: sequence}
+func NewTx(tx *types.Tx, blockHeight, txIndex uint64) *Tx {
+	return &Tx{rawTx: tx, blockHeight: blockHeight, txIndex: txIndex}
 }
 
 // BeforeProposalBlock return all transactions than can be matched, and the number of transactions cannot exceed the given capacity.
@@ -519,7 +519,7 @@ func mergeOrders(addOrderMap, deleteOrderMap map[string]*common.Order) ([]*commo
 func movTxs(block *types.Block) []*Tx {
 	var movTxs []*Tx
 	for i, tx := range block.Transactions {
-		movTxs = append(movTxs, NewTx(tx, block.Height, i))
+		movTxs = append(movTxs, NewTx(tx, block.Height, uint64(i)))
 	}
 	return movTxs
 }

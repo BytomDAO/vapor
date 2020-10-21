@@ -52,7 +52,7 @@ type orderData struct {
 	RatioNumerator   int64
 	RatioDenominator int64
 	BlockHeight      uint64
-	TxIndex          int
+	TxIndex          uint64
 }
 
 func calcOrderKey(fromAssetID, toAssetID *bc.AssetID, utxoHash *bc.Hash, rate float64) []byte {

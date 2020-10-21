@@ -10,12 +10,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bytom/vapor/application/mov/common"
-	"github.com/bytom/vapor/consensus/segwit"
 	"github.com/bytom/vapor/database/leveldb"
 	dbm "github.com/bytom/vapor/database/leveldb"
 	"github.com/bytom/vapor/protocol/bc"
 	"github.com/bytom/vapor/protocol/bc/types"
-	"github.com/bytom/vapor/protocol/vm/vmutil"
 	"github.com/bytom/vapor/testutil"
 )
 
@@ -30,7 +28,7 @@ var (
 	assetID8 = &bc.AssetID{V0: 8}
 	
 	orderProgram = testutil.MustDecodeHexString("0020184e1cc4ee4845023888810a79eed7a42c02c544cf2c61ceac05e176d575bd4603ed4e0e0210272200204775b9e167e2c1ffe57ae3e5088af69e518be010529b5fdadf4be97656084eec20a3e21b55f44403884457166ad5847fdb5489512ba9611eee466efb9f94319143")
-	contractArgs = mustDecodeContractArgs(orderProgram)
+	sellerProgram = testutil.MustDecodeHexString("00204775b9e167e2c1ffe57ae3e5088af69e518be010529b5fdadf4be97656084eec")
 
 	mockOrders = []*common.Order{
 		&common.Order{
@@ -44,7 +42,7 @@ var (
 				SourcePos:      0,
 				ControlProgram: orderProgram,
 			},
-			ContractArgs: contractArgs,
+			SellerProgram: sellerProgram,
 		},
 		&common.Order{
 			FromAssetID:      assetID1,
@@ -57,7 +55,7 @@ var (
 				SourcePos:      0,
 				ControlProgram: orderProgram,
 			},
-			ContractArgs: contractArgs,
+			SellerProgram: sellerProgram,
 		},
 		&common.Order{
 			FromAssetID:      assetID1,
@@ -70,7 +68,7 @@ var (
 				SourcePos:      0,
 				ControlProgram: orderProgram,
 			},
-			ContractArgs: contractArgs,
+			SellerProgram: sellerProgram,
 		},
 		&common.Order{
 			FromAssetID:      assetID1,
@@ -83,7 +81,7 @@ var (
 				SourcePos:      0,
 				ControlProgram: orderProgram,
 			},
-			ContractArgs: contractArgs,
+			SellerProgram: sellerProgram,
 		},
 		&common.Order{
 			FromAssetID:      assetID1,
@@ -96,7 +94,7 @@ var (
 				SourcePos:      1,
 				ControlProgram: orderProgram,
 			},
-			ContractArgs: contractArgs,
+			SellerProgram: sellerProgram,
 		},
 		&common.Order{
 			FromAssetID:      assetID1,
@@ -109,7 +107,7 @@ var (
 				SourcePos:      0,
 				ControlProgram: orderProgram,
 			},
-			ContractArgs: contractArgs,
+			SellerProgram: sellerProgram,
 		},
 		&common.Order{
 			FromAssetID:      assetID1,
@@ -122,7 +120,7 @@ var (
 				SourcePos:      0,
 				ControlProgram: orderProgram,
 			},
-			ContractArgs: contractArgs,
+			SellerProgram: sellerProgram,
 		},
 		&common.Order{
 			FromAssetID:      assetID1,
@@ -135,7 +133,7 @@ var (
 				SourcePos:      0,
 				ControlProgram: orderProgram,
 			},
-			ContractArgs: contractArgs,
+			SellerProgram: sellerProgram,
 		},
 		&common.Order{
 			FromAssetID:      assetID1,
@@ -148,7 +146,7 @@ var (
 				SourcePos:      0,
 				ControlProgram: orderProgram,
 			},
-			ContractArgs: contractArgs,
+			SellerProgram: sellerProgram,
 		},
 		&common.Order{
 			FromAssetID:      assetID1,
@@ -161,7 +159,7 @@ var (
 				SourcePos:      0,
 				ControlProgram: orderProgram,
 			},
-			ContractArgs: contractArgs,
+			SellerProgram: sellerProgram,
 		},
 		&common.Order{
 			FromAssetID:      assetID3,
@@ -174,7 +172,7 @@ var (
 				SourcePos:      0,
 				ControlProgram: orderProgram,
 			},
-			ContractArgs: contractArgs,
+			SellerProgram: sellerProgram,
 		},
 		&common.Order{
 			FromAssetID:      assetID4,
@@ -187,7 +185,7 @@ var (
 				SourcePos:      0,
 				ControlProgram: orderProgram,
 			},
-			ContractArgs: contractArgs,
+			SellerProgram: sellerProgram,
 		},
 		&common.Order{
 			FromAssetID:      assetID4,
@@ -200,7 +198,7 @@ var (
 				SourcePos:      0,
 				ControlProgram: orderProgram,
 			},
-			ContractArgs: contractArgs,
+			SellerProgram: sellerProgram,
 		},
 		&common.Order{
 			FromAssetID:      assetID5,
@@ -213,7 +211,7 @@ var (
 				SourcePos:      0,
 				ControlProgram: orderProgram,
 			},
-			ContractArgs: contractArgs,
+			SellerProgram: sellerProgram,
 		},
 		&common.Order{
 			FromAssetID:      assetID6,
@@ -226,7 +224,7 @@ var (
 				SourcePos:      0,
 				ControlProgram: orderProgram,
 			},
-			ContractArgs: contractArgs,
+			SellerProgram: sellerProgram,
 		},
 	}
 )
@@ -1483,13 +1481,4 @@ func TestCheckMovDatabaseState(t *testing.T) {
 		os.RemoveAll("temp")
 	}
 
-}
-
-func mustDecodeContractArgs(program []byte) *vmutil.MagneticContractArgs {
-	contractArgs, err := segwit.DecodeP2WMCProgram(program)
-	if err != nil {
-		panic(err)
-	}
-
-	return contractArgs
 }

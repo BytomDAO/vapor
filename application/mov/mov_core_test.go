@@ -197,9 +197,9 @@ func TestApplyBlock(t *testing.T) {
 					mock.MatchedTxs[1],
 				},
 			},
-			blockFunc:   detachBlock,
-			initOrders:  []*common.Order{mock.Btc2EthOrders[1]},
-			wantOrders:  []*common.Order{
+			blockFunc:  detachBlock,
+			initOrders: []*common.Order{mock.Btc2EthOrders[1]},
+			wantOrders: []*common.Order{
 				orderWithHeightAndTxIndex(mock.Btc2EthOrders[0], 0, 0),
 				mock.Btc2EthOrders[1],
 				orderWithHeightAndTxIndex(mock.Eth2BtcOrders[0], 0, 0),
@@ -214,9 +214,9 @@ func TestApplyBlock(t *testing.T) {
 					mock.MatchedTxs[0],
 				},
 			},
-			blockFunc:   detachBlock,
-			initOrders:  []*common.Order{mock.MustNewOrderFromOutputV2(mock.MatchedTxs[0], 1, 1, 0)},
-			wantOrders:  []*common.Order{
+			blockFunc:  detachBlock,
+			initOrders: []*common.Order{mock.MustNewOrderFromOutputV2(mock.MatchedTxs[0], 1, 1, 0)},
+			wantOrders: []*common.Order{
 				orderWithHeightAndTxIndex(mock.Btc2EthOrders[0], 0, 0),
 				orderWithHeightAndTxIndex(mock.Eth2BtcOrders[1], 0, 0),
 			},
@@ -230,9 +230,9 @@ func TestApplyBlock(t *testing.T) {
 					mock.MatchedTxs[2], mock.MatchedTxs[3],
 				},
 			},
-			blockFunc:   detachBlock,
-			initOrders:  []*common.Order{mock.MustNewOrderFromOutput(mock.MatchedTxs[3], 1)},
-			wantOrders:  []*common.Order{
+			blockFunc:  detachBlock,
+			initOrders: []*common.Order{mock.MustNewOrderFromOutput(mock.MatchedTxs[3], 1)},
+			wantOrders: []*common.Order{
 				orderWithHeightAndTxIndex(mock.Btc2EthOrders[0], 0, 0),
 				orderWithHeightAndTxIndex(mock.Btc2EthOrders[1], 0, 0),
 				orderWithHeightAndTxIndex(mock.Eth2BtcOrders[2], 0, 0),
@@ -527,7 +527,7 @@ func TestValidateBlock(t *testing.T) {
 
 	for i, c := range cases {
 		movCore := &Core{}
-		c.block.Height = 3456786543
+		c.block.Height = 84000000
 		if err := movCore.ValidateBlock(c.block, c.verifyResults); err != c.wantError {
 			t.Errorf("#%d(%s):validate block want error(%v), got error(%v)", i, c.desc, c.wantError, err)
 		}
@@ -543,7 +543,8 @@ func TestCalcMatchedTxFee(t *testing.T) {
 		{
 			desc: "fee less than max fee",
 			wantMatchedTxFee: map[bc.AssetID]*matchedTxFee{
-				mock.ETH: {amount: 1, rewardProgram: mock.RewardProgram},
+				mock.BTC: {amount: 1, rewardProgram: mock.RewardProgram},
+				mock.ETH: {amount: 2, rewardProgram: mock.RewardProgram},
 			},
 			tx: mock.MatchedTxs[1].TxData,
 		},
@@ -551,6 +552,7 @@ func TestCalcMatchedTxFee(t *testing.T) {
 			desc: "fee refund in tx",
 			wantMatchedTxFee: map[bc.AssetID]*matchedTxFee{
 				mock.BTC: {amount: 1, rewardProgram: mock.RewardProgram},
+				mock.ETH: {amount: 1, rewardProgram: mock.RewardProgram},
 			},
 			tx: mock.MatchedTxs[2].TxData,
 		},
@@ -558,6 +560,7 @@ func TestCalcMatchedTxFee(t *testing.T) {
 			desc: "no price diff",
 			wantMatchedTxFee: map[bc.AssetID]*matchedTxFee{
 				mock.BTC: {amount: 1, rewardProgram: mock.RewardProgram},
+				mock.ETH: {amount: 1, rewardProgram: mock.RewardProgram},
 			},
 			tx: mock.MatchedTxs[0].TxData,
 		},
@@ -849,7 +852,7 @@ func hashPtr(hash bc.Hash) *bc.Hash {
 	return &hash
 }
 
-func orderWithHeightAndTxIndex(order *common.Order, blockHeight uint64, txIndex int) *common.Order {
+func orderWithHeightAndTxIndex(order *common.Order, blockHeight, txIndex uint64) *common.Order {
 	order.BlockHeight = blockHeight
 	order.TxIndex = txIndex
 	return order

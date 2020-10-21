@@ -28,9 +28,9 @@ var (
 				Amount:         10,
 				ControlProgram: MustCreateP2WMCProgram(ETH, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19251"), 50, 1),
 			},
-			ContractArgs: createContractArgs(ETH, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19251"), 50, 1),
-			BlockHeight:  100,
-			TxIndex:      1,
+			BlockHeight:   100,
+			TxIndex:       1,
+			SellerProgram: testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19251"),
 		},
 		{
 			FromAssetID:      &BTC,
@@ -43,9 +43,9 @@ var (
 				Amount:         20,
 				ControlProgram: MustCreateP2WMCProgram(ETH, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19252"), 53, 1),
 			},
-			ContractArgs: createContractArgs(ETH, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19252"), 53, 1),
-			BlockHeight:  100,
-			TxIndex:      2,
+			BlockHeight:   100,
+			TxIndex:       2,
+			SellerProgram: testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19252"),
 		},
 		{
 			FromAssetID:      &BTC,
@@ -58,7 +58,7 @@ var (
 				Amount:         15,
 				ControlProgram: MustCreateP2WMCProgram(ETH, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19252"), 53, 1),
 			},
-			ContractArgs: createContractArgs(ETH, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19252"), 53, 1),
+			SellerProgram: testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19252"),
 		},
 		{
 			FromAssetID:      &BTC,
@@ -71,7 +71,7 @@ var (
 				Amount:         17,
 				ControlProgram: MustCreateP2WMCProgram(ETH, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19252"), 53, 1),
 			},
-			ContractArgs: createContractArgs(ETH, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19252"), 53, 1),
+			SellerProgram: testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19252"),
 		},
 	}
 
@@ -87,7 +87,7 @@ var (
 				Amount:         510,
 				ControlProgram: MustCreateP2WMCProgram(BTC, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19253"), 1, 51.0),
 			},
-			ContractArgs: createContractArgs(BTC, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19253"), 1, 51.0),
+			SellerProgram: testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19253"),
 		},
 		{
 			FromAssetID:      &ETH,
@@ -100,9 +100,9 @@ var (
 				Amount:         416,
 				ControlProgram: MustCreateP2WMCProgram(BTC, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19254"), 1, 52.0),
 			},
-			ContractArgs: createContractArgs(BTC, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19254"), 1, 52.0),
-			BlockHeight:  100,
-			TxIndex:      2,
+			BlockHeight:   100,
+			TxIndex:       2,
+			SellerProgram: testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19254"),
 		},
 		{
 			FromAssetID:      &ETH,
@@ -115,9 +115,9 @@ var (
 				Amount:         810,
 				ControlProgram: MustCreateP2WMCProgram(BTC, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19255"), 1, 54.0),
 			},
-			ContractArgs: createContractArgs(BTC, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19255"), 1, 54.0),
-			BlockHeight:  101,
-			TxIndex:      1,
+			BlockHeight:   101,
+			TxIndex:       1,
+			SellerProgram: testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19255"),
 		},
 		{
 			FromAssetID:      &ETH,
@@ -130,9 +130,9 @@ var (
 				Amount:         600,
 				ControlProgram: MustCreateP2WMCProgram(BTC, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19256"), 1, 150.0),
 			},
-			ContractArgs: createContractArgs(BTC, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19256"), 1, 150.0),
-			BlockHeight:  101,
-			TxIndex:      3,
+			BlockHeight:   101,
+			TxIndex:       3,
+			SellerProgram: testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19256"),
 		},
 	}
 
@@ -148,7 +148,7 @@ var (
 				Amount:         100,
 				ControlProgram: MustCreateP2WMCProgram(ETC, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19255"), 1, 2.0),
 			},
-			ContractArgs: createContractArgs(ETC, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19255"), 1, 2.0),
+			SellerProgram: testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19255"),
 		},
 	}
 
@@ -164,7 +164,7 @@ var (
 				Amount:         50,
 				ControlProgram: MustCreateP2WMCProgram(EOS, testutil.MustDecodeHexString("0014df7a97e53bbe278e4e44810b0a760fb472daa9a3"), 2, 1.0),
 			},
-			ContractArgs: createContractArgs(EOS, testutil.MustDecodeHexString("0014df7a97e53bbe278e4e44810b0a760fb472daa9a3"), 2, 1.0),
+			SellerProgram: testutil.MustDecodeHexString("0014df7a97e53bbe278e4e44810b0a760fb472daa9a3"),
 		},
 	}
 
@@ -180,7 +180,7 @@ var (
 				Amount:         500,
 				ControlProgram: MustCreateP2WMCProgram(EOS, testutil.MustDecodeHexString("0014e3178c0f294a9a8f4b304236406507913091df86"), 2, 1.0),
 			},
-			ContractArgs: createContractArgs(EOS, testutil.MustDecodeHexString("0014e3178c0f294a9a8f4b304236406507913091df86"), 2, 1.0),
+			SellerProgram: testutil.MustDecodeHexString("0014e3178c0f294a9a8f4b304236406507913091df86"),
 		},
 	}
 
@@ -196,7 +196,7 @@ var (
 				Amount:         1000,
 				ControlProgram: MustCreateP2WMCProgram(BTC, testutil.MustDecodeHexString("00144d0dfc8a0c5ce41d31d4f61d99aff70588bff8bc"), 1, 100.0),
 			},
-			ContractArgs: createContractArgs(BTC, testutil.MustDecodeHexString("00144d0dfc8a0c5ce41d31d4f61d99aff70588bff8bc"), 1, 100.0),
+			SellerProgram: testutil.MustDecodeHexString("00144d0dfc8a0c5ce41d31d4f61d99aff70588bff8bc"),
 		},
 	}
 
@@ -289,11 +289,12 @@ var (
 				types.NewSpendInput([][]byte{vm.Int64Bytes(2), vm.Int64Bytes(1)}, *Eth2BtcOrders[1].Utxo.SourceID, *Eth2BtcOrders[1].FromAssetID, Eth2BtcOrders[1].Utxo.Amount, Eth2BtcOrders[1].Utxo.SourcePos, Eth2BtcOrders[1].Utxo.ControlProgram),
 			},
 			Outputs: []*types.TxOutput{
-				types.NewIntraChainOutput(*Btc2EthOrders[0].ToAssetID, 416, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19251")),
+				types.NewIntraChainOutput(*Btc2EthOrders[0].ToAssetID, 415, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19251")),
 				// re-order
 				types.NewIntraChainOutput(*Btc2EthOrders[0].FromAssetID, 2, Btc2EthOrders[0].Utxo.ControlProgram),
 				types.NewIntraChainOutput(*Eth2BtcOrders[1].ToAssetID, 7, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19254")),
 				// fee
+				types.NewIntraChainOutput(*Btc2EthOrders[0].ToAssetID, 1, RewardProgram),
 				types.NewIntraChainOutput(*Eth2BtcOrders[1].ToAssetID, 1, RewardProgram),
 			},
 		}),
@@ -306,11 +307,12 @@ var (
 			},
 			Outputs: []*types.TxOutput{
 				types.NewIntraChainOutput(*Btc2EthOrders[0].ToAssetID, 499, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19251")),
-				types.NewIntraChainOutput(*Eth2BtcOrders[0].ToAssetID, 10, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19253")),
+				types.NewIntraChainOutput(*Eth2BtcOrders[0].ToAssetID, 9, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19253")),
 				// fee
-				types.NewIntraChainOutput(*Btc2EthOrders[0].ToAssetID, 1, RewardProgram),
+				types.NewIntraChainOutput(*Btc2EthOrders[0].ToAssetID, 2, RewardProgram),
+				types.NewIntraChainOutput(*Eth2BtcOrders[0].ToAssetID, 1, RewardProgram),
 				// refund to taker
-				types.NewIntraChainOutput(*Btc2EthOrders[0].ToAssetID, 10, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19251")),
+				types.NewIntraChainOutput(*Btc2EthOrders[0].ToAssetID, 9, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19251")),
 			},
 		}),
 
@@ -323,14 +325,15 @@ var (
 				types.NewSpendInput([][]byte{vm.Int64Bytes(10), vm.Int64Bytes(1), vm.Int64Bytes(0)}, *Eth2BtcOrders[2].Utxo.SourceID, *Eth2BtcOrders[2].FromAssetID, Eth2BtcOrders[2].Utxo.Amount, Eth2BtcOrders[2].Utxo.SourcePos, Eth2BtcOrders[2].Utxo.ControlProgram),
 			},
 			Outputs: []*types.TxOutput{
-				types.NewIntraChainOutput(*Btc2EthOrders[0].ToAssetID, 500, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19251")),
+				types.NewIntraChainOutput(*Btc2EthOrders[0].ToAssetID, 499, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19251")),
 				types.NewIntraChainOutput(*Eth2BtcOrders[2].ToAssetID, 9, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19255")),
 				// re-order
 				types.NewIntraChainOutput(*Eth2BtcOrders[2].FromAssetID, 270, Eth2BtcOrders[2].Utxo.ControlProgram),
 				// fee
+				types.NewIntraChainOutput(*Btc2EthOrders[0].ToAssetID, 1, RewardProgram),
 				types.NewIntraChainOutput(*Btc2EthOrders[0].FromAssetID, 1, RewardProgram),
 				// re-order
-				types.NewIntraChainOutput(*Eth2BtcOrders[2].FromAssetID, 40, Eth2BtcOrders[2].ContractArgs.SellerProgram),
+				types.NewIntraChainOutput(*Eth2BtcOrders[2].FromAssetID, 40, Eth2BtcOrders[2].SellerProgram),
 			},
 		}),
 		types.NewTx(types.TxData{
@@ -341,11 +344,12 @@ var (
 				types.NewSpendInput([][]byte{vm.Int64Bytes(2), vm.Int64Bytes(1)}, testutil.MustDecodeHash("39bdb7058a0c31fb740af8e3c382bf608efff1b041cd4dd461332722ad24552a"), *Eth2BtcOrders[2].FromAssetID, 270, 2, Eth2BtcOrders[2].Utxo.ControlProgram),
 			},
 			Outputs: []*types.TxOutput{
-				types.NewIntraChainOutput(*Btc2EthOrders[1].ToAssetID, 270, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19252")),
+				types.NewIntraChainOutput(*Btc2EthOrders[1].ToAssetID, 269, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19252")),
 				// re-order
 				types.NewIntraChainOutput(*Btc2EthOrders[1].FromAssetID, 15, Btc2EthOrders[1].Utxo.ControlProgram),
 				types.NewIntraChainOutput(*Eth2BtcOrders[2].ToAssetID, 4, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19255")),
 				// fee
+				types.NewIntraChainOutput(*Btc2EthOrders[1].ToAssetID, 1, RewardProgram),
 				types.NewIntraChainOutput(*Eth2BtcOrders[2].ToAssetID, 1, RewardProgram),
 			},
 		}),
@@ -390,12 +394,13 @@ var (
 				types.NewSpendInput([][]byte{vm.Int64Bytes(2), vm.Int64Bytes(1)}, *Eos2BtcOrders[0].Utxo.SourceID, *Eos2BtcOrders[0].FromAssetID, Eos2BtcOrders[0].Utxo.Amount, Eos2BtcOrders[0].Utxo.SourcePos, Eos2BtcOrders[0].Utxo.ControlProgram),
 			},
 			Outputs: []*types.TxOutput{
-				types.NewIntraChainOutput(ETH, 499, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19251")),
-				types.NewIntraChainOutput(EOS, 999, testutil.MustDecodeHexString("0014e3178c0f294a9a8f4b304236406507913091df86")),
-				types.NewIntraChainOutput(BTC, 10, testutil.MustDecodeHexString("00144d0dfc8a0c5ce41d31d4f61d99aff70588bff8bc")),
+				types.NewIntraChainOutput(ETH, 499, Btc2EthOrders[0].SellerProgram),
+				types.NewIntraChainOutput(EOS, 999, Eth2EosOrders[0].SellerProgram),
+				types.NewIntraChainOutput(BTC, 9, Eos2BtcOrders[0].SellerProgram),
 				// fee
 				types.NewIntraChainOutput(ETH, 1, RewardProgram),
 				types.NewIntraChainOutput(EOS, 1, RewardProgram),
+				types.NewIntraChainOutput(BTC, 1, RewardProgram),
 			},
 		}),
 
@@ -473,13 +478,14 @@ var (
 				types.NewSpendInput([][]byte{vm.Int64Bytes(1), vm.Int64Bytes(1)}, *Eth2BtcOrders[3].Utxo.SourceID, *Eth2BtcOrders[3].FromAssetID, Eth2BtcOrders[3].Utxo.Amount, Eth2BtcOrders[3].Utxo.SourcePos, Eth2BtcOrders[3].Utxo.ControlProgram),
 			},
 			Outputs: []*types.TxOutput{
-				types.NewIntraChainOutput(*Btc2EthOrders[0].ToAssetID, 500, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19251")),
+				types.NewIntraChainOutput(*Btc2EthOrders[0].ToAssetID, 499, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19251")),
 				types.NewIntraChainOutput(*Eth2BtcOrders[3].ToAssetID, 3, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19256")),
 				// fee
-				types.NewIntraChainOutput(*Eth2BtcOrders[3].ToAssetID, 1, RewardProgram),
+				types.NewIntraChainOutput(*Btc2EthOrders[0].ToAssetID, 1, RewardProgram),
+				types.NewIntraChainOutput(*Eth2BtcOrders[3].ToAssetID, 2, RewardProgram),
 				// refund
+				types.NewIntraChainOutput(*Eth2BtcOrders[3].ToAssetID, 5, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19256")),
 				types.NewIntraChainOutput(*Btc2EthOrders[0].ToAssetID, 100, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19256")),
-				types.NewIntraChainOutput(*Eth2BtcOrders[3].ToAssetID, 6, testutil.MustDecodeHexString("0014f928b723999312df4ed51cb275a2644336c19256")),
 			},
 		}),
 	}
@@ -504,7 +510,7 @@ func createContractArgs(requestAsset bc.AssetID, sellerProgram []byte, ratioNume
 	}
 }
 
-func MustNewOrderFromOutputV2(tx *types.Tx, outputIndex int, blockHeight uint64, txIndex int) *common.Order {
+func MustNewOrderFromOutputV2(tx *types.Tx, outputIndex int, blockHeight, txIndex uint64) *common.Order {
 	order, err := common.NewOrderFromOutput(tx, outputIndex, blockHeight, txIndex)
 	if err != nil {
 		panic(err)

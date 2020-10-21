@@ -43,14 +43,14 @@ func (d *DefaultFeeStrategy) Allocate(receiveAmounts, priceDiffs []*bc.AssetAmou
 	fees := make([]*bc.AssetAmount, len(receiveAmounts))
 
 	for i, receiveAmount := range receiveAmounts {
-		fee := d.calcMinFeeAmount(receiveAmount.Amount)
+		fee := calcMinFeeAmount(receiveAmount.Amount)
 		receives[i] = &bc.AssetAmount{AssetId: receiveAmount.AssetId, Amount: receiveAmount.Amount - fee}
 		fees[i] = &bc.AssetAmount{AssetId: receiveAmount.AssetId, Amount: fee}
 
 		if i == takerPos {
 			for _, priceDiff := range priceDiffs {
 				if *priceDiff.AssetId == *receiveAmount.AssetId {
-					fee = d.calcMinFeeAmount(priceDiff.Amount)
+					fee = calcMinFeeAmount(priceDiff.Amount)
 					priceDiff.Amount -= fee
 					fees[i].Amount += fee
 				}
@@ -64,39 +64,55 @@ const forkBlockHeight = 83000000
 
 // Validate verify that the fee charged for a matching transaction is correct
 func (d *DefaultFeeStrategy) Validate(receiveAmounts, priceDiffs []*bc.AssetAmount, feeAmounts map[bc.AssetID]uint64, blockHeight uint64) error {
+	if blockHeight < forkBlockHeight {
+		return legendValidateFee(receiveAmounts, feeAmounts)
+	}
+	return validateFee(receiveAmounts, priceDiffs, feeAmounts)
+}
+
+func validateFee(receiveAmounts, priceDiffs []*bc.AssetAmount, feeAmounts map[bc.AssetID]uint64) error {
 	existTaker := false
 	for _, receiveAmount := range receiveAmounts {
+		feeAmount := calcMinFeeAmount(receiveAmount.Amount)
 		realFeeAmount := feeAmounts[*receiveAmount.AssetId]
-		minFeeAmount := d.calcMinFeeAmount(receiveAmount.Amount)
-		if blockHeight <= forkBlockHeight {
-			maxFeeAmount := d.calcMaxFeeAmount(receiveAmount.Amount)
-			if realFeeAmount < minFeeAmount || realFeeAmount > maxFeeAmount {
-				return ErrInvalidAmountOfFee
-			}
-		} else {
-			if realFeeAmount != minFeeAmount && existTaker {
-				return ErrInvalidAmountOfFee
-			}
+		if realFeeAmount == feeAmount {
+			continue
+		}
 
-			for _, priceDiff := range priceDiffs {
-				if priceDiff.AssetId == receiveAmount.AssetId {
-					minFeeAmount += d.calcMinFeeAmount(priceDiff.Amount)
-				}
-			}
+		if existTaker {
+			return ErrInvalidAmountOfFee
+		}
 
-			if realFeeAmount != minFeeAmount {
-				return ErrInvalidAmountOfFee
+		for _, priceDiff := range priceDiffs {
+			if *priceDiff.AssetId == *receiveAmount.AssetId {
+				feeAmount += calcMinFeeAmount(priceDiff.Amount)
 			}
-			existTaker = true
+		}
+
+		if realFeeAmount != feeAmount {
+			return ErrInvalidAmountOfFee
+		}
+		existTaker = true
+	}
+	return nil
+}
+
+func legendValidateFee(receiveAmounts []*bc.AssetAmount, feeAmounts map[bc.AssetID]uint64) error {
+	for _, receiveAmount := range receiveAmounts {
+		realFeeAmount := feeAmounts[*receiveAmount.AssetId]
+		minFeeAmount := calcMinFeeAmount(receiveAmount.Amount)
+		maxFeeAmount := calcMaxFeeAmount(receiveAmount.Amount)
+		if realFeeAmount < minFeeAmount || realFeeAmount > maxFeeAmount {
+			return ErrInvalidAmountOfFee
 		}
 	}
 	return nil
 }
 
-func (d *DefaultFeeStrategy) calcMinFeeAmount(amount uint64) uint64 {
+func calcMinFeeAmount(amount uint64) uint64 {
 	return uint64(math.Ceil(float64(amount) / 1000))
 }
 
-func (d *DefaultFeeStrategy) calcMaxFeeAmount(amount uint64) uint64 {
+func calcMaxFeeAmount(amount uint64) uint64 {
 	return uint64(math.Ceil(float64(amount) * 0.05))
 }

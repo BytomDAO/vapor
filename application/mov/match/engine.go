@@ -22,7 +22,7 @@ type Engine struct {
 
 type orderPosition struct {
 	blockHeight uint64
-	txIndex     int
+	txIndex     uint64
 }
 
 // NewEngine return a new Engine
@@ -92,7 +92,7 @@ func (e *Engine) addReOrder(tx *types.Tx, partialOrderPositions []*orderPosition
 	return nil
 }
 
-func addRefundOutput(txData *types.TxData, orders []*common.Order, takerPos int) {
+func addRefundOutput(txData *types.TxData, takerProgram []byte) {
 	refundAmount := map[bc.AssetID]uint64{}
 	var assetIDs []bc.AssetID
 	for _, input := range txData.Inputs {
@@ -105,18 +105,12 @@ func addRefundOutput(txData *types.TxData, orders []*common.Order, takerPos int)
 		refundAmount[*assetAmount.AssetId] -= assetAmount.Amount
 	}
 
-	for i := range orders {
-		if i != takerPos {
+	for assetID, amount := range refundAmount {
+		if amount == 0 {
 			continue
 		}
-		for assetID, amount := range refundAmount {
-			if amount == 0 {
-				continue
-			}
 
-			txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(assetID,amount, orders[i].SellerProgram))
-		}
-		break
+		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(assetID, amount, takerProgram))
 	}
 }
 
@@ -137,7 +131,7 @@ func (e *Engine) buildMatchTx(orders []*common.Order) (*types.Tx, []*orderPositi
 	}
 
 	addMatchTxFeeOutput(txData, allocatedAssets.Fees, e.rewardProgram)
-	addRefundOutput(txData, orders, takerPos)
+	addRefundOutput(txData, orders[takerPos].SellerProgram)
 
 	byteData, err := txData.MarshalText()
 	if err != nil {

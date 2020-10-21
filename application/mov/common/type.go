@@ -28,7 +28,7 @@ type Order struct {
 	RatioDenominator int64
 	SellerProgram    []byte
 	BlockHeight      uint64
-	TxIndex          int
+	TxIndex          uint64
 }
 
 // Rate return the exchange represented by float64
@@ -70,7 +70,7 @@ func (o OrderSlice) Less(i, j int) bool {
 }
 
 // NewOrderFromOutput convert txinput to order
-func NewOrderFromOutput(tx *types.Tx, outputIndex int, blockHeight uint64, txIndex int) (*Order, error) {
+func NewOrderFromOutput(tx *types.Tx, outputIndex int, blockHeight, txIndex uint64) (*Order, error) {
 	outputID := tx.OutputID(outputIndex)
 	output, err := tx.IntraChainOutput(*outputID)
 	if err != nil {
