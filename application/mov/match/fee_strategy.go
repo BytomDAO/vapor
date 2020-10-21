@@ -75,7 +75,7 @@ func validateFee(receiveAmounts, priceDiffs []*bc.AssetAmount, feeAmounts map[bc
 	for _, receiveAmount := range receiveAmounts {
 		feeAmount := calcMinFeeAmount(receiveAmount.Amount)
 		realFeeAmount := feeAmounts[*receiveAmount.AssetId]
-		if realFeeAmount == feeAmount {
+		if equalsFeeAmount(realFeeAmount, feeAmount) {
 			continue
 		}
 
@@ -89,12 +89,17 @@ func validateFee(receiveAmounts, priceDiffs []*bc.AssetAmount, feeAmounts map[bc
 			}
 		}
 
-		if realFeeAmount != feeAmount {
+		if !equalsFeeAmount(realFeeAmount, feeAmount) {
 			return ErrInvalidAmountOfFee
 		}
 		existTaker = true
 	}
 	return nil
+}
+
+func equalsFeeAmount(realFeeAmount, feeAmount uint64) bool {
+	var tolerance float64 = 5
+	return math.Abs(float64(realFeeAmount)-float64(feeAmount)) < tolerance
 }
 
 func legendValidateFee(receiveAmounts []*bc.AssetAmount, feeAmounts map[bc.AssetID]uint64) error {
