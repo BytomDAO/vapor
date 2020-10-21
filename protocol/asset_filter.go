@@ -3,6 +3,7 @@ package protocol
 import (
 	"strings"
 
+	"github.com/bytom/vapor/common"
 	"github.com/bytom/vapor/consensus"
 	"github.com/bytom/vapor/protocol/bc/types"
 )
@@ -28,7 +29,7 @@ func NewAssetFilter(whitelist string) *AssetFilter {
 // No need to check the output assets types becauese they must have been cover in input assets types
 func (af *AssetFilter) IsDust(tx *types.Tx) bool {
 	for _, input := range tx.Inputs {
-		if _, ok := input.TypedInput.(*types.CrossChainInput); !ok {
+		if crossChainInput, ok := input.TypedInput.(*types.CrossChainInput); !ok || !common.IsOpenFederationIssueAsset(crossChainInput.AssetDefinition) {
 			continue
 		}
 
