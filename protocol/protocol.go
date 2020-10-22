@@ -26,7 +26,7 @@ var ErrNotInitSubProtocolChainStatus = errors.New("node state of sub protocol ha
 type SubProtocol interface {
 	Name() string
 	StartHeight() uint64
-	BeforeProposalBlock(txs []*types.Tx, blockHeight uint64, gasLeft int64, isTimeout func() bool) ([]*types.Tx, error)
+	BeforeProposalBlock(block *types.Block, gasLeft int64, isTimeout func() bool) ([]*types.Tx, error)
 
 	// ChainStatus return the the current block height and block hash of sub protocol.
 	// it will return ErrNotInitSubProtocolChainStatus if not initialized.

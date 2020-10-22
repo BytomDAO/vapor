@@ -26,6 +26,9 @@ type Order struct {
 	Utxo             *MovUtxo
 	RatioNumerator   int64
 	RatioDenominator int64
+	SellerProgram    []byte
+	BlockHeight      uint64
+	TxIndex          uint64
 }
 
 // Rate return the exchange represented by float64
@@ -67,7 +70,7 @@ func (o OrderSlice) Less(i, j int) bool {
 }
 
 // NewOrderFromOutput convert txinput to order
-func NewOrderFromOutput(tx *types.Tx, outputIndex int) (*Order, error) {
+func NewOrderFromOutput(tx *types.Tx, outputIndex int, blockHeight, txIndex uint64) (*Order, error) {
 	outputID := tx.OutputID(outputIndex)
 	output, err := tx.IntraChainOutput(*outputID)
 	if err != nil {
@@ -85,6 +88,9 @@ func NewOrderFromOutput(tx *types.Tx, outputIndex int) (*Order, error) {
 		ToAssetID:        &contractArgs.RequestedAsset,
 		RatioNumerator:   contractArgs.RatioNumerator,
 		RatioDenominator: contractArgs.RatioDenominator,
+		SellerProgram:    contractArgs.SellerProgram,
+		BlockHeight:      blockHeight,
+		TxIndex:          txIndex,
 		Utxo: &MovUtxo{
 			SourceID:       output.Source.Ref,
 			Amount:         assetAmount.Amount,
@@ -111,6 +117,7 @@ func NewOrderFromInput(tx *types.Tx, inputIndex int) (*Order, error) {
 		ToAssetID:        &contractArgs.RequestedAsset,
 		RatioNumerator:   contractArgs.RatioNumerator,
 		RatioDenominator: contractArgs.RatioDenominator,
+		SellerProgram:    contractArgs.SellerProgram,
 		Utxo: &MovUtxo{
 			SourceID:       &input.SourceID,
 			Amount:         input.Amount,
