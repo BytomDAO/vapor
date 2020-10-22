@@ -12,6 +12,8 @@ var (
 	ErrInvalidAmountOfFee = errors.New("amount of fee is invalid")
 )
 
+const forkBlockHeightAt20201028 = 78968116
+
 // AllocatedAssets represent reallocated assets after calculating fees
 type AllocatedAssets struct {
 	Receives []*bc.AssetAmount
@@ -60,11 +62,9 @@ func (d *DefaultFeeStrategy) Allocate(receiveAmounts, priceDiffs []*bc.AssetAmou
 	return &AllocatedAssets{Receives: receives, Fees: fees}
 }
 
-const forkBlockHeight = 83000000
-
 // Validate verify that the fee charged for a matching transaction is correct
 func (d *DefaultFeeStrategy) Validate(receiveAmounts, priceDiffs []*bc.AssetAmount, feeAmounts map[bc.AssetID]uint64, blockHeight uint64) error {
-	if blockHeight < forkBlockHeight {
+	if blockHeight < forkBlockHeightAt20201028 {
 		return legendValidateFee(receiveAmounts, feeAmounts)
 	}
 	return validateFee(receiveAmounts, priceDiffs, feeAmounts)

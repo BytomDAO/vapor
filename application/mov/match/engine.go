@@ -94,10 +94,8 @@ func (e *Engine) addReOrder(tx *types.Tx, partialOrderPositions []*orderPosition
 
 func addRefundOutput(txData *types.TxData, takerProgram []byte) {
 	refundAmount := map[bc.AssetID]uint64{}
-	var assetIDs []bc.AssetID
 	for _, input := range txData.Inputs {
 		refundAmount[input.AssetID()] += input.Amount()
-		assetIDs = append(assetIDs, input.AssetID())
 	}
 
 	for _, output := range txData.Outputs {
@@ -106,11 +104,9 @@ func addRefundOutput(txData *types.TxData, takerProgram []byte) {
 	}
 
 	for assetID, amount := range refundAmount {
-		if amount == 0 {
-			continue
+		if amount != 0 {
+			txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(assetID, amount, takerProgram))
 		}
-
-		txData.Outputs = append(txData.Outputs, types.NewIntraChainOutput(assetID, amount, takerProgram))
 	}
 }
 
