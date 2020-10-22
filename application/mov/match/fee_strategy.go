@@ -12,7 +12,7 @@ var (
 	ErrInvalidAmountOfFee = errors.New("amount of fee is invalid")
 )
 
-const forkBlockHeightAt20201028 = 78968116
+const forkBlockHeightAt20201028 = 78968400
 
 // AllocatedAssets represent reallocated assets after calculating fees
 type AllocatedAssets struct {
