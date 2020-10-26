@@ -264,7 +264,7 @@ func (m *Manager) handleTransactionMsg(peer *peers.Peer, msg *msgs.TransactionMe
 	}
 
 	if m.mempool.IsDust(tx) {
-		m.peers.ProcessIllegal(peer.ID(), security.LevelMsgIllegal, "receive dust tx msg")
+		log.WithFields(log.Fields{"tx_hash": tx.ID.String(), "peer": peer.Addr()}).Warn("receive dust tx msg")
 		return
 	}
 
