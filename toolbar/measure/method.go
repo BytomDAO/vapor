@@ -15,7 +15,7 @@ const (
 
 var store sync.Map
 
-// Start trigger record of stack trace run time record as graph view
+// Start trigger record of stack trace run time record as a graph view
 func Start() {
 	routineID, stacks, err := stacks()
 	if err != nil {
@@ -29,8 +29,8 @@ func Start() {
 		return
 	}
 
-	if err := data.(*Timer).AddSubtimer(stacks); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err, "routine": routineID, "stack": stacks}).Error("fail on add sub timer")
+	if err := data.(*Timer).StartTimer(stacks); err != nil {
+		log.WithFields(log.Fields{"module": logModule, "err": err, "routine": routineID, "stack": stacks}).Error("fail on start timer")
 	}
 }
 
@@ -48,8 +48,14 @@ func End() {
 		return
 	}
 
-	if err := data.(*Timer).EndTimer(stacks); err != nil {
+	rootTimer := data.(*Timer)
+	if err := rootTimer.EndTimer(stacks); err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err, "routine": routineID, "stack": stacks}).Error("fail on end timer")
+	}
+
+	if rootTimer.IsEnd() {
+		log.WithField("module", logModule).Info(rootTimer.String())
+		store.Delete(routineID)
 	}
 }
 
