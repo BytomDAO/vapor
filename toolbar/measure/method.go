@@ -17,7 +17,7 @@ var store sync.Map
 
 // Start trigger record of stack trace run time record as a graph view
 func Start() {
-	routineID, stacks, err := stacks()
+	routineID, stacks, err := traceStacks()
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on measure get stacks")
 		return
@@ -36,7 +36,7 @@ func Start() {
 
 // End end the stack trace run time
 func End() {
-	routineID, stacks, err := stacks()
+	routineID, stacks, err := traceStacks()
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on measure get stacks")
 		return
@@ -59,7 +59,7 @@ func End() {
 	}
 }
 
-func stacks() (string, []string, error) {
+func traceStacks() (string, []string, error) {
 	stacks := []string{}
 	for _, stack := range strings.Split(string(debug.Stack()), "\n") {
 		// skip the file path stack
