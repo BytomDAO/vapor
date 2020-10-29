@@ -8,6 +8,7 @@ import (
 	"github.com/bytom/vapor/protocol/bc/types"
 	"github.com/bytom/vapor/protocol/state"
 	"github.com/bytom/vapor/protocol/validation"
+	"github.com/bytom/vapor/toolbar/measure"
 )
 
 var (
@@ -87,6 +88,9 @@ func (c *Chain) calcReorganizeChain(beginAttach *types.BlockHeader, beginDetach 
 }
 
 func (c *Chain) connectBlock(block *types.Block) (err error) {
+	measure.Start()
+	defer measure.End()
+
 	bcBlock := types.MapBlock(block)
 	if bcBlock.TransactionStatus, err = c.store.GetTransactionStatus(&bcBlock.ID); err != nil {
 		return err
@@ -362,6 +366,9 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 
 // SaveBlock will validate and save block into storage
 func (c *Chain) saveBlock(block *types.Block) error {
+	measure.Start()
+	defer measure.End()
+
 	if err := c.validateSign(block); err != nil {
 		return errors.Sub(ErrBadBlock, err)
 	}
@@ -453,6 +460,9 @@ func (c *Chain) blockProcesser() {
 
 // ProcessBlock is the entry for handle block insert
 func (c *Chain) processBlock(block *types.Block) (bool, error) {
+	measure.Start()
+	defer measure.End()
+
 	blockHash := block.Hash()
 	if c.BlockExist(&blockHash) {
 		log.WithFields(log.Fields{"module": logModule, "hash": blockHash.String(), "height": block.Height}).Debug("block has been processed")

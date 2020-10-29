@@ -17,6 +17,7 @@ import (
 	"github.com/bytom/vapor/protocol/state"
 	"github.com/bytom/vapor/protocol/validation"
 	"github.com/bytom/vapor/protocol/vm/vmutil"
+	"github.com/bytom/vapor/toolbar/measure"
 )
 
 const (
@@ -49,6 +50,9 @@ type blockBuilder struct {
 }
 
 func newBlockBuilder(chain *protocol.Chain, accountManager *account.Manager, timestamp uint64, warnDuration, criticalDuration time.Duration) *blockBuilder {
+	measure.Start()
+	defer measure.End()
+
 	preBlockHeader := chain.BestBlockHeader()
 	block := &types.Block{
 		BlockHeader: types.BlockHeader{
@@ -96,6 +100,9 @@ func (b *blockBuilder) applyCoinbaseTransaction() error {
 }
 
 func (b *blockBuilder) applyTransactions(txs []*types.Tx, timeoutStatus uint8) error {
+	measure.Start()
+	defer measure.End()
+
 	tempTxs := []*types.Tx{}
 	for i := 0; i < len(txs); i++ {
 		if tempTxs = append(tempTxs, txs[i]); len(tempTxs) < batchApplyNum && i != len(txs)-1 {
@@ -127,6 +134,9 @@ func (b *blockBuilder) applyTransactions(txs []*types.Tx, timeoutStatus uint8) e
 }
 
 func (b *blockBuilder) applyTransactionFromPool() error {
+	measure.Start()
+	defer measure.End()
+
 	txDescList := b.chain.GetTxPool().GetTransactions()
 	sort.Sort(byTime(txDescList))
 
@@ -139,6 +149,9 @@ func (b *blockBuilder) applyTransactionFromPool() error {
 }
 
 func (b *blockBuilder) applyTransactionFromSubProtocol() error {
+	measure.Start()
+	defer measure.End()
+
 	isTimeout := func() bool {
 		return b.getTimeoutStatus() > timeoutOk
 	}
@@ -162,6 +175,9 @@ func (b *blockBuilder) applyTransactionFromSubProtocol() error {
 }
 
 func (b *blockBuilder) build() (*types.Block, error) {
+	measure.Start()
+	defer measure.End()
+
 	if err := b.applyCoinbaseTransaction(); err != nil {
 		return nil, err
 	}
@@ -186,6 +202,9 @@ func (b *blockBuilder) build() (*types.Block, error) {
 }
 
 func (b *blockBuilder) calcBlockCommitment() (err error) {
+	measure.Start()
+	defer measure.End()
+
 	var txEntries []*bc.Tx
 	for _, tx := range b.block.Transactions {
 		txEntries = append(txEntries, tx.Tx)
@@ -290,6 +309,9 @@ type validateTxResult struct {
 }
 
 func (b *blockBuilder) preValidateTxs(txs []*types.Tx, chain *protocol.Chain, view *state.UtxoViewpoint, gasLeft int64) ([]*validateTxResult, int64) {
+	measure.Start()
+	defer measure.End()
+
 	var results []*validateTxResult
 	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: chain.BestBlockHeight() + 1}}
 	bcTxs := make([]*bc.Tx, len(txs))
@@ -335,6 +357,9 @@ func (b *blockBuilder) preValidateTxs(txs []*types.Tx, chain *protocol.Chain, vi
 }
 
 func (b *blockBuilder) validateBySubProtocols(tx *types.Tx, statusFail bool, subProtocols []protocol.SubProtocol) error {
+	measure.Start()
+	defer measure.End()
+
 	for _, subProtocol := range subProtocols {
 		verifyResult := &bc.TxVerifyResult{StatusFail: statusFail}
 		if err := subProtocol.ValidateTx(tx, verifyResult, b.block.Height); err != nil {

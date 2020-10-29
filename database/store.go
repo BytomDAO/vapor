@@ -16,6 +16,7 @@ import (
 	"github.com/bytom/vapor/protocol/bc"
 	"github.com/bytom/vapor/protocol/bc/types"
 	"github.com/bytom/vapor/protocol/state"
+	"github.com/bytom/vapor/toolbar/measure"
 )
 
 const (
@@ -285,6 +286,9 @@ func (s *Store) GetStoreStatus() *protocol.BlockStoreState {
 
 // GetTransactionsUtxo will return all the utxo that related to the input txs
 func (s *Store) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) error {
+	measure.Start()
+	defer measure.End()
+
 	return getTransactionsUtxo(s.db, view, txs)
 }
 
@@ -314,6 +318,9 @@ func (s *Store) GetConsensusResult(seq uint64) (*state.ConsensusResult, error) {
 
 // SaveBlock persists a new block in the protocol.
 func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
+	measure.Start()
+	defer measure.End()
+
 	startTime := time.Now()
 	binaryBlockHeader, err := block.MarshalTextForBlockHeader()
 	if err != nil {

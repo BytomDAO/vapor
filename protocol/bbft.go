@@ -13,6 +13,7 @@ import (
 	"github.com/bytom/vapor/protocol/bc"
 	"github.com/bytom/vapor/protocol/bc/types"
 	"github.com/bytom/vapor/protocol/state"
+	"github.com/bytom/vapor/toolbar/measure"
 )
 
 const (
@@ -116,6 +117,9 @@ func (c *Chain) updateBlockSignature(blockHeader *types.BlockHeader, nodeOrder u
 // if some signature is invalid, they will be reset to nil
 // if the block does not have the signature of blocker, it will return error
 func (c *Chain) validateSign(block *types.Block) error {
+	measure.Start()
+	defer measure.End()
+
 	consensusNodeMap, err := c.getConsensusNodes(&block.PreviousBlockHash)
 	if err != nil {
 		return err
@@ -215,6 +219,9 @@ func (c *Chain) SignBlockHeader(blockHeader *types.BlockHeader) error {
 }
 
 func (c *Chain) applyBlockSign(blockHeader *types.BlockHeader) error {
+	measure.Start()
+	defer measure.End()
+
 	signature, err := c.signBlockHeader(blockHeader)
 	if err != nil {
 		return err

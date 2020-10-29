@@ -13,6 +13,7 @@ import (
 	"github.com/bytom/vapor/math/checked"
 	"github.com/bytom/vapor/protocol/bc"
 	"github.com/bytom/vapor/protocol/vm"
+	"github.com/bytom/vapor/toolbar/measure"
 )
 
 // validate transaction error
@@ -664,6 +665,9 @@ func validateTxWorker(workCh chan *validateTxWork, resultCh chan *ValidateTxResu
 
 // ValidateTxs validates txs in async mode
 func ValidateTxs(txs []*bc.Tx, block *bc.Block) []*ValidateTxResult {
+	measure.Start()
+	defer measure.End()
+
 	txSize := len(txs)
 	validateWorkerNum := runtime.NumCPU()
 	//init the goroutine validate worker

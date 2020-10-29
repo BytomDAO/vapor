@@ -6,6 +6,7 @@ import (
 	"github.com/bytom/vapor/protocol/bc"
 	"github.com/bytom/vapor/protocol/bc/types"
 	"github.com/bytom/vapor/protocol/state"
+	"github.com/bytom/vapor/toolbar/measure"
 )
 
 var (
@@ -14,6 +15,9 @@ var (
 )
 
 func (c *Chain) getBestConsensusResult() (*state.ConsensusResult, error) {
+	measure.Start()
+	defer measure.End()
+
 	bestBlockHeader := c.bestBlockHeader
 	seq := state.CalcVoteSeq(bestBlockHeader.Height)
 	return c.getConsensusResult(seq, bestBlockHeader)

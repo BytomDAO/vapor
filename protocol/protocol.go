@@ -12,6 +12,7 @@ import (
 	"github.com/bytom/vapor/protocol/bc"
 	"github.com/bytom/vapor/protocol/bc/types"
 	"github.com/bytom/vapor/protocol/state"
+	"github.com/bytom/vapor/toolbar/measure"
 )
 
 const (
@@ -279,6 +280,9 @@ func (c *Chain) syncProtocolStatus(subProtocol SubProtocol) error {
 
 // This function must be called with mu lock in above level
 func (c *Chain) setState(blockHeader, irrBlockHeader *types.BlockHeader, mainBlockHeaders []*types.BlockHeader, view *state.UtxoViewpoint, consensusResults []*state.ConsensusResult) error {
+	measure.Start()
+	defer measure.End()
+
 	if err := c.store.SaveChainStatus(blockHeader, irrBlockHeader, mainBlockHeaders, view, consensusResults); err != nil {
 		return err
 	}

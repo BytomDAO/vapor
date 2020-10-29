@@ -14,6 +14,7 @@ import (
 	"github.com/bytom/vapor/protocol"
 	"github.com/bytom/vapor/protocol/bc"
 	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/toolbar/measure"
 )
 
 var (
@@ -53,6 +54,9 @@ func NewCoreWithDB(store *database.LevelDBMovStore, startBlockHeight uint64) *Co
 // ApplyBlock parse pending order and cancel from the the transactions of block
 // and add pending order to the dex db, remove cancel order from dex db.
 func (m *Core) ApplyBlock(block *types.Block) error {
+	measure.Start()
+	defer measure.End()
+
 	if block.Height < m.startBlockHeight {
 		return nil
 	}
@@ -175,6 +179,9 @@ func (m *Core) StartHeight() uint64 {
 // ValidateBlock no need to verify the block header, because the first module has been verified.
 // just need to verify the transactions in the block.
 func (m *Core) ValidateBlock(block *types.Block, verifyResults []*bc.TxVerifyResult) error {
+	measure.Start()
+	defer measure.End()
+
 	for i, tx := range block.Transactions {
 		if err := m.ValidateTx(tx, verifyResults[i], block.Height); err != nil {
 			return err

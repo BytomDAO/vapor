@@ -12,6 +12,7 @@ import (
 	"github.com/bytom/vapor/protocol/bc"
 	"github.com/bytom/vapor/protocol/bc/types"
 	"github.com/bytom/vapor/protocol/state"
+	"github.com/bytom/vapor/toolbar/measure"
 )
 
 const logModule = "leveldb"
@@ -88,6 +89,9 @@ func ValidateBlockHeader(b *bc.Block, parent *types.BlockHeader) error {
 
 // ValidateBlock validates a block and the transactions within.
 func ValidateBlock(b *bc.Block, parent *types.BlockHeader, rewards []state.CoinbaseReward) error {
+	measure.Start()
+	defer measure.End()
+
 	startTime := time.Now()
 	if err := ValidateBlockHeader(b, parent); err != nil {
 		return err

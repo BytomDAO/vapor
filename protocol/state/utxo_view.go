@@ -5,6 +5,7 @@ import (
 	"github.com/bytom/vapor/database/storage"
 	"github.com/bytom/vapor/errors"
 	"github.com/bytom/vapor/protocol/bc"
+	"github.com/bytom/vapor/toolbar/measure"
 )
 
 // UtxoViewpoint represents a view into the set of unspent transaction outputs
@@ -32,6 +33,9 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFa
 }
 
 func (view *UtxoViewpoint) ApplyBlock(block *bc.Block, txStatus *bc.TransactionStatus) error {
+	measure.Start()
+	defer measure.End()
+
 	for i, tx := range block.Transactions {
 		statusFail, err := txStatus.GetStatus(i)
 		if err != nil {
