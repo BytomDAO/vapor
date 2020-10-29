@@ -22,6 +22,7 @@ import (
 const (
 	logModule     = "mining"
 	batchApplyNum = 64
+	softMaxTxNum  = 128
 
 	timeoutOk = iota + 1
 	timeoutWarn
@@ -119,7 +120,7 @@ func (b *blockBuilder) applyTransactions(txs []*types.Tx, timeoutStatus uint8) e
 
 		b.gasLeft = gasLeft
 		tempTxs = []*types.Tx{}
-		if b.getTimeoutStatus() >= timeoutStatus {
+		if b.getTimeoutStatus() >= timeoutStatus || len(b.block.Transactions) > softMaxTxNum {
 			break
 		}
 	}
