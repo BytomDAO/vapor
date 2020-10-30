@@ -23,6 +23,7 @@ import (
 	"github.com/bytom/vapor/blockchain/pseudohsm"
 	cfg "github.com/bytom/vapor/config"
 	"github.com/bytom/vapor/consensus"
+	"github.com/bytom/vapor/crypto/ed25519"
 	"github.com/bytom/vapor/database"
 	dbm "github.com/bytom/vapor/database/leveldb"
 	"github.com/bytom/vapor/env"
@@ -222,6 +223,7 @@ func initNodeConfig(config *cfg.Config) error {
 		log.Fatalf("Failed to init ActiveNetParams:[%s]", err.Error())
 	}
 
+	ed25519.InitCache()
 	cfg.CommonConfig = config
 	return nil
 }
