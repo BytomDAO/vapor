@@ -275,7 +275,7 @@ func (s *sidechainKeeper) syncBlock() (bool, error) {
 		return false, err
 	}
 
-	if netInfo.IrreversibleBlock <= chain.BlockHeight {
+	if netInfo.IrreversibleBlock <= chain.BlockHeight+s.cfg.Confirmations {
 		return false, nil
 	}
 
