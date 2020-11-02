@@ -21,7 +21,7 @@ import (
 
 const (
 	logModule     = "mining"
-	batchApplyNum = 64
+	batchApplyNum = 16
 	softMaxTxNum  = 128
 
 	timeoutOk = iota + 1
