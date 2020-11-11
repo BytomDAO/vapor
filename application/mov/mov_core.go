@@ -254,7 +254,7 @@ func calcFeeAmount(matchedTx *types.Tx) (map[bc.AssetID]*matchedTxFee, error) {
 
 func validateCancelOrderTx(tx *types.Tx) error {
 	for _, input := range tx.Inputs {
-		if segwit.IsP2WMCScript(input.ControlProgram()) && !contract.IsTradeClauseSelector(input) {
+		if segwit.IsP2WMCScript(input.ControlProgram()) && !contract.IsCancelClauseSelector(input) {
 			return errInputProgramMustP2WMCScript
 		}
 	}
