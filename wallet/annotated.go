@@ -167,6 +167,8 @@ func (w *Wallet) BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInp
 		in.ControlProgram = orig.ControlProgram()
 		in.Address = w.getAddressFromControlProgram(in.ControlProgram, true)
 		in.SpentOutputID = e.MainchainOutputId
+		_, assetDefinition := w.getAliasDefinition(in.AssetID)
+		in.AssetDefinition = &assetDefinition
 		arguments := orig.Arguments()
 		for _, arg := range arguments {
 			in.WitnessArguments = append(in.WitnessArguments, arg)

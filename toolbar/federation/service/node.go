@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 
+	"github.com/bytom/vapor/api"
 	"github.com/bytom/vapor/errors"
 	"github.com/bytom/vapor/protocol/bc"
 	"github.com/bytom/vapor/toolbar/common"
@@ -34,6 +35,12 @@ func (n *Node) GetBlockCount() (uint64, error) {
 	url := "/get-block-count"
 	res := &getBlockCountResp{}
 	return res.BlockCount, n.request(url, nil, res)
+}
+
+func (n *Node) GetNetInfo() (*api.NetInfo, error) {
+	url := "/net-info"
+	res := &api.NetInfo{}
+	return res, n.request(url, nil, res)
 }
 
 type getRawBlockReq struct {

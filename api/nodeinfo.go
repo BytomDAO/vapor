@@ -24,16 +24,17 @@ type VersionInfo struct {
 
 // NetInfo indicate net information
 type NetInfo struct {
-	Listening    bool         `json:"listening"`
-	Syncing      bool         `json:"syncing"`
-	Mining       bool         `json:"mining"`
-	NodeXPub     string       `json:"node_xpub"`
-	FedAddress   string       `json:"federation_address"`
-	PeerCount    int          `json:"peer_count"`
-	CurrentBlock uint64       `json:"current_block"`
-	HighestBlock uint64       `json:"highest_block"`
-	NetWorkID    string       `json:"network_id"`
-	Version      *VersionInfo `json:"version_info"`
+	Listening         bool         `json:"listening"`
+	Syncing           bool         `json:"syncing"`
+	Mining            bool         `json:"mining"`
+	NodeXPub          string       `json:"node_xpub"`
+	FedAddress        string       `json:"federation_address"`
+	PeerCount         int          `json:"peer_count"`
+	CurrentBlock      uint64       `json:"current_block"`
+	IrreversibleBlock uint64       `json:"irreversible_block"`
+	HighestBlock      uint64       `json:"highest_block"`
+	NetWorkID         string       `json:"network_id"`
+	Version           *VersionInfo `json:"version_info"`
 }
 
 // GetNodeInfo return net information
@@ -48,14 +49,15 @@ func (a *API) GetNodeInfo() *NetInfo {
 	}
 
 	info := &NetInfo{
-		Listening:    a.sync.IsListening(),
-		Syncing:      !a.sync.IsCaughtUp(),
-		Mining:       a.blockProposer.IsProposing(),
-		NodeXPub:     nodeXPub.String(),
-		FedAddress:   address.EncodeAddress(),
-		PeerCount:    a.sync.PeerCount(),
-		CurrentBlock: a.chain.BestBlockHeight(),
-		NetWorkID:    a.sync.GetNetwork(),
+		Listening:         a.sync.IsListening(),
+		Syncing:           !a.sync.IsCaughtUp(),
+		Mining:            a.blockProposer.IsProposing(),
+		NodeXPub:          nodeXPub.String(),
+		FedAddress:        address.EncodeAddress(),
+		PeerCount:         a.sync.PeerCount(),
+		CurrentBlock:      a.chain.BestBlockHeight(),
+		IrreversibleBlock: a.chain.LastIrreversibleHeader().Height,
+		NetWorkID:         a.sync.GetNetwork(),
 		Version: &VersionInfo{
 			Version: version.Version,
 			Update:  version.Status.VersionStatus(),

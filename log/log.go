@@ -20,7 +20,10 @@ const (
 	maxAge       int64 = 604800
 )
 
-var defaultFormatter = &logrus.TextFormatter{DisableColors: true}
+var defaultFormatter = &logrus.TextFormatter{
+	DisableColors:   true,
+	TimestampFormat: time.StampMicro,
+}
 
 func InitLogFile(config *config.Config) error {
 	logPath := config.LogDir()

@@ -17,9 +17,9 @@ import (
 
 const (
 	logModule         = "blockproposer"
-	warnTimeNum       = 2
+	warnTimeNum       = 1
 	warnTimeDenom     = 5
-	criticalTimeNum   = 4
+	criticalTimeNum   = 2
 	criticalTimeDenom = 5
 )
 

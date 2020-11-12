@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/vapor/consensus"
 	"github.com/bytom/vapor/database/storage"
@@ -756,4 +757,8 @@ func TestProcessTransaction(t *testing.T) {
 			t.Errorf("case %d: test ProcessTransaction orphansByPrev mismatch got %s want %s", i, spew.Sdump(txPool.orphansByPrev), spew.Sdump(c.want.orphansByPrev))
 		}
 	}
+}
+
+func init() {
+	log.SetLevel(log.ErrorLevel)
 }

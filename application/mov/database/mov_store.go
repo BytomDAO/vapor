@@ -7,6 +7,7 @@ import (
 	"math"
 
 	"github.com/bytom/vapor/application/mov/common"
+	"github.com/bytom/vapor/consensus/segwit"
 	dbm "github.com/bytom/vapor/database/leveldb"
 	"github.com/bytom/vapor/protocol/bc"
 	"github.com/bytom/vapor/protocol/bc/types"
@@ -50,6 +51,8 @@ type orderData struct {
 	Utxo             *common.MovUtxo
 	RatioNumerator   int64
 	RatioDenominator int64
+	BlockHeight      uint64
+	TxIndex          uint64
 }
 
 func calcOrderKey(fromAssetID, toAssetID *bc.AssetID, utxoHash *bc.Hash, rate float64) []byte {
@@ -152,12 +155,20 @@ func (m *LevelDBMovStore) ListOrders(orderAfter *common.Order) ([]*common.Order,
 			return nil, err
 		}
 
+		contractArgs, err := segwit.DecodeP2WMCProgram(orderData.Utxo.ControlProgram)
+		if err != nil {
+			return nil, err
+		}
+
 		orders = append(orders, &common.Order{
 			FromAssetID:      orderAfter.FromAssetID,
 			ToAssetID:        orderAfter.ToAssetID,
 			Utxo:             orderData.Utxo,
 			RatioNumerator:   orderData.RatioNumerator,
 			RatioDenominator: orderData.RatioDenominator,
+			BlockHeight:      orderData.BlockHeight,
+			TxIndex:          orderData.TxIndex,
+			SellerProgram:    contractArgs.SellerProgram,
 		})
 	}
 	return orders, nil
@@ -225,6 +236,8 @@ func (m *LevelDBMovStore) addOrders(batch dbm.Batch, orders []*common.Order, tra
 			Utxo:             order.Utxo,
 			RatioNumerator:   order.RatioNumerator,
 			RatioDenominator: order.RatioDenominator,
+			BlockHeight:      order.BlockHeight,
+			TxIndex:          order.TxIndex,
 		}
 		data, err := json.Marshal(orderData)
 		if err != nil {

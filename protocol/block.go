@@ -342,10 +342,9 @@ func (c *Chain) reorganizeChain(blockHeader *types.BlockHeader) error {
 		log.WithFields(log.Fields{"module": logModule, "height": blockHeader.Height, "hash": blockHash.String()}).Debug("attach from mainchain")
 	}
 
-	if len(detachBlockHeaders) > 0 &&
-		detachBlockHeaders[len(detachBlockHeaders)-1].Height <= c.lastIrrBlockHeader.Height &&
-		irrBlockHeader.Height <= c.lastIrrBlockHeader.Height {
-		return errors.New("rollback block below the height of irreversible block")
+	if len(detachBlockHeaders) > 0 && detachBlockHeaders[len(detachBlockHeaders)-1].Height <= c.lastIrrBlockHeader.Height && irrBlockHeader.Height <= c.lastIrrBlockHeader.Height {
+		log.WithField("module", logModule).Warn("rollback block below the height of irreversible block")
+		return nil
 	}
 
 	consensusResults = append(consensusResults, consensusResult.Fork())
