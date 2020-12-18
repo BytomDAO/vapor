@@ -464,12 +464,6 @@ func (c *Chain) blockProcesser() {
 
 // ProcessBlock is the entry for handle block insert
 func (c *Chain) processBlock(block *types.Block) (bool, error) {
-	blockHash := block.Hash()
-	if c.BlockExist(&blockHash) {
-		log.WithFields(log.Fields{"module": logModule, "hash": blockHash.String(), "height": block.Height}).Debug("block has been processed")
-		return c.orphanManage.BlockExist(&blockHash), nil
-	}
-
 	c.markTransactions(block.Transactions...)
 
 	if _, err := c.store.GetBlockHeader(&block.PreviousBlockHash); err != nil {
