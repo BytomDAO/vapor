@@ -3,16 +3,12 @@
 package blockchain
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"io"
 	"math"
-	"sync"
-
-	"github.com/bytom/vapor/encoding/bufpool"
 )
-
-var bufPool = sync.Pool{New: func() interface{} { return new([9]byte) }}
 
 var ErrRange = errors.New("value out of range")
 
@@ -129,8 +125,7 @@ func ReadExtensibleString(r *Reader, f func(*Reader) error) (suffix []byte, err 
 	}
 
 	sr := NewReader(s)
-	err = f(sr)
-	if err != nil {
+	if err = f(sr); err != nil {
 		return nil, err
 	}
 	return sr.buf, nil
@@ -140,10 +135,10 @@ func WriteVarint31(w io.Writer, val uint64) (int, error) {
 	if val > math.MaxInt32 {
 		return 0, ErrRange
 	}
-	buf := bufPool.Get().(*[9]byte)
+
+	buf := new([9]byte)
 	n := binary.PutUvarint(buf[:], val)
 	b, err := w.Write(buf[:n])
-	bufPool.Put(buf)
 	return b, err
 }
 
@@ -151,10 +146,10 @@ func WriteVarint63(w io.Writer, val uint64) (int, error) {
 	if val > math.MaxInt64 {
 		return 0, ErrRange
 	}
-	buf := bufPool.Get().(*[9]byte)
+
+	buf := new([9]byte)
 	n := binary.PutUvarint(buf[:], val)
 	b, err := w.Write(buf[:n])
-	bufPool.Put(buf)
 	return b, err
 }
 
@@ -163,6 +158,7 @@ func WriteVarstr31(w io.Writer, str []byte) (int, error) {
 	if err != nil {
 		return n, err
 	}
+
 	n2, err := w.Write(str)
 	return n + n2, err
 }
@@ -174,6 +170,7 @@ func WriteVarstrList(w io.Writer, l [][]byte) (int, error) {
 	if err != nil {
 		return n, err
 	}
+
 	for _, s := range l {
 		n2, err := WriteVarstr31(w, s)
 		n += n2
@@ -187,15 +184,13 @@ func WriteVarstrList(w io.Writer, l [][]byte) (int, error) {
 // WriteExtensibleString sends the output of the given function, plus
 // the given suffix, to w, together with a varint31 length prefix.
 func WriteExtensibleString(w io.Writer, suffix []byte, f func(io.Writer) error) (int, error) {
-	buf := bufpool.Get()
-	defer bufpool.Put(buf)
-	err := f(buf)
-	if err != nil {
+	buf := bytes.NewBuffer(nil)
+	if err := f(buf); err != nil {
 		return 0, err
 	}
+
 	if len(suffix) > 0 {
-		_, err := buf.Write(suffix)
-		if err != nil {
+		if _, err := buf.Write(suffix); err != nil {
 			return 0, err
 		}
 	}
