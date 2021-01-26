@@ -1,13 +1,13 @@
 package types
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"io"
 	"time"
 
 	"github.com/bytom/vapor/encoding/blockchain"
-	"github.com/bytom/vapor/encoding/bufpool"
 	"github.com/bytom/vapor/errors"
 	"github.com/bytom/vapor/protocol/bc"
 )
@@ -37,9 +37,7 @@ func (bh *BlockHeader) Hash() bc.Hash {
 // block headers will get deserialized correctly when being parsed from HTTP
 // requests.
 func (bh *BlockHeader) MarshalText() ([]byte, error) {
-	buf := bufpool.Get()
-	defer bufpool.Put(buf)
-
+	buf := bytes.NewBuffer(nil)
 	if _, err := bh.WriteTo(buf); err != nil {
 		return nil, err
 	}

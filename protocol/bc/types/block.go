@@ -1,12 +1,12 @@
 package types
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"io"
 
 	"github.com/bytom/vapor/encoding/blockchain"
-	"github.com/bytom/vapor/encoding/bufpool"
 	"github.com/bytom/vapor/errors"
 )
 
@@ -26,9 +26,7 @@ type Block struct {
 }
 
 func (b *Block) marshalText(serflags uint8) ([]byte, error) {
-	buf := bufpool.Get()
-	defer bufpool.Put(buf)
-
+	buf := bytes.NewBuffer(nil)
 	ew := errors.NewWriter(buf)
 	if err := b.writeTo(ew, serflags); err != nil {
 		return nil, err
