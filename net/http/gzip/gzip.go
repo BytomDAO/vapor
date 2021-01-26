@@ -8,7 +8,21 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 )
+
+var pool = sync.Pool{
+	New: func() interface{} {
+		w, _ := gzip.NewWriterLevel(nil, gzip.BestSpeed) // #nosec
+		return w
+	},
+}
+
+func getWriter(w io.Writer) *gzip.Writer {
+	gz := pool.Get().(*gzip.Writer)
+	gz.Reset(w)
+	return gz
+}
 
 type Handler struct {
 	Handler http.Handler
@@ -21,10 +35,11 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Encoding", "gzip")
-	gz, _ := gzip.NewWriterLevel(nil, gzip.BestSpeed)
+	gz := getWriter(w)
 	w = &responseWriter{gz, w}
 	h.Handler.ServeHTTP(w, r)
 	gz.Close()
+	pool.Put(gz)
 }
 
 type responseWriter struct {
