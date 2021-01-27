@@ -24,7 +24,7 @@ const (
 )
 
 var (
-	maxNumOfBlocksPerMsg      = uint64(1000)
+	maxNumOfBlocksPerMsg      = uint64(64)
 	maxNumOfHeadersPerMsg     = uint64(1000)
 	maxNumOfBlocksRegularSync = uint64(128)
 )
