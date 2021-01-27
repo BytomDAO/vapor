@@ -157,13 +157,18 @@ func (m *Manager) handleGetBlockMsg(peer *peers.Peer, msg *msgs.GetBlockMessage)
 }
 
 func (m *Manager) handleGetBlocksMsg(peer *peers.Peer, msg *msgs.GetBlocksMessage) {
-	endTime := time.Now().Add(requireBlocksTimeout / 2)
+	endTime := time.Now().Add(requireBlocksTimeout / 10)
 	isTimeout := func() bool {
 		return time.Now().After(endTime)
 	}
 
 	blocks, err := m.blockKeeper.locateBlocks(msg.GetBlockLocator(), msg.GetStopHash(), isTimeout)
 	if err != nil || len(blocks) == 0 {
+		log.WithFields(log.Fields{
+			"module": logModule,
+			"err":    err,
+			"size":   len(blocks),
+		}).Error("fail on handleGetBlocksMsg locateBlocks")
 		return
 	}
 
