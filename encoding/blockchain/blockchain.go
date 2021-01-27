@@ -88,7 +88,9 @@ func ReadVarstr31(r *Reader) ([]byte, error) {
 	if int(l) > len(r.buf) {
 		return nil, io.ErrUnexpectedEOF
 	}
-	str := r.buf[:l]
+
+	str := make([]byte, l)
+	copy(str, r.buf)
 	r.buf = r.buf[l:]
 	return str, nil
 }
