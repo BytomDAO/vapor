@@ -112,9 +112,6 @@ func (w *Wallet) filterAccountUtxo(utxos []*account.UTXO) []*account.UTXO {
 	result := make([]*account.UTXO, 0, len(utxos))
 	for s := range outsByScript {
 		if !segwit.IsP2WScript([]byte(s)) {
-			for _, utxo := range outsByScript[s] {
-				result = append(result, utxo)
-			}
 			continue
 		}
 
