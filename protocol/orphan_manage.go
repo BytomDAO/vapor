@@ -80,6 +80,9 @@ func (o *OrphanManage) Get(hash *bc.Hash) (*types.Block, bool) {
 	o.mtx.RLock()
 	block, ok := o.orphan[*hash]
 	o.mtx.RUnlock()
+	if !ok {
+		return nil, ok
+	}
 	return block.Block, ok
 }
 
