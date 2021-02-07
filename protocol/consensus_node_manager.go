@@ -85,17 +85,28 @@ func (c *Chain) getConsensusResult(seq uint64, blockHeader *types.BlockHeader) (
 
 func (c *Chain) getPrevRoundLastBlock(prevBlockHash *bc.Hash) (*types.BlockHeader, error) {
 	blockHeader, err := c.store.GetBlockHeader(prevBlockHash)
-	if err != nil {
+	if err != nil || blockHeader.Height < (blockHeader.Height%consensus.ActiveNetParams.RoundVoteBlockNums) {
 		return nil, errNotFoundBlockNode
 	}
 
-	for blockHeader.Height%consensus.ActiveNetParams.RoundVoteBlockNums != 0 {
-		blockHeader, err = c.store.GetBlockHeader(&blockHeader.PreviousBlockHash)
+	prevRoundBlockNum := blockHeader.Height - (blockHeader.Height % consensus.ActiveNetParams.RoundVoteBlockNums)
+	blockHashs, err := c.store.GetBlockHashesByHeight(prevRoundBlockNum)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, blockHash := range blockHashs {
+		prevBlockHeader, err := c.store.GetBlockHeader(blockHash)
 		if err != nil {
 			return nil, err
 		}
+
+		if prevBlockHeader.Height == prevRoundBlockNum {
+			return prevBlockHeader, nil
+		}
 	}
-	return blockHeader, nil
+
+	return nil, errNotFoundBlockNode
 }
 
 func (c *Chain) reorganizeConsensusResult(consensusResult *state.ConsensusResult, blockHeader *types.BlockHeader) error {
