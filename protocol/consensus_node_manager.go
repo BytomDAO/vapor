@@ -13,6 +13,12 @@ var (
 	errNotFoundBlockNode     = errors.New("can not find block node")
 )
 
+var (
+	isRoundFirst = func(height uint64) bool {
+		return height%consensus.ActiveNetParams.RoundVoteBlockNums == 1
+	}
+)
+
 func (c *Chain) getBestConsensusResult() (*state.ConsensusResult, error) {
 	bestBlockHeader := c.bestBlockHeader
 	seq := state.CalcVoteSeq(bestBlockHeader.Height)
@@ -83,19 +89,18 @@ func (c *Chain) getConsensusResult(seq uint64, blockHeader *types.BlockHeader) (
 	return consensusResult, nil
 }
 
-func (c *Chain) getPrevRoundLastBlock(prevBlockHash *bc.Hash) (*types.BlockHeader, error) {
-	blockHeader, err := c.store.GetBlockHeader(prevBlockHash)
+func (c *Chain) getPrevRoundLastBlock(hash *bc.Hash) (*types.BlockHeader, error) {
+	blockHeader, err := c.store.GetBlockHeader(hash)
 	if err != nil {
 		return nil, errNotFoundBlockNode
 	}
 
-	for blockHeader.Height%consensus.ActiveNetParams.RoundVoteBlockNums != 0 {
-		blockHeader, err = c.store.GetBlockHeader(&blockHeader.PreviousBlockHash)
-		if err != nil {
-			return nil, err
-		}
+	preRoundVoteBlockHash, err := c.store.GetPreRoundVoteBlockHash(blockHeader, isRoundFirst)
+	if err != nil {
+		return nil, err
 	}
-	return blockHeader, nil
+
+	return c.store.GetBlockHeader(preRoundVoteBlockHash)
 }
 
 func (c *Chain) reorganizeConsensusResult(consensusResult *state.ConsensusResult, blockHeader *types.BlockHeader) error {

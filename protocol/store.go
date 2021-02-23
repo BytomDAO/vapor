@@ -27,12 +27,14 @@ type Store interface {
 	GetConsensusResult(uint64) (*state.ConsensusResult, error)
 	GetMainChainHash(uint64) (*bc.Hash, error)
 	GetBlockHashesByHeight(uint64) ([]*bc.Hash, error)
+	GetPreRoundVoteBlockHash(header *types.BlockHeader, isRoundFirst func(height uint64) bool) (*bc.Hash, error)
 
 	DeleteConsensusResult(uint64) error
 	DeleteBlock(*types.Block) error
 	SaveBlock(*types.Block, *bc.TransactionStatus) error
 	SaveBlockHeader(*types.BlockHeader) error
 	SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, []*state.ConsensusResult) error
+	SavePreRoundVoteBlockHash(*types.BlockHeader, func(height uint64) bool) error
 }
 
 // BlockStoreState represents the core's db status

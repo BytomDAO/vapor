@@ -130,6 +130,14 @@ func (s *mockStore) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*t
 	return nil
 }
 
+func (s *mockStore) GetPreRoundVoteBlockHash(header *types.BlockHeader, isRoundFirst func(height uint64) bool) (*bc.Hash, error) {
+	return nil, nil
+}
+
+func (s *mockStore) SavePreRoundVoteBlockHash(*types.BlockHeader, func(height uint64) bool) error {
+	return nil
+}
+
 func TestAddOrphan(t *testing.T) {
 	cases := []struct {
 		before         *TxPool
@@ -680,6 +688,14 @@ func (s *mockStore1) SaveBlock(*types.Block, *bc.TransactionStatus) error       
 func (s *mockStore1) DeleteConsensusResult(seq uint64) error                    { return nil }
 func (s *mockStore1) SaveBlockHeader(*types.BlockHeader) error                  { return nil }
 func (s *mockStore1) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, []*state.ConsensusResult) error {
+	return nil
+}
+
+func (s *mockStore1) GetPreRoundVoteBlockHash(header *types.BlockHeader, isRoundFirst func(height uint64) bool) (*bc.Hash, error) {
+	return nil, nil
+}
+
+func (s *mockStore1) SavePreRoundVoteBlockHash(*types.BlockHeader, func(height uint64) bool) error {
 	return nil
 }
 

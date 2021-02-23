@@ -17,6 +17,7 @@ const (
 	maxCachedBlockHashes       = 8192
 	maxCachedMainChainHashes   = 8192
 	maxCachedConsensusResults  = 128
+	maxCachedVoteBlockHash     = 8192
 )
 
 type fillBlockHeaderFn func(hash *bc.Hash) (*types.BlockHeader, error)
@@ -24,37 +25,68 @@ type fillBlockTransactionsFn func(hash *bc.Hash) ([]*types.Tx, error)
 type fillBlockHashesFn func(height uint64) ([]*bc.Hash, error)
 type fillMainChainHashFn func(height uint64) (*bc.Hash, error)
 type fillConsensusResultFn func(seq uint64) (*state.ConsensusResult, error)
+type fillPreRoundVoteBlockHashFn func(hash *bc.Hash) (*bc.Hash, error)
 
-func newCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransactionsFn, fillBlockHashes fillBlockHashesFn, fillMainChainHash fillMainChainHashFn, fillConsensusResult fillConsensusResultFn) *cache {
+func newCache(fillBlockHeader fillBlockHeaderFn, fillBlockTxs fillBlockTransactionsFn, fillBlockHashes fillBlockHashesFn, fillMainChainHash fillMainChainHashFn, fillConsensusResult fillConsensusResultFn, fillPreRoundVoteBlockHash fillPreRoundVoteBlockHashFn) *cache {
 	return &cache{
-		lruBlockHeaders:     common.NewCache(maxCachedBlockHeaders),
-		lruBlockTxs:         common.NewCache(maxCachedBlockTransactions),
-		lruBlockHashes:      common.NewCache(maxCachedBlockHashes),
-		lruMainChainHashes:  common.NewCache(maxCachedMainChainHashes),
-		lruConsensusResults: common.NewCache(maxCachedConsensusResults),
+		lruBlockHeaders:            common.NewCache(maxCachedBlockHeaders),
+		lruBlockTxs:                common.NewCache(maxCachedBlockTransactions),
+		lruBlockHashes:             common.NewCache(maxCachedBlockHashes),
+		lruMainChainHashes:         common.NewCache(maxCachedMainChainHashes),
+		lruConsensusResults:        common.NewCache(maxCachedConsensusResults),
+		lruPreRoundVoteBlockHashes: common.NewCache(maxCachedVoteBlockHash),
 
-		fillBlockHeaderFn:      fillBlockHeader,
-		fillBlockTransactionFn: fillBlockTxs,
-		fillBlockHashesFn:      fillBlockHashes,
-		fillMainChainHashFn:    fillMainChainHash,
-		fillConsensusResultFn:  fillConsensusResult,
+		fillBlockHeaderFn:           fillBlockHeader,
+		fillBlockTransactionFn:      fillBlockTxs,
+		fillBlockHashesFn:           fillBlockHashes,
+		fillMainChainHashFn:         fillMainChainHash,
+		fillConsensusResultFn:       fillConsensusResult,
+		fillPreRoundVoteBlockHashFn: fillPreRoundVoteBlockHash,
 	}
 }
 
 type cache struct {
-	lruBlockHeaders     *common.Cache
-	lruBlockTxs         *common.Cache
-	lruBlockHashes      *common.Cache
-	lruMainChainHashes  *common.Cache
-	lruConsensusResults *common.Cache
+	lruBlockHeaders            *common.Cache
+	lruBlockTxs                *common.Cache
+	lruBlockHashes             *common.Cache
+	lruMainChainHashes         *common.Cache
+	lruConsensusResults        *common.Cache
+	lruPreRoundVoteBlockHashes *common.Cache
 
-	fillBlockHeaderFn      func(hash *bc.Hash) (*types.BlockHeader, error)
-	fillBlockTransactionFn func(hash *bc.Hash) ([]*types.Tx, error)
-	fillBlockHashesFn      func(uint64) ([]*bc.Hash, error)
-	fillMainChainHashFn    func(uint64) (*bc.Hash, error)
-	fillConsensusResultFn  func(seq uint64) (*state.ConsensusResult, error)
+	fillBlockHeaderFn           func(hash *bc.Hash) (*types.BlockHeader, error)
+	fillBlockTransactionFn      func(hash *bc.Hash) ([]*types.Tx, error)
+	fillBlockHashesFn           func(uint64) ([]*bc.Hash, error)
+	fillMainChainHashFn         func(uint64) (*bc.Hash, error)
+	fillConsensusResultFn       func(seq uint64) (*state.ConsensusResult, error)
+	fillPreRoundVoteBlockHashFn func(hash *bc.Hash) (*bc.Hash, error)
 
 	sf singleflight.Group
+}
+
+func (c *cache) lookupPreRoundVoteBlockHash(header *types.BlockHeader, isRoundFirst func(height uint64) bool) (*bc.Hash, error) {
+	if isRoundFirst(header.Height) {
+		c.lruPreRoundVoteBlockHashes.Add(header.Hash, header.PreviousBlockHash)
+		return &header.PreviousBlockHash, nil
+	}
+
+	if data, ok := c.lruPreRoundVoteBlockHashes.Get(&header.PreviousBlockHash); ok {
+		return data.(*bc.Hash), nil
+	}
+
+	blockHash, err := c.sf.Do("VoteBlock:"+header.PreviousBlockHash.String(), func() (interface{}, error) {
+		voteBlockHash, err := c.fillPreRoundVoteBlockHashFn(&header.PreviousBlockHash)
+		if err != nil {
+			return nil, err
+		}
+
+		c.lruPreRoundVoteBlockHashes.Add(header.Hash(), voteBlockHash)
+		return voteBlockHash, err
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return blockHash.(*bc.Hash), nil
 }
 
 func (c *cache) lookupBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
@@ -174,4 +206,8 @@ func (c *cache) removeMainChainHash(height uint64) {
 
 func (c *cache) removeConsensusResult(consensusResult *state.ConsensusResult) {
 	c.lruConsensusResults.Remove(consensusResult.Seq)
+}
+
+func (c *cache) removePreRoundVoteBlockHash(blockHash *bc.Hash) {
+	c.lruPreRoundVoteBlockHashes.Remove(blockHash)
 }

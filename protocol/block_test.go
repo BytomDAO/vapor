@@ -33,7 +33,16 @@ func (s *mStore) SaveBlockHeader(blockHeader *types.BlockHeader) error {
 	s.blockHeaders[blockHeader.Hash()] = blockHeader
 	return nil
 }
+
 func (s *mStore) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, []*state.ConsensusResult) error {
+	return nil
+}
+
+func (s *mStore) GetPreRoundVoteBlockHash(header *types.BlockHeader, isRoundFirst func(height uint64) bool) (*bc.Hash, error) {
+	return nil, nil
+}
+
+func (s *mStore) SavePreRoundVoteBlockHash(*types.BlockHeader, func(height uint64) bool) error {
 	return nil
 }
 

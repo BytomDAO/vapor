@@ -33,6 +33,7 @@ const (
 	mainChainIndex
 	txStatus
 	consensusResult
+	voteBlockHashStore
 )
 
 func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
@@ -78,6 +79,10 @@ func calcBlockTransactionsKey(hash *bc.Hash) []byte {
 
 func calcTxStatusKey(hash *bc.Hash) []byte {
 	return append([]byte{txStatus, colon}, hash.Bytes()...)
+}
+
+func calcVoteBlockHashKey(hash *bc.Hash) []byte {
+	return append([]byte{voteBlockHashStore, colon}, hash.Bytes()...)
 }
 
 func calcConsensusResultKey(seq uint64) []byte {
@@ -156,6 +161,21 @@ func GetConsensusResult(db dbm.DB, seq uint64) (*state.ConsensusResult, error) {
 	return consensusResult, nil
 }
 
+// GetPreRoundVoteBlockHash return the pre round vote block hash
+func GetPreRoundVoteBlockHash(db dbm.DB, hash *bc.Hash) (*bc.Hash, error) {
+	binaryHash := db.Get(calcVoteBlockHashKey(hash))
+	if binaryHash == nil {
+		return nil, fmt.Errorf("There are no voteblockHash with given block %s", hash.String())
+	}
+
+	voteBlockHash := new(bc.Hash)
+	if err := voteBlockHash.UnmarshalText(binaryHash); err != nil {
+		return nil, err
+	}
+
+	return voteBlockHash, nil
+}
+
 // DeleteConsensusResult delete a consensusResult from cache and database
 func (s *Store) DeleteConsensusResult(seq uint64) error {
 	consensusResult, err := GetConsensusResult(s.db, seq)
@@ -227,7 +247,11 @@ func NewStore(db dbm.DB) *Store {
 		return GetConsensusResult(db, seq)
 	}
 
-	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillBlockHashesFn, fillMainChainHashFn, fillConsensusResultFn)
+	fillVoteBlockFn := func(hash *bc.Hash) (*bc.Hash, error) {
+		return GetPreRoundVoteBlockHash(db, hash)
+	}
+
+	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillBlockHashesFn, fillMainChainHashFn, fillConsensusResultFn, fillVoteBlockFn)
 	return &Store{
 		db:    db,
 		cache: cache,
@@ -266,6 +290,11 @@ func (s *Store) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
 // GetBlockTransactions return the Block transactions by given hash
 func (s *Store) GetBlockTransactions(hash *bc.Hash) ([]*types.Tx, error) {
 	return s.cache.lookupBlockTxs(hash)
+}
+
+// GetPreRoundVoteBlockHash return the pre round vote Block hash by given hash
+func (s *Store) GetPreRoundVoteBlockHash(header *types.BlockHeader, isRoundFirst func(height uint64) bool) (*bc.Hash, error) {
+	return s.cache.lookupPreRoundVoteBlockHash(header, isRoundFirst)
 }
 
 // GetBlockHashesByHeight return the block hash by the specified height
@@ -370,6 +399,25 @@ func (s *Store) SaveBlockHeader(blockHeader *types.BlockHeader) error {
 	blockHash := blockHeader.Hash()
 	s.db.Set(calcBlockHeaderKey(&blockHash), binaryBlockHeader)
 	s.cache.removeBlockHeader(blockHeader)
+	return nil
+}
+
+// SavePreRoundVoteBlockHash save the pre round vote block hash and delete old cache
+func (s *Store) SavePreRoundVoteBlockHash(header *types.BlockHeader, isRoundFirst func(height uint64) bool) error {
+	hash := header.Hash()
+	key := calcVoteBlockHashKey(&hash)
+	if isRoundFirst(header.Height) || header.Height == 0 {
+		s.db.Set(key, header.PreviousBlockHash.Bytes())
+		return nil
+	}
+
+	binaryHash := s.db.Get(calcVoteBlockHashKey(&header.PreviousBlockHash))
+	if binaryHash == nil {
+		return fmt.Errorf("There are no voteblockHash with given block %s", hash.String())
+	}
+
+	s.db.Set(key, binaryHash)
+	s.cache.removePreRoundVoteBlockHash(&hash)
 	return nil
 }
 

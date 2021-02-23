@@ -198,10 +198,10 @@ func TestGetConsensusNodes(t *testing.T) {
 						{
 							TxData: types.TxData{
 								Inputs: []*types.TxInput{
-									types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 1E14, 0, []byte{0, 1}),
+									types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 1e14, 0, []byte{0, 1}),
 								},
 								Outputs: []*types.TxOutput{
-									types.NewVoteOutput(*consensus.BTMAssetID, 1E14, []byte{0, 1}, testutil.MustDecodeHexString("36695997983028c279c3360ca345a90e3af1f9e3df2506119fca31cdc844be31630f9a421f4d1658e15d67a15ce29c36332dd45020d2a0147fcce4949ccd9a67")),
+									types.NewVoteOutput(*consensus.BTMAssetID, 1e14, []byte{0, 1}, testutil.MustDecodeHexString("36695997983028c279c3360ca345a90e3af1f9e3df2506119fca31cdc844be31630f9a421f4d1658e15d67a15ce29c36332dd45020d2a0147fcce4949ccd9a67")),
 								},
 							},
 						},
@@ -216,10 +216,10 @@ func TestGetConsensusNodes(t *testing.T) {
 						{
 							TxData: types.TxData{
 								Inputs: []*types.TxInput{
-									types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 3E14, 0, []byte{0, 1}),
+									types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 3e14, 0, []byte{0, 1}),
 								},
 								Outputs: []*types.TxOutput{
-									types.NewVoteOutput(*consensus.BTMAssetID, 3E14, []byte{0, 1}, testutil.MustDecodeHexString("b7f463446a31b3792cd168d52b7a89b3657bca3e25d6854db1488c389ab6fc8d538155c25c1ee6975cc7def19710908c7d9b7463ca34a22058b456b45e498db9")),
+									types.NewVoteOutput(*consensus.BTMAssetID, 3e14, []byte{0, 1}, testutil.MustDecodeHexString("b7f463446a31b3792cd168d52b7a89b3657bca3e25d6854db1488c389ab6fc8d538155c25c1ee6975cc7def19710908c7d9b7463ca34a22058b456b45e498db9")),
 								},
 							},
 						},
@@ -275,7 +275,7 @@ func TestGetConsensusNodes(t *testing.T) {
 				},
 				BlockHash:      testutil.MustDecodeHash("73a2a6a098727877e288a4520f2d8076d700b561277ed7c3f533e3f176496888"),
 				BlockHeight:    1200,
-				CoinbaseReward: map[string]uint64{"0001": 1E8},
+				CoinbaseReward: map[string]uint64{"0001": 1e8},
 			},
 			storedBlockHeaders: []*types.BlockHeader{
 				// main chain
@@ -325,10 +325,10 @@ func TestGetConsensusNodes(t *testing.T) {
 						{
 							TxData: types.TxData{
 								Inputs: []*types.TxInput{
-									types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 1E14, 0, []byte{0, 1}),
+									types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 1e14, 0, []byte{0, 1}),
 								},
 								Outputs: []*types.TxOutput{
-									types.NewVoteOutput(*consensus.BTMAssetID, 1E14, []byte{0, 1}, testutil.MustDecodeHexString("36695997983028c279c3360ca345a90e3af1f9e3df2506119fca31cdc844be31630f9a421f4d1658e15d67a15ce29c36332dd45020d2a0147fcce4949ccd9a67")),
+									types.NewVoteOutput(*consensus.BTMAssetID, 1e14, []byte{0, 1}, testutil.MustDecodeHexString("36695997983028c279c3360ca345a90e3af1f9e3df2506119fca31cdc844be31630f9a421f4d1658e15d67a15ce29c36332dd45020d2a0147fcce4949ccd9a67")),
 								},
 							},
 						},
@@ -343,10 +343,10 @@ func TestGetConsensusNodes(t *testing.T) {
 						{
 							TxData: types.TxData{
 								Inputs: []*types.TxInput{
-									types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 2E14, 0, []byte{0, 1}),
+									types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 2e14, 0, []byte{0, 1}),
 								},
 								Outputs: []*types.TxOutput{
-									types.NewVoteOutput(*consensus.BTMAssetID, 2E14, []byte{0, 1}, testutil.MustDecodeHexString("b7f463446a31b3792cd168d52b7a89b3657bca3e25d6854db1488c389ab6fc8d538155c25c1ee6975cc7def19710908c7d9b7463ca34a22058b456b45e498db9")),
+									types.NewVoteOutput(*consensus.BTMAssetID, 2e14, []byte{0, 1}, testutil.MustDecodeHexString("b7f463446a31b3792cd168d52b7a89b3657bca3e25d6854db1488c389ab6fc8d538155c25c1ee6975cc7def19710908c7d9b7463ca34a22058b456b45e498db9")),
 								},
 							},
 						},
@@ -363,10 +363,10 @@ func TestGetConsensusNodes(t *testing.T) {
 						{
 							TxData: types.TxData{
 								Inputs: []*types.TxInput{
-									types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 2E14, 0, []byte{0, 1}),
+									types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 2e14, 0, []byte{0, 1}),
 								},
 								Outputs: []*types.TxOutput{
-									types.NewVoteOutput(*consensus.BTMAssetID, 2E14, []byte{0, 1}, testutil.MustDecodeHexString("0f8669abbd3cc0a167156188e428f940088d5b2f36bb3449df71d2bdc5e077814ea3f68628eef279ed435f51ee26cff00f8bd28fabfd500bedb2a9e369f5c825")),
+									types.NewVoteOutput(*consensus.BTMAssetID, 2e14, []byte{0, 1}, testutil.MustDecodeHexString("0f8669abbd3cc0a167156188e428f940088d5b2f36bb3449df71d2bdc5e077814ea3f68628eef279ed435f51ee26cff00f8bd28fabfd500bedb2a9e369f5c825")),
 								},
 							},
 						},
@@ -381,10 +381,10 @@ func TestGetConsensusNodes(t *testing.T) {
 						{
 							TxData: types.TxData{
 								Inputs: []*types.TxInput{
-									types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 5E14, 0, []byte{0, 1}),
+									types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 5e14, 0, []byte{0, 1}),
 								},
 								Outputs: []*types.TxOutput{
-									types.NewVoteOutput(*consensus.BTMAssetID, 5E14, []byte{0, 1}, testutil.MustDecodeHexString("b928e46bb01e834fdf167185e31b15de7cc257af8bbdf17f9c7fefd5bb97b306d048b6bc0da2097152c1c2ff38333c756a543adbba7030a447dcc776b8ac64ef")),
+									types.NewVoteOutput(*consensus.BTMAssetID, 5e14, []byte{0, 1}, testutil.MustDecodeHexString("b928e46bb01e834fdf167185e31b15de7cc257af8bbdf17f9c7fefd5bb97b306d048b6bc0da2097152c1c2ff38333c756a543adbba7030a447dcc776b8ac64ef")),
 								},
 							},
 						},
@@ -435,7 +435,7 @@ func TestGetConsensusNodes(t *testing.T) {
 				},
 				BlockHash:      testutil.MustDecodeHash("a0239137437634c933fa1200f801783a532b88e9556a0746b75a5832aac09bfc"),
 				BlockHeight:    1198,
-				CoinbaseReward: map[string]uint64{"0001": 1E8},
+				CoinbaseReward: map[string]uint64{"0001": 1e8},
 			},
 			storedBlockHeaders: []*types.BlockHeader{
 				// main chain
@@ -499,10 +499,10 @@ func TestGetConsensusNodes(t *testing.T) {
 						{
 							TxData: types.TxData{
 								Inputs: []*types.TxInput{
-									types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 1E14, 0, []byte{0, 1}),
+									types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 1e14, 0, []byte{0, 1}),
 								},
 								Outputs: []*types.TxOutput{
-									types.NewVoteOutput(*consensus.BTMAssetID, 1E14, []byte{0, 1}, testutil.MustDecodeHexString("1bec3a35da038ec7a76c40986e80b5af2dcef60341970e3fc58b4db0797bd4ca9b2cbf3d7ab820832e22a80b5b86ae1427f7f706a7780089958b2862e7bc0842")),
+									types.NewVoteOutput(*consensus.BTMAssetID, 1e14, []byte{0, 1}, testutil.MustDecodeHexString("1bec3a35da038ec7a76c40986e80b5af2dcef60341970e3fc58b4db0797bd4ca9b2cbf3d7ab820832e22a80b5b86ae1427f7f706a7780089958b2862e7bc0842")),
 								},
 							},
 						},
@@ -517,10 +517,10 @@ func TestGetConsensusNodes(t *testing.T) {
 						{
 							TxData: types.TxData{
 								Inputs: []*types.TxInput{
-									types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 1E14, 0, []byte{0, 1}),
+									types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 1e14, 0, []byte{0, 1}),
 								},
 								Outputs: []*types.TxOutput{
-									types.NewVoteOutput(*consensus.BTMAssetID, 1E14, []byte{0, 1}, testutil.MustDecodeHexString("36695997983028c279c3360ca345a90e3af1f9e3df2506119fca31cdc844be31630f9a421f4d1658e15d67a15ce29c36332dd45020d2a0147fcce4949ccd9a67")),
+									types.NewVoteOutput(*consensus.BTMAssetID, 1e14, []byte{0, 1}, testutil.MustDecodeHexString("36695997983028c279c3360ca345a90e3af1f9e3df2506119fca31cdc844be31630f9a421f4d1658e15d67a15ce29c36332dd45020d2a0147fcce4949ccd9a67")),
 								},
 							},
 						},
@@ -535,10 +535,10 @@ func TestGetConsensusNodes(t *testing.T) {
 						{
 							TxData: types.TxData{
 								Inputs: []*types.TxInput{
-									types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 2E14, 0, []byte{0, 1}),
+									types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 2e14, 0, []byte{0, 1}),
 								},
 								Outputs: []*types.TxOutput{
-									types.NewVoteOutput(*consensus.BTMAssetID, 2E14, []byte{0, 1}, testutil.MustDecodeHexString("b7f463446a31b3792cd168d52b7a89b3657bca3e25d6854db1488c389ab6fc8d538155c25c1ee6975cc7def19710908c7d9b7463ca34a22058b456b45e498db9")),
+									types.NewVoteOutput(*consensus.BTMAssetID, 2e14, []byte{0, 1}, testutil.MustDecodeHexString("b7f463446a31b3792cd168d52b7a89b3657bca3e25d6854db1488c389ab6fc8d538155c25c1ee6975cc7def19710908c7d9b7463ca34a22058b456b45e498db9")),
 								},
 							},
 						},
@@ -555,10 +555,10 @@ func TestGetConsensusNodes(t *testing.T) {
 						{
 							TxData: types.TxData{
 								Inputs: []*types.TxInput{
-									types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 5E14, 0, []byte{0, 1}),
+									types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 5e14, 0, []byte{0, 1}),
 								},
 								Outputs: []*types.TxOutput{
-									types.NewVoteOutput(*consensus.BTMAssetID, 5E14, []byte{0, 1}, testutil.MustDecodeHexString("1bec3a35da038ec7a76c40986e80b5af2dcef60341970e3fc58b4db0797bd4ca9b2cbf3d7ab820832e22a80b5b86ae1427f7f706a7780089958b2862e7bc0842")),
+									types.NewVoteOutput(*consensus.BTMAssetID, 5e14, []byte{0, 1}, testutil.MustDecodeHexString("1bec3a35da038ec7a76c40986e80b5af2dcef60341970e3fc58b4db0797bd4ca9b2cbf3d7ab820832e22a80b5b86ae1427f7f706a7780089958b2862e7bc0842")),
 								},
 							},
 						},
@@ -573,10 +573,10 @@ func TestGetConsensusNodes(t *testing.T) {
 						{
 							TxData: types.TxData{
 								Inputs: []*types.TxInput{
-									types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 3E14, 0, []byte{0, 1}),
+									types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 3e14, 0, []byte{0, 1}),
 								},
 								Outputs: []*types.TxOutput{
-									types.NewVoteOutput(*consensus.BTMAssetID, 3E14, []byte{0, 1}, testutil.MustDecodeHexString("36695997983028c279c3360ca345a90e3af1f9e3df2506119fca31cdc844be31630f9a421f4d1658e15d67a15ce29c36332dd45020d2a0147fcce4949ccd9a67")),
+									types.NewVoteOutput(*consensus.BTMAssetID, 3e14, []byte{0, 1}, testutil.MustDecodeHexString("36695997983028c279c3360ca345a90e3af1f9e3df2506119fca31cdc844be31630f9a421f4d1658e15d67a15ce29c36332dd45020d2a0147fcce4949ccd9a67")),
 								},
 							},
 						},
@@ -591,10 +591,10 @@ func TestGetConsensusNodes(t *testing.T) {
 						{
 							TxData: types.TxData{
 								Inputs: []*types.TxInput{
-									types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 5E14, 0, []byte{0, 1}),
+									types.NewSpendInput(nil, bc.NewHash([32]byte{0, 1}), *consensus.BTMAssetID, 5e14, 0, []byte{0, 1}),
 								},
 								Outputs: []*types.TxOutput{
-									types.NewVoteOutput(*consensus.BTMAssetID, 5E14, []byte{0, 1}, testutil.MustDecodeHexString("b928e46bb01e834fdf167185e31b15de7cc257af8bbdf17f9c7fefd5bb97b306d048b6bc0da2097152c1c2ff38333c756a543adbba7030a447dcc776b8ac64ef")),
+									types.NewVoteOutput(*consensus.BTMAssetID, 5e14, []byte{0, 1}, testutil.MustDecodeHexString("b928e46bb01e834fdf167185e31b15de7cc257af8bbdf17f9c7fefd5bb97b306d048b6bc0da2097152c1c2ff38333c756a543adbba7030a447dcc776b8ac64ef")),
 								},
 							},
 						},
@@ -756,5 +756,13 @@ func (s *dummyStore) SaveBlockHeader(header *types.BlockHeader) error {
 }
 
 func (s *dummyStore) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*types.BlockHeader, *state.UtxoViewpoint, []*state.ConsensusResult) error {
+	return nil
+}
+
+func (s *dummyStore) GetPreRoundVoteBlockHash(header *types.BlockHeader, isRoundFirst func(height uint64) bool) (*bc.Hash, error) {
+	return nil, nil
+}
+
+func (s *dummyStore) SavePreRoundVoteBlockHash(*types.BlockHeader, func(height uint64) bool) error {
 	return nil
 }

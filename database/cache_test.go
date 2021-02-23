@@ -60,7 +60,11 @@ func TestBlockCache(t *testing.T) {
 		return consensusResults[seq], nil
 	}
 
-	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillBlockHashesFn, fillMainChainHashFn, fillConsensusResultFn)
+	fillPreRoundVoteBlockHashFn := func(hash *bc.Hash) (*bc.Hash, error) {
+		return nil, nil
+	}
+
+	cache := newCache(fillBlockHeaderFn, fillBlockTxsFn, fillBlockHashesFn, fillMainChainHashFn, fillConsensusResultFn, fillPreRoundVoteBlockHashFn)
 	for i := 0; i < maxCachedBlockHeaders+10; i++ {
 		block := newBlock(uint64(i))
 		hash := block.Hash()
