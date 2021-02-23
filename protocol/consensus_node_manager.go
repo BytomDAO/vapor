@@ -89,8 +89,8 @@ func (c *Chain) getConsensusResult(seq uint64, blockHeader *types.BlockHeader) (
 	return consensusResult, nil
 }
 
-func (c *Chain) getPrevRoundLastBlock(hash *bc.Hash) (*types.BlockHeader, error) {
-	blockHeader, err := c.store.GetBlockHeader(hash)
+func (c *Chain) getPrevRoundLastBlock(prevBlockHash *bc.Hash) (*types.BlockHeader, error) {
+	blockHeader, err := c.store.GetBlockHeader(prevBlockHash)
 	if err != nil {
 		return nil, errNotFoundBlockNode
 	}
