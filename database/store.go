@@ -293,8 +293,8 @@ func (s *Store) GetBlockTransactions(hash *bc.Hash) ([]*types.Tx, error) {
 }
 
 // GetPreRoundVoteBlockHash return the pre round vote Block hash by given hash
-func (s *Store) GetPreRoundVoteBlockHash(header *types.BlockHeader, isRoundFirst func(height uint64) bool) (*bc.Hash, error) {
-	return s.cache.lookupPreRoundVoteBlockHash(header, isRoundFirst)
+func (s *Store) GetPreRoundVoteBlockHash(header *types.BlockHeader, isVoteBlock func(height uint64) bool) (*bc.Hash, error) {
+	return s.cache.lookupPreRoundVoteBlockHash(header, isVoteBlock)
 }
 
 // GetBlockHashesByHeight return the block hash by the specified height
@@ -403,11 +403,11 @@ func (s *Store) SaveBlockHeader(blockHeader *types.BlockHeader) error {
 }
 
 // SavePreRoundVoteBlockHash save the pre round vote block hash and delete old cache
-func (s *Store) SavePreRoundVoteBlockHash(header *types.BlockHeader, isRoundFirst func(height uint64) bool) error {
+func (s *Store) SavePreRoundVoteBlockHash(header *types.BlockHeader, isVoteBlock func(height uint64) bool) error {
 	hash := header.Hash()
 	key := calcVoteBlockHashKey(&hash)
-	if isRoundFirst(header.Height) || header.Height == 0 {
-		s.db.Set(key, header.PreviousBlockHash.Bytes())
+	if isVoteBlock(header.Height) || header.Height == 0 {
+		s.db.Set(key, hash.Bytes())
 		return nil
 	}
 

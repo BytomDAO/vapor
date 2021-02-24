@@ -89,7 +89,7 @@ func (c *Chain) updateBlockSignature(blockHeader *types.BlockHeader, nodeOrder u
 		return err
 	}
 
-	if err := c.store.SavePreRoundVoteBlockHash(blockHeader, isRoundFirst); err != nil {
+	if err := c.store.SavePreRoundVoteBlockHash(blockHeader, isVoteBlock); err != nil {
 		return err
 	}
 
@@ -232,7 +232,7 @@ func (c *Chain) applyBlockSign(blockHeader *types.BlockHeader) error {
 		return err
 	}
 
-	if err := c.store.SavePreRoundVoteBlockHash(blockHeader, isRoundFirst); err != nil {
+	if err := c.store.SavePreRoundVoteBlockHash(blockHeader, isVoteBlock); err != nil {
 		return err
 	}
 

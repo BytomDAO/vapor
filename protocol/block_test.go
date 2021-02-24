@@ -38,7 +38,7 @@ func (s *mStore) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*type
 	return nil
 }
 
-func (s *mStore) GetPreRoundVoteBlockHash(header *types.BlockHeader, isRoundFirst func(height uint64) bool) (*bc.Hash, error) {
+func (s *mStore) GetPreRoundVoteBlockHash(header *types.BlockHeader, isVoteBlock func(height uint64) bool) (*bc.Hash, error) {
 	return nil, nil
 }
 

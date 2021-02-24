@@ -63,23 +63,24 @@ type cache struct {
 	sf singleflight.Group
 }
 
-func (c *cache) lookupPreRoundVoteBlockHash(header *types.BlockHeader, isRoundFirst func(height uint64) bool) (*bc.Hash, error) {
-	if isRoundFirst(header.Height) {
-		c.lruPreRoundVoteBlockHashes.Add(header.Hash, header.PreviousBlockHash)
-		return &header.PreviousBlockHash, nil
+func (c *cache) lookupPreRoundVoteBlockHash(header *types.BlockHeader, isVoteBlock func(height uint64) bool) (*bc.Hash, error) {
+	hash := header.Hash()
+	if isVoteBlock(header.Height) {
+		c.lruPreRoundVoteBlockHashes.Add(hash, (&hash).Bytes())
+		return &hash, nil
 	}
 
 	if data, ok := c.lruPreRoundVoteBlockHashes.Get(&header.PreviousBlockHash); ok {
 		return data.(*bc.Hash), nil
 	}
 
-	blockHash, err := c.sf.Do("VoteBlock:"+header.PreviousBlockHash.String(), func() (interface{}, error) {
-		voteBlockHash, err := c.fillPreRoundVoteBlockHashFn(&header.PreviousBlockHash)
+	blockHash, err := c.sf.Do("VoteBlock:"+(&hash).String(), func() (interface{}, error) {
+		voteBlockHash, err := c.fillPreRoundVoteBlockHashFn(&hash)
 		if err != nil {
 			return nil, err
 		}
 
-		c.lruPreRoundVoteBlockHashes.Add(header.Hash(), voteBlockHash)
+		c.lruPreRoundVoteBlockHashes.Add(hash, voteBlockHash)
 		return voteBlockHash, err
 	})
 	if err != nil {

@@ -14,8 +14,8 @@ var (
 )
 
 var (
-	isRoundFirst = func(height uint64) bool {
-		return height%consensus.ActiveNetParams.RoundVoteBlockNums == 1
+	isVoteBlock = func(height uint64) bool {
+		return height%consensus.ActiveNetParams.RoundVoteBlockNums == 0
 	}
 )
 
@@ -95,7 +95,7 @@ func (c *Chain) getPrevRoundLastBlock(prevBlockHash *bc.Hash) (*types.BlockHeade
 		return nil, errNotFoundBlockNode
 	}
 
-	preRoundVoteBlockHash, err := c.store.GetPreRoundVoteBlockHash(blockHeader, isRoundFirst)
+	preRoundVoteBlockHash, err := c.store.GetPreRoundVoteBlockHash(blockHeader, isVoteBlock)
 	if err != nil {
 		return nil, err
 	}

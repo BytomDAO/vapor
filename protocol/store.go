@@ -27,7 +27,7 @@ type Store interface {
 	GetConsensusResult(uint64) (*state.ConsensusResult, error)
 	GetMainChainHash(uint64) (*bc.Hash, error)
 	GetBlockHashesByHeight(uint64) ([]*bc.Hash, error)
-	GetPreRoundVoteBlockHash(header *types.BlockHeader, isRoundFirst func(height uint64) bool) (*bc.Hash, error)
+	GetPreRoundVoteBlockHash(header *types.BlockHeader, isVoteBlock func(height uint64) bool) (*bc.Hash, error)
 
 	DeleteConsensusResult(uint64) error
 	DeleteBlock(*types.Block) error

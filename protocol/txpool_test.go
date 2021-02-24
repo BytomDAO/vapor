@@ -130,7 +130,7 @@ func (s *mockStore) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*t
 	return nil
 }
 
-func (s *mockStore) GetPreRoundVoteBlockHash(header *types.BlockHeader, isRoundFirst func(height uint64) bool) (*bc.Hash, error) {
+func (s *mockStore) GetPreRoundVoteBlockHash(header *types.BlockHeader, isVoteBlock func(height uint64) bool) (*bc.Hash, error) {
 	return nil, nil
 }
 
@@ -691,7 +691,7 @@ func (s *mockStore1) SaveChainStatus(*types.BlockHeader, *types.BlockHeader, []*
 	return nil
 }
 
-func (s *mockStore1) GetPreRoundVoteBlockHash(header *types.BlockHeader, isRoundFirst func(height uint64) bool) (*bc.Hash, error) {
+func (s *mockStore1) GetPreRoundVoteBlockHash(header *types.BlockHeader, isVoteBlock func(height uint64) bool) (*bc.Hash, error) {
 	return nil, nil
 }
 
