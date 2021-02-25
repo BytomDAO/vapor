@@ -149,16 +149,16 @@ func (c *Chain) GetPrevRoundVoteBlockHash(hash *bc.Hash) (*bc.Hash, error) {
 	}
 
 	if header.Height%consensus.ActiveNetParams.RoundVoteBlockNums == 0 {
-		c.prevRoundVoteBlockHashCache.Add(hash, hash)
+		c.prevRoundVoteBlockHashCache.Add(*hash, hash)
 		return hash, nil
 	}
 
-	if data, ok := c.prevRoundVoteBlockHashCache.Get(hash); ok {
+	if data, ok := c.prevRoundVoteBlockHashCache.Get(*hash); ok {
 		return data.(*bc.Hash), nil
 	}
 
 	if data, ok := c.prevRoundVoteBlockHashCache.Get(header.PreviousBlockHash); ok {
-		c.prevRoundVoteBlockHashCache.Add(hash, data.(*bc.Hash))
+		c.prevRoundVoteBlockHashCache.Add(*hash, data.(*bc.Hash))
 		return data.(*bc.Hash), nil
 	}
 
@@ -170,7 +170,7 @@ func (c *Chain) GetPrevRoundVoteBlockHash(hash *bc.Hash) (*bc.Hash, error) {
 		}
 	}
 	preRoundVoteBlockHash := header.Hash()
-	c.prevRoundVoteBlockHashCache.Add(hash, &preRoundVoteBlockHash)
+	c.prevRoundVoteBlockHashCache.Add(*hash, &preRoundVoteBlockHash)
 	return &preRoundVoteBlockHash, nil
 }
 
