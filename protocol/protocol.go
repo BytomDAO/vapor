@@ -7,6 +7,7 @@ import (
 
 	"github.com/bytom/vapor/common"
 	"github.com/bytom/vapor/config"
+	"github.com/bytom/vapor/consensus"
 	"github.com/bytom/vapor/errors"
 	"github.com/bytom/vapor/event"
 	"github.com/bytom/vapor/protocol/bc"
@@ -15,8 +16,9 @@ import (
 )
 
 const (
-	maxProcessBlockChSize = 1024
-	maxKnownTxs           = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
+	maxProcessBlockChSize              = 1024
+	maxKnownTxs                        = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
+	maxPrevRoundVoteBlockHashCacheSize = 4086
 )
 
 // ErrNotInitSubProtocolChainStatus represent the node state of sub protocol has not been initialized
@@ -46,8 +48,9 @@ type Chain struct {
 	processBlockCh chan *processBlockMsg
 	subProtocols   []SubProtocol
 
-	signatureCache  *common.Cache
-	eventDispatcher *event.Dispatcher
+	signatureCache              *common.Cache
+	prevRoundVoteBlockHashCache *common.Cache
+	eventDispatcher             *event.Dispatcher
 
 	cond               sync.Cond
 	bestBlockHeader    *types.BlockHeader // the last block on current main chain
@@ -60,14 +63,15 @@ type Chain struct {
 func NewChain(store Store, txPool *TxPool, subProtocols []SubProtocol, eventDispatcher *event.Dispatcher) (*Chain, error) {
 	knownTxs, _ := common.NewOrderedSet(maxKnownTxs)
 	c := &Chain{
-		orphanManage:    NewOrphanManage(),
-		txPool:          txPool,
-		store:           store,
-		subProtocols:    subProtocols,
-		signatureCache:  common.NewCache(maxSignatureCacheSize),
-		eventDispatcher: eventDispatcher,
-		processBlockCh:  make(chan *processBlockMsg, maxProcessBlockChSize),
-		knownTxs:        knownTxs,
+		orphanManage:                NewOrphanManage(),
+		txPool:                      txPool,
+		store:                       store,
+		subProtocols:                subProtocols,
+		signatureCache:              common.NewCache(maxSignatureCacheSize),
+		prevRoundVoteBlockHashCache: common.NewCache(maxPrevRoundVoteBlockHashCacheSize),
+		eventDispatcher:             eventDispatcher,
+		processBlockCh:              make(chan *processBlockMsg, maxProcessBlockChSize),
+		knownTxs:                    knownTxs,
 	}
 	c.cond.L = new(sync.Mutex)
 
@@ -135,6 +139,39 @@ func (c *Chain) initChainStatus() error {
 
 	genesisBlockHeader := &genesisBlock.BlockHeader
 	return c.store.SaveChainStatus(genesisBlockHeader, genesisBlockHeader, []*types.BlockHeader{genesisBlockHeader}, utxoView, consensusResults)
+}
+
+// GetPrevRoundVoteBlockHash return the previous round block hash by the given block header
+func (c *Chain) GetPrevRoundVoteBlockHash(hash *bc.Hash) (*bc.Hash, error) {
+	header, err := c.store.GetBlockHeader(hash)
+	if err != nil {
+		return nil, errNotFoundBlockNode
+	}
+
+	if header.Height%consensus.ActiveNetParams.RoundVoteBlockNums == 0 {
+		c.prevRoundVoteBlockHashCache.Add(hash, hash)
+		return hash, nil
+	}
+
+	if data, ok := c.prevRoundVoteBlockHashCache.Get(hash); ok {
+		return data.(*bc.Hash), nil
+	}
+
+	if data, ok := c.prevRoundVoteBlockHashCache.Get(header.PreviousBlockHash); ok {
+		c.prevRoundVoteBlockHashCache.Add(hash, data.(*bc.Hash))
+		return data.(*bc.Hash), nil
+	}
+
+	// loop find the prev round vote block hash
+	for header.Height%consensus.ActiveNetParams.RoundVoteBlockNums != 0 {
+		header, err = c.store.GetBlockHeader(&header.PreviousBlockHash)
+		if err != nil {
+			return nil, err
+		}
+	}
+	preRoundVoteBlockHash := header.Hash()
+	c.prevRoundVoteBlockHashCache.Add(hash, &preRoundVoteBlockHash)
+	return &preRoundVoteBlockHash, nil
 }
 
 // BestBlockHeight returns the current height of the blockchain.
