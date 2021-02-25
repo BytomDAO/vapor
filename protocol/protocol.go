@@ -141,8 +141,8 @@ func (c *Chain) initChainStatus() error {
 	return c.store.SaveChainStatus(genesisBlockHeader, genesisBlockHeader, []*types.BlockHeader{genesisBlockHeader}, utxoView, consensusResults)
 }
 
-// GetPrevRoundVoteBlockHash return the previous round block hash by the given block header
-func (c *Chain) GetPrevRoundVoteBlockHash(hash *bc.Hash) (*bc.Hash, error) {
+// getPrevRoundVoteBlockHash return the previous round block hash by the given block header
+func (c *Chain) getPrevRoundVoteBlockHash(hash *bc.Hash) (*bc.Hash, error) {
 	header, err := c.store.GetBlockHeader(hash)
 	if err != nil {
 		return nil, errNotFoundBlockNode

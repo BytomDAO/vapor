@@ -84,7 +84,7 @@ func (c *Chain) getConsensusResult(seq uint64, blockHeader *types.BlockHeader) (
 }
 
 func (c *Chain) getPrevRoundLastBlock(prevBlockHash *bc.Hash) (*types.BlockHeader, error) {
-	preRoundBlockHash, err := c.GetPrevRoundVoteBlockHash(prevBlockHash)
+	preRoundBlockHash, err := c.getPrevRoundVoteBlockHash(prevBlockHash)
 	if err != nil {
 		return nil, err
 	}
