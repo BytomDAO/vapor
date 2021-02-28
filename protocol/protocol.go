@@ -18,7 +18,7 @@ import (
 const (
 	maxProcessBlockChSize              = 1024
 	maxKnownTxs                        = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
-	maxPrevRoundVoteBlockHashCacheSize = 4086
+	maxPrevRoundVoteBlockHashCacheSize = 32768
 )
 
 // ErrNotInitSubProtocolChainStatus represent the node state of sub protocol has not been initialized
@@ -143,6 +143,10 @@ func (c *Chain) initChainStatus() error {
 
 // getPrevRoundVoteBlockHash return the previous round block hash by the given block header
 func (c *Chain) getPrevRoundVoteBlockHash(hash *bc.Hash) (*bc.Hash, error) {
+	if data, ok := c.prevRoundVoteBlockHashCache.Get(*hash); ok {
+		return data.(*bc.Hash), nil
+	}
+
 	header, err := c.store.GetBlockHeader(hash)
 	if err != nil {
 		return nil, errNotFoundBlockNode
@@ -151,10 +155,6 @@ func (c *Chain) getPrevRoundVoteBlockHash(hash *bc.Hash) (*bc.Hash, error) {
 	if header.Height%consensus.ActiveNetParams.RoundVoteBlockNums == 0 {
 		c.prevRoundVoteBlockHashCache.Add(*hash, hash)
 		return hash, nil
-	}
-
-	if data, ok := c.prevRoundVoteBlockHashCache.Get(*hash); ok {
-		return data.(*bc.Hash), nil
 	}
 
 	if data, ok := c.prevRoundVoteBlockHashCache.Get(header.PreviousBlockHash); ok {
