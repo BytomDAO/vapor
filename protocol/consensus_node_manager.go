@@ -84,18 +84,12 @@ func (c *Chain) getConsensusResult(seq uint64, blockHeader *types.BlockHeader) (
 }
 
 func (c *Chain) getPrevRoundLastBlock(prevBlockHash *bc.Hash) (*types.BlockHeader, error) {
-	blockHeader, err := c.store.GetBlockHeader(prevBlockHash)
+	preRoundBlockHash, err := c.getPrevRoundVoteBlockHash(prevBlockHash)
 	if err != nil {
-		return nil, errNotFoundBlockNode
+		return nil, err
 	}
 
-	for blockHeader.Height%consensus.ActiveNetParams.RoundVoteBlockNums != 0 {
-		blockHeader, err = c.store.GetBlockHeader(&blockHeader.PreviousBlockHash)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return blockHeader, nil
+	return c.store.GetBlockHeader(preRoundBlockHash)
 }
 
 func (c *Chain) reorganizeConsensusResult(consensusResult *state.ConsensusResult, blockHeader *types.BlockHeader) error {
