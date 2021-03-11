@@ -17,7 +17,6 @@ type OssClient struct {
 func NewOssClient(Oss *config.Oss) (*OssClient, error) {
 	// AccessKeyID和AccessKeySecret不提交到仓库
 	client, err := oss.New(Oss.Endpoint, Oss.AccessKeyID, Oss.AccessKeySecret)
-	// client, err := oss.New("oss-cn-hongkong.aliyuncs.com", "LTAI4G4eoPHBmxcU22vBgx2E", "nBK4MG3ygxoSb1lJ38aScXicSDsRJw")
 	if err != nil {
 		return nil, err
 	}
