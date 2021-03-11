@@ -9,7 +9,7 @@ import (
 	"os"
 )
 
-const LOCALDIR = "./blocks"
+const LOCALDIR = sync.LOCALDIR
 
 func mkDir() error {
 	err := os.Mkdir(LOCALDIR,0755)
@@ -18,7 +18,7 @@ func mkDir() error {
 
 
 func testInfoJson(cfg *config.Config) error {
-	vaporClient := clients.NewVaporClient()
+	vaporClient := clients.NewVaporClient(cfg.VaporURL)
 	ossClient, _ := clients.NewOssClient(&cfg.Oss)
 	ossBucket, _ := ossClient.AccessBucket("bytom-seed")
 	fileUtil := util.NewFileUtil()
@@ -30,14 +30,18 @@ func testInfoJson(cfg *config.Config) error {
 
 
 func main() {
-	//mkDir()
+	err := mkDir()
+	if err != nil {
+		fmt.Println(err)
+	}
+
 	//1823 5216
 
-
+	
 
 
 	cfg := &config.Config{}
-	err := config.LoadConfig(&cfg)
+	err = config.LoadConfig(&cfg)
 
 	if err != nil {
 		fmt.Println(err)
@@ -53,7 +57,7 @@ func main() {
 		fmt.Println(err)
 	}
 
-	vaporClient := clients.NewVaporClient()
+	vaporClient := clients.NewVaporClient(cfg.VaporURL)
 	fmt.Println(vaporClient.GetBlockCount())
 
 	/*

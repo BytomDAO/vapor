@@ -9,7 +9,8 @@ import (
 
 // Config represent root of config
 type Config struct {
-	Oss Oss `json:"oss"`
+	Oss 		Oss 	`json:"oss"`
+	VaporURL 	string 	`json:"vapor_url"`
 }
 
 // Oss logs cfg
@@ -22,7 +23,7 @@ type Oss struct {
 // LoadConfig read path file to the config object
 func LoadConfig(config interface{}) error {
 	if len(os.Args) <= 1 {
-		return errors.New("Please setup the config file path")
+		return errors.New("Please setup the config file path as Args[1]")
 	}
 	return LoadConfigByPath(os.Args[1], config)
 }

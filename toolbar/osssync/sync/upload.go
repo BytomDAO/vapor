@@ -73,7 +73,7 @@ func Upload(cfg *config.Config) error {
 	}
 
 
-	vaporClient := clients.NewVaporClient()
+	vaporClient := clients.NewVaporClient(cfg.VaporURL)
 	currBlockHeight, err := vaporClient.GetBlockCount()  // Current block height on vapor
 	if err != nil {
 		return err

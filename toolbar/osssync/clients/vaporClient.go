@@ -11,8 +11,8 @@ type VaporClient struct {
 	*apiClient
 }
 
-func NewVaporClient() *VaporClient {
-	return &VaporClient{newApiClient("http://localhost:9889", "")}
+func NewVaporClient(url string) *VaporClient {
+	return &VaporClient{newApiClient(url, "")}
 }
 
 // GetBlock return the Block
