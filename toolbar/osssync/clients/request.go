@@ -3,10 +3,11 @@ package clients
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/bytom/bytom/errors"
 	"io/ioutil"
 	"net/http"
 	"time"
+
+	"github.com/bytom/bytom/errors"
 )
 
 func Get(url string, result interface{}) error {
@@ -25,7 +26,6 @@ func Get(url string, result interface{}) error {
 	}
 	return json.Unmarshal(body, result)
 }
-
 
 // Post make a post http request to url
 func Post(url string, payload []byte, result interface{}) error {
@@ -67,19 +67,18 @@ func requestWithHeader(method, url string, header map[string]string, payload []b
 	return json.Unmarshal(body, result)
 }
 
-
-// baseClient wrap the API call for the blockcenter(Bycoin)
+// baseClient for sending request
 type baseClient struct {
 	domain string
 }
 
 type respTemplate struct {
-	Status 		string                     	`json:"status"`
-	Code      	string          			`json:"code"`
-	Msg    		string                     	`json:"msg"`
-	ErrDetail string 						`json:"error_detail"`
-	Data   		json.RawMessage            	`json:"data,omitempty"`
-	Result 		map[string]json.RawMessage 	`json:"result"`
+	Status    string                     `json:"status"`
+	Code      string                     `json:"code"`
+	Msg       string                     `json:"msg"`
+	ErrDetail string                     `json:"error_detail"`
+	Data      json.RawMessage            `json:"data,omitempty"`
+	Result    map[string]json.RawMessage `json:"result"`
 }
 
 func (b *baseClient) request(url string, reqData, respData interface{}) error {
@@ -101,8 +100,6 @@ func (b *baseClient) request(url string, reqData, respData interface{}) error {
 	if resp.Status != "success" {
 		return errors.New(resp.Msg + ". " + resp.ErrDetail)
 	}
-
-	//fmt.Println(string(resp.Data))
 
 	// v3 response format
 	if len(resp.Data) != 0 {

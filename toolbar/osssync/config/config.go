@@ -9,13 +9,13 @@ import (
 
 // Config represent root of config
 type Config struct {
-	Oss 		Oss 	`json:"oss"`
-	VaporURL 	string 	`json:"vapor_url"`
+	Oss      Oss    `json:"oss"`
+	VaporURL string `json:"vapor_url"`
 }
 
 // Oss logs cfg
 type Oss struct {
-	Endpoint 		string `json:"endpoint" mapstructure:"endpoint"`
+	Endpoint        string `json:"endpoint" mapstructure:"endpoint"`
 	AccessKeyID     string `json:"access_key_id" mapstructure:"access_key_id"`
 	AccessKeySecret string `json:"access_key_secret" mapstructure:"access_key_secret"`
 }

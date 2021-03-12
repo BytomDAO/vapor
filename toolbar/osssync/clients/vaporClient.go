@@ -44,6 +44,7 @@ func (v *VaporClient) GetBlockArrayByBlockHeight(start, length uint64) ([]*api.G
 	return data, nil
 }
 
+// GetBlockCount return the latest blockHeight on the chain
 func (v *VaporClient) GetBlockCount() (uint64, error) {
 	var blockHeight map[string]uint64
 	url := v.baseURL + fmt.Sprintf("/get-block-count")
