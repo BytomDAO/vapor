@@ -2,6 +2,7 @@ package clients
 
 import (
 	"fmt"
+
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/vapor/api"
 	"github.com/bytom/vapor/protocol/bc/types"

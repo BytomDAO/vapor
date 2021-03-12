@@ -101,11 +101,6 @@ func (b *baseClient) request(url string, reqData, respData interface{}) error {
 		return errors.New(resp.Msg + ". " + resp.ErrDetail)
 	}
 
-	// v3 response format
-	if len(resp.Data) != 0 {
-		return json.Unmarshal(resp.Data, respData)
-	}
-
 	data, ok := resp.Result["data"]
 	if !ok {
 		return errors.New("fail on find resp data")
