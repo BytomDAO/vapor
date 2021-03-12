@@ -35,11 +35,6 @@ func main() {
 		fmt.Println(err)
 	}
 
-	//1823 5216
-
-	
-
-
 	cfg := &config.Config{}
 	err = config.LoadConfig(&cfg)
 
