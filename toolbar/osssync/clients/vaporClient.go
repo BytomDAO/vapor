@@ -1,8 +1,6 @@
 package clients
 
 import (
-	"fmt"
-
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/vapor/api"
 	"github.com/bytom/vapor/protocol/bc/types"
@@ -18,7 +16,7 @@ func NewVaporClient(url string) *VaporClient {
 
 // GetBlock return the Block
 func (v *VaporClient) GetBlock(req *api.BlockReq) (*api.GetBlockResp, error) {
-	url := v.baseURL + fmt.Sprintf("/get-block")
+	url := v.baseURL + "/get-block"
 	resp := &api.GetBlockResp{}
 	return resp, errors.Wrapf(v.request(url, req, resp), "GetBlock")
 }
@@ -48,7 +46,7 @@ func (v *VaporClient) GetBlockArrayByBlockHeight(start, length uint64) ([]*api.G
 // GetBlockCount return the latest blockHeight on the chain
 func (v *VaporClient) GetBlockCount() (uint64, error) {
 	var blockHeight map[string]uint64
-	url := v.baseURL + fmt.Sprintf("/get-block-count")
+	url := v.baseURL + "/get-block-count"
 	err := errors.Wrapf(v.request(url, nil, &blockHeight), "GetBlockCount")
 	currentBlockHeight := blockHeight["block_count"]
 	return currentBlockHeight, err
@@ -56,7 +54,7 @@ func (v *VaporClient) GetBlockCount() (uint64, error) {
 
 // getRawBlock return the Block
 func (v *VaporClient) GetRawBlock(req *api.BlockReq) (*types.Block, error) {
-	url := v.baseURL + fmt.Sprintf("/get-raw-block")
+	url := v.baseURL + "/get-raw-block"
 	resp := &api.GetRawBlockResp{}
 	err := errors.Wrapf(v.request(url, req, resp), "getRawBlock")
 	return resp.RawBlock, err
