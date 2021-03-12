@@ -14,35 +14,6 @@ func NewVaporClient(url string) *VaporClient {
 	return &VaporClient{newApiClient(url, "")}
 }
 
-// GetBlock return the Block
-func (v *VaporClient) GetBlock(req *api.BlockReq) (*api.GetBlockResp, error) {
-	url := v.baseURL + "/get-block"
-	resp := &api.GetBlockResp{}
-	return resp, errors.Wrapf(v.request(url, req, resp), "GetBlock")
-}
-
-// GetBlockByBlockHeight return the Block by BlockHeight
-func (v *VaporClient) GetBlockByBlockHeight(blockHeight uint64) (*api.GetBlockResp, error) {
-	req := new(api.BlockReq)
-	req.BlockHeight = blockHeight
-	return v.GetBlock(req)
-}
-
-// GetBlockArrayByBlockHeight return the BlockArray
-func (v *VaporClient) GetBlockArrayByBlockHeight(start, length uint64) ([]*api.GetBlockResp, error) {
-	blockHeight := start
-	data := []*api.GetBlockResp{}
-	for i := uint64(0); i < length; i++ {
-		resp, err := v.GetBlockByBlockHeight(blockHeight)
-		if err != nil {
-			return nil, err
-		}
-		data = append(data, resp)
-		blockHeight++
-	}
-	return data, nil
-}
-
 // GetBlockCount return the latest blockHeight on the chain
 func (v *VaporClient) GetBlockCount() (uint64, error) {
 	var blockHeight map[string]uint64
