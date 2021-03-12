@@ -23,7 +23,7 @@ func (v *VaporClient) GetBlockCount() (uint64, error) {
 	return currentBlockHeight, err
 }
 
-// getRawBlock return the Block
+// GetRawBlock return the Block
 func (v *VaporClient) GetRawBlock(req *api.BlockReq) (*types.Block, error) {
 	url := v.baseURL + "/get-raw-block"
 	resp := &api.GetRawBlockResp{}
