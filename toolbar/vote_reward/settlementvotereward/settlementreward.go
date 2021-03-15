@@ -21,7 +21,10 @@ var (
 	errNotRewardTx    = errors.New("No reward transaction")
 )
 
-const standbyNodesRewardForConsensusCycle = 7610350076 // 400000000000000 / (365 * 24 * 60 / (500 * 1200 / 1000 / 60))
+const (
+	standbyNodesRewardForConsensusCycle = 7610350076 // 400000000000000 / (365 * 24 * 60 / (500 * 1200 / 1000 / 60))
+	standbyNodeNum                      = 32
+)
 
 type voteResult struct {
 	VoteAddress string
@@ -115,10 +118,8 @@ func (s *SettlementReward) getStandbyNodeReward(height uint64) (uint64, error) {
 	}
 
 	voteInfos = common.CalcStandByNodes(voteInfos)
-
-	totalVoteNum, xpubVoteNum := uint64(0), uint64(0)
+	xpubVoteNum := uint64(0)
 	for _, voteInfo := range voteInfos {
-		totalVoteNum += voteInfo.VoteNum
 		if s.rewardCfg.XPub == voteInfo.Vote {
 			xpubVoteNum = voteInfo.VoteNum
 		}
@@ -128,12 +129,10 @@ func (s *SettlementReward) getStandbyNodeReward(height uint64) (uint64, error) {
 		return 0, errNotStandbyNode
 	}
 
-	amount := big.NewInt(0).SetUint64(standbyNodesRewardForConsensusCycle)
+	amount := big.NewInt(0).SetUint64(standbyNodesRewardForConsensusCycle / standbyNodeNum)
 	rewardRatio := big.NewInt(0).SetUint64(s.rewardCfg.RewardRatio)
 	amount.Mul(amount, rewardRatio).Div(amount, big.NewInt(100))
-	total := big.NewInt(0).SetUint64(totalVoteNum)
-	voteNum := big.NewInt(0).SetUint64(xpubVoteNum)
-	return amount.Mul(amount, voteNum).Div(amount, total).Uint64(), nil
+	return amount.Uint64(), nil
 }
 
 func (s *SettlementReward) getCoinbaseReward(height uint64) (uint64, error) {
