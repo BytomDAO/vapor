@@ -52,8 +52,8 @@ func (b *OssBucket) PutObjByteArr(objectName string, objectValue []byte) error {
 	return b.PutObject(objectName, bytes.NewReader(objectValue), objectAcl)
 }
 
-// PutObjLocal upload Local File object
-func (b *OssBucket) PutObjLocal(objectName, localDir string) error {
+// PutObjFile upload Local File object
+func (b *OssBucket) PutObjFile(objectName, localDir string) error {
 	return b.PutObjectFromFile(objectName, localDir+"/"+objectName)
 }
 
