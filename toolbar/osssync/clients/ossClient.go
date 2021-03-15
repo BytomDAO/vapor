@@ -2,7 +2,6 @@ package clients
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"strings"
 
@@ -62,28 +61,6 @@ func (b *OssBucket) DelObj(objectName string) error {
 	return b.DeleteObject(objectName)
 }
 
-// ListObjs list all objects
-func (b *OssBucket) ListObjs() error {
-	marker := ""
-	for {
-		lsRes, err := b.ListObjects(oss.Marker(marker))
-		if err != nil {
-			return err
-		}
-
-		for _, object := range lsRes.Objects {
-			fmt.Println("File: ", object.Key)
-		}
-
-		if lsRes.IsTruncated {
-			marker = lsRes.NextMarker
-		} else {
-			break
-		}
-	}
-	return nil
-}
-
 // GetObjToData download object to stream
 func (b *OssBucket) GetObjToData(objectName string) ([]byte, error) {
 	body, err := b.GetObject(objectName)
@@ -99,8 +76,8 @@ func (b *OssBucket) GetObjToData(objectName string) ([]byte, error) {
 	return data, err
 }
 
-// GetObjToLocal download object to local
-func (b *OssBucket) GetObjToLocal(objectName, localDir string) error {
+// GetObjToFile download object to local
+func (b *OssBucket) GetObjToFile(objectName, localDir string) error {
 	return b.GetObjectToFile(objectName, localDir+"/"+objectName)
 }
 
