@@ -30,7 +30,7 @@ type OssBucket struct {
 	*oss.Bucket
 }
 
-// AccessBucket creates a new access of bucket
+// AccessBucket creates a new access to bucket
 func (c *OssClient) AccessBucket(bucketName string) (*OssBucket, error) {
 	bucket, err := c.Bucket(bucketName)
 	if err != nil {
