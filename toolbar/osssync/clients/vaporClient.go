@@ -1,45 +1,29 @@
 package clients
 
 import (
-	"github.com/bytom/bytom/errors"
-	"github.com/bytom/vapor/api"
 	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/toolbar/apinode"
 )
 
 type VaporClient struct {
-	*apiClient
+	*apinode.Node
 }
 
-func NewVaporClient(url string) *VaporClient {
-	return &VaporClient{newApiClient(url, "")}
+func NewVaporClient(hostPort string) *VaporClient {
+	return &VaporClient{apinode.NewNode(hostPort)}
 }
 
 // GetBlockCount return the latest blockHeight on the chain
 func (v *VaporClient) GetBlockCount() (uint64, error) {
-	var blockHeight map[string]uint64
-	url := v.baseURL + "/get-block-count"
-	err := errors.Wrapf(v.request(url, nil, &blockHeight), "GetBlockCount")
-	currentBlockHeight := blockHeight["block_count"]
-	return currentBlockHeight, err
+	return v.Node.GetBlockCount()
 }
 
-// GetRawBlockByHeight return the Block by BlockHeight
-func (v *VaporClient) GetRawBlockByHeight(blockHeight uint64) (*types.Block, error) {
-	req := new(api.BlockReq)
-	req.BlockHeight = blockHeight
-	// GetRawBlock
-	url := v.baseURL + "/get-raw-block"
-	resp := &api.GetRawBlockResp{}
-	err := errors.Wrapf(v.request(url, req, resp), "getRawBlock")
-	return resp.RawBlock, err
-}
-
-// GetRawBlockArrayByBlockHeight return the RawBlockArray
-func (v *VaporClient) GetRawBlockArrayByBlockHeight(start, length uint64) ([]*types.Block, error) {
+// GetBlockArray return the RawBlockArray by BlockHeight from start to start+length-1
+func (v *VaporClient) GetBlockArray(start, length uint64) ([]*types.Block, error) {
 	blockHeight := start
 	data := []*types.Block{}
 	for i := uint64(0); i < length; i++ {
-		resp, err := v.GetRawBlockByHeight(blockHeight)
+		resp, err := v.Node.GetBlockByHeight(blockHeight)
 		if err != nil {
 			return nil, err
 		}

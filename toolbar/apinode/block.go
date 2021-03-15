@@ -16,6 +16,16 @@ func (n *Node) GetBlockByHeight(height uint64) (*types.Block, error) {
 	return n.getRawBlock(&getRawBlockReq{BlockHeight: height})
 }
 
+type getBlockCountResp struct {
+	BlockCount uint64 `json:"block_count"`
+}
+
+func (n *Node) GetBlockCount() (uint64, error) {
+	url := "/get-block-count"
+	res := &getBlockCountResp{}
+	return res.BlockCount, n.request(url, nil, res)
+}
+
 type getRawBlockReq struct {
 	BlockHeight uint64 `json:"block_height"`
 	BlockHash   string `json:"block_hash"`
