@@ -11,10 +11,12 @@ import (
 	"github.com/bytom/vapor/toolbar/osssync/config"
 )
 
+// OssClient OSS Client
 type OssClient struct {
 	*oss.Client
 }
 
+// NewOssClient creates a new OssClient
 func NewOssClient(config *config.Oss) (*OssClient, error) {
 	client, err := oss.New(config.Endpoint, config.AccessKeyID, config.AccessKeySecret)
 	if err != nil {
@@ -23,10 +25,12 @@ func NewOssClient(config *config.Oss) (*OssClient, error) {
 	return &OssClient{client}, err
 }
 
+// OssBucket OSS Bucket
 type OssBucket struct {
 	*oss.Bucket
 }
 
+// AccessBucket creates a new access of bucket
 func (c *OssClient) AccessBucket(bucketName string) (*OssBucket, error) {
 	bucket, err := c.Bucket(bucketName)
 	if err != nil {
