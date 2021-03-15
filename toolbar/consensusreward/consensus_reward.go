@@ -1,8 +1,6 @@
 package consensusreward
 
 import (
-	"math/big"
-
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/vapor/consensus"
@@ -12,7 +10,10 @@ import (
 	"github.com/bytom/vapor/toolbar/consensusreward/config"
 )
 
-const standbyNodesRewardForConsensusCycle = 7610350076 // 400000000000000 / (365 * 24 * 60 / (500 * 1200 / 1000 / 60))
+const (
+	standbyNodesRewardForConsensusCycle = 7610350076 // 400000000000000 / (365 * 24 * 60 / (500 * 1200 / 1000 / 60))
+	StandbyNodeNum                      = 32
+)
 
 type StandbyNodeReward struct {
 	cfg         *config.Config
@@ -39,16 +40,8 @@ func (s *StandbyNodeReward) getStandbyNodeReward(height uint64) error {
 	}
 
 	voteInfos = common.CalcStandByNodes(voteInfos)
-	totalVoteNum := uint64(0)
 	for _, voteInfo := range voteInfos {
-		totalVoteNum += voteInfo.VoteNum
-	}
-
-	total := big.NewInt(0).SetUint64(totalVoteNum)
-	for _, voteInfo := range voteInfos {
-		amount := big.NewInt(0).SetUint64(standbyNodesRewardForConsensusCycle)
-		voteNum := big.NewInt(0).SetUint64(voteInfo.VoteNum)
-		s.xpubRewards[voteInfo.Vote] += amount.Mul(amount, voteNum).Div(amount, total).Uint64()
+		s.xpubRewards[voteInfo.Vote] += standbyNodesRewardForConsensusCycle / StandbyNodeNum
 	}
 	return nil
 }
