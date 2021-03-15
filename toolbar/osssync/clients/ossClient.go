@@ -2,10 +2,8 @@ package clients
 
 import (
 	"bytes"
-	"io/ioutil"
-	"strings"
-
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
+	"io/ioutil"
 
 	"github.com/bytom/vapor/toolbar/osssync/config"
 )
@@ -36,13 +34,6 @@ func (c *OssClient) AccessBucket(bucketName string) (*OssBucket, error) {
 		return nil, err
 	}
 	return &OssBucket{bucket}, err
-}
-
-// PutObjString upload String object
-func (b *OssBucket) PutObjString(objectName, objectValue string) error {
-	storageType := oss.ObjectStorageClass(oss.StorageStandard)
-	objectAcl := oss.ObjectACL(oss.ACLPublicRead)
-	return b.PutObject(objectName, strings.NewReader(objectValue), storageType, objectAcl)
 }
 
 // PutObjByteArr upload Byte Array object
