@@ -1,4 +1,4 @@
-package clients
+package vendor
 
 import (
 	"github.com/bytom/vapor/protocol/bc/types"
