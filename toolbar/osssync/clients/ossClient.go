@@ -37,17 +37,13 @@ func (c *OssClient) AccessBucket(bucketName string) (*OssBucket, error) {
 
 // PutObjString upload String object
 func (b *OssBucket) PutObjString(objectName, objectValue string) error {
-	// 指定存储类型为标准存储，缺省也为标准存储。
 	storageType := oss.ObjectStorageClass(oss.StorageStandard)
-	// 指定访问权限为公共读，缺省为继承bucket的权限。
 	objectAcl := oss.ObjectACL(oss.ACLPublicRead)
-	// 上传字符串。
 	return b.PutObject(objectName, strings.NewReader(objectValue), storageType, objectAcl)
 }
 
 // PutObjByteArr upload Byte Array object
 func (b *OssBucket) PutObjByteArr(objectName string, objectValue []byte) error {
-	// 指定访问权限为公共读，缺省为继承bucket的权限。
 	objectAcl := oss.ObjectACL(oss.ACLPublicRead)
 	return b.PutObject(objectName, bytes.NewReader(objectValue), objectAcl)
 }
