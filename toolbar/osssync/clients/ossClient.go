@@ -15,8 +15,8 @@ type OssClient struct {
 	*oss.Client
 }
 
-func NewOssClient(Oss *config.Oss) (*OssClient, error) {
-	client, err := oss.New(Oss.Endpoint, Oss.AccessKeyID, Oss.AccessKeySecret)
+func NewOssClient(config *config.Oss) (*OssClient, error) {
+	client, err := oss.New(config.Endpoint, config.AccessKeyID, config.AccessKeySecret)
 	if err != nil {
 		return nil, err
 	}
