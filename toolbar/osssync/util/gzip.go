@@ -6,9 +6,9 @@ import (
 )
 
 // GzipCompress compress file to Gzip
-func (f *FileUtil) GzipCompress(filename string) error {
-	filedirname := f.localDir + "/" + filename + ".json.gz"
-	fw, err := os.Create(filedirname)
+func (f *FileUtil) GzipCompress(fileName string) error {
+	filePath := f.localDir + "/" + fileName + ".json.gz"
+	fw, err := os.Create(filePath)
 	if err != nil {
 		return err
 	}
@@ -17,8 +17,8 @@ func (f *FileUtil) GzipCompress(filename string) error {
 	gw := gzip.NewWriter(fw)
 	defer gw.Close()
 
-	filedirname = f.localDir + "/" + filename + ".json"
-	fr, err := os.Open(filedirname)
+	filePath = f.localDir + "/" + fileName + ".json"
+	fr, err := os.Open(filePath)
 	if err != nil {
 		return err
 	}
@@ -45,8 +45,8 @@ func (f *FileUtil) GzipCompress(filename string) error {
 }
 
 // GzipUncompress uncompress Gzip file
-func (f *FileUtil) GzipUncompress(filename string) error {
-	filedirname := f.localDir + "/" + filename + ".json.gz"
+func (f *FileUtil) GzipUncompress(fileName string) error {
+	filedirname := f.localDir + "/" + fileName + ".json.gz"
 	fr, err := os.Open(filedirname)
 	if err != nil {
 		return err
