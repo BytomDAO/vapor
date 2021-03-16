@@ -6,15 +6,13 @@ import (
 	"os"
 )
 
-const LOCALDIR = "./blocks"
-
 type FileUtil struct {
 	localDir string
 }
 
 // NewFileUtil creates new file util
-func NewFileUtil() *FileUtil {
-	return &FileUtil{LOCALDIR}
+func NewFileUtil(localDir string) *FileUtil {
+	return &FileUtil{localDir}
 }
 
 // SaveBlockFile saves block file
