@@ -24,10 +24,12 @@ func (f *FileUtil) SaveBlockFile(filename string, data interface{}) (bool, error
 	if err != nil {
 		return false, err
 	}
+
 	err = ioutil.WriteFile(filename, saveData, 0644)
 	if err != nil {
 		return false, err
 	}
+
 	return true, nil
 }
 
@@ -39,6 +41,7 @@ func (f *FileUtil) SaveTxtFile(filename string, data string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+
 	return true, nil
 }
 
@@ -81,6 +84,7 @@ func IfNoFileToCreate(fileName string) (file *os.File) {
 		if err != nil {
 			return
 		}
+
 		defer f.Close()
 	}
 	return f

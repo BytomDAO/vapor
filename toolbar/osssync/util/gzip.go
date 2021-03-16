@@ -14,6 +14,7 @@ func (f *FileUtil) GzipCompress(fileName string) error {
 	if err != nil {
 		return err
 	}
+
 	defer fw.Close()
 
 	gw := gzip.NewWriter(fw)
@@ -24,6 +25,7 @@ func (f *FileUtil) GzipCompress(fileName string) error {
 	if err != nil {
 		return err
 	}
+
 	defer fr.Close()
 
 	fi, err := fr.Stat()
@@ -43,6 +45,7 @@ func (f *FileUtil) GzipCompress(fileName string) error {
 	if err != nil {
 		return err
 	}
+
 	return err
 }
 
@@ -53,12 +56,14 @@ func (f *FileUtil) GzipUncompress(fileName string) error {
 	if err != nil {
 		return err
 	}
+
 	defer fr.Close()
 
 	gr, err := gzip.NewReader(fr)
 	if err != nil {
 		return err
 	}
+
 	defer gr.Close()
 
 	buf := make([]byte, READ_SIZE)
@@ -69,9 +74,11 @@ func (f *FileUtil) GzipUncompress(fileName string) error {
 	if err != nil {
 		return err
 	}
+
 	_, err = fw.Write(buf[:n])
 	if err != nil {
 		return err
 	}
+
 	return err
 }
