@@ -31,18 +31,6 @@ func (f *FileUtil) SaveBlockFile(filename string, data interface{}) (bool, error
 	return true, nil
 }
 
-// SaveTxtFile saves text file
-func (f *FileUtil) SaveTxtFile(filename string, data string) (bool, error) {
-	filename = f.localDir + "/" + filename + ".txt"
-	saveData := []byte(data)
-	err := ioutil.WriteFile(filename, saveData, 0644)
-	if err != nil {
-		return false, err
-	}
-
-	return true, nil
-}
-
 // GetJson read json file
 func (f *FileUtil) GetJson(filename string) (json.RawMessage, error) {
 	filename = f.localDir + "/" + filename + ".json"
