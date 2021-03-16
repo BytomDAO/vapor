@@ -6,11 +6,11 @@ import (
 	"os"
 )
 
+const LOCALDIR = "./blocks"
+
 type FileUtil struct {
 	localDir string
 }
-
-const LOCALDIR = "./blocks"
 
 // NewFileUtil creates new file util
 func NewFileUtil() *FileUtil {
