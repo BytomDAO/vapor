@@ -9,7 +9,7 @@ const READ_SIZE = 1024 * 1024 * 500
 
 // GzipCompress compress file to Gzip
 func (f *FileUtil) GzipCompress(fileName string) error {
-	filePath := f.localDir + "/" + fileName + ".json.gz"
+	filePath := f.LocalDir + "/" + fileName + ".json.gz"
 	fw, err := os.Create(filePath)
 	if err != nil {
 		return err
@@ -20,7 +20,7 @@ func (f *FileUtil) GzipCompress(fileName string) error {
 	gw := gzip.NewWriter(fw)
 	defer gw.Close()
 
-	filePath = f.localDir + "/" + fileName + ".json"
+	filePath = f.LocalDir + "/" + fileName + ".json"
 	fr, err := os.Open(filePath)
 	if err != nil {
 		return err
@@ -51,7 +51,7 @@ func (f *FileUtil) GzipCompress(fileName string) error {
 
 // GzipUncompress uncompress Gzip file
 func (f *FileUtil) GzipUncompress(fileName string) error {
-	filedirname := f.localDir + "/" + fileName + ".json.gz"
+	filedirname := f.LocalDir + "/" + fileName + ".json.gz"
 	fr, err := os.Open(filedirname)
 	if err != nil {
 		return err
@@ -69,7 +69,7 @@ func (f *FileUtil) GzipUncompress(fileName string) error {
 	buf := make([]byte, READ_SIZE)
 	n, err := gr.Read(buf)
 
-	filedirname = f.localDir + "/" + gr.Header.Name
+	filedirname = f.LocalDir + "/" + gr.Header.Name
 	fw, err := os.Create(filedirname)
 	if err != nil {
 		return err
