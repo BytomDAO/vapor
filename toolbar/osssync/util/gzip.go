@@ -5,6 +5,8 @@ import (
 	"os"
 )
 
+const READ_SIZE = 1024 * 1024 * 500
+
 // GzipCompress compress file to Gzip
 func (f *FileUtil) GzipCompress(fileName string) error {
 	filePath := f.localDir + "/" + fileName + ".json.gz"
@@ -59,7 +61,7 @@ func (f *FileUtil) GzipUncompress(fileName string) error {
 	}
 	defer gr.Close()
 
-	buf := make([]byte, 1024*1024*500)
+	buf := make([]byte, READ_SIZE)
 	n, err := gr.Read(buf)
 
 	filedirname = f.localDir + "/" + gr.Header.Name
