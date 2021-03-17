@@ -35,6 +35,7 @@ func (b *BlockKeeper) Upload() error {
 	if err != nil {
 		return err
 	}
+
 	latestUp := infoJson.LatestBlockHeight // Latest uploaded block height
 	intervals := infoJson.Interval         // Interval array
 
@@ -48,7 +49,7 @@ func (b *BlockKeeper) Upload() error {
 	for pos2 = pos1; latestUp < intervals[pos2].StartBlockHeight; pos2-- {
 	}
 
-	// Upload
+	// Upload Whole Interval
 	for latestUp+1 < intervals[pos1].StartBlockHeight {
 		if latestUp == 0 {
 			err = b.UploadFiles(latestUp, intervals[pos2].EndBlockHeight, intervals[pos2].GzSize)
@@ -58,10 +59,12 @@ func (b *BlockKeeper) Upload() error {
 		if err != nil {
 			return err
 		}
+
 		latestUp = intervals[pos2].EndBlockHeight
 		pos2++
 	}
 
+	// Upload the last Interval
 	newLatestUp := currBlockHeight - ((currBlockHeight - intervals[pos1].StartBlockHeight) % intervals[pos1].GzSize) - 1
 	if latestUp < newLatestUp {
 		if latestUp == 0 {
@@ -116,7 +119,7 @@ func (b *BlockKeeper) UploadFiles(start, end, size uint64) error {
 			return err
 		}
 
-		err = b.FileUtil.RemoveLocal(filename + ".json.gz")
+		err = b.FileUtil.RemoveLocal(filenameGzip)
 		if err != nil {
 			return err
 		}
