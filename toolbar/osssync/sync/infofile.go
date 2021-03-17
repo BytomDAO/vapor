@@ -86,7 +86,7 @@ func (b *BlockKeeper) AddInterval(end, gzSize uint64) error {
 
 		// Add Interval
 		prevInvl := info.Interval[len(info.Interval)-1]
-		newInvl := NewInterval(prevInvl.EndBlockHeight + 1, end, gzSize)
+		newInvl := NewInterval(prevInvl.EndBlockHeight+1, end, gzSize)
 		info.Interval = append(info.Interval, newInvl)
 	} else {
 		info = NewInfo(end, gzSize)
