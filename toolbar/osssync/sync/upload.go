@@ -7,11 +7,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const HOUR = 3600 * 1000
+const MINUTE = 60 * 1000
 
 // RunSyncUp run synchronize upload to OSS
 func (b *BlockKeeper) RunSyncUp() {
-	ticker := time.NewTicker(time.Duration(HOUR) * time.Millisecond)
+	ticker := time.NewTicker(time.Duration(MINUTE) * time.Millisecond)
 	defer ticker.Stop()
 
 	for ; true; <-ticker.C {
@@ -20,56 +20,6 @@ func (b *BlockKeeper) RunSyncUp() {
 			log.WithField("error", err).Errorln("blockKeeper fail on process block")
 		}
 	}
-}
-
-// UploadFiles get block from vapor and upload files to OSS
-func (b *BlockKeeper) UploadFiles(start, end, size uint64) error {
-	for {
-		if start > end {
-			break
-		}
-		blocks, err := b.GetBlockArray(start, size)
-		if err != nil {
-			return err
-		}
-
-		filename := strconv.FormatUint(start, 10)
-		filenameJson := filename + ".json"
-		filenameGzip := filenameJson + ".gz"
-
-		_, err = b.FileUtil.SaveBlockFile(filename, blocks)
-		if err != nil {
-			return err
-		}
-
-		err = b.FileUtil.GzipCompress(filename)
-		if err != nil {
-			return err
-		}
-
-		err = b.OssBucket.PutObjectFromFile(filenameGzip, b.FileUtil.LocalDir+"/"+filenameGzip)
-		if err != nil {
-			return err
-		}
-
-		err = b.SetLatestBlockHeight(start + size - 1)
-		if err != nil {
-			return err
-		}
-
-		err = b.FileUtil.RemoveLocal(filenameJson)
-		if err != nil {
-			return err
-		}
-
-		err = b.FileUtil.RemoveLocal(filename + ".json.gz")
-		if err != nil {
-			return err
-		}
-
-		start += size
-	}
-	return nil
 }
 
 // Upload upload blocks
@@ -124,4 +74,54 @@ func (b *BlockKeeper) Upload() error {
 		}
 	}
 	return err
+}
+
+// UploadFiles get block from vapor and upload files to OSS
+func (b *BlockKeeper) UploadFiles(start, end, size uint64) error {
+	for {
+		if start > end {
+			break
+		}
+		blocks, err := b.GetBlockArray(start, size)
+		if err != nil {
+			return err
+		}
+
+		filename := strconv.FormatUint(start, 10)
+		filenameJson := filename + ".json"
+		filenameGzip := filenameJson + ".gz"
+
+		_, err = b.FileUtil.SaveBlockFile(filename, blocks)
+		if err != nil {
+			return err
+		}
+
+		err = b.FileUtil.GzipCompress(filename)
+		if err != nil {
+			return err
+		}
+
+		err = b.OssBucket.PutObjectFromFile(filenameGzip, b.FileUtil.LocalDir+"/"+filenameGzip)
+		if err != nil {
+			return err
+		}
+
+		err = b.SetLatestBlockHeight(start + size - 1)
+		if err != nil {
+			return err
+		}
+
+		err = b.FileUtil.RemoveLocal(filenameJson)
+		if err != nil {
+			return err
+		}
+
+		err = b.FileUtil.RemoveLocal(filename + ".json.gz")
+		if err != nil {
+			return err
+		}
+
+		start += size
+	}
+	return nil
 }
