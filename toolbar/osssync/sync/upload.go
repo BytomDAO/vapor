@@ -1,9 +1,10 @@
 package sync
 
 import (
-	log "github.com/sirupsen/logrus"
 	"strconv"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const HOUR = 3600 * 1000
