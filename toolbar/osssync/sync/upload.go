@@ -108,13 +108,3 @@ func (b *BlockKeeper) Upload() error {
 	}
 	return err
 }
-
-// CreateInfoJson creates new info.json on OSS
-func (b *BlockKeeper) CreateInfoJson() error {
-	err := b.AddInterval(59999999, 150000)
-	if err != nil {
-		return err
-	}
-
-	return err
-}
