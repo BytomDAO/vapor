@@ -22,7 +22,7 @@ func (b *BlockKeeper) RunSyncUp() {
 	}
 }
 
-// Upload upload blocks
+// Upload find and upload blocks
 func (b *BlockKeeper) Upload() error {
 	b.FileUtil.BlockDirInitial()
 
