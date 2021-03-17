@@ -6,10 +6,6 @@ import (
 	"os"
 )
 
-type FileUtil struct {
-	localDir string
-}
-
 // NewFileUtil creates new file util
 func NewFileUtil(localDir string) *FileUtil {
 	return &FileUtil{localDir}
@@ -17,7 +13,7 @@ func NewFileUtil(localDir string) *FileUtil {
 
 // SaveBlockFile saves block file
 func (f *FileUtil) SaveBlockFile(filename string, data interface{}) (bool, error) {
-	filename = f.localDir + "/" + filename + ".json"
+	filename = f.LocalDir + "/" + filename + ".json"
 	saveData, err := json.Marshal(data)
 	if err != nil {
 		return false, err
@@ -33,13 +29,13 @@ func (f *FileUtil) SaveBlockFile(filename string, data interface{}) (bool, error
 
 // GetJson read json file
 func (f *FileUtil) GetJson(filename string) (json.RawMessage, error) {
-	filename = f.localDir + "/" + filename + ".json"
+	filename = f.LocalDir + "/" + filename + ".json"
 	return ioutil.ReadFile(filename)
 }
 
 // RemoveLocal deletes file
 func (f *FileUtil) RemoveLocal(filename string) error {
-	return os.Remove(f.localDir + "/" + filename)
+	return os.Remove(f.LocalDir + "/" + filename)
 }
 
 // Json2Struct transform json to struct
@@ -50,28 +46,4 @@ func Json2Struct(data json.RawMessage, resp interface{}) error {
 // Struct2Json transform struct to json
 func Struct2Json(theStruct interface{}) (json.RawMessage, error) {
 	return json.Marshal(theStruct)
-}
-
-// IsExists if file or directory exist
-func IsExists(path string) bool {
-	_, err := os.Stat(path)
-	if err != nil && !os.IsExist(err) {
-		return false
-	}
-	return true
-}
-
-// IfNoFileToCreate if the file is not exist, create the file
-func IfNoFileToCreate(fileName string) (file *os.File) {
-	var f *os.File
-	var err error
-	if !IsExists(fileName) {
-		f, err = os.Create(fileName)
-		if err != nil {
-			return
-		}
-
-		defer f.Close()
-	}
-	return f
 }
