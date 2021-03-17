@@ -1,7 +1,6 @@
 package sync
 
 import (
-	"fmt"
 	"strconv"
 )
 
@@ -75,7 +74,6 @@ func (b *BlockKeeper) Upload() error {
 	}
 	// Current Block Height is out of the range given by info.json
 	if currBlockHeight > intervals[pos1].EndBlockHeight {
-		fmt.Println("Current Block Height is out of the range given by info.json")
 		currBlockHeight = intervals[pos1].EndBlockHeight // Upload the part which contained by info.json
 	}
 	for pos2 = pos1; latestUp < intervals[pos2].StartBlockHeight; pos2-- {
