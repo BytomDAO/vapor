@@ -56,6 +56,7 @@ func (b *BlockKeeper) UploadFiles(start, end, size uint64) error {
 
 // Upload upload blocks
 func (b *BlockKeeper) Upload() error {
+	b.FileUtil.BlockDirInitial()
 
 	currBlockHeight, err := b.Node.GetBlockCount() // Current block height on vapor
 	if err != nil {
