@@ -2,7 +2,10 @@ package sync
 
 import "github.com/bytom/vapor/toolbar/osssync/util"
 
-// Interval is a struct for Interval list in info.json
+// Interval determines the number of blocks in a Gzip file in the Interval of blockHeight
+// StartBlockHeight is the start of the Interval
+// EndBlockHeight: the end of the Interval
+// GzSize is the number of blocks store in a Gzip file
 type Interval struct {
 	StartBlockHeight uint64
 	EndBlockHeight   uint64
@@ -10,11 +13,11 @@ type Interval struct {
 }
 
 // NewInterval creates a new Interval from info.json
-func NewInterval(start, intervalEnd, fileLength uint64) *Interval {
+func NewInterval(start, end, gzSize uint64) *Interval {
 	return &Interval{
 		StartBlockHeight: start,
-		EndBlockHeight:   intervalEnd,
-		GzSize:           fileLength,
+		EndBlockHeight:   end,
+		GzSize:           gzSize,
 	}
 }
 
@@ -25,8 +28,8 @@ type Info struct {
 }
 
 // NewInfo creates a new Info for info.json
-func NewInfo(intervalEnd, fileLength uint64) *Info {
-	newInvl := NewInterval(0, intervalEnd, fileLength)
+func NewInfo(end, gzSize uint64) *Info {
+	newInvl := NewInterval(0, end, gzSize)
 	var arr []*Interval
 	arr = append(arr, newInvl)
 	return &Info{0, arr}
@@ -55,7 +58,7 @@ func (b *BlockKeeper) PutInfoJson(infoData *Info) error {
 	return b.PutObjByteArr("info.json", jsonData)
 }
 
-// SetLatestBlockHeight set new latest blockHeight
+// SetLatestBlockHeight set new latest blockHeight on OSS
 func (b *BlockKeeper) SetLatestBlockHeight(newLatestBlockHeight uint64) error {
 	info, err := b.GetInfoJson()
 	if err != nil {
@@ -67,16 +70,14 @@ func (b *BlockKeeper) SetLatestBlockHeight(newLatestBlockHeight uint64) error {
 }
 
 // AddInterval adds an interval to the end of info.json
-func (b *BlockKeeper) AddInterval(intervalEnd, fileLength uint64) error {
-	isJsonExisr, err := b.OssBucket.IsObjectExist("info.json")
+func (b *BlockKeeper) AddInterval(end, gzSize uint64) error {
+	isJsonExist, err := b.OssBucket.IsObjectExist("info.json")
 	if err != nil {
 		return err
 	}
 
 	var info *Info
-	var newStart uint64
-
-	if isJsonExisr {
+	if isJsonExist {
 		// Download info.json
 		info, err = b.GetInfoJson()
 		if err != nil {
@@ -84,14 +85,11 @@ func (b *BlockKeeper) AddInterval(intervalEnd, fileLength uint64) error {
 		}
 
 		// Add Interval
-		lastInvl := info.Interval[len(info.Interval)-1]
-		newStart = lastInvl.EndBlockHeight + 1
-		newInvl := NewInterval(newStart, intervalEnd, fileLength)
+		prevInvl := info.Interval[len(info.Interval)-1]
+		newInvl := NewInterval(prevInvl.EndBlockHeight + 1, end, gzSize)
 		info.Interval = append(info.Interval, newInvl)
 	} else {
-		info = NewInfo(intervalEnd, fileLength)
-		newStart = 0
+		info = NewInfo(end, gzSize)
 	}
-
 	return b.PutInfoJson(info)
 }

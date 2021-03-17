@@ -2,6 +2,7 @@ package sync
 
 import (
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
+
 	"github.com/bytom/vapor/toolbar/apinode"
 	"github.com/bytom/vapor/toolbar/osssync/config"
 	"github.com/bytom/vapor/toolbar/osssync/util"
