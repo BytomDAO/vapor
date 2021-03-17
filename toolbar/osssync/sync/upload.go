@@ -1,8 +1,25 @@
 package sync
 
 import (
+	log "github.com/sirupsen/logrus"
 	"strconv"
+	"time"
 )
+
+const HOUR = 3600 * 1000
+
+// RunSyncUp run synchronize upload to OSS
+func (b *BlockKeeper) RunSyncUp() {
+	ticker := time.NewTicker(time.Duration(HOUR) * time.Millisecond)
+	defer ticker.Stop()
+
+	for ; true; <-ticker.C {
+		err := b.Upload()
+		if err != nil {
+			log.WithField("error", err).Errorln("blockKeeper fail on process block")
+		}
+	}
+}
 
 // UploadFiles get block from vapor and upload files to OSS
 func (b *BlockKeeper) UploadFiles(start, end, size uint64) error {
