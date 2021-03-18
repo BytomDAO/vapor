@@ -6,16 +6,6 @@ import (
 	"crypto"
 )
 
-// var currentCrypt XXXXX
-
-// var (
-// 	currentCrypto map[string]XXXX
-// )
-
-// func init() {
-// 	currentCrypt = currentCrypto[config。？？？？？]
-// }
-
 type XPrvKeyer interface {
 	// XPub derives an extended public key from a given xprv.
 	XPub() XPubKeyer
