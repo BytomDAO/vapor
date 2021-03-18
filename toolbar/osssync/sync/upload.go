@@ -7,11 +7,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const MINUTE = 60 * 1000
-
 // RunSyncUp run synchronize upload to OSS
 func (b *BlockKeeper) RunSyncUp() {
-	ticker := time.NewTicker(time.Duration(MINUTE) * time.Millisecond)
+	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 
 	for ; true; <-ticker.C {
