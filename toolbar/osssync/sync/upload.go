@@ -22,11 +22,8 @@ func (b *BlockKeeper) RunSyncUp() {
 
 // Upload find and upload blocks
 func (b *BlockKeeper) Upload() error {
-	err := b.FileUtil.BlockDirInitial()
-	if err != nil {
-		return err
-	}
-
+	b.FileUtil.BlockDirInitial()
+	
 	currBlockHeight, err := b.Node.GetBlockCount() // Current block height on vapor
 	if err != nil {
 		return err
