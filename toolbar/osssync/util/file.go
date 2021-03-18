@@ -40,7 +40,7 @@ func PathExists(path string) (bool, error) {
 	return false, err
 }
 
-// BlockDirInitial initializes the block directory
+// BlockDirInitial initializes the blocks directory
 func (f *FileUtil) BlockDirInitial() error {
 	ifPathExist, err := PathExists(f.LocalDir)
 	if err != nil {
