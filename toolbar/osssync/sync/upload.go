@@ -27,13 +27,13 @@ func NewUploadKeeper() (*UploadKeeper, error) {
 
 	node := apinode.NewNode(cfg.VaporURL)
 
-	keeper, err := NewSync()
+	sync, err := NewSync()
 	if err != nil {
 		return nil, err
 	}
 
 	return &UploadKeeper{
-		Sync: keeper,
+		Sync: sync,
 		Node:   node,
 	}, nil
 }
