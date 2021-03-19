@@ -13,7 +13,7 @@ import (
 
 // UploadKeeper the struct for upload
 type UploadKeeper struct {
-	Keeper *Sync
+	Sync *Sync
 	Node   *apinode.Node
 }
 
@@ -33,7 +33,7 @@ func NewUploadKeeper() (*UploadKeeper, error) {
 	}
 
 	return &UploadKeeper{
-		Keeper: keeper,
+		Sync: keeper,
 		Node:   node,
 	}, nil
 }
@@ -53,7 +53,7 @@ func (u *UploadKeeper) RunSyncUp() {
 
 // Upload find and upload blocks
 func (u *UploadKeeper) Upload() error {
-	err := u.Keeper.FileUtil.BlockDirInitial()
+	err := u.Sync.FileUtil.BlockDirInitial()
 	if err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ func (u *UploadKeeper) Upload() error {
 		return err
 	}
 
-	infoJson, err := u.Keeper.GetInfoJson()
+	infoJson, err := u.Sync.GetInfoJson()
 	if err != nil {
 		return err
 	}
@@ -126,32 +126,32 @@ func (u *UploadKeeper) UploadFiles(start, end, size uint64) error {
 		filenameJson := filename + ".json"
 		filenameGzip := filenameJson + ".gz"
 
-		_, err = u.Keeper.FileUtil.SaveBlockFile(filename, blocks)
+		_, err = u.Sync.FileUtil.SaveBlockFile(filename, blocks)
 		if err != nil {
 			return err
 		}
 
-		err = u.Keeper.FileUtil.GzipCompress(filename)
+		err = u.Sync.FileUtil.GzipCompress(filename)
 		if err != nil {
 			return err
 		}
 
-		err = u.Keeper.OssBucket.PutObjectFromFile(filenameGzip, u.Keeper.FileUtil.LocalDir+"/"+filenameGzip)
+		err = u.Sync.OssBucket.PutObjectFromFile(filenameGzip, u.Sync.FileUtil.LocalDir+"/"+filenameGzip)
 		if err != nil {
 			return err
 		}
 
-		err = u.Keeper.SetLatestBlockHeight(start + size - 1)
+		err = u.Sync.SetLatestBlockHeight(start + size - 1)
 		if err != nil {
 			return err
 		}
 
-		err = u.Keeper.FileUtil.RemoveLocal(filenameJson)
+		err = u.Sync.FileUtil.RemoveLocal(filenameJson)
 		if err != nil {
 			return err
 		}
 
-		err = u.Keeper.FileUtil.RemoveLocal(filenameGzip)
+		err = u.Sync.FileUtil.RemoveLocal(filenameGzip)
 		if err != nil {
 			return err
 		}
