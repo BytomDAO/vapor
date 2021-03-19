@@ -40,6 +40,11 @@ func PathExists(path string) (bool, error) {
 	return false, err
 }
 
+// RemoveLocal deletes file
+func (f *FileUtil) RemoveLocal(filename string) error {
+	return os.Remove(f.LocalDir + "/" + filename)
+}
+
 // BlockDirInitial initializes the blocks directory
 func (f *FileUtil) BlockDirInitial() error {
 	ifPathExist, err := PathExists(f.LocalDir)

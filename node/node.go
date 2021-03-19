@@ -326,3 +326,8 @@ func (n *Node) RunForever() {
 		n.Stop()
 	})
 }
+
+// GetChain return the chain
+func (n *Node) GetChain() *protocol.Chain {
+	return n.chain
+}

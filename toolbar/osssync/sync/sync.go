@@ -1,22 +1,42 @@
 package sync
 
 import (
-	"github.com/bytom/vapor/protocol"
-	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/aliyun/aliyun-oss-go-sdk/oss"
+
+	"github.com/bytom/vapor/toolbar/osssync/config"
+	"github.com/bytom/vapor/toolbar/osssync/util"
 )
 
-// GetLatestDownloadBlockHeight returns the current height of the node wait for download.
-func GetLatestDownloadBlockHeight(c *protocol.Chain) uint64 {
-	return c.BestBlockHeight()
+// Sync the struct of the Sync
+type Sync struct {
+	OssClient *oss.Client
+	OssBucket *oss.Bucket
+	FileUtil  *util.FileUtil
 }
 
-// Sync
-func Sync(c *protocol.Chain, blocks []*types.Block) error {
-	for i := 0; i < len(blocks); i++ {
-		_, err := c.ProcessBlock(blocks[i])
-		if err != nil {
-			return err
-		}
+// NewSync return one new instance of Sync
+func NewSync() (*Sync, error) {
+	cfg := &config.Config{}
+	err := config.LoadConfig(&cfg)
+	if err != nil {
+		return nil, err
 	}
-	return nil
+
+	ossClient, err := oss.New(cfg.Oss.Endpoint, cfg.Oss.AccessKeyID, cfg.Oss.AccessKeySecret)
+	if err != nil {
+		return nil, err
+	}
+
+	ossBucket, err := ossClient.Bucket("bytom-seed")
+	if err != nil {
+		return nil, err
+	}
+
+	fileUtil := util.NewFileUtil("./blocks")
+
+	return &Sync{
+		OssClient: ossClient,
+		OssBucket: ossBucket,
+		FileUtil:  fileUtil,
+	}, nil
 }
