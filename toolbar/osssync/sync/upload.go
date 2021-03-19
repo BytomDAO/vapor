@@ -1,4 +1,4 @@
-package upload
+package sync
 
 import (
 	"strconv"
@@ -6,14 +6,14 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/vapor/protocol/bc/types"
 	"github.com/bytom/vapor/toolbar/apinode"
 	"github.com/bytom/vapor/toolbar/osssync/config"
-	"github.com/bytom/vapor/toolbar/osssync/sync"
 )
 
 // UploadKeeper the struct for upload
 type UploadKeeper struct {
-	Keeper *sync.Sync
+	Keeper *Sync
 	Node   *apinode.Node
 }
 
@@ -27,7 +27,7 @@ func NewUploadKeeper() (*UploadKeeper, error) {
 
 	node := apinode.NewNode(cfg.VaporURL)
 
-	keeper, err := sync.NewSync()
+	keeper, err := NewSync()
 	if err != nil {
 		return nil, err
 	}
@@ -159,4 +159,20 @@ func (u *UploadKeeper) UploadFiles(start, end, size uint64) error {
 		start += size
 	}
 	return nil
+}
+
+// GetBlockArray return the RawBlockArray by BlockHeight from start to start+length-1
+func (u *UploadKeeper) GetBlockArray(start, length uint64) ([]*types.Block, error) {
+	blockHeight := start
+	data := []*types.Block{}
+	for i := uint64(0); i < length; i++ {
+		resp, err := u.Node.GetBlockByHeight(blockHeight)
+		if err != nil {
+			return nil, err
+		}
+
+		data = append(data, resp)
+		blockHeight++
+	}
+	return data, nil
 }
