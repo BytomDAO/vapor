@@ -5,15 +5,46 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/bytom/vapor/protocol/bc/types"
+	"github.com/bytom/vapor/toolbar/apinode"
+	"github.com/bytom/vapor/toolbar/osssync/config"
 )
 
+// UploadKeeper the struct for upload
+type UploadKeeper struct {
+	Sync *Sync
+	Node   *apinode.Node
+}
+
+// NewUploadKeeper return one new instance of UploadKeeper
+func NewUploadKeeper() (*UploadKeeper, error) {
+	cfg := &config.Config{}
+	err := config.LoadConfig(&cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	node := apinode.NewNode(cfg.VaporURL)
+
+	sync, err := NewSync()
+	if err != nil {
+		return nil, err
+	}
+
+	return &UploadKeeper{
+		Sync: sync,
+		Node:   node,
+	}, nil
+}
+
 // RunSyncUp run synchronize upload to OSS
-func (b *BlockKeeper) RunSyncUp() {
+func (u *UploadKeeper) RunSyncUp() {
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 
 	for ; true; <-ticker.C {
-		err := b.Upload()
+		err := u.Upload()
 		if err != nil {
 			log.WithField("error", err).Errorln("blockKeeper fail on process block")
 		}
@@ -21,18 +52,18 @@ func (b *BlockKeeper) RunSyncUp() {
 }
 
 // Upload find and upload blocks
-func (b *BlockKeeper) Upload() error {
-	err := b.FileUtil.BlockDirInitial()
+func (u *UploadKeeper) Upload() error {
+	err := u.Sync.FileUtil.BlockDirInitial()
 	if err != nil {
 		return err
 	}
 
-	currBlockHeight, err := b.Node.GetBlockCount() // Current block height on vapor
+	currBlockHeight, err := u.Node.GetBlockCount() // Current block height on vapor
 	if err != nil {
 		return err
 	}
 
-	infoJson, err := b.GetInfoJson()
+	infoJson, err := u.Sync.GetInfoJson()
 	if err != nil {
 		return err
 	}
@@ -53,9 +84,9 @@ func (b *BlockKeeper) Upload() error {
 	// Upload Whole Interval
 	for latestUp+1 < intervals[pos1].StartBlockHeight {
 		if latestUp == 0 {
-			err = b.UploadFiles(latestUp, intervals[pos2].EndBlockHeight, intervals[pos2].GzSize)
+			err = u.UploadFiles(latestUp, intervals[pos2].EndBlockHeight, intervals[pos2].GzSize)
 		} else {
-			err = b.UploadFiles(latestUp+1, intervals[pos2].EndBlockHeight, intervals[pos2].GzSize)
+			err = u.UploadFiles(latestUp+1, intervals[pos2].EndBlockHeight, intervals[pos2].GzSize)
 		}
 		if err != nil {
 			return err
@@ -69,9 +100,9 @@ func (b *BlockKeeper) Upload() error {
 	newLatestUp := currBlockHeight - ((currBlockHeight - intervals[pos1].StartBlockHeight) % intervals[pos1].GzSize) - 1
 	if latestUp < newLatestUp {
 		if latestUp == 0 {
-			err = b.UploadFiles(latestUp, newLatestUp, intervals[pos1].GzSize)
+			err = u.UploadFiles(latestUp, newLatestUp, intervals[pos1].GzSize)
 		} else {
-			err = b.UploadFiles(latestUp+1, newLatestUp, intervals[pos1].GzSize)
+			err = u.UploadFiles(latestUp+1, newLatestUp, intervals[pos1].GzSize)
 		}
 		if err != nil {
 			return err
@@ -81,12 +112,12 @@ func (b *BlockKeeper) Upload() error {
 }
 
 // UploadFiles get block from vapor and upload files to OSS
-func (b *BlockKeeper) UploadFiles(start, end, size uint64) error {
+func (u *UploadKeeper) UploadFiles(start, end, size uint64) error {
 	for {
 		if start > end {
 			break
 		}
-		blocks, err := b.GetBlockArray(start, size)
+		blocks, err := u.GetBlockArray(start, size)
 		if err != nil {
 			return err
 		}
@@ -95,32 +126,32 @@ func (b *BlockKeeper) UploadFiles(start, end, size uint64) error {
 		filenameJson := filename + ".json"
 		filenameGzip := filenameJson + ".gz"
 
-		_, err = b.FileUtil.SaveBlockFile(filename, blocks)
+		_, err = u.Sync.FileUtil.SaveBlockFile(filename, blocks)
 		if err != nil {
 			return err
 		}
 
-		err = b.FileUtil.GzipCompress(filename)
+		err = u.Sync.FileUtil.GzipCompress(filename)
 		if err != nil {
 			return err
 		}
 
-		err = b.OssBucket.PutObjectFromFile(filenameGzip, b.FileUtil.LocalDir+"/"+filenameGzip)
+		err = u.Sync.OssBucket.PutObjectFromFile(filenameGzip, u.Sync.FileUtil.LocalDir+"/"+filenameGzip)
 		if err != nil {
 			return err
 		}
 
-		err = b.SetLatestBlockHeight(start + size - 1)
+		err = u.Sync.SetLatestBlockHeight(start + size - 1)
 		if err != nil {
 			return err
 		}
 
-		err = b.FileUtil.RemoveLocal(filenameJson)
+		err = u.Sync.FileUtil.RemoveLocal(filenameJson)
 		if err != nil {
 			return err
 		}
 
-		err = b.FileUtil.RemoveLocal(filenameGzip)
+		err = u.Sync.FileUtil.RemoveLocal(filenameGzip)
 		if err != nil {
 			return err
 		}
@@ -128,4 +159,20 @@ func (b *BlockKeeper) UploadFiles(start, end, size uint64) error {
 		start += size
 	}
 	return nil
+}
+
+// GetBlockArray return the RawBlockArray by BlockHeight from start to start+length-1
+func (u *UploadKeeper) GetBlockArray(start, length uint64) ([]*types.Block, error) {
+	blockHeight := start
+	data := []*types.Block{}
+	for i := uint64(0); i < length; i++ {
+		resp, err := u.Node.GetBlockByHeight(blockHeight)
+		if err != nil {
+			return nil, err
+		}
+
+		data = append(data, resp)
+		blockHeight++
+	}
+	return data, nil
 }

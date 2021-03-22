@@ -36,8 +36,8 @@ func NewInfo(end, gzSize uint64) *Info {
 }
 
 // GetInfoJson Download info.json
-func (b *BlockKeeper) GetInfoJson() (*Info, error) {
-	data, err := b.GetObjToData("info.json")
+func (s *Sync) GetInfoJson() (*Info, error) {
+	data, err := s.GetObjToData("info.json")
 	if err != nil {
 		return nil, err
 	}
@@ -48,30 +48,30 @@ func (b *BlockKeeper) GetInfoJson() (*Info, error) {
 }
 
 // Upload info.json
-func (b *BlockKeeper) PutInfoJson(infoData *Info) error {
+func (s *Sync) PutInfoJson(infoData *Info) error {
 	jsonData, err := util.Struct2Json(infoData)
 	if err != nil {
 		return err
 	}
 
 	// Upload
-	return b.PutObjByteArr("info.json", jsonData)
+	return s.PutObjByteArr("info.json", jsonData)
 }
 
 // SetLatestBlockHeight set new latest blockHeight on OSS
-func (b *BlockKeeper) SetLatestBlockHeight(newLatestBlockHeight uint64) error {
-	info, err := b.GetInfoJson()
+func (s *Sync) SetLatestBlockHeight(newLatestBlockHeight uint64) error {
+	info, err := s.GetInfoJson()
 	if err != nil {
 		return err
 	}
 
 	info.LatestBlockHeight = newLatestBlockHeight
-	return b.PutInfoJson(info)
+	return s.PutInfoJson(info)
 }
 
 // AddInterval adds an interval to the end of info.json
-func (b *BlockKeeper) AddInterval(end, gzSize uint64) error {
-	isJsonExist, err := b.OssBucket.IsObjectExist("info.json")
+func (s *Sync) AddInterval(end, gzSize uint64) error {
+	isJsonExist, err := s.OssBucket.IsObjectExist("info.json")
 	if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func (b *BlockKeeper) AddInterval(end, gzSize uint64) error {
 	var info *Info
 	if isJsonExist {
 		// Download info.json
-		info, err = b.GetInfoJson()
+		info, err = s.GetInfoJson()
 		if err != nil {
 			return err
 		}
@@ -91,5 +91,5 @@ func (b *BlockKeeper) AddInterval(end, gzSize uint64) error {
 	} else {
 		info = NewInfo(end, gzSize)
 	}
-	return b.PutInfoJson(info)
+	return s.PutInfoJson(info)
 }

@@ -3,7 +3,6 @@ package util
 import (
 	"encoding/json"
 	"io/ioutil"
-	"os"
 )
 
 // NewFileUtil creates new file util
@@ -31,11 +30,6 @@ func (f *FileUtil) SaveBlockFile(filename string, data interface{}) (bool, error
 func (f *FileUtil) GetJson(filename string) (json.RawMessage, error) {
 	filename = f.LocalDir + "/" + filename + ".json"
 	return ioutil.ReadFile(filename)
-}
-
-// RemoveLocal deletes file
-func (f *FileUtil) RemoveLocal(filename string) error {
-	return os.Remove(f.LocalDir + "/" + filename)
 }
 
 // Json2Struct transform json to struct
