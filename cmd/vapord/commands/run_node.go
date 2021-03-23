@@ -55,6 +55,9 @@ func init() {
 	runNodeCmd.Flags().Int("ws.max_num_websockets", config.Websocket.MaxNumWebsockets, "Max number of websocket connections")
 	runNodeCmd.Flags().Int("ws.max_num_concurrent_reqs", config.Websocket.MaxNumConcurrentReqs, "Max number of concurrent websocket requests that may be processed concurrently")
 
+	// OSS
+	runNodeCmd.Flags().String("oss_endpoint", config.OssEndpoint, "Endpoint of OSS")
+
 	RootCmd.AddCommand(runNodeCmd)
 }
 

@@ -1,40 +1,54 @@
-package sync
+package upload
 
 import (
 	"strconv"
 	"time"
 
+	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/vapor/protocol/bc/types"
 	"github.com/bytom/vapor/toolbar/apinode"
-	"github.com/bytom/vapor/toolbar/osssync/config"
+	"github.com/bytom/vapor/toolbar/osssync/util"
 )
+
+const LOCALDIR = "./blocks/"  // Local directory to store temp blocks files
 
 // UploadKeeper the struct for upload
 type UploadKeeper struct {
-	Sync *Sync
-	Node   *apinode.Node
+	Node      *apinode.Node
+	OssClient *oss.Client
+	OssBucket *oss.Bucket
+	FileUtil  *util.FileUtil
 }
 
 // NewUploadKeeper return one new instance of UploadKeeper
 func NewUploadKeeper() (*UploadKeeper, error) {
-	cfg := &config.Config{}
-	err := config.LoadConfig(&cfg)
+	cfg := &Config{}
+	err := LoadConfig(&cfg)
 	if err != nil {
 		return nil, err
 	}
 
 	node := apinode.NewNode(cfg.VaporURL)
 
-	sync, err := NewSync()
+	ossClient, err := oss.New(cfg.OssConfig.Login.Endpoint, cfg.OssConfig.Login.AccessKeyID, cfg.OssConfig.Login.AccessKeySecret)
 	if err != nil {
 		return nil, err
 	}
 
+	ossBucket, err := ossClient.Bucket(cfg.OssConfig.Bucket)
+	if err != nil {
+		return nil, err
+	}
+
+	fileUtil := util.NewFileUtil(LOCALDIR)
+
 	return &UploadKeeper{
-		Sync: sync,
-		Node:   node,
+		Node:      node,
+		OssClient: ossClient,
+		OssBucket: ossBucket,
+		FileUtil:  fileUtil,
 	}, nil
 }
 
@@ -53,7 +67,7 @@ func (u *UploadKeeper) RunSyncUp() {
 
 // Upload find and upload blocks
 func (u *UploadKeeper) Upload() error {
-	err := u.Sync.FileUtil.BlockDirInitial()
+	err := u.FileUtil.BlockDirInitial()
 	if err != nil {
 		return err
 	}
@@ -63,7 +77,7 @@ func (u *UploadKeeper) Upload() error {
 		return err
 	}
 
-	infoJson, err := u.Sync.GetInfoJson()
+	infoJson, err := u.GetInfoJson()
 	if err != nil {
 		return err
 	}
@@ -126,32 +140,32 @@ func (u *UploadKeeper) UploadFiles(start, end, size uint64) error {
 		filenameJson := filename + ".json"
 		filenameGzip := filenameJson + ".gz"
 
-		_, err = u.Sync.FileUtil.SaveBlockFile(filename, blocks)
+		_, err = u.FileUtil.SaveBlockFile(filename, blocks)
 		if err != nil {
 			return err
 		}
 
-		err = u.Sync.FileUtil.GzipCompress(filename)
+		err = u.FileUtil.GzipCompress(filename)
 		if err != nil {
 			return err
 		}
 
-		err = u.Sync.OssBucket.PutObjectFromFile(filenameGzip, u.Sync.FileUtil.LocalDir+"/"+filenameGzip)
+		err = u.OssBucket.PutObjectFromFile(filenameGzip, u.FileUtil.LocalDir+filenameGzip)
 		if err != nil {
 			return err
 		}
 
-		err = u.Sync.SetLatestBlockHeight(start + size - 1)
+		err = u.SetLatestBlockHeight(start + size - 1)
 		if err != nil {
 			return err
 		}
 
-		err = u.Sync.FileUtil.RemoveLocal(filenameJson)
+		err = u.FileUtil.RemoveLocal(filenameJson)
 		if err != nil {
 			return err
 		}
 
-		err = u.Sync.FileUtil.RemoveLocal(filenameGzip)
+		err = u.FileUtil.RemoveLocal(filenameGzip)
 		if err != nil {
 			return err
 		}
