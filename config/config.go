@@ -22,13 +22,14 @@ type Config struct {
 	// Top level options use an anonymous struct
 	BaseConfig `mapstructure:",squash"`
 	// Options for services
-	P2P        *P2PConfig        `mapstructure:"p2p"`
-	Wallet     *WalletConfig     `mapstructure:"wallet"`
-	Auth       *RPCAuthConfig    `mapstructure:"auth"`
-	Web        *WebConfig        `mapstructure:"web"`
-	Websocket  *WebsocketConfig  `mapstructure:"ws"`
-	Federation *FederationConfig `mapstructure:"federation"`
-	CrossChain *CrossChainConfig `mapstructure:"cross_chain"`
+	P2P         *P2PConfig        `mapstructure:"p2p"`
+	Wallet      *WalletConfig     `mapstructure:"wallet"`
+	Auth        *RPCAuthConfig    `mapstructure:"auth"`
+	Web         *WebConfig        `mapstructure:"web"`
+	Websocket   *WebsocketConfig  `mapstructure:"ws"`
+	Federation  *FederationConfig `mapstructure:"federation"`
+	CrossChain  *CrossChainConfig `mapstructure:"cross_chain"`
+	OssEndpoint string
 }
 
 // Default configurable parameters.

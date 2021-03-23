@@ -12,7 +12,7 @@ func NewFileUtil(localDir string) *FileUtil {
 
 // SaveBlockFile saves block file
 func (f *FileUtil) SaveBlockFile(filename string, data interface{}) (bool, error) {
-	filename = f.LocalDir + "/" + filename + ".json"
+	filename = f.LocalDir + filename + ".json"
 	saveData, err := json.Marshal(data)
 	if err != nil {
 		return false, err
@@ -28,7 +28,7 @@ func (f *FileUtil) SaveBlockFile(filename string, data interface{}) (bool, error
 
 // GetJson read json file
 func (f *FileUtil) GetJson(filename string) (json.RawMessage, error) {
-	filename = f.LocalDir + "/" + filename + ".json"
+	filename = f.LocalDir + filename + ".json"
 	return ioutil.ReadFile(filename)
 }
 

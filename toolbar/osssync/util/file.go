@@ -16,20 +16,6 @@ func IsExists(path string) bool {
 	return true
 }
 
-// IfNoFileToCreate if the file is not exist, create the file
-func IfNoFileToCreate(fileName string) (file *os.File) {
-	var f *os.File
-	var err error
-	if !IsExists(fileName) {
-		f, err = os.Create(fileName)
-		if err != nil {
-			return
-		}
-		defer f.Close()
-	}
-	return f
-}
-
 // PathExists return if path exists
 func PathExists(path string) (bool, error) {
 	_, err := os.Stat(path)
@@ -42,7 +28,7 @@ func PathExists(path string) (bool, error) {
 
 // RemoveLocal deletes file
 func (f *FileUtil) RemoveLocal(filename string) error {
-	return os.Remove(f.LocalDir + "/" + filename)
+	return os.Remove(f.LocalDir + filename)
 }
 
 // BlockDirInitial initializes the blocks directory
