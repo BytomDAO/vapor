@@ -97,11 +97,7 @@ func (u *UploadKeeper) Upload() error {
 
 	// Upload Whole Interval
 	for latestUp+1 < intervals[pos1].StartBlockHeight {
-		if latestUp == 0 {
-			err = u.UploadFiles(latestUp, intervals[pos2].EndBlockHeight, intervals[pos2].GzSize)
-		} else {
-			err = u.UploadFiles(latestUp+1, intervals[pos2].EndBlockHeight, intervals[pos2].GzSize)
-		}
+		err = u.UploadFiles(latestUp+1, intervals[pos2].EndBlockHeight, intervals[pos2].GzSize)
 		if err != nil {
 			return err
 		}
@@ -113,11 +109,7 @@ func (u *UploadKeeper) Upload() error {
 	// Upload the last Interval
 	newLatestUp := currBlockHeight - ((currBlockHeight - intervals[pos1].StartBlockHeight) % intervals[pos1].GzSize) - 1
 	if latestUp < newLatestUp {
-		if latestUp == 0 {
-			err = u.UploadFiles(latestUp, newLatestUp, intervals[pos1].GzSize)
-		} else {
-			err = u.UploadFiles(latestUp+1, newLatestUp, intervals[pos1].GzSize)
-		}
+		err = u.UploadFiles(latestUp+1, newLatestUp, intervals[pos1].GzSize)
 		if err != nil {
 			return err
 		}
