@@ -14,6 +14,27 @@ import (
 
 const LOCALDIR = "./blocks/" // Local directory to store temp blocks files
 
+// Run synchronize upload blocks from vapor to OSS
+func Run() error {
+	uploadKeeper, err := NewUploadKeeper()
+	if err != nil {
+		return err
+	}
+
+	uploadKeeper.Run()
+	return nil
+}
+
+// AddInterval if "info.json" exists on OSS, add Interval to the end; if not exist, create "info.json" with Interval
+func AddInterval(end, gzSize uint64) error {
+	uploadKeeper, err := NewUploadKeeper()
+	if err != nil {
+		return err
+	}
+
+	return uploadKeeper.AddInterval(end, gzSize)
+}
+
 // UploadKeeper the struct for upload
 type UploadKeeper struct {
 	Node      *apinode.Node
