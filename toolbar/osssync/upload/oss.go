@@ -46,7 +46,7 @@ func (u *UploadKeeper) SetLatestBlockHeight(newLatestBlockHeight uint64) error {
 	return u.PutInfoJson(info)
 }
 
-// AddInterval adds an interval to the end of info.json
+// AddInterval if "info.json" exists on OSS, add Interval to the end; if not exist, create "info.json" with Interval
 func (u *UploadKeeper) AddInterval(end, gzSize uint64) error {
 	isJsonExist, err := u.OssBucket.IsObjectExist("info.json")
 	if err != nil {
