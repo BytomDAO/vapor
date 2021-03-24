@@ -12,7 +12,7 @@ import (
 	"github.com/bytom/vapor/toolbar/osssync/util"
 )
 
-const LOCALDIR = "./blocks/"  // Local directory to store temp blocks files
+const LOCALDIR = "./blocks/" // Local directory to store temp blocks files
 
 // UploadKeeper the struct for upload
 type UploadKeeper struct {
