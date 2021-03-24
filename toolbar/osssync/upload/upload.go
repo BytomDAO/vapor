@@ -14,17 +14,6 @@ import (
 
 const LOCALDIR = "./blocks/" // Local directory to store temp blocks files
 
-// Run synchronize upload blocks from vapor to OSS
-func Run() error {
-	uploadKeeper, err := NewUploadKeeper()
-	if err != nil {
-		return err
-	}
-
-	uploadKeeper.Run()
-	return nil
-}
-
 // UploadKeeper the struct for upload
 type UploadKeeper struct {
 	Node      *apinode.Node
