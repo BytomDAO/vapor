@@ -22,14 +22,14 @@ type Config struct {
 	// Top level options use an anonymous struct
 	BaseConfig `mapstructure:",squash"`
 	// Options for services
-	P2P         *P2PConfig        `mapstructure:"p2p"`
-	Wallet      *WalletConfig     `mapstructure:"wallet"`
-	Auth        *RPCAuthConfig    `mapstructure:"auth"`
-	Web         *WebConfig        `mapstructure:"web"`
-	Websocket   *WebsocketConfig  `mapstructure:"ws"`
-	Federation  *FederationConfig `mapstructure:"federation"`
-	CrossChain  *CrossChainConfig `mapstructure:"cross_chain"`
-	OssEndpoint string
+	P2P        *P2PConfig        `mapstructure:"p2p"`
+	Wallet     *WalletConfig     `mapstructure:"wallet"`
+	Auth       *RPCAuthConfig    `mapstructure:"auth"`
+	Web        *WebConfig        `mapstructure:"web"`
+	Websocket  *WebsocketConfig  `mapstructure:"ws"`
+	Federation *FederationConfig `mapstructure:"federation"`
+	CrossChain *CrossChainConfig `mapstructure:"cross_chain"`
+	Oss        *OssConfig        `mapstructure:"oss"`
 }
 
 // Default configurable parameters.
@@ -43,6 +43,7 @@ func DefaultConfig() *Config {
 		Websocket:  DefaultWebsocketConfig(),
 		Federation: DefaultFederationConfig(),
 		CrossChain: DefaultCrossChainConfig(),
+		Oss:        DefaultOssConfig(),
 	}
 }
 
@@ -221,6 +222,10 @@ type CrossChainConfig struct {
 	AssetWhitelist string `mapstructure:"asset_whitelist"`
 }
 
+type OssConfig struct {
+	Endpoint string `mapstructure:"endpoint"`
+}
+
 // Default configurable rpc's auth parameters.
 func DefaultRPCAuthConfig() *RPCAuthConfig {
 	return &RPCAuthConfig{
@@ -276,6 +281,11 @@ func xpub(str string) (xpub chainkd.XPub) {
 		log.Panicf("Fail converts a string to xpub")
 	}
 	return xpub
+}
+
+// Default configurable oss parameters.
+func DefaultOssConfig() *OssConfig {
+	return &OssConfig{}
 }
 
 //-----------------------------------------------------------------------------
