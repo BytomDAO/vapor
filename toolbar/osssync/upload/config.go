@@ -1,4 +1,4 @@
-package config
+package upload
 
 import (
 	"encoding/json"
@@ -9,18 +9,24 @@ import (
 
 // Config represent root of config
 type Config struct {
-	Oss      Oss    `json:"oss"`
-	VaporURL string `json:"vapor_url"`
+	OssConfig *OssConfig `json:"oss_config"`
+	VaporURL  string     `json:"vapor_url"`
 }
 
 // Oss logs cfg
-type Oss struct {
+type Login struct {
 	Endpoint        string `json:"endpoint"`
 	AccessKeyID     string `json:"access_key_id"`
 	AccessKeySecret string `json:"access_key_secret"`
 }
 
-// LoadConfig read path file to the config object
+// Oss cfg
+type OssConfig struct {
+	Login  *Login `json:"login"`
+	Bucket string `json:"bucket"`
+}
+
+// LoadConfig read path file to the config object for Upload from Vapor to OSS
 func LoadConfig(config interface{}) error {
 	if len(os.Args) <= 1 {
 		return errors.New("Please setup the config file path as Args[1]")
