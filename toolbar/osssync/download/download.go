@@ -68,7 +68,7 @@ func (d *DownloadKeeper) Download() error {
 	var pos1, pos2 int // latestDown interval, latestUp interval
 	for pos1 = len(intervals) - 1; latestDown < intervals[pos1].StartBlockHeight; pos1-- {
 	}
-	for pos2 = pos1; latestDown < intervals[pos2].EndBlockHeight; pos2++ {
+	for pos2 = pos1; latestUp > intervals[pos2].EndBlockHeight; pos2++ {
 	}
 
 	for pos1 < pos2 {

@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -88,7 +89,7 @@ func runNode(cmd *cobra.Command, args []string) error {
 
 	// Get blocks from OSS
 	if err := download.Run(n, config.Oss.Endpoint); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal(" - failed to get blocks from oss")
+		fmt.Println("Failed to get blocks from oss: ", err)
 	}
 
 	// Start node
