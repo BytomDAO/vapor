@@ -18,8 +18,7 @@ func (f *FileUtil) SaveBlockFile(filename string, data interface{}) (bool, error
 		return false, err
 	}
 
-	err = ioutil.WriteFile(filename, saveData, 0644)
-	if err != nil {
+	if err = ioutil.WriteFile(filename, saveData, 0644); err != nil {
 		return false, err
 	}
 

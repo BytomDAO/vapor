@@ -49,8 +49,7 @@ func NewDownloadKeeper(node *node.Node, ossEndpoint string) (*DownloadKeeper, er
 
 // Download get blocks from OSS and update the node
 func (d *DownloadKeeper) Download() error {
-	err := d.FileUtil.BlockDirInitial()
-	if err != nil {
+	if err := d.FileUtil.BlockDirInitial(); err != nil {
 		return err
 	}
 
@@ -71,19 +70,17 @@ func (d *DownloadKeeper) Download() error {
 	}
 
 	for pos1 < pos2 {
-		err = d.DownloadFiles(latestDown+1, intervals[pos1].EndBlockHeight, intervals[pos1].GzSize)
-		if err != nil {
+		if err = d.DownloadFiles(latestDown+1, intervals[pos1].EndBlockHeight, intervals[pos1].GzSize); err != nil {
 			return err
 		}
 		pos1++
 	}
 	if pos1 == pos2 {
-		err = d.DownloadFiles(intervals[pos2].StartBlockHeight, latestUp, intervals[pos2].GzSize)
-		if err != nil {
+		if err = d.DownloadFiles(intervals[pos2].StartBlockHeight, latestUp, intervals[pos2].GzSize); err != nil {
 			return err
 		}
 	}
-	return err
+	return nil
 }
 
 // DownloadFiles get block files from OSS, and update the node
@@ -97,13 +94,11 @@ func (d *DownloadKeeper) DownloadFiles(start, end, size uint64) error {
 		filenameJson := filename + ".json"
 		filenameGzip := filenameJson + ".gz"
 
-		err := d.GetObjectToFile(filenameGzip)
-		if err != nil {
+		if err := d.GetObjectToFile(filenameGzip); err != nil {
 			return err
 		}
 
-		err = d.FileUtil.GzipUncompress(filename)
-		if err != nil {
+		if err := d.FileUtil.GzipUncompress(filename); err != nil {
 			return err
 		}
 
@@ -113,29 +108,23 @@ func (d *DownloadKeeper) DownloadFiles(start, end, size uint64) error {
 		}
 
 		blocks := []*types.Block{}
-		err = util.Json2Struct(blocksJson, blocks)
-		if err != nil {
+		if err = util.Json2Struct(blocksJson, blocks); err != nil {
 			return err
 		}
 
 		latestDown := d.Node.GetChain().BestBlockHeight()
-
 		if latestDown+1 > start {
 			blocks = blocks[latestDown-start:] // start from latestDown+1
 		}
-
-		err = d.SyncToNode(blocks)
-		if err != nil {
+		if err = d.SyncToNode(blocks); err != nil {
 			return err
 		}
 
-		err = d.FileUtil.RemoveLocal(filenameGzip)
-		if err != nil {
+		if err = d.FileUtil.RemoveLocal(filenameGzip); err != nil {
 			return err
 		}
 
-		err = d.FileUtil.RemoveLocal(filenameJson)
-		if err != nil {
+		if err = d.FileUtil.RemoveLocal(filenameJson); err != nil {
 			return err
 		}
 
@@ -147,8 +136,7 @@ func (d *DownloadKeeper) DownloadFiles(start, end, size uint64) error {
 // SyncToNode synchronize blocks to local node
 func (d *DownloadKeeper) SyncToNode(blocks []*types.Block) error {
 	for i := 0; i < len(blocks); i++ {
-		_, err := d.Node.GetChain().ProcessBlock(blocks[i])
-		if err != nil {
+		if _, err := d.Node.GetChain().ProcessBlock(blocks[i]); err != nil {
 			return err
 		}
 	}

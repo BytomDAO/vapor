@@ -130,7 +130,7 @@ func (u *UploadKeeper) Upload() error {
 			return err
 		}
 	}
-	return err
+	return nil
 }
 
 // UploadFiles get block from vapor and upload files to OSS

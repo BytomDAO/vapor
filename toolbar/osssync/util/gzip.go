@@ -36,17 +36,15 @@ func (f *FileUtil) GzipCompress(fileName string) error {
 	gw.Header.Name = fi.Name()
 
 	buf := make([]byte, fi.Size())
-	_, err = fr.Read(buf)
-	if err != nil {
+	if _, err = fr.Read(buf); err != nil {
 		return err
 	}
 
-	_, err = gw.Write(buf)
-	if err != nil {
+	if _, err = gw.Write(buf); err != nil {
 		return err
 	}
 
-	return err
+	return nil
 }
 
 // GzipUncompress uncompress Gzip file
@@ -75,10 +73,9 @@ func (f *FileUtil) GzipUncompress(fileName string) error {
 		return err
 	}
 
-	_, err = fw.Write(buf[:n])
-	if err != nil {
+	if _, err = fw.Write(buf[:n]); err != nil {
 		return err
 	}
 
-	return err
+	return nil
 }

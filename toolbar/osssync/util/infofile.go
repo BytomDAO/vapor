@@ -48,6 +48,5 @@ func GetInfoJson(body io.ReadCloser) (*Info, error) {
 	}
 
 	info := new(Info)
-	err = Json2Struct(data, &info)
-	return info, err
+	return info, Json2Struct(data, &info)
 }

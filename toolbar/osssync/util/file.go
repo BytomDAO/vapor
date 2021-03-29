@@ -9,21 +9,20 @@ type FileUtil struct {
 
 // IsExists if file or directory exist
 func IsExists(path string) bool {
-	_, err := os.Stat(path)
-	if err != nil && !os.IsExist(err) {
+	if _, err := os.Stat(path); err != nil && !os.IsExist(err) {
 		return false
 	}
+
 	return true
 }
 
 // PathExists return if path exists
 func PathExists(path string) (bool, error) {
-	_, err := os.Stat(path)
-	if err == nil {
-		return true, nil
+	if _, err := os.Stat(path); err != nil {
+		return false, err
 	}
 
-	return false, err
+	return true, nil
 }
 
 // RemoveLocal deletes file
@@ -39,12 +38,10 @@ func (f *FileUtil) BlockDirInitial() error {
 	}
 
 	if ifPathExist {
-		err = os.RemoveAll(f.LocalDir)
-		if err != nil {
+		if err = os.RemoveAll(f.LocalDir); err != nil {
 			return err
 		}
 	}
 
-	err = os.Mkdir(f.LocalDir, 0755)
-	return err
+	return os.Mkdir(f.LocalDir, 0755)
 }
