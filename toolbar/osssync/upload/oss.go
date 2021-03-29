@@ -71,7 +71,7 @@ func (u *UploadKeeper) AddInterval(end, gzSize uint64) error {
 		if (end-prevInvl.EndBlockHeight)%gzSize != 0 {
 			return errors.New("New interval is invalid.")
 		}
-		
+
 		newInvl := util.NewInterval(prevInvl.EndBlockHeight+1, end, gzSize)
 		info.Interval = append(info.Interval, newInvl)
 	} else {
