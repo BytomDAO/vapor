@@ -13,20 +13,19 @@ const LOCALDIR = "./toolbar/osssync/blocks/" // Local directory to store temp bl
 
 // Run synchronize download from OSS to local node
 func Run(node *node.Node, ossEndpoint string) error {
-	if ossEndpoint != "" {
-		downloadKeeper, err := NewDownloadKeeper(node, ossEndpoint)
-		if err != nil {
-			return err
-		}
-
-		err = downloadKeeper.Download()
-		if err != nil {
-			return err
-		}
-
-	} else {
+	if ossEndpoint == "" {
 		return errors.New("OSS Endpoint is empty")
 	}
+
+	downloadKeeper, err := NewDownloadKeeper(node, ossEndpoint)
+	if err != nil {
+		return err
+	}
+
+	if err = downloadKeeper.Download(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
