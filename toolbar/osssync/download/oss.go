@@ -30,7 +30,7 @@ func (d *DownloadKeeper) GetObjectToFile(filename string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	defer (*body).Close()
 
 	io.Copy(f, *body)

@@ -2,6 +2,7 @@ package upload
 
 import (
 	"bytes"
+	"github.com/bytom/vapor/errors"
 
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 
@@ -63,6 +64,14 @@ func (u *UploadKeeper) AddInterval(end, gzSize uint64) error {
 
 		// Add Interval
 		prevInvl := info.Interval[len(info.Interval)-1]
+		if prevInvl.EndBlockHeight >= end {
+			return errors.New("New interval is included in previous intervals.")
+		}
+
+		if (end - prevInvl.EndBlockHeight) % gzSize != 0 {
+			return errors.New("New interval is invalid.")
+		}
+		
 		newInvl := util.NewInterval(prevInvl.EndBlockHeight+1, end, gzSize)
 		info.Interval = append(info.Interval, newInvl)
 	} else {
