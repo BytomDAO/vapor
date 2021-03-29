@@ -7,11 +7,6 @@ import (
 )
 
 func main() {
-
-	NewJsonInfoTxt()
-
-
-	return
 	err := upload.Run()
 	if err != nil {
 		fmt.Println(err)
