@@ -15,6 +15,7 @@ func (d *DownloadKeeper) GetObject(filename string) (*io.ReadCloser, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &res.Body, nil
 }
 
@@ -29,6 +30,7 @@ func (d *DownloadKeeper) GetObjectToFile(filename string) error {
 	if err != nil {
 		return err
 	}
+	
 	defer (*body).Close()
 
 	io.Copy(f, *body)
