@@ -7,6 +7,7 @@ import (
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/vapor/errors"
 	"github.com/bytom/vapor/protocol/bc/types"
 	"github.com/bytom/vapor/toolbar/apinode"
 	"github.com/bytom/vapor/toolbar/osssync/util"
@@ -74,12 +75,13 @@ func NewUploadKeeper() (*UploadKeeper, error) {
 
 // Run synchronize upload blocks from vapor to OSS
 func (u *UploadKeeper) Run() {
-	ticker := time.NewTicker(time.Minute)
+	//ticker := time.NewTicker(time.Minute)
+	ticker := time.NewTicker(300 * time.Millisecond)
 	defer ticker.Stop()
 
 	for ; true; <-ticker.C {
 		if err := u.Upload(); err != nil {
-			log.WithField("error", err).Errorln("blockKeeper fail on process block")
+			log.WithField("error", err).Errorln("blockKeeper fail")
 		}
 	}
 }
@@ -95,6 +97,10 @@ func (u *UploadKeeper) Upload() error {
 		return err
 	}
 
+	if currBlockHeight == 0 {
+		return errors.New("Current block height is 0.")
+	}
+
 	infoJson, err := u.GetInfoJson()
 	if err != nil {
 		return err
@@ -104,13 +110,19 @@ func (u *UploadKeeper) Upload() error {
 	intervals := infoJson.Interval         // Interval array
 
 	var pos1, pos2 int // currBlockHeight interval, latestUp interval
+	// Find pos1
 	for pos1 = len(intervals) - 1; currBlockHeight < intervals[pos1].StartBlockHeight; pos1-- {
 	}
 	// Current Block Height is out of the range given by info.json
 	if currBlockHeight > intervals[pos1].EndBlockHeight {
 		currBlockHeight = intervals[pos1].EndBlockHeight // Upload the part which contained by info.json
 	}
-	for pos2 = pos1; latestUp < intervals[pos2].StartBlockHeight; pos2-- {
+	// Find pos2
+	if latestUp == 0 {
+		pos2 = 0
+	} else {
+		for pos2 = pos1; latestUp < intervals[pos2].StartBlockHeight; pos2-- {
+		}
 	}
 
 	// Upload Whole Interval

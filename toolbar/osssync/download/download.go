@@ -53,7 +53,7 @@ func (d *DownloadKeeper) Download() error {
 		return err
 	}
 
-	latestDown := d.Node.GetChain().BestBlockHeight() // latest block height on local node
+	syncStart := d.Node.GetChain().BestBlockHeight() + 1 // block height which the synchronization start from
 
 	infoJson, err := d.GetInfoJson()
 	if err != nil {
@@ -62,19 +62,30 @@ func (d *DownloadKeeper) Download() error {
 
 	latestUp := infoJson.LatestBlockHeight // Latest uploaded block height on OSS
 	intervals := infoJson.Interval         // Interval array
-
-	var pos1, pos2 int // latestDown interval, latestUp interval
-	for pos1 = len(intervals) - 1; latestDown < intervals[pos1].StartBlockHeight; pos1-- {
-	}
-	for pos2 = pos1; latestUp > intervals[pos2].EndBlockHeight; pos2++ {
+	if latestUp == 0 {
+		return errors.New("No blocks on OSS.")
 	}
 
+	var pos1, pos2 int // syncStart interval, latestUp interval
+	// Find pos2
+	for pos2 = len(intervals) - 1; latestUp < intervals[pos2].StartBlockHeight; pos2-- {
+	}
+	// Find pos1
+	if syncStart == 0 {
+		pos1 = 0
+	} else {
+		for pos1 = pos2; syncStart < intervals[pos1].StartBlockHeight; pos1-- {
+		}
+	}
+
+	// Download Whole Interval
 	for pos1 < pos2 {
-		if err = d.DownloadFiles(latestDown+1, intervals[pos1].EndBlockHeight, intervals[pos1].GzSize); err != nil {
+		if err = d.DownloadFiles(syncStart, intervals[pos1].EndBlockHeight, intervals[pos1].GzSize); err != nil {
 			return err
 		}
 		pos1++
 	}
+	// Download the last Interval
 	if pos1 == pos2 {
 		if err = d.DownloadFiles(intervals[pos2].StartBlockHeight, latestUp, intervals[pos2].GzSize); err != nil {
 			return err

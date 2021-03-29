@@ -32,7 +32,7 @@ type Info struct {
 
 // NewInfo creates a new Info for info.json
 func NewInfo(end, gzSize uint64) *Info {
-	newInvl := NewInterval(0, end, gzSize)
+	newInvl := NewInterval(1, end, gzSize)
 	var arr []*Interval
 	arr = append(arr, newInvl)
 	return &Info{0, arr}
