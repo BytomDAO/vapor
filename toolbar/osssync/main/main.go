@@ -7,8 +7,7 @@ import (
 )
 
 func main() {
-	err := upload.Run()
-	if err != nil {
+	if err := upload.Run(); err != nil {
 		fmt.Println(err)
 	}
 }
