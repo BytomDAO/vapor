@@ -75,8 +75,7 @@ func NewUploadKeeper() (*UploadKeeper, error) {
 
 // Run synchronize upload blocks from vapor to OSS
 func (u *UploadKeeper) Run() {
-	//ticker := time.NewTicker(time.Minute)
-	ticker := time.NewTicker(300 * time.Millisecond)
+	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 
 	for ; true; <-ticker.C {
