@@ -167,15 +167,15 @@ func (u *UploadKeeper) UploadFiles(start, end, size uint64) error {
 			return err
 		}
 
+		if err = u.FileUtil.RemoveLocal(filenameJson); err != nil {
+			return err
+		}
+
 		if err = u.OssBucket.PutObjectFromFile(filenameGzip, u.FileUtil.LocalDir+filenameGzip); err != nil {
 			return err
 		}
 
 		if err = u.SetLatestBlockHeight(start + size - 1); err != nil {
-			return err
-		}
-
-		if err = u.FileUtil.RemoveLocal(filenameJson); err != nil {
 			return err
 		}
 

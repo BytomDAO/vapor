@@ -2,15 +2,13 @@ package util
 
 import (
 	"compress/gzip"
+	"io/ioutil"
 	"os"
 )
 
-const READ_SIZE = 1024 * 1024 * 500
-
-// GzipCompress compress file to Gzip
+// GzipCompress Encode file to Gzip and save to the same directory
 func (f *FileUtil) GzipCompress(fileName string) error {
-	filePath := f.LocalDir + fileName + ".json.gz"
-	fw, err := os.Create(filePath)
+	fw, err := os.Create(f.LocalDir + fileName + ".json.gz")
 	if err != nil {
 		return err
 	}
@@ -20,8 +18,7 @@ func (f *FileUtil) GzipCompress(fileName string) error {
 	gw := gzip.NewWriter(fw)
 	defer gw.Close()
 
-	filePath = f.LocalDir + fileName + ".json"
-	fr, err := os.Open(filePath)
+	fr, err := os.Open(f.LocalDir + fileName + ".json")
 	if err != nil {
 		return err
 	}
@@ -47,35 +44,26 @@ func (f *FileUtil) GzipCompress(fileName string) error {
 	return nil
 }
 
-// GzipUncompress uncompress Gzip file
-func (f *FileUtil) GzipUncompress(fileName string) error {
-	filedirname := f.LocalDir + fileName + ".json.gz"
-	fr, err := os.Open(filedirname)
+// GzipDecode Decode Gzip file and save to the same directory
+func (f *FileUtil) GzipDecode(fileName string) error {
+	fr, err := os.Open(f.LocalDir + fileName + ".json.gz")
 	if err != nil {
 		return err
 	}
 
 	defer fr.Close()
 
-	gr, err := gzip.NewReader(fr)
+	reader, err := gzip.NewReader(fr)
 	if err != nil {
 		return err
 	}
 
-	defer gr.Close()
+	defer reader.Close()
 
-	buf := make([]byte, READ_SIZE)
-	n, err := gr.Read(buf)
-
-	filedirname = f.LocalDir + gr.Header.Name
-	fw, err := os.Create(filedirname)
+	json, err := ioutil.ReadAll(reader)
 	if err != nil {
 		return err
 	}
 
-	if _, err = fw.Write(buf[:n]); err != nil {
-		return err
-	}
-
-	return nil
+	return ioutil.WriteFile(f.LocalDir+fileName+".json", json, 0644)
 }

@@ -62,8 +62,8 @@ func (d *DownloadKeeper) Download() error {
 
 	latestUp := infoJson.LatestBlockHeight // Latest uploaded block height on OSS
 	intervals := infoJson.Interval         // Interval array
-	if latestUp == 0 {
-		return errors.New("No blocks on OSS.")
+	if latestUp == 0 || latestUp < syncStart {
+		return errors.New("No new blocks on OSS.")
 	}
 
 	var pos1, pos2 int // syncStart interval, latestUp interval
@@ -80,14 +80,15 @@ func (d *DownloadKeeper) Download() error {
 
 	// Download Whole Interval
 	for pos1 < pos2 {
-		if err = d.DownloadFiles(syncStart, intervals[pos1].EndBlockHeight, intervals[pos1].GzSize); err != nil {
+		if err = d.DownloadFiles(syncStart, intervals[pos1].EndBlockHeight, intervals[pos1]); err != nil {
 			return err
 		}
+		syncStart = intervals[pos1].EndBlockHeight + 1
 		pos1++
 	}
 	// Download the last Interval
 	if pos1 == pos2 {
-		if err = d.DownloadFiles(intervals[pos2].StartBlockHeight, latestUp, intervals[pos2].GzSize); err != nil {
+		if err = d.DownloadFiles(syncStart, latestUp, intervals[pos2]); err != nil {
 			return err
 		}
 	}
@@ -95,13 +96,19 @@ func (d *DownloadKeeper) Download() error {
 }
 
 // DownloadFiles get block files from OSS, and update the node
-func (d *DownloadKeeper) DownloadFiles(start, end, size uint64) error {
+func (d *DownloadKeeper) DownloadFiles(start, end uint64, interval *util.Interval) error {
+	size := interval.GzSize
 	for {
 		if start > end {
 			break
 		}
 
-		filename := strconv.FormatUint(start, 10)
+		intervalStart := interval.StartBlockHeight
+		startInFile := start - intervalStart
+		n := startInFile / size
+		filenameNum := n*size + intervalStart
+
+		filename := strconv.FormatUint(filenameNum, 10)
 		filenameJson := filename + ".json"
 		filenameGzip := filenameJson + ".gz"
 
@@ -109,7 +116,11 @@ func (d *DownloadKeeper) DownloadFiles(start, end, size uint64) error {
 			return err
 		}
 
-		if err := d.FileUtil.GzipUncompress(filename); err != nil {
+		if err := d.FileUtil.GzipDecode(filename); err != nil {
+			return err
+		}
+
+		if err := d.FileUtil.RemoveLocal(filenameGzip); err != nil {
 			return err
 		}
 
@@ -119,19 +130,17 @@ func (d *DownloadKeeper) DownloadFiles(start, end, size uint64) error {
 		}
 
 		blocks := []*types.Block{}
-		if err = util.Json2Struct(blocksJson, blocks); err != nil {
+		if err = util.Json2Struct(blocksJson, &blocks); err != nil {
 			return err
 		}
 
 		latestDown := d.Node.GetChain().BestBlockHeight()
 		if latestDown+1 > start {
-			blocks = blocks[latestDown-start:] // start from latestDown+1
+			blocks = blocks[startInFile:] // start from latestDown+1
+		} else if latestDown+1 < start {
+			return errors.New("Wrong interval")
 		}
 		if err = d.SyncToNode(blocks); err != nil {
-			return err
-		}
-
-		if err = d.FileUtil.RemoveLocal(filenameGzip); err != nil {
 			return err
 		}
 
@@ -139,7 +148,7 @@ func (d *DownloadKeeper) DownloadFiles(start, end, size uint64) error {
 			return err
 		}
 
-		start += size
+		start = filenameNum + size
 	}
 	return nil
 }

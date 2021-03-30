@@ -27,7 +27,7 @@ func (f *FileUtil) SaveBlockFile(filename string, data interface{}) (bool, error
 
 // GetJson read json file
 func (f *FileUtil) GetJson(filename string) (json.RawMessage, error) {
-	filename = f.LocalDir + filename + ".json"
+	filename = f.LocalDir + filename
 	return ioutil.ReadFile(filename)
 }
 
