@@ -1,6 +1,8 @@
 package util
 
-import "os"
+import (
+	"os"
+)
 
 // FileUtil is a struct of File utility
 type FileUtil struct {
@@ -18,11 +20,11 @@ func IsExists(path string) bool {
 
 // PathExists return if path exists
 func PathExists(path string) (bool, error) {
-	if _, err := os.Stat(path); err != nil {
-		return false, err
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return false, nil
+	} else {
+		return err == nil, err
 	}
-
-	return true, nil
 }
 
 // RemoveLocal deletes file
