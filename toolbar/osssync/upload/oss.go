@@ -2,10 +2,10 @@ package upload
 
 import (
 	"bytes"
-	"github.com/bytom/vapor/errors"
 
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 
+	"github.com/bytom/vapor/errors"
 	"github.com/bytom/vapor/toolbar/osssync/util"
 )
 
