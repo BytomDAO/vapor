@@ -9,7 +9,7 @@ import (
 	"github.com/bytom/vapor/toolbar/osssync/util"
 )
 
-const LOCALDIR = "./toolbar/osssync/blocks/" // Local directory to store temp blocks files
+const LOCALDIR = "./blocks/" // Local directory to store temp blocks files
 
 // Run synchronize download from OSS to local node
 func Run(node *node.Node, ossEndpoint string) error {
