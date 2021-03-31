@@ -20,19 +20,11 @@ func IsExists(path string) bool {
 
 // PathExists return if path exists
 func PathExists(path string) (bool, error) {
-	_, err := os.Stat(path)
-	// Path exist
-	if err == nil {
-		return true, nil
-	}
-
-	// Path not exist
-	if os.IsNotExist(err) {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return false, nil
+	} else {
+		return err == nil, err
 	}
-
-	// Unknow
-	return false, err
 }
 
 // RemoveLocal deletes file
