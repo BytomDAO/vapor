@@ -7,6 +7,7 @@ import (
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/vapor/errors"
 	"github.com/bytom/vapor/protocol/bc/types"
 	"github.com/bytom/vapor/toolbar/apinode"
 	"github.com/bytom/vapor/toolbar/osssync/util"
@@ -46,8 +47,7 @@ type UploadKeeper struct {
 // NewUploadKeeper return one new instance of UploadKeeper
 func NewUploadKeeper() (*UploadKeeper, error) {
 	cfg := &Config{}
-	err := LoadConfig(&cfg)
-	if err != nil {
+	if err := LoadConfig(&cfg); err != nil {
 		return nil, err
 	}
 
@@ -79,23 +79,25 @@ func (u *UploadKeeper) Run() {
 	defer ticker.Stop()
 
 	for ; true; <-ticker.C {
-		err := u.Upload()
-		if err != nil {
-			log.WithField("error", err).Errorln("blockKeeper fail on process block")
+		if err := u.Upload(); err != nil {
+			log.WithField("error", err).Errorln("blockKeeper fail")
 		}
 	}
 }
 
 // Upload find and upload blocks
 func (u *UploadKeeper) Upload() error {
-	err := u.FileUtil.BlockDirInitial()
-	if err != nil {
+	if err := u.FileUtil.BlockDirInitial(); err != nil {
 		return err
 	}
 
 	currBlockHeight, err := u.Node.GetBlockCount() // Current block height on vapor
 	if err != nil {
 		return err
+	}
+
+	if currBlockHeight == 0 {
+		return errors.New("Current block height is 0.")
 	}
 
 	infoJson, err := u.GetInfoJson()
@@ -107,19 +109,24 @@ func (u *UploadKeeper) Upload() error {
 	intervals := infoJson.Interval         // Interval array
 
 	var pos1, pos2 int // currBlockHeight interval, latestUp interval
+	// Find pos1
 	for pos1 = len(intervals) - 1; currBlockHeight < intervals[pos1].StartBlockHeight; pos1-- {
 	}
 	// Current Block Height is out of the range given by info.json
 	if currBlockHeight > intervals[pos1].EndBlockHeight {
 		currBlockHeight = intervals[pos1].EndBlockHeight // Upload the part which contained by info.json
 	}
-	for pos2 = pos1; latestUp < intervals[pos2].StartBlockHeight; pos2-- {
+	// Find pos2
+	if latestUp == 0 {
+		pos2 = 0
+	} else {
+		for pos2 = pos1; latestUp < intervals[pos2].StartBlockHeight; pos2-- {
+		}
 	}
 
 	// Upload Whole Interval
 	for latestUp+1 < intervals[pos1].StartBlockHeight {
-		err = u.UploadFiles(latestUp+1, intervals[pos2].EndBlockHeight, intervals[pos2].GzSize)
-		if err != nil {
+		if err = u.UploadFiles(latestUp+1, intervals[pos2].EndBlockHeight, intervals[pos2].GzSize); err != nil {
 			return err
 		}
 
@@ -128,14 +135,13 @@ func (u *UploadKeeper) Upload() error {
 	}
 
 	// Upload the last Interval
-	newLatestUp := currBlockHeight - ((currBlockHeight - intervals[pos1].StartBlockHeight) % intervals[pos1].GzSize) - 1
+	newLatestUp := currBlockHeight - ((currBlockHeight - intervals[pos1].StartBlockHeight + 1) % intervals[pos1].GzSize)
 	if latestUp < newLatestUp {
-		err = u.UploadFiles(latestUp+1, newLatestUp, intervals[pos1].GzSize)
-		if err != nil {
+		if err = u.UploadFiles(latestUp+1, newLatestUp, intervals[pos1].GzSize); err != nil {
 			return err
 		}
 	}
-	return err
+	return nil
 }
 
 // UploadFiles get block from vapor and upload files to OSS
@@ -153,33 +159,27 @@ func (u *UploadKeeper) UploadFiles(start, end, size uint64) error {
 		filenameJson := filename + ".json"
 		filenameGzip := filenameJson + ".gz"
 
-		_, err = u.FileUtil.SaveBlockFile(filename, blocks)
-		if err != nil {
+		if _, err = u.FileUtil.SaveBlockFile(filename, blocks); err != nil {
 			return err
 		}
 
-		err = u.FileUtil.GzipCompress(filename)
-		if err != nil {
+		if err = u.FileUtil.GzipCompress(filename); err != nil {
 			return err
 		}
 
-		err = u.OssBucket.PutObjectFromFile(filenameGzip, u.FileUtil.LocalDir+filenameGzip)
-		if err != nil {
+		if err = u.FileUtil.RemoveLocal(filenameJson); err != nil {
 			return err
 		}
 
-		err = u.SetLatestBlockHeight(start + size - 1)
-		if err != nil {
+		if err = u.OssBucket.PutObjectFromFile(filenameGzip, u.FileUtil.LocalDir+filenameGzip); err != nil {
 			return err
 		}
 
-		err = u.FileUtil.RemoveLocal(filenameJson)
-		if err != nil {
+		if err = u.SetLatestBlockHeight(start + size - 1); err != nil {
 			return err
 		}
 
-		err = u.FileUtil.RemoveLocal(filenameGzip)
-		if err != nil {
+		if err = u.FileUtil.RemoveLocal(filenameGzip); err != nil {
 			return err
 		}
 

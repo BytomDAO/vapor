@@ -18,8 +18,7 @@ func (f *FileUtil) SaveBlockFile(filename string, data interface{}) (bool, error
 		return false, err
 	}
 
-	err = ioutil.WriteFile(filename, saveData, 0644)
-	if err != nil {
+	if err = ioutil.WriteFile(filename, saveData, 0644); err != nil {
 		return false, err
 	}
 
@@ -28,7 +27,7 @@ func (f *FileUtil) SaveBlockFile(filename string, data interface{}) (bool, error
 
 // GetJson read json file
 func (f *FileUtil) GetJson(filename string) (json.RawMessage, error) {
-	filename = f.LocalDir + filename + ".json"
+	filename = f.LocalDir + filename
 	return ioutil.ReadFile(filename)
 }
 

@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytom/vapor/node"
+	"github.com/bytom/vapor/toolbar/osssync/download"
 )
 
 const logModule = "cmd"
@@ -84,6 +86,13 @@ func runNode(cmd *cobra.Command, args []string) error {
 
 	// Create & start node
 	n := node.NewNode(config)
+
+	// Get blocks from OSS
+	if err := download.Run(n, config.Oss.Endpoint); err != nil {
+		fmt.Println("Failed to get blocks from oss: ", err)
+	}
+
+	// Start node
 	if _, err := n.Start(); err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal("failed to start node")
 	}

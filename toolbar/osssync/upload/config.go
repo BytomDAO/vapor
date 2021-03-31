@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/bytom/bytom/errors"
+	"github.com/bytom/vapor/errors"
 )
 
 // Config represent root of config
