@@ -21,14 +21,17 @@ func IsExists(path string) bool {
 // PathExists return if path exists
 func PathExists(path string) (bool, error) {
 	_, err := os.Stat(path)
+	// Path exist
 	if err == nil {
 		return true, nil
 	}
 
+	// Path not exist
 	if os.IsNotExist(err) {
 		return false, nil
 	}
 
+	// Unknow
 	return false, err
 }
 
