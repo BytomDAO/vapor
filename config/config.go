@@ -223,7 +223,7 @@ type CrossChainConfig struct {
 }
 
 type OssConfig struct {
-	Endpoint string `mapstructure:"endpoint"`
+	Url string `mapstructure:"url"`
 }
 
 // Default configurable rpc's auth parameters.

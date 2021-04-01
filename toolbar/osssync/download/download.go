@@ -38,12 +38,10 @@ type DownloadKeeper struct {
 
 // NewDownloadKeeper return one new instance of DownloadKeeper
 func NewDownloadKeeper(node *node.Node, ossEndpoint string) (*DownloadKeeper, error) {
-	fileUtil := util.NewFileUtil(LOCALDIR)
-
 	return &DownloadKeeper{
 		Node:        node,
 		OssEndpoint: "http://" + ossEndpoint + "/",
-		FileUtil:    fileUtil,
+		FileUtil:    util.NewFileUtil(LOCALDIR),
 	}, nil
 }
 

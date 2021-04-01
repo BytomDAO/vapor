@@ -58,7 +58,7 @@ func init() {
 	runNodeCmd.Flags().Int("ws.max_num_concurrent_reqs", config.Websocket.MaxNumConcurrentReqs, "Max number of concurrent websocket requests that may be processed concurrently")
 
 	// OSS
-	runNodeCmd.Flags().String("oss.endpoint", config.Oss.Endpoint, "Endpoint of OSS")
+	runNodeCmd.Flags().String("oss.url", config.Oss.Url, "URL of OSS")
 
 	RootCmd.AddCommand(runNodeCmd)
 }
@@ -88,7 +88,7 @@ func runNode(cmd *cobra.Command, args []string) error {
 	n := node.NewNode(config)
 
 	// Get blocks from OSS
-	if err := download.Run(n, config.Oss.Endpoint); err != nil {
+	if err := download.Run(n, config.Oss.Url); err != nil {
 		fmt.Println("Failed to get blocks from oss: ", err)
 	}
 
