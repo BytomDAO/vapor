@@ -40,7 +40,7 @@ type DownloadKeeper struct {
 func NewDownloadKeeper(node *node.Node, ossEndpoint string) (*DownloadKeeper, error) {
 	return &DownloadKeeper{
 		Node:        node,
-		OssEndpoint: "http://" + ossEndpoint + "/",
+		OssEndpoint: ossEndpoint + "/",
 		FileUtil:    util.NewFileUtil(LOCALDIR),
 	}, nil
 }
