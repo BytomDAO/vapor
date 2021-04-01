@@ -17,7 +17,7 @@ func (u *UploadKeeper) PutObjByteArr(objectName string, objectValue []byte) erro
 
 // GetInfoJson Download info.json
 func (u *UploadKeeper) GetInfoJson() (*util.Info, error) {
-	body, err := u.OssBucket.GetObject("info.json")
+	body, err := u.OssBucket.GetObject(u.OssDir + "info.json")
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +33,7 @@ func (u *UploadKeeper) PutInfoJson(infoData *util.Info) error {
 	}
 
 	// Upload
-	return u.PutObjByteArr("info.json", jsonData)
+	return u.PutObjByteArr(u.OssDir+"info.json", jsonData)
 }
 
 // SetLatestBlockHeight set new latest blockHeight on OSS
@@ -49,7 +49,7 @@ func (u *UploadKeeper) SetLatestBlockHeight(newLatestBlockHeight uint64) error {
 
 // AddInterval if "info.json" exists on OSS, add Interval to the end; if not exist, create "info.json" with Interval
 func (u *UploadKeeper) AddInterval(end, gzSize uint64) error {
-	isJsonExist, err := u.OssBucket.IsObjectExist("info.json")
+	isJsonExist, err := u.OssBucket.IsObjectExist(u.OssDir + "info.json")
 	if err != nil {
 		return err
 	}

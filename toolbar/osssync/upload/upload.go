@@ -41,6 +41,7 @@ type UploadKeeper struct {
 	Node      *apinode.Node
 	OssClient *oss.Client
 	OssBucket *oss.Bucket
+	OssDir    string
 	FileUtil  *util.FileUtil
 }
 
@@ -50,8 +51,6 @@ func NewUploadKeeper() (*UploadKeeper, error) {
 	if err := LoadConfig(&cfg); err != nil {
 		return nil, err
 	}
-
-	node := apinode.NewNode(cfg.VaporURL)
 
 	ossClient, err := oss.New(cfg.OssConfig.Login.Endpoint, cfg.OssConfig.Login.AccessKeyID, cfg.OssConfig.Login.AccessKeySecret)
 	if err != nil {
@@ -63,13 +62,12 @@ func NewUploadKeeper() (*UploadKeeper, error) {
 		return nil, err
 	}
 
-	fileUtil := util.NewFileUtil(LOCALDIR)
-
 	return &UploadKeeper{
-		Node:      node,
+		Node:      apinode.NewNode(cfg.VaporURL),
 		OssClient: ossClient,
 		OssBucket: ossBucket,
-		FileUtil:  fileUtil,
+		OssDir:    cfg.OssConfig.Directory,
+		FileUtil:  util.NewFileUtil(LOCALDIR),
 	}, nil
 }
 
@@ -171,7 +169,7 @@ func (u *UploadKeeper) UploadFiles(start, end, size uint64) error {
 			return err
 		}
 
-		if err = u.OssBucket.PutObjectFromFile(filenameGzip, u.FileUtil.LocalDir+filenameGzip); err != nil {
+		if err = u.OssBucket.PutObjectFromFile(u.OssDir+filenameGzip, u.FileUtil.LocalDir+filenameGzip); err != nil {
 			return err
 		}
 

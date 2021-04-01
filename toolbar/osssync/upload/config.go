@@ -22,8 +22,9 @@ type Login struct {
 
 // Oss cfg
 type OssConfig struct {
-	Login  *Login `json:"login"`
-	Bucket string `json:"bucket"`
+	Login     *Login `json:"login"`
+	Bucket    string `json:"bucket"`
+	Directory string `json:"directory"`
 }
 
 // LoadConfig read path file to the config object for Upload from Vapor to OSS
