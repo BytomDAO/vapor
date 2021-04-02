@@ -10,7 +10,7 @@ import (
 
 // GetObject download the file object from OSS
 func (d *DownloadKeeper) GetObject(filename string) (*io.ReadCloser, error) {
-	url := d.OssEndpoint + filename
+	url := d.OssUrl + filename
 	res, err := http.Get(url)
 	if err != nil {
 		return nil, err

@@ -1,6 +1,7 @@
 package download
 
 import (
+	"io"
 	"strconv"
 
 	"github.com/bytom/vapor/errors"
@@ -31,17 +32,17 @@ func Run(node *node.Node, ossEndpoint string) error {
 
 // DownloadKeeper the struct for download
 type DownloadKeeper struct {
-	Node        *node.Node
-	OssEndpoint string
-	FileUtil    *util.FileUtil
+	Node     *node.Node
+	OssUrl   string
+	FileUtil *util.FileUtil
 }
 
 // NewDownloadKeeper return one new instance of DownloadKeeper
-func NewDownloadKeeper(node *node.Node, ossEndpoint string) (*DownloadKeeper, error) {
+func NewDownloadKeeper(node *node.Node, OssUrl string) (*DownloadKeeper, error) {
 	return &DownloadKeeper{
-		Node:        node,
-		OssEndpoint: "http://" + ossEndpoint + "/",
-		FileUtil:    util.NewFileUtil(LOCALDIR),
+		Node:     node,
+		OssUrl:   OssUrl + "/",
+		FileUtil: util.NewFileUtil(LOCALDIR),
 	}, nil
 }
 
@@ -110,12 +111,14 @@ func (d *DownloadKeeper) DownloadFiles(start, end uint64, interval *util.Interva
 		filenameJson := filename + ".json"
 		filenameGzip := filenameJson + ".gz"
 
-		if err := d.GetObjectToFile(filenameGzip); err != nil {
-			return err
-		}
+		for err := io.ErrUnexpectedEOF; err == io.ErrUnexpectedEOF; {
+			if err = d.GetObjectToFile(filenameGzip); err != nil {
+				return err
+			}
 
-		if err := d.FileUtil.GzipDecode(filename); err != nil {
-			return err
+			if err = d.FileUtil.GzipDecode(filename); err != nil && err != io.ErrUnexpectedEOF {
+				return err
+			}
 		}
 
 		if err := d.FileUtil.RemoveLocal(filenameGzip); err != nil {
