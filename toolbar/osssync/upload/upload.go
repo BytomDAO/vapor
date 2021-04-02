@@ -198,7 +198,6 @@ func (u *UploadKeeper) GetBlockArray(start, length uint64) ([]*types.Block, erro
 
 		data = append(data, resp)
 		blockHeight++
-		//time.Sleep(time.Duration(5) * time.Millisecond)
 	}
 	return data, nil
 }
