@@ -32,17 +32,17 @@ func Run(node *node.Node, ossEndpoint string) error {
 
 // DownloadKeeper the struct for download
 type DownloadKeeper struct {
-	Node        *node.Node
-	OssEndpoint string
-	FileUtil    *util.FileUtil
+	Node     *node.Node
+	OssUrl   string
+	FileUtil *util.FileUtil
 }
 
 // NewDownloadKeeper return one new instance of DownloadKeeper
-func NewDownloadKeeper(node *node.Node, ossEndpoint string) (*DownloadKeeper, error) {
+func NewDownloadKeeper(node *node.Node, OssUrl string) (*DownloadKeeper, error) {
 	return &DownloadKeeper{
-		Node:        node,
-		OssEndpoint: ossEndpoint + "/",
-		FileUtil:    util.NewFileUtil(LOCALDIR),
+		Node:     node,
+		OssUrl:   OssUrl + "/",
+		FileUtil: util.NewFileUtil(LOCALDIR),
 	}, nil
 }
 
