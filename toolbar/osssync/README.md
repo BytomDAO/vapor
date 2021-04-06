@@ -1,7 +1,5 @@
 Osssync is a tool for synchronizing blocks data to OSS, and get blocks data from OSS before start the Vapor node. 
 
-[Usage of Vapor and Docker](https://github.com/Bytom/vapor/blob/master/README.md)
-
 # Sample usage
 ## Upload
 Upload blocks to OSS. 
@@ -12,7 +10,7 @@ Upload blocks to OSS.
 $ docker build -t osssync -f toolbar/osssync/Dockerfile .
 ```
 
-### Running in Docker
+### Run in Docker
 ```bash
 $ docker run -d --name osssync -v <config.json-path-on-host>:/config.json osssync:latest osssync /config.json
 ```
@@ -35,6 +33,10 @@ config.json file:
 
 ## Download
 Download blocks from OSS before starting a node:  
+
+[Usage of Vapor](https://github.com/Bytom/vapor/blob/master/README.md)  
+
+### Start node
 Run vapor with flag `oss.url`
 ```bash
 $ vapord node --home <vapor-data-path> --oss.url <oss-url>
