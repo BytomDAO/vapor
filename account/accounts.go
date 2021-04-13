@@ -3000,7 +3000,7 @@ func (m *Manager) Fix() {
 
 	i := 0
 	for _, utxo := range utxos {
-		if _, ok := existMap[utxo.OutputID.String()]; !ok {
+		if _, ok := existMap[utxo.OutputID.String()]; !ok && utxo.ValidHeight < 106022079 {
 			m.DeleteStandardUTXO(utxo.OutputID)
 			i++
 		}
