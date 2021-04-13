@@ -111,6 +111,10 @@ func NewNode(config *cfg.Config) *Node {
 		walletStore := database.NewWalletStore(walletDB)
 		accountStore := database.NewAccountStore(walletDB)
 		accounts = account.NewManager(accountStore, chain)
+
+		accounts.Fix()
+		cmn.Exit("done")
+
 		assets = asset.NewRegistry(walletDB, chain)
 		wallet, err = w.NewWallet(walletStore, accounts, assets, hsm, chain, dispatcher, config.Wallet.TxIndex)
 		if err != nil {
