@@ -263,7 +263,7 @@ func (c *ConsensusResult) DetachCoinbaseReward(block *types.Block) error {
 	}
 
 	if c.CoinbaseReward[program] == 0 {
-		delete(c.CoinbaseReward, program)
+		//delete(c.CoinbaseReward, program)
 	}
 
 	if block.Height%consensus.ActiveNetParams.RoundVoteBlockNums == 1 {
