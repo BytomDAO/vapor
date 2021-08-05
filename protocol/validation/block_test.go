@@ -159,30 +159,6 @@ func TestCheckCoinbaseTx(t *testing.T) {
 			},
 			err: ErrWrongCoinbaseTransaction,
 		},
-		{
-			desc: "wrong coinbase transaction with dismatch output control_program",
-			txs: []*types.Tx{
-				types.NewTx(types.TxData{
-					Inputs: []*types.TxInput{types.NewCoinbaseInput(nil)},
-					Outputs: []*types.TxOutput{
-						types.NewIntraChainOutput(*consensus.BTMAssetID, 0, []byte{0x51}),
-						types.NewIntraChainOutput(*consensus.BTMAssetID, 20000, []byte{0x51}),
-						types.NewIntraChainOutput(*consensus.BTMAssetID, 10000, []byte{0x52}),
-					},
-				}),
-			},
-			rewards: []state.CoinbaseReward{
-				state.CoinbaseReward{
-					Amount:         20000,
-					ControlProgram: []byte{0x51},
-				},
-				state.CoinbaseReward{
-					Amount:         10000,
-					ControlProgram: []byte{0x53},
-				},
-			},
-			err: ErrWrongCoinbaseTransaction,
-		},
 	}
 
 	block := new(types.Block)
@@ -463,44 +439,6 @@ func TestValidateBlock(t *testing.T) {
 						Outputs: []*types.TxOutput{
 							types.NewIntraChainOutput(*consensus.BTMAssetID, 0, cp),
 							types.NewIntraChainOutput(*consensus.BTMAssetID, 20000, []byte{0x51}),
-						},
-					}),
-				},
-			},
-			parent: parent,
-			rewards: []state.CoinbaseReward{
-				state.CoinbaseReward{
-					Amount:         20000,
-					ControlProgram: []byte{0x51},
-				},
-				state.CoinbaseReward{
-					Amount:         10000,
-					ControlProgram: []byte{0x52},
-				},
-			},
-			err: ErrWrongCoinbaseTransaction,
-		},
-		{
-			desc: "the coinbase program is not equal to the real coinbase outputs",
-			block: &bc.Block{
-				ID: bc.Hash{V0: 1},
-				BlockHeader: &bc.BlockHeader{
-					Version:               1,
-					Height:                1,
-					Timestamp:             1523352601000,
-					PreviousBlockId:       &parentHash,
-					TransactionsRoot:      &txsRoot,
-					TransactionStatusHash: &txStatusHash,
-				},
-				Transactions: []*bc.Tx{
-					types.MapTx(&types.TxData{
-						Version:        1,
-						SerializedSize: 1,
-						Inputs:         []*types.TxInput{types.NewCoinbaseInput(nil)},
-						Outputs: []*types.TxOutput{
-							types.NewIntraChainOutput(*consensus.BTMAssetID, 0, cp),
-							types.NewIntraChainOutput(*consensus.BTMAssetID, 20000, []byte{0x51}),
-							types.NewIntraChainOutput(*consensus.BTMAssetID, 10000, []byte{0x61}),
 						},
 					}),
 				},

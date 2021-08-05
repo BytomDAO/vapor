@@ -1,8 +1,6 @@
 package validation
 
 import (
-	"bytes"
-	"encoding/hex"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -49,24 +47,22 @@ func checkCoinbaseTx(b *bc.Block, rewards []state.CoinbaseReward) error {
 		return errors.Wrapf(ErrWrongCoinbaseTransaction, "dismatch number of outputs, got:%d, want:%d", len(tx.TxHeader.ResultIds), len(rewards))
 	}
 
-	rewards = append([]state.CoinbaseReward{state.CoinbaseReward{Amount: uint64(0)}}, rewards...)
-	for i, output := range tx.TxHeader.ResultIds {
+	var rewardAmount, coinbaseAmount uint64
+	for _, output := range tx.TxHeader.ResultIds {
 		out, err := tx.IntraChainOutput(*output)
 		if err != nil {
 			return err
 		}
 
-		if rewards[i].Amount != out.Source.Value.Amount {
-			return errors.Wrapf(ErrWrongCoinbaseTransaction, "dismatch output amount, got:%d, want:%d", out.Source.Value.Amount, rewards[i].Amount)
-		}
+		coinbaseAmount += out.Source.Value.Amount
+	}
 
-		if i == 0 {
-			continue
-		}
+	for _, reward := range rewards {
+		rewardAmount += reward.Amount
+	}
 
-		if res := bytes.Compare(rewards[i].ControlProgram, out.ControlProgram.Code); res != 0 {
-			return errors.Wrapf(ErrWrongCoinbaseTransaction, "dismatch output control_program, got:%s, want:%s", hex.EncodeToString(out.ControlProgram.Code), hex.EncodeToString(rewards[i].ControlProgram))
-		}
+	if rewardAmount != coinbaseAmount {
+		return errors.Wrapf(ErrWrongCoinbaseTransaction, "dismatch output amount, got:%d, want:%d", coinbaseAmount, rewardAmount)
 	}
 	return nil
 }
