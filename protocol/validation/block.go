@@ -43,10 +43,6 @@ func checkCoinbaseTx(b *bc.Block, rewards []state.CoinbaseReward) error {
 	}
 
 	tx := b.Transactions[0]
-	if len(tx.TxHeader.ResultIds) != len(rewards)+1 {
-		return errors.Wrapf(ErrWrongCoinbaseTransaction, "dismatch number of outputs, got:%d, want:%d", len(tx.TxHeader.ResultIds), len(rewards))
-	}
-
 	var rewardAmount, coinbaseAmount uint64
 	for _, output := range tx.TxHeader.ResultIds {
 		out, err := tx.IntraChainOutput(*output)
