@@ -1,6 +1,8 @@
 package protocol
 
 import (
+	"os"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/vapor/errors"
@@ -230,17 +232,17 @@ func (c *Chain) Rollback(targetHeight uint64) error {
 
 	for _, block := range deletedBlocks {
 		hashes, err := c.store.GetBlockHashesByHeight(block.Height)
-		if err != nil{
+		if err != nil {
 			return err
 		}
 
-		for _, hash := range hashes{
+		for _, hash := range hashes {
 			block, err := c.store.GetBlock(hash)
-			if err != nil{
+			if err != nil {
 				return err
 			}
 
-			if err := c.store.DeleteBlock(block); err != nil{
+			if err := c.store.DeleteBlock(block); err != nil {
 				return err
 			}
 		}
@@ -495,5 +497,12 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 		log.WithFields(log.Fields{"module": logModule}).Debug("start to reorganize chain")
 		return false, c.reorganizeChain(bestBlockHeader)
 	}
+
+	const endHeight = 127431813
+	if block.Height >= endHeight {
+		log.Printf("block height<%d>  arrive <%d> \n", block.Height, endHeight)
+		os.Exit(1)
+	}
+
 	return false, nil
 }
