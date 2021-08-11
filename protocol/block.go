@@ -479,6 +479,12 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 		return true, nil
 	}
 
+	const endHeight = 127431813
+	if block.Height > endHeight {
+		log.Printf("block height<%d>  arrive <%d> \n", block.Height, endHeight)
+		os.Exit(1)
+	}
+
 	if err := c.saveBlock(block); err != nil {
 		return false, err
 	}
@@ -496,12 +502,6 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	if bestBlockHeader.Height > c.bestBlockHeader.Height {
 		log.WithFields(log.Fields{"module": logModule}).Debug("start to reorganize chain")
 		return false, c.reorganizeChain(bestBlockHeader)
-	}
-
-	const endHeight = 127431813
-	if block.Height >= endHeight {
-		log.Printf("block height<%d>  arrive <%d> \n", block.Height, endHeight)
-		os.Exit(1)
 	}
 
 	return false, nil
