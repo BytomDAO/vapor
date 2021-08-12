@@ -245,12 +245,12 @@ func BlockSubsidy(height uint64) uint64 {
 
 // BytomMainNetParams is the config for bytom mainnet
 func BytomMainNetParams(vaporParam *Params) *Params {
-	bech32HRPSegwit := "sm"
+	bech32HRPSegwit := "sn"
 	switch vaporParam.Name {
 	case "main":
-		bech32HRPSegwit = "bm"
+		bech32HRPSegwit = "bn"
 	case "test":
-		bech32HRPSegwit = "tm"
+		bech32HRPSegwit = "tn"
 	}
 	return &Params{Bech32HRPSegwit: bech32HRPSegwit}
 }
@@ -263,4 +263,3 @@ func InitActiveNetParams(chainID string) error {
 	}
 	return nil
 }
-
