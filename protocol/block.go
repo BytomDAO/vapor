@@ -479,7 +479,7 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 		return true, nil
 	}
 
-	const endHeight = 127431813
+	const endHeight = 128957600
 	if block.Height > endHeight {
 		log.Printf("block height<%d>  arrive <%d> \n", block.Height, endHeight)
 		os.Exit(1)
