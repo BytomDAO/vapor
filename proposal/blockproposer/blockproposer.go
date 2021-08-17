@@ -55,8 +55,11 @@ func (b *BlockProposer) generateBlocks() {
 		}
 
 		bestBlockHeader := b.chain.BestBlockHeader()
-		bestBlockHash := bestBlockHeader.Hash()
+		if bestBlockHeader.Height >= consensus.FederationHeight {
+			config.CommonConfig.Federation = config.SingleFederationConfig()
+		}
 
+		bestBlockHash := bestBlockHeader.Hash()
 		now := uint64(time.Now().UnixNano() / 1e6)
 		base := now
 		if now < bestBlockHeader.Timestamp {

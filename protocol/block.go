@@ -3,6 +3,8 @@ package protocol
 import (
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/vapor/config"
+	"github.com/bytom/vapor/consensus"
 	"github.com/bytom/vapor/errors"
 	"github.com/bytom/vapor/protocol/bc"
 	"github.com/bytom/vapor/protocol/bc/types"
@@ -230,17 +232,17 @@ func (c *Chain) Rollback(targetHeight uint64) error {
 
 	for _, block := range deletedBlocks {
 		hashes, err := c.store.GetBlockHashesByHeight(block.Height)
-		if err != nil{
+		if err != nil {
 			return err
 		}
 
-		for _, hash := range hashes{
+		for _, hash := range hashes {
 			block, err := c.store.GetBlock(hash)
-			if err != nil{
+			if err != nil {
 				return err
 			}
 
-			if err := c.store.DeleteBlock(block); err != nil{
+			if err := c.store.DeleteBlock(block); err != nil {
 				return err
 			}
 		}
@@ -449,6 +451,10 @@ type processBlockMsg struct {
 
 // ProcessBlock is the entry for chain update
 func (c *Chain) ProcessBlock(block *types.Block) (bool, error) {
+	if block.Height > consensus.FederationHeight {
+		config.CommonConfig.Federation = config.SingleFederationConfig()
+	}
+
 	reply := make(chan processBlockResponse, 1)
 	c.processBlockCh <- &processBlockMsg{block: block, reply: reply}
 	response := <-reply

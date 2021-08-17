@@ -14,6 +14,8 @@ const (
 	PayToWitnessPubKeyHashDataSize = 20
 	PayToWitnessScriptHashDataSize = 32
 
+	FederationHeight = 0
+
 	_ = iota
 	SoftFork001
 )
