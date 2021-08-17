@@ -62,6 +62,7 @@ func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Te
 	}
 
 	maxTime := time.Now().Add(req.TTL.Duration)
+	ctx = context.WithValue(ctx, "block_height", a.wallet.Chain.BestBlockHeight())
 	tpl, err := txbuilder.Build(ctx, req.Tx, actions, maxTime, req.TimeRange)
 	if errors.Root(err) == txbuilder.ErrAction {
 		// append each of the inner errors contained in the data.

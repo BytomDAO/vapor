@@ -33,8 +33,12 @@ func FederationPMultiSigScript(c *Config) []byte {
 	return program
 }
 
-func FederationWScript(c *Config) []byte {
+func FederationWScript(c *Config, height uint64) []byte {
 	script := FederationPMultiSigScript(c)
+	if height > consensus.SingleFederationHeight {
+		script = FederationPMultiSigScript(&Config{Federation: SingleFederationConfig()})
+	}
+
 	scriptHash := crypto.Sha256(script)
 	wscript, err := vmutil.P2WSHProgram(scriptHash)
 	if err != nil {
@@ -50,7 +54,7 @@ func GenesisTx() *types.Tx {
 		log.Panicf("fail on decode genesis tx output control program")
 	}
 
-	coinbaseInput := FederationWScript(CommonConfig)
+	coinbaseInput := FederationWScript(CommonConfig, 0)
 
 	txData := types.TxData{
 		Version: 1,

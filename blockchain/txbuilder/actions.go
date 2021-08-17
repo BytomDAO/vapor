@@ -295,7 +295,11 @@ func (c *crossInAction) Build(ctx context.Context, builder *TemplateBuilder) err
 	// arguments will be set when materializeWitnesses
 	txin := types.NewCrossChainInput(nil, c.SourceID, *c.AssetId, c.Amount, c.SourcePos, c.VMVersion, c.RawDefinitionByte, c.IssuanceProgram)
 	tplIn := &SigningInstruction{}
+	blockHeight := ctx.Value("block_height").(uint64)
 	fed := cfg.CommonConfig.Federation
+	if blockHeight > consensus.SingleFederationHeight {
+		fed = cfg.SingleFederationConfig()
+	}
 
 	if !common.IsOpenFederationIssueAsset(c.RawDefinitionByte) {
 		tplIn.AddRawWitnessKeys(fed.Xpubs, cfg.FedAddressPath, fed.Quorum)
