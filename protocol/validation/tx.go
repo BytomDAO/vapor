@@ -281,7 +281,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		}
 
 		if !common.IsOpenFederationIssueAsset(e.RawDefinitionByte) {
-			prog.Code = config.FederationWScript(config.CommonConfig)
+			prog.Code = config.FederationWScript(config.CommonConfig, vs.block.Height)
 		}
 
 		if _, err := vm.Verify(NewTxVMContext(vs, e, prog, e.WitnessArguments), consensus.ActiveNetParams.DefaultGasCredit); err != nil {

@@ -271,6 +271,16 @@ func DefaultFederationConfig() *FederationConfig {
 	}
 }
 
+// Default configurable federation parameters.
+func SingleFederationConfig() *FederationConfig {
+	return &FederationConfig{
+		Xpubs: []chainkd.XPub{
+			xpub("0f810c52bcd0d44482d63ef6131712b32e08b2a20c5daf134072b870a789623a726eb61e4021caa7158fbc6ca99827485c7f60010913a12a810ef7b71b03dacd"),
+		},
+		Quorum: 1,
+	}
+}
+
 // Default configurable crosschain parameters.
 func DefaultCrossChainConfig() *CrossChainConfig {
 	return &CrossChainConfig{}
