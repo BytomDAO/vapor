@@ -275,7 +275,7 @@ func DefaultFederationConfig() *FederationConfig {
 func SingleFederationConfig() *FederationConfig {
 	return &FederationConfig{
 		Xpubs: []chainkd.XPub{
-			xpub("aad09890b38d3bae357d2c49af75f839758e3a175273285d7470f4e455bfc975ea3b2f42f33cc9dd0a4131e5b7919067999462ac98195d046fb79862eadccb77"),
+			xpub("0f810c52bcd0d44482d63ef6131712b32e08b2a20c5daf134072b870a789623a726eb61e4021caa7158fbc6ca99827485c7f60010913a12a810ef7b71b03dacd"),
 		},
 		Quorum: 1,
 	}

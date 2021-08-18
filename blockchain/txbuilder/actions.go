@@ -297,7 +297,7 @@ func (c *crossInAction) Build(ctx context.Context, builder *TemplateBuilder) err
 	tplIn := &SigningInstruction{}
 	blockHeight := ctx.Value("block_height").(uint64)
 	fed := cfg.CommonConfig.Federation
-	if blockHeight > consensus.SingleFederationHeight {
+	if blockHeight > consensus.CrossInForkHeight {
 		fed = cfg.SingleFederationConfig()
 	}
 

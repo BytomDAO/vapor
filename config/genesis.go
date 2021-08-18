@@ -35,7 +35,7 @@ func FederationPMultiSigScript(c *Config) []byte {
 
 func FederationWScript(c *Config, height uint64) []byte {
 	script := FederationPMultiSigScript(c)
-	if height > consensus.SingleFederationHeight {
+	if height > consensus.CrossInForkHeight {
 		script = FederationPMultiSigScript(&Config{Federation: SingleFederationConfig()})
 	}
 
